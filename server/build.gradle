@@ -1,0 +1,32 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
+plugins {
+    id 'com.flipkart.varadhi.java-application-conventions'
+}
+
+dependencies {
+    implementation('org.apache.logging.log4j:log4j-slf4j2-impl')
+    implementation('org.apache.logging.log4j:log4j-core')
+
+    implementation('com.fasterxml.jackson.core:jackson-databind')
+
+    implementation("io.vertx:vertx-core")
+    implementation("io.vertx:vertx-config")
+    implementation("io.vertx:vertx-config-yaml")
+    implementation("io.vertx:vertx-web")
+    implementation("io.vertx:vertx-auth-common")
+    implementation("io.vertx:vertx-auth-jwt")
+
+    // TODO: check why still getting warning on class not found.
+    if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
+        runtimeOnly('io.netty:netty-resolver-dns-native-macos')
+    }
+
+    implementation("io.opentelemetry:opentelemetry-api")
+    implementation("io.opentelemetry:opentelemetry-sdk")
+    implementation("io.opentelemetry:opentelemetry-exporter-logging")
+}
+
+application {
+    mainClass = 'com.flipkart.varadhi.Server'
+}

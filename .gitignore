@@ -1,0 +1,37 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+
+# IntelliJ
+.idea/*
+!.idea/vcs.xml
+*.iml
+*.iws
+.fleet/*
+
+# Eclipse
+.classpath
+.project
+.settings/
+.recommenders/
+.factorypath
+
+# NetBeans
+nb-configuration.xml
+
+# Mac
+**/.DS_Store
+.java-version
+
+# VisualStudioCode artifacts
+.vscode/
+
+# Maven
+log/
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# scratch
+.scratch.md

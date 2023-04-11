@@ -1,0 +1,18 @@
+vertxOptions:
+  eventLoopPoolSize: 1
+  workerPoolSize: 1
+  internalBlockingPoolSize: 1
+
+deploymentOptions:
+  instances: 1
+
+authenticationEnabled: false
+
+authentication:
+  jwt:
+    jwksUrl: ''
+    options:
+      issuer: 'https://service.authn-prod.fkcloud.in'
+      audience:
+        - varadhi
+      ignoreExpiration: true

@@ -1,0 +1,5 @@
+/*
+ * This settings file is used to specify which projects to include in your build-logic build.
+ */
+
+rootProject.name = 'buildSrc'

@@ -1,0 +1,68 @@
+plugins {
+    id 'idea'
+    id 'java'
+}
+
+group = projectGroupId
+version = "${projectVersion}.${majorVersion}.${minorVersion}.${patchId}"
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    lombok_version = "1.18.26"
+    slf4j_version = "2.0.7"
+    vertx_version = "4.4.1"
+
+    otl_version = "1.24.0"
+}
+
+dependencies {
+    constraints {
+//        implementation("org.slf4j:slf4j-api:${slf4j_version}")
+        implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
+        implementation('org.apache.logging.log4j:log4j-core:2.20.0')
+
+        compileOnly("org.projectlombok:lombok:$lombok_version")
+        annotationProcessor("org.projectlombok:lombok:$lombok_version")
+
+        implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
+
+        implementation("io.vertx:vertx-core:$vertx_version")
+        implementation("io.vertx:vertx-config:${vertx_version}")
+        implementation("io.vertx:vertx-config-yaml:${vertx_version}")
+        implementation("io.vertx:vertx-web:$vertx_version")
+        implementation("io.vertx:vertx-auth-common:$vertx_version")
+        implementation("io.vertx:vertx-auth-jwt:$vertx_version")
+        runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
+
+
+        implementation("io.opentelemetry:opentelemetry-api:$otl_version")
+        implementation("io.opentelemetry:opentelemetry-sdk:$otl_version")
+        implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
+
+        // Use JUnit Jupiter for testing.
+        testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
+    }
+
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
+    testImplementation('org.junit.jupiter:junit-jupiter')
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+compileJava {
+    options.release = 17
+}
+
+tasks.named('test') {
+    // Use JUnit Platform for unit tests.
+    useJUnitPlatform()
+}
