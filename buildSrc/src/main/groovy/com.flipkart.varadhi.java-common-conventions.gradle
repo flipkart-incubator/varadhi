@@ -16,11 +16,12 @@ ext {
     vertx_version = "4.4.1"
 
     otl_version = "1.25.0"
+    micrometer_version = "1.10.6"
 }
 
 dependencies {
     constraints {
-//        implementation("org.slf4j:slf4j-api:${slf4j_version}")
+        implementation("org.slf4j:slf4j-api:$slf4j_version")
         implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
         implementation('org.apache.logging.log4j:log4j-core:2.20.0')
 
@@ -36,6 +37,7 @@ dependencies {
         implementation("io.vertx:vertx-auth-common:$vertx_version")
         implementation("io.vertx:vertx-auth-jwt:$vertx_version")
         implementation("io.vertx:vertx-opentelemetry:$vertx_version")
+        implementation("io.vertx:vertx-micrometer-metrics:$vertx_version")
         runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
 
 
@@ -45,15 +47,24 @@ dependencies {
         implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
         implementation("io.opentelemetry:opentelemetry-semconv:$otl_version-alpha")
 
-        // Use JUnit Jupiter for testing.
+        implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
+
+        // TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
+        //  by default, and have the docker compose setup ready for local setup.
+        implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
+        
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
     }
 
+    // code generation
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
+    // common apis
+    implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
 
+    // common test framework
     testImplementation('org.junit.jupiter:junit-jupiter')
 }
 
@@ -68,6 +79,5 @@ compileJava {
 }
 
 tasks.named('test') {
-    // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }

@@ -2,6 +2,11 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.configs.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.jmx.JmxConfig;
+import io.micrometer.jmx.JmxMeterRegistry;
+import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -9,14 +14,16 @@ import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,20 +32,27 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
         ServerConfiguration configuration = readConfiguration(args);
-        OpenTelemetry openTelemetry = setupOpenTelemetry(configuration);
+        CoreServices.ObservabilityStack observabilityStack = setupObservabilityStack(configuration);
 
         log.info("Server Starting.");
-        Vertx vertx =
-                Vertx.vertx(configuration.getVertxOptions().setTracingOptions(new OpenTelemetryOptions(openTelemetry)));
+        VertxOptions vertxOptions = configuration.getVertxOptions()
+                .setTracingOptions(new OpenTelemetryOptions(observabilityStack.getOpenTelemetry()))
+                .setMetricsOptions(new MicrometerMetricsOptions()
+                        .setMicrometerRegistry(observabilityStack.getMeterRegistry())
+                        .setRegistryName("default")
+                        .setJvmMetricsEnabled(true)
+                        .setEnabled(true));
 
-        CoreServices services = new CoreServices(openTelemetry, vertx, configuration);
+        Vertx vertx = Vertx.vertx(vertxOptions);
+
+        CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
 
         vertx.deployVerticle(() -> new RestVerticle(configuration, services), configuration.getDeploymentOptions());
 
         // TODO: check need for shutdown hook
     }
 
-    public static OpenTelemetry setupOpenTelemetry(ServerConfiguration configuration) {
+    public static CoreServices.ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
@@ -46,23 +60,24 @@ public class Server {
         float sampleRatio = 1.0f;
 
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(SimpleSpanProcessor.create(LoggingSpanExporter.create()))
+                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
                 .setResource(resource)
                 .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
                 .build();
 
-//        SdkMeterProvider sdkMeterProvider = SdkMeterProvider.builder()
-//                .registerMetricReader(PeriodicMetricReader.builder(OtlpGrpcMetricExporter.builder().build()).build())
-//                .setResource(resource)
-//                .build();
-
         OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
                 .setTracerProvider(sdkTracerProvider)
-//                .setMeterProvider(sdkMeterProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
 
-        return openTelemetry;
+        // TODO: make meter registry config configurable.
+        String meterExporter = "jmx";
+        MeterRegistry meterRegistry = switch (meterExporter) {
+            case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+            default -> new OtlpMeterRegistry();
+        };
+
+        return new CoreServices.ObservabilityStack(openTelemetry, meterRegistry);
     }
 
     public static ServerConfiguration readConfiguration(String[] args) {
