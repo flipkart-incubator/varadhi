@@ -14,14 +14,14 @@ public class TopicHandlers implements RouteDefinition.Provider {
 
     @Override
     public List<RouteDefinition> get() {
-        return HandlerUtil.withBasePath(
+        return new RouteDefinition.SubRoutes(
                 "/v1/topics",
                 List.of(
                         new RouteDefinition(HttpMethod.GET, "/:topic", Set.of(open), this::get),
                         new RouteDefinition(HttpMethod.POST, "", Set.of(), this::create),
                         new RouteDefinition(HttpMethod.DELETE, "/:topic", Set.of(), this::delete)
                 )
-        );
+        ).get();
     }
 
     public void get(RoutingContext event) {

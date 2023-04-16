@@ -15,7 +15,7 @@ ext {
     slf4j_version = "2.0.7"
     vertx_version = "4.4.1"
 
-    otl_version = "1.24.0"
+    otl_version = "1.25.0"
 }
 
 dependencies {
@@ -35,12 +35,15 @@ dependencies {
         implementation("io.vertx:vertx-web:$vertx_version")
         implementation("io.vertx:vertx-auth-common:$vertx_version")
         implementation("io.vertx:vertx-auth-jwt:$vertx_version")
+        implementation("io.vertx:vertx-opentelemetry:$vertx_version")
         runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
 
 
         implementation("io.opentelemetry:opentelemetry-api:$otl_version")
         implementation("io.opentelemetry:opentelemetry-sdk:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
+        implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
+        implementation("io.opentelemetry:opentelemetry-semconv:$otl_version-alpha")
 
         // Use JUnit Jupiter for testing.
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
@@ -48,6 +51,8 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+
+    implementation("io.opentelemetry:opentelemetry-api")
 
     testImplementation('org.junit.jupiter:junit-jupiter')
 }

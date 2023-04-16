@@ -6,6 +6,7 @@ import io.vertx.ext.web.RoutingContext;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -21,7 +22,13 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
     public interface Provider extends java.util.function.Supplier<List<RouteDefinition>> {
     }
 
-    public RouteDefinition withPath(String newPath) {
-        return new RouteDefinition(method, newPath, behaviour, handler);
+    public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implements Provider {
+        @Override
+        public List<RouteDefinition> get() {
+            return
+                    subRoutes.stream()
+                            .map(r -> new RouteDefinition(r.method, basePath + r.path, r.behaviour, r.handler))
+                            .collect(Collectors.toList());
+        }
     }
 }

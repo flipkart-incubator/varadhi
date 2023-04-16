@@ -16,15 +16,17 @@ dependencies {
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-auth-common")
     implementation("io.vertx:vertx-auth-jwt")
+    implementation("io.vertx:vertx-opentelemetry")
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
         runtimeOnly('io.netty:netty-resolver-dns-native-macos')
     }
 
-    implementation("io.opentelemetry:opentelemetry-api")
     implementation("io.opentelemetry:opentelemetry-sdk")
     implementation("io.opentelemetry:opentelemetry-exporter-logging")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    implementation("io.opentelemetry:opentelemetry-semconv")
 }
 
 application {
