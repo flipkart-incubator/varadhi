@@ -1,444 +1,265 @@
----
 openapi: 3.0.0
-info:
-  title: Varadhi OSS API specification
-  description: This is API specification for Varadhi-OSS.
-  version: 1.0.0
 servers:
-- url: http://localhost:8080
-  description: Varadhi OSS API specification
-security:
-- jwt_access_token:
-  - default
+  - description: Varadhi OSS API specification
+    url: http://localhost:8080
+info:
+  version: "1.0.0"
+  title:  Varadhi OSS API specification
+  description: >-
+    This is API specification for Varadhi-OSS.
+
 tags:
-- name: Admin
-  description: APIs for administrative tasks.
-- name: Tenant
-  description: APIs for Varadhi tenancy management.
-- name: Topic
-  description: APIs for Varadhi Topic management
-- name: Subscription
-  description: APIs for Varadhi Subscription management.
-- name: Produce
-  description: APIs to produce message(s) to a given topic.
-- name: Consume
-  description: APIs for managing message(s) in a Subscription's DLT.
+  - name: Admin
+    description: "APIs for administrative tasks."
+  - name: Tenant
+    description: "APIs for Varadhi tenancy management."
+  - name: Topic
+    description: "APIs for Varadhi Topic management"
+  - name: Subscription
+    description: "APIs for Varadhi Subscription management."
+  - name: Produce
+    description: "APIs to produce message(s) to a given topic."
+  - name: Consume
+    description: "APIs for managing message(s) in a Subscription's DLT."
+      
+security:
+  - jwt_access_token:
+    - default
+  
+
 paths:
   /v1/tenants/:
     get:
-      tags:
-      - Tenant
-      description: Returns the list of all tenants.
+      description: >-
+        Returns the list of all tenants.
+      tags: 
+        - Tenant
+      security: []
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/tenants'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-      security: []
+          $ref: '#/components/responses/error_response'
+                
+                
   /v1/tenants/{tenant_name}:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+
     get:
+      description: >-
+        Returns a given tenant.
       tags:
-      - Tenant
-      description: Returns a given tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      responses:
-        "200":
-          description: successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/tenant'
-        default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+        - Tenant
       security: []
-    post:
-      tags:
-      - Tenant
-      description: create a new tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/tenant'
         default:
-          description: Error response describing why operation failed.
+          $ref: '#/components/responses/error_response'
+                
+    post:
+      description: >-
+        create a new tenant.
+      tags: 
+        - Tenant
+      responses:
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/inline_response_default'
-    delete:
-      tags:
-      - Tenant
-      description: delete an existing tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      responses:
-        "200":
-          description: successful operation.
+                $ref: '#/components/schemas/tenant'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-  /v1/tenants/{tenant_name}/topics/:
-    get:
-      tags:
-      - Topic
-      description: list all topics of given tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
+          $ref: '#/components/responses/error_response'
+          
+    delete:
+      description: >-
+        delete an existing tenant.
+      tags: 
+        - Tenant
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
+        default:
+          $ref: '#/components/responses/error_response'
+
+          
+  /v1/tenants/{tenant_name}/topics/:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+    get:
+      description: >-
+        list all topics of given tenant.
+      tags: 
+        - Topic
+      responses:
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/topics'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
+
   /v1/tenants/{tenant_name}/topics/{topic_name}:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/topic_param'
+    
     get:
-      tags:
-      - Topic
-      description: get the details of specified topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+      description: >-
+        get the details of specified topic.
+      tags: 
+        - Topic
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/topic'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-    put:
-      tags:
-      - Topic
-      description: Update mutable properties of the topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
-      requestBody:
-        description: "topic name will be used from path parameter.  #TODO: define a different schema for it."
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/topic'
-      responses:
-        "200":
-          description: successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/topic'
-        default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
     post:
-      tags:
-      - Topic
-      description: create a new topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+      description: >-
+        create a new topic.
+      tags: 
+        - Topic
       requestBody:
-        description: "topic name will be used from path parameter.  #TODO: define a different schema for it."
+        description: >-
+          topic name will be used from path parameter. 
+          #TODO: define a different schema for it.
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/topic'
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/topic'
         default:
-          description: Error response describing why operation failed.
+          $ref: '#/components/responses/error_response'
+          
+    put:
+      description: >-
+        Update mutable properties of the topic.
+      tags: 
+        - Topic
+      requestBody:
+        description: >-
+          topic name will be used from path parameter. 
+          #TODO: define a different schema for it.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/topic'
+      responses:
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/inline_response_default'
-    delete:
-      tags:
-      - Topic
-      description: delete the specified topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
-      responses:
-        "200":
-          description: successful operation.
+                $ref: '#/components/schemas/topic'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-  /v1/tenants/{tenant_name}/topics/{topic_name}/state:
-    get:
-      tags:
-      - Topic
-      description: get the current produce state of the topic
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+          $ref: '#/components/responses/error_response'
+          
+    delete:
+      description: >-
+        delete the specified topic.
+      tags: 
+        - Topic
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
+        default:
+          $ref: '#/components/responses/error_response'
+    
+    
+  /v1/tenants/{tenant_name}/topics/{topic_name}/state:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/topic_param'
+    
+    get:
+      description: >-
+        get the current produce state of the topic
+      tags: 
+        - Topic
+      responses:
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/state'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+          
     put:
-      tags:
-      - Topic
-      description: Update produce state of the topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+      description: >-
+        Update produce state of the topic.
+      tags: 
+        - Topic
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/topic_name_state_body'
+              type: object
+              properties:
+                operation:
+                  $ref: '#/components/schemas/op_enum'
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+  
+  
   /v1/tenants/{tenant_name}/topics/{topic_name}/subscriptions:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/topic_param'
     get:
-      tags:
-      - Topic
-      - Subscription
-      description: List all subscriptions for the given topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+      description: >-
+        List all subscriptions for the given topic.
+      tags: 
+        - Topic
+        - Subscription
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/subscriptions'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+  
+  
   /v1/tenants/{tenant_name}/topics/{topic_name}/messages:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/topic_param'
     post:
-      tags:
-      - Produce
-      description: Produce one or more message(s) to a given topic.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: topic_name
-        in: path
-        description: Name of the Varadhi Topic
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices
+      description: >-
+        Produce one or more message(s) to a given topic.
+      tags: 
+        - Produce
       requestBody:
         content:
           application/json:
@@ -447,301 +268,157 @@ paths:
               items:
                 $ref: '#/components/schemas/message'
       responses:
-        "200":
-          description: successful operation.
+        '200':
+          description: "successful operation."
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/produce_response'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
+
   /v1/tenants/{tenant_name}/subscriptions/:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
     get:
-      tags:
-      - Subscription
-      description: List all subscription under a given tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
+      description: >-
+        List all subscription under a given tenant.
+      tags: 
+        - Subscription
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/subscriptions'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
+
   /v1/tenants/{tenant_name}/subscriptions/{sub_name}:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/sub_param'
     get:
-      tags:
-      - Subscription
-      description: Find a subscription under a given tenant by its name.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
+      description: >-
+        Find a subscription under a given tenant by its name.
+      tags: 
+        - Subscription
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/subscription'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-    put:
-      tags:
-      - Subscription
-      description: Update the mutable proerties of the given subscription.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
-      requestBody:
-        description: "Subscription name will be used from path parameter.  #TODO: define a different schema for it."
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/subscription'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/subscription'
-        default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
     post:
-      tags:
-      - Subscription
-      description: Create a new subscription under the given tenant.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
+      description: >-
+        Create a new subscription under the given tenant.
+      tags: 
+        - Subscription
       requestBody:
-        description: "Subscription name will be used from path parameter.  #TODO: define a different schema for it."
+        description: >-
+          Subscription name will be used from path parameter. 
+          #TODO: define a different schema for it.
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/subscription'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/subscription'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-    delete:
-      tags:
-      - Subscription
-      description: Delete the specified subscription.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
-      responses:
-        "200":
-          description: OK
-        default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
-  /v1/tenants/{tenant_name}/subscriptions/{sub_name}/state:
-    get:
-      tags:
-      - Subscription
-      description: Get the state of the subscription.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/inline_response_200'
-        default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+          
     put:
-      tags:
-      - Subscription
-      description: "Perform the specified operation asynchronously to update the Subscription state.  Allowed operations are block, unblock, start and stop."
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
+      description: >-
+        Update the mutable proerties of the given subscription.
+      tags: 
+        - Subscription
+      requestBody:
+        description: >-
+          Subscription name will be used from path parameter. 
+          #TODO: define a different schema for it.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/subscription'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscription'
+        default:
+          $ref: '#/components/responses/error_response'
+          
+    delete:      
+      description: >-
+        Delete the specified subscription.
+      tags: 
+        - Subscription
+      responses:
+        '200':
+          description: OK
+        default:
+          $ref: '#/components/responses/error_response'
+  
+  
+  /v1/tenants/{tenant_name}/subscriptions/{sub_name}/state:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/sub_param'
+      
+    get:
+      description: >-
+       Get the state of the subscription.
+      tags: 
+        - Subscription
+      responses:
+        '200':
+          $ref: '#/components/responses/state_response'
+
+        default:
+          $ref: '#/components/responses/error_response'
+    put:
+      description: >-
+       Perform the specified operation asynchronously to update the Subscription state. 
+       Allowed operations are block, unblock, start and stop.
+      tags: 
+        - Subscription
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/state_request'
       responses:
-        "200":
+        '200':
           description: OK
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+  
+          
   /v1/tenants/{tenant_name}/subscriptions/{sub_name}/status:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/sub_param'
     get:
-      tags:
-      - Subscription
-      description: Get the current status of this subscription.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
+      description: >-
+        Get the current status of this subscription.
+      tags: 
+        - Subscription
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -750,88 +427,28 @@ paths:
                 items:
                   $ref: '#/components/schemas/consumer_status'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+
+
   /v1/tenants/{tenant_name}/subscriptions/{sub_name}/dlt:
+    parameters:
+      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/sub_param'
+      - $ref: '#/components/parameters/http_code'
+      - $ref: '#/components/parameters/from_param'
+      - $ref: '#/components/parameters/to_param'
+      - $ref: '#/components/parameters/msg_id_param'
+      - $ref: '#/components/parameters/group_id_param'
     get:
-      tags:
-      - Consume
-      description: "View or Peek message(s) from the DLT associated with this subscription. Consumer pointer is not moved. TODO:: - Add pagination semantics to the API."
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
-      - name: code
-        in: query
-        description: Http response code
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            oneOf:
-            - type: string
-              enum:
-              - 4XX
-              - 5XX
-            - type: integer
-      - name: from
-        in: query
-        description: "from timestamp. If 'from' is specified, 'to' is also needed."
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: string
-          format: date-time
-      - name: to
-        in: query
-        description: "to timestamp. If 'to' is specified, 'from' is also needed."
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: string
-          format: date-time
-      - name: msg_id
-        in: query
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            type: string
-      - name: group_id
-        in: query
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            type: string
+      description: >-
+        View or Peek message(s) from the DLT associated with this subscription.
+        Consumer pointer is not moved.
+        TODO::
+        - Add pagination semantics to the API.
+      tags: 
+        - Consume
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -840,167 +457,103 @@ paths:
                 items:
                   $ref: '#/components/schemas/recieved_message'
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+          
     put:
-      tags:
-      - Consume
-      description: Unsideline messages from DLT for further consumption.
-      parameters:
-      - name: tenant_name
-        in: path
-        description: Name of the Varadhi tenant
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: all-invoices
-      - name: sub_name
-        in: path
-        description: Name of the Varadhi Subscription
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-          example: user-invoices-signing
-      - name: code
-        in: query
-        description: Http response code
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            oneOf:
-            - type: string
-              enum:
-              - 4XX
-              - 5XX
-            - type: integer
-      - name: from
-        in: query
-        description: "from timestamp. If 'from' is specified, 'to' is also needed."
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: string
-          format: date-time
-      - name: to
-        in: query
-        description: "to timestamp. If 'to' is specified, 'from' is also needed."
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: string
-          format: date-time
-      - name: msg_id
-        in: query
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            type: string
-      - name: group_id
-        in: query
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: array
-          items:
-            type: string
+      description: >-
+        Unsideline messages from DLT for further consumption.
+      tags: 
+        - Consume
       responses:
-        "200":
+        '200':
           description: OK
         default:
-          description: Error response describing why operation failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/inline_response_default'
+          $ref: '#/components/responses/error_response'
+   
+     
 components:
-  schemas:
+  schemas: 
     tenant:
       type: object
       properties:
         name:
           type: string
-          example: finance-project
+          example: "finance-project"
         quota:
           type: object
+          # TODO:: To be enabled later, based on enforcement static/dynamic. 
+          # properties:
+          #   storage:
+          #     type: integer
+          #   throughput:
+          #     type: integer
+        
     tenants:
       type: array
       items:
         $ref: '#/components/schemas/tenant'
+
     property_bag:
       type: object
       additionalProperties:
         type: string
+        
     retention_policy:
       type: object
       properties:
         retention_hours:
-          maximum: 76
           type: integer
           example: 24
           default: 48
+          maximum: 76
+          
     capacity_policy:
       type: object
       properties:
         max_throughput:
           type: integer
-          description: Maximum throughput in Mbps.
+          description: "Maximum throughput in Mbps."
           example: 10
         max_storage:
           type: integer
-          description: Maximum size in MB
+          description: "Maximum size in MB"
           example: 1500
         message_size:
           type: integer
-          description: Maximum message size in KBs.
+          description: "Maximum message size in KBs."
           example: 10
+          
     retry_policy:
       type: object
       properties:
         retry_codes:
           type: array
-          example:
-          - 500
-          - 501
           items:
             type: integer
+          example: [500, 501]
         kind:
           type: string
-          example: exponential
-          enum:
-          - exponential
-          - linear
+          example: "exponential"
+          enum: 
+            - "exponential"
+            - "linear"
         minbackoff:
           type: integer
-          description: minimum retry interval in ms.
+          description: "minimum retry interval in ms."
           example: 300
         maxbackoff:
           type: integer
-          description: maxmimum retry interval in ms.
+          description: "maxmimum retry interval in ms."
           example: 1500
         multiplier:
           type: integer
-          description: step for iteration
+          description: "step for iteration"
           example: 10
         retry_attempts:
-          maximum: 3
           type: integer
-          description: maximum retry attempts allowed.
+          description: "maximum retry attempts allowed."
+          maximum: 3
+          
     dlq_policy:
       type: object
       properties:
@@ -1009,6 +562,7 @@ components:
           example: true
         endpoint:
           $ref: '#/components/schemas/endpoint'
+          
     consumption_policy:
       type: object
       properties:
@@ -1022,26 +576,44 @@ components:
           type: number
           example: 0.5
         max_error_threshold:
-          maximum: 0.3
           type: number
           example: 0.25
+          maximum: 0.3
         throttle_spec:
-          $ref: '#/components/schemas/consumption_policy_throttle_spec'
+          type: object
+          properties:
+            factor:
+              type: number
+              description: "Factor by which qps needs to be increased/decreased."
+              example: 0.1
+            wait_seconds:
+              type: integer
+              description: "wait in seconds before attempting next increase/decrease step."
+              example: 10
+            ping_seconds:
+              type: integer
+              description: "When fully blocked, keep checking every ping_seconds for recovery."
+              example: 20
+            stop_after_seconds:
+              type: integer
+              description: "Mark consumption stopped if recovery doesn't happen till this time. Manual intervention needed post this."
+              example: 7200
+        
     topic:
       type: object
       properties:
         name:
           type: string
-          example: user-invoices
+          example: "user-invoices"
         tenant:
           type: string
-          example: all-invoices
+          example: "all-invoices"
         grouped:
           type: boolean
           example: true
         max_subscriptions:
-          minimum: 1
           type: integer
+          minimum: 1
           example: 1
         properties:
           $ref: '#/components/schemas/property_bag'
@@ -1054,23 +626,25 @@ components:
         version:
           type: integer
           example: 1
+          
     topics:
       type: array
       items:
         $ref: '#/components/schemas/topic'
+          
     endpoint:
       type: object
       properties:
         url:
           type: string
-          example: https://invoice-signer-service/invoice/sign
+          example: "https://invoice-signer-service/invoice/sign"
         method:
           type: string
-          example: POST
-          enum:
-          - POST
-          - GET
-          - PUT
+          example: "POST"
+          enum: 
+            - "POST"
+            - "GET"
+            - "PUT"
         connect_timeout:
           type: integer
           example: 4
@@ -1080,19 +654,25 @@ components:
           example: 4
           default: 5
         auth_info:
-          $ref: '#/components/schemas/endpoint_auth_info'
+          type: object
+          properties:
+            audience:
+              type: string
+              example: "invoice-signer-service"
+          nullable: true
+          
     subscription:
       type: object
       properties:
         name:
           type: string
-          example: my-sub
+          example: "my-sub"
         tenant:
           type: string
-          example: all-invoices
+          example: "all-invoices"
         topic:
           type: string
-          example: user-invoices
+          example: "user-invoices"
         grouped:
           type: boolean
           example: true
@@ -1109,22 +689,24 @@ components:
         version:
           type: integer
           example: 10
+          
     subscriptions:
       type: array
       items:
         $ref: '#/components/schemas/subscription'
+    
     message:
       type: object
       properties:
         producer:
           type: string
-          description: Identity of application which produced this message. It will be auto populated by the platform.
+          description: "Identity of application which produced this message. It will be auto populated by the platform."
         message_id:
           type: string
           format: uuid
         deduplication_id:
           type: string
-          description: Not used for now. Intended for message deduplication semantics.
+          description: "Not used for now. Intended for message deduplication semantics."
         properties:
           $ref: '#/components/schemas/property_bag'
         groupkey:
@@ -1133,9 +715,11 @@ components:
           type: string
           format: binary
         publish_time:
+          # TODO:: this will be better as integer instead of string.
           type: string
-          description: This will be auto populated by the platform.
           format: date-time
+          description: "This will be auto populated by the platform."
+          
     produce_response:
       type: object
       properties:
@@ -1143,6 +727,7 @@ components:
           type: array
           items:
             type: string
+          
     nullable_error:
       type: object
       properties:
@@ -1152,43 +737,49 @@ components:
         http_message:
           type: string
       nullable: true
+          
     recieved_message:
       type: object
       properties:
         retried_deliveries:
           type: integer
-          description: Number of times this message delivery was retried.
+          description: 'Number of times this message delivery was retried.'
         dlq_deliveries:
           type: integer
-          description: Number of times this message delivery was dlqed.
+          description: 'Number of times this message delivery was dlqed.'
         error:
           $ref: '#/components/schemas/nullable_error'
         message:
           $ref: '#/components/schemas/message'
+          
     state_enum:
       type: string
-      enum:
-      - blocked
-      - stopped
-      - started
+      enum: 
+        - "blocked"
+        - "stopped"
+        - "started"
+        
     state:
       type: object
       properties:
         state:
           $ref: '#/components/schemas/state_enum'
+
     consumer_enum:
       type: string
       enum:
-      - main
-      - retry
-      - dead_letter
-      - all
+        - "main"
+        - "retry"
+        - "dead_letter"
+        - "all"
+    
     op_enum:
       type: string
       enum:
-      - start
-      - stop
-      - block
+        - "start"
+        - "stop"
+        - "block"
+    
     state_request:
       type: object
       properties:
@@ -1196,6 +787,7 @@ components:
           $ref: '#/components/schemas/op_enum'
         consumer_type:
           $ref: '#/components/schemas/consumer_enum'
+          
     consumer_status:
       type: object
       properties:
@@ -1204,66 +796,100 @@ components:
         state:
           $ref: '#/components/schemas/state_enum'
         lag:
-          type: integer
-    inline_response_default:
-      type: object
-      properties:
-        message:
+          type: integer 
+        
+  parameters:
+    tenanat_param:
+      name: tenant_name
+      in: path
+      required: true
+      description: "Name of the Varadhi tenant"
+      schema:
+        type: string
+        example: "all-invoices"
+        
+    topic_param:
+      name: topic_name
+      in: path
+      required: true
+      description: "Name of the Varadhi Topic"
+      schema:
+        type: string
+        example: "user-invoices"
+        
+    sub_param:
+      name: sub_name
+      in: path
+      required: true
+      description: "Name of the Varadhi Subscription"
+      schema:
+        type: string
+        example: "user-invoices-signing"
+        
+    from_param:
+      name: from
+      in: query
+      required: false
+      description: "from timestamp. If 'from' is specified, 'to' is also needed."
+      schema:
+        type: string
+        format: date-time
+        
+    to_param:
+      name: to
+      in: query
+      required: false
+      description: "to timestamp. If 'to' is specified, 'from' is also needed."
+      schema:
+        type: string
+        format: date-time
+        
+    http_code:
+      name: code
+      in: query
+      required: false
+      description: "Http response code"
+      schema:
+        type: array
+        items:
+          oneOf: 
+            - type: string
+              enum: 
+                - 4XX
+                - 5XX
+            - type: integer
+    
+    msg_id_param:
+      name: msg_id
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
           type: string
-    topic_name_state_body:
-      type: object
-      properties:
-        operation:
-          $ref: '#/components/schemas/op_enum'
-    inline_response_200:
-      properties:
-        consumer_type:
-          $ref: '#/components/schemas/consumer_enum'
-        state:
-          $ref: '#/components/schemas/state'
-    consumption_policy_throttle_spec:
-      type: object
-      properties:
-        factor:
-          type: number
-          description: Factor by which qps needs to be increased/decreased.
-          example: 0.1
-        wait_seconds:
-          type: integer
-          description: wait in seconds before attempting next increase/decrease step.
-          example: 10
-        ping_seconds:
-          type: integer
-          description: "When fully blocked, keep checking every ping_seconds for recovery."
-          example: 20
-        stop_after_seconds:
-          type: integer
-          description: Mark consumption stopped if recovery doesn't happen till this time. Manual intervention needed post this.
-          example: 7200
-    endpoint_auth_info:
-      type: object
-      properties:
-        audience:
+          
+    group_id_param:
+      name: group_id
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
           type: string
-          example: invoice-signer-service
-      nullable: true
+          
   responses:
     error_response:
-      description: Error response describing why operation failed.
+      description: "Error response describing why operation failed."
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/inline_response_default'
+            type: object
+            properties:
+              message:
+                type: string
+                
     state_response:
-      description: OK
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/inline_response_200'
-    status_response:
-      description: OK
+      description: "OK"
       content:
         application/json:
           schema:
@@ -1274,99 +900,26 @@ components:
                   $ref: '#/components/schemas/consumer_enum'
                 state:
                   $ref: '#/components/schemas/state'
-  parameters:
-    tenanat_param:
-      name: tenant_name
-      in: path
-      description: Name of the Varadhi tenant
-      required: true
-      style: simple
-      explode: false
-      schema:
-        type: string
-        example: all-invoices
-    topic_param:
-      name: topic_name
-      in: path
-      description: Name of the Varadhi Topic
-      required: true
-      style: simple
-      explode: false
-      schema:
-        type: string
-        example: user-invoices
-    sub_param:
-      name: sub_name
-      in: path
-      description: Name of the Varadhi Subscription
-      required: true
-      style: simple
-      explode: false
-      schema:
-        type: string
-        example: user-invoices-signing
-    from_param:
-      name: from
-      in: query
-      description: "from timestamp. If 'from' is specified, 'to' is also needed."
-      required: false
-      style: form
-      explode: true
-      schema:
-        type: string
-        format: date-time
-    to_param:
-      name: to
-      in: query
-      description: "to timestamp. If 'to' is specified, 'from' is also needed."
-      required: false
-      style: form
-      explode: true
-      schema:
-        type: string
-        format: date-time
-    http_code:
-      name: code
-      in: query
-      description: Http response code
-      required: false
-      style: form
-      explode: true
-      schema:
-        type: array
-        items:
-          oneOf:
-          - type: string
-            enum:
-            - 4XX
-            - 5XX
-          - type: integer
-    msg_id_param:
-      name: msg_id
-      in: query
-      required: false
-      style: form
-      explode: true
-      schema:
-        type: array
-        items:
-          type: string
-    group_id_param:
-      name: group_id
-      in: query
-      required: false
-      style: form
-      explode: true
-      schema:
-        type: array
-        items:
-          type: string
+                  
+    status_response:
+      description: "OK"
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              properties:
+                consumer_type:
+                  $ref: '#/components/schemas/consumer_enum'
+                state:
+                  $ref: '#/components/schemas/state'
+                
   securitySchemes:
     jwt_access_token:
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://authn.flipkart.net/oauth/authorize
           tokenUrl: https://authn.flipkart.net/oauth/token
+          authorizationUrl: https://authn.flipkart.net/oauth/authorize
           scopes:
             default: needs all scopes to perform this operation.
