@@ -13,16 +13,17 @@ public class ResourceName {
 
     private static final Pattern variablePattern = Pattern.compile("\\{[a-zA-Z0-9._-]+}");
 
-    private final List<Token> tokens = new ArrayList<>();
-
-    private boolean hasVariables;
+    private final List<Token> tokens;
 
     private final int sizeEstimate;
 
     public ResourceName(String value) {
         sizeEstimate = value.length() * 2;
+        tokens = parse(value);
+    }
 
-        // TODO: move this to static method
+    static List<Token> parse(String value) {
+        List<Token> tokens = new ArrayList<>();
         Matcher matcher = variablePattern.matcher(value);
 
         int readIdx = 0;
@@ -32,16 +33,13 @@ public class ResourceName {
             }
             tokens.add(new Token(value.substring(matcher.start() + 1, matcher.end() - 1), true));
             readIdx = matcher.end();
-            hasVariables = true;
         }
 
         if (readIdx < value.length()) {
             tokens.add(new Token(value.substring(readIdx), false));
         }
-    }
 
-    public boolean hasVariables() {
-        return hasVariables;
+        return tokens;
     }
 
     public String resolve(Function<String, String> env) {

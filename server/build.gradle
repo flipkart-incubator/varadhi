@@ -34,6 +34,8 @@ dependencies {
 
     implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.micrometer:micrometer-registry-jmx")
+
+    testImplementation("io.vertx:vertx-junit5")
 }
 
 application {

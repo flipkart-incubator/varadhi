@@ -37,31 +37,45 @@ public class AuthHandlers {
                         );
                     };
 
-            if (configuration.isAuthorizationEnabled()) {
-                String providerClassName = configuration.getAuthorization().getProviderClassName();
-                AuthorizationProvider authorizationProvider = null;
-                if (providerClassName != null && !providerClassName.isBlank()) {
-                    try {
-                        Class<? extends AuthorizationProvider> clazz =
-                                (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                        authorizationProvider = buildAuthorizationProvider(clazz, configuration.getAuthorization()
-                                .getProviderOptions());
-                    } catch (ClassNotFoundException | ClassCastException e) {
-                        throw new InvalidConfigException(e);
-                    }
-                }
-                authorizationHandlerBuilder = new AuthorizationHandlerBuilder(configuration.getAuthorization()
-                        .getSuperUsers(), authorizationProvider);
-            } else {
-                authorizationHandlerBuilder = null;
-            }
+            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
         } else {
             authenticationHandler = null;
             authorizationHandlerBuilder = null;
         }
     }
 
-    AuthorizationProvider buildAuthorizationProvider(
+    public void configure(Route route, RouteDefinition routeDef) {
+        if (authenticationHandler != null) {
+            route.handler(authenticationHandler);
+        }
+
+        if (authorizationHandlerBuilder != null && routeDef.requiredAuthorization().isPresent()) {
+            route.handler(authorizationHandlerBuilder.build(routeDef.requiredAuthorization().get()));
+        }
+    }
+
+    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
+        if (configuration.isAuthorizationEnabled()) {
+            String providerClassName = configuration.getAuthorization().getProviderClassName();
+            AuthorizationProvider authorizationProvider = null;
+            if (providerClassName != null && !providerClassName.isBlank()) {
+                try {
+                    Class<? extends AuthorizationProvider> clazz =
+                            (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
+                    authorizationProvider = createAuthorizationProvider(clazz, configuration.getAuthorization()
+                            .getProviderOptions());
+                } catch (ClassNotFoundException | ClassCastException e) {
+                    throw new InvalidConfigException(e);
+                }
+            }
+            return new AuthorizationHandlerBuilder(configuration.getAuthorization()
+                    .getSuperUsers(), authorizationProvider);
+        } else {
+            return null;
+        }
+    }
+
+    AuthorizationProvider createAuthorizationProvider(
             Class<? extends AuthorizationProvider> clazz, JsonObject options
     ) throws InvalidConfigException {
         try {
@@ -73,17 +87,7 @@ public class AuthHandlers {
         }
     }
 
-    public void configure(Route route, RouteDefinition routeDef) {
-        if (authenticationHandler != null) {
-            route.handler(authenticationHandler);
-        }
-
-        if (authorizationHandlerBuilder != null) {
-            route.handler(authorizationHandlerBuilder.build(routeDef));
-        }
-    }
-
-    public JWTAuthHandler createJWTHandler(Vertx vertx, AuthenticationOptions.JWTConfig config) {
+    JWTAuthHandler createJWTHandler(Vertx vertx, AuthenticationOptions.JWTConfig config) {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder().uri(new URI(config.getJwksUrl())).build();

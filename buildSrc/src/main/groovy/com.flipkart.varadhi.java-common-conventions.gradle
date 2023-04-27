@@ -54,6 +54,7 @@ dependencies {
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
 
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
+        testImplementation("io.vertx:vertx-junit5:$vertx_version")
     }
 
     // code generation
@@ -75,9 +76,20 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 17
+    options.release.set(17)
 }
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    testLogging {
+        events "PASSED", "SKIPPED", "FAILED", "STANDARD_OUT", "STANDARD_ERROR"
+    }
+    afterSuite { desc, result ->
+        if (!desc.parent) { // will match the outermost suite
+            def output = "Test Sumary: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+            def startItem = '|  ', endItem = '  |'
+            def repeatLength = startItem.length() + output.length() + endItem.length()
+            println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+        }
+    }
 }

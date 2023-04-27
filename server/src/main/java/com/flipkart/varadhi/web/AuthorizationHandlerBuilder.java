@@ -3,17 +3,20 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
+import com.flipkart.varadhi.auth.user.UserContext;
 import com.flipkart.varadhi.auth.user.VertxUserContext;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.net.HttpURLConnection.*;
 
@@ -31,70 +34,61 @@ public class AuthorizationHandlerBuilder {
         this.provider = provider != null ? provider : new AuthorizationProvider.NoAuthorizationProvider();
     }
 
-    public Handler<RoutingContext> build(RouteDefinition routeDefinition) {
-        return new AuthorizationHandler(routeDefinition);
+    public AuthorizationHandler build(PermissionAuthorization requiredAuthorization) {
+        return new AuthorizationHandler(requiredAuthorization);
     }
 
-    private class AuthorizationHandler implements Handler<RoutingContext> {
+    @AllArgsConstructor
+    class AuthorizationHandler implements Handler<RoutingContext> {
 
-        private final RouteDefinition routeDef;
-
-        AuthorizationHandler(RouteDefinition routeDef) {
-            this.routeDef = routeDef;
-        }
+        private final PermissionAuthorization requiredAuthorization;
 
         @Override
         public void handle(RoutingContext ctx) {
-            // user needs to be authenticated, if authorization is required
-            if (routeDef.requiredAuthorization().isEmpty()) {
-                ctx.next();
-                return;
+            UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
+            Function<String, String> env =
+                    v -> resolveVariable(v, ctx.pathParams(), ctx.request().params(), ctx.request().headers());
+            authorize(user, env).onFailure(ctx::fail).onSuccess(result -> ctx.next());
+        }
+
+        Future<Void> authorize(UserContext userContext, Function<String, String> env) {
+
+            if (userContext == null) {
+                return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "the request is not authenticated"));
             }
 
-            User user = ctx.user();
-            if (user == null) {
-                ctx.fail(new HttpException(HTTP_UNAUTHORIZED, "the request is not authenticated"));
-                return;
+            if (userContext.isExpired()) {
+                return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "the user / token has been expired"));
             }
 
-            if (user.expired()) {
-                ctx.fail(new HttpException(HTTP_UNAUTHORIZED, "the user / token has been expired"));
-                return;
-            }
-
-            VertxUserContext userContext = new VertxUserContext(user);
             if (superUsers.contains(userContext.getSubject())) {
-                ctx.next();
-                return;
+                return Future.succeededFuture();
             }
 
-            PermissionAuthorization requiredAuth = routeDef.requiredAuthorization().get();
-            ResourceAction action = requiredAuth.action();
-            String resource = requiredAuth.resource().resolve(
-                    v -> resolveVariable(v, ctx.pathParams(), ctx.request().params(), ctx.request().headers()));
-            provider.isAuthorized(userContext, action, resource).onComplete(ar -> {
-                if (ar.failed()) {
-                    ctx.fail(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization"));
-                }
-
-                if (!ar.result()) {
-                    ctx.fail(new HttpException(
-                            HTTP_FORBIDDEN,
-                            "user is not authorized to perform action '" + action.toString() + "' on resource '" +
-                                    resource + "'"
-                    ));
-                } else {
-                    ctx.next();
-                }
-            });
+            ResourceAction action = requiredAuthorization.action();
+            String resource = requiredAuthorization.resource().resolve(env);
+            return provider.isAuthorized(userContext, action, resource)
+                    .compose(authorized -> {
+                        if (!authorized) {
+                            return Future.failedFuture(new HttpException(
+                                    HTTP_FORBIDDEN,
+                                    "user is not authorized to perform action '" + action.toString() +
+                                            "' on resource '" +
+                                            resource + "'"
+                            ));
+                        } else {
+                            return Future.succeededFuture();
+                        }
+                    }, t -> Future.failedFuture(
+                            new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
         }
 
         String resolveVariable(
-                String variable, Map<String, String> pathParams, MultiMap queryparams, MultiMap headers
+                String variable, Map<String, String> pathParams, MultiMap queryParams, MultiMap headers
         ) {
             String value = pathParams.get(variable);
             if (value == null) {
-                value = queryparams.get(variable);
+                value = queryParams.get(variable);
             }
             if (value == null) {
                 value = headers.get(variable);
