@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.configs.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -47,7 +46,12 @@ public class Server {
 
         CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
 
-        vertx.deployVerticle(() -> new RestVerticle(configuration, services), configuration.getDeploymentOptions());
+        vertx.deployVerticle(
+                () -> new RestVerticle(configuration, services), configuration.getDeploymentOptions()
+        ).onFailure(t -> {
+            log.error("Could not start HttpServer verticle", t);
+            System.exit(-1);
+        });
 
         // TODO: check need for shutdown hook
     }

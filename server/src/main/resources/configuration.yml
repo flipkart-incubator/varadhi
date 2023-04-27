@@ -10,9 +10,14 @@ authenticationEnabled: false
 
 authentication:
   jwt:
-    jwksUrl: ''
+    jwksUrl: 'http://localhost:9090/default/jwks'
     options:
-      issuer: 'https://service.authn-prod.fkcloud.in'
-      audience:
-        - varadhi
+      issuer: 'http://localhost:9090/default'
       ignoreExpiration: true
+
+authorizationEnabled: false
+
+authorization:
+  superUsers: [ "thanos" ]
+  providerClassName:
+  providerOptions:

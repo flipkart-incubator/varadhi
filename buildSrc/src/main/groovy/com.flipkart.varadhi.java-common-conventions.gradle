@@ -52,7 +52,7 @@ dependencies {
         // TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
         //  by default, and have the docker compose setup ready for local setup.
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
-        
+
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
     }
 
@@ -74,10 +74,10 @@ java {
     }
 }
 
-compileJava {
+tasks.withType(JavaCompile).configureEach {
     options.release = 17
 }
 
-tasks.named('test') {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }

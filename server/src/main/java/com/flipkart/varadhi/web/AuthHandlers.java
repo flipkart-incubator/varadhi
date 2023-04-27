@@ -1,7 +1,9 @@
-package com.flipkart.varadhi.handlers;
+package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.configs.AuthOptions;
-import com.flipkart.varadhi.configs.ServerConfiguration;
+import com.flipkart.varadhi.ServerConfiguration;
+import com.flipkart.varadhi.auth.AuthenticationOptions;
+import com.flipkart.varadhi.auth.AuthorizationProvider;
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -23,36 +25,65 @@ import static java.net.HttpURLConnection.HTTP_OK;
 
 public class AuthHandlers {
     private final Handler<RoutingContext> authenticationHandler;
-    private final Handler<RoutingContext> authorizationHandler;
+    private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthHandlers(Vertx vertx, ServerConfiguration configuration) {
+    public AuthHandlers(Vertx vertx, ServerConfiguration configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled()) {
             authenticationHandler =
                     switch (configuration.getAuthentication().getMechanism()) {
                         case jwt -> createJWTHandler(
                                 vertx,
-                                configuration.getAuthentication().asConfig(AuthOptions.JWTConfig.class)
+                                configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
                         );
                     };
+
+            if (configuration.isAuthorizationEnabled()) {
+                String providerClassName = configuration.getAuthorization().getProviderClassName();
+                AuthorizationProvider authorizationProvider = null;
+                if (providerClassName != null && !providerClassName.isBlank()) {
+                    try {
+                        Class<? extends AuthorizationProvider> clazz =
+                                (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
+                        authorizationProvider = buildAuthorizationProvider(clazz, configuration.getAuthorization()
+                                .getProviderOptions());
+                    } catch (ClassNotFoundException | ClassCastException e) {
+                        throw new InvalidConfigException(e);
+                    }
+                }
+                authorizationHandlerBuilder = new AuthorizationHandlerBuilder(configuration.getAuthorization()
+                        .getSuperUsers(), authorizationProvider);
+            } else {
+                authorizationHandlerBuilder = null;
+            }
         } else {
             authenticationHandler = null;
+            authorizationHandlerBuilder = null;
         }
-
-        // TODO
-        authorizationHandler = null;
     }
 
-    public void configure(Route route) {
+    AuthorizationProvider buildAuthorizationProvider(
+            Class<? extends AuthorizationProvider> clazz, JsonObject options
+    ) throws InvalidConfigException {
+        try {
+            AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();
+            provider.init(options);
+            return provider;
+        } catch (Exception e) {
+            throw new InvalidConfigException(e);
+        }
+    }
+
+    public void configure(Route route, RouteDefinition routeDef) {
         if (authenticationHandler != null) {
             route.handler(authenticationHandler);
         }
 
-        if (authorizationHandler != null) {
-            route.handler(authorizationHandler);
+        if (authorizationHandlerBuilder != null) {
+            route.handler(authorizationHandlerBuilder.build(routeDef));
         }
     }
 
-    public JWTAuthHandler createJWTHandler(Vertx vertx, AuthOptions.JWTConfig config) {
+    public JWTAuthHandler createJWTHandler(Vertx vertx, AuthenticationOptions.JWTConfig config) {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder().uri(new URI(config.getJwksUrl())).build();
