@@ -53,8 +53,8 @@ public final class LoggingSpanExporter implements SpanExporter {
                     .append("', events='")
                     .append(span.getEvents().stream().map(Object::toString).collect(Collectors.joining(",")))
                     .append("', time=")
-                    .append((span.getEndEpochNanos() - span.getStartEpochNanos()) / 1000000L)
-                    .append(" ms")
+                    .append((span.getEndEpochNanos() - span.getStartEpochNanos()) / 1000L)
+                    .append(" μs")
             ;
             log.info(sb.toString());
         }

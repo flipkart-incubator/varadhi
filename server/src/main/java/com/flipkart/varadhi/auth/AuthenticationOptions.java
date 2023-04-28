@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.configs;
+package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import io.vertx.core.json.JsonObject;
@@ -7,7 +7,7 @@ import lombok.Data;
 
 import java.util.HashMap;
 
-public class AuthOptions extends HashMap<AuthOptions.Mechanism, Object> {
+public class AuthenticationOptions extends HashMap<AuthenticationOptions.Mechanism, Object> {
 
     public enum Mechanism {
         jwt

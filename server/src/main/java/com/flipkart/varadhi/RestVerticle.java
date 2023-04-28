@@ -1,9 +1,8 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.configs.ServerConfiguration;
-import com.flipkart.varadhi.handlers.FailureHandler;
+import com.flipkart.varadhi.web.FailureHandler;
+import com.flipkart.varadhi.web.RouteDefinition;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -26,7 +25,7 @@ public class RestVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start() throws Exception {
+    public void start(Promise<Void> startPromise) {
         log.info("HttpServer Starting.");
 
         Router router = Router.router(vertx);
@@ -36,7 +35,7 @@ public class RestVerticle extends AbstractVerticle {
             Route route = router.route().method(def.method()).path(def.path());
 
             if (!def.behaviour().contains(RouteDefinition.RouteBehaviour.open)) {
-                coreServices.getAuthHandlers().configure(route);
+                coreServices.getAuthHandlers().configure(route, def);
             }
 
             route.handler(def.handler());
@@ -48,11 +47,14 @@ public class RestVerticle extends AbstractVerticle {
         options.setDecompressionSupported(false);
 
         // TODO: create config for http server
-        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, this::handleServerStart);
-    }
-
-    private void handleServerStart(AsyncResult<HttpServer> serverStartResult) {
-        log.info("HttpServer Started.");
+        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
+            if (h.succeeded()) {
+                log.info("HttpServer Started.");
+            } else {
+                log.warn("HttpServer Started Failed.");
+            }
+            startPromise.handle(h.map((Void) null));
+        });
     }
 
     @Override

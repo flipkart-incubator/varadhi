@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.handlers;
+package com.flipkart.varadhi.web;
 
 import io.vertx.ext.web.RoutingContext;
 
