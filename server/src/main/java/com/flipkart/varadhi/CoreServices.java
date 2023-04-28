@@ -1,9 +1,9 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.configs.ServerConfiguration;
-import com.flipkart.varadhi.handlers.AuthHandlers;
-import com.flipkart.varadhi.handlers.v1.HealthCheckHandler;
-import com.flipkart.varadhi.handlers.v1.TopicHandlers;
+import com.flipkart.varadhi.web.AuthHandlers;
+import com.flipkart.varadhi.web.RouteDefinition;
+import com.flipkart.varadhi.web.v1.HealthCheckHandler;
+import com.flipkart.varadhi.web.v1.TopicHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;

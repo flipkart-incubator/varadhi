@@ -3,4 +3,6 @@ plugins {
 }
 
 dependencies {
+
+    api("io.vertx:vertx-core")
 }

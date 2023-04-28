@@ -5,6 +5,9 @@ plugins {
 }
 
 dependencies {
+
+    implementation(project(':common'))
+
     implementation('org.apache.logging.log4j:log4j-slf4j2-impl')
     implementation('org.apache.logging.log4j:log4j-core')
 
@@ -31,6 +34,8 @@ dependencies {
 
     implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.micrometer:micrometer-registry-jmx")
+
+    testImplementation("io.vertx:vertx-junit5")
 }
 
 application {
