@@ -9,10 +9,10 @@ info:
     This is API specification for Varadhi-OSS.
 
 tags:
-  - name: Admin
-    description: "APIs for administrative tasks."
   - name: Tenant
     description: "APIs for Varadhi tenancy management."
+  - name: AlternateUrlOptions
+    description: "ToDo:: For Discussion -  Alternate options for url formats."
   - name: Topic
     description: "APIs for Varadhi Topic management"
   - name: Subscription
@@ -21,6 +21,8 @@ tags:
     description: "APIs to produce message(s) to a given topic."
   - name: Consume
     description: "APIs for managing message(s) in a Subscription's DLT."
+  - name: Admin
+    description: "APIs for administrative tasks."
       
 security:
   - jwt_access_token:
@@ -45,10 +47,11 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
                 
-                
+
+
   /v1/tenants/{tenant_name}:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/tenant_param'
 
     get:
       description: >-
@@ -92,10 +95,78 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
 
-          
-  /v1/tenants/{tenant_name}/topics/:
+
+  /v1/tenants/{tenant_name}/projects/:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/tenant_param'
+
+    get:
+      description: >-
+        Returns all projects of the given tenant.
+      tags:
+        - Tenant
+      security: []
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/projects'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /v1/tenants/{tenant_name}/projects/{project_name}:
+    parameters:
+      - $ref: '#/components/parameters/tenant_param'
+      - $ref: '#/components/parameters/project_param'
+
+    get:
+      description: >-
+        Returns the specified projects for the given tenant.
+      tags:
+        - Tenant
+      security: []
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/project'
+        default:
+          $ref: '#/components/responses/error_response'
+
+    post:
+      description: >-
+        create a new project.
+      tags:
+        - Tenant
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/project'
+        default:
+          $ref: '#/components/responses/error_response'
+
+    delete:
+      description: >-
+        delete an existing project.
+      tags:
+        - Tenant
+      responses:
+        '200':
+          description: "successful operation."
+        default:
+          $ref: '#/components/responses/error_response'
+
+
+  /v1/projects/{project_name}/topics/:
+    parameters:
+      - $ref: '#/components/parameters/project_param'
     get:
       description: >-
         list all topics of given tenant.
@@ -112,9 +183,74 @@ paths:
           $ref: '#/components/responses/error_response'
 
 
-  /v1/tenants/{tenant_name}/topics/{topic_name}:
+  /v1/topics/projects/{project_name}/{topic_name}:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
+      - $ref: '#/components/parameters/topic_param'
+
+    get:
+      description: >-
+        TODO::Sample path url for the discussion.
+        get the details of specified topic.
+      tags:
+        - AlternateUrlOptions
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/topic'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /v1/topics/{project_name}/{topic_name}:
+    parameters:
+      - $ref: '#/components/parameters/project_param'
+      - $ref: '#/components/parameters/topic_param'
+
+    get:
+      description: >-
+        TODO::Sample path url for the discussion.
+        get the details of specified topic.
+      tags:
+        - AlternateUrlOptions
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/topic'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /v1/topics/{project_name}:{topic_name}:
+    parameters:
+      - $ref: '#/components/parameters/project_param'
+      - $ref: '#/components/parameters/topic_param'
+
+    get:
+      description: >-
+        TODO::Sample path url for the discussion.
+        get the details of specified topic.
+      tags:
+        - AlternateUrlOptions
+      responses:
+        '200':
+          description: "successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/topic'
+        default:
+          $ref: '#/components/responses/error_response'
+
+
+
+  /v1/projects/{project_name}/topics/{topic_name}:
+    parameters:
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/topic_param'
     
     get:
@@ -189,10 +325,11 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
     
-    
-  /v1/tenants/{tenant_name}/topics/{topic_name}/state:
+
+
+  /v1/projects/{project_name}/topics/{topic_name}/state:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/topic_param'
     
     get:
@@ -228,11 +365,11 @@ paths:
           description: "successful operation."
         default:
           $ref: '#/components/responses/error_response'
+
   
-  
-  /v1/tenants/{tenant_name}/topics/{topic_name}/subscriptions:
+  /v1/projects/{project_name}/topics/{topic_name}/subscriptions:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/topic_param'
     get:
       description: >-
@@ -251,9 +388,9 @@ paths:
           $ref: '#/components/responses/error_response'
   
   
-  /v1/tenants/{tenant_name}/topics/{topic_name}/messages:
+  /v1/projects/{project_name}/topics/{topic_name}/messages:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/topic_param'
     post:
       description: >-
@@ -278,9 +415,9 @@ paths:
           $ref: '#/components/responses/error_response'
 
 
-  /v1/tenants/{tenant_name}/subscriptions/:
+  /v1/projects/{project_name}/subscriptions/:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
     get:
       description: >-
         List all subscription under a given tenant.
@@ -297,9 +434,9 @@ paths:
           $ref: '#/components/responses/error_response'
 
 
-  /v1/tenants/{tenant_name}/subscriptions/{sub_name}:
+  /v1/projects/{project_name}/subscriptions/{sub_name}:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/sub_param'
     get:
       description: >-
@@ -374,9 +511,9 @@ paths:
           $ref: '#/components/responses/error_response'
   
   
-  /v1/tenants/{tenant_name}/subscriptions/{sub_name}/state:
+  /v1/projects/{project_name}/subscriptions/{sub_name}/state:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/sub_param'
       
     get:
@@ -407,14 +544,14 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
   
-          
-  /v1/tenants/{tenant_name}/subscriptions/{sub_name}/status:
+
+  /v1/projects/{project_name}/subscriptions/{sub_name}/info:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/sub_param'
     get:
       description: >-
-        Get the current status of this subscription.
+        Get the current runtime information of this subscription.
       tags: 
         - Subscription
       responses:
@@ -425,14 +562,14 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/consumer_status'
+                  $ref: '#/components/schemas/consumer_info'
         default:
           $ref: '#/components/responses/error_response'
 
 
-  /v1/tenants/{tenant_name}/subscriptions/{sub_name}/dlt:
+  /v1/projects/{project_name}/subscriptions/{sub_name}/dlt:
     parameters:
-      - $ref: '#/components/parameters/tenanat_param'
+      - $ref: '#/components/parameters/project_param'
       - $ref: '#/components/parameters/sub_param'
       - $ref: '#/components/parameters/http_code'
       - $ref: '#/components/parameters/from_param'
@@ -455,13 +592,14 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/recieved_message'
+                  $ref: '#/components/schemas/received_message'
         default:
           $ref: '#/components/responses/error_response'
           
     put:
       description: >-
         Unsideline messages from DLT for further consumption.
+        TODO:: Define APIs for tracking the request status.
       tags: 
         - Consume
       responses:
@@ -470,7 +608,8 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
    
-     
+
+
 components:
   schemas: 
     tenant:
@@ -478,7 +617,7 @@ components:
       properties:
         name:
           type: string
-          example: "finance-project"
+          example: "finance"
         quota:
           type: object
           # TODO:: To be enabled later, based on enforcement static/dynamic. 
@@ -492,6 +631,18 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/tenant'
+
+    project:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "invoice-project"
+
+    projects:
+      type: array
+      items:
+        $ref: '#/components/schemas/project'
 
     property_bag:
       type: object
@@ -511,17 +662,9 @@ components:
       type: object
       properties:
         max_throughput:
-          type: integer
-          description: "Maximum throughput in Mbps."
-          example: 10
-        max_storage:
-          type: integer
-          description: "Maximum size in MB"
-          example: 1500
-        message_size:
-          type: integer
-          description: "Maximum message size in KBs."
-          example: 10
+          type: string
+          description: "Maximum throughput in MBps/KBps/Bps."
+          example: 10KBps
           
     retry_policy:
       type: object
@@ -547,7 +690,7 @@ components:
           example: 1500
         multiplier:
           type: integer
-          description: "step for iteration"
+          description: "multiplier/increment in retry interval for next iteration."
           example: 10
         retry_attempts:
           type: integer
@@ -572,9 +715,8 @@ components:
         recovery_allocation:
           type: number
           example: 0.5
-        dlq_from_recovery:
-          type: number
-          example: 0.5
+        prefer_dlt_recovery:
+          type: boolean
         max_error_threshold:
           type: number
           example: 0.25
@@ -617,8 +759,6 @@ components:
           example: 1
         properties:
           $ref: '#/components/schemas/property_bag'
-        retention_policy:
-          $ref: '#/components/schemas/retention_policy'
         capacity_policy:
           $ref: '#/components/schemas/capacity_policy'
         state:
@@ -709,7 +849,7 @@ components:
           description: "Not used for now. Intended for message deduplication semantics."
         properties:
           $ref: '#/components/schemas/property_bag'
-        groupkey:
+        group_id:
           type: string
         payload:
           type: string
@@ -738,7 +878,7 @@ components:
           type: string
       nullable: true
           
-    recieved_message:
+    received_message:
       type: object
       properties:
         retried_deliveries:
@@ -788,7 +928,7 @@ components:
         consumer_type:
           $ref: '#/components/schemas/consumer_enum'
           
-    consumer_status:
+    consumer_info:
       type: object
       properties:
         consumer_type:
@@ -799,7 +939,7 @@ components:
           type: integer 
         
   parameters:
-    tenanat_param:
+    tenant_param:
       name: tenant_name
       in: path
       required: true
@@ -807,7 +947,16 @@ components:
       schema:
         type: string
         example: "all-invoices"
-        
+
+    project_param:
+      name: project_name
+      in: path
+      required: true
+      description: "Name of the Project for the given Varadhi tenant"
+      schema:
+        type: string
+        example: "all-invoices"
+
     topic_param:
       name: topic_name
       in: path
