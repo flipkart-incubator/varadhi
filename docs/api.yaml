@@ -7,7 +7,7 @@ info:
   title:  Varadhi OSS API specification
   description: >-
     This is API specification for Varadhi-OSS.
-
+    Status: Draft
 tags:
   - name: Tenant
     description: "APIs for Varadhi tenancy management."
