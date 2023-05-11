@@ -4,10 +4,9 @@ servers:
     url: http://localhost:8080
 info:
   version: "1.0.0"
-  title:  Varadhi OSS API specification
+  title:  Varadhi OSS API specification (Status - Draft) 
   description: >-
-    This is API specification for Varadhi-OSS.
-    Status: Draft
+    This is API specification for Varadhi-OSS. Its in draft status and is currently under review.
 tags:
   - name: Tenant
     description: "APIs for Varadhi tenancy management."
