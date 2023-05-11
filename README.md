@@ -14,7 +14,7 @@ With Varadhi we hope others would be able to benefit from our learnings of a dec
 
 ## Full Documentation
 
-See the [Wiki](wiki/) for concepts, use cases, architecture details, API spec and other detailed information.
+See the [Wiki](https://github.com/flipkart-incubator/varadhi/wiki/) for concepts, use cases, architecture details, API spec and other detailed information.
 
 ## Build
 
@@ -30,7 +30,9 @@ See the [Wiki](wiki/) for concepts, use cases, architecture details, API spec an
 
 ## Roadmap
 
-[ TBD ]
+**Status:** Initial Review Completed.
+
+See the  Wiki page [Roadmap](https://github.com/flipkart-incubator/varadhi/wiki/Roadmap) for details.
 
 ## Communications
 
