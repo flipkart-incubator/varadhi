@@ -3,6 +3,5 @@ plugins {
 }
 dependencies {
     implementation(project(':common'))
-    implementation(project(':entities'))
-    implementation('org.apache.pulsar:pulsar-client-admin:2.10.0')
 }
+
