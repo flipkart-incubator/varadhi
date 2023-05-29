@@ -1,6 +1,8 @@
-package com.flipkart.varadhi.pulsar;
+package com.flipkart.varadhi.pulsar.clients;
 
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
+import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
@@ -11,14 +13,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class Client {
+public class AdminClient {
     PulsarAdmin admin;
-
-    //TODO::Should come from the config.
-    String pulsarUrl = "http://localhost:8080";
-    int connectTimeout = 2000;
-    int readTimeout = 2000;
-    int requestTimeout = 2000;
     TimeUnit tu = TimeUnit.MILLISECONDS;
 
     //TODO::tenant and namespace should be assigned when creating PulsarStorageTopic.
@@ -26,14 +22,14 @@ public class Client {
     String namespace = "default";
     String schema = "persistent";
 
-    public void init() {
+    public AdminClient(PulsarClientOptions pulsarClientOptions) {
         try {
-            //TODO::Add authn to the pulsar clients. It should be optional however.
+            //TODO::Add authentication to the pulsar clients. It should be optional however.
             this.admin = PulsarAdmin.builder()
-                    .serviceHttpUrl(pulsarUrl)
-                    .connectionTimeout(connectTimeout, tu)
-                    .requestTimeout(requestTimeout, tu)
-                    .readTimeout(readTimeout, tu)
+                    .serviceHttpUrl(pulsarClientOptions.getPulsarUrl())
+                    .connectionTimeout(pulsarClientOptions.getConnectTimeout(), tu)
+                    .requestTimeout(pulsarClientOptions.getRequestTimeout(), tu)
+                    .readTimeout(pulsarClientOptions.getReadTimeout(), tu)
                     .build();
         } catch (PulsarClientException e) {
             throw new RuntimeException(e);

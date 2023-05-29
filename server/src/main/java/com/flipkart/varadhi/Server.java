@@ -30,28 +30,36 @@ import lombok.extern.slf4j.Slf4j;
 public class Server {
 
     public static void main(String[] args) {
-        ServerConfiguration configuration = readConfiguration(args);
-        CoreServices.ObservabilityStack observabilityStack = setupObservabilityStack(configuration);
 
-        log.info("Server Starting.");
-        VertxOptions vertxOptions = configuration.getVertxOptions()
-                .setTracingOptions(new OpenTelemetryOptions(observabilityStack.getOpenTelemetry()))
-                .setMetricsOptions(new MicrometerMetricsOptions()
-                        .setMicrometerRegistry(observabilityStack.getMeterRegistry())
-                        .setRegistryName("default")
-                        .setJvmMetricsEnabled(true)
-                        .setEnabled(true));
+        try {
 
-        Vertx vertx = Vertx.vertx(vertxOptions);
+            ServerConfiguration configuration = readConfiguration(args);
+            CoreServices.ObservabilityStack observabilityStack = setupObservabilityStack(configuration);
 
-        CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
+            log.info("Server Starting.");
+            VertxOptions vertxOptions = configuration.getVertxOptions()
+                    .setTracingOptions(new OpenTelemetryOptions(observabilityStack.getOpenTelemetry()))
+                    .setMetricsOptions(new MicrometerMetricsOptions()
+                            .setMicrometerRegistry(observabilityStack.getMeterRegistry())
+                            .setRegistryName("default")
+                            .setJvmMetricsEnabled(true)
+                            .setEnabled(true));
 
-        vertx.deployVerticle(
-                () -> new RestVerticle(configuration, services), configuration.getDeploymentOptions()
-        ).onFailure(t -> {
-            log.error("Could not start HttpServer verticle", t);
+            Vertx vertx = Vertx.vertx(vertxOptions);
+
+            CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
+
+            vertx.deployVerticle(
+                    () -> new RestVerticle(configuration, services), configuration.getDeploymentOptions()
+            ).onFailure(t -> {
+                log.error("Could not start HttpServer verticle", t);
+                System.exit(-1);
+            });
+        }catch (Exception e){
+            log.error("Failed to initialise the server: {}.", e);
+            System.out.println("Failed to initialise the server:" + e);
             System.exit(-1);
-        });
+        }
 
         // TODO: check need for shutdown hook
     }

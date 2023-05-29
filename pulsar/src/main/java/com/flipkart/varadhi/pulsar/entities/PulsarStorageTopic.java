@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.pulsar;
+package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.InternalTopic;

@@ -1,11 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 
-import io.netty.util.internal.StringUtil;
 import lombok.Data;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Data
 public class InternalTopic {
@@ -34,30 +30,48 @@ public class InternalTopic {
     private String name;
     private StorageTopic storageTopic;
 
-    private String primaryZone; //zone this topic will be replicating from, in case it is replica topic.
     //TODO::check if reference to primary topic also needs to be kept.
+    private String sourceRegion; //zone this topic will be replicating from, in case it is replica topic.
 
-    public static List<InternalTopic> from(TopicResource topicResource, StorageTopicFactory<StorageTopic> topicFactory) {
-        InternalTopic it1 = new InternalTopic();
-        it1.setTopicKind(TopicKind.Main);
-        it1.setRegion("local");
-        it1.setPrimaryZone(null);
-        it1.setStatus(ProduceStatus.Active);
-        it1.name = it1.internalTopicName(topicResource.getName());
-        StorageTopic st = topicFactory.get(topicResource.getName(), topicResource.getCapacityPolicy());
-        it1.setStorageTopic(st);
-        return List.of(it1);
+    //TODO::check if private ctor suffices for Jackson.
+    //also see if lombok allargsconstructor with accessiblity  modifier would work as well.
+    private InternalTopic(String name,
+                          TopicKind topicKind,
+                          String region,
+                          String sourceRegion,
+                          ProduceStatus status,
+                          StorageTopic storageTopic) {
+        this.name = name;
+        this.topicKind = topicKind;
+        this.region = region;
+        this.status = status;
+        this.sourceRegion = sourceRegion;
+        this.storageTopic = storageTopic;
+
+    }
+
+    public static InternalTopic from(String varadhiTopicName, TopicResource topicResource, StorageTopicFactory<StorageTopic> topicFactory) {
+        TopicKind kind = TopicKind.Main;
+        String region = "local";
+
+        String internalTopicName = internalTopicName(varadhiTopicName, kind, region, null);
+        StorageTopic storageTopic  =  topicFactory.getTopic(internalTopicName, topicResource.getCapacityPolicy());
+        return new InternalTopic(internalTopicName,
+                TopicKind.Main,
+                "local",
+                null,
+                ProduceStatus.Active,
+                storageTopic);
     }
 
 
-
-    private String internalTopicName(String varadhiTopicName) {
-        //internal Topic FQDN format is "<tenant>.<project>.<topicName>.<kind>[.<primaryZone>]
-        //This is not the storage topic name, that should be defined by StorageTopic implementation.
-        List<String> parts =  Arrays.asList(region, "<tenant>", "<project>", varadhiTopicName, topicKind.name());
-        if (!StringUtil.isNullOrEmpty(primaryZone)) {
-            parts.add(primaryZone);
+    private static String internalTopicName(String varadhiTopicName, TopicKind kind, String region, String sourceRegion) {
+        //internal Topic FQDN format is "<varadhiTopicName>.<kind>.<region>[.<sourceRegion>]
+        //should be unique w.r.to <varadhiTopicName>
+        if (null == sourceRegion) {
+            return String.format("%s.%s.%s", varadhiTopicName, kind, region);
+        }else{
+            return String.format("%s.%s.%s.%s", varadhiTopicName, kind, region, sourceRegion);
         }
-        return String.join(".", parts);
     }
 }

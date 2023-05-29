@@ -1,9 +1,27 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.Data;
+import com.flipkart.varadhi.utils.JsonMapper;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
 public class VaradhiResource {
-    protected String name;
+
+    private final String name;
+
+    @Setter
     private int version;
+
+    protected VaradhiResource(String name, int version) {
+        this.name = name;
+        this.version = version;
+    }
+
+//    public static <T> String jsonSerialize(T entity) {
+//        return JsonMapper.jsonSerialize(entity);
+//    }
+//
+//    public static <T> T jsonDeserialize(String data, Class<T> clazz) {
+//        return JsonMapper.jsonDeserialize(data, clazz);
+//    }
 }

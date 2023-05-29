@@ -3,5 +3,8 @@ plugins {
 }
 dependencies {
     implementation(project(':common'))
+    //TODO::Check why not getting included from library conventions.
+    implementation("io.vertx:vertx-web")
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
 }
 
