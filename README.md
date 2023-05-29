@@ -40,7 +40,8 @@ used in a standalone mode. Details can be found [here](https://hub.docker.com/_/
 
 ```docker run --name some-zookeeper --restart always -d -p  2181:2181  -p 2888:2888 -p 3888:3888  zookeeper```
 
-To run the Varadhi server 
+### Varadhi Server
+To run the Varadhi server execute below from repo root. 
 
 ```./gradlew run --args="src/main/resources/configuration.yml"```
 
