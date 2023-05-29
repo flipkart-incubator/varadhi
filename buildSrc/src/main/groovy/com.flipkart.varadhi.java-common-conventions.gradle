@@ -6,6 +6,7 @@ plugins {
 group = projectGroupId
 version = "${projectVersion}.${majorVersion}.${minorVersion}.${patchId}"
 
+
 repositories {
     mavenCentral()
 }
@@ -77,6 +78,17 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.release.set(17)
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add("-parameters")
+}
+
+
+tasks.register('copyDependencies', Copy) {
+    into layout.buildDirectory.dir('dependencies')
+    from configurations.runtimeClasspath
 }
 
 tasks.withType(Test).configureEach {

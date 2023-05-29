@@ -36,10 +36,13 @@ public class AuthHandlers {
                                 configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
                         );
                     };
-
-            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
         } else {
             authenticationHandler = null;
+        }
+
+        if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
+            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
+        }else{
             authorizationHandlerBuilder = null;
         }
     }

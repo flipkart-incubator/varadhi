@@ -33,11 +33,7 @@ public class RestVerticle extends AbstractVerticle {
         FailureHandler failureHandler = new FailureHandler();
         for (RouteDefinition def : coreServices.getRouteDefinitions()) {
             Route route = router.route().method(def.method()).path(def.path());
-
-            if (!def.behaviour().contains(RouteDefinition.RouteBehaviour.open)) {
-                coreServices.getAuthHandlers().configure(route, def);
-            }
-
+            def.behaviours().stream().forEach(d -> d.Configure(route, def, coreServices));
             route.handler(def.handler());
             route.failureHandler(failureHandler);
         }

@@ -21,3 +21,9 @@ authorization:
   superUsers: [ "thanos" ]
   providerClassName:
   providerOptions:
+
+platformOptions:
+  configFile: 'src/main/resources/pulsarConfig.yml'
+
+dbOptions:
+  configFile: 'src/main/resources/zkConfig.yml'

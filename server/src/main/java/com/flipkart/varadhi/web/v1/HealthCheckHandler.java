@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.flipkart.varadhi.web.RouteDefinition.RouteBehaviour.open;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
@@ -37,7 +36,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteDefinit
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(open), this, Optional.empty())
+                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(), this, Optional.empty())
         );
     }
 }

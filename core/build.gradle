@@ -1,3 +1,8 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
 }
+
+dependencies {
+    implementation(project(':entities'))
+    implementation(project(':common'))
+}

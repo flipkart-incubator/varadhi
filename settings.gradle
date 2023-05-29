@@ -8,4 +8,6 @@
  */
 
 rootProject.name = 'varadhi'
-include('common', 'core', 'messaging', 'server')
+include('common', 'entities', 'core', 'messaging', 'pulsar', 'server')
+include 'entities'
+
