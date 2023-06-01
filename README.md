@@ -1,5 +1,8 @@
 # Varadhi : RESTBus - A message bus implementation with a REST interface
 
+[![build](https://github.com/flipkart-incubator/varadhi/actions/workflows/gradlebuild.yml/badge.svg?branch=master)](https://github.com/flipkart-incubator/varadhi/actions/workflows/gradlebuild.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 # Introduction
 
 Varadhi is the open source version of a similar FK internal project, a message bus implementation with a REST interface.
