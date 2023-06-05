@@ -82,7 +82,6 @@ public class TopicHandlers implements RouteDefinition.Provider {
         }
         resourcePersistence.create(topicResource);
 
-        //TODO::This should move to async/future pattern. It is getting executed on event loop..
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
 
         varadhiTopicService.create(vt);

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.exceptions.VaradhiException;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -19,6 +20,7 @@ import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
@@ -49,18 +51,35 @@ public class Server {
 
             CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
 
-            vertx.deployVerticle(
-                    () -> new RestVerticle(configuration, services), configuration.getDeploymentOptions()
-            ).onFailure(t -> {
-                log.error("Could not start HttpServer verticle", t);
-                System.exit(-1);
-            });
-        } catch (Exception e) {
+            deployRestAPI(vertx, services, configuration);
+
+        }catch (Exception e){
             log.error("Failed to initialise the server.", e);
             System.out.println("Failed to initialise the server:" + e);
             System.exit(-1);
         }
         // TODO: check need for shutdown hook
+    }
+
+    private static void deployRestAPI(Vertx vertx, CoreServices services, ServerConfiguration configuration) {
+        DeploymentOptions deploymentOptions = configuration.getRestVerticleDeploymentOptions();
+        if (!deploymentOptions.isWorker()) {
+            // Rest API  should avoid complete execution on Vertx event loop thread because they are likely to be
+            // blocking. Rest API need to be either offloaded from event loop via Async or need to be executed on
+            // Worker Verticle or should use executeBlocking() facility.
+            // Current code assumes Rest API will be executing on Worker Verticle and hence validate.
+            log.error("Rest Verticle is expected to be deployed as Worker Verticle.");
+            throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
+        }
+
+        vertx.deployVerticle(
+                () -> new RestVerticle(configuration, services), deploymentOptions)
+                .onFailure(t -> {
+                    log.error("Could not start HttpServer verticle", t);
+                    throw new VaradhiException("Failed to Deploy Rest API.", t);
+                }).onSuccess( name -> {
+                    log.debug("Successfully deployed the Verticle id({}).", name);
+                });
     }
 
     public static CoreServices.ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {

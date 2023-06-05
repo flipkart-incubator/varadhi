@@ -13,7 +13,7 @@ public class ServerConfiguration {
 
     private VertxOptions vertxOptions;
 
-    private DeploymentOptions deploymentOptions;
+    private DeploymentOptions restVerticleDeploymentOptions;
 
     private boolean authenticationEnabled;
 
