@@ -24,8 +24,7 @@ public class FailureHandler implements Handler<RoutingContext> {
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
 
-            log.error(
-                    "{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(), statusCode,
+            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(), statusCode,
                     errorMsg
             );
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
@@ -36,9 +35,9 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private boolean overWriteErrorMsg(HttpServerResponse response) {
-        return null == response.getStatusMessage() ||
-                response.getStatusMessage().isBlank() ||
-                response.getStatusMessage().equalsIgnoreCase(HttpResponseStatus.OK.reasonPhrase());
+        return null == response.getStatusMessage()
+                || response.getStatusMessage().isBlank()
+                || response.getStatusMessage().equalsIgnoreCase(HttpResponseStatus.OK.reasonPhrase());
     }
 
     private String getErrorFromFailure(Throwable t) {

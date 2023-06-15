@@ -20,13 +20,13 @@ ext {
 
     otl_version = "1.25.0"
     micrometer_version = "1.10.6"
-    ws_rs_version =  "2.1.1"
+    ws_rs_version = "2.1.1"
     jersey_version = "2.25.1"
 }
 
 sourceSets {
     testE2E {
-        java.srcDir  "$projectDir/src/testE2E/java"
+        java.srcDir "$projectDir/src/testE2E/java"
         resources.srcDir "$projectDir/src/testE2E/resources"
         compileClasspath += main.output + test.output
         runtimeClasspath += main.output + test.output
@@ -36,7 +36,7 @@ sourceSets {
 tasks.register('testE2E', Test) {
     testClassesDirs = sourceSets.testE2E.output.classesDirs
     classpath = sourceSets.testE2E.runtimeClasspath
-    outputs.upToDateWhen {false} //this will force testE2E to execute always on target invocation.
+    outputs.upToDateWhen { false } //this will force testE2E to execute always on target invocation.
 }
 
 configurations {

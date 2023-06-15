@@ -15,7 +15,7 @@ volumes:
 services:
   web:
     image: vardhi.docker.registry/varadhi:latest
-    profiles: [ "test", "service"]
+    profiles: [ "test", "service" ]
     networks:
       hostnet:
         ipv4_address: 10.5.5.2
@@ -51,7 +51,7 @@ services:
 
 
   zookeeper:
-#    image: zookeeper:3.8.1-temurin
+    # image: zookeeper:3.8.1-temurin
     image: zookeeper:latest
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "*"

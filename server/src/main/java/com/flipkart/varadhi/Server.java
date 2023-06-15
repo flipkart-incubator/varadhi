@@ -53,7 +53,7 @@ public class Server {
 
             deployRestAPI(vertx, services, configuration);
 
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
             System.out.println("Failed to initialise the server:" + e);
             System.exit(-1);
@@ -72,12 +72,11 @@ public class Server {
             throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
         }
 
-        vertx.deployVerticle(
-                () -> new RestVerticle(configuration, services), deploymentOptions)
+        vertx.deployVerticle(() -> new RestVerticle(configuration, services), deploymentOptions)
                 .onFailure(t -> {
                     log.error("Could not start HttpServer verticle", t);
-                    throw new VaradhiException("Failed to Deploy Rest API.", t);
-                }).onSuccess( name -> log.debug("Successfully deployed the Verticle id({}).", name));
+                    throw new VaradhiException("Failed to Deploy Rest API.", t);})
+                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
 
     public static CoreServices.ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {

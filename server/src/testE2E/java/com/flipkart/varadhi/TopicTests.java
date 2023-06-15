@@ -38,7 +38,7 @@ public class TopicTests {
         return String.format("%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
     }
 
-    private <T>  T makeCreateRequest(T entity,  String targetUrl, int expectedStatus) {
+    private <T> T makeCreateRequest(T entity, String targetUrl, int expectedStatus) {
         Response response = getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
@@ -49,7 +49,13 @@ public class TopicTests {
         return response.readEntity(clazz);
     }
 
-    private <T>  void makeCreateRequest(T entity,  String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored) {
+    private <T> void makeCreateRequest(
+            T entity,
+            String targetUrl,
+            int expectedStatus,
+            String expectedResponse,
+            boolean isErrored
+    ) {
         Response response = getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
@@ -57,7 +63,8 @@ public class TopicTests {
         Assertions.assertNotNull(response);
         Assertions.assertEquals(expectedStatus, response.getStatus());
         if (null != expectedResponse) {
-            String responseMsg = isErrored ? response.readEntity(ErrorResponse.class).reason() : response.readEntity(String.class);
+            String responseMsg =
+                    isErrored ? response.readEntity(ErrorResponse.class).reason() : response.readEntity(String.class);
             Assertions.assertEquals(expectedResponse, responseMsg);
         }
     }
@@ -73,7 +80,8 @@ public class TopicTests {
         Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
         Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
-        String errorDuplicateTopic = String.format("Specified Topic(/TopicResource/%s/%s) already exists.", DefaultProject, topicName);
+        String errorDuplicateTopic =
+                String.format("Specified Topic(/TopicResource/%s/%s) already exists.", DefaultProject, topicName);
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
     }
 
