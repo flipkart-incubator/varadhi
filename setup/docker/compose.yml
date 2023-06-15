@@ -1,0 +1,80 @@
+networks:
+  hostnet:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.5.5.0/24
+
+volumes:
+  pulsarconf:
+  pulsardata:
+  zkdata:
+  zklogs:
+  zkdatalog:
+
+services:
+  web:
+    image: vardhi.docker.registry/varadhi:latest
+    profiles: [ "test", "service"]
+    networks:
+      hostnet:
+        ipv4_address: 10.5.5.2
+    ports:
+      - 8080:8080
+    restart: "no"
+    depends_on:
+      pulsar:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+
+  pulsar:
+    image: apachepulsar/pulsar:3.0.0
+    profiles: [ "test", "dev", "pulsar" ]
+    networks:
+      hostnet:
+        ipv4_address: 10.5.5.3
+    ports:
+      - "8081:8080"
+      - "6650:6650"
+    volumes:
+      - pulsarconf:/pulsar/conf
+      - pulsardata:/pulsar/data
+    command: bin/pulsar standalone
+    restart: "no"
+    healthcheck:
+      test: ./bin/pulsar-admin tenants list
+      interval: 1m
+      timeout: 30s
+      retries: 5
+      start_period: 1m
+
+
+  zookeeper:
+#    image: zookeeper:3.8.1-temurin
+    image: zookeeper:latest
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    profiles: [ "test", "dev", "zk" ]
+    networks:
+      hostnet:
+        ipv4_address: 10.5.5.4
+    ports:
+      - "8082:8080"
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+    volumes:
+      - zkdata:/data
+      - zklogs:/logs
+      - zkdatalog:/datalog
+    restart: "no"
+    healthcheck:
+      test: echo ruok | nc localhost 2181 | grep imok
+      interval: 1m
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+
+

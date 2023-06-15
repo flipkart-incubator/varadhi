@@ -81,10 +81,10 @@ public class TopicHandlers implements RouteDefinition.Provider {
             throw new DuplicateResourceException(String.format("Specified Topic(%s) already exists.", topicKey));
         }
         resourcePersistence.create(topicResource);
-
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
-
         varadhiTopicService.create(vt);
+
+        //TODO::Return updated object.
         ctx.endRequestWithResponse(topicResource);
     }
 

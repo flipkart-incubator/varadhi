@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.web;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
@@ -26,7 +28,8 @@ public class FailureHandler implements Handler<RoutingContext> {
                     "{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(), statusCode,
                     errorMsg
             );
-
+            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);
             response.end(Json.encodeToBuffer(new ErrorResponse(errorMsg)));
         }
@@ -52,7 +55,7 @@ public class FailureHandler implements Handler<RoutingContext> {
                     sb.append(t.getCause().getMessage());
                 }
             } else {
-                sb.append("Internal error");
+                sb.append("Internal error.");
             }
             return sb.toString();
         }

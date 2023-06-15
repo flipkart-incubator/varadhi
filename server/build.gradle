@@ -4,6 +4,7 @@ plugins {
     id 'com.flipkart.varadhi.java-application-conventions'
 }
 
+
 dependencies {
 
     implementation(project(':common'))
@@ -44,8 +45,13 @@ dependencies {
     implementation('org.apache.curator:curator-framework:5.5.0')
 
     testImplementation("io.vertx:vertx-junit5")
+
+    testE2EImplementation("javax.ws.rs:javax.ws.rs-api")
+    testE2EImplementation("org.glassfish.jersey.core:jersey-client")
+    testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson")
 }
 
 application {
     mainClass = 'com.flipkart.varadhi.Server'
 }
+

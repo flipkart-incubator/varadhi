@@ -77,9 +77,7 @@ public class Server {
                 .onFailure(t -> {
                     log.error("Could not start HttpServer verticle", t);
                     throw new VaradhiException("Failed to Deploy Rest API.", t);
-                }).onSuccess( name -> {
-                    log.debug("Successfully deployed the Verticle id({}).", name);
-                });
+                }).onSuccess( name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
 
     public static CoreServices.ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
