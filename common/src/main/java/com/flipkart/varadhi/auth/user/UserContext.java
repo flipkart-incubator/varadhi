@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.auth.user;
 
 public interface UserContext {
-    
+
     String getSubject();
 
     boolean isExpired();

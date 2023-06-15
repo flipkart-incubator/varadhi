@@ -45,7 +45,7 @@ public class ZookeeperProvider implements PersistenceProvider {
         if (!initialised) {
             throw new InvalidStateException("PersistenceProvider is not yet initialised.");
         }
-        return  new ZKPersistence<>(this.zkCurator);
+        return new ZKPersistence<>(this.zkCurator);
     }
 }
 

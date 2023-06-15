@@ -55,7 +55,7 @@ public class Server {
                 log.error("Could not start HttpServer verticle", t);
                 System.exit(-1);
             });
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
             System.out.println("Failed to initialise the server:" + e);
             System.exit(-1);

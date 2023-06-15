@@ -13,7 +13,7 @@ public class ResponseExtension {
             HttpServerRequest request = ctx.request();
             if (r.succeeded()) {
                 log.debug("Request {}:{} completed successfully.", request.method(), request.path());
-            }else{
+            } else {
                 log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
             }
         });

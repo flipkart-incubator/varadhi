@@ -23,7 +23,7 @@ e.g.
 5. no history being maintained for entity.
  */
 @Slf4j
-public class ZKPersistence<T extends KeyProvider> implements Persistence<T>  {
+public class ZKPersistence<T extends KeyProvider> implements Persistence<T> {
     private static final String BASE_PATH = "/varadhi/entities";
     private static final int INITIAL_VERSION = 0;
 

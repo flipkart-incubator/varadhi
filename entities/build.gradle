@@ -2,7 +2,5 @@ plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
 }
 dependencies {
-    implementation(project(':common'))
-    implementation("io.vertx:vertx-web")
     implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
 }

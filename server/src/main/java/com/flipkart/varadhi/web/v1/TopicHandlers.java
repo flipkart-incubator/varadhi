@@ -2,7 +2,9 @@ package com.flipkart.varadhi.web.v1;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.db.Persistence;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.RequestBodyExtension;
@@ -11,7 +13,6 @@ import com.flipkart.varadhi.web.HandlerUtil;
 import com.flipkart.varadhi.web.RouteDefinition;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
-
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,7 +21,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.flipkart.varadhi.auth.ResourceAction.*;
-
 import static com.flipkart.varadhi.web.RouteDefinition.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.RouteDefinition.RouteBehaviour.hasBody;
 
@@ -32,9 +32,11 @@ public class TopicHandlers implements RouteDefinition.Provider {
     private final VaradhiTopicService varadhiTopicService;
     private final Persistence<TopicResource> resourcePersistence;
 
-    public TopicHandlers(VaradhiTopicFactory varadhiTopicFactory,
-                         VaradhiTopicService varadhiTopicService,
-                         Persistence<TopicResource> resourcePersistence)  {
+    public TopicHandlers(
+            VaradhiTopicFactory varadhiTopicFactory,
+            VaradhiTopicService varadhiTopicService,
+            Persistence<TopicResource> resourcePersistence
+    ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
         this.resourcePersistence = resourcePersistence;

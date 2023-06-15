@@ -11,7 +11,7 @@ public class YamlLoader {
 
     public static <T> T loadConfig(String configFile, Class<T> clazz) {
         try {
-            return new Yaml().loadAs( Files.readString(Path.of(configFile)), clazz);
+            return new Yaml().loadAs(Files.readString(Path.of(configFile)), clazz);
         } catch (IOException e) {
             throw new VaradhiException(String.format("Failed to load config file: %s as %s.", configFile, clazz), e);
         }
