@@ -11,10 +11,12 @@ public class VaradhiTopicFactory {
     }
 
     public VaradhiTopic get(TopicResource topicResource) {
-        VaradhiTopic vt = new VaradhiTopic(varadhiTopicName(topicResource),
+        VaradhiTopic vt = new VaradhiTopic(
+                varadhiTopicName(topicResource),
                 topicResource.isGrouped(),
                 topicResource.isExclusiveSubscription(),
-                null);
+                null
+        );
         planDeployment(vt, topicResource);
         return vt;
     }

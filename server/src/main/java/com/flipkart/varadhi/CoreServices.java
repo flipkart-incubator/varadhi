@@ -1,7 +1,9 @@
 package com.flipkart.varadhi;
 
 
-import com.flipkart.varadhi.db.*;
+import com.flipkart.varadhi.db.DBOptions;
+import com.flipkart.varadhi.db.PersistenceProvider;
+import com.flipkart.varadhi.db.ZookeeperProvider;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.pulsar.PulsarProvider;
 import com.flipkart.varadhi.services.PlatformOptions;
@@ -44,13 +46,14 @@ public class CoreServices {
         PlatformProvider platformProvider = getPlatformProvider(configuration.getPlatformOptions());
         PersistenceProvider persistenceProvider = getPersistenceProvider(configuration.getDbOptions());
         VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(platformProvider.getStorageTopicFactory());
-        VaradhiTopicService topicService = new VaradhiTopicService(platformProvider.getStorageTopicServiceFactory(),
-                persistenceProvider.getPersistence());
+        VaradhiTopicService topicService = new VaradhiTopicService(
+                platformProvider.getStorageTopicServiceFactory(),
+                persistenceProvider.getPersistence()
+        );
         this.topicHandlers = new TopicHandlers(topicFactory, topicService, persistenceProvider.getPersistence());
         this.healthCheckHandler = new HealthCheckHandler();
         this.bodyHandler = BodyHandler.create(false);
     }
-
 
 
     public List<RouteDefinition> getRouteDefinitions() {
@@ -90,7 +93,6 @@ public class CoreServices {
         pulsarProvider.init(platformOptions);
         return pulsarProvider;
     }
-
 
 
     @Getter

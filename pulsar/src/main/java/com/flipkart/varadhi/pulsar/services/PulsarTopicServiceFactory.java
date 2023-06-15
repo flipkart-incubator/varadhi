@@ -11,6 +11,7 @@ public class PulsarTopicServiceFactory implements StorageTopicServiceFactory<Pul
     public PulsarTopicServiceFactory(PulsarClientOptions pulsarClientOptions) {
         pulsarTopicService = new PulsarTopicService(pulsarClientOptions);
     }
+
     @Override
     public StorageTopicService<PulsarStorageTopic> get() {
         return pulsarTopicService;

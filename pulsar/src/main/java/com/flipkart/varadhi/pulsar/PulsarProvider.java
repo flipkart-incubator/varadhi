@@ -16,11 +16,13 @@ public class PulsarProvider implements PlatformProvider {
     private PulsarTopicServiceFactory pulsarTopicServiceFactory;
     private PulsarTopicFactory pulsarTopicFactory;
     private volatile boolean initialised = false;
+
     public void init(PlatformOptions platformOptions) {
         if (!initialised) {
             synchronized (this) {
                 if (!initialised) {
-                    PulsarConfig pulsarConfig = YamlLoader.loadConfig(platformOptions.getConfigFile(), PulsarConfig.class);
+                    PulsarConfig pulsarConfig =
+                            YamlLoader.loadConfig(platformOptions.getConfigFile(), PulsarConfig.class);
                     pulsarTopicFactory = new PulsarTopicFactory();
                     pulsarTopicServiceFactory = new PulsarTopicServiceFactory(pulsarConfig.getPulsarClientOptions());
                     initialised = true;
@@ -36,10 +38,10 @@ public class PulsarProvider implements PlatformProvider {
         return (StorageTopicFactory) pulsarTopicFactory;
     }
 
-    public <T extends StorageTopic>  StorageTopicServiceFactory<T> getStorageTopicServiceFactory() {
+    public <T extends StorageTopic> StorageTopicServiceFactory<T> getStorageTopicServiceFactory() {
         if (!initialised) {
             throw new InvalidStateException("PlatformProvider is not yet initialised.");
         }
-        return (StorageTopicServiceFactory) pulsarTopicServiceFactory ;
+        return (StorageTopicServiceFactory) pulsarTopicServiceFactory;
     }
 }

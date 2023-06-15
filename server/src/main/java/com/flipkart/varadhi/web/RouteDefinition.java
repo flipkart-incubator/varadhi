@@ -35,7 +35,7 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
             public void Configure(Route route, RouteDefinition def, CoreServices coreServices) {
                 if (null != coreServices.getBodyHandler()) {
                     route.handler(coreServices.getBodyHandler());
-                }else{
+                } else {
                     throw new InvalidStateException("No request body handler configured.");
                 }
             }

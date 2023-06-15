@@ -13,10 +13,6 @@ import java.util.stream.Collectors;
 public final class LoggingSpanExporter implements SpanExporter {
     private final AtomicBoolean isShutdown = new AtomicBoolean();
 
-    public static LoggingSpanExporter create() {
-        return new LoggingSpanExporter();
-    }
-
     /**
      * Class constructor.
      *
@@ -24,6 +20,10 @@ public final class LoggingSpanExporter implements SpanExporter {
      */
     @Deprecated
     public LoggingSpanExporter() {
+    }
+
+    public static LoggingSpanExporter create() {
+        return new LoggingSpanExporter();
     }
 
     @Override

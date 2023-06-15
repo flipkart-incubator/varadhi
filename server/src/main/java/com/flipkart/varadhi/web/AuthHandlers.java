@@ -42,7 +42,7 @@ public class AuthHandlers {
 
         if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration);
-        }else{
+        } else {
             authorizationHandlerBuilder = null;
         }
     }

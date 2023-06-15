@@ -11,8 +11,11 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
 
     private final StorageTopicServiceFactory<StorageTopic> topicServiceFactory;
     private final Persistence<VaradhiTopic> topicPersistence;
-    public VaradhiTopicService(StorageTopicServiceFactory<StorageTopic> serviceFactory,
-                               Persistence<VaradhiTopic> topicPersistence) {
+
+    public VaradhiTopicService(
+            StorageTopicServiceFactory<StorageTopic> serviceFactory,
+            Persistence<VaradhiTopic> topicPersistence
+    ) {
         this.topicServiceFactory = serviceFactory;
         this.topicPersistence = topicPersistence;
     }

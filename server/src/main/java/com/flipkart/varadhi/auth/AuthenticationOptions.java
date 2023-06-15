@@ -9,10 +9,6 @@ import java.util.HashMap;
 
 public class AuthenticationOptions extends HashMap<AuthenticationOptions.Mechanism, Object> {
 
-    public enum Mechanism {
-        jwt
-    }
-
     public Mechanism getMechanism() {
         validate();
         return keySet().iterator().next();
@@ -33,6 +29,10 @@ public class AuthenticationOptions extends HashMap<AuthenticationOptions.Mechani
         } catch (IllegalArgumentException e) {
             throw new InvalidConfigException(e);
         }
+    }
+
+    public enum Mechanism {
+        jwt
     }
 
     @Data

@@ -11,9 +11,10 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
 
     AdminClient adminClient;
 
-    public  PulsarTopicService(PulsarClientOptions pulsarClientOptions){
+    public PulsarTopicService(PulsarClientOptions pulsarClientOptions) {
         adminClient = new AdminClient(pulsarClientOptions);
     }
+
     public void create(PulsarStorageTopic topic) {
         log.debug("Call Pulsar to create the required topic.");
         adminClient.create(topic);

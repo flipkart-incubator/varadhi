@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,5 +15,4 @@ public class VaradhiResource {
         this.name = name;
         this.version = version;
     }
-
 }

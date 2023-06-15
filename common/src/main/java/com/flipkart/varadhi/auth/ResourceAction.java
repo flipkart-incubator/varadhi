@@ -18,7 +18,7 @@ public enum ResourceAction {
 
     private final ResourceType resourceType;
     private final String action;
-    
+
     ResourceAction(ResourceType type, String action) {
         this.resourceType = type;
         this.action = action;
