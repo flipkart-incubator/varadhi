@@ -37,9 +37,7 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test
     - name: Setup the environment
-      run: docker compose --profile test -f setup/docker/compose.yml up -d
-    - name: wait
-      run: sleep 10
+      run: docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
     - name: Run the test
       run: ./gradlew test testE2E
     - name: Publish Test Results
