@@ -22,6 +22,12 @@ services:
     ports:
       - 8080:8080
     restart: "no"
+    healthcheck:
+      test: curl -s http://localhost:8080/v1/health-check | grep iam_ok
+      interval: 1m
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     depends_on:
       pulsar:
         condition: service_healthy
