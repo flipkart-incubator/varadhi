@@ -32,8 +32,8 @@ jobs:
       run: ./gradlew clean build copyDependencies
     - name: Build the Docker image
       run: docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test
-    - name: Clean the environment
-      run: docker volume rm $(docker volume ls -q | egrep -E 'zk|pulsar')
+#     - name: Clean the environment
+#       run: docker volume rm $(docker volume ls -q | egrep -E 'zk|pulsar')
     - name: Setup the environment
       run: docker compose --profile test -f setup/docker/compose.yml up
     - name: wait
