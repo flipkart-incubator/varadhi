@@ -35,7 +35,7 @@ jobs:
 #     - name: Clean the environment
 #       run: docker volume rm $(docker volume ls -q | egrep -E 'zk|pulsar')
     - name: Setup the environment
-      run: docker compose --profile test -f setup/docker/compose.yml up
+      run: docker compose --profile test -f setup/docker/compose.yml up -d
     - name: wait
       run: sleep 120
     - name: Run the test
