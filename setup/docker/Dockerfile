@@ -20,11 +20,13 @@ COPY $VARADHI_HOME/server/build/resources/main/ /etc/varadhi/
 # Fix configuration files for dev setup, this should move out of docker build
 RUN sed -i "s|'.*pulsarConfig.yml'|'/etc/varadhi/pulsarConfig.yml'|" /etc/varadhi/configuration.yml
 RUN sed -i  "s|'.*zkConfig.yml'|'/etc/varadhi/zkConfig.yml'|" /etc/varadhi/configuration.yml
-# RUN sed -i  "s|127.0.0.1|10.5.5.3|" /etc/varadhi/pulsarConfig.yml
-# RUN sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1:8081|10.5.5.3:8080|" /etc/varadhi/pulsarConfig.yml ; fi
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml ; fi
 
+
+RUN adduser varadhi
+
+USER varadhi
 WORKDIR /usr/share/varadhi
 
 # Start Varadhi server

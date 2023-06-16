@@ -14,7 +14,7 @@ volumes:
 
 services:
   web:
-    image: vardhi.docker.registry/varadhi:latest
+    image: varadhi.docker.registry/varadhi:latest
     profiles: [ "test", "service" ]
     networks:
       hostnet:
