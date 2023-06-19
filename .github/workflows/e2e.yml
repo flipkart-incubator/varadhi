@@ -45,6 +45,11 @@ jobs:
         files: |
           */build/test-results/**/TEST*.xml
         fail_on: 'test failures'
+        compare_to_earlier_commit: false
+    - name: Dump redis logs
+      uses: jwalton/gh-docker-logs@v2
+      with:
+        images: 'varadhi,pulsar,zookeeper'
     - name: Tear down the docker containers
       run: docker compose --profile test -f setup/docker/compose.yml down
     - name: Tear down the data volumes
