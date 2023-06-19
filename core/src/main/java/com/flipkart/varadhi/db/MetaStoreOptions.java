@@ -3,6 +3,8 @@ package com.flipkart.varadhi.db;
 import lombok.Data;
 
 @Data
-public class DBOptions {
+public class MetaStoreOptions {
+
+    private String providerClassName;
     private String configFile;
 }
