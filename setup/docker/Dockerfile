@@ -24,7 +24,7 @@ RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1:8081|10.5.5.3:8080|" /et
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml ; fi
 
 
-RUN adduser varadhi
+RUN useradd varadhi
 
 USER varadhi
 WORKDIR /usr/share/varadhi
