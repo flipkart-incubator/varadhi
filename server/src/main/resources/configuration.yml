@@ -24,8 +24,10 @@ authorization:
   providerClassName:
   providerOptions:
 
-platformOptions:
+messagingStackOptions:
+  providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
   configFile: 'src/main/resources/pulsarConfig.yml'
 
-dbOptions:
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: 'src/main/resources/zkConfig.yml'
