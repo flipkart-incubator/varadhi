@@ -3,8 +3,10 @@ vertxOptions:
   workerPoolSize: 1
   internalBlockingPoolSize: 1
 
-deploymentOptions:
-  instances: 1
+restVerticleDeploymentOptions:
+  instances: 2
+  worker: true
+  workerPoolSize: 2
 
 authenticationEnabled: false
 

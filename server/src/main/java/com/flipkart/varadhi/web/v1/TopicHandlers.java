@@ -81,11 +81,10 @@ public class TopicHandlers implements RouteDefinition.Provider {
             throw new DuplicateResourceException(String.format("Specified Topic(%s) already exists.", topicKey));
         }
         resourcePersistence.create(topicResource);
-
-        //TODO::This should move to async/future pattern. It is getting executed on event loop..
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
-
         varadhiTopicService.create(vt);
+
+        //TODO::Return updated object.
         ctx.endRequestWithResponse(topicResource);
     }
 

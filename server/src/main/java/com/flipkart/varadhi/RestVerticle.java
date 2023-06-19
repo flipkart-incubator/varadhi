@@ -27,13 +27,12 @@ public class RestVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         log.info("HttpServer Starting.");
-
         Router router = Router.router(vertx);
 
         FailureHandler failureHandler = new FailureHandler();
         for (RouteDefinition def : coreServices.getRouteDefinitions()) {
             Route route = router.route().method(def.method()).path(def.path());
-            def.behaviours().stream().forEach(d -> d.Configure(route, def, coreServices));
+            def.behaviours().forEach(d -> d.Configure(route, def, coreServices));
             route.handler(def.handler());
             route.failureHandler(failureHandler);
         }
