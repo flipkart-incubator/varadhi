@@ -81,39 +81,33 @@ public class CoreServices {
      */
 
     private MetaStoreProvider getMetaStoreProvider(MetaStoreOptions metaStoreOptions) {
-        try {
-            String className = metaStoreOptions.getProviderClassName();
-            if (null != className && !className.isBlank()) {
-                Class<MetaStoreProvider> clazz = (Class<MetaStoreProvider>)Class.forName(className);
-                MetaStoreProvider provider = clazz.getDeclaredConstructor().newInstance();
-                provider.init(metaStoreOptions);
-                return provider;
-            }
-            throw new InvalidConfigException();
-        }catch(Exception e) {
-            String errorMsg = String.format("MetaStoreProvider(%s) load failure.", metaStoreOptions.getProviderClassName());
-            log.error(errorMsg, e);
-            throw new InvalidConfigException(errorMsg, e);
-        }
+        MetaStoreProvider provider = loadClass(metaStoreOptions.getProviderClassName());
+        provider.init(metaStoreOptions);
+        return provider;
     }
 
 
     private MessagingStackProvider getMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
-        try {
-            String className = messagingStackOptions.getProviderClassName();
+        MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
+        provider.init(messagingStackOptions);
+        return provider;
+    }
+
+    private <T> T loadClass(String className) {
+        try{
             if (null != className && !className.isBlank()) {
-                Class<MessagingStackProvider> clazz = (Class<MessagingStackProvider>)Class.forName(className);
-                MessagingStackProvider provider = clazz.getDeclaredConstructor().newInstance();
-                provider.init(messagingStackOptions);
-                return provider;
+                Class<T> pluginClass = (Class<T>) Class.forName(className);
+                return pluginClass.getDeclaredConstructor().newInstance();
             }
-            throw new InvalidConfigException();
+            throw new InvalidConfigException("No class provided.");
         }catch(Exception e) {
-            String errorMsg = String.format("MessagingStackProvider(%s) load failure.", messagingStackOptions.getProviderClassName());
+            String errorMsg = String.format("Fail to load class %s.", className);
             log.error(errorMsg, e);
             throw new InvalidConfigException(e);
         }
     }
+
+
 
 
 
