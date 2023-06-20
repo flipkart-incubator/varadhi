@@ -67,7 +67,6 @@ public class CoreServices {
         return provider;
     }
 
-
     private MessagingStackProvider setupMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
         MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
         provider.init(messagingStackOptions);
