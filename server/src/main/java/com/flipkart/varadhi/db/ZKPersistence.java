@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 
+import java.util.Collections;
+import java.util.List;
+
 
 /*
 1. Unique key/path per object, organised in hierarchy on searchable attributes (hierarchical e.g. org/team/project).
@@ -69,6 +72,27 @@ public class ZKPersistence<T extends KeyProvider> implements Persistence<T> {
             return null != zkCurator.checkExists().forPath(resourcePath);
         } catch (Exception e) {
             log.error(String.format("Failed to check entity %s ", resourcePath), e);
+            throw new VaradhiException(e);
+        }
+    }
+
+    public void delete(String resourceKey) {
+        String resourcePath = getResourcePath(resourceKey);
+        try {
+            zkCurator.delete().forPath(resourcePath);
+        } catch (Exception e) {
+            log.error(String.format("Failed to delete entity %s ", resourcePath), e);
+            throw new VaradhiException(e);
+        }
+    }
+
+    public List<String> list(String resourceKey) {
+        String resourcePath = getResourcePath(resourceKey);
+        try {
+            if (!exists(resourceKey)) return Collections.emptyList();
+            return zkCurator.getChildren().forPath(resourcePath);
+        } catch (Exception e) {
+            log.error(String.format("Failed to list entity on %s ", resourcePath), e);
             throw new VaradhiException(e);
         }
     }
