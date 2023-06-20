@@ -1,5 +1,5 @@
 pulsarClientOptions:
-  pulsarUrl: "http://localhost:8081"
+  pulsarUrl: "http://127.0.0.1:8081"
   connectTimeout: 2000
   readTimeout: 2000
   requestTimeout: 2000

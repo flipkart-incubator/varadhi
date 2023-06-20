@@ -29,6 +29,10 @@ public class JsonMapper {
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     }
 
+    public static ObjectMapper getMapper() {
+        return mapper;
+    }
+
     public static <T> String jsonSerialize(T entity) {
         try {
             return mapper.writeValueAsString(entity);

@@ -1,0 +1,56 @@
+# To run the e2e tests.
+# currently setup on dev branch.
+name: E2E 
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    
+    permissions:
+      checks: write
+      pull-requests: write
+      
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'oracle'
+        cache: 'gradle'
+    - name: Setup Gradle 5.6.4
+      uses: gradle/gradle-build-action@v2.4.2
+      with:
+        gradle-version: 5.6.4
+    - name: Execute Gradle build 
+      run: ./gradlew clean build copyDependencies
+    - name: Build the Docker image
+      run: docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test
+    - name: Setup the environment
+      run: docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
+    - name: Run the test
+      run: ./gradlew test testE2E
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      if: success()
+      with:
+        files: |
+          */build/test-results/**/TEST*.xml
+        fail_on: 'test failures'
+        compare_to_earlier_commit: false
+    - name: Dump redis logs
+      uses: jwalton/gh-docker-logs@v2
+      with:
+        images: 'varadhi,pulsar,zookeeper'
+    - name: Tear down the docker containers
+      run: docker compose --profile test -f setup/docker/compose.yml down
+    - name: Tear down the data volumes
+      run: docker volume rm $(docker volume ls -q | egrep -E 'zk|pulsar')
