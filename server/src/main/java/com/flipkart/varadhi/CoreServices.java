@@ -3,29 +3,29 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.db.MetaStoreOptions;
 import com.flipkart.varadhi.db.MetaStoreProvider;
-import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.MessagingStackProvider;
 import com.flipkart.varadhi.services.MessagingStackOptions;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.web.AuthHandlers;
-import com.flipkart.varadhi.web.RouteDefinition;
-import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.TopicHandlers;
+import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.jmx.JmxConfig;
+import io.micrometer.jmx.JmxMeterRegistry;
+import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Tracer;
-import io.vertx.core.Vertx;
-import io.vertx.ext.web.handler.BodyHandler;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.samplers.Sampler;
+import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Getter
@@ -33,74 +33,55 @@ public class CoreServices {
 
     @Getter(AccessLevel.PRIVATE)
     private final ObservabilityStack observabilityStack;
-    private final AuthHandlers authHandlers;
-    private final TopicHandlers topicHandlers;
-    private final HealthCheckHandler healthCheckHandler;
+    private final MessagingStackProvider messagingStackProvider;
+    private final MetaStoreProvider metaStoreProvider;
 
-    private final BodyHandler bodyHandler;
-
-    public CoreServices(ObservabilityStack observabilityStack, Vertx vertx, ServerConfiguration configuration) {
-        this.observabilityStack = observabilityStack;
-        this.authHandlers = new AuthHandlers(vertx, configuration);
-        MessagingStackProvider messagingStackProvider = getMessagingStackProvider(configuration.getMessagingStackOptions());
-        MetaStoreProvider metaStoreProvider = getMetaStoreProvider(configuration.getMetaStoreOptions());
-        VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory());
-        VaradhiTopicService topicService = new VaradhiTopicService(
-                messagingStackProvider.getStorageTopicService(),
-                metaStoreProvider.getMetaStore()
-        );
-        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore());
-        this.healthCheckHandler = new HealthCheckHandler();
-        this.bodyHandler = BodyHandler.create(false);
+    public CoreServices(ServerConfiguration configuration) {
+        this.observabilityStack = setupObservabilityStack(configuration);
+        this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
+        this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
     }
 
-
-    public List<RouteDefinition> getRouteDefinitions() {
-        return Stream.of(
-                        topicHandlers.get(),
-                        healthCheckHandler.get()
-                )
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-    }
 
     public Tracer getTracer(String instrumentationScope, String version) {
-        return getObservabilityStack().getOpenTelemetry().getTracer(instrumentationScope, version);
+        return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope, version);
     }
 
     public MeterRegistry getMetricsRegistry() {
-        return getObservabilityStack().getMeterRegistry();
+        return this.observabilityStack.getMeterRegistry();
     }
 
-
+    public OpenTelemetry getOpenTelemetry() {
+        return this.observabilityStack.getOpenTelemetry();
+    }
 
     /*
-      TODO::Provider needs to be fixed.
+      TODO::RouteProvider needs to be fixed.
        - Should be Strongly typed instead of Raw.
        - Also it should be injected dynamically.
      */
 
-    private MetaStoreProvider getMetaStoreProvider(MetaStoreOptions metaStoreOptions) {
+    private MetaStoreProvider setupMetaStoreProvider(MetaStoreOptions metaStoreOptions) {
         MetaStoreProvider provider = loadClass(metaStoreOptions.getProviderClassName());
         provider.init(metaStoreOptions);
         return provider;
     }
 
 
-    private MessagingStackProvider getMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
+    private MessagingStackProvider setupMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
         MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
         provider.init(messagingStackOptions);
         return provider;
     }
 
     private <T> T loadClass(String className) {
-        try{
+        try {
             if (null != className && !className.isBlank()) {
                 Class<T> pluginClass = (Class<T>) Class.forName(className);
                 return pluginClass.getDeclaredConstructor().newInstance();
             }
             throw new InvalidConfigException("No class provided.");
-        }catch(Exception e) {
+        } catch (Exception e) {
             String errorMsg = String.format("Fail to load class %s.", className);
             log.error(errorMsg, e);
             throw new InvalidConfigException(e);
@@ -108,7 +89,33 @@ public class CoreServices {
     }
 
 
+    private ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
+        Resource resource = Resource.getDefault()
+                .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
+        // TODO: make tracing togglable and configurable.
+        float sampleRatio = 1.0f;
+
+        SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
+                .setResource(resource)
+                .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
+                .build();
+
+        OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
+                .setTracerProvider(sdkTracerProvider)
+                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+                .buildAndRegisterGlobal();
+
+        // TODO: make meter registry config configurable.
+        String meterExporter = "jmx";
+        MeterRegistry meterRegistry = switch (meterExporter) {
+            case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+            default -> new OtlpMeterRegistry();
+        };
+
+        return new ObservabilityStack(openTelemetry, meterRegistry);
+    }
 
 
     @Getter
