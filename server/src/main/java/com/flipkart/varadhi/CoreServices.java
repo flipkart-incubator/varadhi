@@ -112,9 +112,11 @@ public class CoreServices {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             default -> new OtlpMeterRegistry();
         };
-
         return new ObservabilityStack(openTelemetry, meterRegistry);
     }
+
+
+
 
 
     @Getter
