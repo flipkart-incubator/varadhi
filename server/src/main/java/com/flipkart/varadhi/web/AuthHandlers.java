@@ -5,6 +5,8 @@ import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.web.routes.RouteBehaviourProvider;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -23,7 +25,7 @@ import java.net.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 
-public class AuthHandlers {
+public class AuthHandlers implements RouteBehaviourProvider {
     private final Handler<RoutingContext> authenticationHandler;
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 

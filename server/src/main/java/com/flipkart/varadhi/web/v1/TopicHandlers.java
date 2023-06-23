@@ -10,7 +10,9 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.RequestBodyExtension;
 import com.flipkart.varadhi.utils.ResponseExtension;
 import com.flipkart.varadhi.web.HandlerUtil;
-import com.flipkart.varadhi.web.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.routes.SubRoutes;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
@@ -21,12 +23,12 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.flipkart.varadhi.auth.ResourceAction.*;
-import static com.flipkart.varadhi.web.RouteDefinition.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.RouteDefinition.RouteBehaviour.hasBody;
+import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
+import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, ResponseExtension.class})
-public class TopicHandlers implements RouteDefinition.Provider {
+public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
@@ -45,7 +47,7 @@ public class TopicHandlers implements RouteDefinition.Provider {
 
     @Override
     public List<RouteDefinition> get() {
-        return new RouteDefinition.SubRoutes(
+        return new SubRoutes(
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
@@ -84,7 +86,7 @@ public class TopicHandlers implements RouteDefinition.Provider {
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
         varadhiTopicService.create(vt);
 
-        //TODO::Return updated object.
+        //TODO::Return updated object. Fix it.
         ctx.endRequestWithResponse(topicResource);
     }
 
