@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.db.Persistence;
+import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
@@ -30,16 +30,16 @@ public class TopicHandlers implements RouteDefinition.Provider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final Persistence<TopicResource> resourcePersistence;
+    private final MetaStore<TopicResource> resourceMetaStore;
 
     public TopicHandlers(
             VaradhiTopicFactory varadhiTopicFactory,
             VaradhiTopicService varadhiTopicService,
-            Persistence<TopicResource> resourcePersistence
+            MetaStore<TopicResource> resourceMetaStore
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
-        this.resourcePersistence = resourcePersistence;
+        this.resourceMetaStore = resourceMetaStore;
     }
 
 
@@ -75,12 +75,12 @@ public class TopicHandlers implements RouteDefinition.Provider {
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         String topicKey = topicResource.uniqueKeyPath();
-        boolean found = resourcePersistence.exists(topicKey);
+        boolean found = resourceMetaStore.exists(topicKey);
         if (found) {
             log.error("Topic({}) already exists.", topicKey);
             throw new DuplicateResourceException(String.format("Specified Topic(%s) already exists.", topicKey));
         }
-        resourcePersistence.create(topicResource);
+        resourceMetaStore.create(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
         varadhiTopicService.create(vt);
 

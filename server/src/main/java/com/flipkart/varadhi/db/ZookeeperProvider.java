@@ -8,18 +8,18 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryForever;
 
-public class ZookeeperProvider implements PersistenceProvider {
+public class ZookeeperProvider implements MetaStoreProvider {
 
     private volatile boolean initialised = false;
     private CuratorFramework zkCurator;
 
-    public void init(DBOptions DBOptions) {
+    public void init(MetaStoreOptions MetaStoreOptions) {
         if (!initialised) {
             synchronized (this) {
                 if (!initialised) {
-                    DBConfig dbConfig =
-                            YamlLoader.loadConfig(DBOptions.getConfigFile(), DBConfig.class);
-                    zkCurator = getZkCurator(dbConfig.getZookeeperOptions());
+                    ZKMetaStoreConfig zkMetaStoreConfig =
+                            YamlLoader.loadConfig(MetaStoreOptions.getConfigFile(), ZKMetaStoreConfig.class);
+                    zkCurator = getZkCurator(zkMetaStoreConfig.getZookeeperOptions());
                     initialised = true;
                 }
             }
@@ -41,11 +41,11 @@ public class ZookeeperProvider implements PersistenceProvider {
         return zkCurator;
     }
 
-    public <T extends KeyProvider> Persistence<T> getPersistence() {
+    public <T extends KeyProvider> MetaStore<T> getMetaStore() {
         if (!initialised) {
-            throw new InvalidStateException("PersistenceProvider is not yet initialised.");
+            throw new InvalidStateException("ZookeeperProvider is not yet initialised.");
         }
-        return new ZKPersistence<>(this.zkCurator);
+        return new ZKMetaStore<>(this.zkCurator);
     }
 }
 

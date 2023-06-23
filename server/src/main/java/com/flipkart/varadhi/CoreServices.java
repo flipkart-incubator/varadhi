@@ -1,13 +1,12 @@
 package com.flipkart.varadhi;
 
 
-import com.flipkart.varadhi.db.DBOptions;
-import com.flipkart.varadhi.db.PersistenceProvider;
-import com.flipkart.varadhi.db.ZookeeperProvider;
+import com.flipkart.varadhi.db.MetaStoreOptions;
+import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
-import com.flipkart.varadhi.pulsar.PulsarProvider;
-import com.flipkart.varadhi.services.PlatformOptions;
-import com.flipkart.varadhi.services.PlatformProvider;
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.services.MessagingStackProvider;
+import com.flipkart.varadhi.services.MessagingStackOptions;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.AuthHandlers;
 import com.flipkart.varadhi.web.RouteDefinition;
@@ -43,14 +42,14 @@ public class CoreServices {
     public CoreServices(ObservabilityStack observabilityStack, Vertx vertx, ServerConfiguration configuration) {
         this.observabilityStack = observabilityStack;
         this.authHandlers = new AuthHandlers(vertx, configuration);
-        PlatformProvider platformProvider = getPlatformProvider(configuration.getPlatformOptions());
-        PersistenceProvider persistenceProvider = getPersistenceProvider(configuration.getDbOptions());
-        VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(platformProvider.getStorageTopicFactory());
+        MessagingStackProvider messagingStackProvider = getMessagingStackProvider(configuration.getMessagingStackOptions());
+        MetaStoreProvider metaStoreProvider = getMetaStoreProvider(configuration.getMetaStoreOptions());
+        VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory());
         VaradhiTopicService topicService = new VaradhiTopicService(
-                platformProvider.getStorageTopicServiceFactory(),
-                persistenceProvider.getPersistence()
+                messagingStackProvider.getStorageTopicService(),
+                metaStoreProvider.getMetaStore()
         );
-        this.topicHandlers = new TopicHandlers(topicFactory, topicService, persistenceProvider.getPersistence());
+        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore());
         this.healthCheckHandler = new HealthCheckHandler();
         this.bodyHandler = BodyHandler.create(false);
     }
@@ -81,18 +80,35 @@ public class CoreServices {
        - Also it should be injected dynamically.
      */
 
-    private PersistenceProvider getPersistenceProvider(DBOptions DBOptions) {
-        PersistenceProvider provider = new ZookeeperProvider();
-        provider.init(DBOptions);
+    private MetaStoreProvider getMetaStoreProvider(MetaStoreOptions metaStoreOptions) {
+        MetaStoreProvider provider = loadClass(metaStoreOptions.getProviderClassName());
+        provider.init(metaStoreOptions);
         return provider;
     }
 
 
-    private PlatformProvider getPlatformProvider(PlatformOptions platformOptions) {
-        PulsarProvider pulsarProvider = new PulsarProvider();
-        pulsarProvider.init(platformOptions);
-        return pulsarProvider;
+    private MessagingStackProvider getMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
+        MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
+        provider.init(messagingStackOptions);
+        return provider;
     }
+
+    private <T> T loadClass(String className) {
+        try{
+            if (null != className && !className.isBlank()) {
+                Class<T> pluginClass = (Class<T>) Class.forName(className);
+                return pluginClass.getDeclaredConstructor().newInstance();
+            }
+            throw new InvalidConfigException("No class provided.");
+        }catch(Exception e) {
+            String errorMsg = String.format("Fail to load class %s.", className);
+            log.error(errorMsg, e);
+            throw new InvalidConfigException(e);
+        }
+    }
+
+
+
 
 
     @Getter

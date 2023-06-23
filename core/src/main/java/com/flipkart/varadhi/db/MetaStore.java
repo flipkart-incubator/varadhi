@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.KeyProvider;
 
 import java.util.List;
 
-public interface Persistence<T extends KeyProvider> {
+public interface MetaStore<T extends KeyProvider> {
     T get(String resourcePath, Class<T> clazz);
 
     void create(T entity);

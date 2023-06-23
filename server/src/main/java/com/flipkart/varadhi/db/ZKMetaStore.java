@@ -26,7 +26,7 @@ e.g.
 5. no history being maintained for entity.
  */
 @Slf4j
-public class ZKPersistence<T extends KeyProvider> implements Persistence<T> {
+public class ZKMetaStore<T extends KeyProvider> implements MetaStore<T> {
     private static final String BASE_PATH = "/varadhi/entities";
     private static final int INITIAL_VERSION = 0;
 
@@ -34,7 +34,7 @@ public class ZKPersistence<T extends KeyProvider> implements Persistence<T> {
     //TODO::check if zkCurator needs to be singleton.
     private final CuratorFramework zkCurator;
 
-    public ZKPersistence(CuratorFramework zkCurator) {
+    public ZKMetaStore(CuratorFramework zkCurator) {
         this.zkCurator = zkCurator;
     }
 
