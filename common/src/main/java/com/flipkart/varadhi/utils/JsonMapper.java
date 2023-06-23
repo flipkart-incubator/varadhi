@@ -7,6 +7,9 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +26,18 @@ public class JsonMapper {
         // Benefit of ParameterNamesModule
         // avoid annotation cluster for jackson serialisation, i.e. (de)serialization works by default w/o annotation.
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
-        //TODO::ensure only fields are considered for (de)ser and neither properties nor methods.
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+
+        // Include type information in the json, to support (de)ser on polymorphic types.
+        // Not restricting PolymorphicTypeValidator to any sub types or base types as it might cause
+        // issues in custom providers/plugins of various dependencies.
+
+        // NOTE: LaissezFaireSubTypeValidator instead of BasicPolymorphicTypeValidator, this allows all subtypes to be
+        // deserialized, possible security risk as everything can be (de)serialised via this.
+        // TODO:: Discuss and close.
+        mapper.activateDefaultTyping(new LaissezFaireSubTypeValidator(), ObjectMapper.DefaultTyping.NON_FINAL);
     }
 
     public static ObjectMapper getMapper() {

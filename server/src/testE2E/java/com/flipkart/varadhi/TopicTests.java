@@ -81,7 +81,7 @@ public class TopicTests {
         Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
         String errorDuplicateTopic =
-                String.format("Specified Topic(/TopicResource/%s/%s) already exists.", DefaultProject, topicName);
+                String.format("Specified Topic(%s/%s) already exists.", DefaultProject, topicName);
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
     }
 

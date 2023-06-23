@@ -1,12 +1,17 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.KeyProvider;
 
-public interface MetaStore<T extends KeyProvider> {
-    T get(String resourcePath, Class<T> clazz);
+public interface MetaStore<T> {
 
-    void create(T entity);
+    // TODO:: Discuss/Evaluate API semantics for get/exists, specific resource should implement only one
+    // based on its uniqueness i.e. relative or global.
+    // or any alternate options here.
+    // get(String parentKey, String resourceKey) and get(String resourceKey)
 
-    boolean exists(String resourceKey);
+    T get(String parent, String resourcePath);
+
+    T create(T entity);
+
+    boolean exists(String parent, String resourceName);
 
 }

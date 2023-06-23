@@ -76,18 +76,19 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and transaction kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
-        String topicKey = topicResource.uniqueKeyPath();
-        boolean found = resourceMetaStore.exists(topicKey);
+        boolean found = resourceMetaStore.exists(topicResource.getProject(), topicResource.getName());
         if (found) {
-            log.error("Topic({}) already exists.", topicKey);
-            throw new DuplicateResourceException(String.format("Specified Topic(%s) already exists.", topicKey));
+            log.error("Specified Topic({}/{}) already exists.", topicResource.getProject(), topicResource.getName());
+            throw new DuplicateResourceException(
+                    String.format("Specified Topic(%s/%s) already exists.", topicResource.getProject(),
+                            topicResource.getName()
+                    ));
         }
-        resourceMetaStore.create(topicResource);
+        TopicResource createResource = resourceMetaStore.create(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
         varadhiTopicService.create(vt);
 
-        //TODO::Return updated object. Fix it.
-        ctx.endRequestWithResponse(topicResource);
+        ctx.endRequestWithResponse(createResource);
     }
 
 
