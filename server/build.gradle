@@ -1,9 +1,36 @@
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
-plugins {
-    id 'com.flipkart.varadhi.java-application-conventions'
+buildscript {
+    dependencies {
+        // ASSUMES GRADLE 2.12 OR HIGHER. Use plugin version 0.7.5 with earlier gradle versions
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.3'
+    }
 }
 
+plugins {
+    id 'com.flipkart.varadhi.java-application-conventions'
+    id 'com.google.protobuf' version "0.9.3"
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protoc_version"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:$grpc_version"
+        }
+        vertx {
+            artifact = "io.vertx:vertx-grpc-protoc-plugin2:$vertx_version"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc
+            vertx
+        }
+    }
+}
 
 dependencies {
 
@@ -16,11 +43,15 @@ dependencies {
     implementation('org.apache.logging.log4j:log4j-core')
 
     implementation('com.fasterxml.jackson.core:jackson-databind')
+    implementation("javax.annotation:javax.annotation-api:$javax_version")
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-config")
     implementation("io.vertx:vertx-config-yaml")
     implementation("io.vertx:vertx-web")
+    implementation("io.vertx:vertx-grpc-server:$vertx_version")
+    implementation("io.vertx:vertx-grpc-client:$vertx_version")
+    implementation("io.vertx:vertx-grpc-context-storage:$vertx_version")
     implementation("io.vertx:vertx-auth-common")
     implementation("io.vertx:vertx-auth-jwt")
     implementation("io.vertx:vertx-opentelemetry")
@@ -28,7 +59,7 @@ dependencies {
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
-        runtimeOnly('io.netty:netty-resolver-dns-native-macos')
+        runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final:osx-x86_64')
     }
 
     implementation("io.opentelemetry:opentelemetry-sdk")

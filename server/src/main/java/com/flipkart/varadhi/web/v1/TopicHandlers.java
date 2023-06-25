@@ -7,11 +7,10 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.utils.RequestBodyExtension;
-import com.flipkart.varadhi.utils.ResponseExtension;
-import com.flipkart.varadhi.web.HandlerUtil;
-import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
+import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
@@ -27,7 +26,7 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
 @Slf4j
-@ExtensionMethod({RequestBodyExtension.class, ResponseExtension.class})
+@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
@@ -67,7 +66,7 @@ public class TopicHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        HandlerUtil.handleTodo(ctx);
+        ctx.todo();
     }
 
     public void create(RoutingContext ctx) {
@@ -92,6 +91,6 @@ public class TopicHandlers implements RouteProvider {
 
 
     public void delete(RoutingContext ctx) {
-        HandlerUtil.handleTodo(ctx);
+        ctx.todo();
     }
 }
