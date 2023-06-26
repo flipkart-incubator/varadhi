@@ -22,4 +22,9 @@ public class ResponseExtension {
             }
         });
     }
+
+    public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {
+        ctx.response().setStatusCode(status);
+        endRequestWithResponse(ctx, response);
+    }
 }

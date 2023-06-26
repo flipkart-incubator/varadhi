@@ -1,26 +1,9 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.jmx.JmxConfig;
-import io.micrometer.jmx.JmxMeterRegistry;
-import io.micrometer.registry.otlp.OtlpMeterRegistry;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
-import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.sdk.trace.samplers.Sampler;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
@@ -34,25 +17,12 @@ public class Server {
     public static void main(String[] args) {
 
         try {
-            ServerConfiguration configuration = readConfiguration(args);
-            CoreServices.ObservabilityStack observabilityStack = setupObservabilityStack(configuration);
-
             log.info("Server Starting.");
-            VertxOptions vertxOptions = configuration.getVertxOptions()
-                    .setTracingOptions(new OpenTelemetryOptions(observabilityStack.getOpenTelemetry()))
-                    .setMetricsOptions(new MicrometerMetricsOptions()
-                            .setMicrometerRegistry(observabilityStack.getMeterRegistry())
-                            .setRegistryName("default")
-                            .setJvmMetricsEnabled(true)
-                            .setEnabled(true));
-
-
-            Vertx vertx = Vertx.vertx(vertxOptions);
-
-            CoreServices services = new CoreServices(observabilityStack, vertx, configuration);
-
-            deployRestAPI(vertx, services, configuration);
-
+            ServerConfiguration configuration = readConfiguration(args);
+            CoreServices services = new CoreServices(configuration);
+            Vertx vertx = createVertex(configuration, services);
+            deployVerticles(configuration, services, vertx);
+            log.info("Server Started.");
         } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
             System.out.println("Failed to initialise the server:" + e);
@@ -61,51 +31,32 @@ public class Server {
         // TODO: check need for shutdown hook
     }
 
-    private static void deployRestAPI(Vertx vertx, CoreServices services, ServerConfiguration configuration) {
-        DeploymentOptions deploymentOptions = configuration.getRestVerticleDeploymentOptions();
-        if (!deploymentOptions.isWorker()) {
-            // Rest API  should avoid complete execution on Vertx event loop thread because they are likely to be
-            // blocking. Rest API need to be either offloaded from event loop via Async or need to be executed on
-            // Worker Verticle or should use executeBlocking() facility.
-            // Current code assumes Rest API will be executing on Worker Verticle and hence validate.
-            log.error("Rest Verticle is expected to be deployed as Worker Verticle.");
-            throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
-        }
-
-        vertx.deployVerticle(() -> new RestVerticle(configuration, services), deploymentOptions)
-                .onFailure(t -> {
-                    log.error("Could not start HttpServer verticle", t);
-                    throw new VaradhiException("Failed to Deploy Rest API.", t);})
-                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+    private static Vertx createVertex(ServerConfiguration configuration, CoreServices services) {
+        log.debug("Creating Vertex");
+        VertxOptions vertxOptions = configuration.getVertxOptions()
+                .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
+                .setMetricsOptions(new MicrometerMetricsOptions()
+                        .setMicrometerRegistry(services.getMetricsRegistry())
+                        .setRegistryName("default")
+                        .setJvmMetricsEnabled(true)
+                        .setEnabled(true));
+        Vertx vertx = Vertx.vertx(vertxOptions);
+        log.debug("Creating Vertex");
+        return vertx;
     }
 
-    public static CoreServices.ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
-        Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
-
-        // TODO: make tracing togglable and configurable.
-        float sampleRatio = 1.0f;
-
-        SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
-                .setResource(resource)
-                .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
-                .build();
-
-        OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
-                .setTracerProvider(sdkTracerProvider)
-                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
-
-        // TODO: make meter registry config configurable.
-        String meterExporter = "jmx";
-        MeterRegistry meterRegistry = switch (meterExporter) {
-            case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-            default -> new OtlpMeterRegistry();
-        };
-
-        return new CoreServices.ObservabilityStack(openTelemetry, meterRegistry);
+    private static void deployVerticles(ServerConfiguration configuration, CoreServices services, Vertx vertx) {
+        log.debug("Deploying Verticles.");
+        VerticleDeployer verticleDeployer = new VerticleDeployer(
+                vertx,
+                configuration,
+                services.getMessagingStackProvider(),
+                services.getMetaStoreProvider()
+        );
+        verticleDeployer.deployVerticles(vertx, configuration);
+        log.debug("Deploying Verticles, completed.");
     }
+
 
     public static ServerConfiguration readConfiguration(String[] args) {
         if (args.length < 1) {

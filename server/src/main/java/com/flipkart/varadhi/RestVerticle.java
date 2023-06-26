@@ -1,7 +1,10 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.web.FailureHandler;
-import com.flipkart.varadhi.web.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteBehaviour;
+import com.flipkart.varadhi.web.routes.RouteBehaviourProvider;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
@@ -10,29 +13,44 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.Map;
+
 @Slf4j
 public class RestVerticle extends AbstractVerticle {
-
-    private final ServerConfiguration configuration;
-
-    private final CoreServices coreServices;
+    private final List<RouteDefinition> apiRoutes;
+    private final Map<RouteBehaviour, RouteBehaviourProvider> behaviorProviders;
 
     private HttpServer httpServer;
 
-    public RestVerticle(ServerConfiguration configuration, CoreServices coreServices) {
-        this.configuration = configuration;
-        this.coreServices = coreServices;
+    public RestVerticle(
+            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteBehaviourProvider> behaviorProviders
+    ) {
+        this.apiRoutes = apiRoutes;
+        this.behaviorProviders = behaviorProviders;
     }
 
     @Override
     public void start(Promise<Void> startPromise) {
+
         log.info("HttpServer Starting.");
         Router router = Router.router(vertx);
 
         FailureHandler failureHandler = new FailureHandler();
-        for (RouteDefinition def : coreServices.getRouteDefinitions()) {
+        for (RouteDefinition def : apiRoutes) {
             Route route = router.route().method(def.method()).path(def.path());
-            def.behaviours().forEach(d -> d.Configure(route, def, coreServices));
+            def.behaviours().forEach(behaviour -> {
+                        RouteBehaviourProvider behaviorProvider = behaviorProviders.getOrDefault(behaviour, null);
+                        if (null != behaviorProvider) {
+                            behaviorProvider.configure(route, def);
+                        } else {
+                            String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
+                            log.error(errMsg);
+                            throw new InvalidStateException(errMsg);
+                        }
+                        behaviorProvider.configure(route, def);
+                    }
+            );
             route.handler(def.handler());
             route.failureHandler(failureHandler);
         }

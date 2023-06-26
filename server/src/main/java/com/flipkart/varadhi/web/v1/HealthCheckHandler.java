@@ -1,12 +1,10 @@
 package com.flipkart.varadhi.web.v1;
 
-import com.flipkart.varadhi.utils.RequestBodyExtension;
 import com.flipkart.varadhi.utils.ResponseExtension;
-import com.flipkart.varadhi.web.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 
@@ -18,7 +16,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 @ExtensionMethod({ResponseExtension.class})
-public class HealthCheckHandler implements Handler<RoutingContext>, RouteDefinition.Provider {
+public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvider {
 
     // TODO: add appropriate checks
 
@@ -27,8 +25,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteDefinit
 
     @Override
     public void handle(RoutingContext ctx) {
-        ctx.endRequestWithResponse(responseMsg);
-
+        ctx.endRequestWithResponse(responseCode, responseMsg);
     }
 
     public void bringOOR() {
