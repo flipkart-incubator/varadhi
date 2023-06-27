@@ -1,13 +1,12 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.KeyProvider;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 
-import java.util.Collections;
 import java.util.List;
 
 
@@ -51,7 +50,7 @@ public class ZKMetaStore<T extends KeyProvider> implements MetaStore<T> {
             log.debug("zkCurator response:{}", response);
         } catch (Exception e) {
             log.error(String.format("Failed to create entity %s.", resource), e);
-            throw new VaradhiException(e);
+            throw new MetaStoreException(e);
         }
     }
 
@@ -62,7 +61,7 @@ public class ZKMetaStore<T extends KeyProvider> implements MetaStore<T> {
             return JsonMapper.jsonDeserialize(new String(data), clazz);
         } catch (Exception e) {
             log.error(String.format("Failed to get entity %s ", resourcePath), e);
-            throw new VaradhiException(e);
+            throw new MetaStoreException(e);
         }
     }
 
@@ -72,7 +71,7 @@ public class ZKMetaStore<T extends KeyProvider> implements MetaStore<T> {
             return null != zkCurator.checkExists().forPath(resourcePath);
         } catch (Exception e) {
             log.error(String.format("Failed to check entity %s ", resourcePath), e);
-            throw new VaradhiException(e);
+            throw new MetaStoreException(e);
         }
     }
 
@@ -82,22 +81,24 @@ public class ZKMetaStore<T extends KeyProvider> implements MetaStore<T> {
             zkCurator.delete().forPath(resourcePath);
         } catch (Exception e) {
             log.error(String.format("Failed to delete entity %s ", resourcePath), e);
-            throw new VaradhiException(e);
+            throw new MetaStoreException(e);
         }
     }
 
     public List<String> list(String resourceKey) {
         String resourcePath = getResourcePath(resourceKey);
         try {
-            if (!exists(resourceKey)) return Collections.emptyList();
+            if (!exists(resourceKey)) {
+                throw new MetaStoreException(String.format("Resource Path %s does not exist", resourceKey));
+            }
             return zkCurator.getChildren().forPath(resourcePath);
         } catch (Exception e) {
             log.error(String.format("Failed to list entity on %s ", resourcePath), e);
-            throw new VaradhiException(e);
+            throw new MetaStoreException(e);
         }
     }
 
     private String getResourcePath(String resourceKey) {
-        return String.format("%s%s", BASE_PATH, resourceKey);
+        return String.format("%s/%s", BASE_PATH, resourceKey);
     }
 }

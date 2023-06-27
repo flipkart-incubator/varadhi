@@ -31,7 +31,7 @@ public class TopicResource extends VaradhiResource implements KeyProvider {
 
     @Override
     public String uniqueKeyPath() {
-        return String.format("/%s/%s/%s", RESOURCE_TYPE_NAME, project, getName());
+        return String.format("%s/%s/%s", RESOURCE_TYPE_NAME, project, getName());
     }
 
 }

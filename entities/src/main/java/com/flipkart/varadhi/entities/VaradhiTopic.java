@@ -26,7 +26,7 @@ public class VaradhiTopic extends BaseTopic implements KeyProvider {
 
     @Override
     public String uniqueKeyPath() {
-        return String.format("/%s/%s", RESOURCE_TYPE_NAME, getName());
+        return String.format("%s/%s", RESOURCE_TYPE_NAME, getName());
     }
 
     public void addInternalTopic(InternalTopic internalTopic) {
