@@ -209,8 +209,6 @@ class MultiProcessDataLoader:
         with DataLoader(self.config, zk_config=self.zk_config) as loader:
             loader.load_data(parent, child_node_config)
 
-USE_MULTI_PROCESS = True
-SHOULD_MEASURE = False
 class Benchmark:
     def __init__(self, config: BenchmarkConfig):
         self.config = config
