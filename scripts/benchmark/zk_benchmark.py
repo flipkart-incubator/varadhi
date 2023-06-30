@@ -12,16 +12,66 @@ NodeGenerator = Generator[tuple[str, bytes], None, None]
 
 # Util functions
 def random_string(size: int) -> str:
+    """Utility function to return a random string of requested length.
+
+    :param size: Length of string to generate.
+
+    """
     letters = string.ascii_letters + string.digits + "_"
     res = "".join(random.choices(letters, k=size))
     return res
     
 def randstr(low: int, high: int) -> str:
+    """Utility function to return a random string between specified length range.
+    
+    :param low: Min length of the string to generate.
+    :param high: Max length of the string to generate.
+
+    """
     size = random.randrange(low, high)
     return random_string(size)
 
-# Generator which generates the child node data based on params
 def node_generator(num: int, name="", min_name_len=-1, max_name_len=-1, data_size_bytes=1024) -> NodeGenerator:
+    """A generator function which yields a tuple having the desired node name along with
+    its data in bytes. The generation is based on the arguments provided.
+    
+    :param num: Max number of generator iterations. Number of child nodes to generate.
+    :param name: 
+        The fixed name of the node to generate. If specified, then :param:`min_name_len`
+        and :param:`max_name_len` are not used.
+    :param min_name_len: 
+        Inclusive lower bound on the length of the name to generate for the node.
+        This value is ignored if :param:`name` is specified.
+    :param max_name_len:
+        Exclusive upper bound on the length of the name to generate for the node. 
+        This value is ignored if :param:`name` is specified.
+    :param data_size_bytes: Size in bytes of random data to generate for each node.
+
+    Some Examples:
+
+    .. code-block:: python
+        gen = node_generator(5, name="foo", data_size_bytes=10)
+        for node in gen:
+            print(node[0])
+    
+    Prints: 
+    foo_1
+    foo_2
+    foo_3
+    foo_4
+    foo_5
+
+    .. code-block:: python
+        gen = node_generator(3, min_name_len=5, max_name_len=6)
+        for node in gen:
+            print(node[0])
+    
+    Prints:
+    wx96y
+    r4_8u
+    33eg_
+
+    """
     gen = 0
     while gen < num:
         name_res = ""
@@ -49,7 +99,7 @@ class ZkClientConfig:
         self.root_node = root_node
 
 class DataLoaderConfig:
-    def __init__(self, parallelism=5, chunk_size=10000):
+    def __init__(self, parallelism=5, chunk_size=1000):
         self.parallelism = parallelism
         self.chunk_size = chunk_size
 
@@ -66,11 +116,12 @@ class BenchmarkRunConfig:
         self.child_node_config = child_node_config
 
 class BenchmarkConfig:
-    def __init__(self, zk_config: ZkClientConfig, runs: list[BenchmarkRunConfig], data_loader_config: DataLoaderConfig):
+    def __init__(self, zk_config: ZkClientConfig, runs: list[BenchmarkRunConfig], data_loader_config: DataLoaderConfig, measure_samples: int):
         self.zk_config = zk_config
         self.root_node = zk_config.root_node
         self.runs = runs
         self.data_loader_config = data_loader_config
+        self.measure_samples = measure_samples
 ## Config classes end
 
 ## ZkClientWrapper
@@ -227,21 +278,32 @@ class Benchmark:
     
     def _run(self, run_config: BenchmarkRunConfig, skip_measure: bool, use_multiprocess: bool):
         path = self._get_parent_path(run_config.name)
-        measure_samples = 5
+        measure_samples = self.config.measure_samples
 
         ## DataLoading step
         print("Loading nodes under path:", path)
         with self._get_data_loader(self.data_loader_config, self.zk_config, use_multiprocess) as loader:
             loader.load_data(run_config.name, run_config.child_node_config)
-
+        
         ## Measure step
-        if not skip_measure:
-            with ZkClientWrapper(config=self.zk_config, name="measure_zk") as client:
-                print("Num child nodes under path {}: {}".format(path, len(client.ls(path))))
+        self._measure(path, measure_samples, skip_measure)
+
+    def _measure(self, path: str, samples: int, skip_measure: bool):
+        if skip_measure:
+            return
+        
+        min_m, max_m, sum_m = 99999.0, -1.0, 0.0
+        with ZkClientWrapper(config=self.zk_config, name="measure_zk") as client:
+            print("Num child nodes under path {}: {}".format(path, len(client.ls(path))))
+            for _ in range(samples):
                 with catchtime() as t:
-                    for _ in range(measure_samples):
-                        client.ls(path)
-                print("Latency get_children on path {}: {} ms".format(path, t.time / measure_samples))
+                    client.ls(path)
+                sum_m += t.time
+                if t.time > max_m:
+                    max_m = t.time
+                if t.time < min_m:
+                    min_m = t.time
+        print("Latency get_children on path {}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
     
     def _get_data_loader(self, data_loader_config: DataLoaderConfig, zk_config: ZkClientConfig, use_multiprocess: bool = False):
         if use_multiprocess:
@@ -262,8 +324,9 @@ if __name__ == "__main__":
     parser.add_argument("--skip_measure", help="should skip measurements", action="store_true")
     parser.add_argument("--use_mp_dl", help="should use multiprocess dataloader", action="store_true")
 
-    parser.add_argument("--num_threads", help="threads/processes to use for dataloading", type=int, default=6)
-    parser.add_argument("--data_chunk", help="split dataloading to specified chunks", type=int, default=10_000)
+    parser.add_argument("--num_threads", help="threads/processes to use for dataloading", type=int, default=4)
+    parser.add_argument("--measure_samples", help="number of measurement samples to take", type=int, default=5)
+    parser.add_argument("--data_chunk", help="split dataloading to specified chunks", type=int, default=1_000)
     parser.add_argument("-n", "--num_child_nodes", help="number of child nodes to create", type=int)
     parser.add_argument("-p", "--parent", help="name of parent node under which to create child nodes", type=str, default="parent")
     parser.add_argument("-l", "--name_len", help="length of child node name", type=int, default=30)
@@ -277,7 +340,7 @@ if __name__ == "__main__":
     zk_config = ZkClientConfig(hosts=args.hosts, root_node=args.root_path)
     child_config = ChildNodeConfig(args.num_child_nodes, name_len=args.name_len, data_bytes=args.data_size_bytes)
     run = BenchmarkRunConfig(args.parent, child_config)
-    config = BenchmarkConfig(zk_config=zk_config, runs=[run], data_loader_config=data_loader_config)
+    config = BenchmarkConfig(zk_config=zk_config, runs=[run], data_loader_config=data_loader_config, measure_samples=args.measure_samples)
 
     benchmark = Benchmark(config)
 
