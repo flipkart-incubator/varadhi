@@ -170,8 +170,8 @@ class ZkClientWrapper:
         print("cleanup all in {}".format(self.root_node))
         self.clean(self.root_node)
 
-# Data loader which loads data into Zk in chunked manner
-class DataLoader(object):
+# Data loader which loads data into Zk
+class DataLoader:
     def __init__(self, config: DataLoaderConfig, zk_config: ZkClientConfig):
         self.root_node = zk_config.root_node
         self.config = config
@@ -185,6 +185,30 @@ class DataLoader(object):
         self.zk_client.stop()
         return True
 
+    def __get_generator(self, child_node_config: ChildNodeConfig) -> tuple[NodeGenerator, int]:
+        return (
+            node_generator(
+                child_node_config.number, 
+                name=child_node_config.fixed_name, 
+                min_name_len=child_node_config.name_len, 
+                max_name_len=child_node_config.name_len+1, 
+                data_size_bytes=child_node_config.data_bytes), 
+            child_node_config.number)
+
+    def load_data(self, parent: str, child_node_config: ChildNodeConfig):
+        parent_node="{}/{}".format(self.root_node, parent)
+        self.zk_client.create(parent_node)
+
+        generator, size = self.__get_generator(child_node_config)
+        self._fill(parent_node, generator, size)
+
+    def _fill(self, path: str, child_generator: NodeGenerator, gen_size: int):
+        for node in tqdm(child_generator, total=gen_size):
+            child_node = "{}/{}".format(path, node[0])
+            self.zk_client.create(child_node, data=node[1])
+
+# Data loader which loads data into Zk in chunked manner using multiple threads
+class MultiThreadedDataLoader(DataLoader):
     def __get_chunked_generators(self, child_node_config: ChildNodeConfig) -> list[tuple[NodeGenerator, int]]:
         rem_size = child_node_config.number
         result = []
@@ -219,7 +243,8 @@ class DataLoader(object):
             child_node = "{}/{}".format(path, node[0])
             self.zk_client.create(child_node, data=node[1])
 
-class MultiProcessDataLoader:
+# Data loader which loads data into Zk in chunked manner using multiple processes
+class MultiProcessDataLoader(object):
     def __init__(self, config: DataLoaderConfig, zk_config: ZkClientConfig):
         self.root_node = zk_config.root_node
         self.config = config
@@ -248,7 +273,7 @@ class MultiProcessDataLoader:
     def load_data(self, parent: str, child_node_config: ChildNodeConfig):
         configs = self.__get_chunked_configs(child_node_config)
         with concurrent.futures.ProcessPoolExecutor(max_workers=self.config.parallelism) as exec:
-            futures_to_id = {exec.submit(self._process, parent, config): id for (id, config) in enumerate(configs)}
+            futures_to_id = {exec.submit(self._fill, parent, config): id for (id, config) in enumerate(configs)}
             for future in concurrent.futures.as_completed(futures_to_id):
                 id = futures_to_id[future]
                 try:
@@ -256,7 +281,7 @@ class MultiProcessDataLoader:
                 except Exception as exc:
                     print("process: {} generated an exception: {}".format(id, exc))
 
-    def _process(self, parent: str, child_node_config: ChildNodeConfig):
+    def _fill(self, parent: str, child_node_config: ChildNodeConfig):
         with DataLoader(self.config, zk_config=self.zk_config) as loader:
             loader.load_data(parent, child_node_config)
 
@@ -267,28 +292,28 @@ class Benchmark:
         self.data_loader_config = config.data_loader_config
         self.root_node = config.root_node
     
-    def run(self, skip_measure: bool = False, use_multiprocess: bool = False):
+    def run(self, skip_measure: bool = False, dataloading_mode: str = "mt"):
         for (idx, run) in enumerate(self.config.runs):
             print("Starting benchmark run: {} [{} of {}]".format(run.name, idx+1, len(self.config.runs)))
-            self._run(run, skip_measure, use_multiprocess)
+            self.__run(run, skip_measure, dataloading_mode)
     
     def cleanup(self):
         with ZkClientWrapper(config=self.zk_config, name="cleanup_zk") as client:
             client.clean_all()
     
-    def _run(self, run_config: BenchmarkRunConfig, skip_measure: bool, use_multiprocess: bool):
-        path = self._get_parent_path(run_config.name)
+    def __run(self, run_config: BenchmarkRunConfig, skip_measure: bool, dataloading_mode: str):
+        path = self.__get_parent_path(run_config.name)
         measure_samples = self.config.measure_samples
 
         ## DataLoading step
         print("Loading nodes under path:", path)
-        with self._get_data_loader(self.data_loader_config, self.zk_config, use_multiprocess) as loader:
+        with self.__get_data_loader(self.data_loader_config, self.zk_config, dataloading_mode) as loader:
             loader.load_data(run_config.name, run_config.child_node_config)
         
         ## Measure step
-        self._measure(path, measure_samples, skip_measure)
+        self.__measure(path, measure_samples, skip_measure)
 
-    def _measure(self, path: str, samples: int, skip_measure: bool):
+    def __measure(self, path: str, samples: int, skip_measure: bool):
         if skip_measure:
             return
         
@@ -305,14 +330,21 @@ class Benchmark:
                     min_m = t.time
         print("Latency get_children on path {}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
     
-    def _get_data_loader(self, data_loader_config: DataLoaderConfig, zk_config: ZkClientConfig, use_multiprocess: bool = False):
-        if use_multiprocess:
+    def __get_data_loader(self, data_loader_config: DataLoaderConfig, zk_config: ZkClientConfig, dataloading_mode: str):
+        if dataloading_mode == "st":
+            print("Using single threaded dataloader")
+            return DataLoader(data_loader_config, zk_config)
+        elif dataloading_mode == "mt":
+            print("Using multi threaded data loader")
+            return MultiThreadedDataLoader(data_loader_config, zk_config)
+        elif dataloading_mode == "mp":
             print("Using multi processing data loader")
             return MultiProcessDataLoader(data_loader_config, zk_config)
-        print("Using multi threaded data loader")
-        return DataLoader(data_loader_config, zk_config)
+        else:
+            print("Unrecognized data loader mode", dataloading_mode)
+            exit(1)
 
-    def _get_parent_path(self, parent_name: str) -> str:
+    def __get_parent_path(self, parent_name: str) -> str:
         return "{}/{}".format(self.root_node, parent_name)
 
 import argparse
@@ -322,7 +354,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--root_path", help="Root path under which benchmark will run", default="/benchmark")
     parser.add_argument("--cleanup", help="cleanup znodes in root path", action="store_true")
     parser.add_argument("--skip_measure", help="should skip measurements", action="store_true")
-    parser.add_argument("--use_mp_dl", help="should use multiprocess dataloader", action="store_true")
+    parser.add_argument("--dl_mode", help="dataloader approach to use: st (single) | mt (multi-thread) | mp (multi-process)", type=str, default="mt")
 
     parser.add_argument("--num_threads", help="threads/processes to use for dataloading", type=int, default=4)
     parser.add_argument("--measure_samples", help="number of measurement samples to take", type=int, default=5)
@@ -350,4 +382,4 @@ if __name__ == "__main__":
         if not args.num_child_nodes:
             print("ERR: please specify number of child nodes to create")
             exit()
-        benchmark.run(args.skip_measure, args.use_mp_dl)
+        benchmark.run(args.skip_measure, args.dl_mode)
