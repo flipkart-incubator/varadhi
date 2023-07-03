@@ -14,11 +14,12 @@ public class VaradhiTopic extends BaseTopic {
 
     public VaradhiTopic(
             String name,
+            int version,
             boolean isGrouped,
             boolean isExclusiveSubscription,
             Map<InternalTopic.TopicKind, InternalTopic> internalTopics
     ) {
-        super(name, InternalTopic.StorageKind.Meta);
+        super(name, InternalTopic.StorageKind.Meta, version);
         this.isGrouped = isGrouped;
         this.isExclusiveSubscription = isExclusiveSubscription;
         this.internalTopics = null == internalTopics ? new ConcurrentHashMap<>() : internalTopics;

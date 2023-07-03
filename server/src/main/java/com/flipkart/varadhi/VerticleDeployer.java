@@ -1,8 +1,6 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.db.MetaStoreProvider;
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -42,9 +40,9 @@ public class VerticleDeployer {
         VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory());
         VaradhiTopicService topicService = new VaradhiTopicService(
                 messagingStackProvider.getStorageTopicService(),
-                metaStoreProvider.getMetaStore(VaradhiTopic.class)
+                metaStoreProvider.getMetaStore()
         );
-        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore(TopicResource.class));
+        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore());
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));

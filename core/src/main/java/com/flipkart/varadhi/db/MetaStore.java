@@ -1,17 +1,20 @@
 package com.flipkart.varadhi.db;
 
+import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 
-public interface MetaStore<T> {
+public interface MetaStore {
 
-    // TODO:: Discuss/Evaluate API semantics for get/exists, specific resource should implement only one
-    // based on its uniqueness i.e. relative or global.
-    // or any alternate options here.
-    // get(String parentKey, String resourceKey) and get(String resourceKey)
+    TopicResource createTopicResource(TopicResource resource);
 
-    T get(String parent, String resourcePath);
+    boolean checkTopicResourceExists(String projectName, String topicName);
 
-    T create(T entity);
+    TopicResource getTopicResource(String projectName, String resourceName);
 
-    boolean exists(String parent, String resourceName);
+    VaradhiTopic createVaradhiTopic(VaradhiTopic varadhiTopic);
+
+    boolean checkVaradhiTopicExists(String varadhiTopicName);
+
+    VaradhiTopic getVaradhiTopic(String topicName);
 
 }
