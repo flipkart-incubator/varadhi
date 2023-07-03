@@ -35,7 +35,7 @@ public class TopicTests {
     }
 
     private String getTopicCreateUri(String tenant) {
-        return String.format("/%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
+        return String.format("%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
     }
 
     private <T> T makeCreateRequest(T entity, String targetUrl, int expectedStatus) {
@@ -81,7 +81,7 @@ public class TopicTests {
         Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
         String errorDuplicateTopic =
-                String.format("Specified Topic(/TopicResource/%s/%s) already exists.", DefaultProject, topicName);
+                String.format("Specified Topic(TopicResource/%s/%s) already exists.", DefaultProject, topicName);
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
     }
 
