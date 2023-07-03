@@ -51,11 +51,7 @@ public class TopicTests {
     }
 
     private <T> void makeCreateRequest(
-            T entity,
-            String targetUrl,
-            int expectedStatus,
-            String expectedResponse,
-            boolean isErrored
+            T entity, String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored
     ) {
         Response response = getClient()
                 .target(targetUrl)
@@ -86,7 +82,7 @@ public class TopicTests {
         String errorDuplicateTopic =
                 String.format(
                         "Specified Topic(%s) already exists.",
-                        ZKPathUtils.getTopicResourcePath(topic.getProject(), topic.getName())
+                        ZKPathUtils.getTopicResourceFQDN(topic.getProject(), topic.getName())
                 );
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
     }
