@@ -35,7 +35,7 @@ public class TopicTests {
     }
 
     private String getTopicCreateUri(String tenant) {
-        return String.format("%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
+        return String.format("/%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
     }
 
     private <T> T makeCreateRequest(T entity, String targetUrl, int expectedStatus) {
