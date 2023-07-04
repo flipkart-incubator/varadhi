@@ -156,6 +156,9 @@ class ZkClientWrapper:
     def ls(self, path="/") -> list[str]:
         return self.zk.get_children(path) or []
     
+    def get_data(self, path: str) -> tuple[list[bytes], any]:
+        return self.zk.get(path)
+
     def create(self, path: str, data=b''):
         if not self.zk.exists(path):
             self.zk.create(path, value=data, makepath=True)
@@ -312,6 +315,7 @@ class Benchmark:
         
         ## Measure step
         self.__measure(path, measure_samples, skip_measure)
+        self.__measure_get_data(path, measure_samples, skip_measure)
 
     def __measure(self, path: str, samples: int, skip_measure: bool):
         if skip_measure:
@@ -330,6 +334,25 @@ class Benchmark:
                     min_m = t.time
         print("Latency get_children on path {}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
     
+    def __measure_get_data(self, path: str, samples: int, skip_measure: bool):
+        if skip_measure:
+            return
+
+        min_m, max_m, sum_m = 99999.0, -1.0, 0.0
+        with ZkClientWrapper(config=self.zk_config, name="measure_zk") as client:
+            children = client.ls(path)
+
+            for child in random.sample(children, samples):
+                child_path = f'{path}/{child}'
+                with catchtime() as t:
+                    client.get_data(child_path)
+                sum_m += t.time
+                if t.time > max_m:
+                    max_m = t.time
+                if t.time < min_m:
+                    min_m = t.time
+        print("Latency get_data under path{}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
+
     def __get_data_loader(self, data_loader_config: DataLoaderConfig, zk_config: ZkClientConfig, dataloading_mode: str):
         if dataloading_mode == "st":
             print("Using single threaded dataloader")
