@@ -11,11 +11,10 @@ public class InternalTopic {
     private ProduceStatus status;
     private String name;
     private StorageTopic storageTopic;
+
     //TODO::check if reference to primary topic also needs to be kept.
     private String sourceRegion; //zone this topic will be replicating from, in case it is replica topic.
 
-    //TODO::check if private ctor suffices for Jackson.
-    //also see if lombok allargsconstructor with accessiblity  modifier would work as well.
     private InternalTopic(
             String name,
             TopicKind topicKind,
@@ -30,7 +29,6 @@ public class InternalTopic {
         this.status = status;
         this.sourceRegion = sourceRegion;
         this.storageTopic = storageTopic;
-
     }
 
     public static InternalTopic from(
@@ -73,10 +71,4 @@ public class InternalTopic {
         InActive
     }
 
-
-    public enum StorageKind {
-        Pulsar,
-        Kafka,
-        Meta
-    }
 }

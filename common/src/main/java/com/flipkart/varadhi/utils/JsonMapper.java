@@ -23,7 +23,9 @@ public class JsonMapper {
         // Benefit of ParameterNamesModule
         // avoid annotation cluster for jackson serialisation, i.e. (de)serialization works by default w/o annotation.
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
-        //TODO::ensure only fields are considered for (de)ser and neither properties nor methods.
+        //TODO:: Discuss this restriction on (de)ser semantics from global perspective.
+        mapper.setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE);
+        mapper.setVisibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE);
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);

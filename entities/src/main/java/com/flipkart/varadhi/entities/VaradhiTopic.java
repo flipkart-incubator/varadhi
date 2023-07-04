@@ -19,7 +19,7 @@ public class VaradhiTopic extends BaseTopic {
             boolean isExclusiveSubscription,
             Map<InternalTopic.TopicKind, InternalTopic> internalTopics
     ) {
-        super(name, InternalTopic.StorageKind.Meta, version);
+        super(name, version);
         this.isGrouped = isGrouped;
         this.isExclusiveSubscription = isExclusiveSubscription;
         this.internalTopics = null == internalTopics ? new ConcurrentHashMap<>() : internalTopics;
