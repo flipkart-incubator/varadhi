@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 @EqualsAndHashCode(callSuper = true)
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public abstract class StorageTopic extends BaseTopic {
-    public StorageTopic(InternalTopic.StorageKind kind, String name) {
-        super(name, kind);
+    public StorageTopic(InternalTopic.StorageKind kind, String name, int version) {
+        super(name, kind, version);
     }
 }

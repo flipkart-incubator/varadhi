@@ -10,8 +10,8 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.RequestBodyExtension;
 import com.flipkart.varadhi.utils.ResponseExtension;
 import com.flipkart.varadhi.web.HandlerUtil;
-import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
@@ -32,16 +32,16 @@ public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final MetaStore<TopicResource> resourceMetaStore;
+    private final MetaStore metaStore;
 
     public TopicHandlers(
             VaradhiTopicFactory varadhiTopicFactory,
             VaradhiTopicService varadhiTopicService,
-            MetaStore<TopicResource> resourceMetaStore
+            MetaStore metaStore
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
-        this.resourceMetaStore = resourceMetaStore;
+        this.metaStore = metaStore;
     }
 
 
@@ -76,18 +76,19 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and transaction kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
-        String topicKey = topicResource.uniqueKeyPath();
-        boolean found = resourceMetaStore.exists(topicKey);
+        boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
-            log.error("Topic({}) already exists.", topicKey);
-            throw new DuplicateResourceException(String.format("Specified Topic(%s) already exists.", topicKey));
+            log.error("Specified Topic({}/{}) already exists.", topicResource.getProject(), topicResource.getName());
+            throw new DuplicateResourceException(
+                    String.format("Specified Topic(%s/%s) already exists.", topicResource.getProject(),
+                            topicResource.getName()
+                    ));
         }
-        resourceMetaStore.create(topicResource);
+        TopicResource createResource = metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
         varadhiTopicService.create(vt);
 
-        //TODO::Return updated object. Fix it.
-        ctx.endRequestWithResponse(topicResource);
+        ctx.endRequestWithResponse(createResource);
     }
 
 

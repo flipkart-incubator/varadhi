@@ -1,12 +1,20 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.KeyProvider;
+import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 
-public interface MetaStore<T extends KeyProvider> {
-    T get(String resourcePath, Class<T> clazz);
+public interface MetaStore {
 
-    void create(T entity);
+    TopicResource createTopicResource(TopicResource resource);
 
-    boolean exists(String resourceKey);
+    boolean checkTopicResourceExists(String projectName, String topicName);
+
+    TopicResource getTopicResource(String projectName, String resourceName);
+
+    VaradhiTopic createVaradhiTopic(VaradhiTopic varadhiTopic);
+
+    boolean checkVaradhiTopicExists(String varadhiTopicName);
+
+    VaradhiTopic getVaradhiTopic(String topicName);
 
 }

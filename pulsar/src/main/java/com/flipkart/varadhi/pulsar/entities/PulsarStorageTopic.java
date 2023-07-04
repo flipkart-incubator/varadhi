@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.entities;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.InternalTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -16,7 +17,7 @@ public class PulsarStorageTopic extends StorageTopic {
     String namespace;
 
     public PulsarStorageTopic(String name, int partitionCount) {
-        super(InternalTopic.StorageKind.Pulsar, name);
+        super(InternalTopic.StorageKind.Pulsar, name, Constants.INITIAL_VERSION);
         this.partitionCount = partitionCount;
         this.namespace = "default";
     }
