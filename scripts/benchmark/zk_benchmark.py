@@ -314,10 +314,10 @@ class Benchmark:
             loader.load_data(run_config.name, run_config.child_node_config)
         
         ## Measure step
-        self.__measure(path, measure_samples, skip_measure)
+        self.__measure_list(path, measure_samples, skip_measure)
         self.__measure_get_data(path, measure_samples, skip_measure)
 
-    def __measure(self, path: str, samples: int, skip_measure: bool):
+    def __measure_list(self, path: str, samples: int, skip_measure: bool):
         if skip_measure:
             return
         
@@ -351,7 +351,7 @@ class Benchmark:
                     max_m = t.time
                 if t.time < min_m:
                     min_m = t.time
-        print("Latency get_data under path{}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
+        print("Latency get_data under path {}: Min: {:.3f} ms | Max: {:.3f} ms | Avg: {:.3f} ms".format(path, min_m, max_m, sum_m / samples))
 
     def __get_data_loader(self, data_loader_config: DataLoaderConfig, zk_config: ZkClientConfig, dataloading_mode: str):
         if dataloading_mode == "st":
