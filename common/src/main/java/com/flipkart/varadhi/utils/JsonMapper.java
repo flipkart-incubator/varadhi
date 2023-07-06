@@ -1,9 +1,7 @@
 package com.flipkart.varadhi.utils;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -23,10 +21,6 @@ public class JsonMapper {
         // Benefit of ParameterNamesModule
         // avoid annotation cluster for jackson serialisation, i.e. (de)serialization works by default w/o annotation.
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
-        //TODO:: Discuss this restriction on (de)ser semantics from global perspective.
-        mapper.setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE);
-        mapper.setVisibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE);
-        mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     }
