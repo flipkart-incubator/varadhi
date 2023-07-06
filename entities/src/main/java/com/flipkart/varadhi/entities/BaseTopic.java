@@ -8,7 +8,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public abstract class BaseTopic {
     private final String name;
-    private final InternalTopic.StorageKind kind;
     @Setter
     private int version;
 }
