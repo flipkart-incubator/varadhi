@@ -6,4 +6,5 @@ dependencies {
     implementation(project(':entities'))
     implementation(project(':common'))
     implementation('com.fasterxml.jackson.core:jackson-databind')
+    testImplementation(project(':pulsar'))
 }

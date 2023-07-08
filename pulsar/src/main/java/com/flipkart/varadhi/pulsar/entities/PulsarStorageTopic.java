@@ -12,6 +12,9 @@ import lombok.experimental.FieldDefaults;
 @EqualsAndHashCode(callSuper = true)
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class PulsarStorageTopic extends StorageTopic {
+    private static final String DEFAULT_TENANT = "public";
+    private static final String DEFAULT_NAMESPACE = "default";
+    private static final String TOPIC_SCHEMA = "persistent";
     int partitionCount;
     String namespace;
 
@@ -29,5 +32,10 @@ public class PulsarStorageTopic extends StorageTopic {
     private static int getPartitionCount(CapacityPolicy capacityPolicy) {
         //This should be based on capacity planner for the underlying messaging stack.
         return 1;
+    }
+
+    public String getFqdn() {
+        //TODO::tenant and namespace should be assigned when creating PulsarStorageTopic.
+        return String.format("%s://%s/%s/%s", TOPIC_SCHEMA, DEFAULT_TENANT, DEFAULT_NAMESPACE, getName());
     }
 }

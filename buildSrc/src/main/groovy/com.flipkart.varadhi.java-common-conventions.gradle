@@ -3,6 +3,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 plugins {
     id 'idea'
     id 'java'
+    id 'jacoco'
 }
 
 group = projectGroupId
@@ -32,12 +33,6 @@ sourceSets {
         compileClasspath += main.output + test.output
         runtimeClasspath += main.output + test.output
     }
-}
-
-tasks.register('testE2E', Test) {
-    testClassesDirs = sourceSets.testE2E.output.classesDirs
-    classpath = sourceSets.testE2E.runtimeClasspath
-    outputs.upToDateWhen { false } //this will force testE2E to execute always on target invocation.
 }
 
 configurations {
@@ -80,6 +75,7 @@ dependencies {
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
 
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
+        testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
 
         testE2EImplementation("javax.ws.rs:javax.ws.rs-api:$ws_rs_version")
@@ -97,6 +93,7 @@ dependencies {
 
     // common test framework
     testImplementation('org.junit.jupiter:junit-jupiter')
+    testImplementation('org.mockito:mockito-junit-jupiter')
 }
 
 java {
@@ -105,19 +102,32 @@ java {
     }
 }
 
+tasks.register('testE2E', Test) {
+    testClassesDirs = sourceSets.testE2E.output.classesDirs
+    classpath = sourceSets.testE2E.runtimeClasspath
+    outputs.upToDateWhen { false } //this will force testE2E to execute always on target invocation.
+}
+
+tasks.register('copyDependencies', Copy) {
+    into layout.buildDirectory.dir('dependencies')
+    from configurations.runtimeClasspath
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.release.set(17)
 }
-
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.add("-parameters")
 }
 
-
-tasks.register('copyDependencies', Copy) {
-    into layout.buildDirectory.dir('dependencies')
-    from configurations.runtimeClasspath
+tasks.withType(JacocoReport).configureEach {
+    reports {
+        html.required = true
+    }
+    getSourceDirectories().from(sourceSets.main.allSource.srcDirs)
+    getClassDirectories().from(sourceSets.main.output)
+    getExecutionData().from(layout.buildDirectory.files().findAll { it.name.endsWith('.exec') })
 }
 
 tasks.withType(Test).configureEach {
