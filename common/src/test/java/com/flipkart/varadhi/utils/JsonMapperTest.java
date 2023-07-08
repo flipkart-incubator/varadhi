@@ -2,8 +2,10 @@ package com.flipkart.varadhi.utils;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +41,13 @@ public class JsonMapperTest {
         assertTrue(exception.getMessage().contains("Could not resolve type id 'InvalidType'"));
     }
 
+    @Test
+    public void testJsonSerializeFailure() {
+        CantSerialize obj = new CantSerialize();
+        Exception exception = assertThrows(VaradhiException.class, () -> JsonMapper.jsonSerialize(obj));
+        Assertions.assertEquals(InvalidDefinitionException.class, exception.getCause().getClass());
+    }
+
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@vehicleType")
     private abstract static class Vehicle {
         private String manufacturer;
@@ -55,6 +64,14 @@ public class JsonMapperTest {
     private static class Car extends Vehicle {
         public Car(String manufacturer, String model, int year) {
             setManufacturer(manufacturer);
+        }
+    }
+
+    private static class CantSerialize {
+        private int foobar;
+
+        private void CantSerialize() {
+
         }
     }
 }
