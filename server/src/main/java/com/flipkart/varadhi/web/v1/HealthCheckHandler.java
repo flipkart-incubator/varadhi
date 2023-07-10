@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web.v1;
 
-import com.flipkart.varadhi.utils.ResponseExtension;
-import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
@@ -15,7 +15,7 @@ import java.util.Set;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
-@ExtensionMethod({ResponseExtension.class})
+@ExtensionMethod({RoutingContextExtension.class})
 public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvider {
 
     // TODO: add appropriate checks

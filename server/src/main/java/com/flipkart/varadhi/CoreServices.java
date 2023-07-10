@@ -82,9 +82,7 @@ public class CoreServices {
             }
             throw new InvalidConfigException("No class provided.");
         } catch (Exception e) {
-            String errorMsg = String.format("Fail to load class %s.", className);
-            log.error(errorMsg, e);
-            throw new InvalidConfigException(e);
+            throw new InvalidConfigException(String.format("Fail to load class %s.", className), e);
         }
     }
 
@@ -115,7 +113,6 @@ public class CoreServices {
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);
     }
-
 
     @Getter
     @AllArgsConstructor
