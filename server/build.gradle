@@ -78,6 +78,8 @@ dependencies {
     testE2EImplementation("javax.ws.rs:javax.ws.rs-api")
     testE2EImplementation("org.glassfish.jersey.core:jersey-client")
     testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson")
+
+    runtimeOnly project(':pulsar')
 }
 
 application {

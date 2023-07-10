@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.entities;
 
 
+import com.flipkart.varadhi.Constants;
+
 public class VaradhiTopicFactory {
     private static final String DEFAULT_TENANT = "public";
     private static final String DEFAULT_NAMESPACE = "default";
@@ -13,6 +15,7 @@ public class VaradhiTopicFactory {
     public VaradhiTopic get(TopicResource topicResource) {
         VaradhiTopic vt = new VaradhiTopic(
                 varadhiTopicName(topicResource),
+                Constants.INITIAL_VERSION,
                 topicResource.isGrouped(),
                 topicResource.isExclusiveSubscription(),
                 null

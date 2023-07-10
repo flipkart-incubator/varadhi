@@ -6,28 +6,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
-public class VaradhiTopic extends BaseTopic implements KeyProvider {
-    private static final String RESOURCE_TYPE_NAME = "VaradhiTopic";
+public class VaradhiTopic extends BaseTopic {
     private final Map<InternalTopic.TopicKind, InternalTopic> internalTopics;
-    private final boolean isGrouped;
-    private final boolean isExclusiveSubscription;
+    private final boolean grouped;
+    private final boolean exclusiveSubscription;
 
     public VaradhiTopic(
             String name,
-            boolean isGrouped,
-            boolean isExclusiveSubscription,
+            int version,
+            boolean grouped,
+            boolean exclusiveSubscription,
             Map<InternalTopic.TopicKind, InternalTopic> internalTopics
     ) {
-        super(name, InternalTopic.StorageKind.Meta);
-        this.isGrouped = isGrouped;
-        this.isExclusiveSubscription = isExclusiveSubscription;
+        super(name, version);
+        this.grouped = grouped;
+        this.exclusiveSubscription = exclusiveSubscription;
         this.internalTopics = null == internalTopics ? new ConcurrentHashMap<>() : internalTopics;
     }
 
-    @Override
-    public String uniqueKeyPath() {
-        return String.format("/%s/%s", RESOURCE_TYPE_NAME, getName());
-    }
 
     public void addInternalTopic(InternalTopic internalTopic) {
         internalTopics.put(internalTopic.getTopicKind(), internalTopic);

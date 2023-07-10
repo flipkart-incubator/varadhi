@@ -6,6 +6,7 @@ import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.MessagingStackOptions;
 import com.flipkart.varadhi.services.MessagingStackProvider;
+import com.flipkart.varadhi.utils.JsonMapper;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -69,7 +70,7 @@ public class CoreServices {
 
     private MessagingStackProvider setupMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
         MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
-        provider.init(messagingStackOptions);
+        provider.init(messagingStackOptions, JsonMapper.getMapper());
         return provider;
     }
 
