@@ -3,7 +3,7 @@ package com.flipkart.varadhi;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
-import com.flipkart.varadhi.web.routes.RouteBehaviourProvider;
+import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -19,12 +19,12 @@ import java.util.Map;
 @Slf4j
 public class RestVerticle extends AbstractVerticle {
     private final List<RouteDefinition> apiRoutes;
-    private final Map<RouteBehaviour, RouteBehaviourProvider> behaviorProviders;
+    private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders;
 
     private HttpServer httpServer;
 
     public RestVerticle(
-            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteBehaviourProvider> behaviorProviders
+            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders
     ) {
         this.apiRoutes = apiRoutes;
         this.behaviorProviders = behaviorProviders;
@@ -40,7 +40,7 @@ public class RestVerticle extends AbstractVerticle {
         for (RouteDefinition def : apiRoutes) {
             Route route = router.route().method(def.method()).path(def.path());
             def.behaviours().forEach(behaviour -> {
-                        RouteBehaviourProvider behaviorProvider = behaviorProviders.getOrDefault(behaviour, null);
+                        RouteConfigurator behaviorProvider = behaviorProviders.getOrDefault(behaviour, null);
                         if (null != behaviorProvider) {
                             behaviorProvider.configure(route, def);
                         } else {
@@ -58,6 +58,8 @@ public class RestVerticle extends AbstractVerticle {
         HttpServerOptions options = new HttpServerOptions();
         // TODO: why?
         options.setDecompressionSupported(false);
+        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
+        options.setUseAlpn(true);
 
         // TODO: create config for http server
         httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {

@@ -8,7 +8,7 @@ import com.flipkart.varadhi.services.MessagingStackProvider;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.AuthHandlers;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
-import com.flipkart.varadhi.web.routes.RouteBehaviourProvider;
+import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.TopicHandlers;
@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 public class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final Map<RouteBehaviour, RouteBehaviourProvider> behaviorProviders = new HashMap<>();
+    private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders = new HashMap<>();
 
     public VerticleDeployer(
             Vertx vertx,
