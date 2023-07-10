@@ -44,7 +44,6 @@ public class TopicHandlers implements RouteProvider {
         this.metaStore = metaStore;
     }
 
-
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(

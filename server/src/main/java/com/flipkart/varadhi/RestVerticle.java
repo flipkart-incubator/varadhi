@@ -87,7 +87,7 @@ public class RestVerticle extends AbstractVerticle {
         HttpServerOptions options = new HttpServerOptions();
         // TODO: why?
         options.setDecompressionSupported(false);
-        options.setAlpnVersions(Arrays.asList(HttpVersion.HTTP_2, HttpVersion.HTTP_1_1));
+        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
         options.setUseAlpn(true);
 
         // TODO: create config for http server
