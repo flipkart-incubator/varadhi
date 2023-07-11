@@ -16,6 +16,7 @@ dependencies {
     implementation('org.apache.logging.log4j:log4j-core')
 
     implementation('com.fasterxml.jackson.core:jackson-databind')
+    implementation("javax.annotation:javax.annotation-api:$javax_version")
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-config")
@@ -28,7 +29,7 @@ dependencies {
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
-        runtimeOnly('io.netty:netty-resolver-dns-native-macos')
+        runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final:osx-x86_64')
     }
 
     implementation("io.opentelemetry:opentelemetry-sdk")
@@ -47,6 +48,8 @@ dependencies {
     testE2EImplementation("javax.ws.rs:javax.ws.rs-api")
     testE2EImplementation("org.glassfish.jersey.core:jersey-client")
     testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson")
+
+    runtimeOnly project(':pulsar')
 }
 
 application {

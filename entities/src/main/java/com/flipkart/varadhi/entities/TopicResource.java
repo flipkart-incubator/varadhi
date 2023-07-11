@@ -5,7 +5,7 @@ import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class TopicResource extends VaradhiResource implements KeyProvider {
+public class TopicResource extends VaradhiResource {
 
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
     String project;
@@ -27,11 +27,6 @@ public class TopicResource extends VaradhiResource implements KeyProvider {
         this.grouped = grouped;
         this.exclusiveSubscription = exclusiveSubscription;
         this.capacityPolicy = capacityPolicy;
-    }
-
-    @Override
-    public String uniqueKeyPath() {
-        return String.format("%s/%s/%s", RESOURCE_TYPE_NAME, project, getName());
     }
 
 }

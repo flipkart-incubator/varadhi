@@ -10,20 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 public class VaradhiTopicService implements TopicService<VaradhiTopic> {
 
     private final StorageTopicService<StorageTopic> topicService;
-    private final MetaStore<VaradhiTopic> topicMetaStore;
+    private final MetaStore metaStore;
 
     public VaradhiTopicService(
             StorageTopicService<StorageTopic> serviceFactory,
-            MetaStore<VaradhiTopic> topicMetaStore
+            MetaStore metaStore
     ) {
         this.topicService = serviceFactory;
-        this.topicMetaStore = topicMetaStore;
+        this.metaStore = metaStore;
     }
 
     @Override
     public void create(VaradhiTopic varadhiTopic) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
-        topicMetaStore.create(varadhiTopic);
+        metaStore.createVaradhiTopic(varadhiTopic);
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();

@@ -25,7 +25,6 @@ public class Server {
             log.info("Server Started.");
         } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
-            System.out.println("Failed to initialise the server:" + e);
             System.exit(-1);
         }
         // TODO: check need for shutdown hook

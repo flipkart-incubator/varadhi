@@ -1,6 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flipkart.varadhi.db.ZKPathUtils;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -50,11 +51,7 @@ public class TopicTests {
     }
 
     private <T> void makeCreateRequest(
-            T entity,
-            String targetUrl,
-            int expectedStatus,
-            String expectedResponse,
-            boolean isErrored
+            T entity, String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored
     ) {
         Response response = getClient()
                 .target(targetUrl)
@@ -72,7 +69,8 @@ public class TopicTests {
     @Test
     public void createTopic() {
         String topicName = "TestTopic24";
-        TopicResource topic = new TopicResource(topicName, 0, DefaultProject, false, false, null);
+        TopicResource topic =
+                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, false, null);
         TopicResource r = makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
@@ -80,8 +78,12 @@ public class TopicTests {
         Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
         Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
+        //TODO::fix this.
         String errorDuplicateTopic =
-                String.format("Specified Topic(TopicResource/%s/%s) already exists.", DefaultProject, topicName);
+                String.format(
+                        "Specified Topic(%s) already exists.",
+                        ZKPathUtils.getTopicResourceFQDN(topic.getProject(), topic.getName())
+                );
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
     }
 

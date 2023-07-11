@@ -13,7 +13,8 @@
 - No @author tags in any javadoc.
 - Use try-with-resources blocks whenever is possible.
 - TODOs should be associated to at least one issue.
-- Always format the contributed code.
+- Always format the contributed code. In Intellij, it is recommended to enable "Reformat Code" & "Optimize Imports"
+  via "Tools > Actions on Save".
 
 ## Unit tests
 
