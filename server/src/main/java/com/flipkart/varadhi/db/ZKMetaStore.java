@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -29,7 +29,6 @@ public class ZKMetaStore {
             log.debug("Persisted Entity({}) in ZK: {}", resourcePath, response);
             return response;
         } catch (Exception e) {
-            throw new VaradhiException(e);
             log.error(String.format("Failed to create entity %s.", resource), e);
             throw new MetaStoreException(e);
         }
@@ -40,7 +39,6 @@ public class ZKMetaStore {
             byte[] data = zkCurator.getData().forPath(resourcePath);
             return JsonMapper.jsonDeserialize(new String(data), clazz);
         } catch (Exception e) {
-            throw new VaradhiException(e);
             log.error(String.format("Failed to get entity %s ", resourcePath), e);
             throw new MetaStoreException(e);
         }
@@ -50,14 +48,12 @@ public class ZKMetaStore {
         try {
             return null != zkCurator.checkExists().forPath(resourcePath);
         } catch (Exception e) {
-            throw new VaradhiException(e);
             log.error(String.format("Failed to check entity %s ", resourcePath), e);
             throw new MetaStoreException(e);
         }
     }
 
-    public void delete(String resourceKey) {
-        String resourcePath = getResourcePath(resourceKey);
+    public void delete(String resourcePath) {
         try {
             zkCurator.delete().forPath(resourcePath);
         } catch (Exception e) {
@@ -66,20 +62,15 @@ public class ZKMetaStore {
         }
     }
 
-    public List<String> list(String resourceKey) {
-        String resourcePath = getResourcePath(resourceKey);
+    public List<String> list(String resourcePath) {
         try {
-            if (!exists(resourceKey)) {
-                throw new MetaStoreException(String.format("Resource Path %s does not exist", resourceKey));
+            if (!exists(resourcePath)) {
+                throw new MetaStoreException(String.format("Resource Path %s does not exist", resourcePath));
             }
             return zkCurator.getChildren().forPath(resourcePath);
         } catch (Exception e) {
             log.error(String.format("Failed to list entity on %s ", resourcePath), e);
             throw new MetaStoreException(e);
         }
-    }
-
-    private String getResourcePath(String resourceKey) {
-        return String.format("%s/%s", BASE_PATH, resourceKey);
     }
 }

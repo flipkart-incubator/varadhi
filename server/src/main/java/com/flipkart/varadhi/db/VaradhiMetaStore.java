@@ -5,6 +5,8 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.util.List;
+
 
 @Slf4j
 public class VaradhiMetaStore implements MetaStore {
@@ -52,4 +54,21 @@ public class VaradhiMetaStore implements MetaStore {
         return this.zkMetaStore.get(resourcePath, VaradhiTopic.class);
     }
 
+    @Override
+    public void deleteVaradhiTopic(String topicName) {
+        String resourcePath = ZKPathUtils.getVaradhiTopicPath(topicName);
+        this.zkMetaStore.delete(resourcePath);
+    }
+
+    @Override
+    public void deleteTopicResource(String projectName, String resourceName) {
+        String resourcePath = ZKPathUtils.getTopicResourcePath(projectName, resourceName);
+        this.zkMetaStore.delete(resourcePath);
+    }
+
+    @Override
+    public List<String> listVaradhiTopics(String projectName) {
+        String resourcePath = ZKPathUtils.getVaradhiProjectPath(projectName);
+        return this.zkMetaStore.list(resourcePath);
+    }
 }
