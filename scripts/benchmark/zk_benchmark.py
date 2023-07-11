@@ -90,7 +90,6 @@ class catchtime:
     def __exit__(self, type, value, traceback):
         self.time = (perf_counter() - self.time) * 1000
         self.readout = f'Time: {self.time:.3f} ms'
-        # print(self.readout)
 
 ## Config classes start
 class ZkClientConfig:
@@ -295,23 +294,24 @@ class Benchmark:
         self.data_loader_config = config.data_loader_config
         self.root_node = config.root_node
     
-    def run(self, skip_measure: bool = False, dataloading_mode: str = "mt"):
+    def run(self, skip_measure: bool = False, skip_data: bool = False, dataloading_mode: str = "mt"):
         for (idx, run) in enumerate(self.config.runs):
             print("Starting benchmark run: {} [{} of {}]".format(run.name, idx+1, len(self.config.runs)))
-            self.__run(run, skip_measure, dataloading_mode)
+            self.__run(run, skip_measure, skip_data, dataloading_mode)
     
     def cleanup(self):
         with ZkClientWrapper(config=self.zk_config, name="cleanup_zk") as client:
             client.clean_all()
     
-    def __run(self, run_config: BenchmarkRunConfig, skip_measure: bool, dataloading_mode: str):
+    def __run(self, run_config: BenchmarkRunConfig, skip_measure: bool, skip_data: bool, dataloading_mode: str):
         path = self.__get_parent_path(run_config.name)
         measure_samples = self.config.measure_samples
 
         ## DataLoading step
-        print("Loading nodes under path:", path)
-        with self.__get_data_loader(self.data_loader_config, self.zk_config, dataloading_mode) as loader:
-            loader.load_data(run_config.name, run_config.child_node_config)
+        if not skip_data:
+            print("Loading nodes under path:", path)
+            with self.__get_data_loader(self.data_loader_config, self.zk_config, dataloading_mode) as loader:
+                loader.load_data(run_config.name, run_config.child_node_config)
         
         ## Measure step
         self.__measure_list(path, measure_samples, skip_measure)
@@ -377,6 +377,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--root_path", help="Root path under which benchmark will run", default="/benchmark")
     parser.add_argument("--cleanup", help="cleanup znodes in root path", action="store_true")
     parser.add_argument("--skip_measure", help="should skip measurements", action="store_true")
+    parser.add_argument("--skip_data", help="should skip data loading", action="store_true")
     parser.add_argument("--dl_mode", help="dataloader approach to use: st (single) | mt (multi-thread) | mp (multi-process)", type=str, default="mt")
 
     parser.add_argument("--num_threads", help="threads/processes to use for dataloading", type=int, default=4)
@@ -405,4 +406,4 @@ if __name__ == "__main__":
         if not args.num_child_nodes:
             print("ERR: please specify number of child nodes to create")
             exit()
-        benchmark.run(args.skip_measure, args.dl_mode)
+        benchmark.run(args.skip_measure, args.skip_data, args.dl_mode)
