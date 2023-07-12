@@ -124,6 +124,7 @@ tasks.withType(JavaCompile).configureEach {
 tasks.withType(JacocoReport).configureEach {
     reports {
         html.required = true
+        xml.required = true
     }
     getSourceDirectories().from(sourceSets.main.allSource.srcDirs)
     getClassDirectories().from(sourceSets.main.output)
