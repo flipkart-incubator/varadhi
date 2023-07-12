@@ -55,7 +55,8 @@ jobs:
       - name: Publish code coverage (uses CodeCov.io)
         uses: codecov/codecov-action@v3
         with:
-          files: */build/reports/jacoco/test/jacocoTestReport.xml
+          files: |
+            */build/reports/jacoco/test/jacocoTestReport.xml
       - name: Tear down the docker containers
         run: docker compose --profile test -f setup/docker/compose.yml down
       - name: Tear down the data volumes
