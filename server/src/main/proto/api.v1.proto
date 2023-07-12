@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.flipkart.varadhi.web.v1.proto";
+option java_outer_classname = "ProduceApi";
+
+// The greeting service definition.
+service MessageProducer {
+    // Sends a greeting
+    rpc produce (SingleMessageRequest) returns (SingleMessageResponse) {}
+}
+
+message SingleMessageRequest {
+    string payload = 1;
+}
+
+message SingleMessageResponse {
+    string offset = 1;
+}
