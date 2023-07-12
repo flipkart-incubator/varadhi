@@ -128,7 +128,7 @@ tasks.withType(JacocoReport).configureEach {
     }
     getSourceDirectories().from(sourceSets.main.allSource.srcDirs)
     getClassDirectories().from(sourceSets.main.output)
-    getExecutionData().from(layout.buildDirectory.files().findAll { it.name.endsWith('.exec') })
+    getExecutionData().from(fileTree(buildDir).include("/jacoco/*.exec"))
 }
 
 tasks.withType(Test).configureEach {
