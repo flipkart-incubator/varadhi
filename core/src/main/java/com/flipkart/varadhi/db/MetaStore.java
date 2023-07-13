@@ -3,8 +3,6 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 
-import java.util.List;
-
 public interface MetaStore {
 
     TopicResource createTopicResource(TopicResource resource);
@@ -22,6 +20,4 @@ public interface MetaStore {
     void deleteVaradhiTopic(String topicName);
 
     void deleteTopicResource(String projectName, String resourceName);
-
-    List<String> listVaradhiTopics(String projectName);
 }

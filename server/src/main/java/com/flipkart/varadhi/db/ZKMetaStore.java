@@ -29,8 +29,7 @@ public class ZKMetaStore {
             log.debug("Persisted Entity({}) in ZK: {}", resourcePath, response);
             return response;
         } catch (Exception e) {
-            log.error(String.format("Failed to create entity %s.", resource), e);
-            throw new MetaStoreException(e);
+            throw new MetaStoreException(String.format("Failed to create entity %s.", resource));
         }
     }
 
@@ -39,8 +38,7 @@ public class ZKMetaStore {
             byte[] data = zkCurator.getData().forPath(resourcePath);
             return JsonMapper.jsonDeserialize(new String(data), clazz);
         } catch (Exception e) {
-            log.error(String.format("Failed to get entity %s ", resourcePath), e);
-            throw new MetaStoreException(e);
+            throw new MetaStoreException(String.format("Failed to get entity %s ", resourcePath));
         }
     }
 
@@ -48,8 +46,7 @@ public class ZKMetaStore {
         try {
             return null != zkCurator.checkExists().forPath(resourcePath);
         } catch (Exception e) {
-            log.error(String.format("Failed to check entity %s ", resourcePath), e);
-            throw new MetaStoreException(e);
+            throw new MetaStoreException(String.format("Failed to check entity %s ", resourcePath));
         }
     }
 
@@ -57,8 +54,7 @@ public class ZKMetaStore {
         try {
             zkCurator.delete().forPath(resourcePath);
         } catch (Exception e) {
-            log.error(String.format("Failed to delete entity %s ", resourcePath), e);
-            throw new MetaStoreException(e);
+            throw new MetaStoreException(String.format("Failed to delete entity %s ", resourcePath));
         }
     }
 
@@ -69,8 +65,7 @@ public class ZKMetaStore {
             }
             return zkCurator.getChildren().forPath(resourcePath);
         } catch (Exception e) {
-            log.error(String.format("Failed to list entity on %s ", resourcePath), e);
-            throw new MetaStoreException(e);
+            throw new MetaStoreException(String.format("Failed to list entity on %s ", resourcePath));
         }
     }
 }
