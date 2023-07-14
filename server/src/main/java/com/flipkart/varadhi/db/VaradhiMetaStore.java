@@ -70,9 +70,9 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public VaradhiEntity getVaradhiEntity(
-            VaradhiEntityType varadhiEntityType, String entityName, Class<? extends VaradhiEntity> classType
-    ) {
+    public VaradhiEntity getVaradhiEntity(VaradhiEntityType varadhiEntityType,
+                                          String entityName,
+                                          Class<? extends VaradhiEntity> classType) {
         String resourcePath = ZKPathUtils.getVaradhiEntityPath(varadhiEntityType,
                 entityName);
         return this.zkMetaStore.get(resourcePath, classType);

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class OrgService implements VaradhiEntityService<OrgEntity> {
+
     private final MetaStore metaStore;
 
     private static final VaradhiEntityType VARADHI_ENTITY_TYPE = VaradhiEntityType.ORG;

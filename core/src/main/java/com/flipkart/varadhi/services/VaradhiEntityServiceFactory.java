@@ -10,6 +10,7 @@ import java.util.Map;
 
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class VaradhiEntityServiceFactory {
+
     Map<VaradhiEntityType, VaradhiEntityService> varadhiEntityServiceMap;
 
     public VaradhiEntityServiceFactory(MetaStore metaStore) {
@@ -17,6 +18,7 @@ public class VaradhiEntityServiceFactory {
         varadhiEntityServiceMap.put(VaradhiEntityType.ORG, new OrgService(metaStore));
         //TODO : add for other entities, by iterating over enum
     }
+
     public VaradhiEntityService getVaradhiEntityService(VaradhiEntityType varadhiEntityType) {
         return varadhiEntityServiceMap.get(varadhiEntityType);
     }

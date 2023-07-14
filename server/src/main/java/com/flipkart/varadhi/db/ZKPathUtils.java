@@ -11,6 +11,7 @@ public class ZKPathUtils {
     public static String getVaradhiTopicPath(String topicName) {
         return constructPath(VARADHI_TOPIC_NAME, topicName);
     }
+
     public static String getVaradhiEntityPath(VaradhiEntityType varadhiEntityType, String entityName) {
         return constructPath(varadhiEntityType.name(), entityName);
     }
