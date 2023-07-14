@@ -14,7 +14,10 @@ public enum ResourceAction {
 
     SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, "create"),
     SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, "delete"),
-    SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update");
+    SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update"),
+    ORG_CREATE(ResourceType.ORG, "create"),
+    ORG_GET(ResourceType.ORG, "get"),
+    ORG_DELETE(ResourceType.ORG, "delete");
 
     private final ResourceType resourceType;
     private final String action;

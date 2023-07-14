@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiEntity;
+import com.flipkart.varadhi.entities.VaradhiEntityType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -50,6 +52,30 @@ public class VaradhiMetaStore implements MetaStore {
     public VaradhiTopic getVaradhiTopic(String topicName) {
         String resourcePath = ZKPathUtils.getVaradhiTopicPath(topicName);
         return this.zkMetaStore.get(resourcePath, VaradhiTopic.class);
+    }
+
+    @Override
+    public VaradhiEntity createVaradhiEntity(VaradhiEntityType varadhiEntityType, VaradhiEntity varadhiEntity) {
+        String resourcePath = ZKPathUtils.getVaradhiEntityPath(varadhiEntityType,
+                varadhiEntity.getName());
+        this.zkMetaStore.create(varadhiEntity, varadhiEntity.getVersion(), resourcePath);
+        return varadhiEntity;
+    }
+
+    @Override
+    public boolean checkVaradhiEntityExists(VaradhiEntityType varadhiEntityType, String entityName) {
+        String resourcePath = ZKPathUtils.getVaradhiEntityPath(varadhiEntityType,
+                entityName);
+        return this.zkMetaStore.exists(resourcePath);
+    }
+
+    @Override
+    public VaradhiEntity getVaradhiEntity(
+            VaradhiEntityType varadhiEntityType, String entityName, Class<? extends VaradhiEntity> classType
+    ) {
+        String resourcePath = ZKPathUtils.getVaradhiEntityPath(varadhiEntityType,
+                entityName);
+        return this.zkMetaStore.get(resourcePath, classType);
     }
 
 }

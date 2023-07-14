@@ -3,7 +3,8 @@ package com.flipkart.varadhi.auth;
 public enum ResourceType {
     TENANT("tenant"),
     TOPIC("topic"),
-    SUBSCRIPTION("subscription");
+    SUBSCRIPTION("subscription"),
+    ORG("org");
     private final String type;
 
     ResourceType(String type) {

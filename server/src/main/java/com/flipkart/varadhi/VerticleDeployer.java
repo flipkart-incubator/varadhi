@@ -5,6 +5,8 @@ import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.services.MessagingStackProvider;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.VaradhiEntityServiceFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.AuthHandlers;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -12,6 +14,7 @@ import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.TopicHandlers;
+import com.flipkart.varadhi.web.v1.VaradhiEntityHandlers;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -28,6 +31,7 @@ import java.util.stream.Stream;
 @Slf4j
 public class VerticleDeployer {
     private final TopicHandlers topicHandlers;
+    private final VaradhiEntityHandlers varadhiEntityHandlers;
     private final HealthCheckHandler healthCheckHandler;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders = new HashMap<>();
 
@@ -42,7 +46,11 @@ public class VerticleDeployer {
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
+
         this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore());
+
+        this.varadhiEntityHandlers = new VaradhiEntityHandlers(new VaradhiEntityServiceFactory(metaStoreProvider.getMetaStore()));
+
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
@@ -52,7 +60,8 @@ public class VerticleDeployer {
     private List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
                         topicHandlers.get(),
-                        healthCheckHandler.get()
+                        healthCheckHandler.get(),
+                        varadhiEntityHandlers.get()
                 )
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());

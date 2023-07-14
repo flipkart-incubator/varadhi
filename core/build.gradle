@@ -6,5 +6,6 @@ dependencies {
     implementation(project(':entities'))
     implementation(project(':common'))
     implementation('com.fasterxml.jackson.core:jackson-databind')
+    implementation 'javax.ws.rs:javax.ws.rs-api:2.0'
     testImplementation(project(':pulsar'))
 }
