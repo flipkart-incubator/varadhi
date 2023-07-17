@@ -44,7 +44,7 @@ dependencies {
     implementation('org.apache.curator:curator-framework:5.5.0')
 
     testImplementation("io.vertx:vertx-junit5")
-    testImplementation("org.mockito:mockito-core:3.+")
+    testImplementation("org.apache.curator:curator-test:5.5.0")
 
     testE2EImplementation("javax.ws.rs:javax.ws.rs-api")
     testE2EImplementation("org.glassfish.jersey.core:jersey-client")

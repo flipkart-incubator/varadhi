@@ -10,12 +10,8 @@ public class ZKPathUtils {
         return constructPath(VARADHI_TOPIC_NAME, topicName);
     }
 
-    public static String getVaradhiProjectPath(String projectName) {
-        return constructPath(TOPIC_RESOURCE_NAME, projectName);
-    }
-
     public static String getTopicResourceFQDN(String projectName, String topicName) {
-        return String.join("/", projectName, topicName);
+        return String.join(":", projectName, topicName);
     }
 
     public static String getTopicResourcePath(String projectName, String topicName) {

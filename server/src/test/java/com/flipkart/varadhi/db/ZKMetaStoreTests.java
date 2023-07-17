@@ -1,46 +1,45 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.TopicResource;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.GetDataBuilder;
-import org.apache.curator.framework.imps.GetDataBuilderImpl;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.test.TestingServer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-import static org.mockito.Mockito.when;
+import java.io.IOException;
 
 public class ZKMetaStoreTests {
 
-    @Mock
-    private CuratorFramework curatorFramework;
+    private static TestingServer zkCuratorTestingServer;
+    private static CuratorFramework zkCuratorFramework;
 
-    ZKMetaStore metaStore;
+    private static ZKMetaStore zkMetaStore;
 
 
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
-        metaStore = new ZKMetaStore(curatorFramework);
+    @BeforeAll
+    public static void setUp() throws Exception {
+        zkCuratorTestingServer = new TestingServer();
+        zkCuratorFramework =
+                CuratorFrameworkFactory.newClient(
+                        zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(0, 1));
+        zkCuratorFramework.start();
+        zkMetaStore = new ZKMetaStore(zkCuratorFramework);
     }
+
+    @AfterAll
+    public static void closeTest() throws IOException {
+        zkCuratorTestingServer.close();
+    }
+
 
     @Test
     public void testGetZKData() {
-
-        String stringfiedResource =
-                "{\"name\":\"sampleTopic\",\"version\":0,\"project\":\"sampleProject\",\"grouped\":true,\"exclusiveSubscription\":true}";
-        GetDataBuilder dataBuilder = new GetDataBuilderImpl(null, null, null, null, false) {
-            @Override
-            public byte[] forPath(String path) {
-                return stringfiedResource.getBytes();
-            }
-        };
-
-        when(curatorFramework.getData()).thenReturn(dataBuilder);
-        TopicResource result = metaStore.get("resourcePath", TopicResource.class);
-        Assertions.assertEquals(result.getName(), "sampleTopic");
+        zkMetaStore.create("sample-testing-data", 1, "/sample-testing-node");
+        String data = zkMetaStore.get("/sample-testing-node", String.class);
+        Assertions.assertEquals(data, "sample-testing-data");
     }
 
 }
