@@ -16,11 +16,15 @@ services:
   web:
     image: varadhi.docker.registry/varadhi:latest
     profiles: [ "test", "service" ]
+    environment:
+      - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
     networks:
       hostnet:
         ipv4_address: 10.5.5.2
     ports:
       - 8080:8080
+    volumes:
+      - ../../server/build/jacoco:/jacoco
     restart: "no"
     healthcheck:
       test: curl -s http://localhost:8080/v1/health-check | grep iam_ok
