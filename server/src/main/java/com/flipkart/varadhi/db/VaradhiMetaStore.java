@@ -52,4 +52,15 @@ public class VaradhiMetaStore implements MetaStore {
         return this.zkMetaStore.get(resourcePath, VaradhiTopic.class);
     }
 
+    @Override
+    public void deleteVaradhiTopic(String topicName) {
+        String resourcePath = ZKPathUtils.getVaradhiTopicPath(topicName);
+        this.zkMetaStore.delete(resourcePath);
+    }
+
+    @Override
+    public void deleteTopicResource(String projectName, String resourceName) {
+        String resourcePath = ZKPathUtils.getTopicResourcePath(projectName, resourceName);
+        this.zkMetaStore.delete(resourcePath);
+    }
 }

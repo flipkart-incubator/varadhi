@@ -76,9 +76,9 @@ public class TopicHandlers implements RouteProvider {
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
-            log.error("Specified Topic({}/{}) already exists.", topicResource.getProject(), topicResource.getName());
+            log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
-                    String.format("Specified Topic(%s/%s) already exists.", topicResource.getProject(),
+                    String.format("Specified Topic(%s:%s) already exists.", topicResource.getProject(),
                             topicResource.getName()
                     ));
         }

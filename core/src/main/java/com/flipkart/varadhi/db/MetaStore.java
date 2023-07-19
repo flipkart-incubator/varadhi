@@ -17,4 +17,7 @@ public interface MetaStore {
 
     VaradhiTopic getVaradhiTopic(String topicName);
 
+    void deleteVaradhiTopic(String topicName);
+
+    void deleteTopicResource(String projectName, String resourceName);
 }

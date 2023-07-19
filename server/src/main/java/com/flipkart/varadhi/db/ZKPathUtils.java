@@ -11,7 +11,7 @@ public class ZKPathUtils {
     }
 
     public static String getTopicResourceFQDN(String projectName, String topicName) {
-        return String.join("/", projectName, topicName);
+        return String.join(":", projectName, topicName);
     }
 
     public static String getTopicResourcePath(String projectName, String topicName) {
