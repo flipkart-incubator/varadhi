@@ -17,6 +17,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,15 +50,15 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), this::get,
+                                HttpMethod.GET, "/:topic", Set.of(), Collections.emptyList(), this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(authenticated, hasBody), this::create,
-                                Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
+                                HttpMethod.POST, "", Set.of(authenticated, hasBody), Collections.emptyList(),
+                                this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), this::delete,
+                                HttpMethod.DELETE, "/:topic", Set.of(), Collections.emptyList(), this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
                 )
@@ -71,7 +72,7 @@ public class TopicHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         //TODO:: Enable authn/authz for this flow.
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
-        //TODO:: Consider reverting on failure and transaction kind of semantics for all operations.
+        //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());

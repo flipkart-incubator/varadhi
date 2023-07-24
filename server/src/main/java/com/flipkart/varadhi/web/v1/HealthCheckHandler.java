@@ -8,6 +8,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,7 +37,9 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(), this, Optional.empty())
+                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(), Collections.emptyList(),
+                        this, Optional.empty()
+                )
         );
     }
 }

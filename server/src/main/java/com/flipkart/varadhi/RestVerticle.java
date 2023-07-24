@@ -51,7 +51,8 @@ public class RestVerticle extends AbstractVerticle {
                         behaviorProvider.configure(route, def);
                     }
             );
-            route.handler(def.handler());
+            def.preHandlers().forEach(route::handler);
+            route.handler(def.endReqHandler());
             route.failureHandler(failureHandler);
         }
 
