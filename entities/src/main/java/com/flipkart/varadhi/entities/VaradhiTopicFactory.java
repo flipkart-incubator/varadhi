@@ -7,8 +7,14 @@ public class VaradhiTopicFactory {
 
     private final StorageTopicFactory<StorageTopic> topicFactory;
 
-    public VaradhiTopicFactory(StorageTopicFactory<StorageTopic> topicFactory) {
+    //TODO:: This is currently used to provide default value for primary region for the topic being created.
+    //This should come from TopicResource a part of Regional/HA/BCP-DR policy. Since those are not available
+    //use deploymentRegion as global single primary topic region as a workaround.
+    private final String deploymentRegion;
+
+    public VaradhiTopicFactory(StorageTopicFactory<StorageTopic> topicFactory, String deploymentRegion) {
         this.topicFactory = topicFactory;
+        this.deploymentRegion = deploymentRegion;
     }
 
     public VaradhiTopic get(Project project, TopicResource topicResource) {
@@ -16,7 +22,6 @@ public class VaradhiTopicFactory {
                 getVaradhiTopicName(topicResource),
                 Constants.INITIAL_VERSION,
                 topicResource.isGrouped(),
-                topicResource.isExclusiveSubscription(),
                 null
         );
         planDeployment(project, vt, topicResource);
@@ -26,7 +31,8 @@ public class VaradhiTopicFactory {
 
     private void planDeployment(Project project, VaradhiTopic varadhiTopic, TopicResource topicResource) {
         InternalTopic mainTopic =
-                InternalTopic.from(project, varadhiTopic.getName(), topicResource, topicFactory);
+                InternalTopic.mainTopicFrom(
+                        project, varadhiTopic.getName(), deploymentRegion, topicResource, topicFactory);
         varadhiTopic.addInternalTopic(mainTopic);
     }
 

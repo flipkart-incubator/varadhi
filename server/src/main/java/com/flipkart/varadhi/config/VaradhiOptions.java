@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class VaradhiOptions {
-    private String deployedZone;
+    private String deployedRegion;
     private ProducerOptions producerOptions;
 }

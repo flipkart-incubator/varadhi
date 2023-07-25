@@ -70,13 +70,12 @@ public class TopicTests {
     public void createTopic() {
         String topicName = "TestTopic24";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, false, null);
+                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, null);
         TopicResource r = makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
         Assertions.assertEquals(topic.getProject(), r.getProject());
         Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
-        Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
         //TODO::fix this.
         String errorDuplicateTopic =
@@ -91,7 +90,7 @@ public class TopicTests {
     public void createTopicWithValidationFailure() {
         String topicName = "Test";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, false, null);
+                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, null);
         String errorValidationTopic = "name: Varadhi Resource Name Length must be between 5 and 50";
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorValidationTopic, true);
     }

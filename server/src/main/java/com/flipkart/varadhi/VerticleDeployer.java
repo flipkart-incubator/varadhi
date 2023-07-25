@@ -49,8 +49,9 @@ public class VerticleDeployer {
             MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {
+        String deployedRegion = configuration.getVaradhiOptions().getDeployedRegion();
         VaradhiTopicFactory varadhiTopicFactory =
-                new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory());
+                new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
         VaradhiTopicService varadhiTopicService = new VaradhiTopicService(
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
@@ -64,7 +65,7 @@ public class VerticleDeployer {
                         meterRegistry
                 );
         this.produceHandlers =
-                new ProduceHandlers(configuration.getVaradhiOptions().getDeployedZone(), producerService);
+                new ProduceHandlers(configuration.getVaradhiOptions().getDeployedRegion(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         this.behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));

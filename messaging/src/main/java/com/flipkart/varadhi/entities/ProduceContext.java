@@ -39,6 +39,6 @@ public class ProduceContext {
     @Getter
     @Setter
     public static class ClusterContext {
-        String produceZone;
+        String produceRegion;
     }
 }

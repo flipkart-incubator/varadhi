@@ -11,17 +11,17 @@ public class VaradhiTopicFactoryTest {
     private VaradhiTopicFactory varadhiTopicFactory;
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
     private Project project;
-    private String zone = "local";
+    private String region = "local";
     private String iTopicName;
     private String topicName = "testTopic";
 
     @BeforeEach
     public void setUp() {
         storageTopicFactory = mock(StorageTopicFactory.class);
-        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory);
+        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region);
         project = new Project("default", "public", "public");
         String vTopicName = String.format("%s.%s", project.getName(), topicName);
-        iTopicName = InternalTopic.internalMainTopicName(vTopicName, zone);
+        iTopicName = InternalTopic.internalMainTopicName(vTopicName, region);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), iTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
@@ -35,7 +35,6 @@ public class VaradhiTopicFactoryTest {
                 1,
                 project.getName(),
                 true,
-                false,
                 null
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
@@ -44,8 +43,8 @@ public class VaradhiTopicFactoryTest {
         InternalTopic it = varadhiTopic.getInternalTopics().get(iTopicName);
         StorageTopic st = it.getStorageTopic();
         Assertions.assertEquals(it.getStatus(), InternalTopic.ProduceStatus.Active);
-        Assertions.assertEquals(it.getRegion(), zone);
-        Assertions.assertNull(it.getSourceRegion());
+        Assertions.assertEquals(it.getTopicRegion(), region);
+        Assertions.assertNull(it.getReplicatingFromRegion());
         Assertions.assertNotNull(st);
         verify(storageTopicFactory, times(1)).getTopic(project, iTopicName, null);
     }

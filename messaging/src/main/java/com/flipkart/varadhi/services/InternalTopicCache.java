@@ -20,7 +20,7 @@ public class InternalTopicCache {
         this.varadhiTopicCache = CacheBuilder.from(topicCacheBuilderSpec).build();
     }
 
-    public InternalTopic getInternalMainTopicForZone(String varadhiTopicName, String region) {
+    public InternalTopic getInternalMainTopicForRegion(String varadhiTopicName, String region) {
         try {
             VaradhiTopic varadhiTopic = this.varadhiTopicCache.get(varadhiTopicName, () ->
                     this.varadhiTopicService.get(varadhiTopicName));

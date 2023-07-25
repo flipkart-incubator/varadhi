@@ -26,11 +26,11 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class ProduceHandlers implements RouteProvider {
-    private final String deployedZone;
+    private final String deployedRegion;
     private final ProducerService producerService;
 
-    public ProduceHandlers(String deployedZone, ProducerService producerService) {
-        this.deployedZone = deployedZone;
+    public ProduceHandlers(String deployedRegion, ProducerService producerService) {
+        this.deployedRegion = deployedRegion;
         this.producerService = producerService;
     }
 

@@ -10,18 +10,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class VaradhiTopic extends BaseTopic {
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
-    private final boolean exclusiveSubscription;
 
     public VaradhiTopic(
             String name,
             int version,
             boolean grouped,
-            boolean exclusiveSubscription,
             Map<String, InternalTopic> internalTopics
     ) {
         super(name, version);
         this.grouped = grouped;
-        this.exclusiveSubscription = exclusiveSubscription;
         this.internalTopics = null == internalTopics ? new ConcurrentHashMap<>() : internalTopics;
     }
 

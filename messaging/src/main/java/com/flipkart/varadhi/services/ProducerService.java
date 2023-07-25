@@ -31,9 +31,9 @@ public class ProducerService {
         try {
             addRequestHeadersToMessage(message, produceContext.getRequestContext().getHeaders());
             addVaradhiHeadersToMessage(message, produceContext);
-            String produceZone = produceContext.getClusterContext().getProduceZone();
+            String produceRegion = produceContext.getClusterContext().getProduceRegion();
             InternalTopic internalTopic =
-                    this.internalTopicCache.getInternalMainTopicForZone(varadhiTopicName, produceZone);
+                    this.internalTopicCache.getInternalMainTopicForRegion(varadhiTopicName, produceRegion);
             ensureProduceAllowedForTopic(internalTopic);
             Producer producer = this.producerCache.getProducer(internalTopic.getStorageTopic());
             CompletableFuture<ProducerResult> producerResult = producer.ProduceAsync(message);
@@ -51,14 +51,15 @@ public class ProducerService {
     }
 
     private void addVaradhiHeadersToMessage(Message message, ProduceContext produceContext) {
-        //TODO::Discuss: RequestTimestamp or ProduceTimeStamp.. both might give some confusion w.r.to ordering..
+        //TODO::Discuss: RequestTimestamp or ProduceTimeStamp. both might give some confusion w.r.to ordering..
         //TODO::handle null value of these headers.
         message.addHeader(
                 MessageConstants.HEADER_PRODUCE_TIMESTAMP,
                 Long.toString(produceContext.getRequestContext().getRequestTimestamp())
         );
         message.addHeader(MessageConstants.HEADER_PRODUCE_IDENTITY, produceContext.getUserContext().getSubject());
-        message.addHeader(MessageConstants.HEADER_PRODUCE_ZONE, produceContext.getClusterContext().getProduceZone());
+        message.addHeader(
+                MessageConstants.HEADER_PRODUCE_REGION, produceContext.getClusterContext().getProduceRegion());
     }
 
     private void addRequestHeadersToMessage(Message message, Map<String, String> requestHeaders) {

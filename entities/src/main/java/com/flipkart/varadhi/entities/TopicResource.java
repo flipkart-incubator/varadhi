@@ -7,16 +7,11 @@ import lombok.Value;
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class TopicResource extends VaradhiResource {
-
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
 
     @Size(min = 5, max = 50, message = "Project Length must be between 5 and 50")
     String project;
-
     boolean grouped;
-
-    boolean exclusiveSubscription;
-
     CapacityPolicy capacityPolicy;
 
     //TODO::check if private constructor suffices.
@@ -25,13 +20,11 @@ public class TopicResource extends VaradhiResource {
             int version,
             String project,
             boolean grouped,
-            boolean exclusiveSubscription,
             CapacityPolicy capacityPolicy
     ) {
         super(name, version);
         this.project = project;
         this.grouped = grouped;
-        this.exclusiveSubscription = exclusiveSubscription;
         this.capacityPolicy = capacityPolicy;
     }
 }

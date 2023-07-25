@@ -20,7 +20,7 @@ public class VaradhiTopicServiceTest {
     private VaradhiTopicService varadhiTopicService;
     private Project project;
     private InternalTopic.TopicKind topicKind = InternalTopic.TopicKind.Main;
-    private String zone = "local";
+    private String region = "local";
     private String topicName = "testTopic";
     private String iTopicName;
 
@@ -30,11 +30,11 @@ public class VaradhiTopicServiceTest {
         storageTopicService = mock(StorageTopicService.class);
         metaStore = mock(MetaStore.class);
         storageTopicFactory = mock(StorageTopicFactory.class);
-        varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory));
+        varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory, region));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
         project = new Project("default", "public", "public");
         String vTopicName = String.format("%s.%s", project.getName(), topicName);
-        iTopicName = InternalTopic.internalMainTopicName(vTopicName, zone);
+        iTopicName = InternalTopic.internalMainTopicName(vTopicName, region);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), iTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
@@ -84,7 +84,6 @@ public class VaradhiTopicServiceTest {
                 1,
                 project.getName(),
                 true,
-                false,
                 null
         );
     }
