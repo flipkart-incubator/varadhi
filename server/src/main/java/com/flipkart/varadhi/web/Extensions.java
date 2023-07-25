@@ -51,5 +51,10 @@ public class Extensions {
         public static void todo(RoutingContext context) {
             context.response().setStatusCode(500).setStatusMessage("Not Implemented").end();
         }
+
+        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
+            //TODO::Anything more here.
+            ctx.fail(throwable);
+        }
     }
 }

@@ -1,7 +1,8 @@
-package com.flipkart.varadhi.web.v1;
+package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.db.MetaStore;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
@@ -29,7 +30,8 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
-
+    private static final String DEFAULT_TENANT = "public";
+    private static final String DEFAULT_TEAM = "public";
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
     private final MetaStore metaStore;
@@ -78,6 +80,9 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
+        //TODO:: fetch project from metastore when implemented.
+        Project project = new Project(topicResource.getName(), DEFAULT_TEAM, DEFAULT_TENANT);
+
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
@@ -87,7 +92,7 @@ public class TopicHandlers implements RouteProvider {
                     ));
         }
         TopicResource createdResource = metaStore.createTopicResource(topicResource);
-        VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
+        VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);
         ctx.endRequestWithResponse(createdResource);
     }

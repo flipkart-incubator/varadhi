@@ -31,4 +31,9 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
                 }
         );
     }
+
+    @Override
+    public VaradhiTopic get(String topicName) {
+        return metaStore.getVaradhiTopic(topicName);
+    }
 }

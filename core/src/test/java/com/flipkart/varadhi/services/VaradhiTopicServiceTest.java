@@ -7,6 +7,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import static org.mockito.Mockito.*;
 
@@ -17,6 +18,12 @@ public class VaradhiTopicServiceTest {
     private StorageTopicService<StorageTopic> storageTopicService;
     private MetaStore metaStore;
     private VaradhiTopicService varadhiTopicService;
+    private Project project;
+    private InternalTopic.TopicKind topicKind = InternalTopic.TopicKind.Main;
+    private String zone = "local";
+    private String topicName = "testTopic";
+    private String iTopicName;
+
 
     @BeforeEach
     public void setUp() {
@@ -25,27 +32,31 @@ public class VaradhiTopicServiceTest {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
-        //TODO::check it, not a circular dependency though
-        PulsarStorageTopic pTopic = new PulsarStorageTopic("public.default.testTopic.Main.local", 1);
-        doReturn(pTopic).when(storageTopicFactory).getTopic("public.default.testTopic.Main.local", null);
+        project = new Project("default", "public", "public");
+        String vTopicName = String.format("%s.%s", project.getName(), topicName);
+        iTopicName = InternalTopic.internalMainTopicName(vTopicName, zone);
+        String pTopicName =
+                String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), iTopicName);
+        PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
+        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(project, iTopicName, null);
     }
 
     @Test
     public void createVaradhiTopic() {
-        TopicResource topicResource = new TopicResource("testTopic", 1, "testProject", true, false, null);
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(topicResource);
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic);
         verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(InternalTopic.TopicKind.Main).getStorageTopic();
+        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
         verify(storageTopicService, times(1)).create(st);
-        verify(storageTopicFactory, times(1)).getTopic(st.getName(), null);
+        verify(storageTopicFactory, times(1)).getTopic(project, iTopicName, null);
     }
 
     @Test
     public void createVaradhiTopicWhenMetaStoreFails() {
-        TopicResource topicResource = new TopicResource("testTopic", 1, "testProject", true, false, null);
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(topicResource);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(InternalTopic.TopicKind.Main).getStorageTopic();
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(metaStore).createVaradhiTopic(varadhiTopic);
         Exception exception =
                 Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic));
@@ -56,15 +67,26 @@ public class VaradhiTopicServiceTest {
 
     @Test
     public void createVaradhiTopicWhenStorageTopicServiceFails() {
-        TopicResource topicResource = new TopicResource("testTopic", 1, "testProject", true, false, null);
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(topicResource);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(InternalTopic.TopicKind.Main).getStorageTopic();
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(storageTopicService).create(st);
         Exception exception =
                 Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic));
         verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(st);
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
+    }
+
+    private TopicResource getTopicResource(String topicName, Project project) {
+        return new TopicResource(
+                topicName,
+                1,
+                project.getName(),
+                true,
+                false,
+                null
+        );
     }
 }
 

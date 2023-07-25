@@ -1,3 +1,11 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
 }
+
+dependencies {
+    implementation("com.google.guava:guava")
+    implementation("io.micrometer:micrometer-core")
+    implementation(project(':common'))
+    implementation(project(':entities'))
+    implementation(project(':core'))
+}

@@ -52,7 +52,9 @@ dependencies {
     testE2EImplementation("org.glassfish.jersey.core:jersey-client")
     testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson")
     testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_ver:runtime")
-    runtimeOnly project(':pulsar')
+    runtimeOnly(project(':pulsar'))
+    testImplementation(project(':pulsar'))
+
 }
 
 task copyJacocoAgent(type: Copy) {

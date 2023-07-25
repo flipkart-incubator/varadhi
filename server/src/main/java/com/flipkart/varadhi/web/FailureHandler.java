@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.exceptions.*;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -10,10 +11,13 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.*;
 
 @Slf4j
 public class FailureHandler implements Handler<RoutingContext> {
+
+    public static int HTTP_RATE_LIMITED = 429;
+    public static int HTTP_UNPROCESSABLE_ENTITY = 422;
 
     @Override
     public void handle(RoutingContext ctx) {
@@ -61,10 +65,23 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
+        //TODO:: review status code mapping for correctness.
+        Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();
-        } else {
-            return HTTP_INTERNAL_ERROR;
+        } else if (OperationNotAllowedException.class == tClazz) {
+            return HTTP_UNPROCESSABLE_ENTITY;
+        } else if (ResourceBlockedException.class == tClazz) {
+            return HTTP_UNPROCESSABLE_ENTITY;
+        } else if (ResourceRateLimitedException.class == tClazz) {
+            return HTTP_RATE_LIMITED;
+        } else if (DuplicateResourceException.class == tClazz) {
+            return HTTP_CONFLICT;
+        } else if (NotImplementedException.class == tClazz) {
+            return HTTP_NOT_IMPLEMENTED;
         }
+        return HTTP_INTERNAL_ERROR;
     }
+
+
 }

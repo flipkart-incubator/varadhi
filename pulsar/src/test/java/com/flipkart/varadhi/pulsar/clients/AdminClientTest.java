@@ -35,7 +35,7 @@ public class AdminClientTest {
         PulsarStorageTopic topic = new PulsarStorageTopic("testTopic", 1);
         doNothing().when(topics).createPartitionedTopic(anyString(), anyInt(), anyMap());
         adminClient.create(topic);
-        verify(topics, times(1)).createPartitionedTopic(eq(topic.getFqdn()), eq(1), eq(properties));
+        verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1), eq(properties));
     }
 
     @Test

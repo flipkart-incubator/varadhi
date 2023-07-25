@@ -1,3 +1,9 @@
+varadhiOptions:
+  deployedZone: 'default'
+  producerOptions:
+    producerCacheBuilderSpec: ""
+    topicCacheBuilderSpec: ""
+    
 vertxOptions:
   eventLoopPoolSize: 1
   workerPoolSize: 1
@@ -7,6 +13,9 @@ restVerticleDeploymentOptions:
   instances: 2
   worker: true
   workerPoolSize: 2
+
+produceVerticleDeploymentOptions:
+  instances: 1
 
 authenticationEnabled: false
 

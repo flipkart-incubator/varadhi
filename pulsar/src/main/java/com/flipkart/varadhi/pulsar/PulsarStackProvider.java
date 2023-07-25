@@ -2,13 +2,13 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.StorageTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
-import com.flipkart.varadhi.pulsar.entities.PulsarTopicFactory;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
 import com.flipkart.varadhi.services.MessagingStackOptions;
 import com.flipkart.varadhi.services.MessagingStackProvider;
@@ -23,37 +23,46 @@ import java.util.concurrent.TimeUnit;
 public class PulsarStackProvider implements MessagingStackProvider {
     private PulsarTopicService pulsarTopicService;
     private PulsarTopicFactory pulsarTopicFactory;
+    private PulsarProducerFactory pulsarProducerFactory;
     private volatile boolean initialised = false;
-    private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+    private static final TimeUnit TimeUnitMS = TimeUnit.MILLISECONDS;
 
     public void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper) {
-        if (!initialised) {
+        if (!this.initialised) {
             synchronized (this) {
-                if (!initialised) {
+                if (!this.initialised) {
                     PulsarConfig pulsarConfig =
                             YamlLoader.loadConfig(messagingStackOptions.getConfigFile(), PulsarConfig.class);
-                    pulsarTopicFactory = new PulsarTopicFactory();
+                    this.pulsarTopicFactory = new PulsarTopicFactory();
                     PulsarAdmin pulsarAdmin = getPulsarAdminClient(pulsarConfig.getPulsarClientOptions());
-                    pulsarTopicService = new PulsarTopicService(pulsarAdmin);
+                    this.pulsarTopicService = new PulsarTopicService(pulsarAdmin);
+                    this.pulsarProducerFactory = new PulsarProducerFactory();
                     registerSubtypes(mapper);
-                    initialised = true;
+                    this.initialised = true;
                 }
             }
         }
     }
 
     public <T extends StorageTopic> StorageTopicFactory<T> getStorageTopicFactory() {
-        if (!initialised) {
+        if (!this.initialised) {
             throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
         }
-        return (StorageTopicFactory) pulsarTopicFactory;
+        return (StorageTopicFactory) this.pulsarTopicFactory;
     }
 
     public <T extends StorageTopic> StorageTopicService<T> getStorageTopicService() {
-        if (!initialised) {
+        if (!this.initialised) {
             throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
         }
-        return (StorageTopicService) pulsarTopicService;
+        return (StorageTopicService) this.pulsarTopicService;
+    }
+
+    public <T extends StorageTopic> ProducerFactory<T> getProducerFactory() {
+        if (!this.initialised) {
+            throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
+        }
+        return (ProducerFactory) this.pulsarProducerFactory;
     }
 
     private void registerSubtypes(ObjectMapper mapper) {
@@ -65,9 +74,9 @@ public class PulsarStackProvider implements MessagingStackProvider {
             //TODO::Add authentication to the pulsar clients. It should be optional however.
             return PulsarAdmin.builder()
                     .serviceHttpUrl(pulsarClientOptions.getPulsarUrl())
-                    .connectionTimeout(pulsarClientOptions.getConnectTimeout(), timeUnit)
-                    .requestTimeout(pulsarClientOptions.getRequestTimeout(), timeUnit)
-                    .readTimeout(pulsarClientOptions.getReadTimeout(), timeUnit)
+                    .connectionTimeout(pulsarClientOptions.getConnectTimeout(), TimeUnitMS)
+                    .requestTimeout(pulsarClientOptions.getRequestTimeout(), TimeUnitMS)
+                    .readTimeout(pulsarClientOptions.getReadTimeout(), TimeUnitMS)
                     .build();
         } catch (PulsarClientException e) {
             throw new RuntimeException(e);

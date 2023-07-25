@@ -1,4 +1,4 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.auth.AuthorizationOptions;
@@ -11,10 +11,12 @@ import lombok.Getter;
 
 @Getter
 public class ServerConfiguration {
-
+    private VaradhiOptions varadhiOptions;
     private VertxOptions vertxOptions;
 
     private DeploymentOptions restVerticleDeploymentOptions;
+
+    private DeploymentOptions produceVerticleDeploymentOptions;
 
     private boolean authenticationEnabled;
 

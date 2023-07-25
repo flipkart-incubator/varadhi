@@ -21,8 +21,8 @@ public class AdminClient {
         try {
             Map<String, String> properties = new HashMap<>();
             //TODO::see properties are needed, if any.;
-            pulsarAdmin.topics().createPartitionedTopic(topic.getFqdn(), topic.getPartitionCount(), properties);
-            log.info("Created the pulsar topic:{}", topic.getFqdn());
+            pulsarAdmin.topics().createPartitionedTopic(topic.getName(), topic.getPartitionCount(), properties);
+            log.info("Created the pulsar topic:{}", topic.getName());
         } catch (PulsarAdminException e) {
             throw new VaradhiException(e);
         }

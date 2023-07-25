@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
@@ -50,7 +51,8 @@ public class Server {
                 vertx,
                 configuration,
                 services.getMessagingStackProvider(),
-                services.getMetaStoreProvider()
+                services.getMetaStoreProvider(),
+                services.getMetricsRegistry()
         );
         verticleDeployer.deployVerticles(vertx, configuration);
         log.debug("Deploying Verticles, completed.");

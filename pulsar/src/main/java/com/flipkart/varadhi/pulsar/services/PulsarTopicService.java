@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.services;
 
+import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.pulsar.clients.AdminClient;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.services.StorageTopicService;
@@ -18,6 +19,11 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     public void create(PulsarStorageTopic topic) {
         log.debug("Call Pulsar to create the required topic.");
         adminClient.create(topic);
+    }
+
+    @Override
+    public PulsarStorageTopic get(String topicName) {
+        throw new NotImplementedException();
     }
 
 }

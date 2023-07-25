@@ -32,13 +32,18 @@ public class InternalTopic {
     }
 
     public static InternalTopic from(
-            String varadhiTopicName, TopicResource topicResource, StorageTopicFactory<StorageTopic> topicFactory
+            Project project,
+            String varadhiTopicName,
+            TopicResource topicResource,
+            StorageTopicFactory<StorageTopic> topicFactory
     ) {
-        TopicKind kind = TopicKind.Main;
         String region = "local";
 
-        String internalTopicName = internalTopicName(varadhiTopicName, kind, region, null);
-        StorageTopic storageTopic = topicFactory.getTopic(internalTopicName, topicResource.getCapacityPolicy());
+        //TODO::fix -- internalTopicName and InternalTopic are disconnected w.r.to TopicKind.
+
+        String internalTopicName = internalTopicName(varadhiTopicName, region, null);
+        StorageTopic storageTopic =
+                topicFactory.getTopic(project, internalTopicName, topicResource.getCapacityPolicy());
         return new InternalTopic(
                 internalTopicName,
                 TopicKind.Main,
@@ -49,16 +54,21 @@ public class InternalTopic {
         );
     }
 
-    private static String internalTopicName(
-            String varadhiTopicName, TopicKind kind, String region, String sourceRegion
+    public static String internalTopicName(
+            String varadhiTopicName, String region, String sourceRegion
     ) {
         //internal Topic FQDN format is "<varadhiTopicName>.<kind>.<region>[.<sourceRegion>]
         //should be unique w.r.to <varadhiTopicName>
-        if (null == sourceRegion) {
-            return String.format("%s.%s.%s", varadhiTopicName, kind, region);
-        } else {
-            return String.format("%s.%s.%s.%s", varadhiTopicName, kind, region, sourceRegion);
-        }
+        return null == sourceRegion ? internalMainTopicName(varadhiTopicName, region) :
+                internalReplicaTopicName(varadhiTopicName, region, sourceRegion);
+    }
+
+    public static String internalMainTopicName(String varadhiTopicName, String region) {
+        return String.format("%s.%s.%s", varadhiTopicName, TopicKind.Main, region);
+    }
+
+    public static String internalReplicaTopicName(String varadhiTopicName, String replicaRegion, String sourceRegion) {
+        return String.format("%s.%s.%s.%s", varadhiTopicName, TopicKind.Replica, replicaRegion, sourceRegion);
     }
 
     public enum TopicKind {
@@ -67,8 +77,14 @@ public class InternalTopic {
     }
 
     public enum ProduceStatus {
+        // topic allows produce, default status.
         Active,
-        InActive
+        // topic produce is blocked (e.g. administrative reasons)
+        Blocked,
+        // topic is being throttled currently.
+        Throttled,
+        // produce not allowed to passive replicated topic.
+        NotAllowed
     }
 
 }
