@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Getter
 public class Message {
@@ -25,11 +26,23 @@ public class Message {
     }
 
     public void addHeader(String headerName, String headerValue) {
-        this.headers.put(headerName, headerValue);
+        // add only valid headers and values.
+        if (isValid(headerName) && isValid(headerValue)) {
+            this.headers.put(headerName, headerValue);
+        }
+    }
+
+    private boolean isValid(String keyOrValue) {
+        return null != keyOrValue && !keyOrValue.isEmpty();
     }
 
     public void addHeaders(Map<String, String> headersToAdd) {
-        this.headers.putAll(headersToAdd);
+        this.headers.putAll(headersToAdd.
+                entrySet()
+                .stream()
+                .filter((e) -> isValid(e.getKey()) && isValid(e.getValue()))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()))
+        );
     }
 
     public String getHeader(String headerName) {

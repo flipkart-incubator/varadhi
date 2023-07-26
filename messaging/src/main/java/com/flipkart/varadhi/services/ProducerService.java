@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.MessageConstants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.OperationNotAllowedException;
 import com.flipkart.varadhi.exceptions.ResourceBlockedException;
@@ -10,6 +9,8 @@ import com.flipkart.varadhi.utils.HeaderUtils;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import static com.flipkart.varadhi.MessageConstants.*;
 
 public class ProducerService {
     private final ProducerCache producerCache;
@@ -37,30 +38,40 @@ public class ProducerService {
             ensureProduceAllowedForTopic(internalTopic);
             Producer producer = this.producerCache.getProducer(internalTopic.getStorageTopic());
             CompletableFuture<ProducerResult> producerResult = producer.ProduceAsync(message);
-            //TODO::check what happens for thenApply in case of failure.
+            // TODO::check what happens for thenApply in case of failure.
             return producerResult.thenApply(pResult -> {
-                //TODO:: add possible tags to metric.
+                // TODO:: add possible tags to metric.
                 this.metricProvider.onProduceCompleted(produceStart, System.currentTimeMillis(), produceContext, null);
                 return new ProduceResult(message, pResult);
             });
         } catch (Exception e) {
-            //TODO::Handle passing failure info as well for further categorisation.
+            // TODO::Handle passing failure info as well for further categorisation.
             this.metricProvider.onProduceFailed(produceStart, System.currentTimeMillis(), produceContext, null);
             throw e;
         }
     }
 
     private void addVaradhiHeadersToMessage(Message message, ProduceContext produceContext) {
-        //TODO::Discuss: RequestTimestamp or ProduceTimeStamp. both might give some confusion w.r.to ordering..
-        //TODO::handle null value of these headers.
-        message.addHeader(
-                MessageConstants.HEADER_PRODUCE_TIMESTAMP,
-                Long.toString(produceContext.getRequestContext().getRequestTimestamp())
-        );
-        message.addHeader(MessageConstants.HEADER_PRODUCE_IDENTITY, produceContext.getUserContext().getSubject());
-        message.addHeader(
-                MessageConstants.HEADER_PRODUCE_REGION, produceContext.getClusterContext().getProduceRegion());
+        if (null != produceContext.getRequestContext()) {
+            message.addHeader(
+                    HEADER_PRODUCE_TIMESTAMP,
+                    Long.toString(produceContext.getRequestContext().getRequestTimestamp())
+            );
+        }
+        if (null != produceContext.getUserContext()) {
+            message.addHeader(
+                    HEADER_PRODUCE_IDENTITY,
+                    produceContext.getUserContext().getSubject()
+            );
+        }
+        if (null != produceContext.getClusterContext()) {
+            message.addHeader(
+                    HEADER_PRODUCE_REGION,
+                    produceContext.getClusterContext().getProduceRegion()
+            );
+        }
     }
+
 
     private void addRequestHeadersToMessage(Message message, Map<String, String> requestHeaders) {
         message.addHeaders(HeaderUtils.getVaradhiHeader(requestHeaders));
@@ -68,10 +79,9 @@ public class ProducerService {
 
     private void ensureProduceAllowedForTopic(InternalTopic topic) {
         switch (topic.getStatus()) {
-            case Blocked -> throw new ResourceBlockedException("Specified topic is currently blocked for produce.");
-            case Throttled -> throw new ResourceRateLimitedException("Specified topic is being throttled. Try again.");
-            case NotAllowed ->
-                    throw new OperationNotAllowedException("Produce is not allowed for this specific topic.");
+            case Blocked -> throw new ResourceBlockedException("Topic is currently blocked for produce.");
+            case Throttled -> throw new ResourceRateLimitedException("Topic is being throttled. Try again.");
+            case NotAllowed -> throw new OperationNotAllowedException("Produce is not allowed for the topic.");
         }
     }
 }

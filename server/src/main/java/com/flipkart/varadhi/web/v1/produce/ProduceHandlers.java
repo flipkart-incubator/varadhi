@@ -49,7 +49,7 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public void produce(RoutingContext ctx) {
-        ProduceContext produceContext = getProduceContext(ctx);
+        ProduceContext produceContext = new ProduceContext(ctx, this.deployedRegion);
         MessageResource messageResource = ctx.body().asPojo(MessageResource.class);
         String projectName = ctx.pathParam("project");
         String topicName = ctx.pathParam("topic");
@@ -68,9 +68,5 @@ public class ProduceHandlers implements RouteProvider {
                     }
             );
         });
-    }
-
-    private ProduceContext getProduceContext(RoutingContext ctx) {
-        return new ProduceContext();
     }
 }
