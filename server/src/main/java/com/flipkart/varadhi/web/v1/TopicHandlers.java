@@ -9,6 +9,7 @@ import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
+import com.flipkart.varadhi.web.handlers.TopicSchemaValidationHandler;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -30,6 +31,7 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
 
+    private final TopicSchemaValidationHandler topicSchemaValidationHandler = new TopicSchemaValidationHandler();
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
     private final MetaStore metaStore;
@@ -50,15 +52,16 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), Collections.emptyList(), this::get,
+                                HttpMethod.GET, "/:topic", Set.of(), Collections.emptySet(), this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(authenticated, hasBody), Collections.emptyList(),
+                                HttpMethod.POST, "", Set.of(authenticated, hasBody),
+                                Collections.singleton(topicSchemaValidationHandler),
                                 this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), Collections.emptyList(), this::delete,
+                                HttpMethod.DELETE, "/:topic", Set.of(), Collections.emptySet(), this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
                 )

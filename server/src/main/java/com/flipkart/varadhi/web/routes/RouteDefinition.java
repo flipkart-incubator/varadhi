@@ -7,7 +7,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,7 +18,7 @@ import java.util.Set;
 
 @Slf4j
 public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour> behaviours,
-                              List<Handler<RoutingContext>> preHandlers,
+                              Set<Handler<RoutingContext>> preHandlers,
                               Handler<RoutingContext> endReqHandler,
                               Optional<PermissionAuthorization> requiredAuthorization) {
 
