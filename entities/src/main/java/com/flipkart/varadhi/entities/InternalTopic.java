@@ -8,7 +8,7 @@ public class InternalTopic {
 
     private String topicRegion;
     private TopicKind topicKind;
-    private ProduceStatus status;
+    private TopicStatus topicStatus;
     private String name;
     private StorageTopic storageTopic;
 
@@ -20,13 +20,13 @@ public class InternalTopic {
             TopicKind topicKind,
             String topicRegion,
             String replicatingFromRegion,
-            ProduceStatus status,
+            TopicStatus topicStatus,
             StorageTopic storageTopic
     ) {
         this.name = name;
         this.topicKind = topicKind;
         this.topicRegion = topicRegion;
-        this.status = status;
+        this.topicStatus = topicStatus;
         this.replicatingFromRegion = replicatingFromRegion;
         this.storageTopic = storageTopic;
     }
@@ -46,7 +46,7 @@ public class InternalTopic {
                 TopicKind.Main,
                 topicRegion,
                 null,
-                ProduceStatus.Active,
+                TopicStatus.Active,
                 storageTopic
         );
     }
@@ -70,7 +70,7 @@ public class InternalTopic {
         Replica
     }
 
-    public enum ProduceStatus {
+    public enum TopicStatus {
         // topic allows produce, default status.
         Active,
         // topic produce is blocked (e.g. administrative reasons)

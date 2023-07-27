@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.config;
 
+import com.flipkart.varadhi.produce.config.ProducerOptions;
 import lombok.Data;
 
 @Data

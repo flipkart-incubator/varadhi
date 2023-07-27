@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.services.ProducerService;
+import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -18,6 +18,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.auth.ResourceAction.TOPIC_PRODUCE;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
@@ -49,10 +51,10 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public void produce(RoutingContext ctx) {
-        ProduceContext produceContext = new ProduceContext(ctx, this.deployedRegion);
+        ProduceContext produceContext = new ProduceContext(ctx, deployedRegion);
         MessageResource messageResource = ctx.body().asPojo(MessageResource.class);
-        String projectName = ctx.pathParam("project");
-        String topicName = ctx.pathParam("topic");
+        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
         String varadhiTopicName = VaradhiTopic.getTopicFQN(projectName, topicName);
         Message message = messageResource.getMessageToProduce();
         CompletableFuture<ProduceResult> produceFuture =

@@ -4,6 +4,8 @@ import com.flipkart.varadhi.MessageConstants;
 import com.flipkart.varadhi.auth.user.UserContext;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,36 +13,55 @@ import lombok.Setter;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_TOPIC;
+
 @Getter
 @Setter
 public class ProduceContext {
 
     private UserContext userContext;
     private RequestContext requestContext;
-    private ClusterContext clusterContext;
+    private TopicContext topicContext;
 
     //TODO::Discuss Is timer better or different timestamp for start/stop better.
     private Timer timer;
 
-    public ProduceContext(RoutingContext ctx, String deployedRegion) {
-        this.userContext = ctx.user() == null ? null : new VertxUserContext(ctx.user());
-        this.clusterContext = new ClusterContext();
-        this.clusterContext.setProduceRegion(deployedRegion);
+    public ProduceContext(RoutingContext ctx, String produceRegion) {
+        buildUserContext(ctx.user());
+        buildRequestContext(ctx.request());
+        buildTopicContext(ctx.request(), produceRegion);
+    }
+
+    private void buildUserContext(User user) {
+        this.userContext = user == null ? null : new VertxUserContext(user);
+    }
+
+    private void buildRequestContext(HttpServerRequest request) {
         this.requestContext = new RequestContext();
-        this.requestContext.setRequestPath(ctx.request().path());
-        this.requestContext.setAbsoluteUri(ctx.request().absoluteURI());
+        this.requestContext.setRequestPath(request.path());
+        this.requestContext.setAbsoluteUri(request.absoluteURI());
         this.requestContext.setRequestTimestamp(System.currentTimeMillis());
-        ctx.request().headers().forEach((key, value) -> this.requestContext.headers.put(key, value));
-        this.requestContext.setBytesSend(ctx.request().bytesRead());
-        this.requestContext.setHttpMethod(ctx.request().method());
-        String remoteHost = ctx.request().remoteAddress().host();
-        String xfwdedHeaderValue = ctx.request().getHeader(MessageConstants.HEADER_X_FWDED_FOR).trim();
+        request.headers().forEach((key, value) -> this.requestContext.headers.put(key, value));
+        this.requestContext.setBytesReceived(request.bytesRead());
+        this.requestContext.setHttpMethod(request.method());
+        String remoteHost = request.remoteAddress().host();
+        String xfwdedHeaderValue = request.getHeader(MessageConstants.HEADER_X_FWDED_FOR);
         if (null != xfwdedHeaderValue && !xfwdedHeaderValue.isEmpty()) {
             // This could be multivalued (comma separated), take the original initiator i.e. left most in the list.
-            String[] proxies = xfwdedHeaderValue.split(",");
-            remoteHost = proxies[0];
+            String[] proxies = xfwdedHeaderValue.trim().split(",");
+            if (!proxies[0].isBlank()) {
+                remoteHost = proxies[0];
+            }
         }
         this.requestContext.setRemoteHost(remoteHost);
+    }
+
+    private void buildTopicContext(HttpServerRequest request, String produceRegion) {
+        this.topicContext = new TopicContext();
+        this.topicContext.setRegion(produceRegion);
+        this.topicContext.setTopicName(request.getParam(REQUEST_PATH_PARAM_TOPIC));
+        this.topicContext.setProjectName(request.getParam(REQUEST_PATH_PARAM_PROJECT));
     }
 
     @Getter
@@ -52,12 +73,18 @@ public class ProduceContext {
         String remoteHost;
         String absoluteUri;
         long requestTimestamp;
-        long bytesSend;
+        long bytesReceived;
     }
+
 
     @Getter
     @Setter
-    public static class ClusterContext {
-        String produceRegion;
+    public static class TopicContext {
+        // It will be good to add org an team as context as well.
+        // But this info is not available by default in the produce path, and would require cache to be maintained.
+        // Not including for now, evaluate later.
+        String region;
+        String topicName;
+        String projectName;
     }
 }

@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.config;
+package com.flipkart.varadhi.produce.config;
 
 
 import lombok.Data;

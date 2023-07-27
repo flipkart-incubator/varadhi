@@ -1,8 +1,9 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.entities.InternalTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 

@@ -1,10 +1,11 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.OperationNotAllowedException;
 import com.flipkart.varadhi.exceptions.ResourceBlockedException;
 import com.flipkart.varadhi.exceptions.ResourceRateLimitedException;
-import com.flipkart.varadhi.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.produce.MsgProduceStatus;
+import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.utils.HeaderUtils;
 
 import java.util.Map;
@@ -28,25 +29,30 @@ public class ProducerService {
     public CompletableFuture<ProduceResult> produceToTopic(
             Message message, String varadhiTopicName, ProduceContext produceContext
     ) {
-        long produceStart = System.currentTimeMillis();
+        MsgProduceStatus msgProduceStatus = MsgProduceStatus.Success;
+        long produceStartTime = System.currentTimeMillis();
         try {
-            addRequestHeadersToMessage(message, produceContext.getRequestContext().getHeaders());
-            addVaradhiHeadersToMessage(message, produceContext);
-            String produceRegion = produceContext.getClusterContext().getProduceRegion();
+            String produceRegion = produceContext.getTopicContext().getRegion();
             InternalTopic internalTopic =
                     this.internalTopicCache.getInternalMainTopicForRegion(varadhiTopicName, produceRegion);
-            ensureProduceAllowedForTopic(internalTopic);
+
+            //TODO::Check if below two step process can be done in better way.
+            msgProduceStatus = getProduceStatus(internalTopic);
+            ensureProduceAllowed(msgProduceStatus);
+
+            addRequestHeadersToMessage(message, produceContext.getRequestContext().getHeaders());
+            addVaradhiHeadersToMessage(message, produceContext);
             Producer producer = this.producerCache.getProducer(internalTopic.getStorageTopic());
             CompletableFuture<ProducerResult> producerResult = producer.ProduceAsync(message);
             // TODO::check what happens for thenApply in case of failure.
             return producerResult.thenApply(pResult -> {
-                // TODO:: add possible tags to metric.
-                this.metricProvider.onProduceCompleted(produceStart, System.currentTimeMillis(), produceContext, null);
+                this.metricProvider.onMessageProduceEnd(produceStartTime, MsgProduceStatus.Success, produceContext);
                 return new ProduceResult(message, pResult);
             });
         } catch (Exception e) {
-            // TODO::Handle passing failure info as well for further categorisation.
-            this.metricProvider.onProduceFailed(produceStart, System.currentTimeMillis(), produceContext, null);
+            msgProduceStatus = MsgProduceStatus.Success == msgProduceStatus ? MsgProduceStatus.Failed :
+                    msgProduceStatus;
+            this.metricProvider.onMessageProduceEnd(produceStartTime, msgProduceStatus, produceContext);
             throw e;
         }
     }
@@ -64,24 +70,33 @@ public class ProducerService {
                     produceContext.getUserContext().getSubject()
             );
         }
-        if (null != produceContext.getClusterContext()) {
+        if (null != produceContext.getTopicContext()) {
             message.addHeader(
                     HEADER_PRODUCE_REGION,
-                    produceContext.getClusterContext().getProduceRegion()
+                    produceContext.getTopicContext().getRegion()
             );
         }
     }
-
 
     private void addRequestHeadersToMessage(Message message, Map<String, String> requestHeaders) {
         message.addHeaders(HeaderUtils.getVaradhiHeader(requestHeaders));
     }
 
-    private void ensureProduceAllowedForTopic(InternalTopic topic) {
-        switch (topic.getStatus()) {
+    private MsgProduceStatus getProduceStatus(InternalTopic topic) {
+        return switch (topic.getTopicStatus()) {
+            case Blocked -> MsgProduceStatus.Blocked;
+            case Throttled -> MsgProduceStatus.Throttled;
+            case NotAllowed -> MsgProduceStatus.NotAllowed;
+            default -> MsgProduceStatus.Success;
+        };
+    }
+
+    private void ensureProduceAllowed(MsgProduceStatus status) {
+        switch (status) {
             case Blocked -> throw new ResourceBlockedException("Topic is currently blocked for produce.");
             case Throttled -> throw new ResourceRateLimitedException("Topic is being throttled. Try again.");
             case NotAllowed -> throw new OperationNotAllowedException("Produce is not allowed for the topic.");
         }
     }
+
 }

@@ -1,14 +1,18 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.config.ProducerOptions;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
-import com.flipkart.varadhi.otel.ProduceMetricProvider;
-import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.produce.config.ProducerOptions;
+import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.produce.services.InternalTopicCache;
+import com.flipkart.varadhi.produce.services.ProducerCache;
+import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.MessagingStackProvider;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.AuthHandlers;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;

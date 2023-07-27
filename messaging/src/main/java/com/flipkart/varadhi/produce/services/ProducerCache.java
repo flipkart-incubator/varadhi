@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.entities.Producer;
 import com.flipkart.varadhi.entities.ProducerFactory;
