@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.google.common.collect.Sets;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
@@ -37,7 +38,8 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(), Collections.emptySet(),
+                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(),
+                        Sets.newLinkedHashSet(Collections.emptyList()),
                         this, Optional.empty()
                 )
         );

@@ -13,6 +13,7 @@ import com.flipkart.varadhi.web.handlers.TopicSchemaValidationHandler;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.Sets;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
@@ -52,16 +53,18 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), Collections.emptySet(), this::get,
+                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(Collections.emptyList()),
+                                this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
                         new RouteDefinition(
                                 HttpMethod.POST, "", Set.of(authenticated, hasBody),
-                                Collections.singleton(topicSchemaValidationHandler),
+                                Sets.newLinkedHashSet(Collections.singleton(topicSchemaValidationHandler)),
                                 this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), Collections.emptySet(), this::delete,
+                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(Collections.emptyList()),
+                                this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
                 )
