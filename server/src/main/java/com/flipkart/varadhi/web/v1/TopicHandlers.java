@@ -19,7 +19,6 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -53,17 +52,17 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(Collections.emptyList()),
+                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(Sets.newHashSet()),
                                 this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
                         new RouteDefinition(
                                 HttpMethod.POST, "", Set.of(authenticated, hasBody),
-                                Sets.newLinkedHashSet(Collections.singleton(topicSchemaValidationHandler)),
+                                Sets.newLinkedHashSet(Sets.newHashSet(topicSchemaValidationHandler)),
                                 this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(Collections.emptyList()),
+                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(Sets.newHashSet()),
                                 this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
