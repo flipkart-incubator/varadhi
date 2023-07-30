@@ -4,7 +4,6 @@ import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
@@ -22,11 +21,7 @@ import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,7 +39,6 @@ public class VerticleDeployer {
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders = new HashMap<>();
-    private HttpServer httpServer;
 
     public VerticleDeployer(
             Vertx vertx,
@@ -76,48 +70,29 @@ public class VerticleDeployer {
         this.behaviorProviders.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getAdminRouteDefinitions() {
+    private List<RouteDefinition> getDefinitions() {
         return Stream.of(
                         this.topicHandlers.get(),
-                        this.healthCheckHandler.get()
-                )
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-    }
-
-    private List<RouteDefinition> getProduceRouteDefinitions() {
-        return Stream.of(
+                        this.healthCheckHandler.get(),
                         this.produceHandlers.get()
                 )
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
     }
 
-    public void deployVerticles(Vertx vertx, ServerConfiguration configuration) {
-        Router router = Router.router(vertx);
-        FailureHandler failureHandler = new FailureHandler();
-        deployRestVerticle(vertx, router, failureHandler, configuration.getRestVerticleDeploymentOptions());
-        deployProduceVerticle(vertx, router, failureHandler, configuration.getProduceVerticleDeploymentOptions());
-        deployServer(vertx, router);
-    }
 
-    private void deployRestVerticle(
+    public void deployVerticle(
             Vertx vertx,
-            Router router,
-            FailureHandler failureHandler,
-            DeploymentOptions deploymentOptions
+            ServerConfiguration configuration
     ) {
-        if (!deploymentOptions.isWorker()) {
-            // Rest API  should avoid complete execution on Vertx event loop thread because they are likely to be
-            // blocking. Rest API need to be either offloaded from event loop via Async or need to be executed on
-            // Worker Verticle or should use executeBlocking() facility.
-            // Current code assumes Rest API will be executing on Worker Verticle and hence validate.
-            throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
-        }
-
         vertx.deployVerticle(
-                        () -> new RestVerticle(router, getAdminRouteDefinitions(), behaviorProviders, failureHandler, null),
-                        deploymentOptions
+                        () -> new RestVerticle(
+                                getDefinitions(),
+                                behaviorProviders,
+                                new FailureHandler(),
+                                configuration.getHttpServerOptions()
+                        ),
+                        configuration.getVerticleDeploymentOptions()
                 )
                 .onFailure(t -> {
                     log.error("Could not start HttpServer Verticle", t);
@@ -126,47 +101,7 @@ public class VerticleDeployer {
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
 
-    private void deployProduceVerticle(
-            Vertx vertx,
-            Router router,
-            FailureHandler failureHandler,
-            DeploymentOptions deploymentOptions
-    ) {
-        if (deploymentOptions.isWorker()) {
-            throw new InvalidConfigException(
-                    "Produce Verticle is expected to be deployed on Standard Verticle.");
-        }
 
-        vertx.deployVerticle(
-                        () -> new ProduceVerticle(router, getProduceRouteDefinitions(), behaviorProviders, failureHandler),
-                        deploymentOptions
-                )
-                .onFailure(t -> {
-                    log.error("Could not start HttpServer Verticle", t);
-                    throw new VaradhiException("Failed to Deploy Rest API.", t);
-                })
-                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
-    }
-
-    //TODO:: Rest API calls are also landing on Event Loop thread after this change.
-    // This needs to be debugged and Fixed.
-    //TODO:: How server can be closed ? Vertx doesn't provide onClose callback like Verticle.
-    private void deployServer(Vertx vertx, Router router) {
-        HttpServerOptions options = new HttpServerOptions();
-        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
-        options.setUseAlpn(true);
-
-        // TODO: create config for http server
-        this.httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
-            if (h.succeeded()) {
-                log.info("HttpServer Started.");
-            } else {
-                log.warn("HttpServer Started Failed.");
-            }
-        });
-    }
-
-    //TODO::move rest and produce specific handling/initialisation to respective Verticle.
     private ProducerService setupProducerService(
             MessagingStackProvider messagingStackProvider,
             VaradhiTopicService varadhiTopicService,

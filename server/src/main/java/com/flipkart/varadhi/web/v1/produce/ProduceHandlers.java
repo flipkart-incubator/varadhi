@@ -44,6 +44,7 @@ public class ProduceHandlers implements RouteProvider {
                         new RouteDefinition(
                                 HttpMethod.POST, "/topics/:topic/produce", Set.of(authenticated, hasBody),
                                 this::produce,
+                                false,
                                 Optional.of(PermissionAuthorization.of(TOPIC_PRODUCE, "{project}/{topic}"))
                         )
                 )
@@ -51,6 +52,8 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public void produce(RoutingContext ctx) {
+        //TODO:: Request Validations pending
+        // Also close on what happens if fields are missing (like msgId) or groupId.
         ProduceContext produceContext = new ProduceContext(ctx, deployedRegion);
         MessageResource messageResource = ctx.body().asPojo(MessageResource.class);
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);

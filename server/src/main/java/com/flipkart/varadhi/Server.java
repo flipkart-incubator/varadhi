@@ -22,7 +22,7 @@ public class Server {
             ServerConfiguration configuration = readConfiguration(args);
             CoreServices services = new CoreServices(configuration);
             Vertx vertx = createVertex(configuration, services);
-            deployVerticles(configuration, services, vertx);
+            deployVerticle(configuration, services, vertx);
             log.info("Server Started.");
         } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
@@ -41,12 +41,12 @@ public class Server {
                         .setJvmMetricsEnabled(true)
                         .setEnabled(true));
         Vertx vertx = Vertx.vertx(vertxOptions);
-        log.debug("Creating Vertex");
+        log.debug("Created Vertex");
         return vertx;
     }
 
-    private static void deployVerticles(ServerConfiguration configuration, CoreServices services, Vertx vertx) {
-        log.debug("Deploying Verticles.");
+    private static void deployVerticle(ServerConfiguration configuration, CoreServices services, Vertx vertx) {
+        log.debug("Verticle deployment started.");
         VerticleDeployer verticleDeployer = new VerticleDeployer(
                 vertx,
                 configuration,
@@ -54,8 +54,8 @@ public class Server {
                 services.getMetaStoreProvider(),
                 services.getMetricsRegistry()
         );
-        verticleDeployer.deployVerticles(vertx, configuration);
-        log.debug("Deploying Verticles, completed.");
+        verticleDeployer.deployVerticle(vertx, configuration);
+        log.debug("Verticle deployment completed.");
     }
 
 

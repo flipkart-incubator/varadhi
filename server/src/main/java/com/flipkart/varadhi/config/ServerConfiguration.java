@@ -13,10 +13,7 @@ import lombok.Getter;
 public class ServerConfiguration {
     private VaradhiOptions varadhiOptions;
     private VertxOptions vertxOptions;
-
-    private DeploymentOptions restVerticleDeploymentOptions;
-
-    private DeploymentOptions produceVerticleDeploymentOptions;
+    private DeploymentOptions verticleDeploymentOptions;
 
     private boolean authenticationEnabled;
 

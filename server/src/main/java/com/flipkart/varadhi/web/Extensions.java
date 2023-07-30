@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.BaseResource;
+import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -43,17 +44,20 @@ public class Extensions {
             });
         }
 
-        public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {
-            ctx.response().setStatusCode(status);
-            endRequestWithResponse(ctx, response);
+
+        public static <T> void setApiResponse(RoutingContext ctx, T response) {
+            ctx.put("api-response", response);
+        }
+
+        public static <T> T getApiResponse(RoutingContext ctx) {
+            return ctx.get("api-response");
         }
 
         public static void todo(RoutingContext context) {
-            context.response().setStatusCode(500).setStatusMessage("Not Implemented").end();
+            throw new NotImplementedException("Not Implemented.");
         }
 
         public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
-            //TODO::Anything more here.
             ctx.fail(throwable);
         }
     }

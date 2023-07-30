@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.google.common.collect.Sets;
 import io.vertx.core.Handler;
@@ -48,13 +49,16 @@ public class VerticleTest {
         handlers.add(handler2);
 
         RouteDefinition routeDefinition =
-                new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3,
+                new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3, true,
                         Optional.empty()
                 );
         HttpServerOptions httpServerOptions = new HttpServerOptions();
         httpServerOptions.setPort(6969);
         vertx.deployVerticle(
-                new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>(), httpServerOptions),
+                new RestVerticle(
+                        Collections.singletonList(routeDefinition), new HashMap<>(), new FailureHandler(),
+                        httpServerOptions
+                ),
                 testContext.succeeding(id -> webClient.get(6969, "localhost", "/")
                         .as(BodyCodec.string())
                         .send(testContext.succeeding(resp -> testContext.verify(() -> {

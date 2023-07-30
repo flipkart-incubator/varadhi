@@ -79,6 +79,8 @@ public class FailureHandler implements Handler<RoutingContext> {
             return HTTP_CONFLICT;
         } else if (NotImplementedException.class == tClazz) {
             return HTTP_NOT_IMPLEMENTED;
+        } else if (ServerNotAvailableException.class == tClazz) {
+            return HTTP_UNAVAILABLE;
         }
         return HTTP_INTERNAL_ERROR;
     }

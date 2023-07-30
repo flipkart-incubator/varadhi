@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1;
 
+import com.flipkart.varadhi.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -26,7 +27,11 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
 
     @Override
     public void handle(RoutingContext ctx) {
-        ctx.endRequestWithResponse(responseCode, responseMsg);
+        if (responseCode == HTTP_OK) {
+            ctx.setApiResponse(responseMsg);
+        } else {
+            throw new ServerNotAvailableException(responseMsg);
+        }
     }
 
     public void bringOOR() {
@@ -37,10 +42,16 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-                new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(),
+                new RouteDefinition(
+                        HttpMethod.GET,
+                        "/v1/health-check",
+                        Set.of(),
                         Sets.newLinkedHashSet(),
-                        this, Optional.empty()
+                        this::handle,
+                        true,
+                        Optional.empty()
                 )
+
         );
     }
 }
