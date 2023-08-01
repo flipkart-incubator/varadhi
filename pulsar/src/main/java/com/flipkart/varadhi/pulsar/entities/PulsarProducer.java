@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Producer;
 import com.flipkart.varadhi.entities.ProducerResult;
+import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;

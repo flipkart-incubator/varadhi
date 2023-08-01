@@ -15,7 +15,7 @@ public class InternalTopic {
     //TODO::check if reference to primary topic also needs to be kept.
     private String replicatingFromRegion; // Region this topic will be replicating from, in case it is replica topic.
 
-    private InternalTopic(
+    public InternalTopic(
             String name,
             TopicKind topicKind,
             String topicRegion,
@@ -31,30 +31,10 @@ public class InternalTopic {
         this.storageTopic = storageTopic;
     }
 
-    public static InternalTopic mainTopicFrom(
-            Project project,
-            String varadhiTopicName,
-            String topicRegion,
-            TopicResource topicResource,
-            StorageTopicFactory<StorageTopic> topicFactory
-    ) {
-        String internalTopicName = internalMainTopicName(varadhiTopicName, topicRegion);
-        StorageTopic storageTopic =
-                topicFactory.getTopic(project, internalTopicName, topicResource.getCapacityPolicy());
-        return new InternalTopic(
-                internalTopicName,
-                TopicKind.Main,
-                topicRegion,
-                null,
-                TopicStatus.Active,
-                storageTopic
-        );
-    }
-
     //internal Topic FQDN format is "<varadhiTopicName>.<kind>.<topicRegion>[.<replicatingFromRegion>]
     //should be unique w.r.to <varadhiTopicName>
     public static String internalMainTopicName(String varadhiTopicName, String region) {
-        return String.format("%s.%s.%s", varadhiTopicName, TopicKind.Main, region);
+        return String.format("%s.%s.%s", varadhiTopicName, InternalTopic.TopicKind.Main, region);
     }
 
     public static String internalReplicaTopicName(
@@ -62,7 +42,8 @@ public class InternalTopic {
             String replicaRegion,
             String replicatingFromRegion
     ) {
-        return String.format("%s.%s.%s.%s", varadhiTopicName, TopicKind.Replica, replicaRegion, replicatingFromRegion);
+        return String.format(
+                "%s.%s.%s.%s", varadhiTopicName, InternalTopic.TopicKind.Replica, replicaRegion, replicatingFromRegion);
     }
 
     public enum TopicKind {

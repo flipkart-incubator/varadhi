@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
-import com.flipkart.varadhi.auth.user.UserContext;
+import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.HttpException;

@@ -1,9 +1,11 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.services.StorageTopicFactory;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

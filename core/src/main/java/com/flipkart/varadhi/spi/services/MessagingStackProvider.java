@@ -1,9 +1,7 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.spi.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.StorageTopicFactory;
 
 public interface MessagingStackProvider {
     //TODO::This is likely a candidate for flattening, instead of these many factories.

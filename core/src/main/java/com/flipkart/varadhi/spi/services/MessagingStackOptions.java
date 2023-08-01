@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.spi.services;
 
 import lombok.Data;
 

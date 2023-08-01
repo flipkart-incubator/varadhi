@@ -1,6 +1,8 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

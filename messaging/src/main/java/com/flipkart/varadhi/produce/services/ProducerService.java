@@ -6,6 +6,7 @@ import com.flipkart.varadhi.exceptions.ResourceBlockedException;
 import com.flipkart.varadhi.exceptions.ResourceRateLimitedException;
 import com.flipkart.varadhi.produce.MsgProduceStatus;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.HeaderUtils;
 
 import java.util.Map;

@@ -1,8 +1,10 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
+import com.flipkart.varadhi.spi.services.TopicService;
 import lombok.extern.slf4j.Slf4j;
 
 

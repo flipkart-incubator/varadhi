@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.db.MetaStore;
+import com.flipkart.varadhi.core.VaradhiTopicFactory;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

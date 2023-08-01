@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.entities.Producer;
-import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 

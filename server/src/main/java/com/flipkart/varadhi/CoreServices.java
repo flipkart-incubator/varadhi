@@ -2,11 +2,11 @@ package com.flipkart.varadhi;
 
 
 import com.flipkart.varadhi.config.ServerConfiguration;
-import com.flipkart.varadhi.db.MetaStoreOptions;
-import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.services.MessagingStackOptions;
-import com.flipkart.varadhi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.db.MetaStoreOptions;
+import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackOptions;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;

@@ -3,7 +3,7 @@ package com.flipkart.varadhi.pulsar.services;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.pulsar.clients.AdminClient;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
-import com.flipkart.varadhi.services.StorageTopicService;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 

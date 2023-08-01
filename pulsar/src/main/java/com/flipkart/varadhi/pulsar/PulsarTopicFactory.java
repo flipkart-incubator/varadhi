@@ -2,8 +2,8 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.StorageTopicFactory;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 
 public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopic> {
     @Override

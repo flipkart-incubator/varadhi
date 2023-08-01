@@ -2,17 +2,13 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.ProducerFactory;
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.StorageTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
-import com.flipkart.varadhi.services.MessagingStackOptions;
-import com.flipkart.varadhi.services.MessagingStackProvider;
-import com.flipkart.varadhi.services.StorageTopicService;
+import com.flipkart.varadhi.spi.services.*;
 import com.flipkart.varadhi.utils.YamlLoader;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.PulsarClientException;

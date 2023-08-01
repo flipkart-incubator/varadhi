@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.db;
+package com.flipkart.varadhi.spi.db;
 
 import lombok.Data;
 

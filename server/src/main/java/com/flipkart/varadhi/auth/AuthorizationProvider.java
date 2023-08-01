@@ -1,11 +1,10 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.auth.user.UserContext;
+import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public interface AuthorizationProvider {
-
     Future<Boolean> init(JsonObject configuration);
 
     Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource);

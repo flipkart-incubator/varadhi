@@ -1,7 +1,9 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.core;
 
 
 import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 
 public class VaradhiTopicFactory {
 
@@ -30,10 +32,29 @@ public class VaradhiTopicFactory {
 
 
     private void planDeployment(Project project, VaradhiTopic varadhiTopic, TopicResource topicResource) {
-        InternalTopic mainTopic =
-                InternalTopic.mainTopicFrom(
-                        project, varadhiTopic.getName(), deploymentRegion, topicResource, topicFactory);
+        InternalTopic mainTopic = mainTopicFrom(
+                project, varadhiTopic.getName(), deploymentRegion, topicResource, topicFactory);
         varadhiTopic.addInternalTopic(mainTopic);
+    }
+
+    private static InternalTopic mainTopicFrom(
+            Project project,
+            String varadhiTopicName,
+            String topicRegion,
+            TopicResource topicResource,
+            StorageTopicFactory<StorageTopic> topicFactory
+    ) {
+        String internalTopicName = InternalTopic.internalMainTopicName(varadhiTopicName, topicRegion);
+        StorageTopic storageTopic =
+                topicFactory.getTopic(project, internalTopicName, topicResource.getCapacityPolicy());
+        return new InternalTopic(
+                internalTopicName,
+                InternalTopic.TopicKind.Main,
+                topicRegion,
+                null,
+                InternalTopic.TopicStatus.Active,
+                storageTopic
+        );
     }
 
     private String getVaradhiTopicName(TopicResource topicResource) {

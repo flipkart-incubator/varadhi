@@ -44,7 +44,6 @@ public class Extensions {
             });
         }
 
-
         public static <T> void setApiResponse(RoutingContext ctx, T response) {
             ctx.put("api-response", response);
         }
