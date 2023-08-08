@@ -52,10 +52,10 @@ public class VerticleTest {
                         Optional.empty()
                 );
         VaradhiDeploymentConfig varadhiDeploymentConfig = new VaradhiDeploymentConfig();
-        varadhiDeploymentConfig.setPort(8081);
+        varadhiDeploymentConfig.setPort(6969);
         vertx.deployVerticle(
                 new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>(), varadhiDeploymentConfig),
-                testContext.succeeding(id -> webClient.get(8081, "localhost", "/")
+                testContext.succeeding(id -> webClient.get(6969, "localhost", "/")
                         .as(BodyCodec.string())
                         .send(testContext.succeeding(resp -> testContext.verify(() -> {
                             Assertions.assertEquals(resp.body(), "Hello from Varadhi Team!");
