@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.config.VaradhiDeploymentConfig;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -21,13 +22,17 @@ public class RestVerticle extends AbstractVerticle {
     private final List<RouteDefinition> apiRoutes;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders;
 
+    private final VaradhiDeploymentConfig varadhiDeploymentConfig;
+
     private HttpServer httpServer;
 
     public RestVerticle(
-            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders
+            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders,
+            VaradhiDeploymentConfig varadhiDeploymentConfig
     ) {
         this.apiRoutes = apiRoutes;
         this.behaviorProviders = behaviorProviders;
+        this.varadhiDeploymentConfig = varadhiDeploymentConfig;
     }
 
     @Override
@@ -63,14 +68,15 @@ public class RestVerticle extends AbstractVerticle {
         options.setUseAlpn(true);
 
         // TODO: create config for http server
-        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
-            if (h.succeeded()) {
-                log.info("HttpServer Started.");
-            } else {
-                log.warn("HttpServer Started Failed.");
-            }
-            startPromise.handle(h.map((Void) null));
-        });
+        httpServer =
+                vertx.createHttpServer(options).requestHandler(router).listen(varadhiDeploymentConfig.getPort(), h -> {
+                    if (h.succeeded()) {
+                        log.info("HttpServer Started.");
+                    } else {
+                        log.warn("HttpServer Started Failed.");
+                    }
+                    startPromise.handle(h.map((Void) null));
+                });
     }
 
     @Override

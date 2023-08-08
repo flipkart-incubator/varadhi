@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.config.VaradhiDeploymentConfig;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.google.common.collect.Sets;
 import io.vertx.core.Handler;
@@ -50,10 +51,11 @@ public class VerticleTest {
                 new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3,
                         Optional.empty()
                 );
-
+        VaradhiDeploymentConfig varadhiDeploymentConfig = new VaradhiDeploymentConfig();
+        varadhiDeploymentConfig.setPort(8081);
         vertx.deployVerticle(
-                new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>()),
-                testContext.succeeding(id -> webClient.get(8080, "localhost", "/")
+                new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>(), varadhiDeploymentConfig),
+                testContext.succeeding(id -> webClient.get(8081, "localhost", "/")
                         .as(BodyCodec.string())
                         .send(testContext.succeeding(resp -> testContext.verify(() -> {
                             Assertions.assertEquals(resp.body(), "Hello from Varadhi Team!");

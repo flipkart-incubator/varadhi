@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.auth.AuthorizationOptions;
+import com.flipkart.varadhi.config.VaradhiDeploymentConfig;
 import com.flipkart.varadhi.db.MetaStoreOptions;
 import com.flipkart.varadhi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
@@ -24,5 +25,9 @@ public class ServerConfiguration {
     private AuthorizationOptions authorization;
 
     private MessagingStackOptions messagingStackOptions;
+
     private MetaStoreOptions metaStoreOptions;
+
+    private VaradhiDeploymentConfig varadhiDeploymentConfig;
+
 }

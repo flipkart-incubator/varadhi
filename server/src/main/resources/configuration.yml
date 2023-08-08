@@ -31,3 +31,6 @@ messagingStackOptions:
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: 'src/main/resources/zkConfig.yml'
+
+varadhiDeploymentConfig:
+  port: 8080

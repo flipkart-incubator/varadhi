@@ -12,7 +12,6 @@ import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.TopicHandlers;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -59,11 +58,11 @@ public class VerticleDeployer {
     }
 
     public void deployVerticles(Vertx vertx, ServerConfiguration configuration) {
-        deployRestVerticle(vertx, configuration.getRestVerticleDeploymentOptions());
+        deployRestVerticle(vertx, configuration);
     }
 
-    private void deployRestVerticle(Vertx vertx, DeploymentOptions deploymentOptions) {
-        if (!deploymentOptions.isWorker()) {
+    private void deployRestVerticle(Vertx vertx, ServerConfiguration configuration) {
+        if (!configuration.getRestVerticleDeploymentOptions().isWorker()) {
             // Rest API  should avoid complete execution on Vertx event loop thread because they are likely to be
             // blocking. Rest API need to be either offloaded from event loop via Async or need to be executed on
             // Worker Verticle or should use executeBlocking() facility.
@@ -72,7 +71,10 @@ public class VerticleDeployer {
             throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
         }
 
-        vertx.deployVerticle(() -> new RestVerticle(getRouteDefinitions(), behaviorProviders), deploymentOptions)
+        vertx.deployVerticle(
+                        () -> new RestVerticle(getRouteDefinitions(), behaviorProviders,
+                                configuration.getVaradhiDeploymentConfig()
+                        ), configuration.getRestVerticleDeploymentOptions())
                 .onFailure(t -> {
                     log.error("Could not start HttpServer Verticle", t);
                     throw new VaradhiException("Failed to Deploy Rest API.", t);
