@@ -3,6 +3,12 @@ plugins {
 }
 dependencies {
     implementation(project(':common'))
+
     implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
+    implementation('javax.validation:validation-api:2.0.1.Final')
+    implementation('org.hibernate:hibernate-validator:6.2.5.Final')
+    implementation('org.glassfish:javax.el:3.0.1-b12')
+    implementation('com.google.inject:guice:7.0.0')
+
     testImplementation(project(':pulsar'))
 }

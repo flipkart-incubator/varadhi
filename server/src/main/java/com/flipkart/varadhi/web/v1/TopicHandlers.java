@@ -9,7 +9,6 @@ import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
-import com.flipkart.varadhi.web.handlers.TopicSchemaValidationHandler;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -31,7 +30,6 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
 
-    private final TopicSchemaValidationHandler topicSchemaValidationHandler = new TopicSchemaValidationHandler();
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
     private final MetaStore metaStore;
@@ -58,7 +56,7 @@ public class TopicHandlers implements RouteProvider {
                         ),
                         new RouteDefinition(
                                 HttpMethod.POST, "", Set.of(authenticated, hasBody),
-                                Sets.newLinkedHashSet(Sets.newHashSet(topicSchemaValidationHandler)),
+                                Sets.newLinkedHashSet(),
                                 this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
@@ -80,6 +78,7 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
+        topicResource.validate();
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());

@@ -27,8 +27,8 @@ dependencies {
     implementation("io.vertx:vertx-auth-jwt")
     implementation("io.vertx:vertx-opentelemetry")
     implementation("io.vertx:vertx-micrometer-metrics")
-    implementation("io.vertx:vertx-json-schema:4.4.4")
-    implementation("io.vertx:vertx-web-validation:4.4.4")
+    implementation("io.vertx:vertx-junit5:$vertx_version")
+    implementation("io.vertx:vertx-web-client:4.4.4")
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
