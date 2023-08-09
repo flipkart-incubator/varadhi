@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.entities;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
+@EqualsAndHashCode
 public class VaradhiResource {
 
     private final String name;

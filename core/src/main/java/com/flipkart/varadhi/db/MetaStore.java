@@ -1,23 +1,59 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
+
+import java.util.List;
 
 public interface MetaStore {
+    void createOrg(Org org);
 
-    TopicResource createTopicResource(TopicResource resource);
+    Org getOrg(String orgName);
 
-    boolean checkTopicResourceExists(String projectName, String topicName);
+    boolean checkOrgExists(String orgName);
 
-    TopicResource getTopicResource(String projectName, String resourceName);
+    void deleteOrg(String orgName);
 
-    VaradhiTopic createVaradhiTopic(VaradhiTopic varadhiTopic);
+    List<Org> getOrgs();
+
+    List<String> getTeamNames(String orgName);
+
+    List<Team> getTeams(String orgName);
+
+    void createTeam(Team team);
+
+    Team getTeam(String teamName, String orgName);
+
+    boolean checkTeamExists(String teamName, String orgName);
+
+    void deleteTeam(String teamName, String orgName);
+
+    List<Project> getProjects(String teamName, String orgName);
+
+    void createProject(Project project);
+
+    Project getProject(String projectName);
+
+    boolean checkProjectExists(String projectName);
+
+    void deleteProject(String project);
+
+    int updateProject(Project project);
+
+    List<String> getVaradhiTopicNames(String projectName);
+
+    void createTopicResource(TopicResource topicResourceName);
+
+    TopicResource getTopicResource(String topicResourceName, String projectName);
+
+    boolean checkTopicResourceExists(String topicName, String projectName);
+
+    void deleteTopicResource(String topicResourceName, String projectName);
+
+    void createVaradhiTopic(VaradhiTopic varadhiTopicName);
+
+    VaradhiTopic getVaradhiTopic(String varadhiTopicName);
 
     boolean checkVaradhiTopicExists(String varadhiTopicName);
 
-    VaradhiTopic getVaradhiTopic(String topicName);
-
-    void deleteVaradhiTopic(String topicName);
-
-    void deleteTopicResource(String projectName, String resourceName);
+    void deleteVaradhiTopic(String varadhiTopicName);
 }

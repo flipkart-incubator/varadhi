@@ -1,17 +1,16 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
-import com.flipkart.varadhi.services.MessagingStackProvider;
-import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.web.AuthHandlers;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
-import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.TopicHandlers;
+import com.flipkart.varadhi.web.v1.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -29,6 +28,9 @@ import java.util.stream.Stream;
 public class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final HealthCheckHandler healthCheckHandler;
+    private final OrgHandlers orgHandlers;
+    private final TeamHandlers teamHandlers;
+    private final ProjectHandlers projectHandlers;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders = new HashMap<>();
 
     public VerticleDeployer(
@@ -42,7 +44,11 @@ public class VerticleDeployer {
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
-        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStoreProvider.getMetaStore());
+        MetaStore metaStore = metaStoreProvider.getMetaStore();
+        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStore);
+        this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
+        this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
+        this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
@@ -51,6 +57,9 @@ public class VerticleDeployer {
 
     private List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
+                        orgHandlers.get(),
+                        teamHandlers.get(),
+                        projectHandlers.get(),
                         topicHandlers.get(),
                         healthCheckHandler.get()
                 )

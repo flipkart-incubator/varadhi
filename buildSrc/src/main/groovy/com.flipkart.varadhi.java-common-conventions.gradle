@@ -74,6 +74,9 @@ dependencies {
         //  by default, and have the docker compose setup ready for local setup.
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
 
+
+        testCompileOnly("org.projectlombok:lombok:$lombok_version")
+        testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
         testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
@@ -92,6 +95,8 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-api")
 
     // common test framework
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
     testImplementation('org.junit.jupiter:junit-jupiter')
     testImplementation('org.mockito:mockito-junit-jupiter')
 }

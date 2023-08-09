@@ -27,9 +27,8 @@ public class Extensions {
     @Slf4j
     public static class RoutingContextExtension {
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
+            addResponseHeaders(ctx, true);
             String responseBody = JsonMapper.jsonSerialize(response);
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-            ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             ctx.response().end(responseBody, (r) -> {
                 HttpServerRequest request = ctx.request();
                 if (r.succeeded()) {
@@ -38,6 +37,25 @@ public class Extensions {
                     log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
                 }
             });
+        }
+
+        public static <T> void endRequest(RoutingContext ctx) {
+            addResponseHeaders(ctx, false);
+            ctx.response().end((r) -> {
+                HttpServerRequest request = ctx.request();
+                if (r.succeeded()) {
+                    log.debug("Request {}:{} completed successfully.", request.method(), request.path());
+                } else {
+                    log.error("Request {}:{} Failed to complete:{}.", request.method(), request.path(), r.cause());
+                }
+            });
+        }
+
+        private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
+            if (hasContent) {
+                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
+            }
         }
 
         public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {

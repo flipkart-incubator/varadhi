@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.exceptions.IllegalArgumentException;
+import com.flipkart.varadhi.exceptions.*;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -10,7 +12,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.*;
 
 @Slf4j
 public class FailureHandler implements Handler<RoutingContext> {
@@ -20,7 +22,8 @@ public class FailureHandler implements Handler<RoutingContext> {
         HttpServerResponse response = ctx.response();
 
         if (!response.ended()) {
-            int statusCode = ctx.statusCode() < 0 ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
+            int statusCode =
+                    overrideStatusCode(ctx.statusCode()) ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
 
@@ -32,6 +35,11 @@ public class FailureHandler implements Handler<RoutingContext> {
             response.setStatusCode(statusCode);
             response.end(Json.encodeToBuffer(new ErrorResponse(errorMsg)));
         }
+    }
+
+    private boolean overrideStatusCode(int statusCode) {
+        // override if not set or its default failure code (set by Vertx before invoking default failure handler)
+        return statusCode < 0 || statusCode == HTTP_INTERNAL_ERROR;
     }
 
     private boolean overWriteErrorMsg(HttpServerResponse response) {
@@ -47,11 +55,13 @@ public class FailureHandler implements Handler<RoutingContext> {
             StringBuilder sb = new StringBuilder();
             if (null != t) {
                 sb.append(t.getMessage());
-                // include second level exception, in case it is available in case exceptions have been wrapped
-                // with more generic exception.
-                if (null != t.getCause()) {
-                    sb.append("Internal error : ");
-                    sb.append(t.getCause().getMessage());
+                // include second level exception details when available and outermost exception is of not known type
+                // i.e. it doesn't extend from VaradhiException.
+                if (!(t instanceof VaradhiException)) {
+                    if (null != t.getCause()) {
+                        sb.append("Internal error : ");
+                        sb.append(t.getCause().getMessage());
+                    }
                 }
             } else {
                 sb.append("Internal error.");
@@ -61,10 +71,24 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
+
+        //TODO:: review status code mapping for correctness.
+        Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();
-        } else {
-            return HTTP_INTERNAL_ERROR;
+        } else if (DuplicateResourceException.class == tClazz) {
+            return HTTP_CONFLICT;
+        } else if (ResourceNotFoundException.class == tClazz) {
+            return HTTP_NOT_FOUND;
+        } else if (InvalidOperationForResourceException.class == tClazz) {
+            return HTTP_CONFLICT;
+        } else if (IllegalArgumentException.class == tClazz) {
+            return HTTP_BAD_REQUEST;
+        } else if (NotImplementedException.class == tClazz) {
+            return HTTP_NOT_IMPLEMENTED;
         }
+        return HTTP_INTERNAL_ERROR;
     }
+
+
 }

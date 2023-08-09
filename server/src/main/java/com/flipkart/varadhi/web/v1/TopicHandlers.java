@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static com.flipkart.varadhi.auth.ResourceAction.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
@@ -74,7 +75,7 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and transaction kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
-        boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
+        boolean found = metaStore.checkTopicResourceExists(topicResource.getName(), topicResource.getProject());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
@@ -82,10 +83,11 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
-        TopicResource createdResource = metaStore.createTopicResource(topicResource);
+        topicResource.setVersion(INITIAL_VERSION);
+        metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(topicResource);
         varadhiTopicService.create(vt);
-        ctx.endRequestWithResponse(createdResource);
+        ctx.endRequestWithResponse(topicResource);
     }
 
 

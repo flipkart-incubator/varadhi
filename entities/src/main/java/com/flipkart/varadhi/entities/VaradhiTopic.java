@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
-public class VaradhiTopic extends BaseTopic {
+public class VaradhiTopic extends VaradhiResource {
     private final Map<InternalTopic.TopicKind, InternalTopic> internalTopics;
     private final boolean grouped;
     private final boolean exclusiveSubscription;
