@@ -1,0 +1,200 @@
+package com.flipkart.varadhi;
+
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+public class ProjectTests extends E2EBase {
+    Org org1, org2, org3;
+    Team org1Team1, org1Team2, org2Team1, org3Team1;
+
+    Project o1t1Project1, o1t1Project2, o1t2Project3, o1t2Project1, o2t1Project1, o2t1Project4, o3t1Project5;
+
+    @BeforeEach
+    public void testSetup() {
+        org1 = new Org("org1", 0);
+        org2 = new Org("org2", 0);
+        org3 = new Org("org3", 0);
+        org1Team1 = new Team("team1", 0, org1.getName());
+        org1Team2 = new Team("team2", 0, org1.getName());
+        org2Team1 = new Team("team1", 0, org2.getName());
+        org3Team1 = new Team("team1", 0, org3.getName());
+        o1t1Project1 = new Project("project1", 0, "description1", org1Team1.getName(), org1Team1.getOrgName());
+        o1t1Project2 = new Project("project2", 0, "description1", org1Team1.getName(), org1Team1.getOrgName());
+        o1t2Project3 = new Project("project3", 0, "description1", org1Team2.getName(), org1Team2.getOrgName());
+        o1t2Project1 = new Project("project1", 0, "description1", org1Team2.getName(), org1Team2.getOrgName());
+        o2t1Project1 = new Project("project1", 0, "description1", org2Team1.getName(), org2Team1.getOrgName());
+        o2t1Project4 = new Project("project4", 0, "description1", org2Team1.getName(), org2Team1.getOrgName());
+        o3t1Project5 = new Project("project5", 0, "description1", org3Team1.getName(), org3Team1.getOrgName());
+
+        makeCreateRequest(getOrgsUri(), org1, 200);
+        makeCreateRequest(getOrgsUri(), org2, 200);
+        makeCreateRequest(getTeamsUri(org1Team1.getOrgName()), org1Team1, 200);
+        makeCreateRequest(getTeamsUri(org1Team2.getOrgName()), org1Team2, 200);
+        makeCreateRequest(getTeamsUri(org2Team1.getOrgName()), org2Team1, 200);
+    }
+
+    @AfterEach
+    public void testCleanup() {
+        cleanupOrgs(List.of(org1, org2, org3));
+    }
+
+
+    @Test
+    public void testProjectCRUD() {
+        Project c_o1t1Project1 = makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
+        Project c_o1t1Project2 = makeCreateRequest(getProjectCreateUri(), o1t1Project2, 200);
+        Project c_o1t2Project3 = makeCreateRequest(getProjectCreateUri(), o1t2Project3, 200);
+        Project c_o2t1Project4 = makeCreateRequest(getProjectCreateUri(), o2t1Project4, 200);
+        Assertions.assertEquals(o1t1Project1, c_o1t1Project1);
+        Assertions.assertEquals(o1t1Project2, c_o1t1Project2);
+        Assertions.assertEquals(o1t2Project3, c_o1t2Project3);
+        Assertions.assertEquals(o2t1Project4, c_o2t1Project4);
+
+        makeCreateRequest(
+                getProjectCreateUri(), o1t1Project1, 409,
+                String.format("Project(%s) already exists.  Projects are globally unique.", o1t1Project1.getName()),
+                true
+        );
+        makeCreateRequest(
+                getProjectCreateUri(), o1t2Project1, 409,
+                String.format("Project(%s) already exists.  Projects are globally unique.", o1t2Project1.getName()),
+                true
+        );
+        makeCreateRequest(
+                getProjectCreateUri(), o2t1Project1, 409,
+                String.format("Project(%s) already exists.  Projects are globally unique.", o2t1Project1.getName()),
+                true
+        );
+
+        Project g_o1t1Project1 = makeGetRequest(getProjectUri(o1t1Project1), Project.class, 200);
+        Assertions.assertEquals(o1t1Project1, g_o1t1Project1);
+        Project g_o1t2Project3 = makeGetRequest(getProjectUri(o1t2Project3), Project.class, 200);
+        Assertions.assertEquals(o1t2Project3, g_o1t2Project3);
+        Project g_o2t1Project4 = makeGetRequest(getProjectUri(o2t1Project4), Project.class, 200);
+        Assertions.assertEquals(o2t1Project4, g_o2t1Project4);
+
+        makeGetRequest(
+                getProjectUri(o3t1Project5), 404, String.format("Project(%s) not found.", o3t1Project5.getName()),
+                true
+        );
+
+
+        validateTeamProjects(org1Team1, List.of(o1t1Project1, o1t1Project2));
+        validateTeamProjects(org1Team2, List.of(o1t2Project3));
+        validateTeamProjects(org2Team1, List.of(o2t1Project4));
+
+        makeDeleteRequest(
+                getTeamUri(org1Team1), 409,
+                String.format("Can not delete Team(%s) as it has associated Project(s).", org1Team1.getName()), true
+        );
+        makeDeleteRequest(getProjectUri(o1t1Project2), 200);
+
+        validateTeamProjects(org1Team1, List.of(o1t1Project1));
+
+        // org update -- fail
+        Project t1_o1t1Project1 =
+                new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
+                        org2Team1.getName(),
+                        org2Team1.getOrgName()
+                );
+        makeUpdateRequest(
+                getProjectCreateUri(), t1_o1t1Project1, 400,
+                String.format("Project(%s) can not be moved across organisation.", t1_o1t1Project1.getName()), true
+        );
+
+        // no update -- fail
+        Project t2_o1t1Project1 =
+                new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
+                        o1t1Project1.getTeamName(),
+                        o1t1Project1.getOrgName()
+                );
+        makeUpdateRequest(
+                getProjectCreateUri(), t2_o1t1Project1, 400,
+                String.format(
+                        "Project(%s) has same team name and description. Nothing to update.",
+                        t2_o1t1Project1.getName()
+                ), true
+        );
+
+        // version mismatch -- fail
+        Project t3_o1t1Project1 =
+                new Project(o1t1Project1.getName(), o1t1Project1.getVersion() + 1, o1t1Project1.getDescription(),
+                        org1Team2.getName(),
+                        o1t1Project1.getOrgName()
+                );
+        makeUpdateRequest(getProjectCreateUri(), t3_o1t1Project1, 409, null, true);
+
+        // name update  -- fail
+        Project t4_o1t1Project1 = new Project(o1t1Project1.getName() + "mismatch", o1t1Project1.getVersion(),
+                o1t1Project1.getDescription(),
+                o1t1Project1.getTeamName(),
+                o1t1Project1.getOrgName()
+        );
+        makeUpdateRequest(
+                getProjectCreateUri(), t4_o1t1Project1, 404,
+                String.format("Project(%s) not found.", t4_o1t1Project1.getName()), true
+        );
+
+        // only team update -- fine.
+        o1t1Project1.setTeamName(org1Team2.getName());
+        o1t1Project1 = makeUpdateRequest(getProjectCreateUri(), o1t1Project1, 200);
+
+
+        validateTeamProjects(org1Team1, List.of());
+        validateTeamProjects(org1Team2, List.of(o1t1Project1, o1t2Project3));
+
+        makeDeleteRequest(getTeamUri(org1Team1), 200);
+    }
+
+    private void validateTeamProjects(Team team, List<Project> projects) {
+        List<Project> teamProjects =
+                getProjects(makeListRequest(getProjectListUri(team.getOrgName(), team.getName()), 200));
+        Assertions.assertEquals(projects.size(), teamProjects.size());
+        projects.forEach(p -> Assertions.assertTrue(teamProjects.contains(p)));
+    }
+
+
+    @Test
+    public void testProjectInvalidOps() {
+        Project pCreated = makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
+        Project p1 = new Project("p1", 0, "", "t1", "o1");
+        makeGetRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
+        makeDeleteRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
+
+        p1 = new Project("p1", 0, "", pCreated.getTeamName(), "o1");
+        makeCreateRequest(
+                getProjectCreateUri(), p1, 404,
+                String.format(
+                        "Org(%s) not found. For Project creation, associated Org and Team should exist.",
+                        p1.getOrgName()
+                ), true
+        );
+
+        p1 = new Project("p1", 0, "", "t1", pCreated.getOrgName());
+        makeCreateRequest(
+                getProjectCreateUri(), p1, 404,
+                String.format(
+                        "Team(%s) not found. For Project creation, associated Org and Team should exist.",
+                        p1.getTeamName()
+                ), true
+        );
+
+        makeListRequest(
+                getProjectListUri(o1t1Project1.getOrgName(), p1.getTeamName()), 404,
+                String.format("Team(%s) does not exists in the Org(%s).", p1.getTeamName(), o1t1Project1.getOrgName()),
+                true
+        );
+        makeListRequest(
+                getProjectListUri("o1", o1t1Project1.getTeamName()), 404, String.format("Org(%s) not found.", "o1"),
+                true
+        );
+
+    }
+}

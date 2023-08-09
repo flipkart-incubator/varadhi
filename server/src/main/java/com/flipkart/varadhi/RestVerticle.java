@@ -55,9 +55,9 @@ public class RestVerticle extends AbstractVerticle {
             RouteBehaviour[] behaviours = def.behaviours().toArray(new RouteBehaviour[0]);
             Arrays.sort(behaviours, Comparator.comparingInt(RouteBehaviour::getOrder));
             for (RouteBehaviour behaviour : behaviours) {
-                RouteConfigurator behaviorProvider = routeBehaviourConfigurators.getOrDefault(behaviour, null);
-                if (null != behaviorProvider) {
-                    behaviorProvider.configure(route, def);
+                RouteConfigurator routeConfigurator = routeBehaviourConfigurators.getOrDefault(behaviour, null);
+                if (null != routeConfigurator) {
+                    routeConfigurator.configure(route, def);
                 } else {
                     String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
                     log.error(errMsg);

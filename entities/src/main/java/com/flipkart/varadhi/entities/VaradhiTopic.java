@@ -11,9 +11,8 @@ import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 
 
 @Getter
-public class VaradhiTopic extends BaseTopic {
+public class VaradhiTopic extends VaradhiResource {
     private final Map<String, InternalTopic> internalTopics;
-
     private final boolean grouped;
 
     private VaradhiTopic(
@@ -43,7 +42,7 @@ public class VaradhiTopic extends BaseTopic {
     public void addInternalTopic(InternalTopic internalTopic) {
         this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
-    
+
     public InternalTopic getProduceTopicForRegion(String region) {
         InternalTopic internalTopic = internalTopics.get(region);
         if (null == internalTopic) {

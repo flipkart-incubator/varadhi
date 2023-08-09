@@ -95,7 +95,8 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: fetch project from metastore when implemented.
         Project project = new Project(topicResource.getProject(), DEFAULT_TEAM, DEFAULT_TENANT);
 
-        boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
+        TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
+        boolean found = metaStore.checkTopicResourceExists(topicResource.getName(), topicResource.getProject());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
@@ -103,6 +104,7 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
+
         TopicResource createdResource = metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);

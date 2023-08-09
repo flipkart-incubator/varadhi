@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.google.inject.Singleton;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -16,7 +17,7 @@ public interface BaseResource {
         if (violations.isEmpty()) {
             return;
         }
-        throw new IllegalArgumentException(violations.stream()
+        throw new ArgumentException(violations.stream()
                 .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
                 .collect(Collectors.joining(", ")));
     }

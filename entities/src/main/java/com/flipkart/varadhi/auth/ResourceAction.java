@@ -1,9 +1,20 @@
 package com.flipkart.varadhi.auth;
 
 public enum ResourceAction {
-    TENANT_CREATE(ResourceType.TENANT, "create"),
-    TENANT_UPDATE(ResourceType.TENANT, "update"),
-    TENANT_DELETE(ResourceType.TENANT, "delete"),
+
+
+    ORG_CREATE(ResourceType.ORG, "create"),
+    ORG_GET(ResourceType.ORG, "get"),
+    ORG_DELETE(ResourceType.ORG, "delete"),
+
+    TEAM_CREATE(ResourceType.TEAM, "create"),
+    TEAM_GET(ResourceType.TEAM, "get"),
+    TEAM_DELETE(ResourceType.TEAM, "delete"),
+
+    PROJECT_CREATE(ResourceType.PROJECT, "create"),
+    PROJECT_GET(ResourceType.PROJECT, "get"),
+    PROJECT_UPDATE(ResourceType.PROJECT, "update"),
+    PROJECT_DELETE(ResourceType.PROJECT, "delete"),
 
     TOPIC_CREATE(ResourceType.TOPIC, "create"),
     TOPIC_GET(ResourceType.TOPIC, "get"),

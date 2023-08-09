@@ -28,17 +28,16 @@ public class Extensions {
         }
 
         public static <T> T asPojo(RequestBody body, Class<T> clazz) {
-            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
-            return deserialzedObject;
+            return JsonMapper.jsonDeserialize(body.asString(), clazz);
         }
     }
 
     @Slf4j
     public static class RoutingContextExtension {
+
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
+            addResponseHeaders(ctx, true);
             String responseBody = JsonMapper.jsonSerialize(response);
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-            ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             ctx.response().end(responseBody, (r) -> {
                 HttpServerRequest request = ctx.request();
                 if (r.succeeded()) {
@@ -49,9 +48,9 @@ public class Extensions {
             });
         }
 
+
         public static void endRequestWithStatusAndErrorMsg(RoutingContext ctx, int httpStatus, String errorMessage) {
-            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-            ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
+            addResponseHeaders(ctx, true);
             ctx.response().setStatusCode(httpStatus);
             ctx.response().setStatusMessage(errorMessage);
             String responseMsg = JsonMapper.jsonSerialize(new ErrorResponse(errorMessage));
@@ -65,6 +64,28 @@ public class Extensions {
             });
         }
 
+        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
+            ctx.fail(throwable);
+        }
+
+        public static void endRequest(RoutingContext ctx) {
+            addResponseHeaders(ctx, false);
+            ctx.response().end((r) -> {
+                HttpServerRequest request = ctx.request();
+                if (r.succeeded()) {
+                    log.debug("Request {}:{} completed successfully.", request.method(), request.path());
+                } else {
+                    log.error("Request {}:{} Failed to complete:{}.", request.method(), request.path(), r.cause());
+                }
+            });
+        }
+
+        private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
+            if (hasContent) {
+                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
+            }
+        }
 
         public static <T> void setApiResponse(RoutingContext ctx, T response) {
             ctx.put("api-response", response);
@@ -76,10 +97,6 @@ public class Extensions {
 
         public static void todo(RoutingContext context) {
             throw new NotImplementedException("Not Implemented.");
-        }
-
-        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
-            ctx.fail(throwable);
         }
     }
 }
