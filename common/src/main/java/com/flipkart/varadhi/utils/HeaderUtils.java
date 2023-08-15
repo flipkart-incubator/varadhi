@@ -1,16 +1,19 @@
 package com.flipkart.varadhi.utils;
 
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import io.vertx.core.MultiMap;
 
-import static com.flipkart.varadhi.MessageConstants.HEADER_PREFIX;
+import static com.flipkart.varadhi.MessageConstants.Headers.VARADHI_HEADER_PREFIX;
 
 public class HeaderUtils {
-    public static Map<String, String> getVaradhiHeader(Map<String, String> headers) {
-        return headers
-                .entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().toLowerCase().startsWith(HEADER_PREFIX))
-                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+    public static Multimap<String, String> copyVaradhiHeaders(MultiMap headers) {
+        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
+        headers.entries().forEach(entry -> {
+            if (entry.getKey().toLowerCase().startsWith(VARADHI_HEADER_PREFIX)) {
+                varadhiHeaders.put(entry.getKey(), entry.getValue());
+            }
+        });
+        return varadhiHeaders;
     }
 }

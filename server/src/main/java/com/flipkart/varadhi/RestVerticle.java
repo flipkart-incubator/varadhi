@@ -17,6 +17,8 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -50,20 +52,20 @@ public class RestVerticle extends AbstractVerticle {
         log.info("Configuring API routes.");
         for (RouteDefinition def : apiRoutes) {
             Route route = router.route().method(def.method()).path(def.path());
-            def.behaviours().forEach(behaviour -> {
-                        RouteConfigurator behaviorProvider = routeBehaviourConfigurators.getOrDefault(behaviour, null);
-                        if (null != behaviorProvider) {
-                            behaviorProvider.configure(route, def);
-                        } else {
-                            String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
-                            log.error(errMsg);
-                            throw new InvalidStateException(errMsg);
-                        }
-                        behaviorProvider.configure(route, def);
-                    }
-            );
+            RouteBehaviour[] behaviours = def.behaviours().toArray(new RouteBehaviour[0]);
+            Arrays.sort(behaviours, Comparator.comparingInt(RouteBehaviour::getOrder));
+            for (RouteBehaviour behaviour : behaviours) {
+                RouteConfigurator behaviorProvider = routeBehaviourConfigurators.getOrDefault(behaviour, null);
+                if (null != behaviorProvider) {
+                    behaviorProvider.configure(route, def);
+                } else {
+                    String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
+                    log.error(errMsg);
+                    throw new InvalidStateException(errMsg);
+                }
+                behaviorProvider.configure(route, def);
+            }
             def.preHandlers().forEach(route::handler);
-
             if (def.blockingEndHandler()) {
                 route.handler(wrapBlockingExecution(def.endReqHandler()));
             } else {
@@ -101,7 +103,7 @@ public class RestVerticle extends AbstractVerticle {
         options.setUseAlpn(true);
 
         // TODO: create config for http server
-        this.httpServer = this.vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
+        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
             if (h.succeeded()) {
                 log.info("HttpServer Started.");
                 startPromise.complete();

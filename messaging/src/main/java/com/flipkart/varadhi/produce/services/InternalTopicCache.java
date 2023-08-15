@@ -3,7 +3,6 @@ package com.flipkart.varadhi.produce.services;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.InternalTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
@@ -21,14 +20,10 @@ public class InternalTopicCache {
         this.varadhiTopicCache = CacheBuilder.from(topicCacheBuilderSpec).build();
     }
 
-    public InternalTopic getInternalMainTopicForRegion(String varadhiTopicName, String region) {
-        try {
-            VaradhiTopic varadhiTopic = this.varadhiTopicCache.get(varadhiTopicName, () ->
-                    this.varadhiTopicService.get(varadhiTopicName));
-            return varadhiTopic.getInternalMainTopic(varadhiTopicName, region);
-        } catch (ExecutionException e) {
-            throw new VaradhiException(e);
-        }
+    public InternalTopic getProduceTopicForRegion(String varadhiTopicName, String region) throws ExecutionException {
+        VaradhiTopic varadhiTopic = this.varadhiTopicCache.get(varadhiTopicName, () ->
+                this.varadhiTopicService.get(varadhiTopicName));
+        return varadhiTopic.getProduceTopicForRegion(region);
     }
 
 }

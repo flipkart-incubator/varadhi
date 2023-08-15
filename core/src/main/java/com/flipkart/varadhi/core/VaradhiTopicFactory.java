@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.core;
 
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
+
+import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 
 public class VaradhiTopicFactory {
 
@@ -20,44 +21,23 @@ public class VaradhiTopicFactory {
     }
 
     public VaradhiTopic get(Project project, TopicResource topicResource) {
-        VaradhiTopic vt = new VaradhiTopic(
-                getVaradhiTopicName(topicResource),
-                Constants.INITIAL_VERSION,
-                topicResource.isGrouped(),
-                null
-        );
+        VaradhiTopic vt = VaradhiTopic.of(topicResource);
         planDeployment(project, vt, topicResource);
         return vt;
     }
 
 
     private void planDeployment(Project project, VaradhiTopic varadhiTopic, TopicResource topicResource) {
-        InternalTopic mainTopic = mainTopicFrom(
-                project, varadhiTopic.getName(), deploymentRegion, topicResource, topicFactory);
-        varadhiTopic.addInternalTopic(mainTopic);
-    }
-
-    private static InternalTopic mainTopicFrom(
-            Project project,
-            String varadhiTopicName,
-            String topicRegion,
-            TopicResource topicResource,
-            StorageTopicFactory<StorageTopic> topicFactory
-    ) {
-        String internalTopicName = InternalTopic.internalMainTopicName(varadhiTopicName, topicRegion);
         StorageTopic storageTopic =
-                topicFactory.getTopic(project, internalTopicName, topicResource.getCapacityPolicy());
-        return new InternalTopic(
+                topicFactory.getTopic(varadhiTopic.getName(), project, topicResource.getCapacityPolicy());
+        // This is likely to change with replicated topics across zones. To be taken care as part of DR.
+        String internalTopicName = String.join(NAME_SEPARATOR, varadhiTopic.getName(), deploymentRegion);
+        InternalTopic internalTopic = new InternalTopic(
                 internalTopicName,
-                InternalTopic.TopicKind.Main,
-                topicRegion,
-                null,
-                InternalTopic.TopicStatus.Active,
+                deploymentRegion,
+                InternalTopic.TopicState.Producing,
                 storageTopic
         );
-    }
-
-    private String getVaradhiTopicName(TopicResource topicResource) {
-        return VaradhiTopic.getTopicFQN(topicResource.getProject(), topicResource.getName());
+        varadhiTopic.addInternalTopic(internalTopic);
     }
 }

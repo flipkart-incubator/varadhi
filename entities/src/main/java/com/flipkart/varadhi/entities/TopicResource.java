@@ -13,8 +13,7 @@ public class TopicResource extends VaradhiResource {
     String project;
     boolean grouped;
     CapacityPolicy capacityPolicy;
-
-    //TODO::check if private constructor suffices.
+    
     public TopicResource(
             String name,
             int version,

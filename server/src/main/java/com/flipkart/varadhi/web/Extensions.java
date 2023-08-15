@@ -44,6 +44,22 @@ public class Extensions {
             });
         }
 
+        public static void endRequestWithStatusAndResponse(RoutingContext ctx, int httpStatus, String message) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
+            ctx.response().setStatusCode(httpStatus);
+            ctx.response().setStatusMessage(message);
+            ctx.response().end(r -> {
+                HttpServerRequest request = ctx.request();
+                if (r.succeeded()) {
+                    log.debug("Request {}:{} ended successfully.", request.method(), request.path());
+                } else {
+                    log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
+                }
+            });
+        }
+
+
         public static <T> void setApiResponse(RoutingContext ctx, T response) {
             ctx.put("api-response", response);
         }

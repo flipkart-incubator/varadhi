@@ -1,19 +1,21 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.exceptions.OperationNotAllowedException;
-import com.flipkart.varadhi.exceptions.ResourceBlockedException;
-import com.flipkart.varadhi.exceptions.ResourceRateLimitedException;
-import com.flipkart.varadhi.produce.MsgProduceStatus;
+import com.flipkart.varadhi.entities.InternalTopic;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.ProduceContext;
+import com.flipkart.varadhi.entities.ProduceResult;
+import com.flipkart.varadhi.exceptions.ProduceException;
+import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.HeaderUtils;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-import static com.flipkart.varadhi.MessageConstants.*;
+import static com.flipkart.varadhi.entities.ProduceResult.Status.Failed;
 
+@Slf4j
 public class ProducerService {
     private final ProducerCache producerCache;
     private final InternalTopicCache internalTopicCache;
@@ -27,77 +29,53 @@ public class ProducerService {
         this.metricProvider = metricProvider;
     }
 
+    //
+    // TODO:: Discuss impact of bringing validations (topic exists, rate limit, blocked) at this layer.
+    // Rest layer will still be processing & doing basic validations before message produce can be rejected from here.
+
     public CompletableFuture<ProduceResult> produceToTopic(
-            Message message, String varadhiTopicName, ProduceContext produceContext
+            Message message,
+            String varadhiTopicName,
+            ProduceContext context
     ) {
-        MsgProduceStatus msgProduceStatus = MsgProduceStatus.Success;
-        long produceStartTime = System.currentTimeMillis();
+        String messageId = message.getMessageId();
         try {
-            String produceRegion = produceContext.getTopicContext().getRegion();
-            InternalTopic internalTopic =
-                    this.internalTopicCache.getInternalMainTopicForRegion(varadhiTopicName, produceRegion);
+            String produceRegion = context.getTopicContext().getRegion();
+            InternalTopic internalTopic = internalTopicCache.getProduceTopicForRegion(varadhiTopicName, produceRegion);
 
-            //TODO::Check if below two step process can be done in better way.
-            msgProduceStatus = getProduceStatus(internalTopic);
-            ensureProduceAllowed(msgProduceStatus);
-
-            addRequestHeadersToMessage(message, produceContext.getRequestContext().getHeaders());
-            addVaradhiHeadersToMessage(message, produceContext);
-            Producer producer = this.producerCache.getProducer(internalTopic.getStorageTopic());
-            CompletableFuture<ProducerResult> producerResult = producer.ProduceAsync(message);
-            // TODO::check what happens for thenApply in case of failure.
-            return producerResult.thenApply(pResult -> {
-                this.metricProvider.onMessageProduceEnd(produceStartTime, MsgProduceStatus.Success, produceContext);
-                return new ProduceResult(message, pResult);
+            return produceToTopic(message, internalTopic).thenApply(result -> {
+                metricProvider.OnProduceEnd(
+                        messageId, result.getProduceStatus().status(), result.getProducerLatency(), context);
+                return result;
             });
-        } catch (Exception e) {
-            msgProduceStatus = MsgProduceStatus.Success == msgProduceStatus ? MsgProduceStatus.Failed :
-                    msgProduceStatus;
-            this.metricProvider.onMessageProduceEnd(produceStartTime, msgProduceStatus, produceContext);
+        } catch (VaradhiException e) {
+            metricProvider.OnProduceEnd(messageId, Failed, 0, context);
             throw e;
+        } catch (Exception e) {
+            metricProvider.OnProduceEnd(messageId, Failed, 0, context);
+            throw new ProduceException(String.format("Produce failed due to internal error."), e);
         }
     }
 
-    private void addVaradhiHeadersToMessage(Message message, ProduceContext produceContext) {
-        if (null != produceContext.getRequestContext()) {
-            message.addHeader(
-                    HEADER_PRODUCE_TIMESTAMP,
-                    Long.toString(produceContext.getRequestContext().getRequestTimestamp())
-            );
+    private CompletableFuture<ProduceResult> produceToTopic(Message message, InternalTopic internalTopic) throws
+            ExecutionException {
+        String messageId = message.getMessageId();
+        if (internalTopic.produceAllowed()) {
+            long produceStart = System.currentTimeMillis();
+            Producer producer = producerCache.getProducer(internalTopic.getStorageTopic());
+            return producer.ProduceAsync(message).handle((result, throwable) -> {
+                long producerLatency = System.currentTimeMillis() - produceStart;
+                if (throwable != null) {
+                    log.error(String.format("Produce Message(%s) to StorageTopic(%s) failed.", messageId,
+                            internalTopic.getStorageTopic().getName()
+                    ), throwable);
+                    return ProduceResult.onProducerFailure(messageId, producerLatency, throwable.getMessage());
+                } else {
+                    return ProduceResult.onSuccess(messageId, result, producerLatency);
+                }
+            });
         }
-        if (null != produceContext.getUserContext()) {
-            message.addHeader(
-                    HEADER_PRODUCE_IDENTITY,
-                    produceContext.getUserContext().getSubject()
-            );
-        }
-        if (null != produceContext.getTopicContext()) {
-            message.addHeader(
-                    HEADER_PRODUCE_REGION,
-                    produceContext.getTopicContext().getRegion()
-            );
-        }
+        return CompletableFuture.completedFuture(
+                ProduceResult.onNonProducingTopicState(messageId, internalTopic.getTopicState()));
     }
-
-    private void addRequestHeadersToMessage(Message message, Map<String, String> requestHeaders) {
-        message.addHeaders(HeaderUtils.getVaradhiHeader(requestHeaders));
-    }
-
-    private MsgProduceStatus getProduceStatus(InternalTopic topic) {
-        return switch (topic.getTopicStatus()) {
-            case Blocked -> MsgProduceStatus.Blocked;
-            case Throttled -> MsgProduceStatus.Throttled;
-            case NotAllowed -> MsgProduceStatus.NotAllowed;
-            default -> MsgProduceStatus.Success;
-        };
-    }
-
-    private void ensureProduceAllowed(MsgProduceStatus status) {
-        switch (status) {
-            case Blocked -> throw new ResourceBlockedException("Topic is currently blocked for produce.");
-            case Throttled -> throw new ResourceRateLimitedException("Topic is being throttled. Try again.");
-            case NotAllowed -> throw new OperationNotAllowedException("Produce is not allowed for the topic.");
-        }
-    }
-
 }

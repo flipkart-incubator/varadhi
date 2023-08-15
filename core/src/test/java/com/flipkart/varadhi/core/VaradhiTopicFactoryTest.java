@@ -14,7 +14,7 @@ public class VaradhiTopicFactoryTest {
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
     private Project project;
     private String region = "local";
-    private String iTopicName;
+    private String vTopicName;
     private String topicName = "testTopic";
 
     @BeforeEach
@@ -22,12 +22,11 @@ public class VaradhiTopicFactoryTest {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region);
         project = new Project("default", "public", "public");
-        String vTopicName = String.format("%s.%s", project.getName(), topicName);
-        iTopicName = InternalTopic.internalMainTopicName(vTopicName, region);
+        vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
-                String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), iTopicName);
+                String.format("persistent://%s/%s", project.getTenantName(), vTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
-        doReturn(pTopic).when(storageTopicFactory).getTopic(project, iTopicName, null);
+        doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
     }
 
     @Test
@@ -41,13 +40,11 @@ public class VaradhiTopicFactoryTest {
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         Assertions.assertNotNull(varadhiTopic);
-        Assertions.assertEquals(1, varadhiTopic.getInternalTopics().size());
-        InternalTopic it = varadhiTopic.getInternalTopics().get(iTopicName);
+        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
         StorageTopic st = it.getStorageTopic();
-        Assertions.assertEquals(it.getTopicStatus(), InternalTopic.TopicStatus.Active);
+        Assertions.assertEquals(it.getTopicState(), InternalTopic.TopicState.Producing);
         Assertions.assertEquals(it.getTopicRegion(), region);
-        Assertions.assertNull(it.getReplicatingFromRegion());
         Assertions.assertNotNull(st);
-        verify(storageTopicFactory, times(1)).getTopic(project, iTopicName, null);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, null);
     }
 }

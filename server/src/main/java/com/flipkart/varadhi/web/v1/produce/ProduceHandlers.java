@@ -1,17 +1,18 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.MessageConstants;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.Multimap;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -21,11 +22,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.REQUEST_PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_RATE_LIMITED;
+import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
+import static com.flipkart.varadhi.MessageConstants.Headers.*;
+import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
 import static com.flipkart.varadhi.auth.ResourceAction.TOPIC_PRODUCE;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 
 @Slf4j
@@ -56,53 +63,80 @@ public class ProduceHandlers implements RouteProvider {
 
     public void produce(RoutingContext ctx) {
         //TODO:: Request Validations pending
-        // Also close on what happens if fields are missing (like msgId) or groupId.
+
         MessageResource messageResource = ctx.body().asPojo(MessageResource.class);
+
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        String varadhiTopicName = VaradhiTopic.getTopicFQN(projectName, topicName);
-        Message message = messageResource.getMessageToProduce();
+        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
+
         ProduceContext produceContext = buildProduceContext(ctx);
+        Message messageToProduce = buildMessageToProduce(messageResource, ctx.request().headers(), produceContext);
+
         CompletableFuture<ProduceResult> produceFuture =
-                this.producerService.produceToTopic(message, varadhiTopicName, produceContext);
-        produceFuture.whenComplete((produceresult, failure) -> {
-            //TODO::log/metric.
-            ctx.vertx().runOnContext((Void) -> {
-                        if (null != failure) {
-                            ctx.endRequestWithException(failure);
-                        } else {
-                            ctx.endRequestWithResponse(produceresult.getProduceRestResponse());
+                producerService.produceToTopic(messageToProduce, varadhiTopicName, produceContext);
+        produceFuture.whenComplete((produceResult, failure) ->
+                ctx.vertx().runOnContext((Void) -> {
+                            if (null != produceResult) {
+                                if (produceResult.isSuccess()) {
+                                    ctx.endRequestWithResponse(produceResult.getMessageId());
+                                } else {
+                                    ctx.endRequestWithStatusAndResponse(
+                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus().status()),
+                                            produceResult.getProduceStatus().message()
+                                    );
+                                }
+                            } else {
+                                ctx.endRequestWithException(failure);
+                            }
                         }
-                    }
-            );
-        });
+                )
+        );
+    }
+
+    private int getHttpStatusForProduceStatus(ProduceResult.Status status) {
+        return switch (status) {
+            case Blocked, NotAllowed -> HTTP_UNPROCESSABLE_ENTITY;
+            case Throttled -> HTTP_RATE_LIMITED;
+            default -> {
+                log.error("Unexpected Produce Status ({}) for Http code conversion.", status);
+                yield HTTP_INTERNAL_ERROR;
+            }
+        };
+    }
+
+
+    private Message buildMessageToProduce(
+            MessageResource messageResource,
+            MultiMap headers,
+            ProduceContext produceContext
+    ) {
+        Multimap<String, String> requestHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(produceContext.getRequestContext().getRequestTimestamp()));
+        requestHeaders.put(PRODUCE_IDENTITY, produceContext.getRequestContext().getProduceIdentity());
+        requestHeaders.put(PRODUCE_REGION, produceContext.getTopicContext().getRegion());
+        return new Message(messageResource.getPayload(), requestHeaders);
     }
 
     private ProduceContext buildProduceContext(RoutingContext ctx) {
-        UserContext userContext = buildUserContext(ctx.user());
-        ProduceContext.RequestContext requestContext = buildRequestContext(ctx.request());
+        ProduceContext.RequestContext requestContext = buildRequestContext(ctx);
         ProduceContext.TopicContext topicContext = buildTopicContext(ctx.request(), this.deployedRegion);
-        return null;
+        return new ProduceContext(requestContext, topicContext);
     }
 
-
-    private UserContext buildUserContext(User user) {
-        return user == null ? null : new VertxUserContext(user);
-    }
-
-    private ProduceContext.RequestContext buildRequestContext(HttpServerRequest request) {
+    private ProduceContext.RequestContext buildRequestContext(RoutingContext ctx) {
+        HttpServerRequest request = ctx.request();
         ProduceContext.RequestContext requestContext = new ProduceContext.RequestContext();
-        requestContext.setRequestPath(request.path());
-        requestContext.setAbsoluteUri(request.absoluteURI());
+        String produceIdentity = ctx.user() == null ? ANONYMOUS_PRODUCE_IDENTITY : ctx.user().subject();
+        requestContext.setProduceIdentity(produceIdentity);
         requestContext.setRequestTimestamp(System.currentTimeMillis());
-        request.headers().forEach((key, value) -> requestContext.getHeaders().put(key, value));
         requestContext.setBytesReceived(request.bytesRead());
-        requestContext.setHttpMethod(request.method());
+        requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
         String remoteHost = request.remoteAddress().host();
-        String xfwdedHeaderValue = request.getHeader(MessageConstants.HEADER_X_FWDED_FOR);
-        if (null != xfwdedHeaderValue && !xfwdedHeaderValue.isEmpty()) {
+        String xForwardedForValue = request.getHeader(FORWARDED_FOR);
+        if (null != xForwardedForValue && !xForwardedForValue.isEmpty()) {
             // This could be multivalued (comma separated), take the original initiator i.e. left most in the list.
-            String[] proxies = xfwdedHeaderValue.trim().split(",");
+            String[] proxies = xForwardedForValue.trim().split(",");
             if (!proxies[0].isBlank()) {
                 remoteHost = proxies[0];
             }

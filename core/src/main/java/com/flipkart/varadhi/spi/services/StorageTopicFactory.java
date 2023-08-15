@@ -5,5 +5,10 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
 
 public interface StorageTopicFactory<T extends StorageTopic> {
-    T getTopic(Project project, String topicName, CapacityPolicy capacityPolicy);
+
+    // TODO:: This will change further to take care of producing and replicating regions as well.
+
+    // topicName is globally unique. Messaging stack can take a dependency on this to create either
+    // global or regional topic names as required.
+    T getTopic(String topicName, Project project, CapacityPolicy capacityPolicy);
 }

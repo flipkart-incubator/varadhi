@@ -3,15 +3,20 @@ package com.flipkart.varadhi.entities;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import lombok.Getter;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
+
 
 @Getter
 public class VaradhiTopic extends BaseTopic {
     private final Map<String, InternalTopic> internalTopics;
+
     private final boolean grouped;
 
-    public VaradhiTopic(
+    private VaradhiTopic(
             String name,
             int version,
             boolean grouped,
@@ -19,25 +24,30 @@ public class VaradhiTopic extends BaseTopic {
     ) {
         super(name, version);
         this.grouped = grouped;
-        this.internalTopics = null == internalTopics ? new ConcurrentHashMap<>() : internalTopics;
+        this.internalTopics = null == internalTopics ? new HashMap<>() : internalTopics;
     }
 
-    public static String getTopicFQN(String projectName, String topicName) {
-        return String.format("%s.%s", projectName, topicName);
+    public static VaradhiTopic of(TopicResource topicResource) {
+        return new VaradhiTopic(
+                buildTopicName(topicResource.getProject(), topicResource.getName()),
+                INITIAL_VERSION,
+                topicResource.isGrouped(),
+                null
+        );
+    }
+
+    public static String buildTopicName(String projectName, String topicName) {
+        return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 
     public void addInternalTopic(InternalTopic internalTopic) {
-        this.internalTopics.put(internalTopic.getName(), internalTopic);
+        this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
-
-    public InternalTopic getInternalMainTopic(String varadhiTopicName, String region) {
-        String regionMainTopicName = InternalTopic.internalMainTopicName(varadhiTopicName, region);
-        InternalTopic internalTopic = this.internalTopics.get(regionMainTopicName);
+    
+    public InternalTopic getProduceTopicForRegion(String region) {
+        InternalTopic internalTopic = internalTopics.get(region);
         if (null == internalTopic) {
-            throw new ResourceNotFoundException(
-                    String.format("Storage Topic %s of kind(%s) not found.", varadhiTopicName,
-                            InternalTopic.TopicKind.Main
-                    ));
+            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", region));
         }
         return internalTopic;
     }

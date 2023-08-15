@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.exceptions.ServerNotAvailableException;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -16,9 +18,6 @@ import static java.net.HttpURLConnection.*;
 @Slf4j
 public class FailureHandler implements Handler<RoutingContext> {
 
-    public static int HTTP_RATE_LIMITED = 429;
-    public static int HTTP_UNPROCESSABLE_ENTITY = 422;
-
     @Override
     public void handle(RoutingContext ctx) {
         HttpServerResponse response = ctx.response();
@@ -28,7 +27,8 @@ public class FailureHandler implements Handler<RoutingContext> {
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
 
-            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(), statusCode,
+            log.error("{}: {}: Failed. TopicState:{}, Error:{}", ctx.request().method(), ctx.request().path(),
+                    statusCode,
                     errorMsg
             );
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
@@ -65,16 +65,10 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review status code mapping for correctness.
+        //TODO:: review status status mapping for correctness.
         Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();
-        } else if (OperationNotAllowedException.class == tClazz) {
-            return HTTP_UNPROCESSABLE_ENTITY;
-        } else if (ResourceBlockedException.class == tClazz) {
-            return HTTP_UNPROCESSABLE_ENTITY;
-        } else if (ResourceRateLimitedException.class == tClazz) {
-            return HTTP_RATE_LIMITED;
         } else if (DuplicateResourceException.class == tClazz) {
             return HTTP_CONFLICT;
         } else if (NotImplementedException.class == tClazz) {

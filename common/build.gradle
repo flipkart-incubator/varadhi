@@ -3,9 +3,7 @@ plugins {
 }
 
 dependencies {
-    api("io.vertx:vertx-core")
+    implementation("io.vertx:vertx-core")
     implementation('org.yaml:snakeyaml:2.0')
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
-
-    testImplementation("io.vertx:vertx-junit5")
 }

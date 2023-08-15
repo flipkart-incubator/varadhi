@@ -75,7 +75,7 @@ public class PulsarStackProviderTest {
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic(project, topicName, null);
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, null);
         Assertions.assertTrue(topic.getName()
                 .equals(String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), topicName)));
         Assertions.assertEquals(1, topic.getPartitionCount());
@@ -99,7 +99,7 @@ public class PulsarStackProviderTest {
         Topics topics = mock(Topics.class);
         doReturn(topics).when(pulsarAdmin).topics();
         doNothing().when(topics).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
-        PulsarStorageTopic pulsarStorageTopic = storageTopicFactory.getTopic(project, topicName, null);
+        PulsarStorageTopic pulsarStorageTopic = storageTopicFactory.getTopic(topicName, project, null);
         storageTopicService.create(pulsarStorageTopic);
         verify(topics, times(1)).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
     }

@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -21,10 +24,9 @@ public class VaradhiTopicServiceTest {
     private MetaStore metaStore;
     private VaradhiTopicService varadhiTopicService;
     private Project project;
-    private InternalTopic.TopicKind topicKind = InternalTopic.TopicKind.Main;
     private String region = "local";
     private String topicName = "testTopic";
-    private String iTopicName;
+    private String vTopicName;
 
 
     @BeforeEach
@@ -35,12 +37,11 @@ public class VaradhiTopicServiceTest {
         varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory, region));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
         project = new Project("default", "public", "public");
-        String vTopicName = String.format("%s.%s", project.getName(), topicName);
-        iTopicName = InternalTopic.internalMainTopicName(vTopicName, region);
+        vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
-                String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), iTopicName);
+                String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), vTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
-        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(project, iTopicName, null);
+        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
     }
 
     @Test
@@ -49,21 +50,21 @@ public class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic);
         verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         verify(storageTopicService, times(1)).create(st);
-        verify(storageTopicFactory, times(1)).getTopic(project, iTopicName, null);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, null);
     }
 
     @Test
     public void createVaradhiTopicWhenMetaStoreFails() {
         TopicResource topicResource = getTopicResource(topicName, project);
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(metaStore).createVaradhiTopic(varadhiTopic);
         Exception exception =
                 Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic));
         verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
-        verify(storageTopicService, never()).create(st);
+        verify(storageTopicService, times(1)).create(st);
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
     }
 
@@ -71,11 +72,11 @@ public class VaradhiTopicServiceTest {
     public void createVaradhiTopicWhenStorageTopicServiceFails() {
         TopicResource topicResource = getTopicResource(topicName, project);
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        StorageTopic st = varadhiTopic.getInternalTopics().get(iTopicName).getStorageTopic();
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(storageTopicService).create(st);
         Exception exception =
                 Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic));
-        verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
+        verify(metaStore, times(0)).createVaradhiTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(st);
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
     }

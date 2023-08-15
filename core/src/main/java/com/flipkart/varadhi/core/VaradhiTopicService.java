@@ -25,13 +25,14 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     @Override
     public void create(VaradhiTopic varadhiTopic) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
-        metaStore.createVaradhiTopic(varadhiTopic);
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
+                    //TODO :: make this idempotent as part of create topic refactoring task.
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
                     topicService.create(storageTopic);
                 }
         );
+        metaStore.createVaradhiTopic(varadhiTopic);
     }
 
     @Override

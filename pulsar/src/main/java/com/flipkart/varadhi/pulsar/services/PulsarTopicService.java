@@ -17,6 +17,7 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     }
 
     public void create(PulsarStorageTopic topic) {
+        //TODO:: See if this can be idempotent.
         log.debug("Call Pulsar to create the required topic.");
         adminClient.create(topic);
     }

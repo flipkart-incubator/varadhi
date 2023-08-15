@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.produce.otel;
 
 import com.flipkart.varadhi.entities.ProduceContext;
-import com.flipkart.varadhi.produce.MsgProduceStatus;
+import com.flipkart.varadhi.entities.ProduceResult;
 import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.*;
+import static com.flipkart.varadhi.Constants.Tags.*;
 
 public class ProduceMetricProvider {
     private final MeterRegistry meterRegistry;
@@ -18,12 +18,13 @@ public class ProduceMetricProvider {
         //TODO::Add required meters for metrics.
     }
 
-
-    public void onMessageProduceEnd(
-            long produceStartTime,
-            MsgProduceStatus status,
+    public void OnProduceEnd(
+            String messageId,
+            ProduceResult.Status status,
+            long producerLatency,
             ProduceContext context
     ) {
+
     }
 
     private Map<String, String> getTags(ProduceContext context) {
@@ -31,8 +32,7 @@ public class ProduceMetricProvider {
         tags.put(TAG_NAME_REGION, context.getTopicContext().getRegion());
         tags.put(TAG_NAME_PROJECT, context.getTopicContext().getProjectName());
         tags.put(TAG_NAME_TOPIC, context.getTopicContext().getTopicName());
-        String identity =
-                null == context.getUserContext() ? UNKNOWN_IDENTITY_VALUE : context.getUserContext().getSubject();
+        String identity = context.getRequestContext().getProduceIdentity();
         tags.put(TAG_NAME_IDENTITY, identity);
         return tags;
     }
