@@ -2,6 +2,7 @@ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
 plugins {
     id 'com.flipkart.varadhi.java-application-conventions'
+    id 'jacoco-report-aggregation'
 }
 
 def jacoco_ver = "0.8.10"
@@ -55,12 +56,23 @@ dependencies {
     runtimeOnly(project(':pulsar'))
     testImplementation(project(':pulsar'))
 
+    // jacoco aggregation dependency -- explicit inclusion.
+    jacocoAggregation project(':pulsar')
+
 }
 
 task copyJacocoAgent(type: Copy) {
     from configurations.testE2ERuntime.find { it.name.contentEquals("org.jacoco.agent-$jacoco_ver-runtime.jar") }
     into "$buildDir/jacoco"
     rename("org.jacoco.agent-$jacoco_ver-runtime.jar", "org.jacoco.agent-runtime.jar")
+}
+
+reporting {
+    reports {
+        combinedJacocoReport(JacocoCoverageReport) {
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
 }
 
 application {

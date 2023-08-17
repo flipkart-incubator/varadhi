@@ -24,7 +24,7 @@ public class ProduceMetricProvider {
             long producerLatency,
             ProduceContext context
     ) {
-
+        Map<String, String> tags = getTags(context);
     }
 
     private Map<String, String> getTags(ProduceContext context) {

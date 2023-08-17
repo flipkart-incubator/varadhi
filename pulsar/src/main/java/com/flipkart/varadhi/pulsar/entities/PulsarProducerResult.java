@@ -1,12 +1,11 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.entities.ProduceResult;
 import com.flipkart.varadhi.entities.ProducerResult;
 
 public class PulsarProducerResult extends ProducerResult {
 
     @Override
-    public int compareTo(ProduceResult o) {
+    public int compareTo(ProducerResult o) {
         return 0;
     }
 }
