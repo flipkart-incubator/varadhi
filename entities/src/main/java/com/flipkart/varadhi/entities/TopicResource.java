@@ -1,19 +1,12 @@
 package com.flipkart.varadhi.entities;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Valid;
-import javax.validation.ValidationException;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 @Value
 @EqualsAndHashCode(callSuper = true)
-@Valid
 public class TopicResource extends VaradhiResource {
 
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
@@ -22,10 +15,10 @@ public class TopicResource extends VaradhiResource {
     String project;
 
     @NotNull
-    boolean grouped;
+    Boolean grouped;
 
     @NotNull
-    boolean exclusiveSubscription;
+    Boolean exclusiveSubscription;
 
     CapacityPolicy capacityPolicy;
 
@@ -43,15 +36,5 @@ public class TopicResource extends VaradhiResource {
         this.grouped = grouped;
         this.exclusiveSubscription = exclusiveSubscription;
         this.capacityPolicy = capacityPolicy;
-    }
-
-    public void validate() {
-        Set<ConstraintViolation<TopicResource>> violations = super.getValidator().validate(this);
-        if (violations.isEmpty()) {
-            return;
-        }
-        throw new ValidationException(violations.stream()
-                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
-                .collect(Collectors.joining(", ")));
     }
 }

@@ -77,8 +77,7 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
-        TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
-        topicResource.validate();
+        TopicResource topicResource = RequestBodyExtension.asPojo(ctx.body(), TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());

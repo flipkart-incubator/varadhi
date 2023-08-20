@@ -14,8 +14,8 @@ public class VaradhiTopic extends BaseTopic {
     public VaradhiTopic(
             String name,
             int version,
-            boolean grouped,
-            boolean exclusiveSubscription,
+            Boolean grouped,
+            Boolean exclusiveSubscription,
             Map<InternalTopic.TopicKind, InternalTopic> internalTopics
     ) {
         super(name, version);

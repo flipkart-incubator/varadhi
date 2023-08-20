@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.entities.BaseResource;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -20,7 +21,10 @@ public class Extensions {
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
         public static <T> T asPojo(RequestBody body, Class<T> clazz) {
-            return JsonMapper.jsonDeserialize(body.asString(), clazz);
+            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
+            BaseResource baseResource = (BaseResource) deserialzedObject;
+            baseResource.validate();
+            return deserialzedObject;
         }
     }
 
