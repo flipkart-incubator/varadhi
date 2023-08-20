@@ -44,16 +44,35 @@ public class ProducerService {
             InternalTopic internalTopic = internalTopicCache.getProduceTopicForRegion(varadhiTopicName, produceRegion);
 
             return produceToTopic(message, internalTopic).thenApply(result -> {
-                metricProvider.OnProduceEnd(
-                        messageId, result.getProduceStatus().status(), result.getProducerLatency(), context);
+                sendProduceMetric(messageId, result.getProduceStatus().status(), result.getProducerLatency(), context);
                 return result;
             });
         } catch (VaradhiException e) {
-            metricProvider.OnProduceEnd(messageId, Failed, 0, context);
+            sendProduceMetric(messageId, Failed, 0, context);
             throw e;
         } catch (Exception e) {
-            metricProvider.OnProduceEnd(messageId, Failed, 0, context);
+            sendProduceMetric(messageId, Failed, 0, context);
             throw new ProduceException(String.format("Produce failed due to internal error."), e);
+        }
+    }
+
+    private void sendProduceMetric(
+            String messageId,
+            ProduceResult.Status status,
+            int produceLatency,
+            ProduceContext context
+    ) {
+        try {
+            metricProvider.OnProduceEnd(messageId, status, produceLatency, context);
+        } catch (Exception e) {
+            // Failure in metric path, shouldn't fail the metric. Log and ignore any exception.
+            log.error(
+                    "Failed to send metrics for Produce({}) for {}.{}. Error: {}",
+                    messageId,
+                    context.getTopicContext().getProjectName(),
+                    context.getTopicContext().getTopicName(),
+                    e.getMessage()
+            );
         }
     }
 
@@ -64,7 +83,7 @@ public class ProducerService {
             long produceStart = System.currentTimeMillis();
             Producer producer = producerCache.getProducer(internalTopic.getStorageTopic());
             return producer.ProduceAsync(message).handle((result, throwable) -> {
-                long producerLatency = System.currentTimeMillis() - produceStart;
+                int producerLatency = (int) (System.currentTimeMillis() - produceStart);
                 if (throwable != null) {
                     log.error(String.format("Produce Message(%s) to StorageTopic(%s) failed.", messageId,
                             internalTopic.getStorageTopic().getName()

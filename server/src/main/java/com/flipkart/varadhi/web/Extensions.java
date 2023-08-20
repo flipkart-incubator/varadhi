@@ -44,12 +44,13 @@ public class Extensions {
             });
         }
 
-        public static void endRequestWithStatusAndResponse(RoutingContext ctx, int httpStatus, String message) {
+        public static void endRequestWithStatusAndErrorMsg(RoutingContext ctx, int httpStatus, String errorMessage) {
             ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
             ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             ctx.response().setStatusCode(httpStatus);
-            ctx.response().setStatusMessage(message);
-            ctx.response().end(r -> {
+            ctx.response().setStatusMessage(errorMessage);
+            String responseMsg = JsonMapper.jsonSerialize(new ErrorResponse(errorMessage));
+            ctx.response().end(responseMsg, r -> {
                 HttpServerRequest request = ctx.request();
                 if (r.succeeded()) {
                     log.debug("Request {}:{} ended successfully.", request.method(), request.path());

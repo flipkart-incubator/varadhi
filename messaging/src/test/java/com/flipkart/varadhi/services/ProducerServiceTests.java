@@ -8,6 +8,7 @@ import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.utils.JsonMapper;
@@ -200,7 +201,7 @@ public class ProducerServiceTests {
         Assertions.assertNull(rc.throwable);
         Assertions.assertEquals(ProduceResult.Status.Failed, rc.produceResult.getProduceStatus().status());
         Assertions.assertEquals(
-                "Produce failed at messaging stack: java.lang.RuntimeException.",
+                "Produce failed at messaging stack: java.lang.RuntimeException",
                 rc.produceResult.getProduceStatus().message()
         );
         verify(producerFactory, times(1)).getProducer(any());

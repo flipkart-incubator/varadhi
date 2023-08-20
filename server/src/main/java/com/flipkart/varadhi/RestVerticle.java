@@ -63,7 +63,6 @@ public class RestVerticle extends AbstractVerticle {
                     log.error(errMsg);
                     throw new InvalidStateException(errMsg);
                 }
-                behaviorProvider.configure(route, def);
             }
             def.preHandlers().forEach(route::handler);
             if (def.blockingEndHandler()) {

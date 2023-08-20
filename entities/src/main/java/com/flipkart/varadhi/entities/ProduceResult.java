@@ -12,10 +12,10 @@ public class ProduceResult {
     private final String messageId;
     private final ProduceStatus produceStatus;
     private final Optional<ProducerResult> producerResult;
-    private final long producerLatency;
+    private final int producerLatency;
 
     private ProduceResult(
-            String messageId, ProducerResult producerResult, ProduceStatus produceStatus, long producerLatency
+            String messageId, ProducerResult producerResult, ProduceStatus produceStatus, int producerLatency
     ) {
         this.messageId = messageId;
         this.producerResult = Optional.of(producerResult);
@@ -23,24 +23,24 @@ public class ProduceResult {
         this.produceStatus = produceStatus;
     }
 
-    private ProduceResult(String messageId, ProduceStatus produceStatus, long producerLatency) {
+    private ProduceResult(String messageId, ProduceStatus produceStatus, int producerLatency) {
         this.messageId = messageId;
         this.producerResult = Optional.empty();
         this.producerLatency = producerLatency;
         this.produceStatus = produceStatus;
     }
 
-    public static ProduceResult onSuccess(String messageId, ProducerResult producerResult, long producerLatency) {
+    public static ProduceResult onSuccess(String messageId, ProducerResult producerResult, int producerLatency) {
         return new ProduceResult(
                 messageId, producerResult, new ProduceStatus(Status.Success, "Completed"), producerLatency);
     }
 
-    public static ProduceResult onProducerFailure(String messageId, long producerLatency, String errorMessage) {
+    public static ProduceResult onProducerFailure(String messageId, int producerLatency, String errorMessage) {
         return new ProduceResult(
                 messageId,
                 new ProduceStatus(
                         Status.Failed,
-                        String.format("Produce failed at messaging stack: %s.", errorMessage)
+                        String.format("Produce failed at messaging stack: %s", errorMessage)
                 ),
                 producerLatency
         );

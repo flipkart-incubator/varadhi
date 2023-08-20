@@ -1,8 +1,7 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.ProducerResult;
-import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.JsonMapper;
 
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +43,7 @@ public class DummyProducer implements Producer {
     public static class DummyProducerResult extends ProducerResult {
         int offset;
 
-        DummyProducerResult(int offset) {
+        public DummyProducerResult(int offset) {
             this.offset = offset;
         }
 

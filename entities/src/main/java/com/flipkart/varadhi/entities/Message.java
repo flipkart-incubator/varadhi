@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import lombok.Getter;
@@ -29,7 +30,7 @@ public class Message {
     private void checkRequiredHeaders(Multimap<String, String> headers) {
         REQUIRED_HEADERS.forEach(key -> {
             if (!headers.containsKey(key)) {
-                throw new IllegalArgumentException(String.format("Missing required header %s", key));
+                throw new ArgumentException(String.format("Missing required header %s", key));
             }
         });
     }

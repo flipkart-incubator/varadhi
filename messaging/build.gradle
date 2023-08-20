@@ -9,4 +9,5 @@ dependencies {
     implementation(project(':entities'))
     implementation(project(':core'))
     testImplementation("io.micrometer:micrometer-registry-otlp")
+    testImplementation(testFixtures(project(':core')))
 }
