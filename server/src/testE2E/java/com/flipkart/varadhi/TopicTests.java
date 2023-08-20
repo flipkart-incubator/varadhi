@@ -75,8 +75,8 @@ public class TopicTests {
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
         Assertions.assertEquals(topic.getProject(), r.getProject());
-        Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
-        Assertions.assertEquals(topic.isExclusiveSubscription(), r.isExclusiveSubscription());
+        Assertions.assertEquals(topic.getGrouped(), r.getGrouped());
+        Assertions.assertEquals(topic.getExclusiveSubscription(), r.getExclusiveSubscription());
         Assertions.assertNull(r.getCapacityPolicy());
         //TODO::fix this.
         String errorDuplicateTopic =
