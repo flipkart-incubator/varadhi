@@ -32,5 +32,8 @@ metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: 'src/main/resources/zkConfig.yml'
 
-varadhiDeploymentConfig:
+httpServerOptions:
   port: 8080
+  alpnVersions: ["HTTP_1_1", "HTTP_2"]
+  decompressionSupported: false
+  useAlpn: true

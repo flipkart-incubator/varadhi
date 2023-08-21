@@ -1,11 +1,11 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.config.VaradhiDeploymentConfig;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.google.common.collect.Sets;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -51,10 +51,10 @@ public class VerticleTest {
                 new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3,
                         Optional.empty()
                 );
-        VaradhiDeploymentConfig varadhiDeploymentConfig = new VaradhiDeploymentConfig();
-        varadhiDeploymentConfig.setPort(6969);
+        HttpServerOptions httpServerOptions = new HttpServerOptions();
+        httpServerOptions.setPort(6969);
         vertx.deployVerticle(
-                new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>(), varadhiDeploymentConfig),
+                new RestVerticle(Collections.singletonList(routeDefinition), new HashMap<>(), httpServerOptions),
                 testContext.succeeding(id -> webClient.get(6969, "localhost", "/")
                         .as(BodyCodec.string())
                         .send(testContext.succeeding(resp -> testContext.verify(() -> {

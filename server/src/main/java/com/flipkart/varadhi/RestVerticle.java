@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.config.VaradhiDeploymentConfig;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -22,17 +21,17 @@ public class RestVerticle extends AbstractVerticle {
     private final List<RouteDefinition> apiRoutes;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders;
 
-    private final VaradhiDeploymentConfig varadhiDeploymentConfig;
+    private final HttpServerOptions httpServerOptions;
 
     private HttpServer httpServer;
 
     public RestVerticle(
             List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders,
-            VaradhiDeploymentConfig varadhiDeploymentConfig
+            HttpServerOptions httpServerOptions
     ) {
         this.apiRoutes = apiRoutes;
         this.behaviorProviders = behaviorProviders;
-        this.varadhiDeploymentConfig = varadhiDeploymentConfig;
+        this.httpServerOptions = httpServerOptions;
     }
 
     @Override
@@ -61,22 +60,16 @@ public class RestVerticle extends AbstractVerticle {
             route.failureHandler(failureHandler);
         }
 
-        HttpServerOptions options = new HttpServerOptions();
-        // TODO: why?
-        options.setDecompressionSupported(false);
-        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
-        options.setUseAlpn(true);
-
-        // TODO: create config for http server
         httpServer =
-                vertx.createHttpServer(options).requestHandler(router).listen(varadhiDeploymentConfig.getPort(), h -> {
-                    if (h.succeeded()) {
-                        log.info("HttpServer Started.");
-                    } else {
-                        log.warn("HttpServer Started Failed.");
-                    }
-                    startPromise.handle(h.map((Void) null));
-                });
+                vertx.createHttpServer(httpServerOptions).requestHandler(router)
+                        .listen(h -> {
+                            if (h.succeeded()) {
+                                log.info("HttpServer Started.");
+                            } else {
+                                log.warn("HttpServer Started Failed.");
+                            }
+                            startPromise.handle(h.map((Void) null));
+                        });
     }
 
     @Override

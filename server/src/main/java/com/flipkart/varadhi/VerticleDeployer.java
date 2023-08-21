@@ -73,7 +73,7 @@ public class VerticleDeployer {
 
         vertx.deployVerticle(
                         () -> new RestVerticle(getRouteDefinitions(), behaviorProviders,
-                                configuration.getVaradhiDeploymentConfig()
+                                configuration.getHttpServerOptions()
                         ), configuration.getRestVerticleDeploymentOptions())
                 .onFailure(t -> {
                     log.error("Could not start HttpServer Verticle", t);
