@@ -50,7 +50,7 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(Sets.newHashSet()),
+                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(),
                                 this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
@@ -60,7 +60,7 @@ public class TopicHandlers implements RouteProvider {
                                 this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(Sets.newHashSet()),
+                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(),
                                 this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
@@ -77,7 +77,7 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
-        TopicResource topicResource = RequestBodyExtension.asPojo(ctx.body(), TopicResource.class);
+        TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());

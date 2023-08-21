@@ -38,7 +38,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     public List<RouteDefinition> get() {
         return List.of(
                 new RouteDefinition(HttpMethod.GET, "/v1/health-check", Set.of(),
-                        Sets.newLinkedHashSet(Sets.newHashSet()),
+                        Sets.newLinkedHashSet(),
                         this, Optional.empty()
                 )
         );

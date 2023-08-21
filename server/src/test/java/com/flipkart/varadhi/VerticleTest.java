@@ -28,7 +28,7 @@ public class VerticleTest {
 
 
     @Test
-    public void testMultipleHandlers(VertxTestContext testContext) throws InterruptedException {
+    public void testMultipleHandlers(VertxTestContext testContext) {
 
         Handler<RoutingContext> handler1 = context -> {
             context.response().setChunked(true);
@@ -62,7 +62,5 @@ public class VerticleTest {
                             testContext.completeNow();
                         }))))
         );
-        Thread.sleep(5000);
     }
-
 }

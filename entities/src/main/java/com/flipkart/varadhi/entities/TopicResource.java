@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -14,11 +13,9 @@ public class TopicResource extends VaradhiResource {
     @Size(min = 5, max = 50, message = "Project Length must be between 5 and 50")
     String project;
 
-    @NotNull
-    Boolean grouped;
+    boolean grouped;
 
-    @NotNull
-    Boolean exclusiveSubscription;
+    boolean exclusiveSubscription;
 
     CapacityPolicy capacityPolicy;
 

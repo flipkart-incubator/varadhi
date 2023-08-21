@@ -16,8 +16,8 @@ public class VaradhiTopicFactory {
         VaradhiTopic vt = new VaradhiTopic(
                 varadhiTopicName(topicResource),
                 Constants.INITIAL_VERSION,
-                topicResource.getGrouped(),
-                topicResource.getExclusiveSubscription(),
+                topicResource.isGrouped(),
+                topicResource.isExclusiveSubscription(),
                 null
         );
         planDeployment(vt, topicResource);
