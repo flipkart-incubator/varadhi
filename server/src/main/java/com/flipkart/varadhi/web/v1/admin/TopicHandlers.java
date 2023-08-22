@@ -93,7 +93,7 @@ public class TopicHandlers implements RouteProvider {
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         //TODO:: fetch project from metastore when implemented.
-        Project project = new Project(topicResource.getName(), DEFAULT_TEAM, DEFAULT_TENANT);
+        Project project = new Project(topicResource.getProject(), DEFAULT_TEAM, DEFAULT_TENANT);
 
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());
         if (found) {

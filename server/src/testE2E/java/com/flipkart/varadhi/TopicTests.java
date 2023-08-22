@@ -23,8 +23,8 @@ public class TopicTests {
     private static final int ReadTimeoutMs = 10 * 1000;
 
     private static final String VaradhiBaseUri = "http://localhost:8080";
-    private static final String DefaultTenant = "DefaultTestTenant";
-    private static final String DefaultProject = "TestProject";
+    private static final String DefaultTenant = "public";
+    private static final String DefaultProject = "default";
 
 
     private Client getClient() {
@@ -83,7 +83,7 @@ public class TopicTests {
                         "Specified Topic(%s) already exists.",
                         ZKPathUtils.getTopicResourceFQDN(topic.getProject(), topic.getName())
                 );
-        makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorDuplicateTopic, true);
+        makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 409, errorDuplicateTopic, true);
     }
 
     @Test
