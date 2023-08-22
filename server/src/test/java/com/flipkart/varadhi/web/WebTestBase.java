@@ -33,7 +33,7 @@ public class WebTestBase {
     protected Router router;
     protected BodyHandler bodyHandler;
     protected FailureHandler failureHandler;
-    protected int defaultPort = 8080;
+    protected int defaultPort = 9090; //use port different from default 8080, conflicts with server port in e2e.
     protected String defaultHost = "localhost";
 
     public void setUp() throws InterruptedException {
