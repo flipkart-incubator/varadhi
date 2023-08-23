@@ -21,9 +21,14 @@ public class Extensions {
 
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
-        public static <T extends BaseResource> T asPojo(RequestBody body, Class<T> clazz) {
-            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
+        public static <T extends BaseResource> T asValidatedPojo(RequestBody body, Class<T> clazz) {
+            T deserialzedObject = asPojo(body, clazz);
             deserialzedObject.validate();
+            return deserialzedObject;
+        }
+
+        public static <T> T asPojo(RequestBody body, Class<T> clazz) {
+            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
             return deserialzedObject;
         }
     }

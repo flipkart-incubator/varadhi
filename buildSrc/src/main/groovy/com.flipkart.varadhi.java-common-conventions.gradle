@@ -93,7 +93,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
 
     // common apis
-    implementation("com.google.guava:guava");
+    implementation("com.google.guava:guava")
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
 

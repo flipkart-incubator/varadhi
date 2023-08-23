@@ -91,7 +91,7 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
-        TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
+        TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
         //TODO:: fetch project from metastore when implemented.
         Project project = new Project(topicResource.getProject(), DEFAULT_TEAM, DEFAULT_TENANT);
 

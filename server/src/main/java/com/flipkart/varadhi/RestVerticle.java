@@ -94,15 +94,8 @@ public class RestVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
 
         Router router = Router.router(vertx);
-        configureApiRoutes(router, this.apiRoutes, this.routeBehaviourConfigurators, this.failureHandler);
-        HttpServerOptions options = new HttpServerOptions();
-        // TODO: why?
-        options.setDecompressionSupported(false);
-        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
-        options.setUseAlpn(true);
-
-        // TODO: create config for http server
-        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
+        configureApiRoutes(router, apiRoutes, routeBehaviourConfigurators, failureHandler);
+        httpServer = vertx.createHttpServer(httpServerOptions).requestHandler(router).listen(h -> {
             if (h.succeeded()) {
                 log.info("HttpServer Started.");
                 startPromise.complete();
@@ -116,7 +109,7 @@ public class RestVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         log.info("HttpServer Stopping.");
-        this.httpServer.close(h -> {
+        httpServer.close(h -> {
             log.info("HttpServer Stopped.");
             stopPromise.complete();
         });
