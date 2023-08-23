@@ -92,7 +92,7 @@ public class TopicTests {
         String topicName = "Test";
         TopicResource topic =
                 new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, false, null);
-        String errorValidationTopic = "name: Project Length must be between 5 and 50";
+        String errorValidationTopic = "name: Varadhi Resource Name Length must be between 5 and 50";
         makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorValidationTopic, true);
     }
 
