@@ -21,6 +21,7 @@ import java.util.Set;
 public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour> behaviours,
                               LinkedHashSet<Handler<RoutingContext>> preHandlers,
                               Handler<RoutingContext> endReqHandler,
+                              boolean blockingEndHandler,
                               Optional<PermissionAuthorization> requiredAuthorization) {
 
 }

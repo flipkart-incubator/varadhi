@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.BaseResource;
+import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -20,9 +21,14 @@ public class Extensions {
 
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
-        public static <T extends BaseResource> T asPojo(RequestBody body, Class<T> clazz) {
-            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
+        public static <T extends BaseResource> T asValidatedPojo(RequestBody body, Class<T> clazz) {
+            T deserialzedObject = asPojo(body, clazz);
             deserialzedObject.validate();
+            return deserialzedObject;
+        }
+
+        public static <T> T asPojo(RequestBody body, Class<T> clazz) {
+            T deserialzedObject = JsonMapper.jsonDeserialize(body.asString(), clazz);
             return deserialzedObject;
         }
     }
@@ -43,13 +49,37 @@ public class Extensions {
             });
         }
 
-        public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {
-            ctx.response().setStatusCode(status);
-            endRequestWithResponse(ctx, response);
+        public static void endRequestWithStatusAndErrorMsg(RoutingContext ctx, int httpStatus, String errorMessage) {
+            ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
+            ctx.response().setStatusCode(httpStatus);
+            ctx.response().setStatusMessage(errorMessage);
+            String responseMsg = JsonMapper.jsonSerialize(new ErrorResponse(errorMessage));
+            ctx.response().end(responseMsg, r -> {
+                HttpServerRequest request = ctx.request();
+                if (r.succeeded()) {
+                    log.debug("Request {}:{} ended successfully.", request.method(), request.path());
+                } else {
+                    log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
+                }
+            });
+        }
+
+
+        public static <T> void setApiResponse(RoutingContext ctx, T response) {
+            ctx.put("api-response", response);
+        }
+
+        public static <T> T getApiResponse(RoutingContext ctx) {
+            return ctx.get("api-response");
         }
 
         public static void todo(RoutingContext context) {
-            context.response().setStatusCode(500).setStatusMessage("Not Implemented").end();
+            throw new NotImplementedException("Not Implemented.");
+        }
+
+        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
+            ctx.fail(throwable);
         }
     }
 }
