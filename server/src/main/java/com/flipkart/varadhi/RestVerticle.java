@@ -21,13 +21,17 @@ public class RestVerticle extends AbstractVerticle {
     private final List<RouteDefinition> apiRoutes;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders;
 
+    private final HttpServerOptions httpServerOptions;
+
     private HttpServer httpServer;
 
     public RestVerticle(
-            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders
+            List<RouteDefinition> apiRoutes, Map<RouteBehaviour, RouteConfigurator> behaviorProviders,
+            HttpServerOptions httpServerOptions
     ) {
         this.apiRoutes = apiRoutes;
         this.behaviorProviders = behaviorProviders;
+        this.httpServerOptions = httpServerOptions;
     }
 
     @Override
@@ -51,25 +55,21 @@ public class RestVerticle extends AbstractVerticle {
                         behaviorProvider.configure(route, def);
                     }
             );
-            route.handler(def.handler());
+            def.preHandlers().forEach(route::handler);
+            route.handler(def.endReqHandler());
             route.failureHandler(failureHandler);
         }
 
-        HttpServerOptions options = new HttpServerOptions();
-        // TODO: why?
-        options.setDecompressionSupported(false);
-        options.setAlpnVersions(HttpServerOptions.DEFAULT_ALPN_VERSIONS);
-        options.setUseAlpn(true);
-
-        // TODO: create config for http server
-        httpServer = vertx.createHttpServer(options).requestHandler(router).listen(8080, h -> {
-            if (h.succeeded()) {
-                log.info("HttpServer Started.");
-            } else {
-                log.warn("HttpServer Started Failed.");
-            }
-            startPromise.handle(h.map((Void) null));
-        });
+        httpServer =
+                vertx.createHttpServer(httpServerOptions).requestHandler(router)
+                        .listen(h -> {
+                            if (h.succeeded()) {
+                                log.info("HttpServer Started.");
+                            } else {
+                                log.warn("HttpServer Started Failed.");
+                            }
+                            startPromise.handle(h.map((Void) null));
+                        });
     }
 
     @Override

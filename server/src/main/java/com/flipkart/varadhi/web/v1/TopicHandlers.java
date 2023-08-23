@@ -12,6 +12,7 @@ import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.Sets;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
@@ -49,15 +50,18 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/tenants/:tenant/topics",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:topic", Set.of(), this::get,
+                                HttpMethod.GET, "/:topic", Set.of(), Sets.newLinkedHashSet(),
+                                this::get,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{tenant}/{topic}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(authenticated, hasBody), this::create,
-                                Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
+                                HttpMethod.POST, "", Set.of(authenticated, hasBody),
+                                Sets.newLinkedHashSet(),
+                                this::create, Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{tenant}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:topic", Set.of(), this::delete,
+                                HttpMethod.DELETE, "/:topic", Set.of(), Sets.newLinkedHashSet(),
+                                this::delete,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{tenant}/{topic}"))
                         )
                 )
@@ -71,7 +75,7 @@ public class TopicHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         //TODO:: Enable authn/authz for this flow.
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
-        //TODO:: Consider reverting on failure and transaction kind of semantics for all operations.
+        //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getProject(), topicResource.getName());

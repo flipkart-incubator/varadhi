@@ -6,6 +6,7 @@ import com.flipkart.varadhi.db.MetaStoreOptions;
 import com.flipkart.varadhi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpServerOptions;
 import lombok.Getter;
 
 @Getter
@@ -24,5 +25,9 @@ public class ServerConfiguration {
     private AuthorizationOptions authorization;
 
     private MessagingStackOptions messagingStackOptions;
+
     private MetaStoreOptions metaStoreOptions;
+
+    private HttpServerOptions httpServerOptions;
+
 }
