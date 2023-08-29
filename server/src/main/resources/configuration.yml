@@ -1,20 +1,26 @@
+varadhiOptions:
+  deployedRegion: "default"
+  producerOptions:
+    producerCacheBuilderSpec: ""
+    topicCacheBuilderSpec: ""
+
 vertxOptions:
   eventLoopPoolSize: 1
   workerPoolSize: 1
   internalBlockingPoolSize: 1
 
-restVerticleDeploymentOptions:
-  instances: 2
-  worker: true
+verticleDeploymentOptions:
+  instances: 1
+  worker: false
   workerPoolSize: 2
 
 authenticationEnabled: false
 
 authentication:
   jwt:
-    jwksUrl: 'http://localhost:9090/default/jwks'
+    jwksUrl: "http://localhost:9090/default/jwks"
     options:
-      issuer: 'http://localhost:9090/default'
+      issuer: "http://localhost:9090/default"
       ignoreExpiration: true
 
 authorizationEnabled: false
@@ -26,8 +32,14 @@ authorization:
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-  configFile: 'src/main/resources/pulsarConfig.yml'
+  configFile: "src/main/resources/pulsarConfig.yml"
 
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: 'src/main/resources/zkConfig.yml'
+  configFile: "src/main/resources/zkConfig.yml"
+
+httpServerOptions:
+  port: 8080
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true

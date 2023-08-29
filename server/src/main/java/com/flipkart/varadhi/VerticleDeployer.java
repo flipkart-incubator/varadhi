@@ -4,12 +4,28 @@ import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.db.MetaStoreProvider;
 import com.flipkart.varadhi.entities.VaradhiTopicFactory;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.core.VaradhiTopicFactory;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.produce.config.ProducerOptions;
+import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.produce.services.InternalTopicCache;
+import com.flipkart.varadhi.produce.services.ProducerCache;
+import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.web.AuthHandlers;
+import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.v1.HealthCheckHandler;
+import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import io.micrometer.core.instrument.MeterRegistry;
 import com.flipkart.varadhi.web.v1.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -27,6 +43,7 @@ import java.util.stream.Stream;
 @Slf4j
 public class VerticleDeployer {
     private final TopicHandlers topicHandlers;
+    private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
@@ -37,56 +54,83 @@ public class VerticleDeployer {
             Vertx vertx,
             ServerConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
-            MetaStoreProvider metaStoreProvider
+            MetaStoreProvider metaStoreProvider,
+            MeterRegistry meterRegistry
     ) {
-        VaradhiTopicFactory topicFactory = new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory());
-        VaradhiTopicService topicService = new VaradhiTopicService(
+        String deployedRegion = configuration.getVaradhiOptions().getDeployedRegion();
+        VaradhiTopicFactory varadhiTopicFactory =
+                new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
+        VaradhiTopicService varadhiTopicService = new VaradhiTopicService(
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
         MetaStore metaStore = metaStoreProvider.getMetaStore();
-        this.topicHandlers = new TopicHandlers(topicFactory, topicService, metaStore);
         this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
+        this.topicHandlers =
+                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
+        ProducerService producerService =
+                setupProducerService(
+                        messagingStackProvider, varadhiTopicService,
+                        configuration.getVaradhiOptions().getProducerOptions(),
+                        meterRegistry
+                );
+        this.produceHandlers =
+                new ProduceHandlers(configuration.getVaradhiOptions().getDeployedRegion(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
-        behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
-        behaviorProviders.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+        this.behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
+        this.behaviorProviders.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getRouteDefinitions() {
+    private List<RouteDefinition> getDefinitions() {
         return Stream.of(
                         orgHandlers.get(),
                         teamHandlers.get(),
                         projectHandlers.get(),
                         topicHandlers.get(),
-                        healthCheckHandler.get()
+                        healthCheckHandler.get(),
+                        produceHandlers.get()
                 )
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
     }
 
-    public void deployVerticles(Vertx vertx, ServerConfiguration configuration) {
-        deployRestVerticle(vertx, configuration.getRestVerticleDeploymentOptions());
-    }
 
-    private void deployRestVerticle(Vertx vertx, DeploymentOptions deploymentOptions) {
-        if (!deploymentOptions.isWorker()) {
-            // Rest API  should avoid complete execution on Vertx event loop thread because they are likely to be
-            // blocking. Rest API need to be either offloaded from event loop via Async or need to be executed on
-            // Worker Verticle or should use executeBlocking() facility.
-            // Current code assumes Rest API will be executing on Worker Verticle and hence validate.
-            log.error("Rest Verticle is expected to be deployed as Worker Verticle.");
-            throw new InvalidConfigException("Rest API is expected to be deployed via Worker Verticle.");
-        }
-
-        vertx.deployVerticle(() -> new RestVerticle(getRouteDefinitions(), behaviorProviders), deploymentOptions)
+    public void deployVerticle(
+            Vertx vertx,
+            ServerConfiguration configuration
+    ) {
+        vertx.deployVerticle(
+                        () -> new RestVerticle(
+                                getDefinitions(),
+                                behaviorProviders,
+                                new FailureHandler(),
+                                configuration.getHttpServerOptions()
+                        ),
+                        configuration.getVerticleDeploymentOptions()
+                )
                 .onFailure(t -> {
                     log.error("Could not start HttpServer Verticle", t);
                     throw new VaradhiException("Failed to Deploy Rest API.", t);
                 })
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+    }
+
+
+    private ProducerService setupProducerService(
+            MessagingStackProvider messagingStackProvider,
+            VaradhiTopicService varadhiTopicService,
+            ProducerOptions producerOptions,
+            MeterRegistry meterRegistry
+    ) {
+        ProducerFactory producerFactory = messagingStackProvider.getProducerFactory();
+        ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
+        InternalTopicCache internalTopicCache =
+                new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());
+        ProduceMetricProvider produceMetricProvider = new ProduceMetricProvider(meterRegistry);
+        return new ProducerService(producerCache, internalTopicCache, produceMetricProvider);
     }
 
 }

@@ -2,12 +2,13 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.StorageTopicFactory;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
-import com.flipkart.varadhi.services.MessagingStackOptions;
-import com.flipkart.varadhi.services.StorageTopicService;
+import com.flipkart.varadhi.spi.services.MessagingStackOptions;
+import com.flipkart.varadhi.spi.services.StorageTopicFactory;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.admin.Topics;
@@ -26,13 +27,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class PulsarStackProviderTest {
+    @TempDir
+    Path tempDir;
     private PulsarStackProvider pulsarStackProvider;
     private MessagingStackOptions messagingStackOptions;
     private ObjectMapper objectMapper;
     private PulsarAdmin pulsarAdmin;
-
-    @TempDir
-    Path tempDir;
+    private Project project;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -44,6 +45,7 @@ public class PulsarStackProviderTest {
         messagingStackOptions = new MessagingStackOptions();
         messagingStackOptions.setConfigFile(configFile.toString());
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
+        project = new Project("default", "public", "public");
 
         objectMapper = mock(ObjectMapper.class);
         pulsarAdmin = mock(PulsarAdmin.class);
@@ -67,13 +69,15 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetStorageTopicFactory_Initialized() {
+        String topicName = "foobar";
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic("foobar", null);
-        Assertions.assertTrue(topic.getFqdn().endsWith("/foobar"));
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, null);
+        Assertions.assertTrue(topic.getName()
+                .equals(String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), topicName)));
         Assertions.assertEquals(1, topic.getPartitionCount());
     }
 
@@ -84,6 +88,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetStorageTopicService_Initialized() throws PulsarAdminException {
+        String topicName = "foobar";
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicService<PulsarStorageTopic> storageTopicService = pulsarStackProvider.getStorageTopicService();
         StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond =
@@ -94,7 +99,7 @@ public class PulsarStackProviderTest {
         Topics topics = mock(Topics.class);
         doReturn(topics).when(pulsarAdmin).topics();
         doNothing().when(topics).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
-        PulsarStorageTopic pulsarStorageTopic = storageTopicFactory.getTopic("foobar", null);
+        PulsarStorageTopic pulsarStorageTopic = storageTopicFactory.getTopic(topicName, project, null);
         storageTopicService.create(pulsarStorageTopic);
         verify(topics, times(1)).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
     }

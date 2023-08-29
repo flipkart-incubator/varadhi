@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.exceptions.*;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -27,12 +28,14 @@ public class FailureHandler implements Handler<RoutingContext> {
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
 
-            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(), statusCode,
+            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(),
+                    statusCode,
                     errorMsg
             );
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
             response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);
+            response.setStatusMessage(errorMsg);
             response.end(Json.encodeToBuffer(new ErrorResponse(errorMsg)));
         }
     }
@@ -71,22 +74,22 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-
-        //TODO:: review status code mapping for correctness.
+        //TODO:: review status status mapping for correctness.
         Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();
         } else if (DuplicateResourceException.class == tClazz) {
             return HTTP_CONFLICT;
+        } else if (NotImplementedException.class == tClazz) {
+            return HTTP_NOT_IMPLEMENTED;
+        } else if (ServerNotAvailableException.class == tClazz) {
+            return HTTP_UNAVAILABLE;
+        } else if (ArgumentException.class == tClazz) {
+            return HTTP_BAD_REQUEST;
         } else if (ResourceNotFoundException.class == tClazz) {
             return HTTP_NOT_FOUND;
         } else if (InvalidOperationForResourceException.class == tClazz) {
             return HTTP_CONFLICT;
-        } else if (IllegalArgumentException.class == tClazz) {
-            return HTTP_BAD_REQUEST;
-        } else if (NotImplementedException.class == tClazz) {
-            return HTTP_NOT_IMPLEMENTED;
-        }
         return HTTP_INTERNAL_ERROR;
     }
 

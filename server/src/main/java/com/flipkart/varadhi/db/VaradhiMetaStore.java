@@ -2,6 +2,9 @@ package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.ExceptionOrResult;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 

@@ -3,6 +3,11 @@ plugins {
 }
 dependencies {
     implementation(project(':common'))
+    implementation("io.micrometer:micrometer-core")
     implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
+    implementation('org.hibernate:hibernate-validator:8.0.1.Final')
+    implementation('org.glassfish.expressly:expressly:5.0.0')
+    implementation('com.google.inject:guice:7.0.0')
+
     testImplementation(project(':pulsar'))
 }

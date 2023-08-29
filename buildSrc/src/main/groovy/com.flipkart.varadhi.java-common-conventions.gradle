@@ -24,6 +24,7 @@ ext {
     micrometer_version = "1.10.6"
     ws_rs_version = "2.1.1"
     jersey_version = "2.25.1"
+    guava_version = "32.1.1-jre"
 }
 
 sourceSets {
@@ -68,6 +69,7 @@ dependencies {
         implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
         implementation("io.opentelemetry:opentelemetry-semconv:$otl_version-alpha")
 
+        implementation("io.micrometer:micrometer-core:$micrometer_version")
         implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
 
         // TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
@@ -77,9 +79,12 @@ dependencies {
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
+        implementation("com.google.guava:guava:$guava_version")
+
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
         testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
+        testImplementation("io.vertx:vertx-web-client:$vertx_version")
 
         testE2EImplementation("javax.ws.rs:javax.ws.rs-api:$ws_rs_version")
         testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
@@ -91,6 +96,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
 
     // common apis
+    implementation("com.google.guava:guava")
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
 

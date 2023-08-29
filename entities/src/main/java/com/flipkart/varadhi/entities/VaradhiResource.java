@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.EqualsAndHashCode;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
-@EqualsAndHashCode
-public class VaradhiResource {
+public class VaradhiResource implements BaseResource {
 
+    @Size(min = 5, max = 50, message = "Varadhi Resource Name Length must be between 5 and 50")
     private final String name;
 
     @Setter
