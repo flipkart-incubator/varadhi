@@ -11,9 +11,9 @@ import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 
 
 @Getter
-public class VaradhiTopic extends BaseTopic {
-    private final Map<String, InternalTopic> internalTopics;
+public class VaradhiTopic extends VaradhiResource {
 
+    private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
 
     private VaradhiTopic(

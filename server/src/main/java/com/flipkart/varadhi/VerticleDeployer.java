@@ -1,12 +1,9 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.db.MetaStore;
-import com.flipkart.varadhi.db.MetaStoreProvider;
-import com.flipkart.varadhi.entities.VaradhiTopicFactory;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
@@ -14,6 +11,7 @@ import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
@@ -27,7 +25,6 @@ import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import com.flipkart.varadhi.web.v1.*;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -125,7 +122,7 @@ public class VerticleDeployer {
             ProducerOptions producerOptions,
             MeterRegistry meterRegistry
     ) {
-        ProducerFactory producerFactory = messagingStackProvider.getProducerFactory();
+        ProducerFactory<StorageTopic> producerFactory = messagingStackProvider.getProducerFactory();
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());

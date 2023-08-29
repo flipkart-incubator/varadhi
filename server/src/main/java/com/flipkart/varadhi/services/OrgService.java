@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.db.MetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1;
 
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.services.ProjectService;
@@ -8,6 +9,7 @@ import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.Sets;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
@@ -17,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.flipkart.varadhi.Constants.PROJECT_PATH_PARAM;
 import static com.flipkart.varadhi.auth.ResourceAction.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
@@ -37,18 +38,18 @@ public class ProjectHandlers implements RouteProvider {
                 "/v1/projects",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "/:project", Set.of(authenticated), this::get,
+                                HttpMethod.GET, "/:project", Set.of(authenticated), Sets.newLinkedHashSet(), this::get,true,
                                 Optional.of(PermissionAuthorization.of(PROJECT_GET, "{project}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(hasBody), this::create, Optional.empty()
+                                HttpMethod.POST, "", Set.of(hasBody), Sets.newLinkedHashSet(),this::create, true,Optional.empty()
                         ),
                         new RouteDefinition(
-                                HttpMethod.PUT, "", Set.of(hasBody), this::update,
+                                HttpMethod.PUT, "", Set.of(hasBody), Sets.newLinkedHashSet(),this::update,true,
                                 Optional.of(PermissionAuthorization.of(PROJECT_UPDATE, ""))
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:project", Set.of(authenticated), this::delete,
+                                HttpMethod.DELETE, "/:project", Set.of(authenticated), Sets.newLinkedHashSet(), this::delete, true,
                                 Optional.of(PermissionAuthorization.of(PROJECT_DELETE, "{project}"))
                         )
                 )
@@ -56,7 +57,7 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PROJECT_PATH_PARAM);
+        String projectName = ctx.pathParam(Constants.PathParams.REQUEST_PATH_PARAM_PROJECT);
         Project project = this.projectService.getProject(projectName);
         ctx.endRequestWithResponse(project);
     }
@@ -69,7 +70,7 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void delete(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PROJECT_PATH_PARAM);
+        String projectName = ctx.pathParam(Constants.PathParams.REQUEST_PATH_PARAM_PROJECT);
         //TODO::No topics and subscriptions for this project.
         this.projectService.deleteProject(projectName);
         ctx.endRequest();

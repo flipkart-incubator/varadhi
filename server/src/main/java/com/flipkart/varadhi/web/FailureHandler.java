@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.exceptions.IllegalArgumentException;
-import com.flipkart.varadhi.exceptions.*;
 import com.flipkart.varadhi.exceptions.*;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -90,8 +88,8 @@ public class FailureHandler implements Handler<RoutingContext> {
             return HTTP_NOT_FOUND;
         } else if (InvalidOperationForResourceException.class == tClazz) {
             return HTTP_CONFLICT;
-        return HTTP_INTERNAL_ERROR;
+        }
+        return HTTP_BAD_REQUEST;
     }
-
 
 }
