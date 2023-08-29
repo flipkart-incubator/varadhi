@@ -45,7 +45,8 @@ public class PulsarStackProviderTest {
         messagingStackOptions = new MessagingStackOptions();
         messagingStackOptions.setConfigFile(configFile.toString());
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
-        project = new Project("default", "public", "public");
+        project = new Project("default", 0, "public", "teamName", "orgName");
+
 
         objectMapper = mock(ObjectMapper.class);
         pulsarAdmin = mock(PulsarAdmin.class);
@@ -77,7 +78,7 @@ public class PulsarStackProviderTest {
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
         PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, null);
         Assertions.assertTrue(topic.getName()
-                .equals(String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), topicName)));
+                .equals(String.format("persistent://%s/%s/%s.%s", project.getOrgName(), project.getTeamName(), project.getName(), topicName)));
         Assertions.assertEquals(1, topic.getPartitionCount());
     }
 
