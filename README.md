@@ -64,8 +64,7 @@ See the  Wiki page [Roadmap](https://github.com/flipkart-incubator/varadhi/wiki/
 
 ## Want to Contribute ?
 
-[ TBD ]
-
+Reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com incase you want to contribute here :)
 ## Bugs and Feedback
 
 [ TBD ]
