@@ -105,7 +105,7 @@ public class ZKMetaStore {
             return null != zkCurator.checkExists().forPath(znode.getPath());
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to check if %(%s) exists.", znode.getName(), znode.getPath()), e);
+                    String.format("Failed to check if %s(%s) exists.", znode.getName(), znode.getPath()), e);
         }
     }
 

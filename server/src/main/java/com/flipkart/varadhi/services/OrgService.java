@@ -10,8 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
@@ -23,31 +21,30 @@ public class OrgService {
     }
 
     public Org createOrg(Org org) {
-        boolean orgExists = this.metaStore.checkOrgExists(org.getName());
+        boolean orgExists = metaStore.checkOrgExists(org.getName());
         if (orgExists) {
             throw new DuplicateResourceException(
                     String.format("Org(%s) already exists. Org is globally unique.", org.getName()));
         }
-        org.setVersion(INITIAL_VERSION);
-        this.metaStore.createOrg(org);
+        metaStore.createOrg(org);
         return org;
     }
 
     public List<Org> getOrgs() {
-        return this.metaStore.getOrgs();
+        return metaStore.getOrgs();
     }
 
     public Org getOrg(String orgName) {
-        return this.metaStore.getOrg(orgName);
+        return metaStore.getOrg(orgName);
     }
 
 
     public void deleteOrg(String orgName) {
-        List<String> teamsInOrg = this.metaStore.getTeamNames(orgName);
+        List<String> teamsInOrg = metaStore.getTeamNames(orgName);
         if (teamsInOrg.size() > 0) {
             throw new InvalidOperationForResourceException(
                     String.format("Can not delete Org(%s) as it has associated Team(s).", orgName));
         }
-        this.metaStore.deleteOrg(orgName);
+        metaStore.deleteOrg(orgName);
     }
 }

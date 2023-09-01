@@ -25,6 +25,8 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     @Override
     public void create(VaradhiTopic varadhiTopic) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
+
+
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     //TODO :: make this idempotent as part of create topic refactoring task.

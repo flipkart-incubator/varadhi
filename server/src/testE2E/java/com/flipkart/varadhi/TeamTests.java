@@ -31,22 +31,22 @@ public class TeamTests extends E2EBase {
 
     @AfterEach
     public void cleanup() {
-//        cleanupOrgs(List.of(org1, org2, org3));
+        cleanupOrgs(List.of(org1, org2, org3));
     }
 
     @Test
     public void testTeamCRUD() {
-        Team c_org1Team1 = makeCreateRequest(getTeamsUri(org1Team1.getOrgName()), org1Team1, 200);
-        Team c_org1Team2 = makeCreateRequest(getTeamsUri(org1Team2.getOrgName()), org1Team2, 200);
-        Team c_org2Team1 = makeCreateRequest(getTeamsUri(org2Team1.getOrgName()), org2Team1, 200);
-        Team c_org2Team2 = makeCreateRequest(getTeamsUri(org2Team2.getOrgName()), org2Team2, 200);
+        Team c_org1Team1 = makeCreateRequest(getTeamsUri(org1Team1.getOrg()), org1Team1, 200);
+        Team c_org1Team2 = makeCreateRequest(getTeamsUri(org1Team2.getOrg()), org1Team2, 200);
+        Team c_org2Team1 = makeCreateRequest(getTeamsUri(org2Team1.getOrg()), org2Team1, 200);
+        Team c_org2Team2 = makeCreateRequest(getTeamsUri(org2Team2.getOrg()), org2Team2, 200);
         Assertions.assertEquals(org1Team1, c_org1Team1);
         Assertions.assertEquals(org1Team2, c_org1Team2);
         Assertions.assertEquals(org2Team1, c_org2Team1);
         Assertions.assertEquals(org2Team2, c_org2Team2);
 
         makeCreateRequest(
-                getTeamsUri(org1Team1.getOrgName()), org1Team1, 409,
+                getTeamsUri(org1Team1.getOrg()), org1Team1, 409,
                 String.format("Team(%s) already exists. Team is unique with in Org.", org1Team1.getName()), true
         );
 
@@ -89,15 +89,15 @@ public class TeamTests extends E2EBase {
     public void testTeamInvalidOps() {
         // no org
         //TODO::Fix
-        makeGetRequest(getTeamUri(org3Team1), 404, String.format("Org(%s) not found.", org3Team1.getOrgName()), true);
+        makeGetRequest(getTeamUri(org3Team1), 404, String.format("Org(%s) not found.", org3Team1.getOrg()), true);
         makeCreateRequest(
-                getTeamsUri(org3Team1.getOrgName()), org3Team1, 404,
-                String.format("Org(%s) not found.", org3Team1.getOrgName()), true
+                getTeamsUri(org3Team1.getOrg()), org3Team1, 404,
+                String.format("Org(%s) not found.", org3Team1.getOrg()), true
         );
         makeListRequest(
-                getTeamsUri(org3.getName()), 404, String.format("Org(%s) not found.", org3Team1.getOrgName()), true);
+                getTeamsUri(org3.getName()), 404, String.format("Org(%s) not found.", org3Team1.getOrg()), true);
         makeDeleteRequest(
-                getTeamUri(org3Team1), 404, String.format("Org(%s) not found.", org3Team1.getOrgName()), true);
+                getTeamUri(org3Team1), 404, String.format("Org(%s) not found.", org3Team1.getOrg()), true);
 
         //no  team
         makeGetRequest(getTeamUri(org1Team1), 404, String.format("Team(%s) not found.", org1Team1.getName()), true);

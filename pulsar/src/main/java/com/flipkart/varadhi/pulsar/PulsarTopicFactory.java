@@ -23,7 +23,7 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
 
     private static String getPulsarTopicName(String topicName, Project project) {
         // persistent://<tenant>/<namespace>/topicName.
-        return String.format("%s://%s/%s/%s.%s", TOPIC_SCHEMA, project.getOrgName(), project.getTeamName(), project.getName(), topicName);
+        return String.format("%s://%s/%s/%s", TOPIC_SCHEMA, project.getOrg(), project.getName(), topicName);
     }
 
     private static int getPartitionCount(CapacityPolicy capacityPolicy) {

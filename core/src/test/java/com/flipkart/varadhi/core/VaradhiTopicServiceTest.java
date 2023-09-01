@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicServiceTest {
@@ -24,8 +25,8 @@ public class VaradhiTopicServiceTest {
     private MetaStore metaStore;
     private VaradhiTopicService varadhiTopicService;
     private Project project;
-    private String region = "local";
-    private String topicName = "testTopic";
+    private final String region = "local";
+    private final String topicName = "testTopic";
     private String vTopicName;
 
 
@@ -36,10 +37,10 @@ public class VaradhiTopicServiceTest {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory, region));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
-        project = new Project("default", 0, "public", "teamName", "orgName");
+        project = new Project("default", INITIAL_VERSION, "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
-                String.format("persistent://%s/%s/%s", project.getTeamName(), project.getName(), vTopicName);
+                String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
         Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
     }

@@ -53,19 +53,7 @@ public class Extensions {
             addResponseHeaders(ctx, true);
             ctx.response().setStatusCode(httpStatus);
             ctx.response().setStatusMessage(errorMessage);
-            String responseMsg = JsonMapper.jsonSerialize(new ErrorResponse(errorMessage));
-            ctx.response().end(responseMsg, r -> {
-                HttpServerRequest request = ctx.request();
-                if (r.succeeded()) {
-                    log.debug("Request {}:{} ended successfully.", request.method(), request.path());
-                } else {
-                    log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
-                }
-            });
-        }
-
-        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
-            ctx.fail(throwable);
+            endRequestWithResponse(ctx, new ErrorResponse(errorMessage));
         }
 
         public static void endRequest(RoutingContext ctx) {
@@ -80,12 +68,8 @@ public class Extensions {
             });
         }
 
-        public static <T> void setApiResponse(RoutingContext ctx, T response) {
-            ctx.put("api-response", response);
-        }
-
-        public static <T> T getApiResponse(RoutingContext ctx) {
-            return ctx.get("api-response");
+        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
+            ctx.fail(throwable);
         }
 
         private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
@@ -95,9 +79,20 @@ public class Extensions {
             }
         }
 
-        public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {
-            ctx.response().setStatusCode(status);
-            endRequestWithResponse(ctx, response);
+        // Finish blocking handler by calling this for setting the API response.
+        public static <T> void endApiWithResponse(RoutingContext ctx, T response) {
+            ctx.put("api-response", response);
+        }
+
+
+        // Finish blocking handler by calling this for without setting API response.
+        public static void endApi(RoutingContext ctx) {
+            ctx.remove("api-response");
+        }
+
+
+        public static <T> T getApiResponse(RoutingContext ctx) {
+            return ctx.get("api-response");
         }
 
         public static void todo(RoutingContext context) {

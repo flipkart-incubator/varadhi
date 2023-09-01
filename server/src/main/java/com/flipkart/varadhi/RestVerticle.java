@@ -9,6 +9,7 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.Route;
@@ -66,7 +67,7 @@ public class RestVerticle extends AbstractVerticle {
             }
             def.preHandlers().forEach(route::handler);
             if (def.blockingEndHandler()) {
-                route.handler(wrapBlockingExecution(def.endReqHandler()));
+                route.handler(wrapBlockingExecution(vertx, def.endReqHandler()));
             } else {
                 route.handler(def.endReqHandler());
             }
@@ -75,15 +76,19 @@ public class RestVerticle extends AbstractVerticle {
         }
     }
 
-    private Handler<RoutingContext> wrapBlockingExecution(Handler<RoutingContext> apiEndHandler) {
+    public static Handler<RoutingContext> wrapBlockingExecution(Vertx vrtx, Handler<RoutingContext> apiEndHandler) {
         // no try/catch around apiEndHandler.handle as executeBlocking does the same and fails the future.
         return ctx ->
-                vertx.executeBlocking(future -> {
+                vrtx.executeBlocking(future -> {
                     apiEndHandler.handle(ctx);
                     future.complete();
                 }, resultHandler -> {
                     if (resultHandler.succeeded()) {
-                        ctx.endRequestWithResponse(ctx.getApiResponse());
+                        if (null == ctx.getApiResponse()) {
+                            ctx.endRequest();
+                        } else {
+                            ctx.endRequestWithResponse(ctx.getApiResponse());
+                        }
                     } else {
                         ctx.endRequestWithException(resultHandler.cause());
                     }
@@ -92,7 +97,6 @@ public class RestVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-
         Router router = Router.router(vertx);
         configureApiRoutes(router, apiRoutes, routeBehaviourConfigurators, failureHandler);
         httpServer = vertx.createHttpServer(httpServerOptions).requestHandler(router).listen(h -> {

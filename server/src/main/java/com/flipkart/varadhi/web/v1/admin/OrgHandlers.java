@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web.v1;
+package com.flipkart.varadhi.web.v1.admin;
 
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.flipkart.varadhi.Constants.PathParams.ORG_PATH_PARAM;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
 import static com.flipkart.varadhi.auth.ResourceAction.ORG_DELETE;
 import static com.flipkart.varadhi.auth.ResourceAction.ORG_GET;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
@@ -28,7 +28,6 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgHandlers implements RouteProvider {
-    //TODO:: Discuss case preserving or lower case requirement and close this again.
     private final OrgService orgService;
 
     public OrgHandlers(OrgService orgService) {
@@ -41,19 +40,38 @@ public class OrgHandlers implements RouteProvider {
                 "/v1/orgs",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "", Set.of(authenticated), new LinkedHashSet<>(), this::getOrgs, true,
+                                HttpMethod.GET,
+                                "",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::getOrganizations,
+                                true,
                                 Optional.empty()
                         ),
                         new RouteDefinition(
-                                HttpMethod.GET, "/:org", Set.of(authenticated), new LinkedHashSet<>(), this::get, true,
+                                HttpMethod.GET,
+                                "/:org",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::get,
+                                true,
                                 Optional.of(PermissionAuthorization.of(ORG_GET, "{org}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(hasBody), new LinkedHashSet<>(), this::create, true,
+                                HttpMethod.POST,
+                                "",
+                                Set.of(hasBody),
+                                new LinkedHashSet<>(),
+                                this::create,
+                                true,
                                 Optional.empty()
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:org", Set.of(authenticated), new LinkedHashSet<>(), this::delete,
+                                HttpMethod.DELETE,
+                                "/:org",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::delete,
                                 true,
                                 Optional.of(PermissionAuthorization.of(ORG_DELETE, "{org}"))
                         )
@@ -61,27 +79,27 @@ public class OrgHandlers implements RouteProvider {
         ).get();
     }
 
-    public void getOrgs(RoutingContext ctx) {
-        List<Org> orgs = this.orgService.getOrgs();
-        ctx.endRequestWithResponse(orgs);
+    public void getOrganizations(RoutingContext ctx) {
+        List<Org> organizations = orgService.getOrgs();
+        ctx.endApiWithResponse(organizations);
     }
 
     public void get(RoutingContext ctx) {
-        String orgName = ctx.pathParam(ORG_PATH_PARAM);
-        Org org = this.orgService.getOrg(orgName);
-        ctx.endRequestWithResponse(org);
+        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
+        Org org = orgService.getOrg(orgName);
+        ctx.endApiWithResponse(org);
     }
 
     public void create(RoutingContext ctx) {
         //TODO:: Authz check need to be explicit here. This can be done with Authz work.
-        Org org = ctx.body().asPojo(Org.class);
-        Org createdorg = this.orgService.createOrg(org);
-        ctx.endRequestWithResponse(createdorg);
+        Org org = ctx.body().asValidatedPojo(Org.class);
+        Org createdorg = orgService.createOrg(org.cloneForCreate());
+        ctx.endApiWithResponse(createdorg);
     }
 
     public void delete(RoutingContext ctx) {
-        String orgName = ctx.pathParam(ORG_PATH_PARAM);
-        this.orgService.deleteOrg(orgName);
-//        ctx.endRequest();
+        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
+        orgService.deleteOrg(orgName);
+        ctx.endApi();
     }
 }

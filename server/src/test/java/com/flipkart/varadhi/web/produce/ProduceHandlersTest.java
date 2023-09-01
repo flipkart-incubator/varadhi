@@ -15,12 +15,10 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.junit5.VertxExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -33,7 +31,7 @@ import static com.flipkart.varadhi.entities.InternalTopic.TopicState.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(VertxExtension.class)
+
 public class ProduceHandlersTest extends WebTestBase {
     ProduceHandlers produceHandlers;
     ProducerService producerService;
@@ -123,7 +121,7 @@ public class ProduceHandlersTest extends WebTestBase {
     public void testProduceNonProducingTopicState() throws InterruptedException {
         record testData(int status, String message, InternalTopic.TopicState state) {
         }
-        ;
+
         List<testData> data = List.of(
                 new testData(422, "Topic is blocked. Unblock the topic before produce.", Blocked),
                 new testData(429, "Produce to Topic is currently rate limited, try again after sometime.", Throttled),

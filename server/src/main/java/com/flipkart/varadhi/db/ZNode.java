@@ -23,13 +23,13 @@ public class ZNode {
         this.path = String.join(ZK_PATH_SEPARATOR, BASE_PATH, znodeKind.getKind());
     }
 
-    private ZNode(String entityName, ZNodeKind znodeKind) {
+    private ZNode(ZNodeKind znodeKind, String entityName) {
         this.name = entityName;
         this.kind = znodeKind.getKind();
         this.path = String.join(ZK_PATH_SEPARATOR, BASE_PATH, znodeKind.getKind(), entityName);
     }
 
-    private ZNode(String entityName, String parent, ZNodeKind znodeKind) {
+    private ZNode(ZNodeKind znodeKind, String parent, String entityName) {
         this.name = entityName;
         this.kind = znodeKind.getKind();
         this.path = String.join(
@@ -41,27 +41,27 @@ public class ZNode {
     }
 
     public static ZNode OfOrg(String orgName) {
-        return new ZNode(orgName, ORG);
+        return new ZNode(ORG, orgName);
     }
 
-    public static ZNode OfTeam(String teamName, String orgName) {
-        return new ZNode(teamName, orgName, TEAM);
+    public static ZNode OfTeam(String orgName, String teamName) {
+        return new ZNode(TEAM, orgName, teamName);
     }
 
     public static ZNode OfProject(String projectName) {
-        return new ZNode(projectName, PROJECT);
+        return new ZNode(PROJECT, projectName);
     }
 
     public static ZNode OfVaradhiTopic(String varadhiTopicName) {
-        return new ZNode(varadhiTopicName, VARADHI_TOPIC);
+        return new ZNode(VARADHI_TOPIC, varadhiTopicName);
     }
 
-    public static ZNode OfTopicResource(String topicResourceName, String projectName) {
-        return new ZNode(topicResourceName, projectName, TOPIC_RESOURCE);
+    public static ZNode OfTopicResource(String projectName, String topicResourceName) {
+        return new ZNode(TOPIC_RESOURCE, projectName, topicResourceName);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {
-        return new ZNode(name, zNodeKind);
+        return new ZNode(zNodeKind, name);
     }
 
     public static ZNode OfEntityType(ZNodeKind kind) {

@@ -89,7 +89,7 @@ public class FailureHandler implements Handler<RoutingContext> {
         } else if (NotImplementedException.class == tClazz) {
             return HTTP_NOT_IMPLEMENTED;
         }
-        return HTTP_BAD_REQUEST;
+        return HTTP_INTERNAL_ERROR;
     }
 
 }

@@ -1,29 +1,40 @@
 package com.flipkart.varadhi.entities;
 
+
+import com.flipkart.varadhi.ValidateVaradhiResource;
+import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+
 @Getter
 @EqualsAndHashCode(callSuper = true)
+@ValidateVaradhiResource(message = "Invalid Project name. Check naming constraints.")
 public class Project extends VaradhiResource {
-    String orgName;
+    String org;
     @Setter
-    String teamName;
+    String team;
 
     @Setter
+    @Size(max = 100)
     String description;
 
     public Project(
             String name,
             int version,
             String description,
-            String teamName,
-            String orgName
+            String team,
+            String org
     ) {
         super(name, version);
         this.description = description;
-        this.teamName = teamName;
-        this.orgName = orgName;
+        this.team = team;
+        this.org = org;
+    }
+
+    public Project cloneForCreate() {
+        return new Project(getName(), INITIAL_VERSION, description, team, org);
     }
 }

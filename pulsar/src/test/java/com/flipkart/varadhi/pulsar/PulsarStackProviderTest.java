@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -45,8 +46,7 @@ public class PulsarStackProviderTest {
         messagingStackOptions = new MessagingStackOptions();
         messagingStackOptions.setConfigFile(configFile.toString());
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
-        project = new Project("default", 0, "public", "teamName", "orgName");
-
+        project = new Project("default", INITIAL_VERSION, "", "public", "public");
 
         objectMapper = mock(ObjectMapper.class);
         pulsarAdmin = mock(PulsarAdmin.class);
@@ -77,8 +77,10 @@ public class PulsarStackProviderTest {
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
         PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, null);
-        Assertions.assertTrue(topic.getName()
-                .equals(String.format("persistent://%s/%s/%s.%s", project.getOrgName(), project.getTeamName(), project.getName(), topicName)));
+        Assertions.assertEquals(
+                String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
+                topic.getName()
+        );
         Assertions.assertEquals(1, topic.getPartitionCount());
     }
 

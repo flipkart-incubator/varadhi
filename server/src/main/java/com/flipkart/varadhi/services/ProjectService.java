@@ -9,8 +9,6 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-
 public class ProjectService {
     private final MetaStore metaStore;
 
@@ -19,41 +17,40 @@ public class ProjectService {
     }
 
     public Project createProject(Project project) {
-        boolean orgExists = this.metaStore.checkOrgExists(project.getOrgName());
+        boolean orgExists = metaStore.checkOrgExists(project.getOrg());
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format(
                     "Org(%s) not found. For Project creation, associated Org and Team should exist.",
-                    project.getOrgName()
+                    project.getOrg()
             ));
         }
-        boolean teamExists = this.metaStore.checkTeamExists(project.getTeamName(), project.getOrgName());
+        boolean teamExists = metaStore.checkTeamExists(project.getTeam(), project.getOrg());
         if (!teamExists) {
             throw new ResourceNotFoundException(String.format(
                     "Team(%s) not found. For Project creation, associated Org and Team should exist.",
-                    project.getTeamName()
+                    project.getTeam()
             ));
         }
-        boolean found = this.metaStore.checkProjectExists(project.getName());
+        boolean found = metaStore.checkProjectExists(project.getName());
         if (found) {
             throw new DuplicateResourceException(
                     String.format("Project(%s) already exists.  Projects are globally unique.", project.getName()));
         }
-        project.setVersion(INITIAL_VERSION);
-        this.metaStore.createProject(project);
+        metaStore.createProject(project);
         return project;
     }
 
     public Project getProject(String projectName) {
-        return this.metaStore.getProject(projectName);
+        return metaStore.getProject(projectName);
     }
 
     public Project updateProject(Project project) {
         Project existingProject = metaStore.getProject(project.getName());
-        if (!project.getOrgName().equals(existingProject.getOrgName())) {
+        if (!project.getOrg().equals(existingProject.getOrg())) {
             throw new ArgumentException(
                     String.format("Project(%s) can not be moved across organisation.", project.getName()));
         }
-        if (project.getTeamName().equals(existingProject.getTeamName()) &&
+        if (project.getTeam().equals(existingProject.getTeam()) &&
                 project.getDescription().equals(existingProject.getDescription())) {
             throw new ArgumentException(
                     String.format(
@@ -66,17 +63,18 @@ public class ProjectService {
                     "Conflicting update, Project(%s) has been modified. Fetch latest and try again.", project.getName()
             ));
         }
-        int updatedVersion = this.metaStore.updateProject(project);
+        int updatedVersion = metaStore.updateProject(project);
         project.setVersion(updatedVersion);
         return project;
     }
 
     public void deleteProject(String projectName) {
         //TODO:: check no subscriptions/queues for this project.
-        List<String> varadhiTopicNames = this.metaStore.getVaradhiTopicNames(projectName);
+        List<String> varadhiTopicNames = metaStore.getVaradhiTopicNames(projectName);
         if (varadhiTopicNames.size() > 0) {
-            throw new InvalidOperationForResourceException("Can not delete Project, it has associated entities.");
+            throw new InvalidOperationForResourceException(
+                    String.format("Can not delete Project(%s), it has associated entities.", projectName));
         }
-        this.metaStore.deleteProject(projectName);
+        metaStore.deleteProject(projectName);
     }
 }

@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.exceptions.ArgumentException;
-import com.google.inject.Singleton;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 
@@ -10,7 +9,7 @@ import java.util.stream.Collectors;
 
 public interface BaseResource {
 
-    @Singleton
+    //    @Singleton
     default void validate() {
         Set<ConstraintViolation<BaseResource>> violations =
                 Validation.buildDefaultValidatorFactory().getValidator().validate(this);
@@ -18,7 +17,11 @@ public interface BaseResource {
             return;
         }
         throw new ArgumentException(violations.stream()
-                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .map(violation ->
+                        violation.getPropertyPath() == null || violation.getPropertyPath().toString().isBlank() ?
+                                violation.getMessage() :
+                                violation.getPropertyPath().toString() + ": " + violation.getMessage())
                 .collect(Collectors.joining(", ")));
     }
+
 }

@@ -25,19 +25,19 @@ public class ProjectTests extends E2EBase {
         org1Team2 = new Team("team2", 0, org1.getName());
         org2Team1 = new Team("team1", 0, org2.getName());
         org3Team1 = new Team("team1", 0, org3.getName());
-        o1t1Project1 = new Project("project1", 0, "description1", org1Team1.getName(), org1Team1.getOrgName());
-        o1t1Project2 = new Project("project2", 0, "description1", org1Team1.getName(), org1Team1.getOrgName());
-        o1t2Project3 = new Project("project3", 0, "description1", org1Team2.getName(), org1Team2.getOrgName());
-        o1t2Project1 = new Project("project1", 0, "description1", org1Team2.getName(), org1Team2.getOrgName());
-        o2t1Project1 = new Project("project1", 0, "description1", org2Team1.getName(), org2Team1.getOrgName());
-        o2t1Project4 = new Project("project4", 0, "description1", org2Team1.getName(), org2Team1.getOrgName());
-        o3t1Project5 = new Project("project5", 0, "description1", org3Team1.getName(), org3Team1.getOrgName());
+        o1t1Project1 = new Project("project1", 0, "description1", org1Team1.getName(), org1Team1.getOrg());
+        o1t1Project2 = new Project("project2", 0, "description1", org1Team1.getName(), org1Team1.getOrg());
+        o1t2Project3 = new Project("project3", 0, "description1", org1Team2.getName(), org1Team2.getOrg());
+        o1t2Project1 = new Project("project1", 0, "description1", org1Team2.getName(), org1Team2.getOrg());
+        o2t1Project1 = new Project("project1", 0, "description1", org2Team1.getName(), org2Team1.getOrg());
+        o2t1Project4 = new Project("project4", 0, "description1", org2Team1.getName(), org2Team1.getOrg());
+        o3t1Project5 = new Project("project5", 0, "description1", org3Team1.getName(), org3Team1.getOrg());
 
         makeCreateRequest(getOrgsUri(), org1, 200);
         makeCreateRequest(getOrgsUri(), org2, 200);
-        makeCreateRequest(getTeamsUri(org1Team1.getOrgName()), org1Team1, 200);
-        makeCreateRequest(getTeamsUri(org1Team2.getOrgName()), org1Team2, 200);
-        makeCreateRequest(getTeamsUri(org2Team1.getOrgName()), org2Team1, 200);
+        makeCreateRequest(getTeamsUri(org1Team1.getOrg()), org1Team1, 200);
+        makeCreateRequest(getTeamsUri(org1Team2.getOrg()), org1Team2, 200);
+        makeCreateRequest(getTeamsUri(org2Team1.getOrg()), org2Team1, 200);
     }
 
     @AfterEach
@@ -102,7 +102,7 @@ public class ProjectTests extends E2EBase {
         Project t1_o1t1Project1 =
                 new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
                         org2Team1.getName(),
-                        org2Team1.getOrgName()
+                        org2Team1.getOrg()
                 );
         makeUpdateRequest(
                 getProjectCreateUri(), t1_o1t1Project1, 400,
@@ -112,8 +112,8 @@ public class ProjectTests extends E2EBase {
         // no update -- fail
         Project t2_o1t1Project1 =
                 new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
-                        o1t1Project1.getTeamName(),
-                        o1t1Project1.getOrgName()
+                        o1t1Project1.getTeam(),
+                        o1t1Project1.getOrg()
                 );
         makeUpdateRequest(
                 getProjectCreateUri(), t2_o1t1Project1, 400,
@@ -127,15 +127,15 @@ public class ProjectTests extends E2EBase {
         Project t3_o1t1Project1 =
                 new Project(o1t1Project1.getName(), o1t1Project1.getVersion() + 1, o1t1Project1.getDescription(),
                         org1Team2.getName(),
-                        o1t1Project1.getOrgName()
+                        o1t1Project1.getOrg()
                 );
         makeUpdateRequest(getProjectCreateUri(), t3_o1t1Project1, 409, null, true);
 
         // name update  -- fail
         Project t4_o1t1Project1 = new Project(o1t1Project1.getName() + "mismatch", o1t1Project1.getVersion(),
                 o1t1Project1.getDescription(),
-                o1t1Project1.getTeamName(),
-                o1t1Project1.getOrgName()
+                o1t1Project1.getTeam(),
+                o1t1Project1.getOrg()
         );
         makeUpdateRequest(
                 getProjectCreateUri(), t4_o1t1Project1, 404,
@@ -143,7 +143,7 @@ public class ProjectTests extends E2EBase {
         );
 
         // only team update -- fine.
-        o1t1Project1.setTeamName(org1Team2.getName());
+        o1t1Project1.setTeam(org1Team2.getName());
         o1t1Project1 = makeUpdateRequest(getProjectCreateUri(), o1t1Project1, 200);
 
 
@@ -155,7 +155,7 @@ public class ProjectTests extends E2EBase {
 
     private void validateTeamProjects(Team team, List<Project> projects) {
         List<Project> teamProjects =
-                getProjects(makeListRequest(getProjectListUri(team.getOrgName(), team.getName()), 200));
+                getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), 200));
         Assertions.assertEquals(projects.size(), teamProjects.size());
         projects.forEach(p -> Assertions.assertTrue(teamProjects.contains(p)));
     }
@@ -168,31 +168,31 @@ public class ProjectTests extends E2EBase {
         makeGetRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
         makeDeleteRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
 
-        p1 = new Project("p1", 0, "", pCreated.getTeamName(), "o1");
+        p1 = new Project("p1", 0, "", pCreated.getTeam(), "o1");
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(
                         "Org(%s) not found. For Project creation, associated Org and Team should exist.",
-                        p1.getOrgName()
+                        p1.getOrg()
                 ), true
         );
 
-        p1 = new Project("p1", 0, "", "t1", pCreated.getOrgName());
+        p1 = new Project("p1", 0, "", "t1", pCreated.getOrg());
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(
                         "Team(%s) not found. For Project creation, associated Org and Team should exist.",
-                        p1.getTeamName()
+                        p1.getTeam()
                 ), true
         );
 
         makeListRequest(
-                getProjectListUri(o1t1Project1.getOrgName(), p1.getTeamName()), 404,
-                String.format("Team(%s) does not exists in the Org(%s).", p1.getTeamName(), o1t1Project1.getOrgName()),
+                getProjectListUri(o1t1Project1.getOrg(), p1.getTeam()), 404,
+                String.format("Team(%s) does not exists in the Org(%s).", p1.getTeam(), o1t1Project1.getOrg()),
                 true
         );
         makeListRequest(
-                getProjectListUri("o1", o1t1Project1.getTeamName()), 404, String.format("Org(%s) not found.", "o1"),
+                getProjectListUri("o1", o1t1Project1.getTeam()), 404, String.format("Org(%s) not found.", "o1"),
                 true
         );
 
