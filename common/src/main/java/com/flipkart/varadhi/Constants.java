@@ -7,6 +7,9 @@ public class Constants {
     public static class PathParams {
         public static String REQUEST_PATH_PARAM_PROJECT = "project";
         public static String REQUEST_PATH_PARAM_TOPIC = "topic";
+        public static String ORG_PATH_PARAM = "org";
+        public static String TEAM_PATH_PARAM = "team";
+        public static String PROJECT_PATH_PARAM = "project";
     }
 
     public static class Tags {

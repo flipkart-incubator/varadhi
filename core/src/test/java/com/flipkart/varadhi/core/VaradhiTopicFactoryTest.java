@@ -21,10 +21,10 @@ public class VaradhiTopicFactoryTest {
     public void setUp() {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region);
-        project = new Project("default", "public", "public");
+        project = new Project("default", 0, "public", "teamName", "orgName");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
-                String.format("persistent://%s/%s", project.getTenantName(), vTopicName);
+                String.format("persistent://%s/%s", project.getOrgName(), vTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
         doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
     }

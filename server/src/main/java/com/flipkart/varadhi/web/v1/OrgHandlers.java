@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1;
 
+
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.services.OrgService;
@@ -12,11 +13,12 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.flipkart.varadhi.Constants.ORG_PATH_PARAM;
+import static com.flipkart.varadhi.Constants.PathParams.ORG_PATH_PARAM;
 import static com.flipkart.varadhi.auth.ResourceAction.ORG_DELETE;
 import static com.flipkart.varadhi.auth.ResourceAction.ORG_GET;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
@@ -39,17 +41,20 @@ public class OrgHandlers implements RouteProvider {
                 "/v1/orgs",
                 List.of(
                         new RouteDefinition(
-                                HttpMethod.GET, "", Set.of(authenticated), this::getOrgs, Optional.empty()
+                                HttpMethod.GET, "", Set.of(authenticated), new LinkedHashSet<>(), this::getOrgs, true,
+                                Optional.empty()
                         ),
                         new RouteDefinition(
-                                HttpMethod.GET, "/:org", Set.of(authenticated), this::get,
+                                HttpMethod.GET, "/:org", Set.of(authenticated), new LinkedHashSet<>(), this::get, true,
                                 Optional.of(PermissionAuthorization.of(ORG_GET, "{org}"))
                         ),
                         new RouteDefinition(
-                                HttpMethod.POST, "", Set.of(hasBody), this::create, Optional.empty()
+                                HttpMethod.POST, "", Set.of(hasBody), new LinkedHashSet<>(), this::create, true,
+                                Optional.empty()
                         ),
                         new RouteDefinition(
-                                HttpMethod.DELETE, "/:org", Set.of(authenticated), this::delete,
+                                HttpMethod.DELETE, "/:org", Set.of(authenticated), new LinkedHashSet<>(), this::delete,
+                                true,
                                 Optional.of(PermissionAuthorization.of(ORG_DELETE, "{org}"))
                         )
                 )
@@ -77,6 +82,6 @@ public class OrgHandlers implements RouteProvider {
     public void delete(RoutingContext ctx) {
         String orgName = ctx.pathParam(ORG_PATH_PARAM);
         this.orgService.deleteOrg(orgName);
-        ctx.endRequest();
+//        ctx.endRequest();
     }
 }

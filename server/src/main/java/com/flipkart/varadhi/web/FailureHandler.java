@@ -21,7 +21,6 @@ public class FailureHandler implements Handler<RoutingContext> {
         HttpServerResponse response = ctx.response();
 
         if (!response.ended()) {
-
             int statusCode =
                     overrideStatusCode(ctx.statusCode()) ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
             String errorMsg =
@@ -90,8 +89,7 @@ public class FailureHandler implements Handler<RoutingContext> {
         } else if (NotImplementedException.class == tClazz) {
             return HTTP_NOT_IMPLEMENTED;
         }
-        return HTTP_INTERNAL_ERROR;
+        return HTTP_BAD_REQUEST;
     }
-
 
 }

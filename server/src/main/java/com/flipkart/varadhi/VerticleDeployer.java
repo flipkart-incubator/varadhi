@@ -3,6 +3,7 @@ package com.flipkart.varadhi;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
@@ -50,6 +51,7 @@ public class VerticleDeployer {
     private final ProjectHandlers projectHandlers;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
+
     public VerticleDeployer(
             Vertx vertx,
             ServerConfiguration configuration,
@@ -64,10 +66,9 @@ public class VerticleDeployer {
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
-
         MetaStore metaStore = metaStoreProvider.getMetaStore();
         this.topicHandlers =
-                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStoreProvider.getMetaStore());
+                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
         ProducerService producerService =
                 setupProducerService(
                         messagingStackProvider, varadhiTopicService,
@@ -126,7 +127,7 @@ public class VerticleDeployer {
             ProducerOptions producerOptions,
             MeterRegistry meterRegistry
     ) {
-        ProducerFactory producerFactory = messagingStackProvider.getProducerFactory();
+        ProducerFactory<StorageTopic> producerFactory = messagingStackProvider.getProducerFactory();
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());

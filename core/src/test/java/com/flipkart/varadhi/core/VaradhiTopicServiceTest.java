@@ -36,10 +36,10 @@ public class VaradhiTopicServiceTest {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory, region));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
-        project = new Project("default", "public", "public");
+        project = new Project("default", 0, "public", "teamName", "orgName");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
-                String.format("persistent://%s/%s/%s", project.getTenantName(), project.getName(), vTopicName);
+                String.format("persistent://%s/%s/%s", project.getTeamName(), project.getName(), vTopicName);
         PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
         Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
     }

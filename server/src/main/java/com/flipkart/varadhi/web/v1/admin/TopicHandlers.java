@@ -92,10 +92,8 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
-        //TODO:: fetch project from metastore when implemented.
-        Project project = new Project(topicResource.getProject(), DEFAULT_TEAM, DEFAULT_TENANT);
+        Project project = metaStore.getProject(topicResource.getProject());
 
-        TopicResource topicResource = ctx.body().asPojo(TopicResource.class);
         boolean found = metaStore.checkTopicResourceExists(topicResource.getName(), topicResource.getProject());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
@@ -104,11 +102,10 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
-
-        TopicResource createdResource = metaStore.createTopicResource(topicResource);
+        metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);
-        ctx.setApiResponse(createdResource);
+        ctx.setApiResponse(topicResource);
     }
 
 

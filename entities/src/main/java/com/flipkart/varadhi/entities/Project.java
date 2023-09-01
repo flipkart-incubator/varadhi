@@ -8,7 +8,6 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 public class Project extends VaradhiResource {
     String orgName;
-
     @Setter
     String teamName;
 

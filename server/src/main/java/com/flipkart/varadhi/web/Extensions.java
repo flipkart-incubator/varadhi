@@ -80,6 +80,14 @@ public class Extensions {
             });
         }
 
+        public static <T> void setApiResponse(RoutingContext ctx, T response) {
+            ctx.put("api-response", response);
+        }
+
+        public static <T> T getApiResponse(RoutingContext ctx) {
+            return ctx.get("api-response");
+        }
+
         private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
             if (hasContent) {
                 ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
@@ -87,12 +95,9 @@ public class Extensions {
             }
         }
 
-        public static <T> void setApiResponse(RoutingContext ctx, T response) {
-            ctx.put("api-response", response);
-        }
-
-        public static <T> T getApiResponse(RoutingContext ctx) {
-            return ctx.get("api-response");
+        public static <T> void endRequestWithResponse(RoutingContext ctx, int status, T response) {
+            ctx.response().setStatusCode(status);
+            endRequestWithResponse(ctx, response);
         }
 
         public static void todo(RoutingContext context) {

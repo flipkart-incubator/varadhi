@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.db;
 
-
 import com.flipkart.varadhi.ExceptionOrResult;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.db.MetaStore;
