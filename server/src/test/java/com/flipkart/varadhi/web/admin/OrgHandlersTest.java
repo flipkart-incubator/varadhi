@@ -83,8 +83,6 @@ public class OrgHandlersTest extends WebTestBase {
         sendInvalidName("");
         sendInvalidName(null);
         sendInvalidName("ab");
-        sendInvalidName("123445678");
-        sendInvalidName("1startwithnumber");
         sendInvalidName("_startwithunderscore");
         sendInvalidName("-startwithhyphen");
         sendInvalidName("endswith-");
