@@ -8,7 +8,6 @@ import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.TeamService;
-import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
@@ -136,7 +135,7 @@ public class TeamHandlersTest extends WebTestBase {
 
     List<Team> listTeams(HttpRequest<Buffer> request) throws Exception {
         HttpResponse<Buffer> response = sendRequest(request, null);
-        return JsonMapper.jsonDeserialize(response.bodyAsString(), List.class, Team.class);
+        return jsonDeserialize(response.bodyAsString(), List.class, Team.class);
     }
 
     @Test
@@ -157,7 +156,7 @@ public class TeamHandlersTest extends WebTestBase {
 
     List<Project> listProjects(HttpRequest<Buffer> request) throws Exception {
         HttpResponse<Buffer> response = sendRequest(request, null);
-        return JsonMapper.jsonDeserialize(response.bodyAsString(), List.class, Project.class);
+        return jsonDeserialize(response.bodyAsString(), List.class, Project.class);
     }
 
     private Project getProject(String name, Team team) {

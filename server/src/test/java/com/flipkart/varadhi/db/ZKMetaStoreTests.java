@@ -66,11 +66,11 @@ public class ZKMetaStoreTests {
         zkMetaStore.deleteZNode(ZNode.OfKind(testKind, data1.getName()));
         zkMetaStore.deleteZNode(ZNode.OfKind(testKind, data2.getName()));
 
-        Assertions.assertThrows(
+        ResourceNotFoundException e = Assertions.assertThrows(
                 ResourceNotFoundException.class,
-                () -> zkMetaStore.getZNodeDataAsPojo(ZNode.OfKind(testKind, data1.getName()), TestData.class),
-                String.format("TestData(%s) not found.", data1.getName())
+                () -> zkMetaStore.getZNodeDataAsPojo(ZNode.OfKind(testKind, data1.getName()), TestData.class)
         );
+        Assertions.assertEquals(String.format("test(%s) not found.", data1.getName()), e.getMessage());
     }
 
     private ZNode getZnode(String name) {

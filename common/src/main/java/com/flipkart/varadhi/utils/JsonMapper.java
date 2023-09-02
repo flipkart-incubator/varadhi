@@ -3,14 +3,11 @@ package com.flipkart.varadhi.utils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Collection;
 
 @Slf4j
 public class JsonMapper {
@@ -44,16 +41,6 @@ public class JsonMapper {
     public static <T> T jsonDeserialize(String data, Class<T> clazz) {
         try {
             return mapper.readValue(data, clazz);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to jsonDeserialize({}): {}", data, e);
-            throw new VaradhiException(e);
-        }
-    }
-
-    public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz) {
-        try {
-            JavaType type = mapper.getTypeFactory().constructCollectionType(collectionClass, clazz);
-            return (R) mapper.readValue(data, type);
         } catch (JsonProcessingException e) {
             log.error("Failed to jsonDeserialize({}): {}", data, e);
             throw new VaradhiException(e);

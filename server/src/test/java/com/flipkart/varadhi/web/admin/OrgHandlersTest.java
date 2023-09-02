@@ -6,7 +6,6 @@ import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.OrgService;
-import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
@@ -129,7 +128,7 @@ public class OrgHandlersTest extends WebTestBase {
 
     List<Org> listOrganisations(HttpRequest<Buffer> request) throws Exception {
         HttpResponse<Buffer> response = sendRequest(request, null);
-        return JsonMapper.jsonDeserialize(response.bodyAsString(), List.class, Org.class);
+        return jsonDeserialize(response.bodyAsString(), List.class, Org.class);
     }
 
     @Test

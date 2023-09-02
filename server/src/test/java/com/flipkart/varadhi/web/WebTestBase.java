@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.flipkart.varadhi.RestVerticle;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.AsyncResult;
@@ -19,6 +20,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -37,6 +39,13 @@ public class WebTestBase {
     protected FailureHandler failureHandler;
     protected int defaultPort = 9090; //use port different from default 8080, conflicts with server port in e2e.
     protected String defaultHost = "localhost";
+
+    public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz)
+            throws Exception {
+        JavaType type = JsonMapper.getMapper().getTypeFactory().constructCollectionType(collectionClass, clazz);
+        return (R) JsonMapper.getMapper().readValue(data, type);
+
+    }
 
     public void setUp() throws InterruptedException {
         vertx = Vertx.vertx();
@@ -67,7 +76,6 @@ public class WebTestBase {
             awaitLatch(latch);
         }
     }
-
 
     protected Handler<RoutingContext> wrapBlocking(Handler<RoutingContext> handler) {
         return RestVerticle.wrapBlockingExecution(vertx, handler);
@@ -137,7 +145,6 @@ public class WebTestBase {
         }
         return null;
     }
-
 
     protected HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, String json) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
