@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.exceptions.NotImplementedException;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
