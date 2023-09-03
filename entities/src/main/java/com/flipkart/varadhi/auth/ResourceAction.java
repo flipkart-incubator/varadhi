@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.auth;
 
+import lombok.Getter;
+
+@Getter
 public enum ResourceAction {
     @Deprecated TENANT_CREATE(ResourceType.TENANT, "create"),
     @Deprecated TENANT_UPDATE(ResourceType.TENANT, "update"),
