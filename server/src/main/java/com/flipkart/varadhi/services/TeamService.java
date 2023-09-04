@@ -2,7 +2,6 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -20,11 +19,6 @@ public class TeamService {
         boolean orgExists = metaStore.checkOrgExists(team.getOrg());
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", team.getOrg()));
-        }
-        boolean teamExists = metaStore.checkTeamExists(team.getName(), team.getOrg());
-        if (teamExists) {
-            throw new DuplicateResourceException(
-                    String.format("Team(%s) already exists. Team is unique with in Org.", team.getName()));
         }
         metaStore.createTeam(team);
         return team;

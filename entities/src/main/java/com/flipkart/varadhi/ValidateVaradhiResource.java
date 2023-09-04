@@ -19,7 +19,7 @@ public @interface ValidateVaradhiResource {
 
     int min() default 3; //set to -1 for disabling minimum length check. Change default expression as appropriate.
 
-    int max() default 20; //set to -1 for disabling maximum length check.
+    int max() default 32; //set to -1 for disabling maximum length check.
 
     boolean allowNullOrBlank() default false;
 

@@ -93,7 +93,7 @@ public class ProjectServiceTest {
 
     private void validateDuplicateProject(Project project, MethodCaller caller) {
         String errorMsg =
-                String.format("Project(%s) already exists.  Projects are globally unique.", project.getName());
+                String.format("Project(%s) already exists.", project.getName());
         validateException(errorMsg, DuplicateResourceException.class, caller);
     }
 
@@ -119,41 +119,40 @@ public class ProjectServiceTest {
     @Test
     public void testUpdateProject() {
         projectService.createProject(o1t1p1);
-        Project pUpdate = o1t1p1.cloneForCreate();
-        pUpdate.setDescription("Some Description");
-        int initialVersion = pUpdate.getVersion();
-        Project updatedProject = projectService.updateProject(pUpdate);
+        o1t1p1.setDescription("Some Description");
+        int initialVersion = o1t1p1.getVersion();
+        Project updatedProject = projectService.updateProject(o1t1p1);
         Assertions.assertTrue(updatedProject.getVersion() > initialVersion);
-        Assertions.assertEquals(updatedProject, pUpdate);
+        Assertions.assertEquals(updatedProject, o1t1p1);
 
-        pUpdate.setTeam(o1t2.getName());
-        updatedProject = projectService.updateProject(pUpdate);
-        Assertions.assertEquals(updatedProject, pUpdate);
+        o1t1p1.setTeam(o1t2.getName());
+        updatedProject = projectService.updateProject(o1t1p1);
+        Assertions.assertEquals(updatedProject, o1t1p1);
 
-        pUpdate.setTeam(o1t1.getName());
-        pUpdate.setDescription("Some Another Description");
-        updatedProject = projectService.updateProject(pUpdate);
-        Assertions.assertEquals(updatedProject, pUpdate);
+        o1t1p1.setTeam(o1t1.getName());
+        o1t1p1.setDescription("Some Another Description");
+        updatedProject = projectService.updateProject(o1t1p1);
+        Assertions.assertEquals(updatedProject, o1t1p1);
 
         String conflictingUpdate = String.format(
                 "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
-                pUpdate.getName()
+                o1t1p1.getName()
         );
-        pUpdate.setVersion(pUpdate.getVersion() - 1);
-        pUpdate.setTeam(o1t2.getName());
+        o1t1p1.setVersion(o1t1p1.getVersion() - 1);
+        o1t1p1.setTeam(o1t2.getName());
         validateException(
                 conflictingUpdate, InvalidOperationForResourceException.class,
-                () -> projectService.updateProject(pUpdate)
+                () -> projectService.updateProject(o1t1p1)
         );
 
-        pUpdate.setVersion(pUpdate.getVersion() + 10);
-        pUpdate.setTeam(o1t2.getName());
+        o1t1p1.setVersion(o1t1p1.getVersion() + 10);
+        o1t1p1.setTeam(o1t2.getName());
         validateException(
                 conflictingUpdate, InvalidOperationForResourceException.class,
-                () -> projectService.updateProject(pUpdate)
+                () -> projectService.updateProject(o1t1p1)
         );
 
-        Project pLatest = projectService.getProject(pUpdate.getName());
+        Project pLatest = projectService.getProject(o1t1p1.getName());
 
         String argumentErr =
                 String.format("Project(%s) has same team name and description. Nothing to update.", pLatest.getName());
@@ -164,7 +163,7 @@ public class ProjectServiceTest {
 
         orgService.createOrg(org2);
         Project orgUpdate =
-                new Project(pUpdate.getName(), pUpdate.getVersion(), pUpdate.getDescription(), pUpdate.getTeam(),
+                new Project(o1t1p1.getName(), o1t1p1.getVersion(), o1t1p1.getDescription(), o1t1p1.getTeam(),
                         org2.getName()
                 );
 

@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -93,9 +94,12 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class).cloneForCreate(projectName);
-        Project project = metaStore.getProject(topicResource.getProject());
+        TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
+        if (!projectName.equals(topicResource.getProject())) {
+            throw new ArgumentException("Specified Project name is different from Project name in url");
+        }
 
+        Project project = metaStore.getProject(topicResource.getProject());
         boolean found = metaStore.checkTopicResourceExists(topicResource.getName(), topicResource.getProject());
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());

@@ -60,19 +60,18 @@ public class OrgHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         Org org1 = new Org("name1", 0);
-        Org org1CreateClone = org1.cloneForCreate();
-        doReturn(org1CreateClone).when(orgService).createOrg(eq(org1CreateClone));
+        doReturn(org1).when(orgService).createOrg(eq(org1));
         Org org1Created = sendRequestWithBody(request, org1, Org.class);
         Assertions.assertEquals(org1, org1Created);
-        verify(orgService, times(1)).createOrg(eq(org1CreateClone));
+        verify(orgService, times(1)).createOrg(eq(org1));
 
         String duplicateOrgError = String.format("Org(%s) already exists. Org is globally unique.", org1.getName());
-        doThrow(new DuplicateResourceException(duplicateOrgError)).when(orgService).createOrg(org1CreateClone);
+        doThrow(new DuplicateResourceException(duplicateOrgError)).when(orgService).createOrg(org1);
         ErrorResponse response = sendRequestWithBody(request, org1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
-        doThrow(new MetaStoreException(someInternalError)).when(orgService).createOrg(org1CreateClone);
+        doThrow(new MetaStoreException(someInternalError)).when(orgService).createOrg(org1);
         response = sendRequestWithBody(request, org1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }

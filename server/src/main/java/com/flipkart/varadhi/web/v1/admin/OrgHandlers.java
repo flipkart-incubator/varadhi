@@ -93,7 +93,7 @@ public class OrgHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         //TODO:: Authz check need to be explicit here. This can be done with Authz work.
         Org org = ctx.body().asValidatedPojo(Org.class);
-        Org createdorg = orgService.createOrg(org.cloneForCreate());
+        Org createdorg = orgService.createOrg(org);
         ctx.endApiWithResponse(createdorg);
     }
 

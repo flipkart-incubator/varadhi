@@ -50,7 +50,7 @@ public class OrgServiceTest {
         DuplicateResourceException e =
                 Assertions.assertThrows(DuplicateResourceException.class, () -> orgService.createOrg(org));
         Assertions.assertEquals(
-                String.format("Org(%s) already exists. Org is globally unique.", org.getName()), e.getMessage());
+                String.format("Org(%s) already exists.", org.getName()), e.getMessage());
     }
 
     @Test

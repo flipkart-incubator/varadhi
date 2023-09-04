@@ -59,7 +59,7 @@ public class TeamServiceTest {
         DuplicateResourceException e =
                 Assertions.assertThrows(DuplicateResourceException.class, () -> teamService.createTeam(org1Team1));
         Assertions.assertEquals(
-                String.format("Team(%s) already exists. Team is unique with in Org.", org1Team1.getName()),
+                String.format("Team(%s) already exists.", org1Team1.getName()),
                 e.getMessage()
         );
         validateOrgNotFound(teamDummy, () -> teamService.createTeam(teamDummy));

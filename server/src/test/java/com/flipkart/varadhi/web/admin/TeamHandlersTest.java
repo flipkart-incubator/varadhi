@@ -78,25 +78,24 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTeamsUrl(o1.getName()));
         Team team1 = new Team("team1", 0, o1.getName());
 
-        Team team1CreateClone = team1.cloneForCreate(o1.getName());
-        doReturn(team1CreateClone).when(teamService).createTeam(eq(team1CreateClone));
+        doReturn(team1).when(teamService).createTeam(eq(team1));
         Team team1Created = sendRequestWithBody(request, team1, Team.class);
         Assertions.assertEquals(team1, team1Created);
-        verify(teamService, times(1)).createTeam(eq(team1CreateClone));
+        verify(teamService, times(1)).createTeam(eq(team1));
 
         String orgNotFoundError = String.format("Org(%s) not found.", team1.getOrg());
-        doThrow(new ResourceNotFoundException(orgNotFoundError)).when(teamService).createTeam(team1CreateClone);
+        doThrow(new ResourceNotFoundException(orgNotFoundError)).when(teamService).createTeam(team1);
         ErrorResponse response = sendRequestWithBody(request, team1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
         String duplicateOrgError =
                 String.format("Team(%s) already exists. Team is unique with in Org.", team1.getName());
-        doThrow(new DuplicateResourceException(duplicateOrgError)).when(teamService).createTeam(team1CreateClone);
+        doThrow(new DuplicateResourceException(duplicateOrgError)).when(teamService).createTeam(team1);
         response = sendRequestWithBody(request, team1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
-        doThrow(new MetaStoreException(someInternalError)).when(teamService).createTeam(team1CreateClone);
+        doThrow(new MetaStoreException(someInternalError)).when(teamService).createTeam(team1);
         response = sendRequestWithBody(request, team1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }

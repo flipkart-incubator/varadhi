@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions;
@@ -21,11 +20,6 @@ public class OrgService {
     }
 
     public Org createOrg(Org org) {
-        boolean orgExists = metaStore.checkOrgExists(org.getName());
-        if (orgExists) {
-            throw new DuplicateResourceException(
-                    String.format("Org(%s) already exists. Org is globally unique.", org.getName()));
-        }
         metaStore.createOrg(org);
         return org;
     }

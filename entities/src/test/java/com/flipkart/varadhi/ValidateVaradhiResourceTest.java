@@ -11,7 +11,7 @@ public class ValidateVaradhiResourceTest {
 
     @Test
     public void testName() {
-        List.of("abc", "a-c", "a_c", "a12", "a_1", "a-1", "asdasdasdaasdasdad", "12sdfsdf")
+        List.of("abc", "a-c", "a_c", "a12", "a_1", "a-1", "asdasdasdaasdasdad", "ab12sdfsdf")
                 .forEach(name -> {
                     Assertions.assertDoesNotThrow(
                             () -> new TypeDefault(name, 0).validate(),
@@ -23,7 +23,7 @@ public class ValidateVaradhiResourceTest {
                     );
                 });
 
-        List.of("", "a", "asdasdassdfsfsddfdfsdfsfsdfsfsdfsfdaasdasdad", "!!!")
+        List.of("", "a", "asdasdassdfsfsddfdfsdfsfsdfsfsdfsfdaasdasdad", "!!!", "12sadsad")
                 .forEach(name ->
                         Assertions.assertDoesNotThrow(
                                 () -> new Type2(name, 0).validate(),
@@ -50,6 +50,23 @@ public class ValidateVaradhiResourceTest {
                 );
         Assertions.assertEquals("Custom message", e.getMessage());
 
+        List.of("abc", "asdasdas", "asdasdasaa")
+                .forEach(name ->
+                        Assertions.assertDoesNotThrow(
+                                () -> new TypeMax(name, 0).validate(),
+                                String.format("Type2 Failed for %s", name)
+                        )
+                );
+
+        List.of(
+                        "a", "aaaaaaaaaaaa"
+                )
+                .forEach(name -> Assertions.assertThrows(
+                        ArgumentException.class,
+                        () -> new TypeMax(name, 0).validate(),
+                        String.format("TypeDefault Failed for %s", name)
+                ));
+
     }
 
     @ValidateVaradhiResource
@@ -69,6 +86,13 @@ public class ValidateVaradhiResourceTest {
     @ValidateVaradhiResource(message = "Custom message")
     public static class TypeMessage extends VaradhiResource {
         public TypeMessage(String name, int version) {
+            super(name, version);
+        }
+    }
+
+    @ValidateVaradhiResource(max = 10)
+    public static class TypeMax extends VaradhiResource {
+        public TypeMax(String name, int version) {
             super(name, version);
         }
     }

@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1.admin;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -111,7 +112,11 @@ public class TeamHandlers implements RouteProvider {
         //TODO:: Authz check need to be explicit here.
         String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
         Team team = ctx.body().asValidatedPojo(Team.class);
-        Team createdTeam = teamService.createTeam(team.cloneForCreate(orgName));
+        if (!orgName.equals(team.getOrg())) {
+            throw new ArgumentException("Specified org name is different from org name in url");
+        }
+
+        Team createdTeam = teamService.createTeam(team);
         ctx.endApiWithResponse(createdTeam);
     }
 

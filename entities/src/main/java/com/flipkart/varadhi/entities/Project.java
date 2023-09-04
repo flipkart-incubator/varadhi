@@ -7,8 +7,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @ValidateVaradhiResource(message = "Invalid Project name. Check naming constraints.")
@@ -32,9 +30,5 @@ public class Project extends VaradhiResource {
         this.description = description;
         this.team = team;
         this.org = org;
-    }
-
-    public Project cloneForCreate() {
-        return new Project(getName(), INITIAL_VERSION, description, team, org);
     }
 }

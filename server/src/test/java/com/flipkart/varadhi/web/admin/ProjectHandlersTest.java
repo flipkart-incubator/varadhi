@@ -71,25 +71,24 @@ public class ProjectHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getProjectsUrl());
         Project p1 = getProject("Project1");
 
-        Project p1CreateClone = p1.cloneForCreate();
-        doReturn(p1CreateClone).when(projectService).createProject(p1CreateClone);
+        doReturn(p1).when(projectService).createProject(p1);
         Project p1Created = sendRequestWithBody(request, p1, Project.class);
         Assertions.assertEquals(p1, p1Created);
-        verify(projectService, times(1)).createProject(eq(p1CreateClone));
+        verify(projectService, times(1)).createProject(eq(p1));
 
         String orgNotFoundError = String.format("Org(%s) not found.", t1.getOrg());
-        doThrow(new ResourceNotFoundException(orgNotFoundError)).when(projectService).createProject(p1CreateClone);
+        doThrow(new ResourceNotFoundException(orgNotFoundError)).when(projectService).createProject(p1);
         ErrorResponse response = sendRequestWithBody(request, p1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
         String duplicateOrgError =
                 String.format("Project(%s) already exists.  Projects are globally unique.", p1.getName());
-        doThrow(new DuplicateResourceException(duplicateOrgError)).when(projectService).createProject(p1CreateClone);
+        doThrow(new DuplicateResourceException(duplicateOrgError)).when(projectService).createProject(p1);
         response = sendRequestWithBody(request, p1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
-        doThrow(new MetaStoreException(someInternalError)).when(projectService).createProject(p1CreateClone);
+        doThrow(new MetaStoreException(someInternalError)).when(projectService).createProject(p1);
         response = sendRequestWithBody(request, p1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }

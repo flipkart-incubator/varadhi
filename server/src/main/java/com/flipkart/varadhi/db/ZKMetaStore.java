@@ -41,6 +41,7 @@ public class ZKMetaStore {
             log.debug("Created znode for {}({}) in at {}: {}.", znode.getKind(), znode.getName(), znode.getPath(),
                     response
             );
+            //TODO::Return version of the object being created.
         } catch (KeeperException.NodeExistsException e) {
             throw new DuplicateResourceException(
                     String.format("%s(%s) already exists.", znode.getKind(), znode.getName()), e);

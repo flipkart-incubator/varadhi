@@ -86,7 +86,7 @@ public class ProjectHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         //TODO:: Authz check need to be explicit here.
         Project project = ctx.body().asPojo(Project.class);
-        Project createdProject = projectService.createProject(project.cloneForCreate());
+        Project createdProject = projectService.createProject(project);
         ctx.endApiWithResponse(createdProject);
     }
 
