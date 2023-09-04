@@ -1,0 +1,24 @@
+Update IP mappings in config bucket: http://10.24.2.29/#/list-keys/varadhi-oss-zk-bench
+
+Local:
+scp ~/Downloads/zk_setup.sh aayush.gupta@10.119.0.34:/home/aayush.gupta/zk_setup.sh
+
+Remote:
+vim zk_setup.sh
+# edit line for NODE_ID=1 (2/3 based on instance seq)
+
+sudo chmod +x zk_setup.sh
+sudo sh zk_setup.sh
+
+Run as script:
+IP=$(hostname -i)
+sudo /etc/init.d/fpg-hosts-populator start
+HOSTNAME=$(cat /etc/hosts | grep "^$IP" | sed 's/^[0-9\.]*//' | sed 's/[ ]*//')
+hostname ${HOSTNAME}
+
+Edit file:
+sudo vim /etc/zookeeper/conf/zoo.cfg
+#change data dir from /grid/1/var/lib/zookeeper to /var/lib/zookeeper
+
+Start Zk:
+sudo /usr/lib/fk-3p-zookeeper/bin/zkServer.sh start /etc/zookeeper/conf/zoo.cfg
