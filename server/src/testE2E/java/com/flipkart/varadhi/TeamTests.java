@@ -47,7 +47,7 @@ public class TeamTests extends E2EBase {
 
         makeCreateRequest(
                 getTeamsUri(org1Team1.getOrg()), org1Team1, 409,
-                String.format("Team(%s) already exists. Team is unique with in Org.", org1Team1.getName()), true
+                String.format("Team(%s) already exists.", org1Team1.getName()), true
         );
 
         Team g_org1team1 = makeGetRequest(getTeamUri(org1Team1), Team.class, 200);

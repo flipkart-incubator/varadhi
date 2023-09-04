@@ -17,6 +17,14 @@ import java.util.List;
 
 @Slf4j
 public class ZKMetaStore {
+    /*
+    Implementation Details: < T extends VaradhiResource>
+    Some APIs works on VaradhiResource abstraction. VaradhiResource implements Versioned entities.
+    However, for ZKMetaStore, version is of stat object and not data object.
+    So there will be a mismatch in data object version and stat object version. Stat object version is a valid version.
+    create/get/update APIs overwrites the data version with stat version always.
+    Another implication -- manual data update when done, will automatically bump the entity version w/o user being aware of it.
+     */
     private final CuratorFramework zkCurator;
 
     public ZKMetaStore(CuratorFramework zkCurator) {
@@ -41,7 +49,7 @@ public class ZKMetaStore {
             log.debug("Created znode for {}({}) in at {}: {}.", znode.getKind(), znode.getName(), znode.getPath(),
                     response
             );
-            //TODO::Return version of the object being created.
+            dataObject.setVersion(0);
         } catch (KeeperException.NodeExistsException e) {
             throw new DuplicateResourceException(
                     String.format("%s(%s) already exists.", znode.getKind(), znode.getName()), e);

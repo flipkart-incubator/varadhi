@@ -34,7 +34,7 @@ public class OrgTests extends E2EBase {
                 getOrgsUri(),
                 org2,
                 409,
-                String.format("Org(%s) already exists. Org is globally unique.", org2.getName()), true
+                String.format("Org(%s) already exists.", org2.getName()), true
         );
         Org orgGet = makeGetRequest(getOrgUri(org1), Org.class, 200);
         Assertions.assertEquals(org1, orgGet);

@@ -59,17 +59,17 @@ public class ProjectTests extends E2EBase {
 
         makeCreateRequest(
                 getProjectCreateUri(), o1t1Project1, 409,
-                String.format("Project(%s) already exists.  Projects are globally unique.", o1t1Project1.getName()),
+                String.format("Project(%s) already exists.", o1t1Project1.getName()),
                 true
         );
         makeCreateRequest(
                 getProjectCreateUri(), o1t2Project1, 409,
-                String.format("Project(%s) already exists.  Projects are globally unique.", o1t2Project1.getName()),
+                String.format("Project(%s) already exists.", o1t2Project1.getName()),
                 true
         );
         makeCreateRequest(
                 getProjectCreateUri(), o2t1Project1, 409,
-                String.format("Project(%s) already exists.  Projects are globally unique.", o2t1Project1.getName()),
+                String.format("Project(%s) already exists.", o2t1Project1.getName()),
                 true
         );
 
