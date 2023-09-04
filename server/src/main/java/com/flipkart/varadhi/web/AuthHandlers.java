@@ -42,7 +42,7 @@ public class AuthHandlers implements RouteConfigurator {
             authenticationHandler = null;
         }
 
-        if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
+        if (/*configuration.isAuthenticationEnabled() &&*/ configuration.isAuthorizationEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration);
         } else {
             authorizationHandlerBuilder = null;
