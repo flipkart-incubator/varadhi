@@ -25,6 +25,9 @@ ext {
     ws_rs_version = "2.1.1"
     jersey_version = "2.25.1"
     guava_version = "32.1.1-jre"
+    curator_version = "5.5.0"
+    jackson_version = "2.14.2"
+    jakarta_version = "3.0.2"
 }
 
 sourceSets {
@@ -50,7 +53,7 @@ dependencies {
         compileOnly("org.projectlombok:lombok:$lombok_version")
         annotationProcessor("org.projectlombok:lombok:$lombok_version")
 
-        implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
+        implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
 
         implementation("io.vertx:vertx-core:$vertx_version")
         implementation("io.vertx:vertx-config:${vertx_version}")
@@ -71,17 +74,23 @@ dependencies {
 
         implementation("io.micrometer:micrometer-core:$micrometer_version")
         implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
+        implementation("org.apache.curator:curator-framework:$curator_version")
 
         // TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
         //  by default, and have the docker compose setup ready for local setup.
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
-
         implementation("com.google.guava:guava:$guava_version")
 
+
+        implementation("jakarta.validation:jakarta.validation-api:$jakarta_version")
+
+        testCompileOnly("org.projectlombok:lombok:$lombok_version")
+        testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
         testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
         testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
         testImplementation("io.vertx:vertx-web-client:$vertx_version")
+        testImplementation("org.apache.curator:curator-test:$curator_version")
 
         testE2EImplementation("javax.ws.rs:javax.ws.rs-api:$ws_rs_version")
         testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
@@ -98,6 +107,8 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-api")
 
     // common test framework
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
     testImplementation('org.junit.jupiter:junit-jupiter')
     testImplementation('org.mockito:mockito-junit-jupiter')
 }
