@@ -43,7 +43,7 @@ public class VaradhiTopicFactoryTest {
         Assertions.assertNotNull(varadhiTopic);
         InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
         StorageTopic st = it.getStorageTopic();
-        Assertions.assertEquals(it.getTopicState(), InternalTopic.TopicState.Producing);
+        Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
         Assertions.assertEquals(it.getTopicRegion(), region);
         Assertions.assertNotNull(st);
         verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, null);

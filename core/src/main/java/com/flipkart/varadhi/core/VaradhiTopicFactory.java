@@ -35,7 +35,7 @@ public class VaradhiTopicFactory {
         InternalTopic internalTopic = new InternalTopic(
                 internalTopicName,
                 deploymentRegion,
-                InternalTopic.TopicState.Producing,
+                TopicState.Producing,
                 storageTopic
         );
         varadhiTopic.addInternalTopic(internalTopic);

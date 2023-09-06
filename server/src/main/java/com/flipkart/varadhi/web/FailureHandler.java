@@ -26,7 +26,7 @@ public class FailureHandler implements Handler<RoutingContext> {
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
 
-            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(),
+            log.error("{}: {}: Failed. ProduceStatus:{}, Error:{}", ctx.request().method(), ctx.request().path(),
                     statusCode,
                     errorMsg
             );
@@ -72,7 +72,7 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review status code mapping for correctness.
+        //TODO:: review produceStatus code mapping for correctness.
         Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();

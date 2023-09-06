@@ -3,6 +3,7 @@ varadhiOptions:
   producerOptions:
     producerCacheBuilderSpec: ""
     topicCacheBuilderSpec: ""
+    metricEnabled: true
 
 vertxOptions:
   eventLoopPoolSize: 1
@@ -43,3 +44,4 @@ httpServerOptions:
   alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
   decompressionSupported: false
   useAlpn: true
+  tracingPolicy: "ALWAYS"

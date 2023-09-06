@@ -1,26 +1,37 @@
 package com.flipkart.varadhi;
 
 public class Constants {
-    public static int INITIAL_VERSION = 0;
-    public static String NAME_SEPARATOR = ".";
-    public static final String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
+    public static final int INITIAL_VERSION = 0;
+    public final static String NAME_SEPARATOR = ".";
+    public final static String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
 
     public static class PathParams {
-        public static String REQUEST_PATH_PARAM_ORG = "org";
-        public static String REQUEST_PATH_PARAM_TEAM = "team";
-        public static String REQUEST_PATH_PARAM_PROJECT = "project";
-        public static String REQUEST_PATH_PARAM_TOPIC = "topic";
+        public static final String REQUEST_PATH_PARAM_ORG = "org";
+        public static final String REQUEST_PATH_PARAM_TEAM = "team";
+        public static final String REQUEST_PATH_PARAM_PROJECT = "project";
+        public static final String REQUEST_PATH_PARAM_TOPIC = "topic";
     }
 
     public static class Tags {
-        public static String TAG_NAME_REGION = "region";
-        public static String TAG_NAME_PROJECT = "project";
-        public static String TAG_NAME_TOPIC = "topic";
-        public static String TAG_NAME_IDENTITY = "identity";
+        public static final String TAG_NAME_REGION = "region";
+        public static final String TAG_NAME_PROJECT = "project";
+        public static final String TAG_NAME_TOPIC = "topic";
+        public static final String TAG_NAME_IDENTITY = "identity";
+        public static final String TAG_NAME_HOST = "host";
+        public static final String TAG_NAME_PRODUCE_RESULT = "result";
+        public static final String TAG_VALUE_RESULT_SUCCESS = "success";
+        public static final String TAG_VALUE_RESULT_FAILED = "failed";
     }
 
     public static class HttpCodes {
-        public static int HTTP_RATE_LIMITED = 429;
-        public static int HTTP_UNPROCESSABLE_ENTITY = 422;
+        public static final int HTTP_RATE_LIMITED = 429;
+        public static final int HTTP_UNPROCESSABLE_ENTITY = 422;
+    }
+
+    public static class Meters {
+        public static class Produce {
+            public static final String BYTES_METER = "produce.bytes";
+            public static final String LATENCY_METER = "produce.latency";
+        }
     }
 }

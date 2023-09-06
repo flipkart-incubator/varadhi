@@ -6,7 +6,7 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
-import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.produce.otel.ProducerMetricProvider;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -53,6 +53,7 @@ public class VerticleDeployer {
 
 
     public VerticleDeployer(
+            String hostName,
             Vertx vertx,
             ServerConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
@@ -79,7 +80,7 @@ public class VerticleDeployer {
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
         this.produceHandlers =
-                new ProduceHandlers(configuration.getVaradhiOptions().getDeployedRegion(), producerService);
+                new ProduceHandlers(hostName, configuration.getVaradhiOptions().getDeployedRegion(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
@@ -131,8 +132,9 @@ public class VerticleDeployer {
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());
-        ProduceMetricProvider produceMetricProvider = new ProduceMetricProvider(meterRegistry);
-        return new ProducerService(producerCache, internalTopicCache, produceMetricProvider);
+        ProducerMetricProvider producerMetricProvider =
+                new ProducerMetricProvider(producerOptions.isMetricEnabled(), meterRegistry);
+        return new ProducerService(producerCache, internalTopicCache, producerMetricProvider);
     }
 
 }

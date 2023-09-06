@@ -1,10 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceContext;
-import com.flipkart.varadhi.entities.ProduceResult;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -44,11 +41,14 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 public class ProduceHandlers implements RouteProvider {
     private final String deployedRegion;
     private final ProducerService producerService;
+    private final String serviceHostName;
 
-    public ProduceHandlers(String deployedRegion, ProducerService producerService) {
+    public ProduceHandlers(String serviceHostName, String deployedRegion, ProducerService producerService) {
         this.deployedRegion = deployedRegion;
         this.producerService = producerService;
+        this.serviceHostName = serviceHostName;
     }
+
 
     @Override
     public List<RouteDefinition> get() {
@@ -70,8 +70,7 @@ public class ProduceHandlers implements RouteProvider {
 
     public void produce(RoutingContext ctx) {
         //TODO:: Request Validations pending
-
-        byte[] payload = ctx.body().asPojo(byte[].class);
+        byte[] payload = ctx.body().buffer().getBytes();
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
@@ -89,8 +88,8 @@ public class ProduceHandlers implements RouteProvider {
                                     ctx.endRequestWithResponse(produceResult.getMessageId());
                                 } else {
                                     ctx.endRequestWithStatusAndErrorMsg(
-                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus().status()),
-                                            produceResult.getProduceStatus().message()
+                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
+                                            produceResult.getFailureReason()
                                     );
                                 }
                             } else {
@@ -109,13 +108,13 @@ public class ProduceHandlers implements RouteProvider {
         );
     }
 
-    private int getHttpStatusForProduceStatus(ProduceResult.Status status) {
-        return switch (status) {
+    private int getHttpStatusForProduceStatus(ProduceStatus produceStatus) {
+        return switch (produceStatus) {
             case Blocked, NotAllowed -> HTTP_UNPROCESSABLE_ENTITY;
             case Throttled -> HTTP_RATE_LIMITED;
             case Failed -> HTTP_INTERNAL_ERROR;
             default -> {
-                log.error("Unexpected Produce Status ({}) for Http code conversion.", status);
+                log.error("Unexpected Produce ProduceStatus ({}) for Http code conversion.", produceStatus);
                 yield HTTP_INTERNAL_ERROR;
             }
         };
@@ -158,6 +157,7 @@ public class ProduceHandlers implements RouteProvider {
             }
         }
         requestContext.setRemoteHost(remoteHost);
+        requestContext.setServiceHost(serviceHostName);
         return requestContext;
     }
 

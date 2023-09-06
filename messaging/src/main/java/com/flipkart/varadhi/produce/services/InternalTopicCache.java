@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutionException;
 
 public class InternalTopicCache {
 
-    //TODO::Add topic event listener kind of semantics for updating topic status (blocked/throttled) etc.
+    // TODO::Add topic event listener kind of semantics for updating topic state (blocked/throttled) etc.
     private final Cache<String, VaradhiTopic> varadhiTopicCache;
     private final VaradhiTopicService varadhiTopicService;
 
