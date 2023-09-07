@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
+import com.flipkart.varadhi.config.VaradhiOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.utils.HeaderUtils;
@@ -10,6 +11,7 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -42,16 +44,21 @@ public class ProduceHandlers implements RouteProvider {
     private final String deployedRegion;
     private final ProducerService producerService;
     private final String serviceHostName;
+    private final HeaderValidationHandler headerValidationHandler;
 
-    public ProduceHandlers(String serviceHostName, String deployedRegion, ProducerService producerService) {
-        this.deployedRegion = deployedRegion;
+    public ProduceHandlers(String serviceHostName, VaradhiOptions varadhiOptions, ProducerService producerService) {
+        this.deployedRegion = varadhiOptions.getDeployedRegion();
         this.producerService = producerService;
         this.serviceHostName = serviceHostName;
+        this.headerValidationHandler = new HeaderValidationHandler(varadhiOptions);
     }
-
 
     @Override
     public List<RouteDefinition> get() {
+
+        LinkedHashSet<Handler<RoutingContext>> producePreHandlers = new LinkedHashSet<>();
+        producePreHandlers.add(headerValidationHandler::validate);
+
         return new SubRoutes(
                 "/v1/projects/:project",
                 List.of(
@@ -59,7 +66,7 @@ public class ProduceHandlers implements RouteProvider {
                                 HttpMethod.POST,
                                 "/topics/:topic/produce",
                                 Set.of(authenticated, hasBody),
-                                new LinkedHashSet(),
+                                producePreHandlers,
                                 this::produce,
                                 false,
                                 Optional.of(PermissionAuthorization.of(TOPIC_PRODUCE, "{project}/{topic}"))
@@ -69,7 +76,10 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public void produce(RoutingContext ctx) {
-        //TODO:: Request Validations pending
+
+        // TODO:: Discuss, instead of copying the payload, pointer itself can be passed through Message.
+        //  This is to save additional data copy below.
+        //  However, this will require to add Vertx Buffer to Message entity, though details can be abstracted from users.
         byte[] payload = ctx.body().buffer().getBytes();
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
@@ -78,7 +88,6 @@ public class ProduceHandlers implements RouteProvider {
 
         ProduceContext produceContext = buildProduceContext(ctx, payload.length);
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceContext);
-
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, produceContext);
         produceFuture.whenComplete((produceResult, failure) ->

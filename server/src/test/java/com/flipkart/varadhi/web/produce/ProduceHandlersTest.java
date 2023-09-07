@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.AsyncResult;
+import com.flipkart.varadhi.config.VaradhiOptions;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.ProduceContext;
 import com.flipkart.varadhi.entities.ProduceResult;
@@ -52,7 +53,9 @@ public class ProduceHandlersTest extends WebTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         producerService = mock(ProducerService.class);
-        produceHandlers = new ProduceHandlers(localhost, deployedRegion, producerService);
+        VaradhiOptions options = new VaradhiOptions();
+        options.setDeployedRegion(deployedRegion);
+        produceHandlers = new ProduceHandlers(localhost, options, producerService);
 
         Route route = router.post("/projects/:project/topics/:topic/produce");
         route.handler(bodyHandler).handler(produceHandlers::produce);

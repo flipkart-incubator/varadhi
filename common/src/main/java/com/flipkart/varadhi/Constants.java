@@ -34,4 +34,11 @@ public class Constants {
             public static final String LATENCY_METER = "produce.latency";
         }
     }
+
+    public static class REST_DEFAULTS {
+        public static final int PAYLOAD_SIZE_MAX = 5 * 1024 * 1024;
+        public static final int HEADERS_ALLOWED_MAX = 10;
+        public static final int HEADER_NAME_SIZE_MAX = 64;
+        public static final int HEADER_VALUE_SIZE_MAX = 256;
+    }
 }
