@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,7 @@ public class JsonMapperTest {
     }
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@vehicleType")
+    @EqualsAndHashCode
     private abstract static class Vehicle {
         private String manufacturer;
 
@@ -61,9 +64,16 @@ public class JsonMapperTest {
         }
     }
 
+    @EqualsAndHashCode(callSuper = true)
+    @Getter
     private static class Car extends Vehicle {
+        private final String model;
+        private final int year;
+
         public Car(String manufacturer, String model, int year) {
             setManufacturer(manufacturer);
+            this.model = model;
+            this.year = year;
         }
     }
 

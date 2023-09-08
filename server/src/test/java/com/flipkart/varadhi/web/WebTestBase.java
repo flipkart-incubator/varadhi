@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.flipkart.varadhi.RestVerticle;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -11,12 +13,14 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -35,6 +39,13 @@ public class WebTestBase {
     protected FailureHandler failureHandler;
     protected int defaultPort = 9090; //use port different from default 8080, conflicts with server port in e2e.
     protected String defaultHost = "localhost";
+
+    public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz)
+            throws Exception {
+        JavaType type = JsonMapper.getMapper().getTypeFactory().constructCollectionType(collectionClass, clazz);
+        return (R) JsonMapper.getMapper().readValue(data, type);
+
+    }
 
     public void setUp() throws InterruptedException {
         vertx = Vertx.vertx();
@@ -66,6 +77,9 @@ public class WebTestBase {
         }
     }
 
+    protected Handler<RoutingContext> wrapBlocking(Handler<RoutingContext> handler) {
+        return RestVerticle.wrapBlockingExecution(vertx, handler);
+    }
 
     protected Route setupFailureHandler(Route route) {
         return route.failureHandler(failureHandler);
@@ -89,7 +103,7 @@ public class WebTestBase {
             throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, JsonMapper.jsonSerialize(entity));
         Assertions.assertEquals(HTTP_OK, response.statusCode());
-        return (R) JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
+        return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
     }
 
     protected <T, R> R sendRequestWithBody(
@@ -101,13 +115,47 @@ public class WebTestBase {
         if (null != statusMessage) {
             Assertions.assertEquals(statusMessage, response.statusMessage());
         }
-        return (R) JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
+        if (null != responseClazz) {
+            return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
+        }
+        return null;
     }
 
-    HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, String json) throws InterruptedException {
+    protected <R> R sendRequestWithoutBody(HttpRequest<Buffer> request, Class<R> responseClazz)
+            throws InterruptedException {
+        HttpResponse<Buffer> response = sendRequest(request, null);
+        Assertions.assertEquals(HTTP_OK, response.statusCode());
+        if (null != responseClazz) {
+            return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
+        }
+        return null;
+    }
+
+    protected <R> R sendRequestWithoutBody(
+            HttpRequest<Buffer> request, int statusCode, String statusMessage, Class<R> responseClazz
+    )
+            throws InterruptedException {
+        HttpResponse<Buffer> response = sendRequest(request, null);
+        Assertions.assertEquals(statusCode, response.statusCode());
+        if (null != statusMessage) {
+            Assertions.assertEquals(statusMessage, response.statusMessage());
+        }
+        if (null != responseClazz) {
+            return (R) JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
+        }
+        return null;
+    }
+
+    protected HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, String json) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
-        Buffer reqBuffer = Buffer.buffer(json);
-        Future<HttpResponse<Buffer>> responseFuture = request.sendBuffer(reqBuffer);
+        Future<HttpResponse<Buffer>> responseFuture;
+        if (null != json) {
+            Buffer reqBuffer = Buffer.buffer(json);
+            responseFuture = request.sendBuffer(reqBuffer);
+        } else {
+            responseFuture = request.send();
+        }
+
         class PostResponseCapture<T> {
             Throwable throwable;
             T response;

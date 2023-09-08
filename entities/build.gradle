@@ -1,13 +1,12 @@
 plugins {
-    id 'com.flipkart.varadhi.java-library-conventions'
+    id "com.flipkart.varadhi.java-library-conventions"
 }
 dependencies {
-    implementation(project(':common'))
+    implementation(project(":common"))
     implementation("io.micrometer:micrometer-core")
-    implementation('com.fasterxml.jackson.core:jackson-databind:2.14.2')
+    implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("jakarta.validation:jakarta.validation-api")
     implementation('org.hibernate:hibernate-validator:8.0.1.Final')
     implementation('org.glassfish.expressly:expressly:5.0.0')
-    implementation('com.google.inject:guice:7.0.0')
-
-    testImplementation(project(':pulsar'))
+    testImplementation(project(":pulsar"))
 }

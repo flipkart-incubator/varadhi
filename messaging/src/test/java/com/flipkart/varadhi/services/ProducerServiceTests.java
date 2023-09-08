@@ -103,11 +103,11 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
         doThrow(new UncheckedExecutionException(new Exception())).when(topicService).get(vt.getName());
-        Assertions.assertThrows(
+        ProduceException e = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx),
-                "Produce failed due to internal error."
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
+        Assertions.assertEquals("Produce failed due to internal error.", e.getMessage());
         verify(producer, never()).ProduceAsync(any());
     }
 

@@ -3,12 +3,17 @@ package com.flipkart.varadhi;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
@@ -18,6 +23,9 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
+import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
+import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
+import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,7 +46,11 @@ public class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final Map<RouteBehaviour, RouteConfigurator> behaviorProviders = new HashMap<>();
+    private final OrgHandlers orgHandlers;
+    private final TeamHandlers teamHandlers;
+    private final ProjectHandlers projectHandlers;
+    private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
+
 
     public VerticleDeployer(
             Vertx vertx,
@@ -54,27 +66,34 @@ public class VerticleDeployer {
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
+        MetaStore metaStore = metaStoreProvider.getMetaStore();
         this.topicHandlers =
-                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStoreProvider.getMetaStore());
+                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
         ProducerService producerService =
                 setupProducerService(
                         messagingStackProvider, varadhiTopicService,
                         configuration.getVaradhiOptions().getProducerOptions(),
                         meterRegistry
                 );
+        this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
+        this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
+        this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
         this.produceHandlers =
                 new ProduceHandlers(configuration.getVaradhiOptions().getDeployedRegion(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
-        this.behaviorProviders.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
-        this.behaviorProviders.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+        this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
+        this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
     private List<RouteDefinition> getDefinitions() {
         return Stream.of(
-                        this.topicHandlers.get(),
-                        this.healthCheckHandler.get(),
-                        this.produceHandlers.get()
+                        orgHandlers.get(),
+                        teamHandlers.get(),
+                        projectHandlers.get(),
+                        topicHandlers.get(),
+                        produceHandlers.get(),
+                        healthCheckHandler.get()
                 )
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
@@ -88,7 +107,7 @@ public class VerticleDeployer {
         vertx.deployVerticle(
                         () -> new RestVerticle(
                                 getDefinitions(),
-                                behaviorProviders,
+                                behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()
                         ),
@@ -108,7 +127,7 @@ public class VerticleDeployer {
             ProducerOptions producerOptions,
             MeterRegistry meterRegistry
     ) {
-        ProducerFactory producerFactory = messagingStackProvider.getProducerFactory();
+        ProducerFactory<StorageTopic> producerFactory = messagingStackProvider.getProducerFactory();
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());
