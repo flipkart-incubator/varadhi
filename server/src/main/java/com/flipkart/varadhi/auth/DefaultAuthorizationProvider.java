@@ -52,7 +52,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             return result;
         }
         return switch (current) {
-            case TENANT -> throw new InvalidConfigException("tenant resource not supported for authorization");
             case ORG -> {
                 result.put(ResourceType.ORG, segments.remove(0));
                 yield resolve(ResourceType.TEAM, action, segments, result);
