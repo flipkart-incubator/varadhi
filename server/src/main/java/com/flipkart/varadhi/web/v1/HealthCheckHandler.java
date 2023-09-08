@@ -28,7 +28,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public void handle(RoutingContext ctx) {
         if (responseCode == HTTP_OK) {
-            ctx.setApiResponse(responseMsg);
+            ctx.endApiWithResponse(responseMsg);
         } else {
             throw new ServerNotAvailableException(responseMsg);
         }

@@ -13,7 +13,6 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -21,6 +20,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -59,7 +59,7 @@ public class ProduceHandlers implements RouteProvider {
                                 HttpMethod.POST,
                                 "/topics/:topic/produce",
                                 Set.of(authenticated, hasBody),
-                                Sets.newLinkedHashSet(),
+                                new LinkedHashSet(),
                                 this::produce,
                                 false,
                                 Optional.of(PermissionAuthorization.of(TOPIC_PRODUCE, "{project}/{topic}"))

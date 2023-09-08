@@ -4,9 +4,6 @@ import lombok.Getter;
 
 @Getter
 public enum ResourceAction {
-    @Deprecated TENANT_CREATE(ResourceType.TENANT, "create"),
-    @Deprecated TENANT_UPDATE(ResourceType.TENANT, "update"),
-    @Deprecated TENANT_DELETE(ResourceType.TENANT, "delete"),
 
     ORG_CREATE(ResourceType.ORG, "create"),
     ORG_UPDATE(ResourceType.ORG, "update"),

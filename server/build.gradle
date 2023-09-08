@@ -1,23 +1,23 @@
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
 plugins {
-    id 'com.flipkart.varadhi.java-application-conventions'
-    id 'jacoco-report-aggregation'
+    id "com.flipkart.varadhi.java-application-conventions"
+    id "jacoco-report-aggregation"
 }
 
 def jacoco_ver = "0.8.10"
 
 dependencies {
 
-    implementation(project(':common'))
-    implementation(project(':core'))
-    implementation(project(':messaging'))
-    implementation(project(':entities'))
+    implementation(project(":common"))
+    implementation(project(":core"))
+    implementation(project(":messaging"))
+    implementation(project(":entities"))
 
-    implementation('org.apache.logging.log4j:log4j-slf4j2-impl')
-    implementation('org.apache.logging.log4j:log4j-core')
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
+    implementation("org.apache.logging.log4j:log4j-core")
 
-    implementation('com.fasterxml.jackson.core:jackson-databind')
+    implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("javax.annotation:javax.annotation-api:$javax_version")
 
     implementation("io.vertx:vertx-core")
@@ -28,11 +28,10 @@ dependencies {
     implementation("io.vertx:vertx-auth-jwt")
     implementation("io.vertx:vertx-opentelemetry")
     implementation("io.vertx:vertx-micrometer-metrics")
-    implementation("io.vertx:vertx-web-client:4.4.4")
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
-        runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final:osx-x86_64')
+        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.91.Final:osx-x86_64")
     }
 
     implementation("io.opentelemetry:opentelemetry-sdk")
@@ -44,12 +43,12 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-jmx")
 
     //For ZK persistence, curator-framework.
-    implementation('org.apache.curator:curator-framework:5.5.0')
-    runtimeOnly(project(':pulsar'))
+    implementation("org.apache.curator:curator-framework")
+    runtimeOnly(project(":pulsar"))
 
-    testImplementation(project(':pulsar'))
-    testImplementation(testFixtures(project(':core')))
-    testImplementation("org.apache.curator:curator-test:5.5.0")
+    testImplementation(project(":pulsar"))
+    testImplementation(testFixtures(project(":core")))
+    testImplementation("org.apache.curator:curator-test")
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("io.vertx:vertx-web-client")
 
@@ -61,7 +60,7 @@ dependencies {
 
 
     // jacoco aggregation dependency -- explicit inclusion.
-    jacocoAggregation project(':pulsar')
+    jacocoAggregation project(":pulsar")
 
 }
 
@@ -80,6 +79,6 @@ reporting {
 }
 
 application {
-    mainClass = 'com.flipkart.varadhi.Server'
+    mainClass = "com.flipkart.varadhi.Server"
 }
 
