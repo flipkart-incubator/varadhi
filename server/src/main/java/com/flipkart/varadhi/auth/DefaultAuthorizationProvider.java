@@ -17,10 +17,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     @Override
     public Future<Boolean> init(JsonObject configuration) {
-        var def = new DefaultAuthorizationConfiguration(
-                Map.of("org.admin", List.of(ORG_CREATE)),
-                Map.of("flipkart", Map.of("aayush.gupta", List.of("org.admin"))));
-        var res = JsonObject.mapFrom(def);
         this.configuration = configuration.mapTo(DefaultAuthorizationConfiguration.class);
         return Future.succeededFuture(true);
     }
