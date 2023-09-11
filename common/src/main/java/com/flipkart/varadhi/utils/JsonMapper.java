@@ -22,7 +22,7 @@ public class JsonMapper {
         // avoid annotation cluster for jackson serialisation, i.e. (de)serialization works by default w/o annotation.
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     public static ObjectMapper getMapper() {

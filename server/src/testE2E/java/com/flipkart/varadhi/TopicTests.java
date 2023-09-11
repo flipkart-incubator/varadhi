@@ -1,77 +1,49 @@
 package com.flipkart.varadhi;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.varadhi.db.ZKPathUtils;
+import com.flipkart.varadhi.db.ZNode;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.utils.JsonMapper;
-import com.flipkart.varadhi.web.ErrorResponse;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientProperties;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
+import java.util.List;
 
-public class TopicTests {
-    private static final int ConnectTimeoutMs = 10 * 1000;
-    private static final int ReadTimeoutMs = 10 * 1000;
+public class TopicTests extends E2EBase {
 
     private static final String VaradhiBaseUri = "http://localhost:8080";
     private static final String DefaultTenant = "public";
     private static final String DefaultProject = "default";
+    private static Org org1;
+    private static Team o1Team1;
+    private static Project o1t1Project1;
 
 
-    private Client getClient() {
-        ClientConfig clientConfig = new ClientConfig().register(new ObjectMapperContextResolver());
-        Client client = ClientBuilder.newClient(clientConfig);
-        client.property(ClientProperties.CONNECT_TIMEOUT, ConnectTimeoutMs);
-        client.property(ClientProperties.READ_TIMEOUT, ReadTimeoutMs);
-        return client;
+    @BeforeAll
+    public static void setup() {
+        org1 = new Org("public", 0);
+        o1Team1 = new Team("team1", 0, org1.getName());
+        o1t1Project1 = new Project("default", 0, "", o1Team1.getName(), o1Team1.getOrg());
+        makeCreateRequest(getOrgsUri(), org1, 200);
+        makeCreateRequest(getTeamsUri(o1Team1.getOrg()), o1Team1, 200);
+        makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
     }
 
-    private String getTopicCreateUri(String tenant) {
-        return String.format("%s/v1/tenants/%s/topics", VaradhiBaseUri, tenant);
+    @AfterAll
+    public static void tearDown() {
+        cleanupOrgs(List.of(org1));
     }
 
-    private <T> T makeCreateRequest(T entity, String targetUrl, int expectedStatus) {
-        Response response = getClient()
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.entity(entity, MediaType.APPLICATION_JSON_TYPE));
-        Assertions.assertNotNull(response);
-        Assertions.assertEquals(expectedStatus, response.getStatus());
-        Class<T> clazz = (Class<T>) entity.getClass();
-        return response.readEntity(clazz);
-    }
-
-    private <T> void makeCreateRequest(
-            T entity, String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored
-    ) {
-        Response response = getClient()
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .post(Entity.entity(entity, MediaType.APPLICATION_JSON_TYPE));
-        Assertions.assertNotNull(response);
-        Assertions.assertEquals(expectedStatus, response.getStatus());
-        if (null != expectedResponse) {
-            String responseMsg =
-                    isErrored ? response.readEntity(ErrorResponse.class).reason() : response.readEntity(String.class);
-            Assertions.assertEquals(expectedResponse, responseMsg);
-        }
-    }
 
     @Test
     public void createTopic() {
-        String topicName = "TestTopic24";
+        String topicName = "test-topic-1";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, null);
-        TopicResource r = makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 200);
+                new TopicResource(topicName, Constants.INITIAL_VERSION, o1t1Project1.getName(), false, null);
+        TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
         Assertions.assertEquals(topic.getProject(), r.getProject());
@@ -81,28 +53,18 @@ public class TopicTests {
         String errorDuplicateTopic =
                 String.format(
                         "Specified Topic(%s) already exists.",
-                        ZKPathUtils.getTopicResourceFQDN(topic.getProject(), topic.getName())
+                        ZNode.getResourceFQDN(topic.getProject(), topic.getName())
                 );
-        makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 409, errorDuplicateTopic, true);
+        makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
     }
 
     @Test
     public void createTopicWithValidationFailure() {
-        String topicName = "Test";
+        String topicName = "ab";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, DefaultProject, false, null);
-        String errorValidationTopic = "name: Varadhi Resource Name Length must be between 5 and 50";
-        makeCreateRequest(topic, getTopicCreateUri(DefaultTenant), 500, errorValidationTopic, true);
+                new TopicResource(topicName, Constants.INITIAL_VERSION, o1t1Project1.getName(), false, null);
+        String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
+        makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
     }
 
-    @Provider
-    public class ObjectMapperContextResolver implements ContextResolver<ObjectMapper> {
-
-        private final ObjectMapper mapper = JsonMapper.getMapper();
-
-        @Override
-        public ObjectMapper getContext(Class<?> type) {
-            return mapper;
-        }
-    }
 }
