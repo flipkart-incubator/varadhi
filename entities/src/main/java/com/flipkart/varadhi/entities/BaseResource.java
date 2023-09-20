@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 
 public interface BaseResource {
 
-    //    @Singleton
     default void validate() {
         Set<ConstraintViolation<BaseResource>> violations =
                 Validation.buildDefaultValidatorFactory().getValidator().validate(this);
