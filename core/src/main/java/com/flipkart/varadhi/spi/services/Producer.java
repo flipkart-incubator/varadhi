@@ -6,5 +6,5 @@ import com.flipkart.varadhi.entities.ProducerResult;
 import java.util.concurrent.CompletableFuture;
 
 public interface Producer {
-    CompletableFuture<ProducerResult> ProduceAsync(Message message);
+    CompletableFuture<ProducerResult> ProduceAsync(String partitioningKey, Message message);
 }

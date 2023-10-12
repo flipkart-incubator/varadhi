@@ -71,7 +71,8 @@ public class ProduceHandlers implements RouteProvider {
     public void produce(RoutingContext ctx) {
         //TODO:: Request Validations pending
 
-        byte[] payload = ctx.body().asPojo(byte[].class);
+        byte[] payload = ctx.body().buffer().getBytes();
+        //TODO:: Add project validations.
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);

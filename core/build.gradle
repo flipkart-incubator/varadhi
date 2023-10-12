@@ -10,4 +10,5 @@ dependencies {
     testImplementation(project(':pulsar'))
     testFixturesImplementation(project(':common'))
     testFixturesImplementation(project(':entities'))
+    testImplementation(testFixtures(project(':entities')))
 }

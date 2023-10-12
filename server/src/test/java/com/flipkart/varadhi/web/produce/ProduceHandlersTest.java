@@ -11,8 +11,10 @@ import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
@@ -77,16 +79,17 @@ public class ProduceHandlersTest extends WebTestBase {
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
         long requestTimeStamp = System.currentTimeMillis();
-        String messageIdObtained = sendRequestWithBody(request, payload, String.class);
+        String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
-        REQUIRED_HEADERS.forEach(s -> Assertions.assertTrue(msgCapture.getValue().getHeaders().containsKey(s)));
+        Message capturedMessage = msgCapture.getValue();
+        REQUIRED_HEADERS.forEach(s -> Assertions.assertTrue(capturedMessage.hasHeader(s)));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
 
-        Assertions.assertFalse(msgCapture.getValue().getHeaders().containsKey("RandomHeader"));
-        Assertions.assertTrue(msgCapture.getValue().getHeaders().get("x_header1").contains("h1v1"));
-        Assertions.assertTrue(msgCapture.getValue().getHeaders().get("x_header1").contains("h1v2"));
-        Assertions.assertTrue(msgCapture.getValue().getHeaders().get("x_header2").contains("h2v1"));
-        Assertions.assertFalse(msgCapture.getValue().getHeaders().containsKey("X_HEADER2"));
+        Assertions.assertFalse(capturedMessage.hasHeader("RandomHeader"));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header1").contains("h1v1"));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header1").contains("h1v2"));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header2").contains("h2v1"));
+        Assertions.assertFalse(capturedMessage.hasHeader("X_HEADER2"));
 
         Assertions.assertEquals("host1", ctxCapture.getValue().getRequestContext().getRemoteHost());
         Assertions.assertEquals(
@@ -100,7 +103,7 @@ public class ProduceHandlersTest extends WebTestBase {
         Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopicName());
         Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProjectName());
 
-        messageIdObtained = sendRequestWithBody(request, payload, String.class);
+        messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any());
     }
@@ -114,11 +117,11 @@ public class ProduceHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
-        sendRequestWithBody(request, payload, 404, exceptionMessage, ErrorResponse.class);
+        sendRequestWithByteBufferBody(request, payload, 404, exceptionMessage, ErrorResponse.class);
     }
 
     @Test
-    public void testProduceNonProducingTopicState() throws InterruptedException {
+    public void testProduceNonProducingTopicState() {
         record testData(int status, String message, InternalTopic.TopicState state) {
         }
 
@@ -136,7 +139,7 @@ public class ProduceHandlersTest extends WebTestBase {
                     doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                             .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
                     try {
-                        sendRequestWithBody(request, payload, d.status, d.message, ErrorResponse.class);
+                        sendRequestWithByteBufferBody(request, payload, d.status, d.message, ErrorResponse.class);
                     } catch (InterruptedException e) {
                         Assertions.fail("Unexpected Interruped Exception.");
                     }
@@ -153,7 +156,7 @@ public class ProduceHandlersTest extends WebTestBase {
         ProduceResult result = ProduceResult.onProducerFailure(messageId, 10, topicProduceFailureMsg);
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
-        sendRequestWithBody(request, payload, 500,
+        sendRequestWithByteBufferBody(request, payload, 500,
                 String.format("Produce failed at messaging stack: %s", topicProduceFailureMsg), ErrorResponse.class
         );
     }
@@ -165,11 +168,11 @@ public class ProduceHandlersTest extends WebTestBase {
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
-        sendRequestWithBody(request, payload, 404, exceptionMessage, ErrorResponse.class);
+        sendRequestWithByteBufferBody(request, payload, 404, exceptionMessage, ErrorResponse.class);
 
         doReturn(CompletableFuture.failedFuture(new RuntimeException(exceptionMessage))).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
-        sendRequestWithBody(request, payload, 500, exceptionMessage, ErrorResponse.class);
+        sendRequestWithByteBufferBody(request, payload, 500, exceptionMessage, ErrorResponse.class);
     }
 
     @Test
@@ -179,6 +182,30 @@ public class ProduceHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
-        sendRequestWithBody(request, payload, 500, exceptionMessage, ErrorResponse.class);
+        sendRequestWithByteBufferBody(request, payload, 500, exceptionMessage, ErrorResponse.class);
+    }
+
+    @Test
+    public void testProduceHeaderOrdering() throws InterruptedException {
+        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyProducerResult(10), 10);
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(MESSAGE_ID, messageId);
+        request.putHeader(FORWARDED_FOR, "host1, host2");
+        request.putHeader("RandomHeader", "value1");
+        MultiMap multimap = new HeadersMultiMap();
+        multimap.add("x_header1", "h1v1");
+        multimap.add("X_HEADER1", "h1v2");
+        multimap.add("x_header1", "h1v3");
+        request.putHeaders(multimap);
+        request.putHeader("X_HEADER2", "h2v1");
+        String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        Assertions.assertEquals(messageId, messageIdObtained);
+        String[] h1Values = msgCapture.getValue().getHeaders("x_header1").toArray(new String[]{});
+        Assertions.assertEquals("h1v1", h1Values[0]);
+        Assertions.assertEquals("h1v2", h1Values[1]);
+        Assertions.assertEquals("h1v3", h1Values[2]);
+        Assertions.assertEquals("h1v1", msgCapture.getValue().getHeader("x_header1"));
     }
 }

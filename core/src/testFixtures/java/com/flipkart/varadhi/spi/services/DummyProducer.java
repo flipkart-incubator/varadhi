@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 public class DummyProducer implements Producer {
 
     @Override
-    public CompletableFuture<ProducerResult> ProduceAsync(Message message) {
+    public CompletableFuture<ProducerResult> ProduceAsync(String partitioningKey, Message message) {
         byte[] payload = message.getPayload();
         DummyMessage dm = JsonMapper.jsonDeserialize(new String(payload), DummyMessage.class);
 
@@ -40,7 +40,7 @@ public class DummyProducer implements Producer {
     public record DummyMessage(int sleepMillis, int offSet, String exceptionClass, byte[] randomData) {
     }
 
-    public static class DummyProducerResult extends ProducerResult {
+    public static class DummyProducerResult implements ProducerResult {
         int offset;
 
         public DummyProducerResult(int offset) {

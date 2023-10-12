@@ -1,5 +1,14 @@
 package com.flipkart.varadhi.entities;
 
+import lombok.Data;
+
+@Data
 public class CapacityPolicy {
-    String maxThroughput;
+    private int maxThroughputKBps;
+    private int maxQPS;
+
+    public CapacityPolicy(int maxQPS, int maxThroughputKBps) {
+        this.maxQPS = maxQPS;
+        this.maxThroughputKBps = maxThroughputKBps;
+    }
 }

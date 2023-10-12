@@ -9,17 +9,22 @@ import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
 import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.RandomStringGenerator;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
+import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static com.flipkart.varadhi.MessageConstants.Headers.GROUP_ID;
 import static com.flipkart.varadhi.entities.ProduceResult.Status.Failed;
+import static org.apache.commons.text.CharacterPredicates.DIGITS;
+import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class ProducerService {
     private final ProducerCache producerCache;
     private final InternalTopicCache internalTopicCache;
     private final ProduceMetricProvider metricProvider;
+    private final RandomStringGenerator stringGenerator;
 
     public ProducerService(
             ProducerCache producerCache, InternalTopicCache topicCache, ProduceMetricProvider metricProvider
@@ -27,6 +32,8 @@ public class ProducerService {
         this.producerCache = producerCache;
         this.internalTopicCache = topicCache;
         this.metricProvider = metricProvider;
+        this.stringGenerator =
+                new RandomStringGenerator.Builder().withinRange('0', 'z').filteredBy(DIGITS, LETTERS).build();
     }
 
     //
@@ -52,7 +59,7 @@ public class ProducerService {
             throw e;
         } catch (Exception e) {
             sendProduceMetric(messageId, Failed, 0, context);
-            throw new ProduceException(String.format("Produce failed due to internal error."), e);
+            throw new ProduceException(String.format("Produce failed due to internal error: %s", e.getMessage()), e);
         }
     }
 
@@ -76,13 +83,13 @@ public class ProducerService {
         }
     }
 
-    private CompletableFuture<ProduceResult> produceToTopic(Message message, InternalTopic internalTopic) throws
-            ExecutionException {
+    private CompletableFuture<ProduceResult> produceToTopic(Message message, InternalTopic internalTopic) {
         String messageId = message.getMessageId();
         if (internalTopic.produceAllowed()) {
             long produceStart = System.currentTimeMillis();
             Producer producer = producerCache.getProducer(internalTopic.getStorageTopic());
-            return producer.ProduceAsync(message).handle((result, throwable) -> {
+
+            return producer.ProduceAsync(getPartitioningKey(message), message).handle((result, throwable) -> {
                 int producerLatency = (int) (System.currentTimeMillis() - produceStart);
                 if (throwable != null) {
                     log.error(String.format("Produce Message(%s) to StorageTopic(%s) failed.", messageId,
@@ -96,5 +103,12 @@ public class ProducerService {
         }
         return CompletableFuture.completedFuture(
                 ProduceResult.onNonProducingTopicState(messageId, internalTopic.getTopicState()));
+    }
+
+    private String getPartitioningKey(Message message) {
+        if (message.hasHeader(GROUP_ID)) {
+            return message.getHeader(GROUP_ID);
+        }
+        return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }
 }

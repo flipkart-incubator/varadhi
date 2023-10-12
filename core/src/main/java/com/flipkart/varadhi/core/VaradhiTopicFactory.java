@@ -28,8 +28,12 @@ public class VaradhiTopicFactory {
 
 
     private void planDeployment(Project project, VaradhiTopic varadhiTopic, TopicResource topicResource) {
+        CapacityPolicy capacityPolicy = topicResource.getCapacityPolicy();
+        if (null == capacityPolicy) {
+            capacityPolicy = getDefaultCapacityPolicy();
+        }
         StorageTopic storageTopic =
-                topicFactory.getTopic(varadhiTopic.getName(), project, topicResource.getCapacityPolicy());
+                topicFactory.getTopic(varadhiTopic.getName(), project, capacityPolicy);
         // This is likely to change with replicated topics across zones. To be taken care as part of DR.
         String internalTopicName = String.join(NAME_SEPARATOR, varadhiTopic.getName(), deploymentRegion);
         InternalTopic internalTopic = new InternalTopic(
@@ -39,5 +43,10 @@ public class VaradhiTopicFactory {
                 storageTopic
         );
         varadhiTopic.addInternalTopic(internalTopic);
+    }
+
+    private CapacityPolicy getDefaultCapacityPolicy() {
+        //TODO:: make default capacity config based instead of hard coding.
+        return new CapacityPolicy(100, 100);
     }
 }

@@ -2,9 +2,11 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.entities.CapacityHelper;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
-import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
+import com.flipkart.varadhi.pulsar.clients.ClientProvider;
+import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
@@ -20,11 +22,9 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class PulsarStackProviderTest {
@@ -39,7 +39,7 @@ public class PulsarStackProviderTest {
     @BeforeEach
     public void setUp() throws IOException {
         String yamlContent =
-                "pulsarClientOptions:\n  pulsarUrl: \"http://127.0.0.1:8081\"\n  connectTimeout: 2000\n  readTimeout: 2000\n  requestTimeout: 2000\n";
+                "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
 
@@ -50,8 +50,11 @@ public class PulsarStackProviderTest {
 
         objectMapper = mock(ObjectMapper.class);
         pulsarAdmin = mock(PulsarAdmin.class);
+        ClientProvider clientProvider = mock(ClientProvider.class);
+
         pulsarStackProvider = spy(new PulsarStackProvider());
-        doReturn(pulsarAdmin).when(pulsarStackProvider).getPulsarAdminClient(any(PulsarClientOptions.class));
+        doReturn(clientProvider).when(pulsarStackProvider).getPulsarClientProvider(any(PulsarConfig.class));
+        doReturn(pulsarAdmin).when(clientProvider).getAdminClient();
         doNothing().when(objectMapper).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
     }
 
@@ -60,7 +63,7 @@ public class PulsarStackProviderTest {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
-        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));//
+        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
     }
 
     @Test
@@ -76,7 +79,7 @@ public class PulsarStackProviderTest {
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, null);
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, CapacityHelper.getDefault());
         Assertions.assertEquals(
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
                 topic.getName()
@@ -101,10 +104,11 @@ public class PulsarStackProviderTest {
 
         Topics topics = mock(Topics.class);
         doReturn(topics).when(pulsarAdmin).topics();
-        doNothing().when(topics).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
-        PulsarStorageTopic pulsarStorageTopic = storageTopicFactory.getTopic(topicName, project, null);
+        doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
+        PulsarStorageTopic pulsarStorageTopic =
+                storageTopicFactory.getTopic(topicName, project, CapacityHelper.getDefault());
         storageTopicService.create(pulsarStorageTopic);
-        verify(topics, times(1)).createPartitionedTopic(anyString(), anyInt(), any(Map.class));
+        verify(topics, times(1)).createPartitionedTopic(anyString(), eq(1));
     }
 }
 
