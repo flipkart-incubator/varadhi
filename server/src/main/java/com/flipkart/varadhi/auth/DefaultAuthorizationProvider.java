@@ -5,10 +5,10 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
@@ -25,72 +25,47 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      *
      * @param userContext Information on the user, contains the user identifier
      * @param action      Action being performed by the user which is to be authorized
-     * @param resource    URI of the resource on which the action is to be authorized.
-     *                    Must be of format: {org_id} or {org_id}/{team_id} or {project_id}
-     *                    or {project_id}/{topic|queue|subscription}
+     * @param resource    Full schemaless URI of the resource on which the action is to be authorized.
+     *                    Must be of format: {org_id}/{team_id}/{project_id}/{topic|queue|subscription}
      *
      * @return {@code Future<Boolean>} a future result expressing True/False decision
      */
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-        // parse the resource path based on the action and return the final resourceIDs for each resourceType
-        Map<ResourceType, String> resourceTypeToResourceId = getResourceIdsFromResourceURI(action, resource);
+        Map<ResourceType, String> resourceTypeToResourceId = resolve(action, resource);
         return Future.succeededFuture(resourceTypeToResourceId.entrySet().stream()
                 .anyMatch(entry -> isAuthorizedInternal(userContext.getSubject(), action, entry.getValue())));
     }
 
     /**
-     * Takes the {@code resource} as a URI and breaks it down into individual pairs of {@code ResourceType} and their resourceIds
-     *
-     * @param action   ResourceAction to validate against (mostly required for resolving leaf nodes in the hierarchy)
-     * @param resource Full path to the resource on which the action is being performed (URI without any scheme)
-     *
-     * @return Mapping of each ResourceType to its respective resourceID in context of the current resource path
+     * Parse the resource path based on the action and return the final resourceIDs for each resourceType.
+     * @param resourcePath uri of the resource
+     * @return map of resource type to its resource id for the hierarchy (empty if resource id could not be resolved)
      */
-    private Map<ResourceType, String> getResourceIdsFromResourceURI(ResourceAction action, String resource) {
-        // TODO(aayush): need better way to do this?
-        Map<ResourceType, String> resultMap = new HashMap<>();
-        String[] segments = resource.split("/");
-        return resolve(ResourceType.ORG, action, List.of(segments), resultMap);
-    }
+    private Map<ResourceType, String> resolve(ResourceAction action, String resourcePath) {
+        String[] segments = resourcePath.split("/");
 
-
-    private Map<ResourceType, String> resolve(
-            ResourceType current, ResourceAction action, List<String> segments, Map<ResourceType, String> result
-    ) {
-        if (segments.isEmpty()) {
-            return result;
+        // ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|etc
+        Map<ResourceType, String> resourceIdMap = new HashMap<>();
+        resourceIdMap.put(ResourceType.ROOT, ResourceType.ROOT.toString());
+        resourceIdMap.put(ResourceType.ORG, getOrg(segments));
+        resourceIdMap.put(ResourceType.TEAM, getTeam(segments));
+        resourceIdMap.put(ResourceType.PROJECT, getProject(segments));
+        // handle leaf node case
+        if (isActionOnLeafNode(action)) {
+            resourceIdMap.put(action.getResourceType(), getLeaf(segments));
         }
-        return switch (current) {
-            case ORG -> {
-                result.put(ResourceType.ORG, segments.remove(0));
-                yield resolve(ResourceType.TEAM, action, segments, result);
-            }
-            case TEAM -> {
-                result.put(ResourceType.TEAM, result.get(ResourceType.ORG) + ":" + segments.remove(0));
-                yield resolve(ResourceType.PROJECT, action, segments, result);
-            }
-            case PROJECT -> {
-                result.put(ResourceType.PROJECT, segments.remove(0));
-                yield resolve(action.getResourceType(), action, segments, result);
-            }
-            case TOPIC -> {
-                result.put(ResourceType.TOPIC, result.get(ResourceType.PROJECT) + ":" + segments.remove(0));
-                yield result;
-            }
-            case SUBSCRIPTION -> {
-                result.put(ResourceType.SUBSCRIPTION, result.get(ResourceType.PROJECT) + ":" + segments.remove(0));
-                yield result;
-            }
-        };
+
+        return resourceIdMap;
     }
 
-    private List<String> getRolesForSubject(String subject, String resourceId) {
-        return configuration.getRoleBindings()
-                .getOrDefault(resourceId, new HashMap<>())
-                .getOrDefault(subject, new ArrayList<>());
-    }
-
+    /**
+     * Authorize subject against a single resourceId
+     * @param subject user identifier to be authorized
+     * @param action action requested by the subject which needs authorization
+     * @param resourceId resource id under whose scope the check will be performed
+     * @return True, if subject is allowed to perform action under this resource node, else False
+     */
     private boolean isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
         log.debug(
                 "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
@@ -100,12 +75,52 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 .anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
+    private List<String> getRolesForSubject(String subject, String resourceId) {
+        return configuration.getRoleBindings()
+                .getOrDefault(resourceId, Map.of())
+                .getOrDefault(subject, List.of());
+    }
+
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
         log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        boolean matching = configuration.getRoles().getOrDefault(roleId, new ArrayList<>()).contains(action);
+        boolean matching = configuration.getRoles().getOrDefault(roleId, List.of()).contains(action);
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
         return matching;
+    }
+
+    private String getOrg(String[] segments) {
+        if (segments.length > 1) {
+            return segments[0];
+        }
+        else return "";
+    }
+
+    private String getTeam(String[] segments) {
+        if (segments.length > 2) {
+            return segments[0] + ":" + segments[1]; //{org_id}:{team_id}
+        }
+        else return "";
+    }
+
+    private String getProject(String[] segments) {
+        if (segments.length > 3) {
+            return segments[2];
+        }
+        else return "";
+    }
+
+    private String getLeaf(String[] segments) {
+        if (segments.length > 4) {
+            return segments[2] + ":" + segments[3]; //{project_id}:{[topic|sub|queue]_id}
+        }
+        else return "";
+    }
+
+    private boolean isActionOnLeafNode(ResourceAction action) {
+        ResourceType resourceType = action.getResourceType();
+        return ResourceType.TOPIC.equals(resourceType)
+                || ResourceType.SUBSCRIPTION.equals(resourceType);
     }
 }
