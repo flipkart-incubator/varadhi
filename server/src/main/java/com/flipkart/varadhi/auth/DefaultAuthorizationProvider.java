@@ -5,9 +5,11 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 
 @Slf4j
@@ -32,31 +34,31 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      */
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-        Map<ResourceType, String> resourceTypeToResourceId = resolve(action, resource);
-        return Future.succeededFuture(resourceTypeToResourceId.entrySet().stream()
+        List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
+        return Future.succeededFuture(leafToRootResourceIds.stream()
                 .anyMatch(entry -> isAuthorizedInternal(userContext.getSubject(), action, entry.getValue())));
     }
 
     /**
-     * Parse the resource path based on the action and return the final resourceIDs for each resourceType.
+     * Parse the resource path based on the action and resolve the final resourceIDs for each resourceType.
      * @param resourcePath uri of the resource
-     * @return map of resource type to its resource id for the hierarchy (empty if resource id could not be resolved)
+     * @return List of pairs having resource type to its id. List is used so that we can impose ordering from leaf to root nodes.
      */
-    private Map<ResourceType, String> resolve(ResourceAction action, String resourcePath) {
+    private List<Pair<ResourceType, String>> resolveOrderedFromLeaf(ResourceAction action, String resourcePath) {
         String[] segments = resourcePath.split("/");
 
-        // ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|etc
-        Map<ResourceType, String> resourceIdMap = new HashMap<>();
-        resourceIdMap.put(ResourceType.ROOT, ResourceType.ROOT.toString());
-        resourceIdMap.put(ResourceType.ORG, getOrg(segments));
-        resourceIdMap.put(ResourceType.TEAM, getTeam(segments));
-        resourceIdMap.put(ResourceType.PROJECT, getProject(segments));
+        // build the list in reverse order specified: ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|QUEUE
+        List<Pair<ResourceType, String>> resourceIdTuples = new ArrayList<>();
         // handle leaf node case
         if (isActionOnLeafNode(action)) {
-            resourceIdMap.put(action.getResourceType(), getLeaf(segments));
+            resourceIdTuples.add(Pair.of(action.getResourceType(), getLeaf(segments)));
         }
+        resourceIdTuples.add(Pair.of(ResourceType.PROJECT, getProject(segments)));
+        resourceIdTuples.add(Pair.of(ResourceType.TEAM, getTeam(segments)));
+        resourceIdTuples.add(Pair.of(ResourceType.ORG, getOrg(segments)));
+        resourceIdTuples.add(Pair.of(ResourceType.ROOT, ResourceType.ROOT.toString()));
 
-        return resourceIdMap;
+        return resourceIdTuples;
     }
 
     /**
