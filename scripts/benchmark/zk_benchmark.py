@@ -294,16 +294,16 @@ class Benchmark:
         self.data_loader_config = config.data_loader_config
         self.root_node = config.root_node
     
-    def run(self, skip_measure: bool = False, skip_data: bool = False, dataloading_mode: str = "mt"):
+    def run(self, skip_measure: bool = False, skip_data: bool = False, dataloading_mode: str = "mt", measure_list: bool = True, measure_get: bool = True):
         for (idx, run) in enumerate(self.config.runs):
             print("Starting benchmark run: {} [{} of {}]".format(run.name, idx+1, len(self.config.runs)))
-            self.__run(run, skip_measure, skip_data, dataloading_mode)
+            self.__run(run, skip_measure, skip_data, dataloading_mode, measure_list, measure_get)
     
     def cleanup(self):
         with ZkClientWrapper(config=self.zk_config, name="cleanup_zk") as client:
             client.clean_all()
     
-    def __run(self, run_config: BenchmarkRunConfig, skip_measure: bool, skip_data: bool, dataloading_mode: str):
+    def __run(self, run_config: BenchmarkRunConfig, skip_measure: bool, skip_data: bool, dataloading_mode: str, measure_list, measure_get):
         path = self.__get_parent_path(run_config.name)
         measure_samples = self.config.measure_samples
 
@@ -314,8 +314,10 @@ class Benchmark:
                 loader.load_data(run_config.name, run_config.child_node_config)
         
         ## Measure step
-        self.__measure_list(path, measure_samples, skip_measure)
-        self.__measure_get_data(path, measure_samples, skip_measure)
+        if measure_list:
+            self.__measure_list(path, measure_samples, skip_measure)
+        if measure_get:
+            self.__measure_get_data(path, measure_samples, skip_measure)
 
     def __measure_list(self, path: str, samples: int, skip_measure: bool):
         if skip_measure:
@@ -378,6 +380,8 @@ if __name__ == "__main__":
     parser.add_argument("--cleanup", help="cleanup znodes in root path", action="store_true")
     parser.add_argument("--skip_measure", help="should skip measurements", action="store_true")
     parser.add_argument("--skip_data", help="should skip data loading", action="store_true")
+    parser.add_argument("--measure_get", help="should skip data loading", action="store_true")
+    parser.add_argument("--measure_list", help="should skip data loading", action="store_true")
     parser.add_argument("--dl_mode", help="dataloader approach to use: st (single) | mt (multi-thread) | mp (multi-process)", type=str, default="mt")
 
     parser.add_argument("--num_threads", help="threads/processes to use for dataloading", type=int, default=4)
@@ -406,4 +410,4 @@ if __name__ == "__main__":
         if not args.num_child_nodes:
             print("ERR: please specify number of child nodes to create")
             exit()
-        benchmark.run(args.skip_measure, args.skip_data, args.dl_mode)
+        benchmark.run(args.skip_measure, args.skip_data, args.dl_mode, args.measure_list, args.measure_get)
