@@ -28,6 +28,7 @@ authorizationEnabled: true
 authorization:
   superUsers: [ "thanos" ]
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  useDefaultProvider: true
   providerOptions: >
     {
       "roles": {

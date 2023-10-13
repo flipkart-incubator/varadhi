@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
+import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -17,6 +18,7 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -61,23 +63,31 @@ public class AuthHandlers implements RouteConfigurator {
 
     AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
         if (configuration.isAuthorizationEnabled()) {
-            String providerClassName = configuration.getAuthorization().getProviderClassName();
-            AuthorizationProvider authorizationProvider = null;
-            if (providerClassName != null && !providerClassName.isBlank()) {
-                try {
-                    Class<? extends AuthorizationProvider> clazz =
-                            (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                    authorizationProvider = createAuthorizationProvider(clazz, configuration.getAuthorization()
-                            .getProviderOptions());
-                } catch (ClassNotFoundException | ClassCastException e) {
-                    throw new InvalidConfigException(e);
-                }
-            }
+            AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
             return new AuthorizationHandlerBuilder(configuration.getAuthorization()
                     .getSuperUsers(), authorizationProvider);
         } else {
             return null;
         }
+    }
+
+    private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
+        if (configuration.getAuthorization().getUseDefaultProvider()) {
+            return createAuthorizationProvider(DefaultAuthorizationProvider.class, configuration.getAuthorization()
+                    .getProviderOptions());
+        }
+        String providerClassName = configuration.getAuthorization().getProviderClassName();
+        if (StringUtils.isNotBlank(providerClassName)) {
+            try {
+                Class<? extends AuthorizationProvider> clazz =
+                        (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
+                return createAuthorizationProvider(clazz, configuration.getAuthorization()
+                        .getProviderOptions());
+            } catch (ClassNotFoundException | ClassCastException e) {
+                throw new InvalidConfigException(e);
+            }
+        }
+        return null;
     }
 
     AuthorizationProvider createAuthorizationProvider(
