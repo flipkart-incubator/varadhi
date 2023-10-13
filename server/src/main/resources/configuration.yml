@@ -23,11 +23,11 @@ authentication:
       issuer: "http://localhost:9090/default"
       ignoreExpiration: true
 
-authorizationEnabled: true
+authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider" # ignored if useDefaultProvider is true
   useDefaultProvider: true
   configFile: "src/main/resources/authorizationConfig.yml"
 

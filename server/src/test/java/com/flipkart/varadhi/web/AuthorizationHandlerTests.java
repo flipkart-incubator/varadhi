@@ -6,7 +6,6 @@ import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;

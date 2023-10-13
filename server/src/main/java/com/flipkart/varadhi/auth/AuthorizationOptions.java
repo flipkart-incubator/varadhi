@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.auth;
 
-import io.vertx.core.json.JsonObject;
 import lombok.Data;
-import lombok.Getter;
 
 import java.util.List;
 
@@ -17,7 +15,10 @@ public class AuthorizationOptions {
      */
     private String providerClassName;
 
-    private JsonObject providerOptions;
+    /**
+     * Path to yaml file having authorization provider configs.<br>
+     * It is expected that the provider will implement the logic to parse this config file.
+     */
     private String configFile;
 
     /**

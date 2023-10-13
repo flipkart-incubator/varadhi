@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.mockito.Mockito.spy;
-
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthorizationProviderTest {
 
@@ -85,7 +83,7 @@ public class DefaultAuthorizationProviderTest {
         authorizationOptions.setUseDefaultProvider(true);
         authorizationOptions.setConfigFile(configFile.toString());
 
-        defaultAuthorizationProvider = spy(new DefaultAuthorizationProvider());
+        defaultAuthorizationProvider = new DefaultAuthorizationProvider();
     }
 
     @Test
