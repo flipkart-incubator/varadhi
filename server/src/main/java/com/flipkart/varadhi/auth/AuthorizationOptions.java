@@ -16,8 +16,8 @@ public class AuthorizationOptions {
     private String providerClassName;
 
     /**
-     * Path to yaml file having authorization provider configs.<br>
-     * It is expected that the provider will implement the logic to parse this config file.
+     * Path to a file having authorization provider configs.<br>
+     * This file can be in any format, since the provider will implement the logic to parse this config file.<br>
      */
     private String configFile;
 
