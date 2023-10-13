@@ -28,6 +28,7 @@ ext {
     curator_version = "5.5.0"
     jackson_version = "2.14.2"
     jakarta_version = "3.0.2"
+    commons_lang_version = "3.11"
 }
 
 sourceSets {
@@ -49,6 +50,7 @@ dependencies {
         implementation("org.slf4j:slf4j-api:$slf4j_version")
         implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
         implementation('org.apache.logging.log4j:log4j-core:2.20.0')
+        implementation("org.apache.commons:commons-lang3:$commons_lang_version")
 
         compileOnly("org.projectlombok:lombok:$lombok_version")
         annotationProcessor("org.projectlombok:lombok:$lombok_version")
