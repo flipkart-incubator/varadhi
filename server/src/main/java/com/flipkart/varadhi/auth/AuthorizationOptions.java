@@ -1,11 +1,12 @@
 package com.flipkart.varadhi.auth;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Data;
 import lombok.Getter;
 
 import java.util.List;
 
-@Getter
+@Data
 public class AuthorizationOptions {
 
     private List<String> superUsers;
@@ -17,6 +18,7 @@ public class AuthorizationOptions {
     private String providerClassName;
 
     private JsonObject providerOptions;
+    private String configFile;
 
     /**
      * If specified as true, then the default implementation via {@link com.flipkart.varadhi.auth.DefaultAuthorizationProvider} is used.<br/>

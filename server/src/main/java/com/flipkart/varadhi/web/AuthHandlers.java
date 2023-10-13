@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
+import com.flipkart.varadhi.auth.AuthorizationOptions;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.ServerConfiguration;
@@ -73,16 +74,14 @@ public class AuthHandlers implements RouteConfigurator {
 
     private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
         if (configuration.getAuthorization().getUseDefaultProvider()) {
-            return createAuthorizationProvider(DefaultAuthorizationProvider.class, configuration.getAuthorization()
-                    .getProviderOptions());
+            return createAuthorizationProvider(DefaultAuthorizationProvider.class, configuration.getAuthorization());
         }
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
                 Class<? extends AuthorizationProvider> clazz =
                         (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                return createAuthorizationProvider(clazz, configuration.getAuthorization()
-                        .getProviderOptions());
+                return createAuthorizationProvider(clazz, configuration.getAuthorization());
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new InvalidConfigException(e);
             }
@@ -91,7 +90,7 @@ public class AuthHandlers implements RouteConfigurator {
     }
 
     AuthorizationProvider createAuthorizationProvider(
-            Class<? extends AuthorizationProvider> clazz, JsonObject options
+            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options
     ) throws InvalidConfigException {
         try {
             AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();

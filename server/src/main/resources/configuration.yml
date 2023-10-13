@@ -29,36 +29,7 @@ authorization:
   superUsers: [ "thanos" ]
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
   useDefaultProvider: true
-  providerOptions: >
-    {
-      "roles": {
-        "org.admin": [
-          "ORG_CREATE",
-          "ORG_UPDATE",
-          "ORG_GET",
-          "ORG_DELETE"
-        ],
-        "team.admin": [
-          "TEAM_CREATE",
-          "TEAM_GET",
-          "TEAM_UPDATE"
-        ]
-      },
-      "roleBindings": {
-        "flipkart": {
-          "aayush.gupta": [
-            "org.admin",
-            "team.admin"
-          ],
-          "abc": [
-            "team.admin"
-          ],
-          "xyz": [
-            "org.admin"
-          ]
-        }
-      }
-    }
+  configFile: "src/main/resources/authorizationConfig.yml"
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -15,10 +15,19 @@ import org.apache.commons.lang3.tuple.Pair;
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private DefaultAuthorizationConfiguration configuration;
+    private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(JsonObject configuration) {
-        this.configuration = configuration.mapTo(DefaultAuthorizationConfiguration.class);
+    public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
+        if (!this.initialised) {
+            synchronized (this) {
+                if (!this.initialised) {
+                    this.configuration =
+                            YamlLoader.loadConfig(authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
+                    this.initialised = true;
+                }
+            }
+        }
         return Future.succeededFuture(true);
     }
 

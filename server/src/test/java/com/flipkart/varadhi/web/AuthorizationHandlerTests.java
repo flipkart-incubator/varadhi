@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.auth.AuthorizationOptions;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
@@ -78,7 +79,7 @@ public class AuthorizationHandlerTests {
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
         @Override
-        public Future<Boolean> init(JsonObject configuration) {
+        public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture();
         }
 
