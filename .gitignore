@@ -36,3 +36,5 @@ target/
 # scratch
 .scratch.md
 scratch
+
+scripts/benchmark/infra/
