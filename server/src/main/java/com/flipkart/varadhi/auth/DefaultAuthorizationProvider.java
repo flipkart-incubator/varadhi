@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 
@@ -44,8 +45,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
         List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
-        return Future.succeededFuture(leafToRootResourceIds.stream()
-                .anyMatch(entry -> isAuthorizedInternal(userContext.getSubject(), action, entry.getValue())));
+        var result = leafToRootResourceIds.stream().filter(pair -> StringUtils.isNotBlank(pair.getValue()))
+                .anyMatch(pair -> isAuthorizedInternal(userContext.getSubject(), action, pair.getValue()));
+        return Future.succeededFuture(result);
     }
 
     /**
@@ -94,7 +96,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
         log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        boolean matching = configuration.getRoles().getOrDefault(roleId, List.of()).contains(action);
+        boolean matching = configuration.getRoles().getOrDefault(roleId, List.of()).contains(action.name());
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
@@ -102,28 +104,28 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private String getOrg(String[] segments) {
-        if (segments.length > 1) {
+        if (segments.length > 0) {
             return segments[0];
         }
         else return "";
     }
 
     private String getTeam(String[] segments) {
-        if (segments.length > 2) {
+        if (segments.length > 1) {
             return segments[0] + ":" + segments[1]; //{org_id}:{team_id}
         }
         else return "";
     }
 
     private String getProject(String[] segments) {
-        if (segments.length > 3) {
+        if (segments.length > 2) {
             return segments[2];
         }
         else return "";
     }
 
     private String getLeaf(String[] segments) {
-        if (segments.length > 4) {
+        if (segments.length > 3) {
             return segments[2] + ":" + segments[3]; //{project_id}:{[topic|sub|queue]_id}
         }
         else return "";

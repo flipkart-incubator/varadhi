@@ -7,6 +7,6 @@ import java.util.Map;
 
 @Data
 public class DefaultAuthorizationConfiguration {
-    private Map<String, List<ResourceAction>> roles;
+    private Map<String, List<String>> roles;
     private Map<String, Map<String, List<String>>> roleBindings;
 }
