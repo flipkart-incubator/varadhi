@@ -60,13 +60,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
         // build the list in reverse order specified: ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|QUEUE
         List<Pair<ResourceType, String>> resourceIdTuples = new ArrayList<>();
-        // handle leaf node case
-        if (isActionOnLeafNode(action)) {
-            resourceIdTuples.add(Pair.of(action.getResourceType(), getLeaf(segments)));
-        }
-        resourceIdTuples.add(Pair.of(ResourceType.PROJECT, getProject(segments)));
-        resourceIdTuples.add(Pair.of(ResourceType.TEAM, getTeam(segments)));
-        resourceIdTuples.add(Pair.of(ResourceType.ORG, getOrg(segments)));
+        pushLeafNode(resourceIdTuples, action, segments);
+        pushProjectNode(resourceIdTuples, segments);
+        pushTeamNode(resourceIdTuples, segments);
+        pushOrgNode(resourceIdTuples, segments);
         resourceIdTuples.add(Pair.of(ResourceType.ROOT, ResourceType.ROOT.toString()));
 
         return resourceIdTuples;
@@ -103,37 +100,27 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         return matching;
     }
 
-    private String getOrg(String[] segments) {
+    private void pushOrgNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 0) {
-            return segments[0];
+            resourceIdTuples.add(Pair.of(ResourceType.ORG, segments[0]));
         }
-        else return "";
     }
 
-    private String getTeam(String[] segments) {
+    private void pushTeamNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 1) {
-            return segments[0] + ":" + segments[1]; //{org_id}:{team_id}
+            resourceIdTuples.add(Pair.of(ResourceType.TEAM, segments[0] + ":" + segments[1])); //{org_id}:{team_id}
         }
-        else return "";
     }
 
-    private String getProject(String[] segments) {
+    private void pushProjectNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 2) {
-            return segments[2];
+            resourceIdTuples.add(Pair.of(ResourceType.PROJECT, segments[2]));
         }
-        else return "";
     }
 
-    private String getLeaf(String[] segments) {
+    private void pushLeafNode(List<Pair<ResourceType, String>> resourceIdTuples, ResourceAction action, String[] segments) {
         if (segments.length > 3) {
-            return segments[2] + ":" + segments[3]; //{project_id}:{[topic|sub|queue]_id}
+            resourceIdTuples.add(Pair.of(action.getResourceType(),segments[2] + ":" + segments[3])); //{project_id}:{[topic|sub|queue]_id}
         }
-        else return "";
-    }
-
-    private boolean isActionOnLeafNode(ResourceAction action) {
-        ResourceType resourceType = action.getResourceType();
-        return ResourceType.TOPIC.equals(resourceType)
-                || ResourceType.SUBSCRIPTION.equals(resourceType);
     }
 }
