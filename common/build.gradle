@@ -6,4 +6,5 @@ dependencies {
     implementation("io.vertx:vertx-core")
     implementation('org.yaml:snakeyaml:2.0')
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
 }
