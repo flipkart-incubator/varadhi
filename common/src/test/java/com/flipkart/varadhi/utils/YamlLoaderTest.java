@@ -9,6 +9,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 
 public class YamlLoaderTest {
 
@@ -54,6 +56,31 @@ public class YamlLoaderTest {
         });
     }
 
+    @Test
+    public void testLoadConfig_GenericConfig() throws IOException {
+        Path configFile = tempDir.resolve("config.yaml");
+        String yamlContent = """
+                ---
+                genericConf:
+                  k1:
+                  - ABC
+                  - XYZ
+                  k2:
+                  - XYZ
+                """;
+        Files.write(configFile, yamlContent.getBytes());
+
+        // Load the config using YamlLoader
+        GenericConfig config = YamlLoader.loadConfig(configFile.toString(), GenericConfig.class);
+
+        // Verify the loaded config
+        Assertions.assertNotNull(config);
+        Assertions.assertTrue(config.getGenericConf().containsKey("k1"));
+        Assertions.assertNotNull(config.getGenericConf().get("k1").get(0));
+        Assertions.assertNotNull(config.getGenericConf().get("k1").get(0).getField());
+        Assertions.assertEquals("abc", config.getGenericConf().get("k1").get(0).getField());
+    }
+
     // Sample config class for testing
     public static class Config {
         private String message;
@@ -64,6 +91,33 @@ public class YamlLoaderTest {
 
         public void setMessage(String message) {
             this.message = message;
+        }
+    }
+
+    public static class GenericConfig {
+        private Map<String, List<MyEnum>> genericConf;
+
+        public Map<String, List<MyEnum>> getGenericConf() {
+            return genericConf;
+        }
+
+        public void setGenericConf(Map<String, List<MyEnum>> conf) {
+            genericConf = conf;
+        }
+    }
+
+    public enum MyEnum {
+        ABC("abc"),
+        XYZ("xyz");
+
+        private final String field;
+
+        public String getField() {
+            return field;
+        }
+
+        MyEnum(String field) {
+            this.field = field;
         }
     }
 }
