@@ -2,6 +2,8 @@ package com.flipkart.varadhi.utils;
 
 
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -61,12 +63,13 @@ public class YamlLoaderTest {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent = """
                 ---
-                genericConf:
+                nestedGenericConf:
                   k1:
                   - ABC
                   - XYZ
-                  k2:
-                  - XYZ
+                genericConf:
+                - ABC
+                - XYZ
                 """;
         Files.write(configFile, yamlContent.getBytes());
 
@@ -75,10 +78,12 @@ public class YamlLoaderTest {
 
         // Verify the loaded config
         Assertions.assertNotNull(config);
-        Assertions.assertTrue(config.getGenericConf().containsKey("k1"));
-        Assertions.assertNotNull(config.getGenericConf().get("k1").get(0));
-        Assertions.assertNotNull(config.getGenericConf().get("k1").get(0).getField());
-        Assertions.assertEquals("abc", config.getGenericConf().get("k1").get(0).getField());
+        Assertions.assertTrue(config.getNestedGenericConf().containsKey("k1"));
+        Assertions.assertNotNull(config.getNestedGenericConf().get("k1").get(0));
+        Assertions.assertEquals("abc", config.getNestedGenericConf().get("k1").get(0).getField());
+
+        Assertions.assertNotNull(config.getGenericConf().get(0));
+        Assertions.assertEquals("abc", config.getGenericConf().get(0).getField());
     }
 
     // Sample config class for testing
@@ -94,16 +99,11 @@ public class YamlLoaderTest {
         }
     }
 
+    @Getter
+    @Setter
     public static class GenericConfig {
-        private Map<String, List<MyEnum>> genericConf;
-
-        public Map<String, List<MyEnum>> getGenericConf() {
-            return genericConf;
-        }
-
-        public void setGenericConf(Map<String, List<MyEnum>> conf) {
-            genericConf = conf;
-        }
+        private Map<String, List<MyEnum>> nestedGenericConf;
+        private List<MyEnum> genericConf;
     }
 
     public enum MyEnum {
