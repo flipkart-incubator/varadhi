@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":messaging"))
     implementation(project(":entities"))
+    implementation(project(":authz"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.apache.logging.log4j:log4j-core")

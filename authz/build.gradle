@@ -1,0 +1,18 @@
+plugins {
+    id 'com.flipkart.varadhi.java-library-conventions'
+}
+
+dependencies {
+    implementation(project(':common'))
+    implementation(project(":messaging"))
+    implementation(project(':entities'))
+
+    implementation("io.vertx:vertx-core")
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
+    implementation("org.apache.logging.log4j:log4j-core")
+    implementation("org.apache.commons:commons-lang3")
+    implementation('com.fasterxml.jackson.core:jackson-databind')
+
+    testImplementation("io.vertx:vertx-junit5")
+    testImplementation("io.vertx:vertx-web-client")
+}

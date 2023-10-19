@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.auth;
+package com.flipkart.varadhi.authz;
 
 import lombok.Data;
 
@@ -22,7 +22,7 @@ public class AuthorizationOptions {
     private String configFile;
 
     /**
-     * If specified as true, then the default implementation via {@link com.flipkart.varadhi.auth.DefaultAuthorizationProvider} is used.<br/>
+     * If specified as true, then the default implementation via {@link DefaultAuthorizationProvider} is used.<br/>
      * {@link AuthorizationOptions#providerClassName} value is ignored.
      */
     private Boolean useDefaultProvider;

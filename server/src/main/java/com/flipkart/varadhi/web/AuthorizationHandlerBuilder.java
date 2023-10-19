@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.auth.AuthorizationProvider;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;

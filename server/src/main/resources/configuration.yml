@@ -27,7 +27,7 @@ authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider" # ignored if useDefaultProvider is true
+  providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider" # ignored if useDefaultProvider is true
   useDefaultProvider: true
   configFile: "src/main/resources/authorizationConfig.yml"
 
