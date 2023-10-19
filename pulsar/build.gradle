@@ -5,6 +5,5 @@ dependencies {
     implementation(project(':common'))
     implementation(project(':core'))
     implementation(project(':entities'))
-    implementation('org.yaml:snakeyaml:2.0')
     implementation('org.apache.pulsar:pulsar-client-admin:2.10.0')
 }
