@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -64,7 +65,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         pushProjectNode(resourceIdTuples, segments);
         pushTeamNode(resourceIdTuples, segments);
         pushOrgNode(resourceIdTuples, segments);
-        resourceIdTuples.add(Pair.of(ResourceType.ROOT, ResourceType.ROOT.toString()));
 
         return resourceIdTuples;
     }
@@ -85,15 +85,15 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 .anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
-    private List<String> getRolesForSubject(String subject, String resourceId) {
+    private Set<String> getRolesForSubject(String subject, String resourceId) {
         return configuration.getRoleBindings()
                 .getOrDefault(resourceId, Map.of())
-                .getOrDefault(subject, List.of());
+                .getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
         log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        boolean matching = configuration.getRoles().getOrDefault(roleId, List.of()).contains(action.name());
+        boolean matching = configuration.getRoles().getOrDefault(roleId, Set.of()).contains(action.name());
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
