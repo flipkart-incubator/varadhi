@@ -9,7 +9,6 @@ dependencies {
     implementation("com.google.guava:guava")
     implementation("io.micrometer:micrometer-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("org.apache.commons:commons-text:1.10.0")
     testImplementation("io.micrometer:micrometer-registry-otlp")
     testImplementation(testFixtures(project(':core')))
 }

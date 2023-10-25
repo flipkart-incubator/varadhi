@@ -7,6 +7,9 @@ import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+
+import java.util.concurrent.ExecutionException;
 
 public class InternalTopicCache {
 
@@ -25,13 +28,16 @@ public class InternalTopicCache {
             VaradhiTopic varadhiTopic = this.varadhiTopicCache.get(varadhiTopicName, () ->
                     this.varadhiTopicService.get(varadhiTopicName));
             return varadhiTopic.getProduceTopicForRegion(region);
-        } catch (Exception e) {
-            Throwable realFailure = e.getCause() == null ? e : e.getCause();
+        } catch (ExecutionException | UncheckedExecutionException e) {
+            Throwable realFailure = e.getCause();
             if (realFailure instanceof VaradhiException) {
                 throw (VaradhiException) realFailure;
             }
             throw new ProduceException(
-                    String.format("Failed to get Produce Topic(%s): %s", varadhiTopicName, realFailure.getMessage()),
+                    String.format(
+                            "Failed to get topic (%s) for message produce: %s", varadhiTopicName,
+                            realFailure.getMessage()
+                    ),
                     realFailure
             );
         }

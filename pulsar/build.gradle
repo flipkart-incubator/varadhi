@@ -7,7 +7,15 @@ dependencies {
     implementation(project(":entities"))
     implementation("org.yaml:snakeyaml:2.0")
     implementation("org.apache.pulsar:pulsar-client-admin:2.10.0")
-    testImplementation(testFixtures(project(':entities')))
+    implementation("org.apache.commons:commons-text:1.10.0")
     testE2EImplementation("org.apache.commons:commons-text:1.10.0")
-    testE2EImplementation(testFixtures(project(':entities')))
 }
+
+// reference -- https://github.com/gradle/gradle/issues/17236
+//  This seems to be happening because of E2E resources, however their source directory
+//   has been set appropriately, to avoid duplicates.
+// TODO:: this might need to move common conventions file.
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.WARN
+}
+

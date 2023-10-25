@@ -1,11 +1,13 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProducerResult;
+import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
+import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.api.ProducerAccessMode;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
@@ -13,12 +15,17 @@ import org.apache.pulsar.client.api.TypedMessageBuilder;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static com.flipkart.varadhi.MessageConstants.Headers.GROUP_ID;
 import static com.flipkart.varadhi.pulsar.Constants.Producer.*;
+import static org.apache.commons.text.CharacterPredicates.DIGITS;
+import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class PulsarProducer implements Producer {
 
     private final ClientProvider clientProvider;
+    private final RandomStringGenerator stringGenerator;
     private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
@@ -27,31 +34,33 @@ public class PulsarProducer implements Producer {
     )
             throws PulsarClientException {
         this.clientProvider = clientProvider;
+        this.stringGenerator =
+                new RandomStringGenerator.Builder().withinRange('0', 'z').filteredBy(DIGITS, LETTERS).build();
         this.pulsarProducer = getProducer(storageTopic, producerOptions, hostName);
     }
 
     @Override
-    public CompletableFuture<ProducerResult> ProduceAsync(String partitioningKey, Message message) {
+    public CompletableFuture<Offset> ProduceAsync(Message message) {
 
-        CompletableFuture<ProducerResult> produceFuture = new CompletableFuture<>();
+        String partitioningKey = getPartitioningKey(message);
 
         TypedMessageBuilder<byte[]> messageBuilder =
                 pulsarProducer.newMessage().key(partitioningKey).value(message.getPayload());
 
         message.getRequestHeaders().asMap()
-                .forEach((key, values) -> values.forEach(value -> messageBuilder.property(key, value)));
+                .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 
-        messageBuilder.sendAsync().whenComplete((producerResult, throwable) -> {
-            if (producerResult != null) {
-                produceFuture.complete(new PulsarProducerResult(producerResult));
-            } else {
-                // In general Pulsar client and producer, auto-reconnects so this should be fine.Might need to
-                // refresh/re-create producer (and possibly client) if there are fatal errors, currently these
-                // failures are unknown.
-                produceFuture.completeExceptionally(throwable);
-            }
-        });
-        return produceFuture;
+        // In general Pulsar client and producer, auto-reconnects so this should be fine.Might need to
+        // refresh/re-create producer (and possibly client) if there are fatal errors, currently these
+        // failures are unknown.
+        return messageBuilder.sendAsync().thenApply(PulsarOffset::new);
+    }
+
+    private String getPartitioningKey(Message message) {
+        if (message.hasHeader(GROUP_ID)) {
+            return message.getHeader(GROUP_ID);
+        }
+        return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }
 
 
@@ -83,7 +92,7 @@ public class PulsarProducer implements Producer {
         //
         // Calculated:: Topic capacity dependent, (primitive calculation by Varadhi).
         // maxPendingMessages, maxPendingMessagesAcrossPartitions
-        // batchingMaxPublishDelay, batchingMaxMessages, batchingMaxBytes,
+        // batchingMaxMessages, batchingMaxBytes,
 
         Map<String, Object> producerConfig = options.asConfigMap();
         producerConfig.put("topicName", topic.getName());
@@ -97,27 +106,30 @@ public class PulsarProducer implements Producer {
         // maxPendingMessages and maxPendingMessagesAcrossPartitions are kept same assuming worst case.
         producerConfig.put("maxPendingMessagesAcrossPartitions", maxPendingMessages);
         producerConfig.put("batchingMaxMessages", batchingMaxMessages);
-        producerConfig.put("batchingMaxBytes", batchingMaxMessages * getBatchingMaxBytes(batchingMaxMessages, topic));
+        producerConfig.put("batchingMaxBytes", getBatchingMaxBytes(batchingMaxMessages, topic));
         return producerConfig;
     }
 
-    private String getProducerName(String topicName, String hostName) {
-        String topicSuffix = topicName.split("/")[4];
-        return String.format("%s.%s", topicSuffix, hostName);
+    public static String getProducerName(String topicName, String hostName) {
+        return String.format("%s.%s", topicName, hostName);
     }
 
-    private int getMaxPendingMessages(int topicMaxQps) {
-        // Assumption: Don't allow queue to build more than 1 second worth of messages.
+    public static int getMaxPendingMessages(int topicMaxQps) {
+        // Assumption:
+        // 1. Don't allow queue to build more than 1 second worth of messages.
         // with bound [min, max]
-        // TODO:: This impacts memory so Discuss and close it.
+        // 2. It also assumes worst case in terms of distribution i.e. all messages are landing to the same producer.
+        // TODO::
+        // 1. This impacts memory so Discuss and close it.
+        // 2. This needs further tuning based on benchmarking and further understanding of the behavior.
         return Math.min(MAX_PENDING_MESSAGES, Math.max(MIN_PENDING_MESSAGES, topicMaxQps));
     }
 
-    private int getBatchMaxMessages(int topicMaxQps, int maxPublishDelayMs) {
+    public static int getBatchMaxMessages(int topicMaxQps, int maxPublishDelayMs) {
         return Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, ((topicMaxQps * maxPublishDelayMs) / 1000)));
     }
 
-    private int getBatchingMaxBytes(int batchingMaxMessages, PulsarStorageTopic topic) {
+    public static int getBatchingMaxBytes(int batchingMaxMessages, PulsarStorageTopic topic) {
         return batchingMaxMessages * (topic.getMaxThroughputKBps() * 1000 / topic.getMaxQPS());
     }
 

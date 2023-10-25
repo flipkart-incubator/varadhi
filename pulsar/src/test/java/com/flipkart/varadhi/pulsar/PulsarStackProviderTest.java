@@ -2,7 +2,7 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.CapacityHelper;
+import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
@@ -79,7 +79,7 @@ public class PulsarStackProviderTest {
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, CapacityHelper.getDefault());
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, CapacityPolicy.getDefault());
         Assertions.assertEquals(
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
                 topic.getName()
@@ -106,7 +106,7 @@ public class PulsarStackProviderTest {
         doReturn(topics).when(pulsarAdmin).topics();
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
         PulsarStorageTopic pulsarStorageTopic =
-                storageTopicFactory.getTopic(topicName, project, CapacityHelper.getDefault());
+                storageTopicFactory.getTopic(topicName, project, CapacityPolicy.getDefault());
         storageTopicService.create(pulsarStorageTopic);
         verify(topics, times(1)).createPartitionedTopic(anyString(), eq(1));
     }

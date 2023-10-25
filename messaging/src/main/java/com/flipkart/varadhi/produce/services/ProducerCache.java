@@ -7,6 +7,9 @@ import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+
+import java.util.concurrent.ExecutionException;
 
 public class ProducerCache {
     private final ProducerFactory producerFactory;
@@ -24,16 +27,18 @@ public class ProducerCache {
                     storageTopic.getName(),
                     () -> producerFactory.getProducer(storageTopic)
             );
-        } catch (Exception e) {
-            Throwable realFailure = e.getCause() == null ? e : e.getCause();
+        } catch (ExecutionException | UncheckedExecutionException e) {
+            Throwable realFailure = e.getCause();
             if (realFailure instanceof VaradhiException) {
                 throw (VaradhiException) realFailure;
             }
             throw new ProduceException(
                     String.format(
-                            "Failed to create Pulsar producer for %s. %s", storageTopic.getName(),
+                            "Failed to create producer for topic (%s): %s", storageTopic.getName(),
                             realFailure.getMessage()
-                    ), realFailure);
+                    ),
+                    realFailure
+            );
         }
     }
 }

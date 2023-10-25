@@ -39,7 +39,7 @@ public class VaradhiTopicServiceTest {
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
-        capacityPolicy = CapacityHelper.getDefault();
+        capacityPolicy = CapacityPolicy.getDefault();
         PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
         Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
     }

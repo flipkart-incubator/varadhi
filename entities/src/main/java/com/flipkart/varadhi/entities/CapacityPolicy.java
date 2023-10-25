@@ -11,4 +11,8 @@ public class CapacityPolicy {
         this.maxQPS = maxQPS;
         this.maxThroughputKBps = maxThroughputKBps;
     }
+
+    public static CapacityPolicy getDefault() {
+        return new CapacityPolicy(100, 100);
+    }
 }

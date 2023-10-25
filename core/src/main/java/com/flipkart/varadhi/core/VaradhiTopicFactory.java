@@ -47,6 +47,6 @@ public class VaradhiTopicFactory {
 
     private CapacityPolicy getDefaultCapacityPolicy() {
         //TODO:: make default capacity config based instead of hard coding.
-        return new CapacityPolicy(100, 100);
+        return CapacityPolicy.getDefault();
     }
 }

@@ -69,7 +69,7 @@ public class ProduceHandlersTest extends WebTestBase {
 
     @Test
     public void testProduceAndDuplicateMessage() throws InterruptedException {
-        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyProducerResult(10), 10);
+        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -187,7 +187,7 @@ public class ProduceHandlersTest extends WebTestBase {
 
     @Test
     public void testProduceHeaderOrdering() throws InterruptedException {
-        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyProducerResult(10), 10);
+        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);

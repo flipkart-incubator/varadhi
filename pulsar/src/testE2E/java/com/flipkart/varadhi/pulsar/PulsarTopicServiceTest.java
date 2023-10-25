@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.entities.CapacityHelper;
+import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
@@ -30,7 +30,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityHelper.getDefault());
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
         topicService.create(pt);
         validateTopicExists(topicFQDN);
     }
@@ -38,7 +38,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreateTopic_Duplicate() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityHelper.getDefault());
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
         topicService.create(pt);
         MessagingException m = Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt));
         Throwable realFailure = m.getCause();

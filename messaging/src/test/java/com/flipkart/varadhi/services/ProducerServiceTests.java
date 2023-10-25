@@ -68,7 +68,7 @@ public class ProducerServiceTests {
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        verify(producer, times(1)).ProduceAsync(any(), eq(msg1));
+        verify(producer, times(1)).ProduceAsync(eq(msg1));
 
         Message msg2 = getMessage(100, 1, null, 2000, ctx);
         result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project, topic), ctx);
@@ -76,7 +76,7 @@ public class ProducerServiceTests {
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         Assertions.assertTrue(rc.produceResult.getProducerLatency() > 0);
-        verify(producer, times(1)).ProduceAsync(any(), eq(msg2));
+        verify(producer, times(1)).ProduceAsync(eq(msg2));
         verify(producerFactory, times(1)).getProducer(any());
     }
 
@@ -92,7 +92,7 @@ public class ProducerServiceTests {
                 ResourceNotFoundException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
-        verify(producer, never()).ProduceAsync(any(), any());
+        verify(producer, never()).ProduceAsync(any());
     }
 
     @Test
@@ -106,8 +106,9 @@ public class ProducerServiceTests {
                 ProduceException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
-        Assertions.assertEquals("Failed to get Produce Topic(project1.topic1): Unknown error.", e.getMessage());
-        verify(producer, never()).ProduceAsync(any(), any());
+        Assertions.assertEquals(
+                "Failed to get topic (project1.topic1) for message produce: Unknown error.", e.getMessage());
+        verify(producer, never()).ProduceAsync(any());
     }
 
     @Test
@@ -152,7 +153,7 @@ public class ProducerServiceTests {
         Assertions.assertNull(rc.throwable);
         Assertions.assertEquals(status, rc.produceResult.getProduceStatus().status());
         Assertions.assertEquals(message, rc.produceResult.getProduceStatus().message());
-        verify(producer, never()).ProduceAsync(any(), any());
+        verify(producer, never()).ProduceAsync(any());
     }
 
     @Test
@@ -167,7 +168,7 @@ public class ProducerServiceTests {
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
         Assertions.assertEquals(
-                "Failed to create Pulsar producer for project1.topic1. Unknown Error.", pe.getMessage());
+                "Failed to create producer for topic (project1.topic1): Unknown Error.", pe.getMessage());
     }
 
     @Test
@@ -181,9 +182,9 @@ public class ProducerServiceTests {
                 RuntimeException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
-        verify(producer, never()).ProduceAsync(any(), any());
+        verify(producer, never()).ProduceAsync(any());
         Assertions.assertEquals(
-                "Failed to create Pulsar producer for project1.topic1. Topic doesn't exists.", re.getMessage());
+                "Failed to create producer for topic (project1.topic1): Topic doesn't exists.", re.getMessage());
     }
 
     @Test
