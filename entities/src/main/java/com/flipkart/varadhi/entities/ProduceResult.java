@@ -11,28 +11,28 @@ public class ProduceResult {
 
     private final String messageId;
     private final ProduceStatus produceStatus;
-    private final Optional<ProducerResult> producerResult;
+    private final Optional<Offset> produceOffset;
     private final int producerLatency;
 
     private ProduceResult(
-            String messageId, ProducerResult producerResult, ProduceStatus produceStatus, int producerLatency
+            String messageId, Offset produceOffset, ProduceStatus produceStatus, int producerLatency
     ) {
         this.messageId = messageId;
-        this.producerResult = Optional.of(producerResult);
+        this.produceOffset = Optional.of(produceOffset);
         this.producerLatency = producerLatency;
         this.produceStatus = produceStatus;
     }
 
     private ProduceResult(String messageId, ProduceStatus produceStatus, int producerLatency) {
         this.messageId = messageId;
-        this.producerResult = Optional.empty();
+        this.produceOffset = Optional.empty();
         this.producerLatency = producerLatency;
         this.produceStatus = produceStatus;
     }
 
-    public static ProduceResult onSuccess(String messageId, ProducerResult producerResult, int producerLatency) {
+    public static ProduceResult onSuccess(String messageId, Offset produceOffset, int producerLatency) {
         return new ProduceResult(
-                messageId, producerResult, new ProduceStatus(Status.Success, "Completed"), producerLatency);
+                messageId, produceOffset, new ProduceStatus(Status.Success, "Completed"), producerLatency);
     }
 
     public static ProduceResult onProducerFailure(String messageId, int producerLatency, String errorMessage) {
