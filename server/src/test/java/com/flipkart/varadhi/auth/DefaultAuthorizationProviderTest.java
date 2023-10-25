@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.auth;
 
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.util.TestUtil;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -52,9 +53,6 @@ public class DefaultAuthorizationProviderTest {
                           topic.read:
                             - TOPIC_GET
                         roleBindings:
-                          varadhi.root:
-                            root_usr:
-                              - org.admin
                           flipkart:
                             abc:
                               - team.admin
@@ -80,7 +78,6 @@ public class DefaultAuthorizationProviderTest {
         Files.write(configFile, configContent.getBytes());
 
         authorizationOptions = new AuthorizationOptions();
-        authorizationOptions.setUseDefaultProvider(true);
         authorizationOptions.setConfigFile(configFile.toString());
 
         defaultAuthorizationProvider = new DefaultAuthorizationProvider();
@@ -94,6 +91,13 @@ public class DefaultAuthorizationProviderTest {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
                 }));
+    }
+
+    @Test
+    public void testNotInit() {
+        Assertions.assertThrows(InvalidConfigException.class, () ->
+                defaultAuthorizationProvider.isAuthorized(
+                        TestUtil.testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
     }
 
     @Test
@@ -127,19 +131,11 @@ public class DefaultAuthorizationProviderTest {
     }
 
     @Test
-    public void testIsAuthorized_UserRootNodeRoles(VertxTestContext testContext) {
-        Checkpoint checkpoint = testContext.checkpoint(2);
+    public void testIsAuthorized_UserNoNodeRoles(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
 
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("root_usr", false),
-                        ResourceAction.ORG_CREATE, ""
-                ))
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("xyz", false),
                         ResourceAction.ORG_CREATE, ""
                 )) // xyz has org.admin but not at root level
