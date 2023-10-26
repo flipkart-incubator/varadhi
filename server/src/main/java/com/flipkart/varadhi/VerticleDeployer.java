@@ -79,6 +79,7 @@ public class VerticleDeployer {
         this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
+        
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getVaradhiOptions(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();

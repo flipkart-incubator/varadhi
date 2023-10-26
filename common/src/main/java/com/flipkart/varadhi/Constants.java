@@ -1,9 +1,10 @@
 package com.flipkart.varadhi;
 
 public class Constants {
-    public static final int INITIAL_VERSION = 0;
-    public final static String NAME_SEPARATOR = ".";
-    public final static String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
+    public static final String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
+    public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
+    public static int INITIAL_VERSION = 0;
+    public static String NAME_SEPARATOR = ".";
 
     public static class PathParams {
         public static final String REQUEST_PATH_PARAM_ORG = "org";

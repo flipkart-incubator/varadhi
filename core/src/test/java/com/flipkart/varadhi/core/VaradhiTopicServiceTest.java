@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -28,6 +25,7 @@ public class VaradhiTopicServiceTest {
     private final String region = "local";
     private final String topicName = "testTopic";
     private String vTopicName;
+    private CapacityPolicy capacityPolicy;
 
 
     @BeforeEach
@@ -41,8 +39,9 @@ public class VaradhiTopicServiceTest {
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
-        PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
-        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
+        capacityPolicy = CapacityPolicy.getDefault();
+        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
+        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
     }
 
     @Test
@@ -53,7 +52,7 @@ public class VaradhiTopicServiceTest {
         verify(metaStore, times(1)).createVaradhiTopic(varadhiTopic);
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         verify(storageTopicService, times(1)).create(st);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, null);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy);
     }
 
     @Test
@@ -88,7 +87,7 @@ public class VaradhiTopicServiceTest {
                 1,
                 project.getName(),
                 true,
-                null
+                capacityPolicy
         );
     }
 }

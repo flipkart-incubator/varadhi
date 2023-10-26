@@ -54,4 +54,25 @@ public class HeaderUtilsTest {
         Assertions.assertTrue(copiedHeaders.get("header1").isEmpty());
         Assertions.assertTrue(copiedHeaders.get("Header1").isEmpty());
     }
+
+    @Test
+    public void ensureHeaderOrderIsMaintained() {
+        MultiMap headers = HeadersMultiMap.headers();
+        headers.add("x_multi_value1", "multi_value1_2");
+        headers.add("x_multi_value1", "multi_value1_1");
+        headers.add("x_Multi_Value2", "multi_value2_1");
+        headers.add("x_multi_value2", "multi_Value2_1");
+        headers.add("x_multi_value1", "multi_value1_3");
+        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        String[] values = copiedHeaders.get("x_multi_value1").toArray(new String[]{});
+        Assertions.assertEquals(3, values.length);
+        Assertions.assertEquals("multi_value1_2", values[0]);
+        Assertions.assertEquals("multi_value1_1", values[1]);
+        Assertions.assertEquals("multi_value1_3", values[2]);
+
+        values = copiedHeaders.get("x_multi_value2").toArray(new String[]{});
+        Assertions.assertEquals(2, values.length);
+        Assertions.assertEquals("multi_value2_1", values[0]);
+        Assertions.assertEquals("multi_Value2_1", values[1]);
+    }
 }

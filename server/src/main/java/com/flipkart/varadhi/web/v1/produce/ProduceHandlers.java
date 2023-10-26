@@ -5,6 +5,7 @@ import com.flipkart.varadhi.config.VaradhiOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.utils.HeaderUtils;
+import com.flipkart.varadhi.utils.MessageHelper;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -77,10 +78,12 @@ public class ProduceHandlers implements RouteProvider {
 
     public void produce(RoutingContext ctx) {
 
-        // TODO:: Discuss, instead of copying the payload, pointer itself can be passed through Message.
-        //  This is to save additional data copy below.
-        //  However, this will require to add Vertx Buffer to Message entity, though details can be abstracted from users.
+        // TODO:: Below is making extra copy, this needs to be avoided.
+        // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
+        // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
+//         TODO:: Add project validations.
+
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
@@ -139,6 +142,7 @@ public class ProduceHandlers implements RouteProvider {
         requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(produceContext.getRequestContext().getRequestTimestamp()));
         requestHeaders.put(PRODUCE_IDENTITY, produceContext.getRequestContext().getProduceIdentity());
         requestHeaders.put(PRODUCE_REGION, produceContext.getTopicContext().getRegion());
+        MessageHelper.ensureRequiredHeaders(requestHeaders);
         return new Message(payload, requestHeaders);
     }
 

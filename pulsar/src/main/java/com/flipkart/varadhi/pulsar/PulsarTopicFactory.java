@@ -17,8 +17,7 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
             CapacityPolicy capacityPolicy
     ) {
         String pulsarTopicName = getPulsarTopicName(topicName, project);
-        int partitionCount = getPartitionCount(capacityPolicy);
-        return new PulsarStorageTopic(pulsarTopicName, partitionCount);
+        return PulsarStorageTopic.from(pulsarTopicName, capacityPolicy);
     }
 
     private static String getPulsarTopicName(String topicName, Project project) {
@@ -26,8 +25,4 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
         return String.format("%s://%s/%s/%s", TOPIC_SCHEMA, project.getOrg(), project.getName(), topicName);
     }
 
-    private static int getPartitionCount(CapacityPolicy capacityPolicy) {
-        //TODO::This should be based on capacity planner for the underlying messaging stack.
-        return 1;
-    }
 }

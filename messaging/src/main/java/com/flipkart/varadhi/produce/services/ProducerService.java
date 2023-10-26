@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 
+
 @Slf4j
 public class ProducerService {
     private final ProducerCache producerCache;
@@ -43,12 +44,12 @@ public class ProducerService {
         } catch (VaradhiException e) {
             throw e;
         } catch (Exception e) {
-            throw new ProduceException("Produce failed due to internal error.", e);
+            throw new ProduceException(String.format("Produce failed due to internal error: %s", e.getMessage()), e);
         }
     }
 
 
-    private CompletableFuture<AsyncResult<ProducerResult>> produceToStorageProducer(
+    private CompletableFuture<AsyncResult<Offset>> produceToStorageProducer(
             Producer producer, ProduceContext context, String topic, Message message
     ) {
         long produceStart = System.currentTimeMillis();
