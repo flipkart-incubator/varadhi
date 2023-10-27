@@ -10,22 +10,3 @@ dependencies {
     implementation('org.glassfish.expressly:expressly:5.0.0')
     testImplementation(project(":pulsar"))
 }
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = "${projectGroupId}"
-            artifactId = "${project.name}"
-            version = "${version}"
-            from components.java
-
-            pom {
-                name = "${project.name}"
-            }
-        }
-    }
-
-    repositories {
-        maven { url = mavenPublishUrl }
-    }
-}

@@ -8,3 +8,25 @@ plugins {
     // Apply the maven-publish to allow deploying to maven artifactories
     id 'maven-publish'
 }
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "${projectGroupId}"
+            artifactId = "${project.name}"
+            version = "${version}"
+            from components.java
+
+            pom {
+                name = "${project.name}"
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = mavenPublishUrl.replace('"', '') // important to strip double-quotes from this otherwise the url will be dealt as a file url
+        }
+    }
+}

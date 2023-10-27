@@ -6,22 +6,3 @@ dependencies {
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
 }
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = "${projectGroupId}"
-            artifactId = "${project.name}"
-            version = "${version}"
-            from components.java
-
-            pom {
-                name = "${project.name}"
-            }
-        }
-    }
-
-    repositories {
-        maven { url = mavenPublishUrl }
-    }
-}
