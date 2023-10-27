@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 import static java.net.HttpURLConnection.*;
@@ -31,7 +32,7 @@ public class AuthorizationHandlerBuilder {
         if (superUsers != null) {
             this.superUsers.addAll(superUsers);
         }
-        this.provider = provider != null ? provider : new AuthorizationProvider.NoAuthorizationProvider();
+        this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
     }
 
     public AuthorizationHandler build(PermissionAuthorization requiredAuthorization) {

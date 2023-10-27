@@ -27,8 +27,7 @@ authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider" # ignored if useDefaultProvider is true
-  useDefaultProvider: true
+  providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider"
   configFile: "src/main/resources/authorizationConfig.yml"
 
 messagingStackOptions:

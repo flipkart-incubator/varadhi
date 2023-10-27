@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation("io.vertx:vertx-core")
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
 }

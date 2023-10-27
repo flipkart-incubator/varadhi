@@ -4,16 +4,17 @@ import com.flipkart.varadhi.auth.DefaultAuthorizationConfiguration;
 import com.flipkart.varadhi.auth.ResourceAction;
 import com.flipkart.varadhi.auth.ResourceType;
 import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.Set;
 
 
 @Slf4j
@@ -22,15 +23,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
+    public synchronized Future<Boolean> init(AuthorizationOptions authorizationOptions) {
         if (!this.initialised) {
-            synchronized (this) {
-                if (!this.initialised) {
-                    this.configuration =
-                            YamlLoader.loadConfig(authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
-                    this.initialised = true;
-                }
-            }
+            this.configuration =
+                    YamlLoader.loadConfig(
+                            authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
+            this.initialised = true;
         }
         return Future.succeededFuture(true);
     }
@@ -47,6 +45,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      */
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
+        if (!initialised) {
+            throw new InvalidConfigException("Default Authorization Provider is not initialised.");
+        }
         List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
         var result = leafToRootResourceIds.stream().filter(pair -> StringUtils.isNotBlank(pair.getValue()))
                 .anyMatch(pair -> isAuthorizedInternal(userContext.getSubject(), action, pair.getValue()));
@@ -55,7 +56,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     /**
      * Parse the resource path based on the action and resolve the final resourceIDs for each resourceType.
+     *
      * @param resourcePath uri of the resource
+     *
      * @return List of pairs having resource type to its id. List is used so that we can impose ordering from leaf to root nodes.
      */
     private List<Pair<ResourceType, String>> resolveOrderedFromLeaf(ResourceAction action, String resourcePath) {
@@ -67,16 +70,17 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         pushProjectNode(resourceIdTuples, segments);
         pushTeamNode(resourceIdTuples, segments);
         pushOrgNode(resourceIdTuples, segments);
-        resourceIdTuples.add(Pair.of(ResourceType.ROOT, ResourceType.ROOT.toString()));
 
         return resourceIdTuples;
     }
 
     /**
      * Authorize subject against a single resourceId
-     * @param subject user identifier to be authorized
-     * @param action action requested by the subject which needs authorization
+     *
+     * @param subject    user identifier to be authorized
+     * @param action     action requested by the subject which needs authorization
      * @param resourceId resource id under whose scope the check will be performed
+     *
      * @return True, if subject is allowed to perform action under this resource node, else False
      */
     private boolean isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
@@ -88,15 +92,15 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 .anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
-    private List<String> getRolesForSubject(String subject, String resourceId) {
+    private Set<String> getRolesForSubject(String subject, String resourceId) {
         return configuration.getRoleBindings()
                 .getOrDefault(resourceId, Map.of())
-                .getOrDefault(subject, List.of());
+                .getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
         log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        boolean matching = configuration.getRoles().getOrDefault(roleId, List.of()).contains(action.name());
+        boolean matching = configuration.getRoles().getOrDefault(roleId, Set.of()).contains(action.name());
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
@@ -121,9 +125,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         }
     }
 
-    private void pushLeafNode(List<Pair<ResourceType, String>> resourceIdTuples, ResourceAction action, String[] segments) {
+    private void pushLeafNode(
+            List<Pair<ResourceType, String>> resourceIdTuples, ResourceAction action, String[] segments
+    ) {
         if (segments.length > 3) {
-            resourceIdTuples.add(Pair.of(action.getResourceType(),segments[2] + ":" + segments[3])); //{project_id}:{[topic|sub|queue]_id}
+            resourceIdTuples.add(Pair.of(action.getResourceType(),
+                    segments[2] + ":" + segments[3])); //{project_id}:{[topic|sub|queue]_id}
         }
     }
 }

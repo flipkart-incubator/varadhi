@@ -25,11 +25,15 @@ public class FailureHandler implements Handler<RoutingContext> {
                     overrideStatusCode(ctx.statusCode()) ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
             String errorMsg =
                     overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
-
-            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(),
-                    statusCode,
-                    errorMsg
-            );
+            String failureLog =
+                    String.format("%s: %s: Failed. Status:%s, Error:%s", ctx.request().method(), ctx.request().path(),
+                            statusCode, errorMsg
+                    );
+            if (statusCode == HTTP_INTERNAL_ERROR) {
+                log.error(failureLog, ctx.failure());
+            } else {
+                log.error(failureLog);
+            }
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
             response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);

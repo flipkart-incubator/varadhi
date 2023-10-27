@@ -3,7 +3,6 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -72,10 +71,8 @@ public class AuthHandlers implements RouteConfigurator {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
-        if (configuration.getAuthorization().getUseDefaultProvider()) {
-            return createAuthorizationProvider(DefaultAuthorizationProvider.class, configuration.getAuthorization());
-        }
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
@@ -86,7 +83,7 @@ public class AuthHandlers implements RouteConfigurator {
                 throw new InvalidConfigException(e);
             }
         }
-        return null;
+        return new AuthorizationProvider.NoAuthorizationProvider();
     }
 
     AuthorizationProvider createAuthorizationProvider(

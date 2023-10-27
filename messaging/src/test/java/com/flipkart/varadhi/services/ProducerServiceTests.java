@@ -14,7 +14,6 @@ import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +68,7 @@ public class ProducerServiceTests {
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        verify(producer, times(1)).ProduceAsync(msg1);
+        verify(producer, times(1)).ProduceAsync(eq(msg1));
 
         Message msg2 = getMessage(100, 1, null, 2000, ctx);
         result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project, topic), ctx);
@@ -77,7 +76,7 @@ public class ProducerServiceTests {
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         Assertions.assertTrue(rc.produceResult.getProducerLatency() > 0);
-        verify(producer, times(1)).ProduceAsync(msg2);
+        verify(producer, times(1)).ProduceAsync(eq(msg2));
         verify(producerFactory, times(1)).getProducer(any());
     }
 
@@ -90,7 +89,7 @@ public class ProducerServiceTests {
         doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(topicService).get(vt.getName());
         //TODO:: This shall be ResourceNotFoundException, once ZKMetaStore code is fixed.
         Assertions.assertThrows(
-                ProduceException.class,
+                ResourceNotFoundException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
         verify(producer, never()).ProduceAsync(any());
@@ -102,12 +101,13 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
-        doThrow(new UncheckedExecutionException(new Exception())).when(topicService).get(vt.getName());
+        doThrow(new RuntimeException("Unknown error.")).when(topicService).get(vt.getName());
         ProduceException e = Assertions.assertThrows(
                 ProduceException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
-        Assertions.assertEquals("Produce failed due to internal error.", e.getMessage());
+        Assertions.assertEquals(
+                "Failed to get topic (project1.topic1) for message produce: Unknown error.", e.getMessage());
         verify(producer, never()).ProduceAsync(any());
     }
 
@@ -162,12 +162,13 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doThrow(new UncheckedExecutionException(new Exception())).when(producerFactory).getProducer(any());
-        Assertions.assertThrows(
+        doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).getProducer(any());
+        ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx),
-                "Produce failed due to internal error."
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
+        Assertions.assertEquals(
+                "Failed to create producer for topic (project1.topic1): Unknown Error.", pe.getMessage());
     }
 
     @Test
@@ -176,13 +177,14 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(producerFactory).getProducer(any());
-        //TODO:: This shall be ResourceNotFoundException, once ZKMetaStore code is fixed.
-        Assertions.assertThrows(
-                ProduceException.class,
+        doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).getProducer(any());
+        RuntimeException re = Assertions.assertThrows(
+                RuntimeException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
         );
         verify(producer, never()).ProduceAsync(any());
+        Assertions.assertEquals(
+                "Failed to create producer for topic (project1.topic1): Topic doesn't exists.", re.getMessage());
     }
 
     @Test

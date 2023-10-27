@@ -11,7 +11,6 @@ import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static com.flipkart.varadhi.entities.ProduceResult.Status.Failed;
 
@@ -52,7 +51,7 @@ public class ProducerService {
             throw e;
         } catch (Exception e) {
             sendProduceMetric(messageId, Failed, 0, context);
-            throw new ProduceException(String.format("Produce failed due to internal error."), e);
+            throw new ProduceException(String.format("Produce failed due to internal error: %s", e.getMessage()), e);
         }
     }
 
@@ -76,12 +75,13 @@ public class ProducerService {
         }
     }
 
-    private CompletableFuture<ProduceResult> produceToTopic(Message message, InternalTopic internalTopic) throws
-            ExecutionException {
+    private CompletableFuture<ProduceResult> produceToTopic(Message message, InternalTopic internalTopic)
+            throws Exception {
         String messageId = message.getMessageId();
         if (internalTopic.produceAllowed()) {
             long produceStart = System.currentTimeMillis();
             Producer producer = producerCache.getProducer(internalTopic.getStorageTopic());
+
             return producer.ProduceAsync(message).handle((result, throwable) -> {
                 int producerLatency = (int) (System.currentTimeMillis() - produceStart);
                 if (throwable != null) {
