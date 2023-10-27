@@ -4,4 +4,7 @@ plugins {
 
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+
+    // Apply the maven-publish to allow deploying to maven artifactories
+    id 'maven-publish'
 }

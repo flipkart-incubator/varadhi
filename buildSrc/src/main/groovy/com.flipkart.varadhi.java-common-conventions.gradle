@@ -7,7 +7,7 @@ plugins {
 }
 
 group = projectGroupId
-version = "${projectVersion}.${majorVersion}.${minorVersion}.${patchId}"
+version = "${projectVersion}.${majorVersion}.${minorVersion}.${patchId}-SNAPSHOT"
 
 
 repositories {

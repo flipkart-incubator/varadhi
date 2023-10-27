@@ -15,3 +15,22 @@ dependencies {
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("io.vertx:vertx-web-client")
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "${projectGroupId}"
+            artifactId = "${project.name}"
+            version = "${version}"
+            from components.java
+
+            pom {
+                name = "${project.name}"
+            }
+        }
+    }
+
+    repositories {
+        maven { url = "https://jfrog.fkinternal.com/artifactory/maven_virtual" }
+    }
+}
