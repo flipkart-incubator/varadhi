@@ -31,6 +31,6 @@ publishing {
     }
 
     repositories {
-        maven { url = "https://jfrog.fkinternal.com/artifactory/maven_virtual" }
+        maven { url = maven_publish_url }
     }
 }
