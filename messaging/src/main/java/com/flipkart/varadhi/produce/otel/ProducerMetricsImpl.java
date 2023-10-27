@@ -14,22 +14,19 @@ import static com.flipkart.varadhi.Constants.Meters.Produce.BYTES_METER;
 import static com.flipkart.varadhi.Constants.Meters.Produce.LATENCY_METER;
 import static com.flipkart.varadhi.Constants.Tags.*;
 
-public class ProducerMetricProvider {
+public class ProducerMetricsImpl implements ProducerMetrics {
     private final MeterRegistry meterRegistry;
-    private boolean enabled;
 
-    public ProducerMetricProvider(boolean enabled, MeterRegistry meterRegistry) {
+    public ProducerMetricsImpl(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
-        this.enabled = enabled;
     }
 
-    public void OnMessageProduced(boolean succeeded, long producerLatency, ProduceContext context) {
-        if (enabled) {
-            List<Tag> tags = getTags(context);
-            getProducedBytesCounter(tags).increment(context.getRequestContext().getBytesReceived());
-            tags.add(Tag.of(TAG_NAME_PRODUCE_RESULT, succeeded ? TAG_VALUE_RESULT_SUCCESS : TAG_VALUE_RESULT_FAILED));
-            getLatencyTimer(tags).record(producerLatency, TimeUnit.MILLISECONDS);
-        }
+    @Override
+    public void onMessageProduced(boolean succeeded, long producerLatency, ProduceContext context) {
+        List<Tag> tags = getTags(context);
+        getProducedBytesCounter(tags).increment(context.getRequestContext().getBytesReceived());
+        tags.add(Tag.of(TAG_NAME_PRODUCE_RESULT, succeeded ? TAG_VALUE_RESULT_SUCCESS : TAG_VALUE_RESULT_FAILED));
+        getLatencyTimer(tags).record(producerLatency, TimeUnit.MILLISECONDS);
     }
 
     private List<Tag> getTags(ProduceContext context) {

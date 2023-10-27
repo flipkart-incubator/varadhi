@@ -14,6 +14,7 @@ public class ServerConfiguration {
     private VaradhiOptions varadhiOptions;
     private VertxOptions vertxOptions;
     private DeploymentOptions verticleDeploymentOptions;
+    private HttpServerOptions httpServerOptions;
 
     private boolean authenticationEnabled;
 
@@ -26,7 +27,5 @@ public class ServerConfiguration {
     private MessagingStackOptions messagingStackOptions;
 
     private MetaStoreOptions metaStoreOptions;
-
-    private HttpServerOptions httpServerOptions;
 
 }

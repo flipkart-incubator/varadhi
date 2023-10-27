@@ -6,7 +6,9 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
-import com.flipkart.varadhi.produce.otel.ProducerMetricProvider;
+import com.flipkart.varadhi.produce.otel.ProducerMetrics;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -79,7 +81,7 @@ public class VerticleDeployer {
         this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
-        
+
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getVaradhiOptions(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
@@ -135,9 +137,9 @@ public class VerticleDeployer {
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());
-        ProducerMetricProvider producerMetricProvider =
-                new ProducerMetricProvider(producerOptions.isMetricEnabled(), meterRegistry);
-        return new ProducerService(producerCache, internalTopicCache, producerMetricProvider);
+        ProducerMetrics producerMetrics = producerOptions.isMetricEnabled() ? new ProducerMetricsImpl(meterRegistry) :
+                new ProducerMetricsNoOpImpl();
+        return new ProducerService(producerCache, internalTopicCache, producerMetrics);
     }
 
 }

@@ -1,14 +1,16 @@
 package com.flipkart.varadhi;
 
 public class AsyncResult<T> {
-    private T result;
-    private Throwable cause;
+    private final T result;
+    private final Throwable cause;
+
+    private AsyncResult(T result, Throwable cause) {
+        this.result = result;
+        this.cause = cause;
+    }
 
     public static <T> AsyncResult<T> of(T result, Throwable cause) {
-        AsyncResult<T> asyncResult = new AsyncResult<>();
-        asyncResult.result = result;
-        asyncResult.cause = cause;
-        return asyncResult;
+        return new AsyncResult<>(result, cause);
     }
 
     public static <T> AsyncResult<T> of(T result) {

@@ -5,21 +5,19 @@ import com.flipkart.varadhi.AsyncResult;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import lombok.Getter;
 
-import java.util.Optional;
-
 @Getter
 public class ProduceResult {
     private final String messageId;
     private final ProduceStatus produceStatus;
-    private final Optional<Throwable> throwable;
-    private final Optional<Offset> produceOffset;
+    private final Throwable throwable;
+    private final Offset produceOffset;
 
     private ProduceResult(
             String messageId, ProduceStatus produceStatus, Offset produceOffset, Throwable throwable
     ) {
         this.messageId = messageId;
-        this.produceOffset = null == produceOffset ? Optional.empty() : Optional.of(produceOffset);
-        this.throwable = null == throwable ? Optional.empty() : Optional.of(throwable);
+        this.produceOffset = produceOffset;
+        this.throwable = throwable;
         this.produceStatus = produceStatus;
     }
 
@@ -46,8 +44,8 @@ public class ProduceResult {
 
     public String getFailureReason() {
         String message = produceStatus.getMessage();
-        if (throwable.isPresent()) {
-            message = String.format("%s %s", message, throwable.get().getMessage());
+        if (throwable != null) {
+            message = String.format("%s %s", message, throwable.getMessage());
         }
         return message;
     }

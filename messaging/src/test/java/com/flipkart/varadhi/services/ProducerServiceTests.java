@@ -4,7 +4,7 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.produce.otel.ProducerMetricProvider;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
 
 public class ProducerServiceTests {
     ProducerService service;
-    ProducerMetricProvider metricProvider;
+    ProducerMetricsImpl metricProvider;
     ProducerFactory producerFactory;
     VaradhiTopicService topicService;
     Producer producer;
@@ -49,7 +49,7 @@ public class ProducerServiceTests {
         topicService = mock(VaradhiTopicService.class);
         InternalTopicCache topicCache = new InternalTopicCache(topicService, "");
 
-        metricProvider = new ProducerMetricProvider(true, new OtlpMeterRegistry());
+        metricProvider = new ProducerMetricsImpl(new OtlpMeterRegistry());
         service = new ProducerService(producerCache, topicCache, metricProvider);
         random = new Random();
 

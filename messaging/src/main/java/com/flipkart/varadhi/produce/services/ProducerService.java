@@ -4,7 +4,7 @@ import com.flipkart.varadhi.AsyncResult;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
-import com.flipkart.varadhi.produce.otel.ProducerMetricProvider;
+import com.flipkart.varadhi.produce.otel.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,14 +15,14 @@ import java.util.concurrent.CompletableFuture;
 public class ProducerService {
     private final ProducerCache producerCache;
     private final InternalTopicCache internalTopicCache;
-    private final ProducerMetricProvider metricProvider;
+    private final ProducerMetrics producerMetrics;
 
     public ProducerService(
-            ProducerCache producerCache, InternalTopicCache topicCache, ProducerMetricProvider metricProvider
+            ProducerCache producerCache, InternalTopicCache topicCache, ProducerMetrics producerMetrics
     ) {
         this.producerCache = producerCache;
         this.internalTopicCache = topicCache;
-        this.metricProvider = metricProvider;
+        this.producerMetrics = producerMetrics;
     }
 
     public CompletableFuture<ProduceResult> produceToTopic(
@@ -68,7 +68,7 @@ public class ProducerService {
 
     private void emitProducerMetric(String messageId, boolean succeeded, int produceLatency, ProduceContext context) {
         try {
-            metricProvider.OnMessageProduced(succeeded, produceLatency, context);
+            producerMetrics.onMessageProduced(succeeded, produceLatency, context);
         } catch (Exception e) {
             // Failure in metric path, shouldn't fail the metric. Log and ignore any exception.
             ProduceContext.TopicContext tContext = context.getTopicContext();
