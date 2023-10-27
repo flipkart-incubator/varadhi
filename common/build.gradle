@@ -22,6 +22,6 @@ publishing {
     }
 
     repositories {
-        maven { url = maven_publish_url }
+        maven { url = mavenPublishUrl }
     }
 }
