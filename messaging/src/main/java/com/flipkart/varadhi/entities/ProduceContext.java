@@ -29,11 +29,16 @@ public class ProduceContext {
     @Getter
     @Setter
     public static class TopicContext {
-        // It will be good to add org and team as context as well.
-        // But this info is not available by default in the produce path, and would require cache to be maintained.
-        // Not including for now, evaluate later.
         String region;
-        String topicName;
-        String projectName;
+        String org;
+        String team;
+        String project;
+        String topic;
+
+        public void setProjectAttributes(Project project) {
+            this.org = project.getOrg();
+            this.team = project.getTeam();
+            this.project = project.getName();
+        }
     }
 }

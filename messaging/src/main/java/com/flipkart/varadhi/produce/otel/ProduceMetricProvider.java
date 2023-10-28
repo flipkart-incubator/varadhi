@@ -30,8 +30,8 @@ public class ProduceMetricProvider {
     private Map<String, String> getTags(ProduceContext context) {
         Map<String, String> tags = new HashMap<>();
         tags.put(TAG_NAME_REGION, context.getTopicContext().getRegion());
-        tags.put(TAG_NAME_PROJECT, context.getTopicContext().getProjectName());
-        tags.put(TAG_NAME_TOPIC, context.getTopicContext().getTopicName());
+        tags.put(TAG_NAME_PROJECT, context.getTopicContext().getProject());
+        tags.put(TAG_NAME_TOPIC, context.getTopicContext().getTopic());
         String identity = context.getRequestContext().getProduceIdentity();
         tags.put(TAG_NAME_IDENTITY, identity);
         return tags;

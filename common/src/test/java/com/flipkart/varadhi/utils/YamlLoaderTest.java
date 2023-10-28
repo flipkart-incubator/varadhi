@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.utils;
 
 
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.validator.constraints.Length;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,6 +34,25 @@ public class YamlLoaderTest {
         // Verify the loaded config
         Assertions.assertNotNull(config);
         Assertions.assertEquals("Hello, World!", config.getMessage());
+    }
+
+    @Test
+    public void testLoadConfig_InvalidAttribute() throws IOException {
+        // Create a temporary YAML config file
+        Path configFile = tempDir.resolve("config.yaml");
+        String yamlContent = "message: Hi There, Hello, World!";
+        Files.write(configFile, yamlContent.getBytes());
+
+        // Load the config using YamlLoader
+        InvalidConfigException e = Assertions.assertThrows(
+                InvalidConfigException.class,
+                () -> YamlLoader.loadConfig(configFile.toString(), Config.class)
+        );
+        Assertions.assertEquals(
+                String.format(
+                        "Failed to load config file: %s. message: length must be between 0 and 15",
+                        configFile.toString()
+                ), e.getMessage());
     }
 
     @Test
@@ -86,8 +107,24 @@ public class YamlLoaderTest {
         Assertions.assertEquals("abc", config.getGenericConf().get(0).getField());
     }
 
+    public enum MyEnum {
+        ABC("abc"),
+        XYZ("xyz");
+
+        private final String field;
+
+        MyEnum(String field) {
+            this.field = field;
+        }
+
+        public String getField() {
+            return field;
+        }
+    }
+
     // Sample config class for testing
     public static class Config {
+        @Length(max = 15)
         private String message;
 
         public String getMessage() {
@@ -104,20 +141,5 @@ public class YamlLoaderTest {
     public static class GenericConfig {
         private Map<String, List<MyEnum>> nestedGenericConf;
         private List<MyEnum> genericConf;
-    }
-
-    public enum MyEnum {
-        ABC("abc"),
-        XYZ("xyz");
-
-        private final String field;
-
-        public String getField() {
-            return field;
-        }
-
-        MyEnum(String field) {
-            this.field = field;
-        }
     }
 }

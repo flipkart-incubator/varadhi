@@ -3,7 +3,6 @@ package com.flipkart.varadhi.pulsar;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
@@ -69,14 +68,7 @@ public class PulsarStackProvider implements MessagingStackProvider {
     }
 
     private PulsarConfig getPulsarConfig(String file) {
-        //TODO:: Move validations to validator.
         PulsarConfig pulsarConfig = YamlLoader.loadConfig(file, PulsarConfig.class);
-        if (pulsarConfig.getPulsarAdminOptions() == null) {
-            throw new InvalidConfigException("Missing Pulsar Admin client configuration.");
-        }
-        if (pulsarConfig.getPulsarClientOptions() == null) {
-            throw new InvalidConfigException("Missing Pulsar client configuration.");
-        }
         return pulsarConfig;
     }
 }

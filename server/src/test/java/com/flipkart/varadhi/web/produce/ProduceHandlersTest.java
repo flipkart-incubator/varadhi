@@ -1,12 +1,10 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.entities.InternalTopic;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceContext;
-import com.flipkart.varadhi.entities.ProduceResult;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -37,6 +35,7 @@ import static org.mockito.Mockito.*;
 public class ProduceHandlersTest extends WebTestBase {
     ProduceHandlers produceHandlers;
     ProducerService producerService;
+    ProjectService projectService;
     String deployedRegion = "region1";
 
     ArgumentCaptor<Message> msgCapture;
@@ -51,7 +50,10 @@ public class ProduceHandlersTest extends WebTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         producerService = mock(ProducerService.class);
-        produceHandlers = new ProduceHandlers(deployedRegion, producerService);
+        projectService = mock(ProjectService.class);
+        produceHandlers = new ProduceHandlers(deployedRegion, producerService, projectService);
+        Project project = new Project("project1", 0, "description", "team1", "org1");
+        doReturn(project).when(projectService).getCachedProject("project1");
 
         Route route = router.post("/projects/:project/topics/:topic/produce");
         route.handler(bodyHandler).handler(produceHandlers::produce);
@@ -100,8 +102,8 @@ public class ProduceHandlersTest extends WebTestBase {
 
 
         Assertions.assertEquals(deployedRegion, ctxCapture.getValue().getTopicContext().getRegion());
-        Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopicName());
-        Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProjectName());
+        Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopic());
+        Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProject());
 
         messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
@@ -207,5 +209,17 @@ public class ProduceHandlersTest extends WebTestBase {
         Assertions.assertEquals("h1v2", h1Values[1]);
         Assertions.assertEquals("h1v3", h1Values[2]);
         Assertions.assertEquals("h1v1", msgCapture.getValue().getHeader("x_header1"));
+    }
+
+    @Test
+    public void testProduceForNonexistingProject() throws InterruptedException {
+        doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(MESSAGE_ID, messageId);
+        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
+        sendRequestWithByteBufferBody(request, payload, 404, "Project1 not found.", ErrorResponse.class
+        );
     }
 }
