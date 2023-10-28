@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.auth.AuthorizationOptions;
 import com.flipkart.varadhi.auth.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -78,7 +78,7 @@ public class AuthorizationHandlerTests {
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
         @Override
-        public Future<Boolean> init(JsonObject configuration) {
+        public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture();
         }
 

@@ -27,8 +27,8 @@ authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName:
-  providerOptions:
+  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  configFile: "src/main/resources/authorizationConfig.yml"
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"

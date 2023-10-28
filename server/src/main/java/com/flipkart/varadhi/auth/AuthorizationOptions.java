@@ -1,16 +1,22 @@
 package com.flipkart.varadhi.auth;
 
-import io.vertx.core.json.JsonObject;
-import lombok.Getter;
+import lombok.Data;
 
 import java.util.List;
 
-@Getter
+@Data
 public class AuthorizationOptions {
 
     private List<String> superUsers;
 
+    /**
+     * Fully qualified package path to the class implementing AuthorizationProvider interface.
+     */
     private String providerClassName;
 
-    private JsonObject providerOptions;
+    /**
+     * Path to a file having authorization provider configs.<br>
+     * This file can be in any format, since the provider will implement the logic to parse this config file.<br>
+     */
+    private String configFile;
 }
