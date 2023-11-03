@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 
-import com.flipkart.varadhi.AsyncResult;
+import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import lombok.Getter;
 
@@ -21,7 +21,7 @@ public class ProduceResult {
         this.produceStatus = produceStatus;
     }
 
-    public static ProduceResult of(String messageId, AsyncResult<Offset> producerResult) {
+    public static ProduceResult of(String messageId, Result<Offset> producerResult) {
         return producerResult.hasResult() ?
                 new ProduceResult(messageId, ProduceStatus.Success, producerResult.result(), null) :
                 new ProduceResult(messageId, ProduceStatus.Failed, null, producerResult.cause());

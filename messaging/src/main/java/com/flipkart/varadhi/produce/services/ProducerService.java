@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.AsyncResult;
+import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -49,7 +49,7 @@ public class ProducerService {
     }
 
 
-    private CompletableFuture<AsyncResult<Offset>> produceToStorageProducer(
+    private CompletableFuture<Result<Offset>> produceToStorageProducer(
             Producer producer, ProduceContext context, String topic, Message message
     ) {
         long produceStart = System.currentTimeMillis();
@@ -62,21 +62,11 @@ public class ProducerService {
                         throwable
                 );
             }
-            return AsyncResult.of(result, throwable);
+            return Result.of(result, throwable);
         });
     }
 
     private void emitProducerMetric(String messageId, boolean succeeded, int produceLatency, ProduceContext context) {
-        try {
-            producerMetrics.onMessageProduced(succeeded, produceLatency, context);
-        } catch (Exception e) {
-            // Failure in metric path, shouldn't fail the metric. Log and ignore any exception.
-            ProduceContext.TopicContext tContext = context.getTopicContext();
-            String message = String.format("Failed to send metric: %s:%s:%s(%s) Succeeded(%b) Latency(%d).",
-                    tContext.getRegion(), tContext.getProjectName(),
-                    tContext.getTopicName(), messageId, succeeded, produceLatency
-            );
-            log.error("{}: {}", message, e.getMessage());
-        }
+        producerMetrics.onMessageProduced(succeeded, produceLatency, context);
     }
 }

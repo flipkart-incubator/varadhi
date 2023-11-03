@@ -62,7 +62,7 @@ public class VerticleDeployer {
             MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {
-        String deployedRegion = configuration.getVaradhiOptions().getDeployedRegion();
+        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         VaradhiTopicFactory varadhiTopicFactory =
                 new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
         VaradhiTopicService varadhiTopicService = new VaradhiTopicService(
@@ -75,19 +75,18 @@ public class VerticleDeployer {
         ProducerService producerService =
                 setupProducerService(
                         messagingStackProvider, varadhiTopicService,
-                        configuration.getVaradhiOptions().getProducerOptions(),
-                        meterRegistry
+                        configuration.getProducerOptions(), meterRegistry
                 );
         this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
 
         this.produceHandlers =
-                new ProduceHandlers(hostName, configuration.getVaradhiOptions(), producerService);
+                new ProduceHandlers(hostName, configuration.getRestOptions(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
-        bodyHandler.setBodyLimit(configuration.getVaradhiOptions().getPayloadSizeMax());
+        bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }

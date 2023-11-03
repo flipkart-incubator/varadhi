@@ -49,7 +49,7 @@ public class ProducerServiceTests {
         topicService = mock(VaradhiTopicService.class);
         InternalTopicCache topicCache = new InternalTopicCache(topicService, "");
 
-        metricProvider = new ProducerMetricsImpl(new OtlpMeterRegistry());
+        metricProvider = spy(new ProducerMetricsImpl(new OtlpMeterRegistry()));
         service = new ProducerService(producerCache, topicCache, metricProvider);
         random = new Random();
 
@@ -59,7 +59,7 @@ public class ProducerServiceTests {
     @Test
     public void testProduceMessage() throws InterruptedException {
         ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+        Message msg1 = getMessage(0, 1, null, 10, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
@@ -77,6 +77,24 @@ public class ProducerServiceTests {
         Assertions.assertNull(rc.throwable);
         verify(producer, times(1)).ProduceAsync(msg2);
         verify(producerFactory, times(1)).getProducer(any());
+    }
+
+    @Test
+    public void testProduceWhenProduceAsyncThrows() {
+        ProduceContext ctx = getProduceContext(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 10, ctx);
+        VaradhiTopic vt = getTopic(topic, project, region);
+        doReturn(vt).when(topicService).get(vt.getName());
+        doReturn(producer).when(producerFactory).getProducer(any());
+        doThrow(new RuntimeException("Some random error.")).when(producer).ProduceAsync(msg1);
+        // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
+        // This is not expected in general.
+        ProduceException pe = Assertions.assertThrows(
+                ProduceException.class,
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+        );
+        Assertions.assertEquals("Produce failed due to internal error: Some random error.", pe.getMessage());
+        verify(metricProvider, never()).onMessageProduced(anyBoolean(), anyLong(), any());
     }
 
     @Test
@@ -243,7 +261,8 @@ public class ProducerServiceTests {
         requestContext.setRequestTimestamp(System.currentTimeMillis());
         requestContext.setBytesReceived(100);
         requestContext.setProduceIdentity(ANONYMOUS_PRODUCE_IDENTITY);
-        requestContext.setRemoteHost("localhost");
+        requestContext.setRemoteHost("remotehost");
+        requestContext.setServiceHost("localhost");
         requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
         ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
         topicContext.setTopicName(topic);

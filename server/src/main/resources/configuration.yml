@@ -1,9 +1,10 @@
-varadhiOptions:
+restOptions:
   deployedRegion: "default"
-  producerOptions:
-    producerCacheBuilderSpec: ""
-    topicCacheBuilderSpec: ""
-    metricEnabled: true
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
 
 vertxOptions:
   eventLoopPoolSize: 1

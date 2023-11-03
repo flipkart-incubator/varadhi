@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.config.VaradhiOptions;
+import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.utils.HeaderUtils;
@@ -47,11 +47,11 @@ public class ProduceHandlers implements RouteProvider {
     private final String serviceHostName;
     private final HeaderValidationHandler headerValidationHandler;
 
-    public ProduceHandlers(String serviceHostName, VaradhiOptions varadhiOptions, ProducerService producerService) {
-        this.deployedRegion = varadhiOptions.getDeployedRegion();
+    public ProduceHandlers(String serviceHostName, RestOptions restOptions, ProducerService producerService) {
+        this.deployedRegion = restOptions.getDeployedRegion();
         this.producerService = producerService;
         this.serviceHostName = serviceHostName;
-        this.headerValidationHandler = new HeaderValidationHandler(varadhiOptions);
+        this.headerValidationHandler = new HeaderValidationHandler(restOptions);
     }
 
     @Override

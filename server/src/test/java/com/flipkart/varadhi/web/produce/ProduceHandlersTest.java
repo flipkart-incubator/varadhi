@@ -1,29 +1,22 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.AsyncResult;
-import com.flipkart.varadhi.config.VaradhiOptions;
+import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceContext;
 import com.flipkart.varadhi.entities.ProduceResult;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.WebTestBase;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
-import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -36,45 +29,28 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 
-public class ProduceHandlersTest extends WebTestBase {
-    ProduceHandlers produceHandlers;
-    ProducerService producerService;
-    String deployedRegion = "region1";
-    String localhost = "localhost";
+public class ProduceHandlersTest extends ProduceTestBase {
 
-    ArgumentCaptor<Message> msgCapture;
-    ArgumentCaptor<ProduceContext> ctxCapture;
-    String topicPath = "/projects/project1/topics/topic1/produce";
-    String topicFullName = "project1.topic1";
-    String messageId;
-    byte[] payload;
-
+    @Override
+    public void tearDown() throws InterruptedException {
+        super.tearDown();
+    }
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
-        super.setUp();
-        producerService = mock(ProducerService.class);
-        VaradhiOptions options = new VaradhiOptions();
-        options.setDeployedRegion(deployedRegion);
-        produceHandlers = new ProduceHandlers(localhost, options, producerService);
-
-        Route route = router.post("/projects/:project/topics/:topic/produce");
+        setUp();
         route.handler(bodyHandler).handler(produceHandlers::produce);
         setupFailureHandler(route);
-        msgCapture = ArgumentCaptor.forClass(Message.class);
-        ctxCapture = ArgumentCaptor.forClass(ProduceContext.class);
-        messageId = "messageId1";
-        payload = "somerandomdata".getBytes();
     }
 
     @AfterEach
     public void PostTest() throws InterruptedException {
-        super.tearDown();
+        tearDown();
     }
 
     @Test
     public void testProduceAndDuplicateMessage() throws InterruptedException {
-        ProduceResult result = ProduceResult.of(messageId, AsyncResult.of(new DummyProducer.DummyOffset(10)));
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -112,7 +88,6 @@ public class ProduceHandlersTest extends WebTestBase {
         Assertions.assertEquals(messageId, messageIdObtained);
         verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any());
     }
-
 
     @Test
     public void testProduceThrows() throws InterruptedException {
@@ -160,7 +135,7 @@ public class ProduceHandlersTest extends WebTestBase {
         request.putHeader(MESSAGE_ID, messageId);
         String topicProduceFailureMsg = "Failure from messaging stack in ProduceAsync().";
         ProduceResult result =
-                ProduceResult.of(messageId, AsyncResult.of(new ProduceException(topicProduceFailureMsg)));
+                ProduceResult.of(messageId, Result.of(new ProduceException(topicProduceFailureMsg)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         sendRequestWithByteBufferBody(request, payload, 500,
@@ -195,7 +170,7 @@ public class ProduceHandlersTest extends WebTestBase {
 
     @Test
     public void testProduceHeaderOrdering() throws InterruptedException {
-        ProduceResult result = ProduceResult.of(messageId, AsyncResult.of(new DummyProducer.DummyOffset(10)));
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);

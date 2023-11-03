@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.config.VaradhiOptions;
+import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.exceptions.ArgumentException;
 import io.vertx.ext.web.RoutingContext;
 
@@ -15,10 +15,10 @@ public class HeaderValidationHandler {
     private int headerValueSizeMax;
     private int headersAllowedMax;
 
-    public HeaderValidationHandler(VaradhiOptions varadhiOptions) {
-        this.headerNameSizeMax = varadhiOptions.getHeaderNameSizeMax();
-        this.headerValueSizeMax = varadhiOptions.getHeaderValueSizeMax();
-        this.headersAllowedMax = varadhiOptions.getHeadersAllowedMax();
+    public HeaderValidationHandler(RestOptions restOptions) {
+        this.headerNameSizeMax = restOptions.getHeaderNameSizeMax();
+        this.headerValueSizeMax = restOptions.getHeaderValueSizeMax();
+        this.headersAllowedMax = restOptions.getHeadersAllowedMax();
     }
 
     public void validate(RoutingContext ctx) {
@@ -28,7 +28,7 @@ public class HeaderValidationHandler {
             if (key.startsWith(VARADHI_HEADER_PREFIX)) {
                 validateEntry(entry);
                 headers.add(key); // multi-value headers are considered one.
-                if (headers.size() > headersAllowedMax) {
+                if (headers.size() >= headersAllowedMax) {
                     throw new ArgumentException(
                             String.format(
                                     "More Varadhi specific headers specified than allowed max(%d).",
