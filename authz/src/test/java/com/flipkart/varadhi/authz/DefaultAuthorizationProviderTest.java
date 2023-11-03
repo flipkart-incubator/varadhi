@@ -2,7 +2,6 @@ package com.flipkart.varadhi.authz;
 
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.auth.ResourceAction;
-import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -15,6 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import static com.flipkart.varadhi.entities.TestUser.testUser;
 
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthorizationProviderTest {
@@ -221,19 +222,5 @@ public class DefaultAuthorizationProviderTest {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
                 }));
-    }
-
-    public static UserContext testUser(String name, boolean expired) {
-        return new UserContext() {
-            @Override
-            public String getSubject() {
-                return name;
-            }
-
-            @Override
-            public boolean isExpired() {
-                return expired;
-            }
-        };
     }
 }

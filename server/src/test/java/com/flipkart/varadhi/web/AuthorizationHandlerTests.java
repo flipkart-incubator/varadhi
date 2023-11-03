@@ -17,6 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Map;
 
+import static com.flipkart.varadhi.entities.TestUser.testUser;
+
 @ExtendWith(VertxExtension.class)
 public class AuthorizationHandlerTests {
 
@@ -60,20 +62,6 @@ public class AuthorizationHandlerTests {
                     Assertions.assertEquals(500, ((HttpException) t).getStatusCode());
                     checks.flag();
                 }));
-    }
-
-    private UserContext testUser(String name, boolean expired) {
-        return new UserContext() {
-            @Override
-            public String getSubject() {
-                return name;
-            }
-
-            @Override
-            public boolean isExpired() {
-                return expired;
-            }
-        };
     }
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
