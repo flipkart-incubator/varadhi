@@ -26,7 +26,7 @@ publishing {
 
     repositories {
         maven {
-            url = mavenPublishUrl.replace('"', '') // important to strip double-quotes from this otherwise the url will be dealt as a file url
+            url = mavenPublishUrl
         }
     }
 }
