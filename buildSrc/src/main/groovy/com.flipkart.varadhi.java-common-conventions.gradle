@@ -65,6 +65,7 @@ dependencies {
         implementation("io.vertx:vertx-auth-common:$vertx_version")
         implementation("io.vertx:vertx-auth-jwt:$vertx_version")
         implementation("io.vertx:vertx-opentelemetry:$vertx_version")
+        implementation("io.vertx:vertx-opentracing:$vertx_version")
         implementation("io.vertx:vertx-micrometer-metrics:$vertx_version")
         runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
 

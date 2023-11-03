@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.utils.HostUtils;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -18,12 +19,13 @@ public class Server {
     public static void main(String[] args) {
 
         try {
-            log.info("Server Starting.");
+            String hostName = HostUtils.getHostName();
+            log.info("Server Starting on {}.", hostName);
             ServerConfiguration configuration = readConfiguration(args);
             CoreServices services = new CoreServices(configuration);
             Vertx vertx = createVertex(configuration, services);
-            deployVerticle(configuration, services, vertx);
-            log.info("Server Started.");
+            deployVerticle(hostName, configuration, services, vertx);
+            log.info("Server Started on {}.", hostName);
         } catch (Exception e) {
             log.error("Failed to initialise the server.", e);
             System.exit(-1);
@@ -45,9 +47,12 @@ public class Server {
         return vertx;
     }
 
-    private static void deployVerticle(ServerConfiguration configuration, CoreServices services, Vertx vertx) {
+    private static void deployVerticle(
+            String hostName, ServerConfiguration configuration, CoreServices services, Vertx vertx
+    ) {
         log.debug("Verticle deployment started.");
         VerticleDeployer verticleDeployer = new VerticleDeployer(
+                hostName,
                 vertx,
                 configuration,
                 services.getMessagingStackProvider(),
