@@ -32,8 +32,6 @@ import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
-    private static final String DEFAULT_TENANT = "public";
-    private static final String DEFAULT_TEAM = "public";
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
     private final MetaStore metaStore;
