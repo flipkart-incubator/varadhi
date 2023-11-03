@@ -109,6 +109,18 @@ public class VerticleDeployer {
             Vertx vertx,
             ServerConfiguration configuration
     ) {
+        if (configuration.isDefaultAuthorizationServerEnabled()) {
+            vertx.deployVerticle(
+                            () -> new DefaultAuthZVerticle(configuration.getDefaultAuthorizationServerOptions().getHttpServerOptions()),
+                            configuration.getDefaultAuthorizationServerOptions().getVerticleDeploymentOptions()
+                    )
+                    .onFailure(t -> {
+                        log.error("Could not start Default AuthZ Verticle", t);
+                        throw new VaradhiException("Failed to Deploy Default AuthZ API.", t);
+                    })
+                    .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+        }
+
         vertx.deployVerticle(
                         () -> new RestVerticle(
                                 getDefinitions(),

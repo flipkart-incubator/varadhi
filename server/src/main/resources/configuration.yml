@@ -32,6 +32,19 @@ authorization:
   providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider"
   configFile: "src/main/resources/authorizationConfig.yml"
 
+defaultAuthorizationServerEnabled: true
+defaultAuthorizationServerOptions:
+  httpServerOptions:
+    port: 8088
+    alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+    decompressionSupported: false
+    useAlpn: true
+    tracingPolicy: "IGNORE"
+  verticleDeploymentOptions:
+    instances: 1
+    worker: false
+    workerPoolSize: 2
+
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
   configFile: "src/main/resources/pulsarConfig.yml"

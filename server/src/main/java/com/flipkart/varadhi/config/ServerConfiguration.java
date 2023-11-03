@@ -24,6 +24,10 @@ public class ServerConfiguration {
 
     private AuthorizationOptions authorization;
 
+    private boolean defaultAuthorizationServerEnabled;
+
+    private DefaultAuthorizationServerOptions defaultAuthorizationServerOptions;
+
     private RestOptions restOptions;
 
     private ProducerOptions producerOptions;
