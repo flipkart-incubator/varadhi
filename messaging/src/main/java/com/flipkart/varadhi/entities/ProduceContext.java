@@ -23,6 +23,7 @@ public class ProduceContext {
         String remoteHost;
         long requestTimestamp;
         long bytesReceived;
+        String serviceHost;
     }
 
 

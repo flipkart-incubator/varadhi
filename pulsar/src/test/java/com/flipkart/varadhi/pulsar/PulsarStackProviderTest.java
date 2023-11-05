@@ -5,15 +5,11 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
-import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import org.apache.pulsar.client.admin.PulsarAdmin;
-import org.apache.pulsar.client.admin.PulsarAdminException;
-import org.apache.pulsar.client.admin.Topics;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +29,6 @@ public class PulsarStackProviderTest {
     private PulsarStackProvider pulsarStackProvider;
     private MessagingStackOptions messagingStackOptions;
     private ObjectMapper objectMapper;
-    private PulsarAdmin pulsarAdmin;
     private Project project;
 
     @BeforeEach
@@ -47,14 +42,10 @@ public class PulsarStackProviderTest {
         messagingStackOptions.setConfigFile(configFile.toString());
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
         project = new Project("default", INITIAL_VERSION, "", "public", "public");
-
         objectMapper = mock(ObjectMapper.class);
-        pulsarAdmin = mock(PulsarAdmin.class);
-        ClientProvider clientProvider = mock(ClientProvider.class);
-
+        // Below is working as Pulsar clients doesn't seem to either create connections to actual hosts
+        // or ignore failure (and retry later) during creation of client objects.
         pulsarStackProvider = spy(new PulsarStackProvider());
-        doReturn(clientProvider).when(pulsarStackProvider).getPulsarClientProvider(any(PulsarConfig.class));
-        doReturn(pulsarAdmin).when(clientProvider).getAdminClient();
         doNothing().when(objectMapper).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
     }
 
@@ -93,22 +84,25 @@ public class PulsarStackProviderTest {
     }
 
     @Test
-    public void testGetStorageTopicService_Initialized() throws PulsarAdminException {
-        String topicName = "foobar";
+    public void testGetStorageTopicService_Initialized() {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicService<PulsarStorageTopic> storageTopicService = pulsarStackProvider.getStorageTopicService();
         StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond =
                 pulsarStackProvider.getStorageTopicService();
-        StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicService, storageTopicServiceSecond);
+    }
 
-        Topics topics = mock(Topics.class);
-        doReturn(topics).when(pulsarAdmin).topics();
-        doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        PulsarStorageTopic pulsarStorageTopic =
-                storageTopicFactory.getTopic(topicName, project, CapacityPolicy.getDefault());
-        storageTopicService.create(pulsarStorageTopic);
-        verify(topics, times(1)).createPartitionedTopic(anyString(), eq(1));
+    @Test
+    public void testGetProducerFactory_NotInitialized() {
+        assertThrows(InvalidStateException.class, () -> pulsarStackProvider.getProducerFactory());
+    }
+
+    @Test
+    public void testGetProducerFactory_Initialized() {
+        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        ProducerFactory<PulsarStorageTopic> producerFactory1 = pulsarStackProvider.getProducerFactory();
+        ProducerFactory<PulsarStorageTopic> producerFactory2 = pulsarStackProvider.getProducerFactory();
+        Assertions.assertEquals(producerFactory1, producerFactory2);
     }
 }
 

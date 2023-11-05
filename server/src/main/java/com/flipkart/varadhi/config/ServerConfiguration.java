@@ -2,6 +2,7 @@ package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.auth.AuthorizationOptions;
+import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
@@ -12,15 +13,13 @@ import lombok.Getter;
 
 @Getter
 public class ServerConfiguration {
-
-    @NotNull
-    private VaradhiOptions varadhiOptions;
-
     @NotNull
     private VertxOptions vertxOptions;
-
     @NotNull
     private DeploymentOptions verticleDeploymentOptions;
+
+    @NotNull
+    private HttpServerOptions httpServerOptions;
 
     private boolean authenticationEnabled;
 
@@ -30,13 +29,15 @@ public class ServerConfiguration {
 
     private AuthorizationOptions authorization;
 
+
+    @NotNull
+    private RestOptions restOptions;
+
+    @NotNull
+    private ProducerOptions producerOptions;
     @NotNull
     private MessagingStackOptions messagingStackOptions;
 
     @NotNull
     private MetaStoreOptions metaStoreOptions;
-
-    @NotNull
-    private HttpServerOptions httpServerOptions;
-
 }

@@ -1,25 +1,22 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.ProduceResult;
+import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.WebTestBase;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
-import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -27,51 +24,32 @@ import java.util.concurrent.CompletableFuture;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
 import static com.flipkart.varadhi.MessageConstants.Headers.*;
 import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
-import static com.flipkart.varadhi.entities.InternalTopic.TopicState.*;
+import static com.flipkart.varadhi.entities.TopicState.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+public class ProduceHandlersTest extends ProduceTestBase {
 
-public class ProduceHandlersTest extends WebTestBase {
-    ProduceHandlers produceHandlers;
-    ProducerService producerService;
-    ProjectService projectService;
-    String deployedRegion = "region1";
-
-    ArgumentCaptor<Message> msgCapture;
-    ArgumentCaptor<ProduceContext> ctxCapture;
-    String topicPath = "/projects/project1/topics/topic1/produce";
-    String topicFullName = "project1.topic1";
-    String messageId;
-    byte[] payload;
-
+    @Override
+    public void tearDown() throws InterruptedException {
+        super.tearDown();
+    }
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
-        producerService = mock(ProducerService.class);
-        projectService = mock(ProjectService.class);
-        produceHandlers = new ProduceHandlers(deployedRegion, producerService, projectService);
-        Project project = new Project("project1", 0, "description", "team1", "org1");
-        doReturn(project).when(projectService).getCachedProject("project1");
-
-        Route route = router.post("/projects/:project/topics/:topic/produce");
         route.handler(bodyHandler).handler(produceHandlers::produce);
         setupFailureHandler(route);
-        msgCapture = ArgumentCaptor.forClass(Message.class);
-        ctxCapture = ArgumentCaptor.forClass(ProduceContext.class);
-        messageId = "messageId1";
-        payload = "somerandomdata".getBytes();
     }
 
     @AfterEach
     public void PostTest() throws InterruptedException {
-        super.tearDown();
+        tearDown();
     }
 
     @Test
     public void testProduceAndDuplicateMessage() throws InterruptedException {
-        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -110,7 +88,6 @@ public class ProduceHandlersTest extends WebTestBase {
         verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any());
     }
 
-
     @Test
     public void testProduceThrows() throws InterruptedException {
         String exceptionMessage = "Some random message.";
@@ -124,20 +101,21 @@ public class ProduceHandlersTest extends WebTestBase {
 
     @Test
     public void testProduceNonProducingTopicState() {
-        record testData(int status, String message, InternalTopic.TopicState state) {
+        record testData(int status, String message, TopicState state) {
         }
 
         List<testData> data = List.of(
-                new testData(422, "Topic is blocked. Unblock the topic before produce.", Blocked),
-                new testData(429, "Produce to Topic is currently rate limited, try again after sometime.", Throttled),
-                new testData(422, "Produce is not allowed for replicating topic.", Replicating)
+                new testData(422, "Topic/Queue is blocked. Unblock the Topic/Queue before produce.", Blocked),
+                new testData(
+                        429, "Produce to Topic/Queue is currently rate limited, try again after sometime.", Throttled),
+                new testData(422, "Produce is not allowed for replicating Topic/Queue.", Replicating)
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
 
         data.forEach(d -> {
-                    ProduceResult result = ProduceResult.onNonProducingTopicState(messageId, d.state);
+                    ProduceResult result = ProduceResult.ofNonProducingTopic(messageId, d.state);
                     doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                             .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
                     try {
@@ -155,11 +133,13 @@ public class ProduceHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
         String topicProduceFailureMsg = "Failure from messaging stack in ProduceAsync().";
-        ProduceResult result = ProduceResult.onProducerFailure(messageId, 10, topicProduceFailureMsg);
+        ProduceResult result =
+                ProduceResult.of(messageId, Result.of(new ProduceException(topicProduceFailureMsg)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         sendRequestWithByteBufferBody(request, payload, 500,
-                String.format("Produce failed at messaging stack: %s", topicProduceFailureMsg), ErrorResponse.class
+                String.format("Produce failure from messaging stack for Topic/Queue. %s", topicProduceFailureMsg),
+                ErrorResponse.class
         );
     }
 
@@ -189,7 +169,7 @@ public class ProduceHandlersTest extends WebTestBase {
 
     @Test
     public void testProduceHeaderOrdering() throws InterruptedException {
-        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -216,7 +196,7 @@ public class ProduceHandlersTest extends WebTestBase {
         doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(MESSAGE_ID, messageId);
-        ProduceResult result = ProduceResult.onSuccess(messageId, new DummyProducer.DummyOffset(10), 10);
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                 .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
         sendRequestWithByteBufferBody(request, payload, 404, "Project1 not found.", ErrorResponse.class
