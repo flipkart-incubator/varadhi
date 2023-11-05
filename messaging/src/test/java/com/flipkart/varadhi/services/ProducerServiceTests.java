@@ -38,7 +38,7 @@ public class ProducerServiceTests {
     Producer producer;
     Random random;
     String topic = "topic1";
-    String project = "project1";
+    Project project = new Project("project1", 0, "", "team1", "org1");
     String region = "region1";
 
     @BeforeEach
@@ -60,14 +60,14 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         verify(producer, times(1)).ProduceAsync(eq(msg1));
 
         Message msg2 = getMessage(100, 1, null, 2000, ctx);
-        result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project, topic), ctx);
+        result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
         rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -88,7 +88,7 @@ public class ProducerServiceTests {
         // This is not expected in general.
         ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
         Assertions.assertEquals("Produce failed due to internal error: Some random error.", pe.getMessage());
         verify(metricProvider, never()).onMessageProduced(anyBoolean(), anyLong(), any());
@@ -103,7 +103,7 @@ public class ProducerServiceTests {
         doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(topicService).get(vt.getName());
         Assertions.assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
         verify(producer, never()).ProduceAsync(any());
     }
@@ -117,7 +117,7 @@ public class ProducerServiceTests {
         doThrow(new RuntimeException("Unknown error.")).when(topicService).get(vt.getName());
         ProduceException e = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
         Assertions.assertEquals(
                 "Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
@@ -160,7 +160,7 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -178,7 +178,7 @@ public class ProducerServiceTests {
         doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).getProducer(any());
         ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
         Assertions.assertEquals(
                 "Failed to create Pulsar producer for Topic(project1.topic1). Unknown Error.", pe.getMessage());
@@ -193,7 +193,7 @@ public class ProducerServiceTests {
         doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).getProducer(any());
         RuntimeException re = Assertions.assertThrows(
                 RuntimeException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
         verify(producer, never()).ProduceAsync(any());
         Assertions.assertEquals(
@@ -209,7 +209,7 @@ public class ProducerServiceTests {
         doReturn(producer).when(producerFactory).getProducer(any());
 
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
 
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
@@ -233,7 +233,7 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project, topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
         ResultCapture rc = getResult(result);
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
@@ -243,12 +243,12 @@ public class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
-    public VaradhiTopic getTopic(String name, String project, String region) {
+    public VaradhiTopic getTopic(String name, Project project, String region) {
         return getTopic(TopicState.Producing, name, project, region);
     }
 
-    public VaradhiTopic getTopic(TopicState state, String name, String project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(new TopicResource(name, 0, project, false, null));
+    public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
+        VaradhiTopic topic = VaradhiTopic.of(new TopicResource(name, 0, project.getName(), false, null));
         String itName = String.join(NAME_SEPARATOR, topic.getName(), region);
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         topic.addInternalTopic(new InternalTopic(itName, region, state, st));
@@ -276,7 +276,7 @@ public class ProducerServiceTests {
     }
 
 
-    public ProduceContext getProduceContext(String topic, String project, String region) {
+    public ProduceContext getProduceContext(String topic, Project project, String region) {
         ProduceContext.RequestContext requestContext = new ProduceContext.RequestContext();
         requestContext.setRequestTimestamp(System.currentTimeMillis());
         requestContext.setBytesReceived(100);
@@ -286,8 +286,8 @@ public class ProducerServiceTests {
         requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
         ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
         topicContext.setTopic(topic);
-        topicContext.setProject(project);
         topicContext.setRegion(region);
+        topicContext.setProjectAttributes(project);
         return new ProduceContext(requestContext, topicContext);
     }
 
