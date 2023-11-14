@@ -2,6 +2,7 @@ package com.flipkart.varadhi.authz;
 
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.auth.ResourceAction;
+import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -88,7 +89,7 @@ public class DefaultAuthorizationProviderTest {
     @Test
     public void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        defaultAuthorizationProvider.init(authorizationOptions)
+        defaultAuthorizationProvider.init(Vertx.vertx(), authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -107,7 +108,7 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         defaultAuthorizationProvider
-                .init(authorizationOptions)
+                .init(Vertx.vertx(), authorizationOptions)
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("abc", false),
                         ResourceAction.ORG_CREATE, "flipkart"
                 ))
@@ -122,7 +123,7 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         defaultAuthorizationProvider
-                .init(authorizationOptions)
+                .init(Vertx.vertx(), authorizationOptions)
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, "flipkart"
                 ))
@@ -137,7 +138,7 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         defaultAuthorizationProvider
-                .init(authorizationOptions)
+                .init(Vertx.vertx(), authorizationOptions)
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, ""
                 )) // xyz has org.admin but not at root level
@@ -152,7 +153,7 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(5);
 
         defaultAuthorizationProvider
-                .init(authorizationOptions)
+                .init(Vertx.vertx(), authorizationOptions)
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user3", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // checking if user role at the leaf node resolves
@@ -198,7 +199,7 @@ public class DefaultAuthorizationProviderTest {
     public void testIsAuthorized_UserProjectAccess(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(3);
         defaultAuthorizationProvider
-                .init(authorizationOptions)
+                .init(Vertx.vertx(), authorizationOptions)
                 .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user2", false),
                         ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
                 )) // proj_user2 only has topic read access, so should fail

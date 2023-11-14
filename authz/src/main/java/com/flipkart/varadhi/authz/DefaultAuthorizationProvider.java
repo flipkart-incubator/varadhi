@@ -7,6 +7,7 @@ import com.flipkart.varadhi.entities.UserContext;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -23,7 +24,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private volatile boolean initialised = false;
 
     @Override
-    public synchronized Future<Boolean> init(AuthorizationOptions authorizationOptions) {
+    public synchronized Future<Boolean> init(Vertx vertx, AuthorizationOptions authorizationOptions) {
         if (!this.initialised) {
             this.configuration =
                     YamlLoader.loadConfig(

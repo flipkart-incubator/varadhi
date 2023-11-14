@@ -45,7 +45,7 @@ public class AuthHandlers implements RouteConfigurator {
         }
 
         if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
-            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
+            authorizationHandlerBuilder = createAuthorizationHandler(vertx, configuration);
         } else {
             authorizationHandlerBuilder = null;
         }
@@ -61,9 +61,9 @@ public class AuthHandlers implements RouteConfigurator {
         }
     }
 
-    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
+    AuthorizationHandlerBuilder createAuthorizationHandler(Vertx vertx, ServerConfiguration configuration) {
         if (configuration.isAuthorizationEnabled()) {
-            AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
+            AuthorizationProvider authorizationProvider = getAuthorizationProvider(vertx, configuration);
             return new AuthorizationHandlerBuilder(configuration.getAuthorization()
                     .getSuperUsers(), authorizationProvider);
         } else {
@@ -72,13 +72,13 @@ public class AuthHandlers implements RouteConfigurator {
     }
 
     @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
+    private AuthorizationProvider getAuthorizationProvider(Vertx vertx, ServerConfiguration configuration) {
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
                 Class<? extends AuthorizationProvider> clazz =
                         (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                return createAuthorizationProvider(clazz, configuration.getAuthorization());
+                return createAuthorizationProvider(clazz, vertx, configuration.getAuthorization());
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new InvalidConfigException(e);
             }
@@ -87,11 +87,11 @@ public class AuthHandlers implements RouteConfigurator {
     }
 
     AuthorizationProvider createAuthorizationProvider(
-            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options
+            Class<? extends AuthorizationProvider> clazz, Vertx vertx, AuthorizationOptions options
     ) throws InvalidConfigException {
         try {
             AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();
-            provider.init(options);
+            provider.init(vertx, options);
             return provider;
         } catch (Exception e) {
             throw new InvalidConfigException(e);

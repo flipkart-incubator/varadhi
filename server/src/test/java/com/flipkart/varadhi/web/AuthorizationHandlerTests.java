@@ -6,6 +6,7 @@ import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.auth.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -66,7 +67,7 @@ public class AuthorizationHandlerTests {
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
         @Override
-        public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
+        public Future<Boolean> init(Vertx vertx, AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture();
         }
 
