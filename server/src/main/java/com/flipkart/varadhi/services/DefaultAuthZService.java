@@ -1,11 +1,18 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.auth.ResourceType;
 import com.flipkart.varadhi.auth.Role;
+import com.flipkart.varadhi.auth.RoleBindingNode;
+import com.flipkart.varadhi.auth.RoleAssignmentUpdate;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DefaultAuthZService {
     private final MetaStore metaStore;
@@ -56,5 +63,119 @@ public class DefaultAuthZService {
             ));
         }
         metaStore.deleteRole(roleName);
+    }
+
+    public List<RoleBindingNode> getAllRoleBindingNodes() {
+        return metaStore.getRoleBindingNodes();
+    }
+
+    public RoleBindingNode getRoleBindingNode(String resourceId) {
+        return metaStore.getRoleBindingNode(resourceId);
+    }
+
+    public RoleBindingNode updateRoleAssignment(RoleAssignmentUpdate binding) {
+        RoleBindingNode node = createOrGetRoleBindingNode(binding.getResourceId(), binding.getResourceType());
+        node.setRoleAssignment(binding.getSubject(), binding.getRoles());
+        return updateRoleBindingNode(node);
+    }
+
+    public void deleteRoleBindingNode(String resourceId) {
+        boolean exists = metaStore.checkRoleBindingNodeExists(resourceId);
+        if (!exists) {
+            throw new ResourceNotFoundException(String.format(
+                    "RoleBinding on resource(%s) not found.",
+                    resourceId
+            ));
+        }
+        metaStore.deleteRoleBindingNode(resourceId);
+    }
+
+    private RoleBindingNode createOrGetRoleBindingNode(String resourceId, ResourceType resourceType) {
+        boolean exists = metaStore.checkRoleBindingNodeExists(resourceId);
+        if (!exists) {
+            return createRoleBindingNode(resourceId, resourceType);
+        }
+        RoleBindingNode existingNode = metaStore.getRoleBindingNode(resourceId);
+        if (existingNode.getResourceType() != resourceType) {
+            throw new InvalidOperationForResourceException(String.format(
+                    "Incorrect resource type(%s) for resource id(%s).",
+                    resourceType,
+                    resourceId
+            ));
+        }
+        return existingNode;
+    }
+
+    private RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
+        if (!isResourceValid(resourceId, resourceType)) {
+            throw new InvalidOperationForResourceException(String.format(
+                    "Invalid resource id(%s) for resource type(%s).",
+                    resourceId,
+                    resourceType
+            ));
+        }
+        RoleBindingNode node = new RoleBindingNode(resourceId, resourceType, new HashMap<>(), 0);
+        metaStore.createRoleBindingNode(node);
+        return node;
+    }
+
+    private RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
+        boolean exists = metaStore.checkRoleBindingNodeExists(node.getResourceId());
+        if (!exists) {
+            throw new ResourceNotFoundException(String.format(
+                    "RoleBinding(%s) not found.",
+                    node.getResourceId()
+            ));
+        }
+
+        checkValidRoles(node);
+
+        RoleBindingNode existingNode = metaStore.getRoleBindingNode(node.getResourceId());
+        if (node.getVersion() != existingNode.getVersion()) {
+            throw new InvalidOperationForResourceException(String.format(
+                    "Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
+                    node.getResourceId()
+            ));
+        }
+        int updatedVersion = metaStore.updateRoleBindingNode(node);
+        node.setVersion(updatedVersion);
+        return node;
+    }
+
+    private boolean isResourceValid(String resourceId, ResourceType resourceType) {
+        return switch (resourceType) {
+            case ORG -> metaStore.checkOrgExists(resourceId);
+            case TEAM -> {
+                // org:team
+                String[] segments = resourceId.split(":");
+                yield (segments.length == 2) && metaStore.checkTeamExists(segments[1], segments[0]);
+            }
+            case PROJECT -> metaStore.checkProjectExists(resourceId);
+            case TOPIC -> {
+                // project:topic
+                String[] segments = resourceId.split(":");
+                yield (segments.length == 2) && metaStore.checkTopicResourceExists(segments[1], segments[0]);
+            }
+            case SUBSCRIPTION -> false; //TODO
+        };
+    }
+
+    private void checkValidRoles(RoleBindingNode node) {
+        // collect roles for each subject into a single set
+        Set<String> rolesOnNode = node.getSubjectToRolesMapping()
+                .values()
+                .stream()
+                .flatMap(Set::stream)
+                .collect(Collectors.toUnmodifiableSet());
+
+        // check if each role exists
+        rolesOnNode.stream()
+                .filter(role -> !metaStore.checkRoleExists(role))
+                .findAny().ifPresent(role -> {
+                    throw new ResourceNotFoundException(String.format(
+                            "Invalid assignment. Role(%s) does not exist",
+                            role
+                    ));
+                });
     }
 }

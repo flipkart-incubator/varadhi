@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web.v1.authz;
 
+import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.auth.Role;
+import com.flipkart.varadhi.auth.RoleAssignmentUpdate;
 import com.flipkart.varadhi.services.DefaultAuthZService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -18,7 +20,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ROLE;
+import static com.flipkart.varadhi.Constants.PathParams.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
@@ -99,59 +101,6 @@ public class DefaultAuthZHandlers implements RouteProvider {
         ).get();
     }
 
-    private List<RouteDefinition> getRoleBindingsRouteDefinitions() {
-        return new SubRoutes(
-                "/rbs",
-                List.of(
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::getAllRoleBindings,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:rb",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::getRoleBinding,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "",
-                                Set.of(hasBody),
-                                new LinkedHashSet<>(),
-                                this::createRoleBinding,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.PUT,
-                                "",
-                                Set.of(hasBody),
-                                new LinkedHashSet<>(),
-                                this::updateRoleBinding,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.DELETE,
-                                "/:rb",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::deleteRoleBinding,
-                                true,
-                                Optional.empty()
-                        )
-                )
-        ).get();
-    }
-
     private void createRole(RoutingContext routingContext) {
         Role role = routingContext.body().asPojo(Role.class);
         Role createdRole = defaultAuthZService.createRole(role);
@@ -169,30 +118,82 @@ public class DefaultAuthZHandlers implements RouteProvider {
         routingContext.endApiWithResponse(roles);
     }
 
-    private void deleteRole(RoutingContext routingContext) {
-        String roleName = routingContext.pathParam(REQUEST_PATH_PARAM_ROLE);
-        defaultAuthZService.deleteRole(roleName);
-        routingContext.endApi();
-    }
-
     private void updateRole(RoutingContext routingContext) {
         Role role = routingContext.body().asPojo(Role.class);
         Role updatedRole = defaultAuthZService.updateRole(role);
         routingContext.endApiWithResponse(updatedRole);
     }
 
-    private void createRoleBinding(RoutingContext routingContext) {
+    private void deleteRole(RoutingContext routingContext) {
+        String roleName = routingContext.pathParam(REQUEST_PATH_PARAM_ROLE);
+        defaultAuthZService.deleteRole(roleName);
+        routingContext.endApi();
     }
 
-    private void getRoleBinding(RoutingContext routingContext) {
+    private List<RouteDefinition> getRoleBindingsRouteDefinitions() {
+        return new SubRoutes(
+                "/rbs",
+                List.of(
+                        new RouteDefinition(
+                                HttpMethod.GET,
+                                "",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::getAllRoleBindingNodes,
+                                true,
+                                Optional.empty()
+                        ),
+                        new RouteDefinition(
+                                HttpMethod.GET,
+                                "/:resource",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::getRoleBindingNode,
+                                true,
+                                Optional.empty()
+                        ),
+                        new RouteDefinition(
+                                HttpMethod.PUT,
+                                "",
+                                Set.of(hasBody),
+                                new LinkedHashSet<>(),
+                                this::updateRoleAssignment,
+                                true,
+                                Optional.empty()
+                        ),
+                        new RouteDefinition(
+                                HttpMethod.DELETE,
+                                "/:resource",
+                                Set.of(authenticated),
+                                new LinkedHashSet<>(),
+                                this::deleteRoleBindingNode,
+                                true,
+                                Optional.empty()
+                        )
+                )
+        ).get();
     }
 
-    private void getAllRoleBindings(RoutingContext routingContext) {
+    private void getAllRoleBindingNodes(RoutingContext routingContext) {
+        List<RoleBindingNode> roleBindings = defaultAuthZService.getAllRoleBindingNodes();
+        routingContext.endApiWithResponse(roleBindings);
     }
 
-    private void updateRoleBinding(RoutingContext routingContext) {
+    private void getRoleBindingNode(RoutingContext routingContext) {
+        String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
+        RoleBindingNode roleBindingNode = defaultAuthZService.getRoleBindingNode(resourceId);
+        routingContext.endApiWithResponse(roleBindingNode);
     }
 
-    private void deleteRoleBinding(RoutingContext routingContext) {
+    private void updateRoleAssignment(RoutingContext routingContext) {
+        RoleAssignmentUpdate binding = routingContext.body().asPojo(RoleAssignmentUpdate.class);
+        RoleBindingNode node = defaultAuthZService.updateRoleAssignment(binding);
+        routingContext.endApiWithResponse(node);
+    }
+
+    private void deleteRoleBindingNode(RoutingContext routingContext) {
+        String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
+        defaultAuthZService.deleteRoleBindingNode(resourceId);
+        routingContext.endApi();
     }
 }

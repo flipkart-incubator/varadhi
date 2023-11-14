@@ -5,23 +5,27 @@ import com.flipkart.varadhi.entities.VaradhiResource;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @ValidateVaradhiResource(message = "Invalid Role Binding name. Check naming constraints.")
-public class RoleBinding extends VaradhiResource {
+public class RoleBindingNode extends VaradhiResource {
     String resourceId;
     ResourceType resourceType;
-    Map<String, List<String>> userToRoleBindings;
+    Map<String, Set<String>> subjectToRolesMapping;
 
-    protected RoleBinding(
-            String resourceId, ResourceType resourceType, Map<String, List<String>> userToRoleBindings, int version
+    public RoleBindingNode(
+            String resourceId, ResourceType resourceType, Map<String, Set<String>> subjectToRolesMapping, int version
     ) {
         super(resourceId, version);
         this.resourceId = resourceId;
         this.resourceType = resourceType;
-        this.userToRoleBindings = userToRoleBindings;
+        this.subjectToRolesMapping = subjectToRolesMapping;
+    }
+
+    public void setRoleAssignment(String subject, Set<String> roles) {
+        subjectToRolesMapping.put(subject, roles);
     }
 }
