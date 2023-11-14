@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.spi.db;
 
+import com.flipkart.varadhi.auth.Role;
+import com.flipkart.varadhi.auth.RoleBinding;
 import com.flipkart.varadhi.entities.*;
 
 import java.util.List;
@@ -56,4 +58,22 @@ public interface MetaStore {
     boolean checkVaradhiTopicExists(String varadhiTopicName);
 
     void deleteVaradhiTopic(String varadhiTopicName);
+
+    List<Role> getRoles();
+
+    Role getRole(String roleName);
+
+    void createRole(Role role);
+
+    boolean checkRoleExists(String name);
+
+    List<RoleBinding> getRoleBindings();
+
+    RoleBinding getRoleBinding(String resourceId);
+
+    void createRoleBinding(RoleBinding roleBinding);
+
+    int updateRole(Role role);
+
+    void deleteRole(String roleName);
 }

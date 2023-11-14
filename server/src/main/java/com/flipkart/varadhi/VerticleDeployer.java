@@ -12,6 +12,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.DefaultAuthZService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
@@ -29,6 +30,7 @@ import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import com.flipkart.varadhi.web.v1.authz.DefaultAuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -51,6 +53,7 @@ public class VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
+    private final DefaultAuthZHandlers defaultAuthZHandlers;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
 
@@ -83,6 +86,8 @@ public class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService);
+        this.defaultAuthZHandlers = new DefaultAuthZHandlers(
+                new DefaultAuthZService(metaStore)); //TODO(aayush): do not init if default provider flag false.
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
@@ -104,23 +109,47 @@ public class VerticleDeployer {
                 .collect(Collectors.toList());
     }
 
+    private List<RouteDefinition> getAuthZServerDefinitions() {
+        return Stream.of(
+                        defaultAuthZHandlers.get(),
+                        healthCheckHandler.get()
+                )
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+    }
+
 
     public void deployVerticle(
             Vertx vertx,
             ServerConfiguration configuration
     ) {
         if (configuration.isDefaultAuthorizationServerEnabled()) {
-            vertx.deployVerticle(
-                            () -> new DefaultAuthZVerticle(configuration.getDefaultAuthorizationServerOptions().getHttpServerOptions()),
-                            configuration.getDefaultAuthorizationServerOptions().getVerticleDeploymentOptions()
-                    )
-                    .onFailure(t -> {
-                        log.error("Could not start Default AuthZ Verticle", t);
-                        throw new VaradhiException("Failed to Deploy Default AuthZ API.", t);
-                    })
-                    .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+            deployDefaultAuthZVerticle(vertx, configuration);
         }
+        deployRestVerticle(vertx, configuration);
+    }
 
+    private void deployDefaultAuthZVerticle(Vertx vertx, ServerConfiguration configuration) {
+        vertx.deployVerticle(
+                        () -> new RestVerticle(
+                                getAuthZServerDefinitions(),
+                                behaviorConfigurators,
+                                new FailureHandler(),
+                                configuration.getDefaultAuthorizationServerOptions().getHttpServerOptions()
+                        ),
+                        configuration.getDefaultAuthorizationServerOptions().getVerticleDeploymentOptions()
+                )
+                .onFailure(t -> {
+                    log.error("Could not start Default AuthZServer Verticle", t);
+                    throw new VaradhiException("Failed to Deploy Default AuthZ API.", t);
+                })
+                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+    }
+
+    private void deployRestVerticle(
+            Vertx vertx,
+            ServerConfiguration configuration
+    ) {
         vertx.deployVerticle(
                         () -> new RestVerticle(
                                 getDefinitions(),
@@ -135,6 +164,7 @@ public class VerticleDeployer {
                     throw new VaradhiException("Failed to Deploy Rest API.", t);
                 })
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+
     }
 
 

@@ -9,6 +9,8 @@ public class ZNode {
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind VARADHI_TOPIC = new ZNodeKind("VaradhiTopic");
     public static final ZNodeKind TOPIC_RESOURCE = new ZNodeKind("TopicResource");
+    public static final ZNodeKind ROLE = new ZNodeKind("Role");
+    public static final ZNodeKind ROLE_BINDING = new ZNodeKind("RoleBinding");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";

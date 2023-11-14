@@ -11,6 +11,8 @@ public class Constants {
         public static final String REQUEST_PATH_PARAM_TEAM = "team";
         public static final String REQUEST_PATH_PARAM_PROJECT = "project";
         public static final String REQUEST_PATH_PARAM_TOPIC = "topic";
+        public static final String REQUEST_PATH_PARAM_ROLE = "role";
+        public static final String REQUEST_PATH_PARAM_ROLE_BINDING = "rb";
     }
 
     public static class Tags {
