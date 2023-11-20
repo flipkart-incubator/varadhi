@@ -7,6 +7,7 @@ dependencies {
     implementation(project(':entities'))
 
     implementation("io.vertx:vertx-core")
+    implementation("io.vertx:vertx-web-client:${vertx_version}")
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.commons:commons-lang3")
