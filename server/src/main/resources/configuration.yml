@@ -1,8 +1,10 @@
-varadhiOptions:
+restOptions:
   deployedRegion: "default"
-  producerOptions:
-    producerCacheBuilderSpec: ""
-    topicCacheBuilderSpec: ""
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
 
 vertxOptions:
   eventLoopPoolSize: 1
@@ -27,8 +29,8 @@ authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName:
-  providerOptions:
+  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  configFile: "src/main/resources/authorizationConfig.yml"
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
@@ -43,3 +45,4 @@ httpServerOptions:
   alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
   decompressionSupported: false
   useAlpn: true
+  tracingPolicy: "ALWAYS"

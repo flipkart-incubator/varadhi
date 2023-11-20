@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProducerResult;
+import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.utils.JsonMapper;
 
 import java.util.concurrent.CompletableFuture;
@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 public class DummyProducer implements Producer {
 
     @Override
-    public CompletableFuture<ProducerResult> ProduceAsync(Message message) {
+    public CompletableFuture<Offset> ProduceAsync(Message message) {
         byte[] payload = message.getPayload();
         DummyMessage dm = JsonMapper.jsonDeserialize(new String(payload), DummyMessage.class);
 
@@ -24,7 +24,7 @@ public class DummyProducer implements Producer {
             if (null != dm.exceptionClass && !dm.exceptionClass.isBlank()) {
                 throw loadClass(dm.exceptionClass);
             }
-            return new DummyProducerResult(dm.offSet);
+            return new DummyOffset(dm.offSet);
         });
     }
 
@@ -40,16 +40,16 @@ public class DummyProducer implements Producer {
     public record DummyMessage(int sleepMillis, int offSet, String exceptionClass, byte[] randomData) {
     }
 
-    public static class DummyProducerResult extends ProducerResult {
+    public static class DummyOffset implements Offset {
         int offset;
 
-        public DummyProducerResult(int offset) {
+        public DummyOffset(int offset) {
             this.offset = offset;
         }
 
         @Override
-        public int compareTo(ProducerResult o) {
-            return offset - ((DummyProducerResult) o).offset;
+        public int compareTo(Offset o) {
+            return offset - ((DummyOffset) o).offset;
         }
     }
 

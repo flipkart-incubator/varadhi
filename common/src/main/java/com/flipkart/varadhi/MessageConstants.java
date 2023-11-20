@@ -1,6 +1,6 @@
 package com.flipkart.varadhi;
 
-import java.util.Set;
+import java.util.List;
 
 public class MessageConstants {
 
@@ -16,7 +16,7 @@ public class MessageConstants {
         public static String MESSAGE_ID = "x_restbus_message_id";
         public static String GROUP_ID = "x_restbus_group_id";
 
-        public static Set<String> REQUIRED_HEADERS =
-                Set.of(MESSAGE_ID, PRODUCE_IDENTITY, PRODUCE_REGION, PRODUCE_TIMESTAMP);
+        public static List<String> REQUIRED_HEADERS =
+                List.of(MESSAGE_ID, PRODUCE_IDENTITY, PRODUCE_REGION, PRODUCE_TIMESTAMP);
     }
 }

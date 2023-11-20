@@ -26,12 +26,34 @@ public class VaradhiTopicFactoryTest {
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        PulsarStorageTopic pTopic = new PulsarStorageTopic(pTopicName, 1);
-        doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, null);
+        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
+        doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
     }
 
     @Test
     public void getTopic() {
+        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        TopicResource topicResource = new TopicResource(
+                topicName,
+                1,
+                project.getName(),
+                true,
+                capacityPolicy
+        );
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        Assertions.assertNotNull(varadhiTopic);
+        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
+        StorageTopic st = it.getStorageTopic();
+        Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
+        Assertions.assertEquals(it.getTopicRegion(), region);
+        Assertions.assertNotNull(st);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy);
+    }
+
+    @Test
+    public void getTopicWithDefaultCapacity() {
+        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
         TopicResource topicResource = new TopicResource(
                 topicName,
                 1,
@@ -40,12 +62,9 @@ public class VaradhiTopicFactoryTest {
                 null
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        Assertions.assertNotNull(varadhiTopic);
         InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
-        StorageTopic st = it.getStorageTopic();
-        Assertions.assertEquals(it.getTopicState(), InternalTopic.TopicState.Producing);
-        Assertions.assertEquals(it.getTopicRegion(), region);
-        Assertions.assertNotNull(st);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, null);
+        PulsarStorageTopic pt = (PulsarStorageTopic) it.getStorageTopic();
+        Assertions.assertEquals(capacityPolicy.getMaxThroughputKBps(), pt.getMaxThroughputKBps());
+        Assertions.assertEquals(capacityPolicy.getMaxQPS(), pt.getMaxQPS());
     }
 }

@@ -6,7 +6,9 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
-import com.flipkart.varadhi.produce.otel.ProduceMetricProvider;
+import com.flipkart.varadhi.produce.otel.ProducerMetrics;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -53,13 +55,14 @@ public class VerticleDeployer {
 
 
     public VerticleDeployer(
+            String hostName,
             Vertx vertx,
             ServerConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {
-        String deployedRegion = configuration.getVaradhiOptions().getDeployedRegion();
+        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         VaradhiTopicFactory varadhiTopicFactory =
                 new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
         VaradhiTopicService varadhiTopicService = new VaradhiTopicService(
@@ -72,16 +75,18 @@ public class VerticleDeployer {
         ProducerService producerService =
                 setupProducerService(
                         messagingStackProvider, varadhiTopicService,
-                        configuration.getVaradhiOptions().getProducerOptions(),
-                        meterRegistry
+                        configuration.getProducerOptions(), meterRegistry
                 );
         this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
         this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
         this.projectHandlers = new ProjectHandlers(new ProjectService(metaStore));
+
         this.produceHandlers =
-                new ProduceHandlers(configuration.getVaradhiOptions().getDeployedRegion(), producerService);
+                new ProduceHandlers(hostName, configuration.getRestOptions(), producerService);
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
+        // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
+        bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
@@ -131,8 +136,9 @@ public class VerticleDeployer {
         ProducerCache producerCache = new ProducerCache(producerFactory, producerOptions.getProducerCacheBuilderSpec());
         InternalTopicCache internalTopicCache =
                 new InternalTopicCache(varadhiTopicService, producerOptions.getTopicCacheBuilderSpec());
-        ProduceMetricProvider produceMetricProvider = new ProduceMetricProvider(meterRegistry);
-        return new ProducerService(producerCache, internalTopicCache, produceMetricProvider);
+        ProducerMetrics producerMetrics = producerOptions.isMetricEnabled() ? new ProducerMetricsImpl(meterRegistry) :
+                new ProducerMetricsNoOpImpl();
+        return new ProducerService(producerCache, internalTopicCache, producerMetrics);
     }
 
 }

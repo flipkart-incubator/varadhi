@@ -77,15 +77,15 @@ public class WebTestBase {
         }
     }
 
-    protected Handler<RoutingContext> wrapBlocking(Handler<RoutingContext> handler) {
+    public Handler<RoutingContext> wrapBlocking(Handler<RoutingContext> handler) {
         return RestVerticle.wrapBlockingExecution(vertx, handler);
     }
 
-    protected Route setupFailureHandler(Route route) {
+    public Route setupFailureHandler(Route route) {
         return route.failureHandler(failureHandler);
     }
 
-    protected HttpRequest<Buffer> createRequest(HttpMethod method, String path) {
+    public HttpRequest<Buffer> createRequest(HttpMethod method, String path) {
         if (POST == method) {
             return webClient.post(defaultPort, defaultHost, path);
         } else if (GET == method) {
@@ -99,18 +99,18 @@ public class WebTestBase {
         return null;
     }
 
-    protected <T, R> R sendRequestWithBody(HttpRequest<Buffer> request, T entity, Class<R> responseClazz)
+    public <R> R sendRequestWithByteBufferBody(HttpRequest<Buffer> request, byte[] payload, Class<R> responseClazz)
             throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, JsonMapper.jsonSerialize(entity));
+        HttpResponse<Buffer> response = sendRequest(request, payload);
         Assertions.assertEquals(HTTP_OK, response.statusCode());
         return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
     }
 
-    protected <T, R> R sendRequestWithBody(
-            HttpRequest<Buffer> request, T entity, int statusCode, String statusMessage, Class<R> responseClazz
+    public <R> R sendRequestWithByteBufferBody(
+            HttpRequest<Buffer> request, byte[] payload, int statusCode, String statusMessage, Class<R> responseClazz
     )
             throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, JsonMapper.jsonSerialize(entity));
+        HttpResponse<Buffer> response = sendRequest(request, payload);
         Assertions.assertEquals(statusCode, response.statusCode());
         if (null != statusMessage) {
             Assertions.assertEquals(statusMessage, response.statusMessage());
@@ -121,7 +121,21 @@ public class WebTestBase {
         return null;
     }
 
-    protected <R> R sendRequestWithoutBody(HttpRequest<Buffer> request, Class<R> responseClazz)
+
+    public <T, R> R sendRequestWithBody(HttpRequest<Buffer> request, T entity, Class<R> responseClazz)
+            throws InterruptedException {
+        return sendRequestWithByteBufferBody(request, JsonMapper.jsonSerialize(entity).getBytes(), responseClazz);
+    }
+
+    public <T, R> R sendRequestWithBody(
+            HttpRequest<Buffer> request, T entity, int statusCode, String statusMessage, Class<R> responseClazz
+    )
+            throws InterruptedException {
+        return sendRequestWithByteBufferBody(
+                request, JsonMapper.jsonSerialize(entity).getBytes(), statusCode, statusMessage, responseClazz);
+    }
+
+    public <R> R sendRequestWithoutBody(HttpRequest<Buffer> request, Class<R> responseClazz)
             throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, null);
         Assertions.assertEquals(HTTP_OK, response.statusCode());
@@ -131,7 +145,7 @@ public class WebTestBase {
         return null;
     }
 
-    protected <R> R sendRequestWithoutBody(
+    public <R> R sendRequestWithoutBody(
             HttpRequest<Buffer> request, int statusCode, String statusMessage, Class<R> responseClazz
     )
             throws InterruptedException {
@@ -146,11 +160,12 @@ public class WebTestBase {
         return null;
     }
 
-    protected HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, String json) throws InterruptedException {
+    public HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, byte[] payload)
+            throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         Future<HttpResponse<Buffer>> responseFuture;
-        if (null != json) {
-            Buffer reqBuffer = Buffer.buffer(json);
+        if (null != payload) {
+            Buffer reqBuffer = Buffer.buffer(payload);
             responseFuture = request.sendBuffer(reqBuffer);
         } else {
             responseFuture = request.send();
@@ -172,15 +187,15 @@ public class WebTestBase {
         return responseCapture.response;
     }
 
-    protected void awaitLatch(CountDownLatch latch) throws InterruptedException {
+    public void awaitLatch(CountDownLatch latch) throws InterruptedException {
         awaitLatch(latch, 10, TimeUnit.SECONDS);
     }
 
-    protected void awaitLatch(CountDownLatch latch, long timeout, TimeUnit unit) throws InterruptedException {
+    public void awaitLatch(CountDownLatch latch, long timeout, TimeUnit unit) throws InterruptedException {
         assertTrue(latch.await(timeout, unit));
     }
 
-    protected <T> Handler<AsyncResult<T>> onSuccess(Consumer<T> consumer) {
+    public <T> Handler<AsyncResult<T>> onSuccess(Consumer<T> consumer) {
         return result -> {
             if (result.failed()) {
                 result.cause().printStackTrace();
@@ -191,7 +206,7 @@ public class WebTestBase {
         };
     }
 
-    protected void fail(String message) {
+    public void fail(String message) {
         Assertions.fail(message);
     }
 }

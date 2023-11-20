@@ -24,12 +24,17 @@ public class FailureHandler implements Handler<RoutingContext> {
             int statusCode =
                     overrideStatusCode(ctx.statusCode()) ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
             String errorMsg =
-                    overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure()) : response.getStatusMessage();
-
-            log.error("{}: {}: Failed. Status:{}, Error:{}", ctx.request().method(), ctx.request().path(),
-                    statusCode,
-                    errorMsg
-            );
+                    overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure(), statusCode) :
+                            response.getStatusMessage();
+            String failureLog =
+                    String.format("%s: %s: Failed. Status:%s, Error:%s", ctx.request().method(), ctx.request().path(),
+                            statusCode, errorMsg
+                    );
+            if (statusCode == HTTP_INTERNAL_ERROR) {
+                log.error(failureLog, ctx.failure());
+            } else {
+                log.error(failureLog);
+            }
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
             response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);
@@ -49,7 +54,7 @@ public class FailureHandler implements Handler<RoutingContext> {
                 || response.getStatusMessage().equalsIgnoreCase(HttpResponseStatus.OK.reasonPhrase());
     }
 
-    private String getErrorFromFailure(Throwable t) {
+    private String getErrorFromFailure(Throwable t, int statusCode) {
         if (t instanceof HttpException he) {
             return he.getPayload();
         } else {
@@ -65,14 +70,21 @@ public class FailureHandler implements Handler<RoutingContext> {
                     }
                 }
             } else {
-                sb.append("Internal error.");
+                sb.append(getDefaultErrorMessageFromStatusCode(statusCode));
             }
             return sb.toString();
         }
     }
 
+    private String getDefaultErrorMessageFromStatusCode(int statusCode) {
+        return switch (statusCode) {
+            case HTTP_ENTITY_TOO_LARGE -> "Entity too large.";
+            default -> "Internal error.";
+        };
+    }
+
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review status code mapping for correctness.
+        //TODO:: review produceStatus code mapping for correctness.
         Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();

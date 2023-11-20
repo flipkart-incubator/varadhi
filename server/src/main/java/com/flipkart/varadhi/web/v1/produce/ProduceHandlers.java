@@ -1,18 +1,18 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceContext;
-import com.flipkart.varadhi.entities.ProduceResult;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.utils.HeaderUtils;
+import com.flipkart.varadhi.utils.MessageHelper;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -44,14 +44,22 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 public class ProduceHandlers implements RouteProvider {
     private final String deployedRegion;
     private final ProducerService producerService;
+    private final String serviceHostName;
+    private final HeaderValidationHandler headerValidationHandler;
 
-    public ProduceHandlers(String deployedRegion, ProducerService producerService) {
-        this.deployedRegion = deployedRegion;
+    public ProduceHandlers(String serviceHostName, RestOptions restOptions, ProducerService producerService) {
+        this.deployedRegion = restOptions.getDeployedRegion();
         this.producerService = producerService;
+        this.serviceHostName = serviceHostName;
+        this.headerValidationHandler = new HeaderValidationHandler(restOptions);
     }
 
     @Override
     public List<RouteDefinition> get() {
+
+        LinkedHashSet<Handler<RoutingContext>> producePreHandlers = new LinkedHashSet<>();
+        producePreHandlers.add(headerValidationHandler::validate);
+
         return new SubRoutes(
                 "/v1/projects/:project",
                 List.of(
@@ -59,7 +67,7 @@ public class ProduceHandlers implements RouteProvider {
                                 HttpMethod.POST,
                                 "/topics/:topic/produce",
                                 Set.of(authenticated, hasBody),
-                                new LinkedHashSet(),
+                                producePreHandlers,
                                 this::produce,
                                 false,
                                 Optional.of(PermissionAuthorization.of(TOPIC_PRODUCE, "{project}/{topic}"))
@@ -69,9 +77,13 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public void produce(RoutingContext ctx) {
-        //TODO:: Request Validations pending
 
-        byte[] payload = ctx.body().asPojo(byte[].class);
+        // TODO:: Below is making extra copy, this needs to be avoided.
+        // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
+        // however only required bytes are needed. Need to figure out the correct mechanism here.
+        byte[] payload = ctx.body().buffer().getBytes();
+//         TODO:: Add project validations.
+
 
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
@@ -79,7 +91,6 @@ public class ProduceHandlers implements RouteProvider {
 
         ProduceContext produceContext = buildProduceContext(ctx, payload.length);
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceContext);
-
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, produceContext);
         produceFuture.whenComplete((produceResult, failure) ->
@@ -89,8 +100,8 @@ public class ProduceHandlers implements RouteProvider {
                                     ctx.endRequestWithResponse(produceResult.getMessageId());
                                 } else {
                                     ctx.endRequestWithStatusAndErrorMsg(
-                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus().status()),
-                                            produceResult.getProduceStatus().message()
+                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
+                                            produceResult.getFailureReason()
                                     );
                                 }
                             } else {
@@ -109,13 +120,13 @@ public class ProduceHandlers implements RouteProvider {
         );
     }
 
-    private int getHttpStatusForProduceStatus(ProduceResult.Status status) {
-        return switch (status) {
+    private int getHttpStatusForProduceStatus(ProduceStatus produceStatus) {
+        return switch (produceStatus) {
             case Blocked, NotAllowed -> HTTP_UNPROCESSABLE_ENTITY;
             case Throttled -> HTTP_RATE_LIMITED;
             case Failed -> HTTP_INTERNAL_ERROR;
             default -> {
-                log.error("Unexpected Produce Status ({}) for Http code conversion.", status);
+                log.error("Unexpected Produce ProduceStatus ({}) for Http code conversion.", produceStatus);
                 yield HTTP_INTERNAL_ERROR;
             }
         };
@@ -131,6 +142,7 @@ public class ProduceHandlers implements RouteProvider {
         requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(produceContext.getRequestContext().getRequestTimestamp()));
         requestHeaders.put(PRODUCE_IDENTITY, produceContext.getRequestContext().getProduceIdentity());
         requestHeaders.put(PRODUCE_REGION, produceContext.getTopicContext().getRegion());
+        MessageHelper.ensureRequiredHeaders(requestHeaders);
         return new Message(payload, requestHeaders);
     }
 
@@ -158,6 +170,7 @@ public class ProduceHandlers implements RouteProvider {
             }
         }
         requestContext.setRemoteHost(remoteHost);
+        requestContext.setServiceHost(serviceHostName);
         return requestContext;
     }
 
