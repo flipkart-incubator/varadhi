@@ -10,7 +10,7 @@ publishing {
         maven(MavenPublication) {
             groupId = "${projectGroupId}"
             artifactId = "${project.name}"
-            version = "${version}-SNAPSHOT"
+            version = "${version}"
             from components.java
 
             pom {

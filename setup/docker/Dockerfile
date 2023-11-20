@@ -14,7 +14,7 @@ EXPOSE 8080
 RUN mkdir -p /usr/share/varadhi/dependencies && chmod 755 /usr/share/varadhi/dependencies
 RUN mkdir /etc/varadhi && chmod 755 /etc/varadhi
 COPY $VARADHI_HOME/server/build/dependencies/ /usr/share/varadhi/dependencies/
-COPY $VARADHI_HOME/pulsar/build/libs/pulsar-0.1.0.1.jar /usr/share/varadhi/dependencies/
+COPY $VARADHI_HOME/pulsar/build/libs/pulsar-*.jar /usr/share/varadhi/dependencies/
 COPY $VARADHI_HOME/pulsar/build/dependencies/ /usr/share/varadhi/dependencies/
 COPY $VARADHI_HOME/server/build/libs/ /usr/share/varadhi/
 COPY $VARADHI_HOME/server/build/resources/main/ /etc/varadhi/
