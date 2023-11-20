@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.authz;
 
-import com.flipkart.varadhi.auth.DefaultAuthorizationConfiguration;
-import com.flipkart.varadhi.auth.ResourceAction;
-import com.flipkart.varadhi.auth.ResourceType;
+import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
+import com.flipkart.varadhi.entities.ResourceAction;
+import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.UserContext;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.YamlLoader;

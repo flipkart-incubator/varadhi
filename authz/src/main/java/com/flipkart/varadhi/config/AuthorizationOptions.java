@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.authz;
+package com.flipkart.varadhi.config;
 
 import lombok.Data;
 

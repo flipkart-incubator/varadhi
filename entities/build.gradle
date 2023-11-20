@@ -1,6 +1,5 @@
 plugins {
     id "com.flipkart.varadhi.java-library-conventions"
-    id 'java-test-fixtures'
 }
 dependencies {
     implementation(project(":common"))
