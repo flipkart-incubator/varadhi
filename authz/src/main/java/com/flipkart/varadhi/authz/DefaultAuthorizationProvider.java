@@ -90,7 +90,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      * @param action     action requested by the subject which needs authorization
      * @param resourceId resource id under whose scope the check will be performed
      *
-     * @return {@code Future<Boolean>} a future result expressing True/False decision
+     * @return {@code Future<Boolean>} return a future of true or failed future if not authorized
      */
     private Future<Boolean> isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
         log.debug(
@@ -107,7 +107,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     protected Future<Set<String>> getRolesForSubject(String subject, String resourceId) {
         // use web client to make get call
-        return webClient.get(8088, "localhost", "/v1/authz/rbs/" + resourceId)
+        return webClient.get(
+                        configuration.getAuthZServerPort(), configuration.getAuthZServerHost(),
+                        configuration.getAuthZServerPath() + resourceId
+                )
                 .as(BodyCodec.json(RoleBindingNode.class))
                 .send()
                 .compose(response -> {
