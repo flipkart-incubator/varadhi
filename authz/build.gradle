@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(':common'))
+    implementation(project(':entities'))
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-web-client:${vertx_version}")

@@ -1,0 +1,12 @@
+---
+roleDefinitions:
+  project.admin:
+    roleId: project.admin
+    permissions:
+      - PROJECT_CREATE
+      - PROJECT_UPDATE
+  team.admin:
+    roleId: team.admin
+    permissions:
+      - TEAM_CREATE
+      - TEAM_UPDATE

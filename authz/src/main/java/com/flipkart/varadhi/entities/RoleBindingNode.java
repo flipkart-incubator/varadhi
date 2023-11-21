@@ -1,7 +1,6 @@
-package com.flipkart.varadhi.auth;
+package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.ValidateVaradhiResource;
-import com.flipkart.varadhi.entities.VaradhiResource;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 

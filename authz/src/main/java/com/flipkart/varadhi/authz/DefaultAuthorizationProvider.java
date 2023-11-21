@@ -1,10 +1,8 @@
 package com.flipkart.varadhi.authz;
 
-import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
-import com.flipkart.varadhi.entities.ResourceAction;
-import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.config.AuthorizationOptions;
-import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
@@ -18,12 +16,12 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
+    private static final Role EMPTY_ROLE = new Role("", Set.of());
     private DefaultAuthorizationConfiguration configuration;
     private WebClient webClient;
     private volatile boolean initialised = false;
@@ -56,9 +54,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             throw new InvalidConfigException("Default Authorization Provider is not initialised.");
         }
         List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
-        var result = leafToRootResourceIds.stream().filter(pair -> StringUtils.isNotBlank(pair.getValue()))
-                .anyMatch(pair -> isAuthorizedInternalV2(userContext.getSubject(), action, pair.getValue()).result());
-        return Future.succeededFuture(result);
+        List<Future<Boolean>> futures =
+                leafToRootResourceIds.stream().filter(pair -> StringUtils.isNotBlank(pair.getValue()))
+                        .map(pair -> isAuthorizedInternal(userContext.getSubject(), action, pair.getValue()))
+                        .toList();
+        // succeeded future denotes successful authorization
+        return Future.any(futures).transform(result -> Future.succeededFuture(result.succeeded()));
     }
 
     /**
@@ -82,40 +83,29 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     /**
-     * Authorize subject against a single resourceId
+     * Authorize subject against a single resourceId.
+     * Succeeds the future if user is authorized, otherwise fails the future.
      *
      * @param subject    user identifier to be authorized
      * @param action     action requested by the subject which needs authorization
      * @param resourceId resource id under whose scope the check will be performed
      *
-     * @return True, if subject is allowed to perform action under this resource node, else False
+     * @return {@code Future<Boolean>} a future result expressing True/False decision
      */
-    private boolean isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
+    private Future<Boolean> isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
         log.debug(
                 "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
                 resourceId
         );
-        return getRolesForSubject(subject, resourceId).stream()
-                .anyMatch(role -> doesActionBelongToRole(subject, role, action));
-    }
-
-    private Future<Boolean> isAuthorizedInternalV2(String subject, ResourceAction action, String resourceId) {
-        log.debug(
-                "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
-                resourceId
-        );
-        return getRolesForSubjectV2(subject, resourceId)
-                .compose(roles -> checkAllRoles(subject, roles, action));
-    }
-
-    private Set<String> getRolesForSubject(String subject, String resourceId) {
-        return configuration.getRoleBindings()
-                .getOrDefault(resourceId, Map.of())
-                .getOrDefault(subject, Set.of());
+        return getRolesForSubject(subject, resourceId)
+                .compose(roles -> (checkAllRoles(subject, roles, action)) ?
+                        Future.succeededFuture(true)
+                        :
+                        Future.failedFuture("Not authorized"));
     }
 
 
-    private Future<Set<String>> getRolesForSubjectV2(String subject, String resourceId) {
+    protected Future<Set<String>> getRolesForSubject(String subject, String resourceId) {
         // use web client to make get call
         return webClient.get(8088, "localhost", "/v1/authz/rbs/" + resourceId)
                 .as(BodyCodec.json(RoleBindingNode.class))
@@ -131,35 +121,16 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
         log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        boolean matching = configuration.getRoles().getOrDefault(roleId, Set.of()).contains(action.name());
+        boolean matching =
+                configuration.getRoleDefinitions().getOrDefault(roleId, EMPTY_ROLE).getPermissions().contains(action);
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
         return matching;
     }
 
-    private Future<Boolean> doesActionBelongToRoleV2(String subject, String roleId, ResourceAction action) {
-        log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
-        return webClient.get(8088, "localhost", "/v1/authz/roles/" + roleId)
-                .as(BodyCodec.json(Role.class))
-                .send()
-                .compose(response -> {
-                    Role role = response.body();
-                    boolean matching = role.getPermissions().contains(action);
-                    if (matching) {
-                        log.debug(
-                                "Successfully matched action [{}] for subject [{}] against role [{}]", action, subject,
-                                roleId
-                        );
-                    }
-                    return Future.succeededFuture(matching);
-                })
-                .onFailure(err -> log.error("Error while fetching details for role [{}]", roleId, err));
-    }
-
-    private Future<Boolean> checkAllRoles(String subject, Set<String> roles, ResourceAction action) {
-        return Future.all(roles.stream().map(role -> doesActionBelongToRoleV2(subject, role, action)).toList())
-                .map(result -> result.list().stream().anyMatch(Boolean.TRUE::equals));
+    private boolean checkAllRoles(String subject, Set<String> roles, ResourceAction action) {
+        return roles.stream().anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
     private void pushOrgNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
