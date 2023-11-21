@@ -1,10 +1,10 @@
 plugins {
-    id 'com.flipkart.varadhi.java-library-conventions'
+    id 'com.flipkart.varadhi.java-published-library-conventions'
+    id 'java-test-fixtures'
 }
 
 dependencies {
     implementation(project(':common'))
-    implementation(project(':entities'))
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-web-client:${vertx_version}")
@@ -15,5 +15,4 @@ dependencies {
 
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("io.vertx:vertx-web-client")
-    testImplementation(testFixtures(project(':entities')))
 }

@@ -1,0 +1,27 @@
+plugins {
+    id 'com.flipkart.varadhi.java-library-conventions'
+    // Apply the maven-publish to allow deploying to maven artifactories
+    id 'maven-publish'
+}
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "${projectGroupId}"
+            artifactId = "${project.name}"
+            version = "${version}"
+            from components.java
+
+            pom {
+                name = "${project.name}"
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = mavenPublishUrl
+        }
+    }
+}

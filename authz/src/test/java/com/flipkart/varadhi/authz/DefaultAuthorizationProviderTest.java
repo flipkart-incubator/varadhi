@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.authz;
 
+import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.auth.ResourceAction;
 import io.vertx.core.Vertx;
+import com.flipkart.varadhi.entities.ResourceAction;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
