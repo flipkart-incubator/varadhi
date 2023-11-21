@@ -1,7 +1,8 @@
-package com.flipkart.varadhi.auth;
+package com.flipkart.varadhi.authz;
 
+import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.util.TestUtil;
+import com.flipkart.varadhi.entities.ResourceAction;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import static com.flipkart.varadhi.entities.TestUser.testUser;
 
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthorizationProviderTest {
@@ -97,7 +100,7 @@ public class DefaultAuthorizationProviderTest {
     public void testNotInit() {
         Assertions.assertThrows(InvalidConfigException.class, () ->
                 defaultAuthorizationProvider.isAuthorized(
-                        TestUtil.testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
+                        testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
     }
 
     @Test
@@ -106,7 +109,7 @@ public class DefaultAuthorizationProviderTest {
 
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("abc", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("abc", false),
                         ResourceAction.ORG_CREATE, "flipkart"
                 ))
                 .onComplete(testContext.succeeding(t -> {
@@ -121,7 +124,7 @@ public class DefaultAuthorizationProviderTest {
 
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("xyz", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, "flipkart"
                 ))
                 .onComplete(testContext.succeeding(t -> {
@@ -136,7 +139,7 @@ public class DefaultAuthorizationProviderTest {
 
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("xyz", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, ""
                 )) // xyz has org.admin but not at root level
                 .onComplete(testContext.succeeding(t -> {
@@ -151,7 +154,7 @@ public class DefaultAuthorizationProviderTest {
 
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("proj_user3", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user3", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // checking if user role at the leaf node resolves
                 .onComplete(testContext.succeeding(t -> {
@@ -159,7 +162,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("proj_user2", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user2", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // checking if user role at the parent node resolves
                 .onComplete(testContext.succeeding(t -> {
@@ -167,7 +170,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("abc", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("abc", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // checking since abc is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
@@ -175,7 +178,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("team_user1", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("team_user1", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // checking since team_user1 is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
@@ -183,7 +186,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("brock", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("brock", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
                 )) // brock is team admin for different team, should not be able to access
                 .onComplete(testContext.succeeding(t -> {
@@ -197,7 +200,7 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(3);
         defaultAuthorizationProvider
                 .init(authorizationOptions)
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("proj_user2", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user2", false),
                         ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
                 )) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
@@ -205,7 +208,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("proj_user2", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user2", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001"
                 )) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
@@ -213,7 +216,7 @@ public class DefaultAuthorizationProviderTest {
                     checkpoint.flag();
                 }))
 
-                .compose(t -> defaultAuthorizationProvider.isAuthorized(TestUtil.testUser("proj_user1", false),
+                .compose(t -> defaultAuthorizationProvider.isAuthorized(testUser("proj_user1", false),
                         ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
                 )) // proj_user1 is project.read so should work
                 .onComplete(testContext.succeeding(t -> {

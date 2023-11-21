@@ -1,9 +1,8 @@
-package com.flipkart.varadhi.util;
+package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.UserContext;
-
-public final class TestUtil {
-    private TestUtil(){}
+public final class TestUser {
+    private TestUser() {
+    }
 
     public static UserContext testUser(String name, boolean expired) {
         return new UserContext() {

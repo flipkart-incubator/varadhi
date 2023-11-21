@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.auth.ResourceAction.*;
+import static com.flipkart.varadhi.entities.ResourceAction.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 

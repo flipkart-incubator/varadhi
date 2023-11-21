@@ -21,8 +21,8 @@ import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TEAM;
-import static com.flipkart.varadhi.auth.ResourceAction.TEAM_DELETE;
-import static com.flipkart.varadhi.auth.ResourceAction.TEAM_GET;
+import static com.flipkart.varadhi.entities.ResourceAction.TEAM_DELETE;
+import static com.flipkart.varadhi.entities.ResourceAction.TEAM_GET;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 

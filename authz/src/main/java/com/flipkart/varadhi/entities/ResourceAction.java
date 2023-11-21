@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.auth;
+package com.flipkart.varadhi.entities;
 
 import lombok.Getter;
 

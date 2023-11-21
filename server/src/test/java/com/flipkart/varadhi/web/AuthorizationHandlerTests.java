@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.auth.AuthorizationOptions;
-import com.flipkart.varadhi.auth.AuthorizationProvider;
+import com.flipkart.varadhi.config.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.auth.ResourceAction;
+import com.flipkart.varadhi.entities.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
 import io.vertx.ext.web.handler.HttpException;
@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
+
+import static com.flipkart.varadhi.entities.TestUser.testUser;
 
 @ExtendWith(VertxExtension.class)
 public class AuthorizationHandlerTests {
@@ -60,20 +62,6 @@ public class AuthorizationHandlerTests {
                     Assertions.assertEquals(500, ((HttpException) t).getStatusCode());
                     checks.flag();
                 }));
-    }
-
-    private UserContext testUser(String name, boolean expired) {
-        return new UserContext() {
-            @Override
-            public String getSubject() {
-                return name;
-            }
-
-            @Override
-            public boolean isExpired() {
-                return expired;
-            }
-        };
     }
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
