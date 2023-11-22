@@ -19,7 +19,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,13 +39,17 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
         defaultAuthZService = mock(DefaultAuthZService.class);
         defaultAuthZHandlers = new DefaultAuthZHandlers(defaultAuthZService);
 
-        Route routeGetNode = router.get("/authz/bindings/:resource").handler(wrapBlocking(defaultAuthZHandlers::getRoleBindingNode));
+        Route routeGetNode =
+                router.get("/authz/bindings/:resource").handler(wrapBlocking(defaultAuthZHandlers::getRoleBindingNode));
         setupFailureHandler(routeGetNode);
-        Route routeGetAllNodes = router.get("/authz/bindings").handler(wrapBlocking(defaultAuthZHandlers::getAllRoleBindingNodes));
+        Route routeGetAllNodes =
+                router.get("/authz/bindings").handler(wrapBlocking(defaultAuthZHandlers::getAllRoleBindingNodes));
         setupFailureHandler(routeGetAllNodes);
-        Route routeUpdateAssignment = router.put("/authz/bindings").handler(bodyHandler).handler(wrapBlocking(defaultAuthZHandlers::updateRoleAssignment));
+        Route routeUpdateAssignment = router.put("/authz/bindings").handler(bodyHandler)
+                .handler(wrapBlocking(defaultAuthZHandlers::updateRoleAssignment));
         setupFailureHandler(routeUpdateAssignment);
-        Route routeDeleteNode = router.delete("/authz/bindings/:resource").handler(wrapBlocking(defaultAuthZHandlers::deleteRoleBindingNode));
+        Route routeDeleteNode = router.delete("/authz/bindings/:resource")
+                .handler(wrapBlocking(defaultAuthZHandlers::deleteRoleBindingNode));
         setupFailureHandler(routeDeleteNode);
     }
 
@@ -71,7 +74,8 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
         verify(defaultAuthZService, times(1)).getRoleBindingNode(expected.getResourceId());
 
         String notFoundError = String.format("RoleBinding on resource(%s) not found.", expected.getResourceId());
-        doThrow(new ResourceNotFoundException(notFoundError)).when(defaultAuthZService).getRoleBindingNode(expected.getResourceId());
+        doThrow(new ResourceNotFoundException(notFoundError)).when(defaultAuthZService)
+                .getRoleBindingNode(expected.getResourceId());
         ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
         assertEquals(notFoundError, errResponse.reason());
     }
@@ -80,13 +84,15 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
     public void testGetAllRoleBindingNodes() throws Exception {
         List<RoleBindingNode> expected = List.of(
                 new RoleBindingNode("testNode1", ResourceType.ORG, Map.of(), 0),
-                new RoleBindingNode("testNode2", ResourceType.ORG, Map.of(), 0));
+                new RoleBindingNode("testNode2", ResourceType.ORG, Map.of(), 0)
+        );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, "/authz/bindings");
         doReturn(expected).when(defaultAuthZService).getAllRoleBindingNodes();
 
         HttpResponse<Buffer> responseBuffer = sendRequest(request, null);
-        List<RoleBindingNode> response = jsonDeserialize(responseBuffer.bodyAsString(), List.class, RoleBindingNode.class);
+        List<RoleBindingNode> response =
+                jsonDeserialize(responseBuffer.bodyAsString(), List.class, RoleBindingNode.class);
 
         assertEquals(expected.size(), response.size());
         assertArrayEquals(expected.toArray(), response.toArray());
@@ -104,7 +110,8 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
         verify(defaultAuthZService, times(1)).deleteRoleBindingNode(node.getResourceId());
 
         String notFoundError = String.format("RoleBinding on resource(%s) not found.", node.getResourceId());
-        doThrow(new ResourceNotFoundException(notFoundError)).when(defaultAuthZService).deleteRoleBindingNode(node.getResourceId());
+        doThrow(new ResourceNotFoundException(notFoundError)).when(defaultAuthZService)
+                .deleteRoleBindingNode(node.getResourceId());
         ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
         assertEquals(notFoundError, errResponse.reason());
     }
@@ -116,7 +123,8 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
         ), 0);
         RoleAssignmentUpdate assignmentUpdate = new RoleAssignmentUpdate(existingNode.getResourceId(),
                 existingNode.getResourceType(),
-                "user.a", Set.of("role1", "role2"));
+                "user.a", Set.of("role1", "role2")
+        );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, "/authz/bindings");
         doReturn(existingNode).when(defaultAuthZService).updateRoleAssignment(eq(assignmentUpdate));
@@ -126,8 +134,10 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
         verify(defaultAuthZService, times(1)).updateRoleAssignment(eq(assignmentUpdate));
 
         String someInternalError = "Some internal error";
-        doThrow(new MetaStoreException(someInternalError)).when(defaultAuthZService).updateRoleAssignment(eq(assignmentUpdate));
-        ErrorResponse errResponse = sendRequestWithBody(request, assignmentUpdate, 500, someInternalError, ErrorResponse.class);
+        doThrow(new MetaStoreException(someInternalError)).when(defaultAuthZService)
+                .updateRoleAssignment(eq(assignmentUpdate));
+        ErrorResponse errResponse =
+                sendRequestWithBody(request, assignmentUpdate, 500, someInternalError, ErrorResponse.class);
         assertEquals(someInternalError, errResponse.reason());
     }
 }

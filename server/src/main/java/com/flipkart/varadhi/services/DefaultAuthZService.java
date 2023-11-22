@@ -1,16 +1,14 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.RoleAssignmentUpdate;
-import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class DefaultAuthZService {
     private final MetaStore metaStore;
@@ -60,7 +58,7 @@ public class DefaultAuthZService {
         return existingNode;
     }
 
-    private RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
+    public RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
             throw new InvalidOperationForResourceException(String.format(
                     "Invalid resource id(%s) for resource type(%s).",
@@ -73,7 +71,7 @@ public class DefaultAuthZService {
         return node;
     }
 
-    private RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
+    public RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
         boolean exists = metaStore.checkRoleBindingNodeExists(node.getResourceId());
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
@@ -116,20 +114,6 @@ public class DefaultAuthZService {
 
     private void checkValidRoles(RoleBindingNode node) {
         // collect roles for each subject into a single set
-        Set<String> rolesOnNode = node.getSubjectToRolesMapping()
-                .values()
-                .stream()
-                .flatMap(Set::stream)
-                .collect(Collectors.toUnmodifiableSet());
-
-        // check if each role exists
-        rolesOnNode.stream() // TODO: check valid roleId
-//                .filter(role -> !metaStore.checkRoleExists(role))
-                .findAny().ifPresent(role -> {
-                    throw new ResourceNotFoundException(String.format(
-                            "Invalid assignment. Role(%s) does not exist",
-                            role
-                    ));
-                });
+        // TODO: check valid roleId?
     }
 }
