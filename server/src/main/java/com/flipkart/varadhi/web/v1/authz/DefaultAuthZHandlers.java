@@ -34,7 +34,7 @@ public class DefaultAuthZHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/authz/rbs",
+                "/v1/authz/bindings",
                 List.of(
                         new RouteDefinition(
                                 HttpMethod.GET,
@@ -76,24 +76,24 @@ public class DefaultAuthZHandlers implements RouteProvider {
         ).get();
     }
 
-    private void getAllRoleBindingNodes(RoutingContext routingContext) {
+    public void getAllRoleBindingNodes(RoutingContext routingContext) {
         List<RoleBindingNode> roleBindings = defaultAuthZService.getAllRoleBindingNodes();
         routingContext.endApiWithResponse(roleBindings);
     }
 
-    private void getRoleBindingNode(RoutingContext routingContext) {
+    public void getRoleBindingNode(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         RoleBindingNode roleBindingNode = defaultAuthZService.getRoleBindingNode(resourceId);
         routingContext.endApiWithResponse(roleBindingNode);
     }
 
-    private void updateRoleAssignment(RoutingContext routingContext) {
+    public void updateRoleAssignment(RoutingContext routingContext) {
         RoleAssignmentUpdate binding = routingContext.body().asPojo(RoleAssignmentUpdate.class);
         RoleBindingNode node = defaultAuthZService.updateRoleAssignment(binding);
         routingContext.endApiWithResponse(node);
     }
 
-    private void deleteRoleBindingNode(RoutingContext routingContext) {
+    public void deleteRoleBindingNode(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         defaultAuthZService.deleteRoleBindingNode(resourceId);
         routingContext.endApi();

@@ -14,5 +14,5 @@ public class DefaultAuthorizationConfiguration {
 
     private String authZServerHost = "localhost";
     private int authZServerPort = 8088;
-    private String authZServerPath = "/v1/authz/rbs/";
+    private String authZServerPath = "/v1/authz/bindings/";
 }
