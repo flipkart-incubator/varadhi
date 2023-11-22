@@ -47,7 +47,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         fkTeamAsh = new Team("team_ash", 0, flipkart.getName());
         fkProj001 = new Project("proj001", 0, "", fkTeamRocket.getName(), flipkart.getName());
         fkTopic001 = new TopicResource("topic001", INITIAL_VERSION, fkProj001.getName(), false, null);
-
+        cleanupRoleBindings();
         makeCreateRequest(getOrgsUri(), flipkart, 200);
         makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamAsh, 200);
