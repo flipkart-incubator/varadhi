@@ -3,17 +3,14 @@ plugins {
     id 'java-test-fixtures'
 }
 
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) {
+    skip()
+}
+
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) {
+    skip()
+}
+
 dependencies {
-    implementation(project(':common'))
-    implementation(project(':entities'))
-
     implementation("io.vertx:vertx-core")
-    implementation("io.vertx:vertx-web-client:${vertx_version}")
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
-    implementation("org.apache.logging.log4j:log4j-core")
-    implementation("org.apache.commons:commons-lang3")
-    implementation('com.fasterxml.jackson.core:jackson-databind')
-
-    testImplementation("io.vertx:vertx-junit5")
-    testImplementation("io.vertx:vertx-web-client")
 }

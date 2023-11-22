@@ -2,7 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.RoleAssignmentUpdate;
-import com.flipkart.varadhi.entities.RoleBindingNode;
+import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;

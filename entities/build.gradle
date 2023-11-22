@@ -3,6 +3,7 @@ plugins {
 }
 dependencies {
     implementation(project(":common"))
+    implementation(project(":authz"))
     implementation("io.micrometer:micrometer-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("jakarta.validation:jakarta.validation-api")

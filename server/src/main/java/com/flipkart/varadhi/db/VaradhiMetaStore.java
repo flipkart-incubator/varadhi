@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.RoleBindingNode;
+import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;

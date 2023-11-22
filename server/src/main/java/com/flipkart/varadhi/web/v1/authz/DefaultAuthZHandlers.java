@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1.authz;
 
 import com.flipkart.varadhi.entities.RoleAssignmentUpdate;
-import com.flipkart.varadhi.entities.RoleBindingNode;
+import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.services.DefaultAuthZService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
