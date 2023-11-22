@@ -8,9 +8,9 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,25 +29,25 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthZProviderTests extends E2EBase {
 
-    Org flipkart;
-    Team fkTeamRocket, fkTeamAsh;
-    Project fkProj001;
-    TopicResource fkTopic001;
+    public static Org flipkart;
+    public static Team fkTeamRocket, fkTeamAsh;
+    public static Project fkProj001;
+    public static TopicResource fkTopic001;
 
     @TempDir
-    Path tempDir;
+    public static Path tempDir;
 
-    DefaultAuthorizationProvider provider;
-    AuthorizationOptions authorizationOptions;
+    public static DefaultAuthorizationProvider provider = new DefaultAuthorizationProvider();
+    public static AuthorizationOptions authorizationOptions;
 
-    @BeforeEach
-    public void setup() throws IOException {
+    @BeforeAll
+    public static void setup() throws IOException, InterruptedException {
         flipkart = new Org("flipkart", 0);
         fkTeamRocket = new Team("team_rocket", 0, flipkart.getName());
         fkTeamAsh = new Team("team_ash", 0, flipkart.getName());
         fkProj001 = new Project("proj001", 0, "", fkTeamRocket.getName(), flipkart.getName());
         fkTopic001 = new TopicResource("topic001", INITIAL_VERSION, fkProj001.getName(), false, null);
-        cleanupRoleBindings();
+//        cleanupRoleBindings();
         makeCreateRequest(getOrgsUri(), flipkart, 200);
         makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamAsh, 200);
@@ -57,7 +57,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         setupProvider();
     }
 
-    private void setupProvider() throws IOException {
+    private static void setupProvider() throws IOException, InterruptedException {
         String configContent =
                 """
                         ---
@@ -98,34 +98,34 @@ public class DefaultAuthZProviderTests extends E2EBase {
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
 
-        provider = new DefaultAuthorizationProvider();
+        provider.init(Vertx.vertx(), authorizationOptions).wait();
     }
 
-    @AfterEach
-    public void cleanup() {
+    @AfterAll
+    public static void cleanup() {
         cleanupRoleBindings();
     }
 
-    private void cleanupRoleBindings() {
+    private static void cleanupRoleBindings() {
         cleanupOrgs(List.of(flipkart));
         var allNodes = getRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
         allNodes.forEach(node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceId()), 200));
     }
 
-    private List<RoleBindingNode> getRoleBindings(Response response) {
+    private static List<RoleBindingNode> getRoleBindings(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
 
-    private String getRoleBindingsUri() {
+    private static String getRoleBindingsUri() {
         return String.format("%s/v1/authz/bindings", DefaultAuthZBaseUri);
     }
 
-    private String getRoleBindingsUri(String resourceId) {
+    private static String getRoleBindingsUri(String resourceId) {
         return String.join("/", getRoleBindingsUri(), resourceId);
     }
 
-    private void bootstrapRoleBindings() {
+    private static void bootstrapRoleBindings() {
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
                 new RoleAssignmentUpdate("flipkart", ResourceType.ORG, "abc", Set.of("team.admin"))
@@ -157,7 +157,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         );
     }
 
-    private void makeRoleAssignmentUpdate(String targetUrl, RoleAssignmentUpdate entity) {
+    private static void makeRoleAssignmentUpdate(String targetUrl, RoleAssignmentUpdate entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
@@ -169,10 +169,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         provider
-                .init(Vertx.vertx(), authorizationOptions)
-                .compose(t -> provider.isAuthorized(testUser("abc", false),
+                .isAuthorized(testUser("abc", false),
                         ResourceAction.ORG_CREATE, "flipkart"
-                ))
+                )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -184,10 +183,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         provider
-                .init(Vertx.vertx(), authorizationOptions)
-                .compose(t -> provider.isAuthorized(testUser("xyz", false),
+                .isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, "flipkart"
-                ))
+                )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -199,10 +197,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         provider
-                .init(Vertx.vertx(), authorizationOptions)
-                .compose(t -> provider.isAuthorized(testUser("xyz", false),
+                .isAuthorized(testUser("xyz", false),
                         ResourceAction.ORG_CREATE, ""
-                )) // xyz has org.admin but not at root level
+                ) // xyz has org.admin but not at root level
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -214,10 +211,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(5);
 
         provider
-                .init(Vertx.vertx(), authorizationOptions)
-                .compose(t -> provider.isAuthorized(testUser("proj_user3", false),
+                .isAuthorized(testUser("proj_user3", false),
                         ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
-                )) // checking if user role at the leaf node resolves
+                ) // checking if user role at the leaf node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -260,10 +256,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserProjectAccess(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(3);
         provider
-                .init(Vertx.vertx(), authorizationOptions)
-                .compose(t -> provider.isAuthorized(testUser("proj_user2", false),
+                .isAuthorized(testUser("proj_user2", false),
                         ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
-                )) // proj_user2 only has topic read access, so should fail
+                ) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
