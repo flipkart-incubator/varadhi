@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.auth;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.varadhi.ValidateVaradhiResource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiResource;
@@ -18,8 +20,14 @@ public class RoleBindingNode extends VaradhiResource {
     ResourceType resourceType;
     Map<String, Set<String>> subjectToRolesMapping;
 
+    @JsonCreator
     public RoleBindingNode(
-            String resourceId, ResourceType resourceType, Map<String, Set<String>> subjectToRolesMapping, int version
+            @JsonProperty("resourceId") String resourceId,
+            @JsonProperty("resourceType") ResourceType resourceType,
+            @JsonProperty("subjectToRolesMapping")
+            Map<String, Set<String>> subjectToRolesMapping,
+            @JsonProperty("version")
+            int version
     ) {
         super(resourceId, version);
         this.resourceId = resourceId;

@@ -3,7 +3,10 @@ package com.flipkart.varadhi.auth;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.ResourceAction;
+import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.Role;
+import com.flipkart.varadhi.entities.UserContext;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
@@ -116,6 +119,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 .send()
                 .compose(response -> {
                     RoleBindingNode node = response.body();
+                    if (node == null || node.subjectToRolesMapping == null) {
+                        return Future.failedFuture("No roles on resource for subject" + subject);
+                    }
+                    log.info(
+                            "Fetched roles for subject [{}] and resource [{}] status: {}", subject, resourceId,
+                            response.statusCode()
+                    );
                     return Future.succeededFuture(node.getSubjectToRolesMapping().getOrDefault(subject, Set.of()));
                 })
                 .onFailure(err -> log.error("Error while fetching roles for subject [{}] and resource [{}]",

@@ -164,7 +164,6 @@ public class VerticleDeployer {
                     throw new VaradhiException("Failed to Deploy Rest API.", t);
                 })
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
-
     }
 
 

@@ -34,7 +34,7 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
     Org o1 = new Org("OrgOne", 0);
 
     @BeforeEach
-    public void preTest() throws InterruptedException {
+    public void PreTest() throws InterruptedException {
         super.setUp();
         defaultAuthZService = mock(DefaultAuthZService.class);
         defaultAuthZHandlers = new DefaultAuthZHandlers(defaultAuthZService);
@@ -54,7 +54,7 @@ public class DefaultAuthZHandlersTest extends WebTestBase {
     }
 
     @AfterEach
-    public void postTest() throws InterruptedException {
+    public void PostTest() throws InterruptedException {
         super.tearDown();
     }
 
