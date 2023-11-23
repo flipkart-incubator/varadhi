@@ -29,9 +29,9 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthZProviderTests extends E2EBase {
 
-    public static Org flipkart;
+    public static Org oPublic;
     public static Team fkTeamRocket, fkTeamAsh;
-    public static Project fkProj001;
+    public static Project fkDefault;
     public static TopicResource fkTopic001;
 
     @TempDir
@@ -42,17 +42,16 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     @BeforeAll
     public static void setup() throws IOException, InterruptedException {
-        flipkart = new Org("flipkart", 0);
-        fkTeamRocket = new Team("team_rocket", 0, flipkart.getName());
-        fkTeamAsh = new Team("team_ash", 0, flipkart.getName());
-        fkProj001 = new Project("proj001", 0, "", fkTeamRocket.getName(), flipkart.getName());
-        fkTopic001 = new TopicResource("topic001", INITIAL_VERSION, fkProj001.getName(), false, null);
-//        cleanupRoleBindings();
-        makeCreateRequest(getOrgsUri(), flipkart, 200);
-        makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamRocket, 200);
-        makeCreateRequest(getTeamsUri(flipkart.getName()), fkTeamAsh, 200);
-        makeCreateRequest(getProjectCreateUri(), fkProj001, 200);
-        makeCreateRequest(getTopicsUri(fkProj001), fkTopic001, 200);
+        oPublic = new Org("public", 0);
+        fkTeamRocket = new Team("team_rocket", 0, oPublic.getName());
+        fkTeamAsh = new Team("team_ash", 0, oPublic.getName());
+        fkDefault = new Project("default", 0, "", fkTeamRocket.getName(), oPublic.getName());
+        fkTopic001 = new TopicResource("topic001", INITIAL_VERSION, fkDefault.getName(), false, null);
+        makeCreateRequest(getOrgsUri(), oPublic, 200);
+        makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
+        makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamAsh, 200);
+        makeCreateRequest(getProjectCreateUri(), fkDefault, 200);
+        makeCreateRequest(getTopicsUri(fkDefault), fkTopic001, 200);
         bootstrapRoleBindings();
         setupProvider();
     }
@@ -107,7 +106,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
     }
 
     private static void cleanupRoleBindings() {
-        cleanupOrgs(List.of(flipkart));
+        cleanupOrgs(List.of(oPublic));
         var allNodes = getRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
         allNodes.forEach(node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceId()), 200));
     }
@@ -128,31 +127,31 @@ public class DefaultAuthZProviderTests extends E2EBase {
     private static void bootstrapRoleBindings() {
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("flipkart", ResourceType.ORG, "abc", Set.of("team.admin"))
+                new RoleAssignmentUpdate("public", ResourceType.ORG, "abc", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("flipkart", ResourceType.ORG, "xyz", Set.of("org.admin"))
+                new RoleAssignmentUpdate("public", ResourceType.ORG, "xyz", Set.of("org.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("flipkart:team_rocket", ResourceType.TEAM, "team_user1", Set.of("team.admin"))
+                new RoleAssignmentUpdate("public:team_rocket", ResourceType.TEAM, "team_user1", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("flipkart:team_ash", ResourceType.TEAM, "brock", Set.of("team.admin"))
+                new RoleAssignmentUpdate("public:team_ash", ResourceType.TEAM, "brock", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("proj001", ResourceType.PROJECT, "proj_user1", Set.of("project.read"))
+                new RoleAssignmentUpdate("default", ResourceType.PROJECT, "proj_user1", Set.of("project.read"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("proj001", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
+                new RoleAssignmentUpdate("default", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
         );
         makeUpdateRequest(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("proj001:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read")),
+                new RoleAssignmentUpdate("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read")),
                 200
         );
     }
@@ -170,7 +169,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
         provider
                 .isAuthorized(testUser("abc", false),
-                        ResourceAction.ORG_CREATE, "flipkart"
+                        ResourceAction.ORG_CREATE, "public"
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -184,7 +183,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
         provider
                 .isAuthorized(testUser("xyz", false),
-                        ResourceAction.ORG_CREATE, "flipkart"
+                        ResourceAction.ORG_CREATE, "public"
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -212,7 +211,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
         provider
                 .isAuthorized(testUser("proj_user3", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
                 ) // checking if user role at the leaf node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -220,7 +219,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
                 )) // checking if user role at the parent node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -228,7 +227,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("abc", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
                 )) // checking since abc is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -236,7 +235,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("team_user1", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
                 )) // checking since team_user1 is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -244,7 +243,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("brock", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001/topic001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
                 )) // brock is team admin for different team, should not be able to access
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -257,7 +256,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(3);
         provider
                 .isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
+                        ResourceAction.PROJECT_GET, "public/team_rocket/default"
                 ) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -265,7 +264,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.TOPIC_GET, "flipkart/team_rocket/proj001"
+                        ResourceAction.TOPIC_GET, "public/team_rocket/default"
                 )) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -273,7 +272,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 }))
 
                 .compose(t -> provider.isAuthorized(testUser("proj_user1", false),
-                        ResourceAction.PROJECT_GET, "flipkart/team_rocket/proj001"
+                        ResourceAction.PROJECT_GET, "public/team_rocket/default"
                 )) // proj_user1 is project.read so should work
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
