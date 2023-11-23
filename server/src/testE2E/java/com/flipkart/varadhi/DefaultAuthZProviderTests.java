@@ -149,10 +149,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 getRoleBindingsUri(),
                 new RoleAssignmentUpdate("default", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
         );
-        makeUpdateRequest(
+        makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read")),
-                200
+                new RoleAssignmentUpdate("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read"))
         );
     }
 
