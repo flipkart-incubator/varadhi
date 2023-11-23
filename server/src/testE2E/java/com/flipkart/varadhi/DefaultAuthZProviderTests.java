@@ -41,7 +41,9 @@ public class DefaultAuthZProviderTests extends E2EBase {
     public static AuthorizationOptions authorizationOptions;
 
     @BeforeAll
-    public static void setup() throws IOException, InterruptedException {
+    public static void setup(VertxTestContext testContext) throws IOException, InterruptedException {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
         oPublic = new Org("public", 0);
         fkTeamRocket = new Team("team_rocket", 0, oPublic.getName());
         fkTeamAsh = new Team("team_ash", 0, oPublic.getName());
@@ -53,10 +55,10 @@ public class DefaultAuthZProviderTests extends E2EBase {
         makeCreateRequest(getProjectCreateUri(), fkDefault, 200);
         makeCreateRequest(getTopicsUri(fkDefault), fkTopic001, 200);
         bootstrapRoleBindings();
-        setupProvider();
+        setupProvider(checkpoint);
     }
 
-    private static void setupProvider() throws IOException, InterruptedException {
+    private static void setupProvider(Checkpoint checkpoint) throws IOException, InterruptedException {
         String configContent =
                 """
                         ---
@@ -96,8 +98,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
-
-        provider.init(Vertx.vertx(), authorizationOptions).wait();
+        provider.init(Vertx.vertx(), authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
     @AfterAll
