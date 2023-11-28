@@ -5,12 +5,21 @@ volumes:
   zklogs:
   zkdatalog:
 
+networks:
+  hostnet:
+    ipam:
+      driver: default
+
 services:
   web:
     image: varadhi.docker.registry/varadhi:latest
     profiles: [ "test", "service" ]
     environment:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
+      - ZK_URL=zookeeper:2181
+      - PULSAR_URL=http://pulsar:8080
+    networks:
+      hostnet:
     ports:
       - 8488:8488
     volumes:
@@ -31,6 +40,8 @@ services:
   pulsar:
     image: apachepulsar/pulsar:3.0.0
     profiles: [ "test", "dev", "pulsar" ]
+    networks:
+      hostnet:
     ports:
       - "8080:8080"
       - "6650:6650"
@@ -54,6 +65,8 @@ services:
       ZOO_4LW_COMMANDS_WHITELIST: "*"
       ZOO_ADMINSERVER_ENABLED: false
     profiles: [ "test", "dev", "zk" ]
+    networks:
+      hostnet:
     ports:
       - "2181:2181"
       - "2888:2888"
