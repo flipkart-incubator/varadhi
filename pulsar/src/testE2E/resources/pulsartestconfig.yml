@@ -1,4 +1,4 @@
 pulsarAdminOptions:
-  serviceHttpUrl: "http://127.0.0.1:8081"
+  serviceHttpUrl: "http://127.0.0.1:8080"
 pulsarClientOptions:
-  serviceUrl: "http://127.0.0.1:8081"
+  serviceUrl: "http://127.0.0.1:8080"
