@@ -253,7 +253,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     @Test
     public void testIsAuthorized_UserProjectAccess(VertxTestContext testContext) {
-        Checkpoint checkpoint = testContext.checkpoint(3);
+        Checkpoint checkpoint = testContext.checkpoint(1);
         provider
                 .isAuthorized(testUser("proj_user2", false),
                         ResourceAction.PROJECT_GET, "public/team_rocket/default"
@@ -261,19 +261,29 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("proj_user2", false),
+    @Test
+    public void testIsAuthorized_UserProjectAccess2(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+        provider
+                .isAuthorized(testUser("proj_user2", false),
                         ResourceAction.TOPIC_GET, "public/team_rocket/default"
-                )) // proj_user2 only has topic read access, so should fail
+                ) // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("proj_user1", false),
+    @Test
+    public void testIsAuthorized_UserProjectAccess3(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+        provider
+                .isAuthorized(testUser("proj_user1", false),
                         ResourceAction.PROJECT_GET, "public/team_rocket/default"
-                )) // proj_user1 is project.read so should work
+                ) // proj_user1 is project.read so should work
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
