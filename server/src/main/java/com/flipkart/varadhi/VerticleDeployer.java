@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,7 +54,7 @@ public class VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
-    private final DefaultAuthZHandlers defaultAuthZHandlers;
+    private final Supplier<DefaultAuthZHandlers> authZHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
 
@@ -86,8 +87,8 @@ public class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService);
-        this.defaultAuthZHandlers = new DefaultAuthZHandlers(
-                new DefaultAuthZService(metaStore)); //TODO(aayush): do not init if default provider flag false.
+        this.authZHandlersSupplier = () -> new DefaultAuthZHandlers(
+                new DefaultAuthZService(metaStore));
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
@@ -109,50 +110,26 @@ public class VerticleDeployer {
                 .collect(Collectors.toList());
     }
 
-    private List<RouteDefinition> getAuthZServerDefinitions() {
-        return Stream.of(
-                        defaultAuthZHandlers.get(),
-                        healthCheckHandler.get()
-                )
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-    }
-
-
     public void deployVerticle(
             Vertx vertx,
             ServerConfiguration configuration
     ) {
-        if (configuration.isDefaultAuthorizationServerEnabled()) {
-            deployDefaultAuthZVerticle(vertx, configuration);
-        }
-        deployRestVerticle(vertx, configuration);
-    }
 
-    private void deployDefaultAuthZVerticle(Vertx vertx, ServerConfiguration configuration) {
-        vertx.deployVerticle(
-                        () -> new RestVerticle(
-                                getAuthZServerDefinitions(),
-                                behaviorConfigurators,
-                                new FailureHandler(),
-                                configuration.getDefaultAuthorizationServerOptions().getHttpServerOptions()
-                        ),
-                        configuration.getDefaultAuthorizationServerOptions().getVerticleDeploymentOptions()
-                )
-                .onFailure(t -> {
-                    log.error("Could not start Default AuthZServer Verticle", t);
-                    throw new VaradhiException("Failed to Deploy Default AuthZ API.", t);
-                })
-                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+        deployRestVerticle(vertx, configuration);
     }
 
     private void deployRestVerticle(
             Vertx vertx,
             ServerConfiguration configuration
     ) {
+        List<RouteDefinition> handlerDefinitions = getDefinitions();
+        if (configuration.isAuthorizationServerEnabled()) {
+            handlerDefinitions.addAll(authZHandlersSupplier.get().get());
+        }
+
         vertx.deployVerticle(
                         () -> new RestVerticle(
-                                getDefinitions(),
+                                handlerDefinitions,
                                 behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()

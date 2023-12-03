@@ -118,7 +118,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
     }
 
     private static String getRoleBindingsUri() {
-        return String.format("%s/v1/authz/bindings", DefaultAuthZBaseUri);
+        return String.format("%s/v1/authz/bindings", VaradhiBaseUri);
     }
 
     private static String getRoleBindingsUri(String resourceId) {
