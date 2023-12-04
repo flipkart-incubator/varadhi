@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.varadhi.java-library-conventions'
+    id 'com.flipkart.varadhi.java-published-library-conventions'
 }
 
 dependencies {
