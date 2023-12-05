@@ -127,35 +127,35 @@ public class DefaultAuthZProviderTests extends E2EBase {
     private static void bootstrapRoleBindings() {
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("public", ResourceType.ORG, "abc", Set.of("team.admin"))
+                new RoleAssignmentRequest("public", ResourceType.ORG, "abc", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("public", ResourceType.ORG, "xyz", Set.of("org.admin"))
+                new RoleAssignmentRequest("public", ResourceType.ORG, "xyz", Set.of("org.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("public:team_rocket", ResourceType.TEAM, "team_user1", Set.of("team.admin"))
+                new RoleAssignmentRequest("public:team_rocket", ResourceType.TEAM, "team_user1", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("public:team_ash", ResourceType.TEAM, "brock", Set.of("team.admin"))
+                new RoleAssignmentRequest("public:team_ash", ResourceType.TEAM, "brock", Set.of("team.admin"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("default", ResourceType.PROJECT, "proj_user1", Set.of("project.read"))
+                new RoleAssignmentRequest("default", ResourceType.PROJECT, "proj_user1", Set.of("project.read"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("default", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
+                new RoleAssignmentRequest("default", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
         );
         makeRoleAssignmentUpdate(
                 getRoleBindingsUri(),
-                new RoleAssignmentUpdate("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read"))
+                new RoleAssignmentRequest("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read"))
         );
     }
 
-    private static void makeRoleAssignmentUpdate(String targetUrl, RoleAssignmentUpdate entity) {
+    private static void makeRoleAssignmentUpdate(String targetUrl, RoleAssignmentRequest entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());

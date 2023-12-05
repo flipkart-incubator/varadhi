@@ -7,7 +7,7 @@ import com.flipkart.varadhi.entities.ResourceAction;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Role;
 import com.flipkart.varadhi.entities.UserContext;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.exceptions.NotInitializedException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -55,9 +55,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
         if (!initialised) {
-            throw new InvalidConfigException("Default Authorization Provider is not initialised.");
+            throw new NotInitializedException("Default Authorization Provider is not initialised.");
         }
         List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
+        if (leafToRootResourceIds.isEmpty()) {
+            return Future.succeededFuture(false);
+        }
+
         List<Future<Boolean>> futures =
                 leafToRootResourceIds.stream().filter(pair -> StringUtils.isNotBlank(pair.getValue()))
                         .map(pair -> isAuthorizedInternal(userContext.getSubject(), action, pair.getValue()))

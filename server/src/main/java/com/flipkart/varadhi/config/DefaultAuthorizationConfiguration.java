@@ -13,6 +13,6 @@ public class DefaultAuthorizationConfiguration {
     private Map<String, Role> roleDefinitions;
 
     private String authZServerHost = "localhost";
-    private int authZServerPort = 8088;
+    private int authZServerPort = 8080;
     private String authZServerPath = "/v1/authz/bindings/";
 }

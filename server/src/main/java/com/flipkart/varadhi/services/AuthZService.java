@@ -2,7 +2,8 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.RoleAssignmentUpdate;
+import com.flipkart.varadhi.entities.RoleAssignmentRequest;
+import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -10,16 +11,16 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import java.util.HashMap;
 import java.util.List;
 
-public class DefaultAuthZService {
+public class AuthZService {
     private final MetaStore metaStore;
 
-    public DefaultAuthZService(MetaStore metaStore) {
+    public AuthZService(MetaStore metaStore) {
         this.metaStore = metaStore;
     }
 
     public RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
-            throw new InvalidOperationForResourceException(String.format(
+            throw new IllegalArgumentException(String.format(
                     "Invalid resource id(%s) for resource type(%s).",
                     resourceId,
                     resourceType
@@ -61,7 +62,7 @@ public class DefaultAuthZService {
         return node;
     }
 
-    public RoleBindingNode updateRoleAssignment(RoleAssignmentUpdate binding) {
+    public RoleBindingNode setIAMPolicy(RoleAssignmentRequest binding) {
         RoleBindingNode node = createOrGetRoleBindingNode(binding.getResourceId(), binding.getResourceType());
         node.setRoleAssignment(binding.getSubject(), binding.getRoles());
         return updateRoleBindingNode(node);
@@ -85,7 +86,7 @@ public class DefaultAuthZService {
         }
         RoleBindingNode existingNode = metaStore.getRoleBindingNode(resourceId);
         if (existingNode.getResourceType() != resourceType) {
-            throw new InvalidOperationForResourceException(String.format(
+            throw new IllegalArgumentException(String.format(
                     "Incorrect resource type(%s) for resource id(%s).",
                     resourceType,
                     resourceId

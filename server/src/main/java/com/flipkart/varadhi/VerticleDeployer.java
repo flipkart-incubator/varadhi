@@ -12,7 +12,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.InternalTopicCache;
 import com.flipkart.varadhi.produce.services.ProducerCache;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.DefaultAuthZService;
+import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
@@ -30,7 +30,7 @@ import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
-import com.flipkart.varadhi.web.v1.authz.DefaultAuthZHandlers;
+import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -54,7 +54,7 @@ public class VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
-    private final Supplier<DefaultAuthZHandlers> authZHandlersSupplier;
+    private final Supplier<AuthZHandlers> authZHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
 
@@ -87,8 +87,8 @@ public class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService);
-        this.authZHandlersSupplier = () -> new DefaultAuthZHandlers(
-                new DefaultAuthZService(metaStore));
+        this.authZHandlersSupplier = () -> new AuthZHandlers(
+                new AuthZService(metaStore));
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
