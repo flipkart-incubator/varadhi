@@ -14,7 +14,6 @@ publishing {
 
             pom {
                 name = "${project.name}"
-                description = "Common AuthZ Provider interface for integrating with Varadhi"
                 url = "https://github.com/flipkart-incubator/varadhi"
             }
         }

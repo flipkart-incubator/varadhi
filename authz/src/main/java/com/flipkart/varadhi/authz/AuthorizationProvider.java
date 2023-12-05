@@ -4,17 +4,16 @@ import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.ResourceAction;
 import com.flipkart.varadhi.entities.UserContext;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 
 public interface AuthorizationProvider {
-    Future<Boolean> init(Vertx vertx, AuthorizationOptions authorizationOptions);
+    Future<Boolean> init(AuthorizationOptions authorizationOptions);
 
     Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource);
 
     class NoAuthorizationProvider implements AuthorizationProvider {
 
         @Override
-        public Future<Boolean> init(Vertx vertx, AuthorizationOptions authorizationOptions) {
+        public Future<Boolean> init(AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture(true);
         }
 

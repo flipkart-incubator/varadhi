@@ -31,12 +31,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private volatile boolean initialised = false;
 
     @Override
-    public synchronized Future<Boolean> init(Vertx vertx, AuthorizationOptions authorizationOptions) {
+    public synchronized Future<Boolean> init(AuthorizationOptions authorizationOptions) {
         if (!this.initialised) {
             this.configuration =
                     YamlLoader.loadConfig(
                             authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
-            this.webClient = CachingWebClient.create(WebClient.create(vertx));
+            this.webClient = CachingWebClient.create(WebClient.create(Vertx.vertx()));
             this.initialised = true;
         }
         return Future.succeededFuture(true);

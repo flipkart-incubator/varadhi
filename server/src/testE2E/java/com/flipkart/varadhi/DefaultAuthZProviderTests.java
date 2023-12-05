@@ -4,7 +4,6 @@ import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.*;
-import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -98,7 +97,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
-        provider.init(Vertx.vertx(), authorizationOptions).onSuccess(t -> checkpoint.flag());
+        provider.init(authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
     @AfterAll

@@ -77,7 +77,7 @@ public class DefaultAuthorizationProviderTest {
     @Test
     public void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        defaultAuthorizationProvider.init(Vertx.vertx(), authorizationOptions)
+        defaultAuthorizationProvider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
