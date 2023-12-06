@@ -2,7 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.RoleAssignmentRequest;
+import com.flipkart.varadhi.entities.IAMPolicyRequest;
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -35,12 +35,12 @@ public class AuthZService {
         return metaStore.getRoleBindingNodes();
     }
 
-    public RoleBindingNode getRoleBindingNode(String resourceId) {
-        return metaStore.getRoleBindingNode(resourceId);
+    public RoleBindingNode findRoleBindingNode(ResourceType resourceType, String resourceId) {
+        return metaStore.getRoleBindingNode(resourceType, resourceId);
     }
 
     public RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
-        boolean exists = metaStore.checkRoleBindingNodeExists(node.getResourceId());
+        boolean exists = metaStore.checkRoleBindingNodeExists(node.getResourceType(), node.getResourceId());
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
                     "RoleBinding(%s) not found.",
@@ -50,7 +50,7 @@ public class AuthZService {
 
         checkValidRoles(node);
 
-        RoleBindingNode existingNode = metaStore.getRoleBindingNode(node.getResourceId());
+        RoleBindingNode existingNode = metaStore.getRoleBindingNode(node.getResourceType(), node.getResourceId());
         if (node.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
@@ -62,29 +62,33 @@ public class AuthZService {
         return node;
     }
 
-    public RoleBindingNode setIAMPolicy(RoleAssignmentRequest binding) {
-        RoleBindingNode node = createOrGetRoleBindingNode(binding.getResourceId(), binding.getResourceType());
+    public RoleBindingNode getIAMPolicy(ResourceType resourceType, String resourceId) {
+        return metaStore.getRoleBindingNode(resourceType, resourceId);
+    }
+
+    public RoleBindingNode setIAMPolicy(ResourceType resourceType, String resourceId, IAMPolicyRequest binding) {
+        RoleBindingNode node = createOrGetRoleBindingNode(resourceId, resourceType);
         node.setRoleAssignment(binding.getSubject(), binding.getRoles());
         return updateRoleBindingNode(node);
     }
 
-    public void deleteRoleBindingNode(String resourceId) {
-        boolean exists = metaStore.checkRoleBindingNodeExists(resourceId);
+    public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
+        boolean exists = metaStore.checkRoleBindingNodeExists(resourceType, resourceId);
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
                     "RoleBinding on resource(%s) not found.",
                     resourceId
             ));
         }
-        metaStore.deleteRoleBindingNode(resourceId);
+        metaStore.deleteRoleBindingNode(resourceType, resourceId);
     }
 
     private RoleBindingNode createOrGetRoleBindingNode(String resourceId, ResourceType resourceType) {
-        boolean exists = metaStore.checkRoleBindingNodeExists(resourceId);
+        boolean exists = metaStore.checkRoleBindingNodeExists(resourceType, resourceId);
         if (!exists) {
             return createRoleBindingNode(resourceId, resourceType);
         }
-        RoleBindingNode existingNode = metaStore.getRoleBindingNode(resourceId);
+        RoleBindingNode existingNode = metaStore.getRoleBindingNode(resourceType, resourceId);
         if (existingNode.getResourceType() != resourceType) {
             throw new IllegalArgumentException(String.format(
                     "Incorrect resource type(%s) for resource id(%s).",

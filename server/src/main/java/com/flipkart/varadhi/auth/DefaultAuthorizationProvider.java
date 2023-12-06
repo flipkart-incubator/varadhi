@@ -7,6 +7,7 @@ import com.flipkart.varadhi.entities.ResourceAction;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Role;
 import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.NotInitializedException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
@@ -57,7 +58,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         if (!initialised) {
             throw new NotInitializedException("Default Authorization Provider is not initialised.");
         }
-        List<Pair<ResourceType, String>> leafToRootResourceIds = resolveOrderedFromLeaf(action, resource);
+        List<Pair<ResourceType, String>> leafToRootResourceIds = generatePolicyPathsForResource(action, resource);
         if (leafToRootResourceIds.isEmpty()) {
             return Future.succeededFuture(false);
         }
@@ -77,35 +78,37 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      *
      * @return List of pairs having resource type to its id. List is used so that we can impose ordering from leaf to root nodes.
      */
-    private List<Pair<ResourceType, String>> resolveOrderedFromLeaf(ResourceAction action, String resourcePath) {
+    private List<Pair<ResourceType, String>> generatePolicyPathsForResource(
+            ResourceAction action, String resourcePath
+    ) {
         String[] segments = resourcePath.split("/");
 
         // build the list in reverse order specified: ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|QUEUE
         List<Pair<ResourceType, String>> resourceIdTuples = new ArrayList<>();
-        pushLeafNode(resourceIdTuples, action, segments);
-        pushProjectNode(resourceIdTuples, segments);
-        pushTeamNode(resourceIdTuples, segments);
-        pushOrgNode(resourceIdTuples, segments);
+        addGetPolicyPathForLeafNode(resourceIdTuples, action, segments);
+        addGetPolicyPathForProjectNode(resourceIdTuples, segments);
+        addGetPolicyPathForTeamNode(resourceIdTuples, segments);
+        addGetPolicyPathForOrgNode(resourceIdTuples, segments);
 
         return resourceIdTuples;
     }
 
     /**
-     * Authorize subject against a single resourceId.
+     * Authorize subject against a single resource.
      * Succeeds the future if user is authorized, otherwise fails the future.
      *
-     * @param subject    user identifier to be authorized
-     * @param action     action requested by the subject which needs authorization
-     * @param resourceId resource id under whose scope the check will be performed
+     * @param subject            user identifier to be authorized
+     * @param action             action requested by the subject which needs authorization
+     * @param resourcePolicyPath get IAM Policy path under whose scope the check will be performed
      *
      * @return {@code Future<Boolean>} return a future of true or failed future if not authorized
      */
-    private Future<Boolean> isAuthorizedInternal(String subject, ResourceAction action, String resourceId) {
+    private Future<Boolean> isAuthorizedInternal(String subject, ResourceAction action, String resourcePolicyPath) {
         log.debug(
                 "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
-                resourceId
+                resourcePolicyPath
         );
-        return getRolesForSubject(subject, resourceId)
+        return getRolesForSubject(subject, resourcePolicyPath)
                 .compose(roles -> (checkAllRoles(subject, roles, action)) ?
                         Future.succeededFuture(true)
                         :
@@ -113,11 +116,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
 
-    protected Future<Set<String>> getRolesForSubject(String subject, String resourceId) {
+    protected Future<Set<String>> getRolesForSubject(String subject, String resourcePolicyPath) {
         // use web client to make get call
         return webClient.get(
                         configuration.getAuthZServerPort(), configuration.getAuthZServerHost(),
-                        configuration.getAuthZServerPath() + resourceId
+                        String.join("/", "/v1", resourcePolicyPath, "policy")
                 )
                 .as(BodyCodec.json(RoleBindingNode.class))
                 .send()
@@ -127,13 +130,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                         return Future.failedFuture("No roles on resource for subject" + subject);
                     }
                     log.info(
-                            "Fetched roles for subject [{}] and resource [{}] status: {}", subject, resourceId,
+                            "Fetched roles for subject [{}] and resource [{}] status: {}", subject, resourcePolicyPath,
                             response.statusCode()
                     );
                     return Future.succeededFuture(node.getSubjectToRolesMapping().getOrDefault(subject, Set.of()));
                 })
                 .onFailure(err -> log.error("Error while fetching roles for subject [{}] and resource [{}]",
-                        subject, resourceId, err
+                        subject, resourcePolicyPath, err
                 ));
     }
 
@@ -151,32 +154,40 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         return roles.stream().anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
-    private void pushOrgNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
+    private void addGetPolicyPathForOrgNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 0) {
-            resourceIdTuples.add(Pair.of(ResourceType.ORG, segments[0]));
+            resourceIdTuples.add(Pair.of(ResourceType.ORG, String.format("/orgs/%s", segments[0])));
         }
     }
 
-    private void pushTeamNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
+    private void addGetPolicyPathForTeamNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 1) {
-            resourceIdTuples.add(Pair.of(ResourceType.TEAM, segments[0] + ":" + segments[1])); //{org_id}:{team_id}
+            // /orgs/:org/teams/:team
+            resourceIdTuples.add(
+                    Pair.of(ResourceType.TEAM, String.format("/orgs/%s/teams/%s", segments[0], segments[1])));
         }
     }
 
-    private void pushProjectNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
+    private void addGetPolicyPathForProjectNode(List<Pair<ResourceType, String>> resourceIdTuples, String[] segments) {
         if (segments.length > 2) {
-            resourceIdTuples.add(Pair.of(ResourceType.PROJECT, segments[2]));
+            resourceIdTuples.add(Pair.of(ResourceType.PROJECT, String.format("/projects/%s", segments[2])));
         }
     }
 
-    private void pushLeafNode(
+    private void addGetPolicyPathForLeafNode(
             List<Pair<ResourceType, String>> resourceIdTuples, ResourceAction action, String[] segments
     ) {
         if (segments.length > 3) {
-            resourceIdTuples.add(Pair.of(
-                    action.getResourceType(),
-                    segments[2] + ":" + segments[3]
-            )); //{project_id}:{[topic|sub|queue]_id}
+            // /projects/:project/[topics|subs]/:[topic|sub]
+            switch (action.getResourceType()) {
+                case TOPIC -> resourceIdTuples.add(
+                        Pair.of(ResourceType.TOPIC, String.format("/projects/%s/topics/%s", segments[2], segments[3])));
+                case SUBSCRIPTION -> resourceIdTuples.add(Pair.of(ResourceType.SUBSCRIPTION,
+                        String.format("/projects/%s/subscriptions/%s", segments[2], segments[3])
+                ));
+                default -> throw new IllegalArgumentException(
+                        "Invalid resource type under project : " + action.getResourceType());
+            }
         }
     }
 }

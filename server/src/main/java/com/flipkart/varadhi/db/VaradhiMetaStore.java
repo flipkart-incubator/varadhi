@@ -224,36 +224,42 @@ public class VaradhiMetaStore implements MetaStore {
     @Override
     public List<RoleBindingNode> getRoleBindingNodes() {
         ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
-        return zkMetaStore.listChildren(znode).stream().map(this::getRoleBindingNode).toList();
+        return zkMetaStore.listChildren(znode).stream().map(this::findRoleBindingNode).toList();
     }
 
     @Override
-    public RoleBindingNode getRoleBindingNode(String resourceId) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceId);
+    public RoleBindingNode findRoleBindingNode(String resourceIdWithType) {
+        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceIdWithType);
         return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
     }
 
     @Override
-    public void createRoleBindingNode(RoleBindingNode roleBindingNode) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, roleBindingNode.getResourceId());
-        zkMetaStore.createZNodeWithData(znode, roleBindingNode);
+    public RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+        return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
     }
 
     @Override
-    public boolean checkRoleBindingNodeExists(String resourceId) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceId);
+    public void createRoleBindingNode(RoleBindingNode node) {
+        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
+        zkMetaStore.createZNodeWithData(znode, node);
+    }
+
+    @Override
+    public boolean checkRoleBindingNodeExists(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public int updateRoleBindingNode(RoleBindingNode node) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, node.getResourceId());
+        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
         return zkMetaStore.updateZNodeWithData(znode, node);
     }
 
     @Override
-    public void deleteRoleBindingNode(String resourceId) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceId);
+    public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
         zkMetaStore.deleteZNode(znode);
     }
 }

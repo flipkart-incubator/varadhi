@@ -57,6 +57,11 @@ public class DefaultAuthZProviderTests extends E2EBase {
         setupProvider(checkpoint);
     }
 
+    @AfterAll
+    public static void cleanup() {
+        cleanupRoleBindings();
+    }
+
     private static void setupProvider(Checkpoint checkpoint) throws IOException, InterruptedException {
         String configContent =
                 """
@@ -100,62 +105,62 @@ public class DefaultAuthZProviderTests extends E2EBase {
         provider.init(authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
-    @AfterAll
-    public static void cleanup() {
-        cleanupRoleBindings();
-    }
-
     private static void cleanupRoleBindings() {
         cleanupOrgs(List.of(oPublic));
-        var allNodes = getRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
-        allNodes.forEach(node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceId()), 200));
+        var allNodes = getAllRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
+        allNodes.forEach(
+                node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
     }
 
-    private static List<RoleBindingNode> getRoleBindings(Response response) {
+    private static List<RoleBindingNode> getAllRoleBindings(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
 
     private static String getRoleBindingsUri() {
-        return String.format("%s/v1/authz/bindings", VaradhiBaseUri);
+        return String.format("%s/v1/authz/debug", VaradhiBaseUri);
     }
 
-    private static String getRoleBindingsUri(String resourceId) {
-        return String.join("/", getRoleBindingsUri(), resourceId);
+    private static String getRoleBindingsUri(ResourceType resourceType, String resourceId) {
+        return String.join("/", getRoleBindingsUri(), resourceType.name(), resourceId);
+    }
+
+    private static String getIAMPolicyUri(String resourceUri) {
+        return String.join("/", VaradhiBaseUri, "v1", resourceUri, "policy");
     }
 
     private static void bootstrapRoleBindings() {
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("public", ResourceType.ORG, "abc", Set.of("team.admin"))
+        setIAMPolicy(
+                getIAMPolicyUri("orgs/public"),
+                new IAMPolicyRequest("abc", Set.of("team.admin"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("public", ResourceType.ORG, "xyz", Set.of("org.admin"))
+        setIAMPolicy(
+                getIAMPolicyUri("orgs/public"),
+                new IAMPolicyRequest("xyz", Set.of("org.admin"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("public:team_rocket", ResourceType.TEAM, "team_user1", Set.of("team.admin"))
+        setIAMPolicy(
+                getIAMPolicyUri("orgs/public/teams/team_rocket"),
+                new IAMPolicyRequest("team_user1", Set.of("team.admin"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("public:team_ash", ResourceType.TEAM, "brock", Set.of("team.admin"))
+        setIAMPolicy(
+                getIAMPolicyUri("orgs/public/teams/team_ash"),
+                new IAMPolicyRequest("brock", Set.of("team.admin"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("default", ResourceType.PROJECT, "proj_user1", Set.of("project.read"))
+        setIAMPolicy(
+                getIAMPolicyUri("projects/default"),
+                new IAMPolicyRequest("proj_user1", Set.of("project.read"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("default", ResourceType.PROJECT, "proj_user2", Set.of("topic.read"))
+        setIAMPolicy(
+                getIAMPolicyUri("projects/default"),
+                new IAMPolicyRequest("proj_user2", Set.of("topic.read"))
         );
-        makeRoleAssignmentUpdate(
-                getRoleBindingsUri(),
-                new RoleAssignmentRequest("default:topic001", ResourceType.TOPIC, "proj_user3", Set.of("topic.read"))
+        setIAMPolicy(
+                getIAMPolicyUri("projects/default/topics/topic001"),
+                new IAMPolicyRequest("proj_user3", Set.of("topic.read"))
         );
     }
 
-    private static void makeRoleAssignmentUpdate(String targetUrl, RoleAssignmentRequest entity) {
+    private static void setIAMPolicy(String targetUrl, IAMPolicyRequest entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
@@ -206,7 +211,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     @Test
     public void testIsAuthorized_UserTopicAccess(VertxTestContext testContext) {
-        Checkpoint checkpoint = testContext.checkpoint(5);
+        Checkpoint checkpoint = testContext.checkpoint(1);
 
         provider
                 .isAuthorized(testUser("proj_user3", false),
@@ -215,35 +220,59 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("proj_user2", false),
+    @Test
+    public void testIsAuthorized_UserTopicAccess2(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        provider
+                .isAuthorized(testUser("proj_user2", false),
                         ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                )) // checking if user role at the parent node resolves
+                )// checking if user role at the parent node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("abc", false),
+    @Test
+    public void testIsAuthorized_UserTopicAccess3(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        provider
+                .isAuthorized(testUser("abc", false),
                         ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                )) // checking since abc is team.admin, they should be able to read the topic
+                ) // checking since abc is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("team_user1", false),
+    @Test
+    public void testIsAuthorized_UserTopicAccess4(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        provider
+                .isAuthorized(testUser("team_user1", false),
                         ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                )) // checking since team_user1 is team.admin, they should be able to read the topic
+                ) // checking since team_user1 is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
-                }))
+                }));
+    }
 
-                .compose(t -> provider.isAuthorized(testUser("brock", false),
+    @Test
+    public void testIsAuthorized_UserTopicAccess5(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        provider
+                .isAuthorized(testUser("brock", false),
                         ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                )) // brock is team admin for different team, should not be able to access
+                ) // brock is team admin for different team, should not be able to access
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();

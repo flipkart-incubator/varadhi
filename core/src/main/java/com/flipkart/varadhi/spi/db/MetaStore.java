@@ -60,13 +60,15 @@ public interface MetaStore {
 
     List<RoleBindingNode> getRoleBindingNodes();
 
-    RoleBindingNode getRoleBindingNode(String resourceId);
+    RoleBindingNode findRoleBindingNode(String resourceIdWithType);
 
-    void createRoleBindingNode(RoleBindingNode roleBindingNode);
+    RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId);
 
-    boolean checkRoleBindingNodeExists(String resourceId);
+    void createRoleBindingNode(RoleBindingNode node);
+
+    boolean checkRoleBindingNodeExists(ResourceType resourceType, String resourceId);
 
     int updateRoleBindingNode(RoleBindingNode node);
 
-    void deleteRoleBindingNode(String resourceId);
+    void deleteRoleBindingNode(ResourceType resourceType, String resourceId);
 }

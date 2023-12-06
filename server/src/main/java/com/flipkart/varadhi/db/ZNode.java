@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.db;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import lombok.Getter;
 
 @Getter
@@ -59,6 +60,10 @@ public class ZNode {
 
     public static ZNode OfTopicResource(String projectName, String topicResourceName) {
         return new ZNode(TOPIC_RESOURCE, projectName, topicResourceName);
+    }
+
+    public static ZNode OfIAMPolicy(ResourceType resourceType, String resourceId) {
+        return new ZNode(ROLE_BINDING, resourceType.toString(), resourceId);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {
