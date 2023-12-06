@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.ResourceAction.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
@@ -77,13 +78,25 @@ public class TopicHandlers implements RouteProvider {
                                 this::delete,
                                 true,
                                 Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{project}/{topic}"))
+                        ),
+                        new RouteDefinition(
+                                HttpMethod.GET,
+                                "",
+                                Set.of(),
+                                new LinkedHashSet<>(),
+                                this::getTopics,
+                                true,
+                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}")) //TODO: Do we need a new permission for this?
                         )
                 )
         ).get();
     }
 
     public void get(RoutingContext ctx) {
-        ctx.todo();
+        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
+        TopicResource topicResource = metaStore.getTopicResource(topicName, projectName);
+        ctx.endApiWithResponse(topicResource);
     }
 
     public void create(RoutingContext ctx) {
@@ -106,7 +119,6 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
-        metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);
         ctx.endApiWithResponse(topicResource);
@@ -114,6 +126,19 @@ public class TopicHandlers implements RouteProvider {
 
 
     public void delete(RoutingContext ctx) {
-        ctx.todo();
+        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
+        TopicResource topicResource = metaStore.getTopicResource(topicName, projectName);
+        Project project = metaStore.getProject(topicResource.getProject());
+        metaStore.deleteTopicResource(topicName, projectName);
+        VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
+        //TODO : varadhiTopicService.delete(vt);
+        ctx.endApiWithResponse(topicResource);
+    }
+
+    public void getTopics(RoutingContext ctx) {
+        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
+        List<String> topicNames = metaStore.getVaradhiTopicNames(projectName);
+        ctx.endApiWithResponse(topicNames);
     }
 }
