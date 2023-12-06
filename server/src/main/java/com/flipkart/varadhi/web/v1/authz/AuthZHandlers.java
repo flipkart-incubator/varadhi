@@ -160,7 +160,6 @@ public class AuthZHandlers implements RouteProvider {
     public Handler<RoutingContext> getIAMPolicyHandler(ResourceType resourceType) {
         return (routingContext) -> {
             String resourceId = routingContext.getResourceIdFromPath(resourceType);
-            log.info("get iam policy called for resource {} at route {}", resourceId, routingContext.currentRoute().getName());
             RoleBindingNode policy = getIAMPolicy(resourceType, resourceId);
             routingContext.endApiWithResponse(policy);
         };
@@ -174,7 +173,6 @@ public class AuthZHandlers implements RouteProvider {
         return (routingContext) -> {
             String resourceId = routingContext.getResourceIdFromPath(resourceType);
             IAMPolicyRequest policyForSubject = routingContext.body().asPojo(IAMPolicyRequest.class);
-            log.info("set iam policy called for resource {} at route {}", resourceId, routingContext.currentRoute().getName());
             RoleBindingNode updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
             routingContext.endApiWithResponse(updated);
         };
