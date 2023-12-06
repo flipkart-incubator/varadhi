@@ -37,7 +37,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             this.configuration =
                     YamlLoader.loadConfig(
                             authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
-            this.webClient = CachingWebClient.create(WebClient.create(Vertx.vertx()));
+            this.webClient = WebClient.create(Vertx.vertx()); //CachingWebClient.create(WebClient.create(Vertx.vertx()));
             this.initialised = true;
         }
         return Future.succeededFuture(true);
