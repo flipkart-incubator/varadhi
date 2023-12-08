@@ -45,7 +45,8 @@ public class ProduceResult {
     public String getFailureReason() {
         String message = produceStatus.getMessage();
         if (throwable != null) {
-            message = String.format("%s %s", message, throwable.getMessage());
+            Throwable t = throwable.getCause() == null ? throwable : throwable.getCause();
+            message = String.format("%s %s", message, t.getMessage());
         }
         return message;
     }
