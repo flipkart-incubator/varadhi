@@ -119,6 +119,7 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
+        //metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);
         ctx.endApiWithResponse(topicResource);
@@ -138,7 +139,7 @@ public class TopicHandlers implements RouteProvider {
 
     public void getTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        List<String> topicNames = metaStore.getVaradhiTopicNames(projectName);
+        List<String> topicNames = metaStore.getTopicResourceNames(projectName);
         ctx.endApiWithResponse(topicNames);
     }
 }
