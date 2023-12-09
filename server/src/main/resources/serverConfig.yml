@@ -17,7 +17,6 @@ verticleDeploymentOptions:
   workerPoolSize: 2
 
 authenticationEnabled: false
-
 authentication:
   jwt:
     jwksUrl: "http://localhost:9090/default/jwks"
@@ -26,7 +25,6 @@ authentication:
       ignoreExpiration: true
 
 authorizationEnabled: false
-
 authorization:
   superUsers: [ "thanos" ]
   providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider"
@@ -41,7 +39,7 @@ metaStoreOptions:
   configFile: "src/main/resources/zkConfig.yml"
 
 httpServerOptions:
-  port: 8080
+  port: 8488
   alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
   decompressionSupported: false
   useAlpn: true

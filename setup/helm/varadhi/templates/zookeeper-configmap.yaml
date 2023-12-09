@@ -1,0 +1,35 @@
+{{- if .Values.zkDeployment.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.configMapName }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.zkDeployment.name }}
+data:
+  {{ .Values.zkDeployment.configFileName }}: |
+    tickTime = {{ .Values.zkDeployment.configData.tickTime }}
+    dataDir = /data
+    dataLogDir = /datalog
+    globalOutstandingLimit = {{ .Values.zkDeployment.configData.globalOutstandingLimit }}
+    clientPort = {{ .Values.zkDeployment.configData.clientPort }}
+    maxClientCnxns = {{ .Values.zkDeployment.configData.maxClientCnxns }}
+    initLimit = {{ .Values.zkDeployment.configData.initLimit }}
+    syncLimit = {{ .Values.zkDeployment.configData.syncLimit }}
+    skipACL = {{ .Values.zkDeployment.configData.skipACL }}
+    autopurge.purgeInterval = {{ .Values.zkDeployment.configData.purgeInterval }}
+    autopurge.snapRetainCount = {{ .Values.zkDeployment.configData.snapRetainCount }}
+    4lw.commands.whitelist=*
+    peerType = {{ .Values.zkDeployment.configData.peerType }}
+    {{- $replicaCount := int .Values.zkDeployment.replicaCount }}
+    {{- $name := include "varadhi.name" . }}
+    {{- $serverName := .Values.zkDeployment.name }}
+    {{- $followerPort := int .Values.zkDeployment.ports.follower }}
+    {{- $electionPort := int .Values.zkDeployment.ports.leaderElection }}
+    {{- $namespace := .Release.Namespace }}
+    {{- $serviceName := .Values.zkDeployment.name }}
+    {{- $clusterDomain := .Values.clusterDomain }}
+    {{ range $i, $e := until $replicaCount }}{{ printf "server.%d=" $i }}{{ $name }}-{{ $serverName }}-{{ $i }}.{{ $name }}-{{ $serviceName }}.{{ $namespace }}.svc.{{ $clusterDomain }}:{{ $followerPort }}:{{ $electionPort }}
+    {{ end }}
+{{- end }}

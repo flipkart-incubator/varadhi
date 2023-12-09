@@ -66,7 +66,7 @@ public class Server {
 
     public static ServerConfiguration readConfiguration(String[] args) {
         if (args.length < 1) {
-            log.error("Usage: java com.flipkart.varadhi.Server configuration.yml");
+            log.error("Usage: java com.flipkart.varadhi.Server serverConfig.yml");
             System.exit(-1);
         }
         return readConfigFromFile(args[0]);
