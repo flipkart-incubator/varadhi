@@ -119,7 +119,7 @@ public class TopicHandlers implements RouteProvider {
                             topicResource.getName()
                     ));
         }
-        //metaStore.createTopicResource(topicResource);
+        // metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt);
         ctx.endApiWithResponse(topicResource);
