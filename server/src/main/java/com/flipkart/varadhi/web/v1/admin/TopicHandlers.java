@@ -130,10 +130,7 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
         TopicResource topicResource = metaStore.getTopicResource(topicName, projectName);
-        Project project = metaStore.getProject(topicResource.getProject());
-        metaStore.deleteTopicResource(topicName, projectName);
-        VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
-        //TODO : varadhiTopicService.delete(vt);
+        //TODO : varadhiTopicService.delete(topicResource);
         ctx.endApiWithResponse(topicResource);
     }
 
