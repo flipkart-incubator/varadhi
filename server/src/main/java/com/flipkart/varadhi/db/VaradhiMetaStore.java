@@ -190,6 +190,21 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
+    public List<String> getTopicResourceNames(String projectName) {
+        List<String> topicResourceNames = new ArrayList<>();
+        String projectPrefixOfTopicResource = projectName + RESOURCE_NAME_SEPARATOR;
+        ZNode znode = ZNode.OfEntityType(TOPIC_RESOURCE);
+        zkMetaStore.listChildren(znode).forEach(topicResourceName -> {
+                    if (topicResourceName.startsWith(projectPrefixOfTopicResource)) {
+                        String[] splits = topicResourceName.split(RESOURCE_NAME_SEPARATOR);
+                        topicResourceNames.add(splits[1]);
+                    }
+                }
+        );
+        return topicResourceNames;
+    }
+
+    @Override
     public void deleteTopicResource(String topicResourceName, String projectName) {
         ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
         zkMetaStore.deleteZNode(znode);
