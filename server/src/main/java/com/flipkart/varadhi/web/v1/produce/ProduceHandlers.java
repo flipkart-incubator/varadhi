@@ -4,6 +4,7 @@ import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -44,12 +45,17 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 public class ProduceHandlers implements RouteProvider {
     private final String deployedRegion;
     private final ProducerService producerService;
+    private final ProjectService projectService;
     private final String serviceHostName;
     private final HeaderValidationHandler headerValidationHandler;
 
-    public ProduceHandlers(String serviceHostName, RestOptions restOptions, ProducerService producerService) {
+    public ProduceHandlers(
+            String serviceHostName, RestOptions restOptions, ProducerService producerService,
+            ProjectService projectService
+    ) {
         this.deployedRegion = restOptions.getDeployedRegion();
         this.producerService = producerService;
+        this.projectService = projectService;
         this.serviceHostName = serviceHostName;
         this.headerValidationHandler = new HeaderValidationHandler(restOptions);
     }
@@ -78,18 +84,19 @@ public class ProduceHandlers implements RouteProvider {
 
     public void produce(RoutingContext ctx) {
 
+        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
+
+        Project project = projectService.getCachedProject(projectName);
+
+        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
+
         // TODO:: Below is making extra copy, this needs to be avoided.
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-//         TODO:: Add project validations.
 
-
-        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
-
-        ProduceContext produceContext = buildProduceContext(ctx, payload.length);
+        ProduceContext produceContext = buildProduceContext(ctx, project, topicName, payload.length);
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceContext);
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, produceContext);
@@ -146,9 +153,9 @@ public class ProduceHandlers implements RouteProvider {
         return new Message(payload, requestHeaders);
     }
 
-    private ProduceContext buildProduceContext(RoutingContext ctx, int payloadSize) {
+    private ProduceContext buildProduceContext(RoutingContext ctx, Project project, String topic, int payloadSize) {
         ProduceContext.RequestContext requestContext = buildRequestContext(ctx, payloadSize);
-        ProduceContext.TopicContext topicContext = buildTopicContext(ctx.request(), this.deployedRegion);
+        ProduceContext.TopicContext topicContext = buildTopicContext(topic, project);
         return new ProduceContext(requestContext, topicContext);
     }
 
@@ -174,11 +181,11 @@ public class ProduceHandlers implements RouteProvider {
         return requestContext;
     }
 
-    private ProduceContext.TopicContext buildTopicContext(HttpServerRequest request, String produceRegion) {
+    private ProduceContext.TopicContext buildTopicContext(String topic, Project project) {
         ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
-        topicContext.setRegion(produceRegion);
-        topicContext.setTopicName(request.getParam(REQUEST_PATH_PARAM_TOPIC));
-        topicContext.setProjectName(request.getParam(REQUEST_PATH_PARAM_PROJECT));
+        topicContext.setRegion(deployedRegion);
+        topicContext.setProjectAttributes(project);
+        topicContext.setTopic(topic);
         return topicContext;
     }
 }

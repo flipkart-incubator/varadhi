@@ -5,4 +5,8 @@ plugins {
 dependencies {
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
+    implementation("io.micrometer:micrometer-core")
+    implementation('org.hibernate:hibernate-validator:8.0.1.Final')
+    runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
+    testImplementation("io.micrometer:micrometer-registry-jmx")
 }

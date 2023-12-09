@@ -1,18 +1,23 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.List;
+import java.util.function.Function;
 
 public class ProjectService {
     private final MetaStore metaStore;
+    private final VaradhiCache<String, Project> projectCache;
 
-    public ProjectService(MetaStore metaStore) {
+    public ProjectService(MetaStore metaStore, String cacheSpec, MeterRegistry meterRegistry) {
         this.metaStore = metaStore;
+        this.projectCache = buildProjectCache(cacheSpec, this::getProject, meterRegistry);
     }
 
     public Project createProject(Project project) {
@@ -36,6 +41,10 @@ public class ProjectService {
 
     public Project getProject(String projectName) {
         return metaStore.getProject(projectName);
+    }
+
+    public Project getCachedProject(String projectName) {
+        return projectCache.get(projectName);
     }
 
     public Project updateProject(Project project) {
@@ -70,5 +79,20 @@ public class ProjectService {
                     String.format("Can not delete Project(%s), it has associated entities.", projectName));
         }
         metaStore.deleteProject(projectName);
+    }
+
+    private VaradhiCache<String, Project> buildProjectCache(
+            String cacheSpec, Function<String, Project> projectProvider, MeterRegistry meterRegistry
+    ) {
+        return new VaradhiCache<>(
+                cacheSpec,
+                projectProvider,
+                (projectName, exception) -> new ResourceNotFoundException(
+                        String.format("Failed to get project(%s). %s", projectName, exception.getMessage()),
+                        exception
+                ),
+                "project",
+                meterRegistry
+        );
     }
 }

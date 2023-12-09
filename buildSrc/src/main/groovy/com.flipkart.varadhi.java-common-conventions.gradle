@@ -109,6 +109,7 @@ dependencies {
     implementation("com.google.guava:guava")
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
+    implementation("jakarta.validation:jakarta.validation-api")
 
     // common test framework
     testCompileOnly("org.projectlombok:lombok")
