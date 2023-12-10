@@ -50,4 +50,14 @@ public class VaradhiTopic extends AbstractTopic {
         }
         return internalTopic;
     }
+
+    public TopicResource getTopicResource(String projectName) {
+        return new TopicResource(
+                this.getName().split("\\.")[1],
+                this.getVersion(),
+                projectName,
+                this.isGrouped(),
+                null
+        );
+    }
 }

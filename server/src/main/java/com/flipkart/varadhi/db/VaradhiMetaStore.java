@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 import static com.flipkart.varadhi.db.ZNode.*;
 
 
@@ -162,12 +163,11 @@ public class VaradhiMetaStore implements MetaStore {
 
     @Override
     public List<String> getVaradhiTopicNames(String projectName) {
-        String projectPrefixOfTopicName = projectName + RESOURCE_NAME_SEPARATOR;
+        String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefixOfTopicName))
-                .map(name -> name.split(RESOURCE_NAME_SEPARATOR)[1])
                 .collect(Collectors.toList());
     }
 
@@ -185,18 +185,26 @@ public class VaradhiMetaStore implements MetaStore {
 
     @Override
     public TopicResource getTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        return zkMetaStore.getZNodeDataAsPojo(znode, TopicResource.class);
+        List<String> varadhiTopicNames = getVaradhiTopicNames(projectName);
+        List<String> matchedVaradhiTopicNames = varadhiTopicNames.stream().filter(
+                varadhiTopicName -> varadhiTopicName.contains(topicResourceName))
+                .limit(1)
+                .toList();
+        String varadhiTopicName = matchedVaradhiTopicNames.get(0);
+        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+        VaradhiTopic varadhiTopic = zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
+        return varadhiTopic.getTopicResource(projectName);
     }
 
     @Override
     public List<String> getTopicResourceNames(String projectName) {
         List<String> topicResourceNames = new ArrayList<>();
-        String projectPrefixOfTopicResource = projectName + RESOURCE_NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(TOPIC_RESOURCE);
-        zkMetaStore.listChildren(znode).forEach(topicResourceName -> {
-                    if (topicResourceName.startsWith(projectPrefixOfTopicResource)) {
-                        String[] splits = topicResourceName.split(RESOURCE_NAME_SEPARATOR);
+        String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
+        ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
+        //todo
+        zkMetaStore.listChildren(znode).forEach(varadhiTopic -> {
+                    if (varadhiTopic.startsWith(projectPrefixOfVaradhiTopic)) {
+                        String[] splits = varadhiTopic.split("\\.");
                         topicResourceNames.add(splits[1]);
                     }
                 }
