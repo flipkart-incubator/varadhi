@@ -173,35 +173,17 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public void createTopicResource(TopicResource resource) {
-        ZNode znode = ZNode.OfTopicResource(resource.getProject(), resource.getName());
-        zkMetaStore.createZNodeWithData(znode, resource);
-    }
-
-    @Override
-    public boolean checkTopicResourceExists(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        return zkMetaStore.zkPathExist(znode);
-    }
-
-    @Override
     public VaradhiTopic getVaradhiTopic(String topicResourceName, String projectName) {
-        List<String> varadhiTopicNames = getVaradhiTopicNames(projectName);
-        List<String> matchedVaradhiTopicNames = varadhiTopicNames.stream().filter(
-                varadhiTopicName -> varadhiTopicName.contains(topicResourceName))
-                .limit(1)
-                .toList();
-        if(matchedVaradhiTopicNames.isEmpty()) {
+        String varadhiTopicName = getVaradhiTopicName(topicResourceName, projectName);
+        if("".equals(varadhiTopicName)) {
             throw new ResourceNotFoundException(String.format(
                     "Topic(%s) not found for the Project(%s).",
                     topicResourceName,
                     projectName
             ));
         }
-        String varadhiTopicName = matchedVaradhiTopicNames.get(0);
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
-        VaradhiTopic varadhiTopic = zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
-        return varadhiTopic;
+        return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
 
     @Override
@@ -220,21 +202,14 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public void deleteTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        zkMetaStore.deleteZNode(znode);
-    }
-
-    @Override
     public void createVaradhiTopic(VaradhiTopic varadhiTopic) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopic.getName());
         zkMetaStore.createZNodeWithData(znode, varadhiTopic);
     }
 
     @Override
-    public boolean checkVaradhiTopicExists(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
-        return zkMetaStore.zkPathExist(znode);
+    public boolean checkVaradhiTopicExists(String topicResourceName, String projectName) {
+        return !"".equals(getVaradhiTopicName(topicResourceName, projectName));
     }
 
     @Override
@@ -249,4 +224,12 @@ public class VaradhiMetaStore implements MetaStore {
         zkMetaStore.deleteZNode(znode);
     }
 
+    private String getVaradhiTopicName(String topicResourceName, String projectName) {
+        List<String> varadhiTopicNames = getVaradhiTopicNames(projectName);
+        List<String> matchedVaradhiTopicNames = varadhiTopicNames.stream().filter(
+                        varadhiTopicName -> varadhiTopicName.contains(topicResourceName))
+                .limit(1)
+                .toList();
+        return matchedVaradhiTopicNames.isEmpty() ? "" : matchedVaradhiTopicNames.get(0);
+    }
 }
