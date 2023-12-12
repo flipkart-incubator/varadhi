@@ -31,7 +31,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
-        topicService.create(pt);
+        topicService.create(pt, TENANT, NAMESPACE);
         validateTopicExists(topicFQDN);
     }
 
@@ -39,8 +39,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     public void testCreateTopic_Duplicate() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
-        topicService.create(pt);
-        MessagingException m = Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt));
+        topicService.create(pt, TENANT, NAMESPACE);
+        MessagingException m = Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt, TENANT, NAMESPACE));
         Throwable realFailure = m.getCause();
         Assertions.assertTrue(
                 realFailure instanceof PulsarAdminException.ConflictException, "Duplicate Topic creation didn't fail.");
