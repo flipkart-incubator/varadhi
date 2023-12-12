@@ -121,7 +121,7 @@ public class TopicHandlers implements RouteProvider {
                     ));
         }
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
-        varadhiTopicService.create(vt);
+        varadhiTopicService.create(vt, project.getOrg(), project.getName());
         ctx.endApiWithResponse(topicResource);
     }
 
