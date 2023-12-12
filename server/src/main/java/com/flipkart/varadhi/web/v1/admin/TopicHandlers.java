@@ -94,8 +94,9 @@ public class TopicHandlers implements RouteProvider {
 
     public void get(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        TopicResource topicResource = metaStore.getTopicResource(topicName, projectName);
+        String topicResourceName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
+        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(topicResourceName, projectName);
+        TopicResource topicResource = varadhiTopic.getTopicResource(projectName);
         ctx.endApiWithResponse(topicResource);
     }
 
@@ -127,11 +128,10 @@ public class TopicHandlers implements RouteProvider {
 
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        //TODO: Get VaradhiTopic from metastore instead of TopicResource
-        TopicResource topicResource = metaStore.getTopicResource(topicName, projectName);
-        //TODO :varadhiTopicService.delete(topicResource);
-        ctx.endApiWithResponse(topicResource);
+        String topicResourceName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
+        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(topicResourceName, projectName);
+        varadhiTopicService.delete(varadhiTopic);
+        ctx.endApiWithResponse(String.format("Deleted topic %s", topicResourceName));
     }
 
     public void getTopics(RoutingContext ctx) {

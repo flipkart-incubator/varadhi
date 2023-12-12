@@ -43,7 +43,7 @@ public interface MetaStore {
 
     void createTopicResource(TopicResource topicResourceName);
 
-    TopicResource getTopicResource(String topicResourceName, String projectName);
+    VaradhiTopic getVaradhiTopic(String topicResourceName, String projectName);
 
     boolean checkTopicResourceExists(String topicName, String projectName);
 

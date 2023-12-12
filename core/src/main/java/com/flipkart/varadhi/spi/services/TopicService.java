@@ -6,4 +6,6 @@ public interface TopicService<T extends AbstractTopic> {
     void create(T topic);
 
     T get(String topicName);
+
+    void delete(T topic);
 }

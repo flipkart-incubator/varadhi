@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -184,16 +185,23 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public TopicResource getTopicResource(String topicResourceName, String projectName) {
+    public VaradhiTopic getVaradhiTopic(String topicResourceName, String projectName) {
         List<String> varadhiTopicNames = getVaradhiTopicNames(projectName);
         List<String> matchedVaradhiTopicNames = varadhiTopicNames.stream().filter(
                 varadhiTopicName -> varadhiTopicName.contains(topicResourceName))
                 .limit(1)
                 .toList();
+        if(matchedVaradhiTopicNames.isEmpty()) {
+            throw new ResourceNotFoundException(String.format(
+                    "Topic(%s) not found for the Project(%s).",
+                    topicResourceName,
+                    projectName
+            ));
+        }
         String varadhiTopicName = matchedVaradhiTopicNames.get(0);
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         VaradhiTopic varadhiTopic = zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
-        return varadhiTopic.getTopicResource(projectName);
+        return varadhiTopic;
     }
 
     @Override
@@ -201,7 +209,6 @@ public class VaradhiMetaStore implements MetaStore {
         List<String> topicResourceNames = new ArrayList<>();
         String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
-        //todo
         zkMetaStore.listChildren(znode).forEach(varadhiTopic -> {
                     if (varadhiTopic.startsWith(projectPrefixOfVaradhiTopic)) {
                         String[] splits = varadhiTopic.split("\\.");

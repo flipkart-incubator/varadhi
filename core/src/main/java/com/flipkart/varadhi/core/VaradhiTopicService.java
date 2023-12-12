@@ -39,4 +39,18 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     public VaradhiTopic get(String topicName) {
         return metaStore.getVaradhiTopic(topicName);
     }
+
+    @Override
+    public void delete(VaradhiTopic varadhiTopic) {
+        log.info("Deleting Varadhi topic {}", varadhiTopic.getName());
+        //TODO : delete namespace, tenant also if the Only Topic in the namespace+tenant is deleted?
+        varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
+                {
+                    StorageTopic storageTopic = internalTopic.getStorageTopic();
+                    topicService.delete(storageTopic);
+                }
+        );
+        metaStore.deleteVaradhiTopic(varadhiTopic.getName());
+    }
+
 }
