@@ -28,7 +28,6 @@ import static com.flipkart.varadhi.entities.TopicState.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-
 public class ProduceHandlersTest extends ProduceTestBase {
 
     @Override
@@ -38,7 +37,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
-        setUp();
+        super.setUp();
         route.handler(bodyHandler).handler(produceHandlers::produce);
         setupFailureHandler(route);
     }
@@ -81,8 +80,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
 
         Assertions.assertEquals(deployedRegion, ctxCapture.getValue().getTopicContext().getRegion());
-        Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopicName());
-        Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProjectName());
+        Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopic());
+        Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProject());
 
         messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
@@ -101,7 +100,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     }
 
     @Test
-    public void testProduceNonProducingTopicState() throws InterruptedException {
+    public void testProduceNonProducingTopicState() {
         record testData(int status, String message, TopicState state) {
         }
 
@@ -190,5 +189,17 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Assertions.assertEquals("h1v2", h1Values[1]);
         Assertions.assertEquals("h1v3", h1Values[2]);
         Assertions.assertEquals("h1v1", msgCapture.getValue().getHeader("x_header1"));
+    }
+
+    @Test
+    public void testProduceForNonexistingProject() throws InterruptedException {
+        doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(MESSAGE_ID, messageId);
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                .produceToTopic(msgCapture.capture(), eq(topicFullName), ctxCapture.capture());
+        sendRequestWithByteBufferBody(request, payload, 404, "Project1 not found.", ErrorResponse.class
+        );
     }
 }

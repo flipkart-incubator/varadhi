@@ -32,8 +32,8 @@ public class ProducerMetricsImpl implements ProducerMetrics {
     private List<Tag> getTags(ProduceContext context) {
         List<Tag> tags = new ArrayList<>();
         tags.add(Tag.of(TAG_NAME_REGION, context.getTopicContext().getRegion()));
-        tags.add(Tag.of(TAG_NAME_PROJECT, context.getTopicContext().getProjectName()));
-        tags.add(Tag.of(TAG_NAME_TOPIC, context.getTopicContext().getTopicName()));
+        tags.add(Tag.of(TAG_NAME_PROJECT, context.getTopicContext().getProject()));
+        tags.add(Tag.of(TAG_NAME_TOPIC, context.getTopicContext().getTopic()));
         tags.add(Tag.of(TAG_NAME_IDENTITY, context.getRequestContext().getProduceIdentity()));
         tags.add(Tag.of(TAG_NAME_HOST, context.getRequestContext().getServiceHost()));
         return tags;
