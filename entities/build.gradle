@@ -5,7 +5,6 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_version")
 
-    testRuntimeOnly("jakarta.el:jakarta.el-api:4.0.0")
-    testRuntimeOnly("org.glassfish:jakarta.el:4.0.2")
+    testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
     testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
 }
