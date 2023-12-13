@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1.produce;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
@@ -32,9 +33,9 @@ import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.Headers.*;
 import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
 import static com.flipkart.varadhi.entities.ResourceAction.TOPIC_PRODUCE;
+import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;

@@ -26,9 +26,11 @@ ext {
     jersey_version = "2.25.1"
     guava_version = "32.1.1-jre"
     curator_version = "5.5.0"
-    jackson_version = "2.14.2"
+    jackson_version = "2.15.1"
     jakarta_version = "3.0.2"
     commons_lang_version = "3.11"
+
+    hibernate_validator_version = "8.0.1.Final"
 }
 
 sourceSets {
@@ -46,6 +48,7 @@ configurations {
 }
 
 dependencies {
+    // TODO: Get rid of these unnecessary constraints. We are probably using it wrong. Need to check.
     constraints {
         implementation("org.slf4j:slf4j-api:$slf4j_version")
         implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
@@ -55,6 +58,8 @@ dependencies {
         compileOnly("org.projectlombok:lombok:$lombok_version")
         annotationProcessor("org.projectlombok:lombok:$lombok_version")
 
+        implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
+        testFixtures("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
         implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
         implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version")
 
@@ -85,8 +90,8 @@ dependencies {
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
         implementation("com.google.guava:guava:$guava_version")
 
-
         implementation("jakarta.validation:jakarta.validation-api:$jakarta_version")
+        testFixtures("jakarta.validation:jakarta.validation-api:$jakarta_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")

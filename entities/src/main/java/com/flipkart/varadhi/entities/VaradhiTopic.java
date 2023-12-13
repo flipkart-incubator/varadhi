@@ -1,17 +1,15 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
-
+import java.util.Optional;
 
 @Getter
 public class VaradhiTopic extends AbstractTopic {
+
+
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
 
@@ -43,11 +41,14 @@ public class VaradhiTopic extends AbstractTopic {
         this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
 
-    public InternalTopic getProduceTopicForRegion(String region) {
-        InternalTopic internalTopic = internalTopics.get(region);
-        if (null == internalTopic) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", region));
-        }
-        return internalTopic;
+    /**
+     * TODO: evaluate whether it should return Optional or not. An unmapped region probably wouldn't be queried.
+     *
+     * @param region
+     *
+     * @return InternalTopic for the given region
+     */
+    public Optional<InternalTopic> getProduceTopicForRegion(String region) {
+        return Optional.ofNullable(internalTopics.get(region));
     }
 }

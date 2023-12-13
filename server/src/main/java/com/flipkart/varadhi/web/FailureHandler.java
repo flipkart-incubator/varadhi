@@ -11,6 +11,8 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.IllegalArgumentException;
+
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
@@ -92,7 +94,7 @@ public class FailureHandler implements Handler<RoutingContext> {
             return HTTP_CONFLICT;
         } else if (ServerNotAvailableException.class == tClazz) {
             return HTTP_UNAVAILABLE;
-        } else if (ArgumentException.class == tClazz) {
+        } else if (IllegalArgumentException.class == tClazz) {
             return HTTP_BAD_REQUEST;
         } else if (ResourceNotFoundException.class == tClazz) {
             return HTTP_NOT_FOUND;

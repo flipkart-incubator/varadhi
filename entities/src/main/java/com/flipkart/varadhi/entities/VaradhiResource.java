@@ -7,6 +7,9 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode
 public class VaradhiResource implements BaseResource {
+
+    public static final int INITIAL_VERSION = 1;
+
     private final String name;
 
     @Setter

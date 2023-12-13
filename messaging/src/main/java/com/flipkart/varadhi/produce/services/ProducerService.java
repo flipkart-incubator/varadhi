@@ -5,7 +5,9 @@ import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -13,6 +15,7 @@ import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -76,8 +79,13 @@ public class ProducerService {
     ) {
         try {
             String produceRegion = context.getTopicContext().getRegion();
-            InternalTopic internalTopic =
+            Optional<InternalTopic> opInternalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
+            if (opInternalTopic.isEmpty()) {
+                throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
+            }
+
+            InternalTopic internalTopic = opInternalTopic.get();
             if (!internalTopic.getTopicState().isProduceAllowed()) {
                 return CompletableFuture.completedFuture(
                         ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState()));

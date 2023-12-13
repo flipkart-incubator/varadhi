@@ -6,8 +6,6 @@ import lombok.Getter;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.MessageConstants.Headers.MESSAGE_ID;
-
 @Getter
 public class Message {
     private final byte[] payload;
@@ -23,7 +21,7 @@ public class Message {
 
     // TODO:: This will affect json, verify it.
     public String getMessageId() {
-        return getHeader(MESSAGE_ID);
+        return getHeader(StandardHeaders.MESSAGE_ID);
     }
 
     public boolean hasHeader(String key) {

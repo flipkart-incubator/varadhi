@@ -1,6 +1,5 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.VaradhiResource;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

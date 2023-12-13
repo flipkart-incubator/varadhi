@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +14,7 @@ public class ResultTest {
         Assertions.assertEquals("some data", r.result());
         Assertions.assertNull(r.cause());
 
-        ArgumentException e = new ArgumentException("some error");
+        IllegalArgumentException e = new IllegalArgumentException("some error");
         r = Result.of(e);
         Assertions.assertFalse(r.hasResult());
         Assertions.assertTrue(r.hasFailed());
@@ -39,7 +38,8 @@ public class ResultTest {
         Assertions.assertFalse(r.hasFailed());
         Assertions.assertNull(r.result());
         Assertions.assertNull(r.cause());
-        ArgumentException ee = Assertions.assertThrows(ArgumentException.class, () -> Result.of("some data", e));
+        IllegalArgumentException ee =
+                Assertions.assertThrows(IllegalArgumentException.class, () -> Result.of("some data", e));
         Assertions.assertEquals("Both result and cause can't be non null.", ee.getMessage());
     }
 }

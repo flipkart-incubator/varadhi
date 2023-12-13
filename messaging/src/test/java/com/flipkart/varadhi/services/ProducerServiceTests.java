@@ -4,6 +4,7 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -23,10 +24,9 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.Headers.*;
 import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
+import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -249,7 +249,7 @@ public class ProducerServiceTests {
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
         VaradhiTopic topic = VaradhiTopic.of(new TopicResource(name, 0, project.getName(), false, null));
-        String itName = String.join(NAME_SEPARATOR, topic.getName(), region);
+        String itName = String.join(AbstractTopic.NAME_SEPARATOR, topic.getName(), region);
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         topic.addInternalTopic(new InternalTopic(itName, region, state, st));
         return topic;

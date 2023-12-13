@@ -5,9 +5,9 @@ plugins {
 
 dependencies {
     implementation(project(':common'))
-    implementation(project(':entities'))
     implementation('com.fasterxml.jackson.core:jackson-databind')
+
+    testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
-    testFixturesImplementation(project(':entities'))
-    testFixturesImplementation(project(':common'))
+    testImplementation('com.fasterxml.jackson.core:jackson-annotations')
 }

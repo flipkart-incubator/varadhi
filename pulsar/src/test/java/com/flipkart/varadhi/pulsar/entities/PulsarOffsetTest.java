@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.impl.MessageIdImpl;
@@ -39,7 +38,7 @@ public class PulsarOffsetTest {
     @Test
     public void NullNotComparable() {
         PulsarOffset p1 = new PulsarOffset(MessageId.earliest);
-        ArgumentException ae = Assertions.assertThrows(ArgumentException.class, () -> p1.compareTo(null));
+        IllegalArgumentException ae = Assertions.assertThrows(IllegalArgumentException.class, () -> p1.compareTo(null));
         Assertions.assertEquals("Can not compare null Offset.", ae.getMessage());
     }
 
@@ -47,7 +46,7 @@ public class PulsarOffsetTest {
     public void CanNotCompareIncompatibleTypes() {
         PulsarOffset p1 = new PulsarOffset(MessageId.earliest);
         DummyProducer.DummyOffset dp1 = new DummyProducer.DummyOffset(1);
-        ArgumentException ae = Assertions.assertThrows(ArgumentException.class, () -> p1.compareTo(dp1));
+        IllegalArgumentException ae = Assertions.assertThrows(IllegalArgumentException.class, () -> p1.compareTo(dp1));
         Assertions.assertEquals(
                 String.format("Can not compare different Offset types. Expected Offset is %s, given  %s.",
                         p1.getClass().getName(), dp1.getClass().getName()
