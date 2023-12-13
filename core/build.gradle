@@ -9,5 +9,4 @@ dependencies {
 
     testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
-    testImplementation('com.fasterxml.jackson.core:jackson-annotations')
 }
