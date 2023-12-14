@@ -24,6 +24,7 @@ public class PulsarTopicServiceTest {
 
     private static final String TENANT = "testTenant";
     private static final String NAMESPACE = "testNamespace";
+    private static final String TEST_TOPIC = "testTopic";
 
     @BeforeEach
     public void setUp() {
@@ -41,7 +42,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.from("testTopic", CapacityPolicy.getDefault());
+        PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
         pulsarTopicService.create(topic, TENANT, NAMESPACE);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
@@ -49,7 +50,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_PulsarAdminException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.from("testTopic", CapacityPolicy.getDefault());
+        PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
         assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, TENANT, NAMESPACE));
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
@@ -57,7 +58,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_ConflictException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.from("testTopic", CapacityPolicy.getDefault());
+        PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
         doThrow(new PulsarAdminException.ConflictException(
                 new RuntimeException(""), "duplicate topic error", 409)).when(topics)
@@ -68,5 +69,15 @@ public class PulsarTopicServiceTest {
         Assertions.assertEquals("duplicate topic error", me.getMessage());
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
 
+    }
+
+    @Test
+    public void testCreate_NewTenantNamespace() throws PulsarAdminException {
+        String newTenant = "testTenantNew";
+        String newNamespace = "testNamespaceNew";
+        PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
+        doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
+        pulsarTopicService.create(topic, newTenant, newNamespace);
+        verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
     }
 }

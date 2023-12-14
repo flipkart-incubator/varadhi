@@ -56,6 +56,7 @@ public class TopicTests extends E2EBase {
                         ZNode.getResourceFQDN(topic.getProject(), topic.getName())
                 );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
+        makeGetRequest(getTopicsUri(o1t1Project1)+"/"+topicName, TopicResource.class, 200);
         makeDeleteRequest(getTopicsUri(o1t1Project1)+"/"+topicName, 200);
     }
 
@@ -66,5 +67,8 @@ public class TopicTests extends E2EBase {
                 new TopicResource(topicName, Constants.INITIAL_VERSION, o1t1Project1.getName(), false, null);
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
+
+        List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1),200));
+        Assertions.assertTrue(topics.isEmpty());
     }
 }

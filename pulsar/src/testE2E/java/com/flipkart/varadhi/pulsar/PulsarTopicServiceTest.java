@@ -46,6 +46,16 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
                 realFailure instanceof PulsarAdminException.ConflictException, "Duplicate Topic creation didn't fail.");
     }
 
+    @Test
+    public void testCreate_NewTenantNamespace() throws PulsarAdminException {
+        String newTenant = "testTenantNew";
+        String newNamespace = "testNamespaceNew";
+        String topicFQDN = getRandomTopicFQDN();
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
+        topicService.create(pt, newTenant, newNamespace);
+        validateTopicExists(topicFQDN);
+    }
+
     private void validateTopicExists(String topicFQDN) throws PulsarAdminException {
         List<String> topics = clientProvider.getAdminClient().topics().getPartitionedTopicList(getNamespace());
         Assertions.assertTrue(topics.contains(topicFQDN), String.format("Failed to find the topic %s.", topicFQDN));

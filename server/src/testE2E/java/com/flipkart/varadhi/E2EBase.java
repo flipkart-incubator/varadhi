@@ -74,6 +74,11 @@ public class E2EBase {
         });
     }
 
+    static List<String> getTopics(Response response) {
+        return response.readEntity(new GenericType<>() {
+        });
+    }
+
     static void cleanupOrgs(List<Org> orgs) {
         List<Org> existingOrgs = getOrgs(makeListRequest(getOrgsUri(), 200));
         existingOrgs.forEach(o -> {
