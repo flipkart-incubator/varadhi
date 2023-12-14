@@ -13,7 +13,6 @@ public class MessageConstants {
         public static List<String> REQUIRED_HEADERS =
                 List.of(
                         StandardHeaders.MESSAGE_ID,
-                        StandardHeaders.GROUP_ID,
                         StandardHeaders.PRODUCE_IDENTITY,
                         StandardHeaders.PRODUCE_REGION,
                         StandardHeaders.PRODUCE_TIMESTAMP
