@@ -15,7 +15,6 @@ import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -79,13 +78,14 @@ public class ProducerService {
     ) {
         try {
             String produceRegion = context.getTopicContext().getRegion();
-            Optional<InternalTopic> opInternalTopic =
+            InternalTopic internalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
-            if (opInternalTopic.isEmpty()) {
+
+            // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
+            if (internalTopic == null) {
                 throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
             }
 
-            InternalTopic internalTopic = opInternalTopic.get();
             if (!internalTopic.getTopicState().isProduceAllowed()) {
                 return CompletableFuture.completedFuture(
                         ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState()));

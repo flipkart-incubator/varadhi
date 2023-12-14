@@ -4,7 +4,6 @@ import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Getter
 public class VaradhiTopic extends AbstractTopic {
@@ -48,7 +47,7 @@ public class VaradhiTopic extends AbstractTopic {
      *
      * @return InternalTopic for the given region
      */
-    public Optional<InternalTopic> getProduceTopicForRegion(String region) {
-        return Optional.ofNullable(internalTopics.get(region));
+    public InternalTopic getProduceTopicForRegion(String region) {
+        return internalTopics.get(region);
     }
 }

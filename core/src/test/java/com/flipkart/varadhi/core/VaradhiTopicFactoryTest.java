@@ -43,7 +43,7 @@ public class VaradhiTopicFactoryTest {
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         Assertions.assertNotNull(varadhiTopic);
-        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region).get();
+        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
         StorageTopic st = it.getStorageTopic();
         Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
         Assertions.assertEquals(it.getTopicRegion(), region);
@@ -62,7 +62,7 @@ public class VaradhiTopicFactoryTest {
                 null
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region).get();
+        InternalTopic it = varadhiTopic.getProduceTopicForRegion(region);
         PulsarStorageTopic pt = (PulsarStorageTopic) it.getStorageTopic();
         Assertions.assertEquals(capacityPolicy.getMaxThroughputKBps(), pt.getMaxThroughputKBps());
         Assertions.assertEquals(capacityPolicy.getMaxQPS(), pt.getMaxQPS());
