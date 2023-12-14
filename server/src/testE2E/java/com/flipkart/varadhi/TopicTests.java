@@ -67,4 +67,11 @@ public class TopicTests extends E2EBase {
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
     }
 
+    @Test
+    public void deleteTopic() {
+        String topicName = "test-topic-1";
+        makeDeleteRequest(getTopicsUri(o1t1Project1)+"/"+topicName, 200);
+        //TODO::Try deleting again.
+    }
+
 }
