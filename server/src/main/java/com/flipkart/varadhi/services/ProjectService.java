@@ -81,6 +81,10 @@ public class ProjectService {
         metaStore.deleteProject(projectName);
     }
 
+    public List<Project> getProjects(String teamName, String orgName) {
+        return metaStore.getProjects(teamName, orgName);
+    }
+
     private VaradhiCache<String, Project> buildProjectCache(
             String cacheSpec, Function<String, Project> projectProvider, MeterRegistry meterRegistry
     ) {

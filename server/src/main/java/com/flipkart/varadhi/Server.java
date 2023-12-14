@@ -1,6 +1,8 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
+import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.HostUtils;
 import io.vertx.config.ConfigRetriever;
@@ -51,14 +53,27 @@ public class Server {
             String hostName, ServerConfiguration configuration, CoreServices services, Vertx vertx
     ) {
         log.debug("Verticle deployment started.");
-        VerticleDeployer verticleDeployer = new VerticleDeployer(
-                hostName,
-                vertx,
-                configuration,
-                services.getMessagingStackProvider(),
-                services.getMetaStoreProvider(),
-                services.getMetricsRegistry()
-        );
+        VerticleDeployer verticleDeployer;
+        if (configuration.getFeatureFlags().isLeanDeployment()) {
+            verticleDeployer = new LeanDeploymentVerticleDeployer(
+                    hostName,
+                    vertx,
+                    configuration,
+                    services.getMessagingStackProvider(),
+                    services.getMetaStoreProvider(),
+                    services.getMetricsRegistry()
+            );
+        } else {
+            verticleDeployer = new FullDeploymentVerticleDeployer(
+                    hostName,
+                    vertx,
+                    configuration,
+                    services.getMessagingStackProvider(),
+                    services.getMetaStoreProvider(),
+                    services.getMetricsRegistry()
+            );
+        }
+
         verticleDeployer.deployVerticle(vertx, configuration);
         log.debug("Verticle deployment completed.");
     }

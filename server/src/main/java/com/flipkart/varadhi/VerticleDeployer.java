@@ -43,14 +43,16 @@ import java.util.stream.Stream;
 
 
 @Slf4j
-public class VerticleDeployer {
+public abstract class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final OrgHandlers orgHandlers;
-    private final TeamHandlers teamHandlers;
-    private final ProjectHandlers projectHandlers;
+
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
+
+    protected final OrgService orgService;
+    protected final TeamService teamService;
+    protected final ProjectService projectService;
 
 
     public VerticleDeployer(
@@ -77,11 +79,10 @@ public class VerticleDeployer {
                         configuration.getProducerOptions(), messagingStackProvider.getProducerFactory(),
                         varadhiTopicService, meterRegistry
                 );
-        ProjectService projectService =
+        this.projectService =
                 new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
-        this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
-        this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
-        this.projectHandlers = new ProjectHandlers(projectService);
+        this.orgService = new OrgService(metaStore);
+        this.teamService = new TeamService(metaStore);
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
@@ -95,9 +96,7 @@ public class VerticleDeployer {
 
     private List<RouteDefinition> getDefinitions() {
         return Stream.of(
-                        orgHandlers.get(),
-                        teamHandlers.get(),
-                        projectHandlers.get(),
+                        getRouteDefinitions(),
                         topicHandlers.get(),
                         produceHandlers.get(),
                         healthCheckHandler.get()
@@ -126,6 +125,8 @@ public class VerticleDeployer {
                 })
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
+
+    public abstract List<RouteDefinition> getRouteDefinitions();
 
     private ProducerService setupProducerService(
             ProducerOptions producerOptions,
