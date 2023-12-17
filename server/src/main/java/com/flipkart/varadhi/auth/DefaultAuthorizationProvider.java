@@ -8,11 +8,9 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Role;
 import com.flipkart.varadhi.entities.UserContext;
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
-import com.flipkart.varadhi.exceptions.NotInitializedException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.web.client.CachingWebClient;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +54,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
         if (!initialised) {
-            throw new NotInitializedException("Default Authorization Provider is not initialised.");
+            throw new IllegalStateException("Default Authorization Provider is not initialised.");
         }
         List<Pair<ResourceType, String>> leafToRootResourceIds = generatePolicyPathsForResource(action, resource);
         if (leafToRootResourceIds.isEmpty()) {

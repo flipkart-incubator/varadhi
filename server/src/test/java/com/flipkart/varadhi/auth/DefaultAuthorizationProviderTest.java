@@ -2,7 +2,6 @@ package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.ResourceAction;
-import com.flipkart.varadhi.exceptions.NotInitializedException;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -85,7 +84,7 @@ public class DefaultAuthorizationProviderTest {
 
     @Test
     public void testNotInit() {
-        Assertions.assertThrows(NotInitializedException.class, () ->
+        Assertions.assertThrows(IllegalStateException.class, () ->
                 defaultAuthorizationProvider.isAuthorized(
                         testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
     }
