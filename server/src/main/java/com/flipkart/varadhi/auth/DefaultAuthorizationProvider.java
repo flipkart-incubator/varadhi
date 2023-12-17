@@ -124,7 +124,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 .send()
                 .compose(response -> {
                     RoleBindingNode node = response.body();
-                    if (node == null || node.subjectToRolesMapping == null) {
+                    if (node == null || node.getSubjectToRolesMapping() == null) {
                         return Future.failedFuture("No roles on resource for subject" + subject);
                     }
                     log.info(

@@ -16,9 +16,9 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = true)
 @ValidateVaradhiResource(message = "Invalid Role Binding name. Check naming constraints.")
 public class RoleBindingNode extends VaradhiResource {
-    String resourceId;
-    ResourceType resourceType;
-    Map<String, Set<String>> subjectToRolesMapping;
+    private final String resourceId;
+    private final ResourceType resourceType;
+    private final Map<String, Set<String>> subjectToRolesMapping;
 
     @JsonCreator
     public RoleBindingNode(
