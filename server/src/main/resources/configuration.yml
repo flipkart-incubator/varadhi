@@ -1,8 +1,8 @@
 restOptions:
   deployedRegion: "default"
-  defaultOrg: "defaultOrg"
-  defaultTeam: "defaultTeam"
-  defaultProject: "defaultProject"
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
 
 producerOptions:
   producerCacheBuilderSpec: ""

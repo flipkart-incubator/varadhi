@@ -41,9 +41,9 @@ public class Constants {
         public static final int HEADERS_ALLOWED_MAX = 10;
         public static final int HEADER_NAME_SIZE_MAX = 64;
         public static final int HEADER_VALUE_SIZE_MAX = 256;
-        public static final String DEFAULT_ORG = "defaultOrg";
-        public static final String DEFAULT_TEAM = "defaultTeam";
-        public static final String DEFAULT_PROJECT = "defaultProject";
+        public static final String DEFAULT_ORG = "default";
+        public static final String DEFAULT_TEAM = "public";
+        public static final String DEFAULT_PROJECT = "public";
 
     }
 }

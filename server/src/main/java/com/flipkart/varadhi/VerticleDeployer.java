@@ -24,9 +24,6 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
-import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
-import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -94,7 +91,7 @@ public abstract class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getDefinitions() {
+    private List<RouteDefinition> getAllRouteDefinitions() {
         return Stream.of(
                         getRouteDefinitions(),
                         topicHandlers.get(),
@@ -112,7 +109,7 @@ public abstract class VerticleDeployer {
     ) {
         vertx.deployVerticle(
                         () -> new RestVerticle(
-                                getDefinitions(),
+                                getAllRouteDefinitions(),
                                 behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()
