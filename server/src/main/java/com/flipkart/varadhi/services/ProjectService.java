@@ -2,7 +2,6 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -50,12 +49,12 @@ public class ProjectService {
     public Project updateProject(Project project) {
         Project existingProject = metaStore.getProject(project.getName());
         if (!project.getOrg().equals(existingProject.getOrg())) {
-            throw new ArgumentException(
+            throw new IllegalArgumentException(
                     String.format("Project(%s) can not be moved across organisation.", project.getName()));
         }
         if (project.getTeam().equals(existingProject.getTeam()) &&
                 project.getDescription().equals(existingProject.getDescription())) {
-            throw new ArgumentException(
+            throw new IllegalArgumentException(
                     String.format(
                             "Project(%s) has same team name and description. Nothing to update.",
                             project.getName()

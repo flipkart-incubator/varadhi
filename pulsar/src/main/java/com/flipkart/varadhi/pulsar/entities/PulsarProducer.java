@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
-import static com.flipkart.varadhi.MessageConstants.Headers.GROUP_ID;
+import static com.flipkart.varadhi.entities.StandardHeaders.GROUP_ID;
 import static com.flipkart.varadhi.pulsar.Constants.Producer.*;
 import static org.apache.commons.text.CharacterPredicates.DIGITS;
 import static org.apache.commons.text.CharacterPredicates.LETTERS;

@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.StorageTopic;
 import lombok.EqualsAndHashCode;
@@ -26,7 +25,7 @@ public class PulsarStorageTopic extends StorageTopic {
     }
 
     public static PulsarStorageTopic from(String name, CapacityPolicy capacityPolicy) {
-        return new PulsarStorageTopic(name, Constants.INITIAL_VERSION, getPartitionCount(capacityPolicy),
+        return new PulsarStorageTopic(name, INITIAL_VERSION, getPartitionCount(capacityPolicy),
                 capacityPolicy.getMaxQPS(), capacityPolicy.getMaxThroughputKBps()
         );
     }

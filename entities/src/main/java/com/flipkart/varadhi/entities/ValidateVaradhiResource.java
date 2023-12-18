@@ -1,4 +1,4 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.entities;
 
 
 import jakarta.validation.Constraint;
@@ -7,7 +7,6 @@ import jakarta.validation.Payload;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static com.flipkart.varadhi.Constants.NAME_VALIDATION_PATTERN;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -15,6 +14,9 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target(TYPE)
 @Retention(RUNTIME)
 public @interface ValidateVaradhiResource {
+
+    String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
+
     String regexp() default NAME_VALIDATION_PATTERN; //set to "" for disabling pattern check.
 
     int min() default 3; //set to -1 for disabling minimum length check. Change default expression as appropriate.

@@ -1,7 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.exceptions.ArgumentException;
-
 public class Result<T> {
     private final T result;
     private final Throwable cause;
@@ -13,7 +11,7 @@ public class Result<T> {
 
     public static <T> Result<T> of(T result, Throwable cause) {
         if (result != null && cause != null) {
-            throw new ArgumentException("Both result and cause can't be non null.");
+            throw new IllegalArgumentException("Both result and cause can't be non null.");
         }
         return new Result<>(result, cause);
     }

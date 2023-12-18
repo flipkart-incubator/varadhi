@@ -2,10 +2,10 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceResult;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import io.vertx.core.MultiMap;
@@ -22,8 +22,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.Headers.*;
+import static com.flipkart.varadhi.MessageConstants.Headers.REQUIRED_HEADERS;
 import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
+import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
+import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.ProduceResult;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
@@ -17,8 +17,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.MessageConstants.Headers.FORWARDED_FOR;
-import static com.flipkart.varadhi.MessageConstants.Headers.MESSAGE_ID;
+import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
+import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
