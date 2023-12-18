@@ -40,13 +40,6 @@ public class VaradhiTopic extends AbstractTopic {
         this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
 
-    /**
-     * TODO: evaluate whether it should return Optional or not. An unmapped region probably wouldn't be queried.
-     *
-     * @param region
-     *
-     * @return InternalTopic for the given region
-     */
     public InternalTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
     }
