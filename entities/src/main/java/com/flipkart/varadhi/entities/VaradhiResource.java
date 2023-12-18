@@ -8,7 +8,7 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class VaradhiResource implements BaseResource {
 
-    public static final int INITIAL_VERSION = 1;
+    public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";
 
     private final String name;
