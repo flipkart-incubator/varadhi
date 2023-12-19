@@ -53,7 +53,6 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    //do not delete if storage topic doesn't exist. Do add warn, if storage topic not found.
                     if(topicService.checkTopicExists(storageTopic)) {
                         topicService.delete(storageTopic);
                     } else {
