@@ -121,7 +121,7 @@ public class TopicHandlers implements RouteProvider {
                     ));
         }
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
-        varadhiTopicService.create(vt, project.getOrg(), project.getName());
+        varadhiTopicService.create(vt, project);
         ctx.endApiWithResponse(topicResource);
     }
 
@@ -131,7 +131,7 @@ public class TopicHandlers implements RouteProvider {
         String topicResourceName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
         VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(topicResourceName, projectName);
         varadhiTopicService.delete(varadhiTopic);
-        ctx.endApiWithResponse(String.format("Deleted topic %s", topicResourceName));
+        ctx.endApi();
     }
 
     public void getTopics(RoutingContext ctx) {

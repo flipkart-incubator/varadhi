@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -23,13 +24,13 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     @Override
-    public void create(VaradhiTopic varadhiTopic, String orgName, String projectName) {
+    public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     //TODO :: make this idempotent as part of create topic refactoring task.
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    topicService.create(storageTopic, orgName, projectName);
+                    topicService.create(storageTopic, project);
                 }
         );
         metaStore.createVaradhiTopic(varadhiTopic);

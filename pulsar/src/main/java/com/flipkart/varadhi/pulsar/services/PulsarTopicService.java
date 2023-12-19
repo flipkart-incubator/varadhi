@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.services;
 
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
@@ -22,10 +23,10 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
         this.clientProvider = clientProvider;
     }
 
-    public void create(PulsarStorageTopic topic, String orgName, String projectName) {
+    public void create(PulsarStorageTopic topic, Project project) {
         try {
-            createTenant(orgName);
-            createNamespace(orgName, projectName);
+            createTenant(project.getOrg());
+            createNamespace(project.getOrg(), project.getName());
             //TODO:: Check any other attributes to set on the topic e.g. retention, secure etc.
             clientProvider.getAdminClient().topics().createPartitionedTopic(topic.getName(), topic.getPartitionCount());
             log.info("Created the pulsar topic:{}", topic.getName());

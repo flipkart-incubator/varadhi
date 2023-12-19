@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.pulsar.services;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -21,9 +23,7 @@ public class PulsarTopicServiceTest {
     private Topics topics;
     private PulsarTopicService pulsarTopicService;
     private ClientProvider clientProvider;
-
-    private static final String TENANT = "testTenant";
-    private static final String NAMESPACE = "testNamespace";
+    private Project project;
     private static final String TEST_TOPIC = "testTopic";
 
     @BeforeEach
@@ -32,6 +32,7 @@ public class PulsarTopicServiceTest {
         topics = mock(Topics.class);
         Tenants tenants = mock(Tenants.class);
         Namespaces namespaces = mock(Namespaces.class);
+        project = new Project("testNamespace", INITIAL_VERSION, "", "public", "testTenant");
         doReturn(topics).when(pulsarAdmin).topics();
         doReturn(tenants).when(pulsarAdmin).tenants();
         doReturn(namespaces).when(pulsarAdmin).namespaces();
@@ -44,7 +45,7 @@ public class PulsarTopicServiceTest {
     public void testCreate() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(topic, TENANT, NAMESPACE);
+        pulsarTopicService.create(topic, project);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
     }
 
@@ -52,7 +53,7 @@ public class PulsarTopicServiceTest {
     public void testCreate_PulsarAdminException() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
-        assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, TENANT, NAMESPACE));
+        assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, project));
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
     }
 
@@ -64,7 +65,7 @@ public class PulsarTopicServiceTest {
                 new RuntimeException(""), "duplicate topic error", 409)).when(topics)
                 .createPartitionedTopic(anyString(), eq(1));
         MessagingException me =
-                Assertions.assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, TENANT, NAMESPACE));
+                Assertions.assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, project));
         Assertions.assertTrue(me.getCause() instanceof PulsarAdminException.ConflictException);
         Assertions.assertEquals("duplicate topic error", me.getMessage());
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
@@ -77,7 +78,7 @@ public class PulsarTopicServiceTest {
         String newNamespace = "testNamespaceNew";
         PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(topic, newTenant, newNamespace);
+        pulsarTopicService.create(topic, project);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
     }
 }
