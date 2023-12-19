@@ -17,7 +17,6 @@ repositories {
 ext {
     lombok_version = "1.18.26"
     slf4j_version = "2.0.7"
-    javax_version = "1.3.2"
     vertx_version = "4.4.4"
 
     otl_version = "1.25.0"
@@ -27,7 +26,8 @@ ext {
     guava_version = "32.1.1-jre"
     curator_version = "5.5.0"
     jackson_version = "2.15.1"
-    jakarta_version = "3.0.2"
+    jakarta_validation_version = "3.0.2"
+    jakarta_ws_version = "3.1.0"
     commons_lang_version = "3.11"
 
     hibernate_validator_version = "8.0.1.Final"
@@ -88,7 +88,7 @@ dependencies {
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
         implementation("com.google.guava:guava:$guava_version")
 
-        implementation("jakarta.validation:jakarta.validation-api:$jakarta_version")
+        implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
