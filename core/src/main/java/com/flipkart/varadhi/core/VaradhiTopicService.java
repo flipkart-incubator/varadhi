@@ -29,7 +29,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.checkTopicExists(storageTopic, project)) {
+                    if (topicService.checkTopicExists(storageTopic)) {
                         log.warn("Specified StorageTopic({}:{}) already exists.", project.getName(), storageTopic.getName());
                     } else {
                         topicService.create(storageTopic, project);
@@ -47,18 +47,25 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     @Override
     public void delete(VaradhiTopic varadhiTopic) {
         log.info("Deleting Varadhi topic {}", varadhiTopic.getName());
-        //TODO : delete namespace, tenant also if the Only Topic in the namespace+tenant is deleted?
+        /*TODO : delete namespace, tenant also if the only Topic in the namespace+tenant is deleted / cleanup independent of delete
+         * check for existing subscriptions before deleting the topic
+         */
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    topicService.delete(storageTopic);
+                    //do not delete if storage topic doesn't exist. Do add warn, if storage topic not found.
+                    if(topicService.checkTopicExists(storageTopic)) {
+                        topicService.delete(storageTopic);
+                    } else {
+                        log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
+                    }
                 }
         );
         metaStore.deleteVaradhiTopic(varadhiTopic.getName());
     }
 
     @Override
-    public boolean checkTopicExists(VaradhiTopic topic, Project project) {
+    public boolean checkTopicExists(VaradhiTopic topic) {
         //TODO : implementation
         return false;
     }

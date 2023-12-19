@@ -55,13 +55,12 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
         }
     }
     @Override
-    public boolean checkTopicExists(PulsarStorageTopic topic, Project project) {
+    public boolean checkTopicExists(PulsarStorageTopic topic) {
         try {
-            return clientProvider.getAdminClient().topics()
-                    .getPartitionedTopicList(getNamespace(project.getOrg(), project.getName()))
-                    .contains(topic.getName());
+            return clientProvider.getAdminClient().topics().getPartitionedTopicMetadata((topic.getName())) != null;
         } catch (PulsarAdminException e) {
-            throw new MessagingException(e);
+            //exception occurs if Topic is not found
+            return false;
         }
     }
 

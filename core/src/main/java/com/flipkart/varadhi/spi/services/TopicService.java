@@ -10,5 +10,5 @@ public interface TopicService<T extends AbstractTopic> {
 
     void delete(T topic);
 
-    boolean checkTopicExists(T topic, Project project);
+    boolean checkTopicExists(T topic);
 }
