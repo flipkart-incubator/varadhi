@@ -5,6 +5,7 @@ public class Constants {
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
     public static int INITIAL_VERSION = 0;
     public static String NAME_SEPARATOR = ".";
+    public static String PATH_SEPARATOR = "/";
 
     public static class PathParams {
         public static final String REQUEST_PATH_PARAM_ORG = "org";

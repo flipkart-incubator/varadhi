@@ -9,4 +9,6 @@ public interface TopicService<T extends AbstractTopic> {
     T get(String topicName);
 
     void delete(T topic);
+
+    boolean checkTopicExists(T topic, Project project);
 }

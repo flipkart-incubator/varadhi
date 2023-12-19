@@ -5,6 +5,7 @@ import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import static com.flipkart.varadhi.pulsar.util.EntityHelper.getNamespace;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.Clusters;
@@ -53,6 +54,16 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
             throw new MessagingException(e);
         }
     }
+    @Override
+    public boolean checkTopicExists(PulsarStorageTopic topic, Project project) {
+        try {
+            return clientProvider.getAdminClient().topics()
+                    .getPartitionedTopicList(getNamespace(project.getOrg(), project.getName()))
+                    .contains(topic.getName());
+        } catch (PulsarAdminException e) {
+            throw new MessagingException(e);
+        }
+    }
 
     private void createTenant(String tenantName) throws PulsarAdminException {
         if (!clientProvider.getAdminClient().tenants().getTenants().contains(tenantName)) {
@@ -65,7 +76,7 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     }
 
     private void createNamespace(String tenantName, String projectName) throws PulsarAdminException {
-        String namespace = String.join("/", tenantName, projectName);
+        String namespace = getNamespace(tenantName, projectName);
         if (!clientProvider.getAdminClient().namespaces().getNamespaces(tenantName).contains(namespace)) {
             clientProvider.getAdminClient().namespaces().createNamespace(namespace);
             log.info("Created the namespace:{}, in tenant:{}", namespace, tenantName);

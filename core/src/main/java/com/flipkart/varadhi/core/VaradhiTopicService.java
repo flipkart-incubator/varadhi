@@ -28,9 +28,12 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
-                    //TODO :: make this idempotent as part of create topic refactoring task.
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    topicService.create(storageTopic, project);
+                    if (topicService.checkTopicExists(storageTopic, project)) {
+                        log.warn("Specified StorageTopic({}:{}) already exists.", project.getName(), storageTopic.getName());
+                    } else {
+                        topicService.create(storageTopic, project);
+                    }
                 }
         );
         metaStore.createVaradhiTopic(varadhiTopic);
@@ -52,6 +55,12 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
                 }
         );
         metaStore.deleteVaradhiTopic(varadhiTopic.getName());
+    }
+
+    @Override
+    public boolean checkTopicExists(VaradhiTopic topic, Project project) {
+        //TODO : implementation
+        return false;
     }
 
 }
