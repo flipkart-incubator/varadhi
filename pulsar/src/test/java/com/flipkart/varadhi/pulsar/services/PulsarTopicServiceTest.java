@@ -15,12 +15,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+import static com.flipkart.varadhi.Constants.PATH_SEPARATOR;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class PulsarTopicServiceTest {
     private PulsarAdmin pulsarAdmin;
     private Topics topics;
+    private Tenants tenants;
+    private Namespaces namespaces;
     private PulsarTopicService pulsarTopicService;
     private ClientProvider clientProvider;
     private Project project;
@@ -30,8 +33,8 @@ public class PulsarTopicServiceTest {
     public void setUp() {
         pulsarAdmin = mock(PulsarAdmin.class);
         topics = mock(Topics.class);
-        Tenants tenants = mock(Tenants.class);
-        Namespaces namespaces = mock(Namespaces.class);
+        tenants = mock(Tenants.class);
+        namespaces = mock(Namespaces.class);
         project = new Project("testNamespace", INITIAL_VERSION, "", "public", "testTenant");
         doReturn(topics).when(pulsarAdmin).topics();
         doReturn(tenants).when(pulsarAdmin).tenants();
@@ -80,5 +83,7 @@ public class PulsarTopicServiceTest {
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
         pulsarTopicService.create(topic, project);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
+        verify(tenants, times(1)).createTenant(eq(project.getOrg()), any());
+        verify(namespaces, times(1)).createNamespace(eq(String.join(PATH_SEPARATOR, project.getOrg(), project.getName())));
     }
 }

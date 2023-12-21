@@ -57,7 +57,7 @@ public class VaradhiTopic extends AbstractTopic {
                 this.getVersion(),
                 projectName,
                 this.isGrouped(),
-                null
+                CapacityPolicy.getDefault()
         );
     }
 }

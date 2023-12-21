@@ -48,7 +48,7 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     @Override
     public void delete(PulsarStorageTopic topic) {
         try {
-            clientProvider.getAdminClient().topics().deletePartitionedTopic(topic.getName(), true, true);
+            clientProvider.getAdminClient().topics().deletePartitionedTopic(topic.getName(), false, false);
             log.info("Deleted the pulsar topic:{}", topic.getName());
         } catch (PulsarAdminException e) {
             throw new MessagingException(e);

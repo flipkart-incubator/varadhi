@@ -84,7 +84,7 @@ public class TopicHandlers implements RouteProvider {
                                 "",
                                 Set.of(),
                                 new LinkedHashSet<>(),
-                                this::getTopics,
+                                this::listTopics,
                                 true,
                                 Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}")) //TODO: Do we need a new permission for this?
                         )
@@ -134,7 +134,7 @@ public class TopicHandlers implements RouteProvider {
         ctx.endApi();
     }
 
-    public void getTopics(RoutingContext ctx) {
+    public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         List<String> topicNames = metaStore.getTopicResourceNames(projectName);
         ctx.endApiWithResponse(topicNames);

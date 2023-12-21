@@ -53,15 +53,27 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreate_NewTenantNamespace() throws PulsarAdminException {
         String newTenant = "testTenantNew";
-        String newNamespace = "testNamespaceNew";
+        String newNamespace = String.format("%s/%s", newTenant, "testNamespaceNew");
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
+        validateTenantExists(newTenant);
+        validateNamespaceExists(newTenant, newNamespace);
     }
 
     private void validateTopicExists(String topicFQDN) throws PulsarAdminException {
         List<String> topics = clientProvider.getAdminClient().topics().getPartitionedTopicList(getNamespace());
         Assertions.assertTrue(topics.contains(topicFQDN), String.format("Failed to find the topic %s.", topicFQDN));
+    }
+
+    private void validateTenantExists(String tenant) throws PulsarAdminException {
+        List<String> tenants = clientProvider.getAdminClient().tenants().getTenants();
+        Assertions.assertTrue(tenants.contains(tenant), String.format("Failed to find the tenant %s.", tenant));
+    }
+
+    private void validateNamespaceExists(String tenant, String namespace) throws PulsarAdminException {
+        List<String> namespaces = clientProvider.getAdminClient().namespaces().getNamespaces(tenant);
+        Assertions.assertTrue(namespaces.contains(namespace), String.format("Failed to find the namespace %s.", namespace));
     }
 }

@@ -103,7 +103,16 @@ public class E2EBase {
 
     static void cleanupProject(Project project) {
         //TODO:: add cleanup of other resources when implemented.
+        List<String> existingTopics = getTopics(makeListRequest(getTopicsUri(project), 200));
+        if (!existingTopics.isEmpty()) {
+            existingTopics.forEach(t -> cleanupTopic(t, project));
+        }
         makeDeleteRequest(getProjectUri(project), 200);
+    }
+
+    static void cleanupTopic(String topicName, Project project) {
+        //TODO: Do subscription/namespace/tenant or any relevant resources cleanup
+        makeDeleteRequest(getTopicsUri(project)+"/"+topicName, 200);
     }
 
     static Client getClient() {
