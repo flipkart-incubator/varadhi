@@ -5,7 +5,9 @@ import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -78,6 +80,12 @@ public class ProducerService {
             String produceRegion = context.getTopicContext().getRegion();
             InternalTopic internalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
+
+            // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
+            if (internalTopic == null) {
+                throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
+            }
+
             if (!internalTopic.getTopicState().isProduceAllowed()) {
                 return CompletableFuture.completedFuture(
                         ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState()));

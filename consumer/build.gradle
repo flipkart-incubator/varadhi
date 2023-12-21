@@ -1,0 +1,7 @@
+plugins {
+    id 'com.flipkart.varadhi.java-library-conventions'
+}
+
+dependencies {
+    
+}

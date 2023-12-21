@@ -1,7 +1,6 @@
 package com.flipkart.varadhi;
 
 public class Constants {
-    public static final String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
     public static int INITIAL_VERSION = 0;
     public static String NAME_SEPARATOR = ".";

@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
+
 public class TopicTests extends E2EBase {
 
     private static final String VaradhiBaseUri = "http://localhost:8080";
@@ -42,7 +44,7 @@ public class TopicTests extends E2EBase {
     public void createTopic() {
         String topicName = "test-topic-1";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, o1t1Project1.getName(), false, null);
+                new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
@@ -64,7 +66,7 @@ public class TopicTests extends E2EBase {
     public void createTopicWithValidationFailure() {
         String topicName = "ab";
         TopicResource topic =
-                new TopicResource(topicName, Constants.INITIAL_VERSION, o1t1Project1.getName(), false, null);
+                new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
 

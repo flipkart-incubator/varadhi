@@ -1,14 +1,13 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import io.vertx.ext.web.RoutingContext;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static com.flipkart.varadhi.MessageConstants.Headers.VARADHI_HEADER_PREFIX;
+import static com.flipkart.varadhi.entities.StandardHeaders.VARADHI_HEADER_PREFIX;
 
 public class HeaderValidationHandler {
     private int headerNameSizeMax;
@@ -29,7 +28,7 @@ public class HeaderValidationHandler {
                 validateEntry(entry);
                 headers.add(key); // multi-value headers are considered one.
                 if (headers.size() >= headersAllowedMax) {
-                    throw new ArgumentException(
+                    throw new IllegalArgumentException(
                             String.format(
                                     "More Varadhi specific headers specified than allowed max(%d).",
                                     headersAllowedMax
@@ -44,10 +43,11 @@ public class HeaderValidationHandler {
 
     private void validateEntry(Map.Entry<String, String> entry) {
         if (entry.getKey().length() > headerNameSizeMax) {
-            throw new ArgumentException(String.format("Header name %s exceeds allowed size.", entry.getKey()));
+            throw new IllegalArgumentException(String.format("Header name %s exceeds allowed size.", entry.getKey()));
         }
         if (entry.getValue().length() > headerValueSizeMax) {
-            throw new ArgumentException(String.format("Value of Header %s exceeds allowed size.", entry.getKey()));
+            throw new IllegalArgumentException(
+                    String.format("Value of Header %s exceeds allowed size.", entry.getKey()));
         }
     }
 }

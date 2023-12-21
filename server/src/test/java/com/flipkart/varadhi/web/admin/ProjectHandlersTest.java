@@ -3,7 +3,10 @@ package com.flipkart.varadhi.web.admin;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.exceptions.MetaStoreException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -121,7 +124,7 @@ public class ProjectHandlersTest extends WebTestBase {
         Assertions.assertEquals(p1, p1Updated);
 
         String argumentError = String.format("Project(%s) can not be moved across organisation.", p1.getName());
-        doThrow(new ArgumentException(argumentError)).when(projectService).updateProject(p1);
+        doThrow(new IllegalArgumentException(argumentError)).when(projectService).updateProject(p1);
         ErrorResponse response = sendRequestWithBody(request, p1, 400, argumentError, ErrorResponse.class);
         Assertions.assertEquals(argumentError, response.reason());
 

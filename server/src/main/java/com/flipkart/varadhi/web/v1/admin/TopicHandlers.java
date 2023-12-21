@@ -6,7 +6,6 @@ import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -111,7 +110,7 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
         if (!projectName.equals(topicResource.getProject())) {
-            throw new ArgumentException("Specified Project name is different from Project name in url");
+            throw new IllegalArgumentException("Specified Project name is different from Project name in url");
         }
 
         Project project = metaStore.getProject(topicResource.getProject());

@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
-import static com.flipkart.varadhi.MessageConstants.Headers.GROUP_ID;
+import static com.flipkart.varadhi.entities.StandardHeaders.GROUP_ID;
 import static org.mockito.Mockito.*;
 
 public class PulsarProducerTest {

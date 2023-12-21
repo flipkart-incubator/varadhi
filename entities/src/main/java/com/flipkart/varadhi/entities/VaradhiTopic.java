@@ -1,17 +1,14 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
-
-
 @Getter
 public class VaradhiTopic extends AbstractTopic {
+
+
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
 
@@ -44,11 +41,7 @@ public class VaradhiTopic extends AbstractTopic {
     }
 
     public InternalTopic getProduceTopicForRegion(String region) {
-        InternalTopic internalTopic = internalTopics.get(region);
-        if (null == internalTopic) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", region));
-        }
-        return internalTopic;
+        return internalTopics.get(region);
     }
 
     public TopicResource getTopicResource(String projectName) {

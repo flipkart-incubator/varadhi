@@ -1,8 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.exceptions.ArgumentException;
-import com.flipkart.varadhi.utils.Validator;
-
 import java.util.List;
 
 public interface BaseResource {
@@ -13,6 +10,6 @@ public interface BaseResource {
         if (failures.isEmpty()) {
             return;
         }
-        throw new ArgumentException(String.join(",", failures));
+        throw new IllegalArgumentException(String.join(",", failures));
     }
 }
