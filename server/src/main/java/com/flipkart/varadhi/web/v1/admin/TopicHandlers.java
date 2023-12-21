@@ -23,7 +23,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
 
+import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.ResourceAction.*;
@@ -95,7 +97,8 @@ public class TopicHandlers implements RouteProvider {
     public void get(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicResourceName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(topicResourceName, projectName);
+        String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResourceName);
+        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
         TopicResource topicResource = varadhiTopic.getTopicResource(projectName);
         ctx.endApiWithResponse(topicResource);
     }
@@ -112,7 +115,8 @@ public class TopicHandlers implements RouteProvider {
         }
 
         Project project = metaStore.getProject(topicResource.getProject());
-        boolean found = metaStore.checkVaradhiTopicExists(topicResource.getName(), topicResource.getProject());
+        String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResource.getName());
+        boolean found = metaStore.checkVaradhiTopicExists(varadhiTopicName);
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
@@ -129,14 +133,25 @@ public class TopicHandlers implements RouteProvider {
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String topicResourceName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(topicResourceName, projectName);
+        String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResourceName);
+        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
         varadhiTopicService.delete(varadhiTopic);
         ctx.endApi();
     }
 
     public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        List<String> topicNames = metaStore.getTopicResourceNames(projectName);
-        ctx.endApiWithResponse(topicNames);
+        List<String> varadhiTopics = metaStore.listVaradhiTopics(projectName);
+
+        String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
+        List<String> topicResourceNames = new ArrayList<>();
+        varadhiTopics.forEach(varadhiTopic -> {
+                    if (varadhiTopic.startsWith(projectPrefixOfVaradhiTopic)) {
+                        String[] splits = varadhiTopic.split("\\.");
+                        topicResourceNames.add(splits[1]);
+                    }
+                }
+        );
+        ctx.endApiWithResponse(topicResourceNames);
     }
 }

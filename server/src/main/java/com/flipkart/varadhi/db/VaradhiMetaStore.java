@@ -173,32 +173,9 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public VaradhiTopic getVaradhiTopic(String topicResourceName, String projectName) {
-        String varadhiTopicName = getVaradhiTopicName(topicResourceName, projectName);
-        if("".equals(varadhiTopicName)) {
-            throw new ResourceNotFoundException(String.format(
-                    "Topic(%s) not found for the Project(%s).",
-                    topicResourceName,
-                    projectName
-            ));
-        }
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
-        return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
-    }
-
-    @Override
-    public List<String> getTopicResourceNames(String projectName) {
-        List<String> topicResourceNames = new ArrayList<>();
-        String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
+    public List<String> listVaradhiTopics(String projectName) {
         ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
-        zkMetaStore.listChildren(znode).forEach(varadhiTopic -> {
-                    if (varadhiTopic.startsWith(projectPrefixOfVaradhiTopic)) {
-                        String[] splits = varadhiTopic.split("\\.");
-                        topicResourceNames.add(splits[1]);
-                    }
-                }
-        );
-        return topicResourceNames;
+        return zkMetaStore.listChildren(znode);
     }
 
     @Override
@@ -208,12 +185,18 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public boolean checkVaradhiTopicExists(String topicResourceName, String projectName) {
-        return !"".equals(getVaradhiTopicName(topicResourceName, projectName));
+    public boolean checkVaradhiTopicExists(String varadhiTopicName) {
+        try {
+            getVaradhiTopic(varadhiTopicName);
+            return true;
+        } catch (ResourceNotFoundException ex) {
+            log.warn("VaradhiTopic:{} does not exist.", varadhiTopicName);
+        }
+        return false;
     }
 
     @Override
-    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) {
+    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) throws ResourceNotFoundException {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
@@ -222,14 +205,5 @@ public class VaradhiMetaStore implements MetaStore {
     public void deleteVaradhiTopic(String varadhiTopicName) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         zkMetaStore.deleteZNode(znode);
-    }
-
-    private String getVaradhiTopicName(String topicResourceName, String projectName) {
-        List<String> varadhiTopicNames = getVaradhiTopicNames(projectName);
-        List<String> matchedVaradhiTopicNames = varadhiTopicNames.stream().filter(
-                        varadhiTopicName -> varadhiTopicName.contains(topicResourceName))
-                .limit(1)
-                .toList();
-        return matchedVaradhiTopicNames.isEmpty() ? "" : matchedVaradhiTopicNames.get(0);
     }
 }

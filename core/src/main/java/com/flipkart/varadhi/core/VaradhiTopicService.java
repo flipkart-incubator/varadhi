@@ -65,8 +65,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
 
     @Override
     public boolean checkTopicExists(VaradhiTopic topic) {
-        //TODO : implementation
-        return false;
+        return metaStore.checkVaradhiTopicExists(topic.getName());
     }
 
 }
