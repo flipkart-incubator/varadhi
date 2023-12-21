@@ -83,6 +83,71 @@ public class VaradhiTopicServiceTest {
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
     }
 
+    @Test
+    public void deleteVaradhiTopicSuccessfully() {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
+        when(storageTopicService.checkTopicExists(st)).thenReturn(true);
+
+        varadhiTopicService.delete(varadhiTopic);
+
+        verify(storageTopicService, times(1)).delete(st);
+        verify(metaStore, times(1)).deleteVaradhiTopic(varadhiTopic.getName());
+    }
+
+    @Test
+    public void deleteVaradhiTopicWhenStorageTopicDoesNotExist() {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
+        when(storageTopicService.checkTopicExists(st)).thenReturn(false);
+
+        varadhiTopicService.delete(varadhiTopic);
+
+        verify(storageTopicService, times(0)).delete(st);
+        verify(metaStore, times(1)).deleteVaradhiTopic(varadhiTopic.getName());
+    }
+
+    @Test
+    public void deleteVaradhiTopicWhenMetaStoreFails() {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
+        when(storageTopicService.checkTopicExists(st)).thenReturn(true);
+        doThrow(new VaradhiException("Some error")).when(metaStore).deleteVaradhiTopic(varadhiTopic.getName());
+
+        Exception exception = Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.delete(varadhiTopic));
+
+        verify(storageTopicService, times(1)).delete(st);
+        verify(metaStore, times(1)).deleteVaradhiTopic(varadhiTopic.getName());
+        Assertions.assertEquals(exception.getClass(), VaradhiException.class);
+    }
+
+    @Test
+    public void checkVaradhiTopicExistsWhenTopicExists() {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        when(metaStore.checkVaradhiTopicExists(varadhiTopic.getName())).thenReturn(true);
+
+        boolean exists = varadhiTopicService.checkTopicExists(varadhiTopic);
+
+        Assertions.assertTrue(exists);
+        verify(metaStore, times(1)).checkVaradhiTopicExists(varadhiTopic.getName());
+    }
+
+    @Test
+    public void checkVaradhiTopicExistsWhenTopicDoesNotExist() {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        when(metaStore.checkVaradhiTopicExists(varadhiTopic.getName())).thenReturn(false);
+
+        boolean exists = varadhiTopicService.checkTopicExists(varadhiTopic);
+
+        Assertions.assertFalse(exists);
+        verify(metaStore, times(1)).checkVaradhiTopicExists(varadhiTopic.getName());
+    }
+
     private TopicResource getTopicResource(String topicName, Project project) {
         return new TopicResource(
                 topicName,
