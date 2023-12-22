@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.authz;
 
-import com.flipkart.varadhi.auth.RoleBindingNode;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.services.AuthZService;

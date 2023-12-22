@@ -2,7 +2,7 @@ plugins {
     id "com.flipkart.varadhi.java-published-library-conventions"
 }
 dependencies {
-    implementation(project(":authz"))
+    api(project(":authz"))
     api("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
     api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")

@@ -1,9 +1,9 @@
-package com.flipkart.varadhi.auth;
+package com.flipkart.varadhi.entities.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.flipkart.varadhi.ValidateVaradhiResource;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.ValidateVaradhiResource;
 import com.flipkart.varadhi.entities.VaradhiResource;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

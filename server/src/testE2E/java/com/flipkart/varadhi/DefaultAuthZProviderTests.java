@@ -1,7 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
-import com.flipkart.varadhi.auth.RoleBindingNode;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.*;
 import io.vertx.junit5.Checkpoint;

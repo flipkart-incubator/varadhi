@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.db;
 
-import com.flipkart.varadhi.auth.RoleBindingNode;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.*;
 
 import java.util.List;

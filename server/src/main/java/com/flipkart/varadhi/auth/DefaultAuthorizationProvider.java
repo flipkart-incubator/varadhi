@@ -7,6 +7,7 @@ import com.flipkart.varadhi.entities.ResourceAction;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Role;
 import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
@@ -35,7 +36,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             this.configuration =
                     YamlLoader.loadConfig(
                             authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
-            this.webClient = WebClient.create(Vertx.vertx()); //CachingWebClient.create(WebClient.create(Vertx.vertx()));
+            this.webClient = WebClient.create(Vertx.vertx());
             this.initialised = true;
         }
         return Future.succeededFuture(true);
