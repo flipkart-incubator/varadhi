@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;

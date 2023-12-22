@@ -6,6 +6,9 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -46,6 +49,11 @@ public class LeanDeploymentVerticleDeployerTest {
 
     Vertx vertx = Vertx.vertx();
 
+    private OrgService orgService;
+    private TeamService teamService;
+    private ProjectService projectService;
+
+
     private static final String TEST_ORG = "testOrg";
     private static final String TEST_TEAM = "testTeam";
     private static final String TEST_PROJECT = "testProject";
@@ -69,6 +77,13 @@ public class LeanDeploymentVerticleDeployerTest {
                 "src/test/resources/testConfiguration.yml",
                 ServerConfiguration.class);
 
+        orgService = new OrgService(varadhiMetaStore);
+        teamService = new TeamService(varadhiMetaStore);
+        projectService = new ProjectService(
+                varadhiMetaStore,
+                serverConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
+                meterRegistry);
+
         leanDeploymentVerticleDeployer = new LeanDeploymentVerticleDeployer(
                 "testHostName",
                 vertx,
@@ -83,17 +98,17 @@ public class LeanDeploymentVerticleDeployerTest {
     public void testNoEntitiesPresent_Success() {
         leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration);
 
-        Org org = leanDeploymentVerticleDeployer.getOrgService().getOrg(
+        Org org = orgService.getOrg(
                 serverConfiguration.getRestOptions().getDefaultOrg());
         assertNotNull(org);
         assertEquals(serverConfiguration.getRestOptions().getDefaultOrg(), org.getName());
 
-        Team team = leanDeploymentVerticleDeployer.getTeamService().getTeam(
+        Team team = teamService.getTeam(
                 org.getName(), serverConfiguration.getRestOptions().getDefaultTeam());
         assertNotNull(team);
         assertEquals(serverConfiguration.getRestOptions().getDefaultTeam(), team.getName());
 
-        Project project = leanDeploymentVerticleDeployer.getProjectService().getProject(
+        Project project = projectService.getProject(
                 serverConfiguration.getRestOptions().getDefaultProject());
         assertNotNull(project);
         assertEquals(serverConfiguration.getRestOptions().getDefaultProject(), project.getName());
@@ -102,29 +117,29 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testEntitiesPresentWithDefaultName_Success() {
         Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
         Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team);
+        teamService.createTeam(team);
         Project project = new Project(serverConfiguration.getRestOptions().getDefaultProject(),
                 0,
                 "",
                 team.getName(),
                 org.getName()
         );
-        leanDeploymentVerticleDeployer.getProjectService().createProject(project);
+        projectService.createProject(project);
 
         leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration);
 
-        org = leanDeploymentVerticleDeployer.getOrgService().getOrg(serverConfiguration.getRestOptions().getDefaultOrg());
+        org = orgService.getOrg(serverConfiguration.getRestOptions().getDefaultOrg());
         assertNotNull(org);
         assertEquals(serverConfiguration.getRestOptions().getDefaultOrg(), org.getName());
 
-        team = leanDeploymentVerticleDeployer.getTeamService().getTeam(
+        team = teamService.getTeam(
                 org.getName(), serverConfiguration.getRestOptions().getDefaultTeam());
         assertNotNull(team);
         assertEquals(serverConfiguration.getRestOptions().getDefaultTeam(), team.getName());
 
-        project = leanDeploymentVerticleDeployer.getProjectService().getProject(
+        project = projectService.getProject(
                 serverConfiguration.getRestOptions().getDefaultProject());
         assertNotNull(project);
         assertEquals(serverConfiguration.getRestOptions().getDefaultProject(), project.getName());
@@ -133,7 +148,7 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testDifferentOrgPresent_Failure() {
         Org org = new Org(TEST_ORG, 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
@@ -147,8 +162,8 @@ public class LeanDeploymentVerticleDeployerTest {
     public void testMultipleOrgsPresent_Failure() {
         Org org1 = new Org(TEST_ORG, 0);
         Org org2 = new Org(TEST_ORG + "2", 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org1);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org2);
+        orgService.createOrg(org1);
+        orgService.createOrg(org2);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
@@ -160,9 +175,9 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testDifferentTeamPresent_Failure() {
         Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
         Team team = new Team(TEST_TEAM, 0, org.getName());
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team);
+        teamService.createTeam(team);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
@@ -175,11 +190,11 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testMultipleTeamsPresent_Failure() {
         Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
         Team team1 = new Team(TEST_TEAM, 0, org.getName());
         Team team2 = new Team(TEST_TEAM + "2", 0, org.getName());
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team1);
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team2);
+        teamService.createTeam(team1);
+        teamService.createTeam(team2);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
@@ -191,11 +206,11 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testDifferentProjectPresent_Failure() {
         Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
         Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team);
+        teamService.createTeam(team);
         Project project = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
-        leanDeploymentVerticleDeployer.getProjectService().createProject(project);
+        projectService.createProject(project);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
@@ -208,13 +223,13 @@ public class LeanDeploymentVerticleDeployerTest {
     @Test
     public void testMultipleProjectsPresent_Failure() {
         Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
-        leanDeploymentVerticleDeployer.getOrgService().createOrg(org);
+        orgService.createOrg(org);
         Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
-        leanDeploymentVerticleDeployer.getTeamService().createTeam(team);
+        teamService.createTeam(team);
         Project project1 = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
         Project project2 = new Project(TEST_PROJECT + "2", 0, "", team.getName(), org.getName());
-        leanDeploymentVerticleDeployer.getProjectService().createProject(project1);
-        leanDeploymentVerticleDeployer.getProjectService().createProject(project2);
+        projectService.createProject(project1);
+        projectService.createProject(project2);
 
         InvalidConfigException exception = assertThrows(InvalidConfigException.class,
                 () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));

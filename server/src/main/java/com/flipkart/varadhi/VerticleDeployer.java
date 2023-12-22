@@ -51,18 +51,6 @@ public abstract class VerticleDeployer {
     protected final TeamService teamService;
     protected final ProjectService projectService;
 
-    public OrgService getOrgService() {
-        return orgService;
-    }
-
-    public TeamService getTeamService() {
-        return teamService;
-    }
-
-    public ProjectService getProjectService() {
-        return projectService;
-    }
-
     public VerticleDeployer(
             String hostName,
             Vertx vertx,
