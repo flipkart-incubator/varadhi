@@ -1,7 +1,10 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.produce;
 
 
 import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.ProduceStatus;
+import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.InvalidStateException;
 import lombok.Getter;
 

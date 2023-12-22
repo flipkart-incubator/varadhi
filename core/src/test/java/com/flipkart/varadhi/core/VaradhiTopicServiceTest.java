@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicServiceTest {

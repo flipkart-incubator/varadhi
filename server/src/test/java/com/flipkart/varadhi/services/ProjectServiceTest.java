@@ -4,7 +4,6 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -162,7 +161,7 @@ public class ProjectServiceTest {
         String argumentErr =
                 String.format("Project(%s) has same team name and description. Nothing to update.", pLatest.getName());
         validateException(
-                argumentErr, ArgumentException.class,
+                argumentErr, IllegalArgumentException.class,
                 () -> projectService.updateProject(pLatest)
         );
 
@@ -174,7 +173,7 @@ public class ProjectServiceTest {
 
         argumentErr = String.format("Project(%s) can not be moved across organisation.", orgUpdate.getName());
         validateException(
-                argumentErr, ArgumentException.class,
+                argumentErr, IllegalArgumentException.class,
                 () -> projectService.updateProject(orgUpdate)
         );
     }

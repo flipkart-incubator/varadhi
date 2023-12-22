@@ -8,7 +8,7 @@ dependencies {
     implementation(project(':entities'))
     implementation(project(':authz'))
     implementation('com.fasterxml.jackson.core:jackson-databind')
+
+    testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
-    testFixturesImplementation(project(':entities'))
-    testFixturesImplementation(project(':common'))
 }

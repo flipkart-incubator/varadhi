@@ -1,7 +1,7 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.entities.ValidateVaradhiResource;
 import com.flipkart.varadhi.entities.VaradhiResource;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,13 +39,13 @@ public class ValidateVaradhiResourceTest {
                         "asdaAsdas", "asdasdasdaasdasdadsadasadadasasdadsad"
                 )
                 .forEach(name -> Assertions.assertThrows(
-                        ArgumentException.class,
+                        IllegalArgumentException.class,
                         () -> new TypeDefault(name, 0).validate(),
                         String.format("TypeDefault Failed for %s", name)
                 ));
 
-        ArgumentException e =
-                Assertions.assertThrows(ArgumentException.class, () -> new TypeMessage("A", 0).validate(),
+        IllegalArgumentException e =
+                Assertions.assertThrows(IllegalArgumentException.class, () -> new TypeMessage("A", 0).validate(),
                         String.format("TypeMessage Failed for name")
                 );
         Assertions.assertEquals("Custom message", e.getMessage());
@@ -62,7 +62,7 @@ public class ValidateVaradhiResourceTest {
                         "a", "aaaaaaaaaaaa"
                 )
                 .forEach(name -> Assertions.assertThrows(
-                        ArgumentException.class,
+                        IllegalArgumentException.class,
                         () -> new TypeMax(name, 0).validate(),
                         String.format("TypeDefault Failed for %s", name)
                 ));

@@ -4,7 +4,7 @@ package com.flipkart.varadhi.core;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VaradhiResource.NAME_SEPARATOR;
 
 public class VaradhiTopicFactory {
 

@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    api(project(":entities"))
     implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("io.micrometer:micrometer-core")

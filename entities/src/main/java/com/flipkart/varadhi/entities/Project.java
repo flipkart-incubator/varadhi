@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.entities;
 
 
-import com.flipkart.varadhi.ValidateVaradhiResource;
 import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
