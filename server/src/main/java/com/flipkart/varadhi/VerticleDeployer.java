@@ -26,6 +26,7 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import com.google.common.annotations.VisibleForTesting;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -51,6 +52,17 @@ public abstract class VerticleDeployer {
     protected final TeamService teamService;
     protected final ProjectService projectService;
 
+    public OrgService getOrgService() {
+        return orgService;
+    }
+
+    public TeamService getTeamService() {
+        return teamService;
+    }
+
+    public ProjectService getProjectService() {
+        return projectService;
+    }
 
     public VerticleDeployer(
             String hostName,
@@ -91,9 +103,8 @@ public abstract class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getAllRouteDefinitions() {
+    public List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
-                        getRouteDefinitions(),
                         topicHandlers.get(),
                         produceHandlers.get(),
                         healthCheckHandler.get()
@@ -109,7 +120,7 @@ public abstract class VerticleDeployer {
     ) {
         vertx.deployVerticle(
                         () -> new RestVerticle(
-                                getAllRouteDefinitions(),
+                                getRouteDefinitions(),
                                 behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()
@@ -122,8 +133,6 @@ public abstract class VerticleDeployer {
                 })
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
-
-    public abstract List<RouteDefinition> getRouteDefinitions();
 
     private ProducerService setupProducerService(
             ProducerOptions producerOptions,

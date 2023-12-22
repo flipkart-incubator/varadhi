@@ -35,6 +35,7 @@ public class FullDeploymentVerticleDeployer extends VerticleDeployer {
     @Override
     public List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
+                        super.getRouteDefinitions(),
                         orgHandlers.get(),
                         teamHandlers.get(),
                         projectHandlers.get()

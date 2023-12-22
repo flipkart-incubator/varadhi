@@ -1,0 +1,54 @@
+restOptions:
+  deployedRegion: "test"
+  defaultOrg: "test"
+  defaultTeam: "test"
+  defaultProject: "test"
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
+
+vertxOptions:
+  eventLoopPoolSize: 1
+  workerPoolSize: 1
+  internalBlockingPoolSize: 1
+
+verticleDeploymentOptions:
+  instances: 1
+  worker: false
+  workerPoolSize: 2
+
+authenticationEnabled: false
+
+authentication:
+  jwt:
+    jwksUrl: "http://localhost:9090/default/jwks"
+    options:
+      issuer: "http://localhost:9090/default"
+      ignoreExpiration: true
+
+authorizationEnabled: false
+
+authorization:
+  superUsers: [ "thanos" ]
+  providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider"
+  configFile: "src/main/resources/authorizationConfig.yml"
+
+messagingStackOptions:
+  providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
+  configFile: "src/main/resources/pulsarConfig.yml"
+
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+  configFile: "src/main/resources/zkConfig.yml"
+
+httpServerOptions:
+  port: 8080
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+featureFlags:
+  leanDeployment: false

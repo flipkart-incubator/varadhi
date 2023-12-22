@@ -27,11 +27,6 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     }
 
     @Override
-    public List<RouteDefinition> getRouteDefinitions() {
-        return List.of();
-    }
-
-    @Override
     public void deployVerticle(
             Vertx vertx,
             ServerConfiguration configuration
