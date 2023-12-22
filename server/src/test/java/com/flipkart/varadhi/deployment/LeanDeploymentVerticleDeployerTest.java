@@ -1,14 +1,11 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.Server;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.services.OrgService;
-import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -23,8 +20,12 @@ import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class LeanDeploymentVerticleDeployerTest {
 

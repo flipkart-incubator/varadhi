@@ -26,7 +26,6 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
-import com.google.common.annotations.VisibleForTesting;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
