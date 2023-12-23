@@ -14,6 +14,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.utils.YamlLoader;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;
@@ -22,10 +23,9 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -57,6 +57,12 @@ public class LeanDeploymentVerticleDeployerTest {
     private static final String TEST_ORG = "testOrg";
     private static final String TEST_TEAM = "testTeam";
     private static final String TEST_PROJECT = "testProject";
+
+    private static final List<String> MANAGEABLE_ENTITIES_API_ENDPOINTS = List.of(
+            "/v1/orgs",
+            "/v1/orgs/:org/teams",
+            "/v1/projects"
+    );
 
     @BeforeEach
     public void setup() throws Exception {
@@ -236,5 +242,20 @@ public class LeanDeploymentVerticleDeployerTest {
 
         assertEquals("Lean deployment can not be enabled as there are more than one projects.",
                 exception.getMessage());
+    }
+
+    @Test
+    public void testManageableEntitiesHandlerNotPresent() {
+        List<RouteDefinition> routeDefinitions = leanDeploymentVerticleDeployer.getRouteDefinitions();
+        assertNotNull(routeDefinitions);
+        assertFalse(isManageableEntitiesHandlerPresent(routeDefinitions));
+    }
+
+    private Boolean isManageableEntitiesHandlerPresent(List<RouteDefinition> routeDefinitions) {
+        return routeDefinitions.stream()
+                .anyMatch(routeDefinition ->
+                        MANAGEABLE_ENTITIES_API_ENDPOINTS.stream()
+                                .anyMatch(apiEndpoint -> apiEndpoint.equals(routeDefinition.path()))
+                );
     }
 }
