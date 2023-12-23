@@ -7,137 +7,125 @@ package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.RoutingContext;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.Route;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.mockito.Mockito.*;
 
-public class TopicHandlersTest {
+public class TopicHandlersTest extends WebTestBase {
+    TopicHandlers topicHandlers;
+    VaradhiTopicService varadhiTopicService;
+    VaradhiTopicFactory varadhiTopicFactory;
+    VaradhiMetaStore varadhiMetaStore;
 
-    @Mock
-    private VaradhiTopicFactory varadhiTopicFactory;
-    @Mock
-    private VaradhiTopicService varadhiTopicService;
-    @Mock
-    private MetaStore metaStore;
-    @Mock
-    private RoutingContext routingContext;
-    @Mock
-    private HttpServerRequest request;
-    @Mock
-    private HttpServerResponse response;
-    @Mock
-    private VaradhiTopic varadhiTopic;
-    @Mock
-    private Project project;
-    @Mock
-    private TopicResource topicResource;
-
-    private TopicHandlers topicHandlers;
+    private final String topicName = "topic1";
+    private final String team1 = "team1";
+    private final String org1 = "org1";
+    private Project project = new Project("project1", 0, "", team1, org1);
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
-        when(routingContext.request()).thenReturn(request);
-        when(routingContext.response()).thenReturn(response);
+    public void PreTest() throws InterruptedException {
+        super.setUp();
+        varadhiTopicService = mock(VaradhiTopicService.class);
+        varadhiTopicFactory = mock(VaradhiTopicFactory.class);
+        varadhiMetaStore = mock(VaradhiMetaStore.class);
+        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, varadhiMetaStore);
+
+        Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::create));
+        setupFailureHandler(routeCreate);
+        Route routeGet = router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
+        setupFailureHandler(routeGet);
+        Route routeListAll = router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
+        setupFailureHandler(routeListAll);
+        Route routeDelete = router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
+        setupFailureHandler(routeDelete);
+    }
+
+    @AfterEach
+    public void PostTest() throws InterruptedException {
+        super.tearDown();
     }
 
     @Test
-    void getTopicSuccessfully() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(request.getParam("topic")).thenReturn("topic1");
-        when(metaStore.getVaradhiTopic("project1.topic1")).thenReturn(varadhiTopic);
-        when(varadhiTopic.getTopicResource("project1")).thenReturn(topicResource);
+    public void testTopicCreate() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicsUrl(project));
+        TopicResource topicResource = getTopicResource(topicName, project);
 
-        topicHandlers.get(routingContext);
+        TopicResource t1Created = sendRequestWithBody(request, topicResource, TopicResource.class);
+        Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
+    }
 
-        verify(response).end(anyString());
+
+    @Test
+    public void testTopicGet() throws InterruptedException {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic t1 = VaradhiTopic.of(topicResource);
+        String varadhiTopicName = String.join(".", project.getName(), topicName);
+        doReturn(t1).when(varadhiMetaStore).getVaradhiTopic(varadhiTopicName);
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTopicUrl(topicName, project));
+        TopicResource t1Created = sendRequestWithoutBody(request, TopicResource.class);
+        Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
     }
 
     @Test
-    void getTopicNotFound() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(request.getParam("topic")).thenReturn("topic1");
-        when(metaStore.getVaradhiTopic("project1.topic1")).thenReturn(null);
+    public void testListTopics() throws InterruptedException {
+        TopicResource topicResource = getTopicResource(topicName, project);
+        VaradhiTopic t1 = VaradhiTopic.of(topicResource);
+        List<String> listOfTopics = new ArrayList<>();
+        listOfTopics.add(t1.getName());
 
-        topicHandlers.get(routingContext);
+        doReturn(listOfTopics).when(varadhiMetaStore).listVaradhiTopics(project.getName());
 
-        verify(response).setStatusCode(404);
-        verify(response).end(anyString());
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTopicsUrl(project));
+        List<String> t1Created = sendRequestWithoutBody(request, List.class);
+        Assertions.assertEquals(t1Created.size(), listOfTopics.size());
     }
 
     @Test
-    void createTopicSuccessfully() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(routingContext.getBodyAsJson()).thenReturn(JsonObject.mapFrom(topicResource));
-        when(topicResource.getProject()).thenReturn("project1");
-        when(metaStore.getProject("project1")).thenReturn(project);
-        when(metaStore.checkVaradhiTopicExists("project1.topic1")).thenReturn(false);
+    public void testTopicDelete() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getTopicUrl(topicName, project));
+        TopicResource topicResource = getTopicResource(topicName, project);
+        doNothing().when(varadhiTopicService).delete(any());
 
-        topicHandlers.create(routingContext);
-
-        verify(varadhiTopicService).create(any(), eq(project));
-        verify(response).end(anyString());
+        sendRequestWithoutBody(request, null);
+        verify(varadhiTopicService, times(1)).delete(any());
     }
 
-    @Test
-    void createTopicAlreadyExists() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(routingContext.getBodyAsJson()).thenReturn(JsonObject.mapFrom(topicResource));
-        when(topicResource.getProject()).thenReturn("project1");
-        when(metaStore.getProject("project1")).thenReturn(project);
-        when(metaStore.checkVaradhiTopicExists("project1.topic1")).thenReturn(true);
-
-        Assertions.assertThrows(DuplicateResourceException.class, () -> topicHandlers.create(routingContext));
+    private TopicResource getTopicResource(String topicName, Project project) {
+        return new TopicResource(
+                topicName,
+                1,
+                project.getName(),
+                true,
+                CapacityPolicy.getDefault()
+        );
     }
 
-    @Test
-    void deleteTopicSuccessfully() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(request.getParam("topic")).thenReturn("topic1");
-        when(metaStore.getVaradhiTopic("project1.topic1")).thenReturn(varadhiTopic);
-
-        topicHandlers.delete(routingContext);
-
-        verify(varadhiTopicService).delete(varadhiTopic);
-        verify(response).end();
+    private String getTopicsUrl(Project project) {
+        return String.join("/", "/projects", project.getName(), "topics");
     }
 
-    @Test
-    void deleteTopicNotFound() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(request.getParam("topic")).thenReturn("topic1");
-        when(metaStore.getVaradhiTopic("project1.topic1")).thenReturn(null);
 
-        topicHandlers.delete(routingContext);
-
-        verify(response).setStatusCode(404);
-        verify(response).end(anyString());
-    }
-
-    @Test
-    void listTopicsSuccessfully() {
-        when(request.getParam("project")).thenReturn("project1");
-        when(metaStore.listVaradhiTopics("project1")).thenReturn(Arrays.asList("project1.topic1", "project1.topic2"));
-
-        topicHandlers.listTopics(routingContext);
-
-        verify(response).end(anyString());
+    private String getTopicUrl(String topicName, Project project) {
+        return String.join("/", getTopicsUrl(project), topicName);
     }
 }
