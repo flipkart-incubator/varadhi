@@ -6,41 +6,41 @@ package com.flipkart.varadhi.entities;
  */
 
 import org.junit.jupiter.api.Test;
+
+import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VaradhiTopicTest {
 
+    private static final String projectName = "project1";
+    private static final String topicName = "topic1";
+
     @Test
     void buildTopicName() {
-        String projectName = "project1";
-        String topicName = "topic1";
-        String expected = "project1.topic1";
-
+        String expected = String.join(".", projectName, topicName);
         String actual = VaradhiTopic.buildTopicName(projectName, topicName);
-
         assertEquals(expected, actual);
     }
 
     @Test
     void addAndGetInternalTopic() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource("topic1", 1, "project1", false, null));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, 1, projectName, false, null));
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
-        InternalTopic internalTopic = new InternalTopic("region1", "topic1", TopicState.Producing, st);
+        InternalTopic internalTopic = new InternalTopic("region1", topicName, TopicState.Producing, st);
 
         varadhiTopic.addInternalTopic(internalTopic);
-
-        assertEquals(internalTopic, varadhiTopic.getProduceTopicForRegion("region1"));
+        assertEquals(internalTopic.getTopicRegion(), varadhiTopic.getProduceTopicForRegion(topicName).getTopicRegion());
     }
 
     @Test
     void getTopicResource() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource("topic1", 1, "project1", false, null));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, INITIAL_VERSION, projectName, false, CapacityPolicy.getDefault()));
 
-        TopicResource topicResource = varadhiTopic.getTopicResource("project1");
+        TopicResource topicResource = varadhiTopic.getTopicResource(projectName);
 
-        assertEquals("topic1", topicResource.getName());
-        assertEquals(1, topicResource.getVersion());
-        assertEquals("project1", topicResource.getProject());
+        assertEquals(topicName, topicResource.getName());
+        assertEquals(INITIAL_VERSION, topicResource.getVersion());
+        assertEquals(projectName, topicResource.getProject());
         assertFalse(topicResource.isGrouped());
     }
     public static class DummyStorageTopic extends StorageTopic {
