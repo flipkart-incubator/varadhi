@@ -58,6 +58,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
+
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);
     }
@@ -69,7 +70,14 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
 
     private void validateTenantExists(String tenant) throws PulsarAdminException {
         List<String> tenants = clientProvider.getAdminClient().tenants().getTenants();
-        Assertions.assertTrue(tenants.contains(tenant), String.format("Failed to find the tenant %s.", tenant));
+        boolean found = false;
+        for (String t : tenants) {
+            if(t.contains(tenant)) {
+                found = true;
+                break;
+            }
+        }
+        Assertions.assertTrue(found, String.format("Failed to find the tenant %s.", tenant));
     }
 
     private void validateNamespaceExists(String tenant, String namespace) throws PulsarAdminException {

@@ -12,8 +12,6 @@ import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import io.vertx.core.http.HttpMethod;
