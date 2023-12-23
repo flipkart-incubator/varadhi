@@ -39,4 +39,7 @@ public class ServerConfiguration {
 
     @NotNull
     private MetaStoreOptions metaStoreOptions;
+
+    @NotNull
+    private FeatureFlags featureFlags;
 }

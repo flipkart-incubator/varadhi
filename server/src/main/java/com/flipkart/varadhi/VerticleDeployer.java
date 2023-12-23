@@ -24,9 +24,6 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
-import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
-import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,15 +40,16 @@ import java.util.stream.Stream;
 
 
 @Slf4j
-public class VerticleDeployer {
+public abstract class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final OrgHandlers orgHandlers;
-    private final TeamHandlers teamHandlers;
-    private final ProjectHandlers projectHandlers;
+
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
+    protected final OrgService orgService;
+    protected final TeamService teamService;
+    protected final ProjectService projectService;
 
     public VerticleDeployer(
             String hostName,
@@ -77,11 +75,10 @@ public class VerticleDeployer {
                         configuration.getProducerOptions(), messagingStackProvider.getProducerFactory(),
                         varadhiTopicService, meterRegistry
                 );
-        ProjectService projectService =
+        this.projectService =
                 new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
-        this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
-        this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
-        this.projectHandlers = new ProjectHandlers(projectService);
+        this.orgService = new OrgService(metaStore);
+        this.teamService = new TeamService(metaStore);
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
@@ -93,11 +90,8 @@ public class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getDefinitions() {
+    public List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
-                        orgHandlers.get(),
-                        teamHandlers.get(),
-                        projectHandlers.get(),
                         topicHandlers.get(),
                         produceHandlers.get(),
                         healthCheckHandler.get()
@@ -113,7 +107,7 @@ public class VerticleDeployer {
     ) {
         vertx.deployVerticle(
                         () -> new RestVerticle(
-                                getDefinitions(),
+                                getRouteDefinitions(),
                                 behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()
