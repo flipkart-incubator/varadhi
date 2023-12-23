@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.admin.Topics;
@@ -78,12 +79,14 @@ public class PulsarTopicServiceTest {
     @Test
     public void testCreate_NewTenantNamespace() throws PulsarAdminException {
         String newTenant = "testTenantNew";
-        String newNamespace = "testNamespaceNew";
+        Project projectNew = new Project("projectNew", INITIAL_VERSION, "", "public", newTenant);
+        String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
+
         PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, CapacityPolicy.getDefault());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(topic, project);
+        pulsarTopicService.create(topic, projectNew);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
-        verify(tenants, times(1)).createTenant(eq(project.getOrg()), any());
-        verify(namespaces, times(1)).createNamespace(eq(String.join(PATH_SEPARATOR, project.getOrg(), project.getName())));
+        verify(tenants, times(1)).createTenant(eq(projectNew.getOrg()), any());
+        verify(namespaces, times(1)).createNamespace(eq(newNamespace));
     }
 }
