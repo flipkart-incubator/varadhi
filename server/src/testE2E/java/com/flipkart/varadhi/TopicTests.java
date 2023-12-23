@@ -84,7 +84,7 @@ public class TopicTests extends E2EBase {
 
     @Test
     public void createTopicsWithMultiTenancy() {
-        String topicName = "test-topic-1";
+        String topicName = "test-topic-2";
         TopicResource topic1 =
                 new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
         TopicResource topic2 =
@@ -100,5 +100,8 @@ public class TopicTests extends E2EBase {
         Assertions.assertEquals(topic2.getVersion(), r2.getVersion());
         Assertions.assertEquals(topic2.getName(), r2.getName());
         Assertions.assertEquals(topic2.getProject(), r2.getProject());
+
+        makeDeleteRequest(getTopicsUri(o1t1Project1)+"/"+topic1.getName(), 200);
+        makeDeleteRequest(getTopicsUri(o2t1Project1)+"/"+topic2.getName(), 200);
     }
 }
