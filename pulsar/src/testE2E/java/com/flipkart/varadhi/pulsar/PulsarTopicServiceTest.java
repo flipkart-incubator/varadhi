@@ -6,6 +6,8 @@ import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
 import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+
+import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -53,12 +55,14 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreate_NewTenantNamespace() throws PulsarAdminException {
         String newTenant = "testTenantNew";
-        String newNamespace = String.format("%s/%s", newTenant, "testNamespaceNew");
+        Project projectNew = new Project("projectNew", INITIAL_VERSION, "", "public", newTenant);
+        String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
-        topicService.create(pt, project);
-        validateTopicExists(topicFQDN);
 
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
+        topicService.create(pt, projectNew);
+
+        validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);
     }
@@ -70,14 +74,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
 
     private void validateTenantExists(String tenant) throws PulsarAdminException {
         List<String> tenants = clientProvider.getAdminClient().tenants().getTenants();
-        boolean found = false;
-        for (String t : tenants) {
-            if(t.contains(tenant)) {
-                found = true;
-                break;
-            }
-        }
-        Assertions.assertTrue(found, String.format("Failed to find the tenant %s.", tenant));
+        Assertions.assertTrue(tenants.contains(tenant), String.format("Failed to find the tenant %s.", tenant));
     }
 
     private void validateNamespaceExists(String tenant, String namespace) throws PulsarAdminException {
