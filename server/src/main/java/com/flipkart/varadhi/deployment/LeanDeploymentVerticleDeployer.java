@@ -30,34 +30,21 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
             Vertx vertx,
             ServerConfiguration configuration
     ) {
-        validateLeanDeploymentConstraints(configuration.getRestOptions());
+        ensureLeanDeploymentConstraints(configuration.getRestOptions());
         super.deployVerticle(vertx, configuration);
     }
 
-    private void validateLeanDeploymentConstraints(RestOptions restOptions) {
+    private void ensureLeanDeploymentConstraints(RestOptions restOptions) {
         String defaultOrg = restOptions.getDefaultOrg();
         String defaultTeam = restOptions.getDefaultTeam();
         String defaultProject = restOptions.getDefaultProject();
 
-        if (validateOrgConstraints(defaultOrg, defaultTeam, defaultProject)) {
-            // If org is created, then team and project will be created by default.
-            return;
-        }
-
-        if (validateTeamConstraints(defaultOrg, defaultTeam, defaultProject)) {
-            // If team is created, then project will be created by default.
-            return;
-        }
-
-        validateProjectConstraints(defaultOrg, defaultTeam, defaultProject);
-
-
+        ensureOrgConstraints(defaultOrg);
+        ensureTeamConstraints(defaultOrg, defaultTeam);
+        ensureProjectConstraints(defaultOrg, defaultTeam, defaultProject);
     }
 
-    private Boolean validateOrgConstraints(
-            String defaultOrg,
-            String defaultTeam,
-            String defaultProject) {
+    private void ensureOrgConstraints(String defaultOrg) {
 
         List<Org> orgs = orgService.getOrgs();
 
@@ -72,23 +59,33 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
         }
 
         if (orgs.isEmpty()) {
-            createDefaultOrgTeamProject(defaultOrg, defaultTeam, defaultProject);
-            return true;
+            log.debug("Creating default org no org is present.");
+            orgService.createOrg(new Org(defaultOrg, 0));
+            log.debug("Created default org, team and project as no org is present.");
         }
-        return false;
     }
 
-    private void createDefaultOrgTeamProject(String defaultOrg, String defaultTeam, String defaultProject) {
-        log.debug("Creating default org, team and project as no org is present.");
+    private void ensureTeamConstraints(String defaultOrg, String defaultTeam) {
+        List<Team> teams = teamService.getTeams(defaultOrg);
 
-        orgService.createOrg(new Org(defaultOrg, 0));
-        teamService.createTeam(new Team(defaultTeam, 0, defaultOrg));
-        projectService.createProject(new Project(defaultProject, 0, "", defaultTeam, defaultOrg));
+        if (teams.size() > 1) {
+            throw new InvalidConfigException("Lean deployment can not be enabled as there are more than one teams.");
+        }
+        if (teams.size() == 1 && !defaultTeam.equals(teams.get(0).getName())) {
+            throw new InvalidConfigException(String.format(
+                    "Lean deployment can not be enabled as team with %s name is present.",
+                    teams.get(0).getName()));
+        }
+        if (teams.isEmpty()) {
+            log.debug("Creating default team no team is present.");
 
-        log.debug("Created default org, team and project as no org is present.");
+            teamService.createTeam(new Team(defaultTeam, 0, defaultOrg));
+
+            log.debug("Created default team as no team is present.");
+        }
+
     }
-
-    private void validateProjectConstraints(
+    private void ensureProjectConstraints(
             String defaultOrg,
             String defaultTeam,
             String defaultProject) {
@@ -108,42 +105,6 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
             projectService.createProject(new Project(defaultProject, 0, "", defaultTeam, defaultOrg));
             log.debug("Created default project as no team is present.");
         }
-    }
-
-    private Boolean validateTeamConstraints(
-            String defaultOrg,
-            String defaultTeam,
-            String defaultProject
-    ) {
-        List<Team> teams = teamService.getTeams(defaultOrg);
-
-        if (teams.size() > 1) {
-            throw new InvalidConfigException("Lean deployment can not be enabled as there are more than one teams.");
-        }
-        if (teams.size() == 1 && !defaultTeam.equals(teams.get(0).getName())) {
-            throw new InvalidConfigException(String.format(
-                    "Lean deployment can not be enabled as team with %s name is present.",
-                    teams.get(0).getName()));
-        }
-        if (teams.isEmpty()) {
-            createTeamAndProject(defaultOrg, defaultTeam, defaultProject);
-            return true;
-        }
-
-        return false;
-    }
-
-    private void createTeamAndProject(
-            String defaultOrg,
-            String defaultTeam,
-            String defaultProject
-    ) {
-        log.debug("Creating default team and project as no team is present.");
-
-        teamService.createTeam(new Team(defaultTeam, 0, defaultOrg));
-        projectService.createProject(new Project(defaultProject, 0, "", defaultTeam, defaultOrg));
-
-        log.debug("Created default team and project as no team is present.");
     }
 
 }
