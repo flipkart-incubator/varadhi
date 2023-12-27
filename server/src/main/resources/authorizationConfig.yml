@@ -1,4 +1,8 @@
 ---
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+  configFile: "src/main/resources/zkConfig.yml"
+
 roleDefinitions:
   project.admin:
     roleId: project.admin

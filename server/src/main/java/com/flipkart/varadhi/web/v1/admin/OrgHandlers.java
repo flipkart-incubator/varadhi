@@ -19,8 +19,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
-import static com.flipkart.varadhi.entities.ResourceAction.ORG_DELETE;
-import static com.flipkart.varadhi.entities.ResourceAction.ORG_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_DELETE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_GET;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 

@@ -2,9 +2,10 @@ package com.flipkart.varadhi.entities.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.ValidateVaradhiResource;
 import com.flipkart.varadhi.entities.VaradhiResource;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -16,8 +17,13 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = true)
 @ValidateVaradhiResource(message = "Invalid Role Binding name. Check naming constraints.")
 public class RoleBindingNode extends VaradhiResource {
+    @NotBlank
     private final String resourceId;
+
+    @NotNull
     private final ResourceType resourceType;
+
+    @NotNull
     private final Map<String, Set<String>> subjectToRolesMapping;
 
     @JsonCreator

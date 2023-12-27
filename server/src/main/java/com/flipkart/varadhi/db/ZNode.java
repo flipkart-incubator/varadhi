@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import lombok.Getter;
 
 @Getter

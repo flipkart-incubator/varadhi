@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.entities.Role;
+import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import lombok.Data;
 
 import java.util.Map;
@@ -12,6 +13,5 @@ public class DefaultAuthorizationConfiguration {
      */
     private Map<String, Role> roleDefinitions;
 
-    private String authZServerHost = "localhost";
-    private int authZServerPort = 8080;
+    private MetaStoreOptions metaStoreOptions;
 }

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;

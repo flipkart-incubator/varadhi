@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.authz;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.entities.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.AuthZService;

@@ -1,6 +1,8 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.entities.*;
@@ -22,8 +24,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
 import static com.flipkart.varadhi.entities.TestUser.testUser;
+import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
 
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthZProviderTests extends E2EBase {
