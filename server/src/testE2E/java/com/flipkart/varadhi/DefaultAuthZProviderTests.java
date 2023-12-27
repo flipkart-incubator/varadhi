@@ -68,6 +68,10 @@ public class DefaultAuthZProviderTests extends E2EBase {
         String configContent =
                 """
                         ---
+                        metaStoreOptions:
+                          providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+                          configFile: "src/main/resources/zkConfig.yml"
+
                         roleDefinitions:
                           org.admin:
                             roleId: org.admin
