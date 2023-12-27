@@ -25,9 +25,6 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
-import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
-import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
@@ -46,16 +43,17 @@ import java.util.stream.Stream;
 
 
 @Slf4j
-public class VerticleDeployer {
+public abstract class VerticleDeployer {
     private final TopicHandlers topicHandlers;
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final OrgHandlers orgHandlers;
-    private final TeamHandlers teamHandlers;
-    private final ProjectHandlers projectHandlers;
+
     private final Supplier<AuthZHandlers> authZHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
+    protected final OrgService orgService;
+    protected final TeamService teamService;
+    protected final ProjectService projectService;
 
     public VerticleDeployer(
             String hostName,
@@ -81,17 +79,16 @@ public class VerticleDeployer {
                         configuration.getProducerOptions(), messagingStackProvider.getProducerFactory(),
                         varadhiTopicService, meterRegistry
                 );
-        ProjectService projectService =
+        this.projectService =
                 new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
-        this.orgHandlers = new OrgHandlers(new OrgService(metaStore));
-        this.teamHandlers = new TeamHandlers(new TeamService(metaStore));
-        this.projectHandlers = new ProjectHandlers(projectService);
+        this.orgService = new OrgService(metaStore);
+        this.teamService = new TeamService(metaStore);
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
         this.authZHandlersSupplier = () -> new AuthZHandlers(
                 new AuthZService(metaStore));
-      
+
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
@@ -100,11 +97,8 @@ public class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
     }
 
-    private List<RouteDefinition> getDefinitions() {
+    public List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
-                        orgHandlers.get(),
-                        teamHandlers.get(),
-                        projectHandlers.get(),
                         topicHandlers.get(),
                         produceHandlers.get(),
                         healthCheckHandler.get()
@@ -117,19 +111,10 @@ public class VerticleDeployer {
             Vertx vertx,
             ServerConfiguration configuration
     ) {
-
-        deployRestVerticle(vertx, configuration);
-    }
-
-    private void deployRestVerticle(
-            Vertx vertx,
-            ServerConfiguration configuration
-    ) {
-        List<RouteDefinition> handlerDefinitions = getDefinitions();
+        List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
         if (configuration.isAuthorizationServerEnabled()) {
             handlerDefinitions.addAll(authZHandlersSupplier.get().get());
         }
-
         vertx.deployVerticle(
                         () -> new RestVerticle(
                                 handlerDefinitions,
