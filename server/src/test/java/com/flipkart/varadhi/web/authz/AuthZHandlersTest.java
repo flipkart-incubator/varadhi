@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.authz;
 
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.entities.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.MetaStoreException;

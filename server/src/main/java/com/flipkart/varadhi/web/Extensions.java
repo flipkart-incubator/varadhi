@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.BaseResource;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -11,8 +10,6 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.flipkart.varadhi.Constants.PathParams.*;
-import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 
 public class Extensions {
 
@@ -101,20 +98,6 @@ public class Extensions {
 
         public static void todo(RoutingContext context) {
             throw new NotImplementedException("Not Implemented.");
-        }
-
-        public static String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
-            return switch (resourceType) {
-                case ORG -> ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-                case TEAM -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
-                        ctx.pathParam(REQUEST_PATH_PARAM_TEAM)
-                );
-                case PROJECT -> ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-                case TOPIC -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
-                        ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
-                );
-                case SUBSCRIPTION -> ctx.pathParam("sub");
-            };
         }
     }
 }

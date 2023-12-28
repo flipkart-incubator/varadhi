@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.config.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
@@ -12,12 +12,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,9 +25,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthorizationProviderTest {
 
-    @TempDir
-    Path tempDir;
-
     private AuthorizationOptions authorizationOptions;
 
     private DefaultAuthorizationProvider provider;
@@ -39,84 +33,8 @@ public class DefaultAuthorizationProviderTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        String configContent =
-                """
-                        ---
-                        metaStoreOptions:
-                          providerClassName: "com.flipkart.varadhi.utils.MockMetaStoreProvider"
-                          configFile: ""
-                        roleDefinitions:
-                          org.admin:
-                            roleId: org.admin
-                            permissions:
-                                - ORG_CREATE
-                                - ORG_UPDATE
-                                - ORG_GET
-                                - ORG_DELETE
-                                - TEAM_CREATE
-                                - TEAM_GET
-                                - TEAM_UPDATE
-                                - PROJECT_GET
-                                - TOPIC_GET
-                                - SUBSCRIPTION_GET
-                          team.admin:
-                            roleId: team.admin
-                            permissions:
-                                - TEAM_CREATE
-                                - TEAM_GET
-                                - TEAM_UPDATE
-                                - PROJECT_GET
-                                - TOPIC_GET
-                                - SUBSCRIPTION_GET
-                          team.reader:
-                            roleId: team.reader
-                            permissions:
-                                - TEAM_GET
-                                - PROJECT_GET
-                                - TOPIC_GET
-                                - SUBSCRIPTION_GET
-                          project.read:
-                            roleId: project.read
-                            permissions:
-                                - PROJECT_GET
-                                - TOPIC_GET
-                                - SUBSCRIPTION_GET
-                          project.writer:
-                            roleId: project.writer
-                            permissions:
-                                - PROJECT_GET
-                                - PROJECT_UPDATE
-                                - PROJECT_CREATE
-                                - TOPIC_GET
-                                - SUBSCRIPTION_GET
-                          topic.reader:
-                            roleId: topic.reader
-                            permissions:
-                                - TOPIC_GET
-                          topic.admin:
-                            roleId: topic.admin
-                            permissions:
-                                - TOPIC_GET
-                                - TOPIC_CREATE
-                                - TOPIC_UPDATE
-                                - TOPIC_DELETE
-                          subscription.reader:
-                            roleId: subscription.reader
-                            permissions:
-                                - SUBSCRIPTION_GET
-                          subscription.admin:
-                            roleId: subscription.admin
-                            permissions:
-                                - SUBSCRIPTION_GET
-                                - SUBSCRIPTION_CREATE
-                                - SUBSCRIPTION_UPDATE
-                                - SUBSCRIPTION_DELETE
-                        """;
-        Path configFile = tempDir.resolve("authorizationConfig.yaml");
-        Files.write(configFile, configContent.getBytes());
-
         authorizationOptions = new AuthorizationOptions();
-        authorizationOptions.setConfigFile(configFile.toString());
+        authorizationOptions.setConfigFile("src/test/resources/testAuthorizationConfig.yml");
 
         provider = spy(new DefaultAuthorizationProvider());
         authZService = mock(AuthZService.class);
