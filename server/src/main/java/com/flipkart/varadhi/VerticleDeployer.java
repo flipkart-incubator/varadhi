@@ -45,16 +45,14 @@ import java.util.stream.Stream;
 
 @Slf4j
 public abstract class VerticleDeployer {
-    private final TopicHandlers topicHandlers;
-    private final ProduceHandlers produceHandlers;
-    private final HealthCheckHandler healthCheckHandler;
-
-    private final Supplier<AuthZHandlers> authZHandlersSupplier;
-    private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
-
     protected final OrgService orgService;
     protected final TeamService teamService;
     protected final ProjectService projectService;
+    private final TopicHandlers topicHandlers;
+    private final ProduceHandlers produceHandlers;
+    private final HealthCheckHandler healthCheckHandler;
+    private final Supplier<AuthZHandlers> authZHandlersSupplier;
+    private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
             String hostName,

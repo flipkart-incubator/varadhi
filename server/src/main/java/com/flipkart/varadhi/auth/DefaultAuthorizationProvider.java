@@ -144,7 +144,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             return Set.of();
         }
         log.info("Fetched roles for subject [{}] and resource [{}]", subject, resourceContext.policyPath());
-        return node.getSubjectToRolesMapping().getOrDefault(subject, Set.of());
+        return node.getRolesAssignment().getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {

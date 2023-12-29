@@ -23,30 +23,33 @@ public class RoleBindingNode extends VaradhiResource {
     @NotNull
     private final ResourceType resourceType;
 
+    /**
+     * Map of subject to roles
+     */
     @NotNull
-    private final Map<String, Set<String>> subjectToRolesMapping;
+    private final Map<String, Set<String>> rolesAssignment;
 
     @JsonCreator
     public RoleBindingNode(
             @JsonProperty("resourceId") String resourceId,
             @JsonProperty("resourceType") ResourceType resourceType,
-            @JsonProperty("subjectToRolesMapping")
-            Map<String, Set<String>> subjectToRolesMapping,
+            @JsonProperty("rolesAssignment")
+            Map<String, Set<String>> rolesAssignment,
             @JsonProperty("version")
             int version
     ) {
         super(resourceId, version);
         this.resourceId = resourceId;
         this.resourceType = resourceType;
-        this.subjectToRolesMapping = new HashMap<>();
-        this.subjectToRolesMapping.putAll(subjectToRolesMapping);
+        this.rolesAssignment = new HashMap<>();
+        this.rolesAssignment.putAll(rolesAssignment);
     }
 
     public void setRoleAssignment(String subject, Set<String> roles) {
         if (roles.isEmpty()) {
-            subjectToRolesMapping.remove(subject);
+            rolesAssignment.remove(subject);
             return;
         }
-        subjectToRolesMapping.put(subject, roles);
+        rolesAssignment.put(subject, roles);
     }
 }

@@ -14,7 +14,7 @@ public interface RoleBindingMetaStore {
 
     void createRoleBindingNode(RoleBindingNode node);
 
-    boolean checkRoleBindingNodeExists(ResourceType resourceType, String resourceId);
+    boolean isRoleBindingPresent(ResourceType resourceType, String resourceId);
 
     int updateRoleBindingNode(RoleBindingNode node);
 

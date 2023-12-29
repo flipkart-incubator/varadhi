@@ -248,7 +248,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public boolean checkRoleBindingNodeExists(ResourceType resourceType, String resourceId) {
+    public boolean isRoleBindingPresent(ResourceType resourceType, String resourceId) {
         ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
         return zkMetaStore.zkPathExist(znode);
     }
