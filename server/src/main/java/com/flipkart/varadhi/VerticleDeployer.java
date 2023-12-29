@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
@@ -120,7 +121,7 @@ public abstract class VerticleDeployer {
             ServerConfiguration configuration
     ) {
         List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
-        if (configuration.isAuthorizationServerEnabled()) {
+        if (shouldEnableAuthZHandlers(configuration)) {
             handlerDefinitions.addAll(authZHandlersSupplier.get().get());
         }
         vertx.deployVerticle(
@@ -149,6 +150,12 @@ public abstract class VerticleDeployer {
                 new ProducerMetricsNoOpImpl();
         return new ProducerService(
                 producerOptions, producerFactory, producerMetrics, varadhiTopicService, meterRegistry);
+    }
+
+    private boolean shouldEnableAuthZHandlers(ServerConfiguration configuration) {
+        String defaultProviderClass = DefaultAuthorizationProvider.class.getName();
+        return configuration.isAuthorizationEnabled()
+                && defaultProviderClass.equals(configuration.getAuthorization().getProviderClassName());
     }
 
 }

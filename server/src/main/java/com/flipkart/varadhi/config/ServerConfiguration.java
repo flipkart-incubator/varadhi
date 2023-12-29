@@ -29,8 +29,6 @@ public class ServerConfiguration {
 
     private AuthorizationOptions authorization;
 
-    private boolean authorizationServerEnabled;
-
     @NotNull
     private RestOptions restOptions;
 

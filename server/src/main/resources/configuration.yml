@@ -30,8 +30,6 @@ authentication:
 
 authorizationEnabled: false
 
-authorizationServerEnabled: true
-
 authorization:
   superUsers: [ "thanos" ]
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
