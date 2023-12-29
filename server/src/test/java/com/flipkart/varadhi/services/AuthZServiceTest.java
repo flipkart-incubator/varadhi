@@ -54,7 +54,7 @@ public class AuthZServiceTest {
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
-        authZService = new AuthZService(varadhiMetaStore);
+        authZService = new AuthZService(varadhiMetaStore, varadhiMetaStore);
         org1 = new Org("org1", 0);
         org2 = new Org("org2", 0);
         org1team1 = new Team("team1", 0, org1.getName());

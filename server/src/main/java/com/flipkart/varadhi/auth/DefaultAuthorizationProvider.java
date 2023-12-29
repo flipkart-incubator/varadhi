@@ -1,17 +1,15 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
-import com.flipkart.varadhi.entities.auth.Role;
-import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.services.AuthZService;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
@@ -52,10 +50,16 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         return this.authZService;
     }
 
-    private AuthZService initAuthZService(MetaStoreOptions metaStoreOptions) {
-        MetaStoreProvider provider = loadClass(metaStoreOptions.getProviderClassName());
-        provider.init(metaStoreOptions);
-        return new AuthZService(provider.getMetaStore());
+    private AuthZService initAuthZService(MetaStoreOptions options) {
+        MetaStoreProvider provider = loadClass(options.getProviderClassName());
+        provider.init(options);
+        MetaStore store = provider.getMetaStore();
+
+        if (store instanceof RoleBindingMetaStore) {
+            return new AuthZService(store, (RoleBindingMetaStore) store);
+        }
+
+        throw new IllegalStateException("Provider must implement RoleBindingMetaStore");
     }
 
     /**

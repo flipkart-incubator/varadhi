@@ -12,9 +12,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,6 +27,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthorizationProviderTest {
+
+    @TempDir
+    private Path tempDir;
 
     private AuthorizationOptions authorizationOptions;
 
@@ -48,6 +54,30 @@ public class DefaultAuthorizationProviderTest {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
                 }));
+    }
+
+    @Test
+    public void testInitNotImplRoleBindingMetaStoreShouldThrow() throws IOException {
+        Path configFile = tempDir.resolve("config.yaml");
+        String yamlContent =
+                """
+                                metaStoreOptions:
+                                  providerClassName: "com.flipkart.varadhi.utils.InvalidMetaStoreProvider"
+                                  configFile: ""
+                                roleDefinitions:
+                                  org.admin:
+                                    roleId: org.admin
+                                    permissions:
+                                        - ORG_CREATE
+                        """;
+        Files.write(configFile, yamlContent.getBytes());
+
+        AuthorizationOptions opts = new AuthorizationOptions();
+        opts.setConfigFile(configFile.toString());
+        Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> provider.init(opts)
+        );
     }
 
     @Test

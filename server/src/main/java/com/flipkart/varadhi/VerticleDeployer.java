@@ -17,6 +17,7 @@ import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.web.AuthHandlers;
@@ -86,8 +87,7 @@ public abstract class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
-        this.authZHandlersSupplier = () -> new AuthZHandlers(
-                new AuthZService(metaStore));
+        this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
 
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
@@ -95,6 +95,16 @@ public abstract class VerticleDeployer {
         bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+    }
+
+    private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {
+        return () -> {
+            if (metaStore instanceof RoleBindingMetaStore rbMetaStore) {
+                return new AuthZHandlers(
+                        new AuthZService(metaStore, rbMetaStore));
+            }
+            throw new IllegalStateException("MetaStore is not an instance of RoleBindingMetaStore.");
+        };
     }
 
     public List<RouteDefinition> getRouteDefinitions() {

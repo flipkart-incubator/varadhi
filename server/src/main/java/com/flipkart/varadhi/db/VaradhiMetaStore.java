@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.db;
 
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -15,7 +16,7 @@ import static com.flipkart.varadhi.db.ZNode.*;
 
 
 @Slf4j
-public class VaradhiMetaStore implements MetaStore {
+public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     private final ZKMetaStore zkMetaStore;
 
     public VaradhiMetaStore(CuratorFramework zkCurator) {
