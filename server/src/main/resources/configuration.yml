@@ -28,7 +28,7 @@ authentication:
       issuer: "http://localhost:9090/default"
       ignoreExpiration: true
 
-authorizationEnabled: false
+authorizationEnabled: true
 
 authorization:
   superUsers: [ "thanos" ]
