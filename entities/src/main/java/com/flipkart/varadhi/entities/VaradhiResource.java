@@ -2,22 +2,13 @@ package com.flipkart.varadhi.entities;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@EqualsAndHashCode
-public class VaradhiResource implements Validatable {
-
-    public static final int INITIAL_VERSION = 0;
+@EqualsAndHashCode(callSuper = true)
+public class VaradhiResource extends VersionedEntity {
     public static final String NAME_SEPARATOR = ".";
 
-    private final String name;
-
-    @Setter
-    private int version;
-
     protected VaradhiResource(String name, int version) {
-        this.name = name;
-        this.version = version;
+        super(name, version);
     }
 }

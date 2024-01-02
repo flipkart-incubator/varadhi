@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
-import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 @ExtendWith(VertxExtension.class)
 public class DefaultAuthZProviderTests extends E2EBase {
