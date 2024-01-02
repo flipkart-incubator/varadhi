@@ -8,8 +8,8 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Project name. Check naming constraints.")
-public class Project extends VaradhiResource {
+@ValidateMetaStoreEntity(message = "Invalid Project name. Check naming constraints.")
+public class Project extends MetaStoreEntity {
     private String org;
     @Setter
     private String team;

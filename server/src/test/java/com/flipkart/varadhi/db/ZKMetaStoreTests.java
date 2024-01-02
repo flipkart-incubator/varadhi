@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.VaradhiResource;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.exceptions.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -218,7 +218,7 @@ public class ZKMetaStoreTests {
     @Setter
     @Getter
     @EqualsAndHashCode(callSuper = true)
-    public static class TestData extends VaradhiResource {
+    public static class TestData extends MetaStoreEntity {
         String data;
 
         public TestData(String name, int version, String data) {
