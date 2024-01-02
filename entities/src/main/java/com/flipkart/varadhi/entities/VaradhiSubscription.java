@@ -1,0 +1,33 @@
+package com.flipkart.varadhi.entities;
+
+import lombok.EqualsAndHashCode;
+import lombok.Value;
+
+@Value
+@EqualsAndHashCode(callSuper = true)
+@ValidateVaradhiResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
+public class VaradhiSubscription extends VaradhiResource {
+
+    String project;
+    String topic;
+    String description;
+    boolean grouped;
+    Endpoint endpoint;
+
+    public VaradhiSubscription(
+            String name,
+            int version,
+            String project,
+            String topic,
+            String description,
+            boolean grouped,
+            Endpoint endpoint
+    ) {
+        super(name, version);
+        this.project = project;
+        this.topic = topic;
+        this.description = description;
+        this.grouped = grouped;
+        this.endpoint = endpoint;
+    }
+}
