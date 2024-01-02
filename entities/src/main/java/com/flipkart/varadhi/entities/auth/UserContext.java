@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.entities.auth;
 
 public interface UserContext {
 

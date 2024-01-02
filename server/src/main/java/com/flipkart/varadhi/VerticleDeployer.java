@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
@@ -11,11 +12,13 @@ import com.flipkart.varadhi.produce.otel.ProducerMetrics;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.web.AuthHandlers;
@@ -25,6 +28,7 @@ import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -35,21 +39,21 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
 @Slf4j
 public abstract class VerticleDeployer {
-    private final TopicHandlers topicHandlers;
-    private final ProduceHandlers produceHandlers;
-    private final HealthCheckHandler healthCheckHandler;
-
-    private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
-
     protected final OrgService orgService;
     protected final TeamService teamService;
     protected final ProjectService projectService;
+    private final TopicHandlers topicHandlers;
+    private final ProduceHandlers produceHandlers;
+    private final HealthCheckHandler healthCheckHandler;
+    private final Supplier<AuthZHandlers> authZHandlersSupplier;
+    private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
             String hostName,
@@ -82,12 +86,24 @@ public abstract class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
+        this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
+
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+    }
+
+    private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {
+        return () -> {
+            if (metaStore instanceof RoleBindingMetaStore rbMetaStore) {
+                return new AuthZHandlers(
+                        new AuthZService(metaStore, rbMetaStore));
+            }
+            throw new IllegalStateException("MetaStore is not an instance of RoleBindingMetaStore.");
+        };
     }
 
     public List<RouteDefinition> getRouteDefinitions() {
@@ -100,14 +116,17 @@ public abstract class VerticleDeployer {
                 .collect(Collectors.toList());
     }
 
-
     public void deployVerticle(
             Vertx vertx,
             ServerConfiguration configuration
     ) {
+        List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
+        if (shouldEnableAuthZHandlers(configuration)) {
+            handlerDefinitions.addAll(authZHandlersSupplier.get().get());
+        }
         vertx.deployVerticle(
                         () -> new RestVerticle(
-                                getRouteDefinitions(),
+                                handlerDefinitions,
                                 behaviorConfigurators,
                                 new FailureHandler(),
                                 configuration.getHttpServerOptions()
@@ -131,6 +150,12 @@ public abstract class VerticleDeployer {
                 new ProducerMetricsNoOpImpl();
         return new ProducerService(
                 producerOptions, producerFactory, producerMetrics, varadhiTopicService, meterRegistry);
+    }
+
+    private boolean shouldEnableAuthZHandlers(ServerConfiguration configuration) {
+        String defaultProviderClass = DefaultAuthorizationProvider.class.getName();
+        return configuration.isAuthorizationEnabled()
+                && defaultProviderClass.equals(configuration.getAuthorization().getProviderClassName());
     }
 
 }

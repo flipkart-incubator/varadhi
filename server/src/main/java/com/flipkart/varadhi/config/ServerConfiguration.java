@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
+import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -27,7 +28,6 @@ public class ServerConfiguration {
     private boolean authorizationEnabled;
 
     private AuthorizationOptions authorization;
-
 
     @NotNull
     private RestOptions restOptions;

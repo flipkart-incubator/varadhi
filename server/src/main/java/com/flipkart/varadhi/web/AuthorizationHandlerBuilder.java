@@ -2,8 +2,8 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.entities.ResourceAction;
-import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

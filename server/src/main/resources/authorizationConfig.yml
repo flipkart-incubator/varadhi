@@ -1,20 +1,16 @@
 ---
-roles:
-  org.admin:
-    - ORG_CREATE
-    - ORG_UPDATE
-    - ORG_GET
-    - ORG_DELETE
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+  configFile: "src/main/resources/zkConfig.yml"
+
+roleDefinitions:
+  project.admin:
+    roleId: project.admin
+    permissions:
+      - PROJECT_CREATE
+      - PROJECT_UPDATE
   team.admin:
-    - TEAM_CREATE
-    - TEAM_GET
-    - TEAM_UPDATE
-roleBindings:
-  flipkart:
-    aayush.gupta:
-      - org.admin
-      - team.admin
-    abc:
-      - team.admin
-    xyz:
-      - org.admin
+    roleId: team.admin
+    permissions:
+      - TEAM_CREATE
+      - TEAM_UPDATE

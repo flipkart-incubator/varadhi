@@ -34,7 +34,7 @@ import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJE
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
 import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
-import static com.flipkart.varadhi.entities.ResourceAction.TOPIC_PRODUCE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;

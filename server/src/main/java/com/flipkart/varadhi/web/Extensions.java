@@ -10,6 +10,7 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
+
 public class Extensions {
 
     public static class RequestBodyExtension {
