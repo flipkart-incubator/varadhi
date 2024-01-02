@@ -1,19 +1,17 @@
 package com.flipkart.varadhi.entities;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
+@EqualsAndHashCode
 public abstract class VersionedEntity implements Validatable {
     public static final int INITIAL_VERSION = 0;
 
-    @NotBlank
     private final String name;
 
     @Setter
-    @Min(0)
     private int version;
 
     protected VersionedEntity(String name, int version) {
