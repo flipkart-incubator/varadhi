@@ -224,6 +224,36 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
+    public List<String> getVaradhiSubscriptionNames(String projectName) {
+        return null;
+    }
+
+    @Override
+    public void createVaradhiSubscription(VaradhiSubscription subscription) {
+
+    }
+
+    @Override
+    public VaradhiSubscription getVaradhiSubscription(String subscriptionName, String projectName) {
+        return null;
+    }
+
+    @Override
+    public int updateVaradhiSubscription(VaradhiSubscription subscription) {
+        return 0;
+    }
+
+    @Override
+    public boolean checkVaradhiSubscriptionExists(String subscriptionName, String projectName) {
+        return false;
+    }
+
+    @Override
+    public void deleteVaradhiSubscription(String subscriptionName, String projectName) {
+
+    }
+
+    @Override
     public List<RoleBindingNode> getRoleBindingNodes() {
         ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
         return zkMetaStore.listChildren(znode).stream().map(this::findRoleBindingNode).toList();

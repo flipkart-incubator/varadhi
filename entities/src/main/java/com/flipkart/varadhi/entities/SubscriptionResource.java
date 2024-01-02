@@ -2,7 +2,9 @@ package com.flipkart.varadhi.entities;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
 
+@Getter
 public class SubscriptionResource extends VersionedEntity {
     @NotBlank
     String project;
@@ -33,5 +35,17 @@ public class SubscriptionResource extends VersionedEntity {
         this.description = description;
         this.grouped = grouped;
         this.endpoint = endpoint;
+    }
+
+    public static SubscriptionResource of(VaradhiSubscription subscription) {
+        return new SubscriptionResource(
+                subscription.getName(),
+                subscription.getVersion(),
+                subscription.getProject(),
+                subscription.getTopic(),
+                subscription.getDescription(),
+                subscription.isGrouped(),
+                subscription.getEndpoint()
+        );
     }
 }
