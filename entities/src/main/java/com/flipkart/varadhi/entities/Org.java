@@ -5,8 +5,8 @@ import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Org name. Check naming constraints.")
-public class Org extends VaradhiResource {
+@ValidateMetaStoreEntity(message = "Invalid Org name. Check naming constraints.")
+public class Org extends MetaStoreEntity {
 
     public Org(String name, int version) {
         super(name, version);

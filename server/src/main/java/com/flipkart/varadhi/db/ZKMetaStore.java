@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.VaradhiResource;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.MetaStoreException;
@@ -41,7 +41,7 @@ public class ZKMetaStore {
         }
     }
 
-    <T extends VaradhiResource> void createZNodeWithData(ZNode znode, T dataObject) {
+    <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
             String response =
@@ -61,7 +61,7 @@ public class ZKMetaStore {
         }
     }
 
-    <T extends VaradhiResource> int updateZNodeWithData(ZNode znode, T dataObject) {
+    <T extends MetaStoreEntity> int updateZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
             Stat stat = zkCurator.setData().withVersion(dataObject.getVersion())
@@ -87,7 +87,7 @@ public class ZKMetaStore {
         }
     }
 
-    <T extends VaradhiResource> T getZNodeDataAsPojo(ZNode znode, Class<T> pojoClazz) {
+    <T extends MetaStoreEntity> T getZNodeDataAsPojo(ZNode znode, Class<T> pojoClazz) {
         byte[] jsonData;
         Stat stat;
         try {

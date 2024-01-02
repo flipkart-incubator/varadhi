@@ -5,8 +5,8 @@ import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
-public class TopicResource extends VaradhiResource {
+@ValidateMetaStoreEntity(message = "Invalid Topic name. Check naming constraints.", max = 64)
+public class TopicResource extends MetaStoreEntity {
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
 
     String project;

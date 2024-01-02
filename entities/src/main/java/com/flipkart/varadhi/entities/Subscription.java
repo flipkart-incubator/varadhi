@@ -2,7 +2,7 @@ package com.flipkart.varadhi.entities;
 
 import jakarta.validation.constraints.NotNull;
 
-public class Subscription extends VaradhiResource {
+public class Subscription extends MetaStoreEntity {
     @NotNull
     private String topic;
     private boolean grouped;

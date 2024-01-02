@@ -5,14 +5,14 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.regex.Pattern;
 
-public class VaradhiResourceValidator implements ConstraintValidator<ValidateVaradhiResource, VaradhiResource> {
+public class MetaStoreEntityValidator implements ConstraintValidator<ValidateMetaStoreEntity, MetaStoreEntity> {
     String regExp;
     int minLength;
     int maxLength;
     boolean allowNullOrBlank;
 
     @Override
-    public void initialize(ValidateVaradhiResource constraintAnnotation) {
+    public void initialize(ValidateMetaStoreEntity constraintAnnotation) {
         this.regExp = constraintAnnotation.regexp();
         this.maxLength = constraintAnnotation.max();
         this.minLength = constraintAnnotation.min();
@@ -20,7 +20,7 @@ public class VaradhiResourceValidator implements ConstraintValidator<ValidateVar
     }
 
     @Override
-    public boolean isValid(VaradhiResource value, ConstraintValidatorContext context) {
+    public boolean isValid(MetaStoreEntity value, ConstraintValidatorContext context) {
         if (null == value.getName() || value.getName().isBlank()) {
             return allowNullOrBlank;
         }

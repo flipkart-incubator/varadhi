@@ -3,10 +3,10 @@ package com.flipkart.varadhi.entities;
 import lombok.Getter;
 
 @Getter
-public class VaradhiResource extends VersionedEntity {
+public class MetaStoreEntity extends VersionedEntity {
     public static final String NAME_SEPARATOR = ".";
 
-    protected VaradhiResource(String name, int version) {
+    protected MetaStoreEntity(String name, int version) {
         super(name, version);
     }
 }

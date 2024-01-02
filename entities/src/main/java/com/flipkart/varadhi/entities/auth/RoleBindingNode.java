@@ -2,8 +2,8 @@ package com.flipkart.varadhi.entities.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.flipkart.varadhi.entities.ValidateVaradhiResource;
-import com.flipkart.varadhi.entities.VaradhiResource;
+import com.flipkart.varadhi.entities.ValidateMetaStoreEntity;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -15,8 +15,8 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Role Binding name. Check naming constraints.")
-public class RoleBindingNode extends VaradhiResource {
+@ValidateMetaStoreEntity(message = "Invalid Role Binding name. Check naming constraints.")
+public class RoleBindingNode extends MetaStoreEntity {
     @NotBlank
     private final String resourceId;
 
