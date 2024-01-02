@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode
-public class VaradhiResource implements BaseResource {
+public class VaradhiResource implements Validatable {
 
     public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";
