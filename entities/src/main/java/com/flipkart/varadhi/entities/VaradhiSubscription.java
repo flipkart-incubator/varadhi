@@ -5,8 +5,8 @@ import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
-public class VaradhiSubscription extends VaradhiResource {
+@ValidateMetaStoreEntity(message = "Invalid Subscription name. Check naming constraints.", max = 64)
+public class VaradhiSubscription extends MetaStoreEntity {
 
     String project;
     String topic;
