@@ -4,16 +4,25 @@ import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.metrices.CustomMetrics;
 import com.flipkart.varadhi.utils.HostUtils;
+import io.micrometer.core.instrument.Tag;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.spi.observability.HttpRequest;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 public class Server {
@@ -43,10 +52,27 @@ public class Server {
                         .setMicrometerRegistry(services.getMetricsRegistry())
                         .setRegistryName("default")
                         .setJvmMetricsEnabled(true)
+                        .setFactory(options -> new CustomMetrics(services.getMetricsRegistry()))
+                        .setClientRequestTagsProvider(httpRequest -> getCustomHttpHeaders(httpRequest))
                         .setEnabled(true));
         Vertx vertx = Vertx.vertx(vertxOptions);
         log.debug("Created Vertex");
         return vertx;
+    }
+
+    private static List<Tag> getCustomHttpHeaders(HttpRequest httpRequest) {
+
+        MultiMap multiMap = httpRequest.headers();
+        String topicName = multiMap.get(Constants.Tags.TAG_NAME_TOPIC);
+        Tag topicTag = Tag.of(Constants.Tags.TAG_NAME_TOPIC, Optional.ofNullable(topicName).orElse(StringUtils.EMPTY));
+
+        String projectName = multiMap.get(Constants.Tags.TAG_NAME_PROJECT);
+        Tag projectTag = Tag.of(Constants.Tags.TAG_NAME_PROJECT, Optional.ofNullable(projectName).orElse(StringUtils.EMPTY));
+
+        String regionName = multiMap.get(Constants.Tags.TAG_NAME_REGION);
+        Tag regionTag = Tag.of(Constants.Tags.TAG_NAME_REGION, Optional.ofNullable(regionName).orElse(StringUtils.EMPTY));
+
+        return Arrays.asList(topicTag, projectTag, regionTag);
     }
 
     private static void deployVerticle(
