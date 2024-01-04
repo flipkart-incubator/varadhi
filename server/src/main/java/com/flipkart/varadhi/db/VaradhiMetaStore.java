@@ -173,12 +173,6 @@ public class VaradhiMetaStore implements MetaStore {
     }
 
     @Override
-    public List<String> listVaradhiTopics(String projectName) {
-        ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
-        return zkMetaStore.listChildren(znode);
-    }
-
-    @Override
     public void createVaradhiTopic(VaradhiTopic varadhiTopic) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopic.getName());
         zkMetaStore.createZNodeWithData(znode, varadhiTopic);

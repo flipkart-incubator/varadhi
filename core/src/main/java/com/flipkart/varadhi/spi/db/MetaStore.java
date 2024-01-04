@@ -41,8 +41,6 @@ public interface MetaStore {
 
     List<String> getVaradhiTopicNames(String projectName);
 
-    List<String> listVaradhiTopics(String projectName);
-
     void createVaradhiTopic(VaradhiTopic varadhiTopicName);
 
     VaradhiTopic getVaradhiTopic(String varadhiTopicName);

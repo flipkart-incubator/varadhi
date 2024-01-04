@@ -140,7 +140,7 @@ public class TopicHandlers implements RouteProvider {
 
     public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        List<String> varadhiTopics = metaStore.listVaradhiTopics(projectName);
+        List<String> varadhiTopics = metaStore.getVaradhiTopicNames(projectName);
 
         String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
         List<String> topicResourceNames = new ArrayList<>();

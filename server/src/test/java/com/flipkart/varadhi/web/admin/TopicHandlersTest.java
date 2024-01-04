@@ -91,7 +91,7 @@ public class TopicHandlersTest extends WebTestBase {
         List<String> listOfTopics = new ArrayList<>();
         listOfTopics.add(t1.getName());
 
-        doReturn(listOfTopics).when(varadhiMetaStore).listVaradhiTopics(project.getName());
+        doReturn(listOfTopics).when(varadhiMetaStore).getVaradhiTopicNames(project.getName());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTopicsUrl(project));
         List<String> t1Created = sendRequestWithoutBody(request, List.class);
