@@ -12,7 +12,7 @@ import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VaradhiResource.NAME_SEPARATOR;
 
 public class AuthZService {
     private final MetaStore metaStore;

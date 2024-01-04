@@ -10,6 +10,7 @@ public class VaradhiResource implements BaseResource {
 
     public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";
+    public static final String NAME_SEPARATOR_REGEX = "\\.";
 
     private final String name;
 

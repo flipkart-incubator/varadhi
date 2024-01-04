@@ -46,9 +46,9 @@ public class VaradhiTopic extends AbstractTopic {
 
     public TopicResource getTopicResource(String projectName) {
         return new TopicResource(
-                this.getName().split("\\.")[1],
+                this.getName().split(NAME_SEPARATOR_REGEX)[1],
                 this.getVersion(),
-                projectName,
+                this.getName().split(NAME_SEPARATOR_REGEX)[0],
                 this.isGrouped(),
                 CapacityPolicy.getDefault()
         );
