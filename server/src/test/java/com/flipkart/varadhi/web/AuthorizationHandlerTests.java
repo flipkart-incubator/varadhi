@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.config.AuthorizationOptions;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.entities.ResourceAction;
-import com.flipkart.varadhi.entities.UserContext;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.core.Future;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 
@@ -77,7 +78,7 @@ public class AuthorizationHandlerTests {
             } else if (List.of("alice", "bob", "intern").contains(userContext.getSubject()) &&
                     action.toString().endsWith("get")) {
                 return Future.succeededFuture(true);
-            } else if (List.of("doom").contains(userContext.getSubject())) {
+            } else if (Objects.equals("doom", userContext.getSubject())) {
                 return Future.failedFuture(new RuntimeException("it was destined to be doomed"));
             } else {
                 return Future.succeededFuture(false);

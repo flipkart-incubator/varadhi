@@ -16,5 +16,8 @@ public class RestOptions {
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;
     private int headerNameSizeMax = HEADER_NAME_SIZE_MAX;
     private int headerValueSizeMax = HEADER_VALUE_SIZE_MAX;
+    private String defaultOrg = DEFAULT_ORG;
+    private String defaultTeam = DEFAULT_TEAM;
+    private String defaultProject = DEFAULT_PROJECT;
 
 }

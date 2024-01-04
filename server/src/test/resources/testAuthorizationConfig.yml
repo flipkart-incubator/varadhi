@@ -1,0 +1,70 @@
+---
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.utils.MockMetaStoreProvider"
+  configFile: ""
+roleDefinitions:
+  org.admin:
+    roleId: org.admin
+    permissions:
+      - ORG_CREATE
+      - ORG_UPDATE
+      - ORG_GET
+      - ORG_DELETE
+      - TEAM_CREATE
+      - TEAM_GET
+      - TEAM_UPDATE
+      - PROJECT_GET
+      - TOPIC_GET
+      - SUBSCRIPTION_GET
+  team.admin:
+    roleId: team.admin
+    permissions:
+      - TEAM_CREATE
+      - TEAM_GET
+      - TEAM_UPDATE
+      - PROJECT_GET
+      - TOPIC_GET
+      - SUBSCRIPTION_GET
+  team.reader:
+    roleId: team.reader
+    permissions:
+      - TEAM_GET
+      - PROJECT_GET
+      - TOPIC_GET
+      - SUBSCRIPTION_GET
+  project.read:
+    roleId: project.read
+    permissions:
+      - PROJECT_GET
+      - TOPIC_GET
+      - SUBSCRIPTION_GET
+  project.writer:
+    roleId: project.writer
+    permissions:
+      - PROJECT_GET
+      - PROJECT_UPDATE
+      - PROJECT_CREATE
+      - TOPIC_GET
+      - SUBSCRIPTION_GET
+  topic.reader:
+    roleId: topic.reader
+    permissions:
+      - TOPIC_GET
+  topic.admin:
+    roleId: topic.admin
+    permissions:
+      - TOPIC_GET
+      - TOPIC_CREATE
+      - TOPIC_UPDATE
+      - TOPIC_DELETE
+  subscription.reader:
+    roleId: subscription.reader
+    permissions:
+      - SUBSCRIPTION_GET
+  subscription.admin:
+    roleId: subscription.admin
+    permissions:
+      - SUBSCRIPTION_GET
+      - SUBSCRIPTION_CREATE
+      - SUBSCRIPTION_UPDATE
+      - SUBSCRIPTION_DELETE

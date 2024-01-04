@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.utils.LoaderUtils;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -28,6 +29,8 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
 @Slf4j
 @Getter
@@ -74,19 +77,6 @@ public class CoreServices {
         provider.init(messagingStackOptions, JsonMapper.getMapper());
         return provider;
     }
-
-    private <T> T loadClass(String className) {
-        try {
-            if (null != className && !className.isBlank()) {
-                Class<T> pluginClass = (Class<T>) Class.forName(className);
-                return pluginClass.getDeclaredConstructor().newInstance();
-            }
-            throw new InvalidConfigException("No class provided.");
-        } catch (Exception e) {
-            throw new InvalidConfigException(String.format("Fail to load class %s.", className), e);
-        }
-    }
-
 
     private ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
         Resource resource = Resource.getDefault()

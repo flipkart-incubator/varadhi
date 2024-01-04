@@ -1,8 +1,8 @@
 restOptions:
-  deployedRegion: "default"
-  defaultOrg: "default"
-  defaultTeam: "public"
-  defaultProject: "public"
+  deployedRegion: "test"
+  defaultOrg: "test"
+  defaultTeam: "test"
+  defaultProject: "test"
 
 producerOptions:
   producerCacheBuilderSpec: ""
@@ -28,11 +28,11 @@ authentication:
       issuer: "http://localhost:9090/default"
       ignoreExpiration: true
 
-authorizationEnabled: true
+authorizationEnabled: false
 
 authorization:
   superUsers: [ "thanos" ]
-  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  providerClassName: "com.flipkart.varadhi.authz.DefaultAuthorizationProvider"
   configFile: "src/main/resources/authorizationConfig.yml"
 
 messagingStackOptions:

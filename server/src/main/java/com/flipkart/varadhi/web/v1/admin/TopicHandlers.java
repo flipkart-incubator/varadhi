@@ -26,6 +26,7 @@ import java.util.ArrayList;
 
 import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.ResourceAction.*;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;

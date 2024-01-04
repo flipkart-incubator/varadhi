@@ -1,6 +1,16 @@
 plugins {
     id "com.flipkart.varadhi.java-published-library-conventions"
+    id "java-test-fixtures"
 }
+
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) {
+    skip()
+}
+
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) {
+    skip()
+}
+
 dependencies {
     api("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")

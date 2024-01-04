@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.entities.ResourceAction;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
 
 public record PermissionAuthorization(ResourceAction action, ResourceName resource) {
 

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
-import com.flipkart.varadhi.config.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
