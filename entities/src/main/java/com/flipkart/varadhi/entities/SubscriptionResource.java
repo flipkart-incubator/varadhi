@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class SubscriptionResource extends VersionedEntity {
+@ValidateResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
+public class SubscriptionResource extends VersionedEntity implements Validatable {
     @NotBlank
     String project;
 
