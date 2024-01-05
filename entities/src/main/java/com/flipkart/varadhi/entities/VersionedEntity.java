@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode
-public abstract class VersionedEntity implements Validatable {
+public abstract class VersionedEntity {
     public static final int INITIAL_VERSION = 0;
 
     private final String name;

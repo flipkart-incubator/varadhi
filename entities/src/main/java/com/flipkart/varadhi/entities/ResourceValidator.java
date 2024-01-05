@@ -5,14 +5,14 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.regex.Pattern;
 
-public class MetaStoreEntityValidator implements ConstraintValidator<ValidateMetaStoreEntity, MetaStoreEntity> {
+public class ResourceValidator implements ConstraintValidator<ValidateResource, VersionedEntity> {
     String regExp;
     int minLength;
     int maxLength;
     boolean allowNullOrBlank;
 
     @Override
-    public void initialize(ValidateMetaStoreEntity constraintAnnotation) {
+    public void initialize(ValidateResource constraintAnnotation) {
         this.regExp = constraintAnnotation.regexp();
         this.maxLength = constraintAnnotation.max();
         this.minLength = constraintAnnotation.min();
@@ -20,7 +20,7 @@ public class MetaStoreEntityValidator implements ConstraintValidator<ValidateMet
     }
 
     @Override
-    public boolean isValid(MetaStoreEntity value, ConstraintValidatorContext context) {
+    public boolean isValid(VersionedEntity value, ConstraintValidatorContext context) {
         if (null == value.getName() || value.getName().isBlank()) {
             return allowNullOrBlank;
         }

@@ -1,13 +1,15 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.ValidateMetaStoreEntity;
+import com.flipkart.varadhi.entities.Validatable;
+import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.VersionedEntity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class ValidateMetaStoreEntityTest {
+public class ValidateResourceTest {
 
     @Test
     public void testName() {
@@ -69,29 +71,29 @@ public class ValidateMetaStoreEntityTest {
 
     }
 
-    @ValidateMetaStoreEntity
-    public static class TypeDefault extends MetaStoreEntity {
+    @ValidateResource
+    public static class TypeDefault extends VersionedEntity implements Validatable {
         public TypeDefault(String name, int version) {
             super(name, version);
         }
     }
 
-    @ValidateMetaStoreEntity(allowNullOrBlank = true, min = -1, max = -1, regexp = "")
-    public static class Type2 extends MetaStoreEntity {
+    @ValidateResource(allowNullOrBlank = true, min = -1, max = -1, regexp = "")
+    public static class Type2 extends VersionedEntity implements Validatable {
         public Type2(String name, int version) {
             super(name, version);
         }
     }
 
-    @ValidateMetaStoreEntity(message = "Custom message")
-    public static class TypeMessage extends MetaStoreEntity {
+    @ValidateResource(message = "Custom message")
+    public static class TypeMessage extends VersionedEntity implements Validatable {
         public TypeMessage(String name, int version) {
             super(name, version);
         }
     }
 
-    @ValidateMetaStoreEntity(max = 10)
-    public static class TypeMax extends MetaStoreEntity {
+    @ValidateResource(max = 10)
+    public static class TypeMax extends VersionedEntity implements Validatable {
         public TypeMax(String name, int version) {
             super(name, version);
         }
