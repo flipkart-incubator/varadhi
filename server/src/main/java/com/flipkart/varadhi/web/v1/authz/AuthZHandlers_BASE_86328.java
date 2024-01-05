@@ -17,12 +17,11 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod(Extensions.RoutingContextExtension.class)
 public class AuthZHandlers implements RouteProvider {
-
-    public static final String AUTH_RESOURCE_NAME_SEPARATOR = ":";
 
     public static final String REQUEST_PATH_PARAM_RESOURCE = "resource";
     public static final String REQUEST_PATH_PARAM_RESOURCE_TYPE = "resource_type";
@@ -37,13 +36,14 @@ public class AuthZHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/authz/debug",
                 List.of(
-                        RouteDefinition.get("").blocking().authenticated()
+                        RouteDefinition.get("")
+                                .authenticated().blocking()
                                 .build(this::getAllRoleBindingNodes),
                         RouteDefinition.get("/:resource_type/:resource")
-                                .blocking().authenticated()
-                                .build(this::getRoleBindingNode),
+                                .authenticated().blocking()
+                                .build(this::findRoleBindingNode),
                         RouteDefinition.delete("/:resource_type/:resource")
-                                .blocking().authenticated()
+                                .authenticated().blocking()
                                 .build(this::deleteRoleBindingNode)
                 )
         ).get();
@@ -54,28 +54,28 @@ public class AuthZHandlers implements RouteProvider {
                 "/v1",
                 List.of(
                         RouteDefinition.get("/orgs/:org/policy")
-                                .blocking().authenticated()
+                                .authenticated().blocking()
                                 .build(this.getIAMPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.put("/orgs/:org/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().authenticated().blocking()
                                 .build(this.setIAMPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.get("/orgs/:org/teams/:team/policy")
-                                .blocking().authenticated()
+                                .authenticated().blocking()
                                 .build(this.getIAMPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.put("/orgs/:org/teams/:team/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().authenticated().blocking()
                                 .build(this.setIAMPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.get("/projects/:project/policy")
-                                .blocking().authenticated()
+                                .authenticated().blocking()
                                 .build(this.getIAMPolicyHandler(ResourceType.PROJECT)),
                         RouteDefinition.put("/projects/:project/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().authenticated().blocking()
                                 .build(this.setIAMPolicyHandler(ResourceType.PROJECT)),
                         RouteDefinition.get("/projects/:project/topics/:topic/policy")
-                                .blocking().authenticated()
+                                .authenticated().blocking()
                                 .build(this.getIAMPolicyHandler(ResourceType.TOPIC)),
                         RouteDefinition.put("/projects/:project/topics/:topic/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().authenticated().blocking()
                                 .build(this.setIAMPolicyHandler(ResourceType.TOPIC))
                 )
         ).get();
@@ -104,7 +104,7 @@ public class AuthZHandlers implements RouteProvider {
     public Handler<RoutingContext> setIAMPolicyHandler(ResourceType resourceType) {
         return (routingContext) -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
-            IAMPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IAMPolicyRequest.class);
+            IAMPolicyRequest policyForSubject = routingContext.body().asPojo(IAMPolicyRequest.class);
             RoleBindingNode updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
             routingContext.endApiWithResponse(updated);
         };
@@ -121,10 +121,10 @@ public class AuthZHandlers implements RouteProvider {
         routingContext.endApiWithResponse(roleBindings);
     }
 
-    public void getRoleBindingNode(RoutingContext routingContext) {
+    public void findRoleBindingNode(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        RoleBindingNode node = authZService.getRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
+        RoleBindingNode node = authZService.findRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
         routingContext.endApiWithResponse(node);
     }
 
@@ -138,11 +138,11 @@ public class AuthZHandlers implements RouteProvider {
     private String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
         return switch (resourceType) {
             case ORG -> ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-            case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
+            case TEAM -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
                     ctx.pathParam(REQUEST_PATH_PARAM_TEAM)
             );
             case PROJECT -> ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-            case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
+            case TOPIC -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
                     ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
             );
             case SUBSCRIPTION -> ctx.pathParam("sub");

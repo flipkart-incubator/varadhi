@@ -8,13 +8,13 @@ import java.util.List;
 public interface RoleBindingMetaStore {
     List<RoleBindingNode> getRoleBindingNodes();
 
-    RoleBindingNode findRoleBindingNode(String resourceIdWithType);
+    RoleBindingNode getRoleBindingNode(String resourceIdWithType);
 
     RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId);
 
     void createRoleBindingNode(RoleBindingNode node);
 
-    boolean isRoleBindingPresent(ResourceType resourceType, String resourceId);
+    boolean isRoleBindingNodePresent(ResourceType resourceType, String resourceId);
 
     int updateRoleBindingNode(RoleBindingNode node);
 

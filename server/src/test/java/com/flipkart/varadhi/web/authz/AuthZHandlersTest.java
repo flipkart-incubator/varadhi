@@ -45,7 +45,7 @@ public class AuthZHandlersTest extends WebTestBase {
         authZHandlers = new AuthZHandlers(authZService);
 
         Route routeGetNode =
-                router.get(AUTHZ_DEBUG_PATH).handler(wrapBlocking(authZHandlers::findRoleBindingNode));
+                router.get(AUTHZ_DEBUG_PATH).handler(wrapBlocking(authZHandlers::getRoleBindingNode));
         setupFailureHandler(routeGetNode);
 
         Route routeGetAllNodes =
@@ -98,15 +98,15 @@ public class AuthZHandlersTest extends WebTestBase {
                 HttpMethod.GET,
                 getRoleBindingNodeUrl(expected.getResourceType(), expected.getResourceId())
         );
-        doReturn(expected).when(authZService).findRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+        doReturn(expected).when(authZService).getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
 
         RoleBindingNode response = sendRequestWithoutBody(request, RoleBindingNode.class);
         assertEquals(expected, response);
-        verify(authZService, times(1)).findRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+        verify(authZService, times(1)).getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
 
         String notFoundError = String.format("RoleBinding on resource(%s) not found.", expected.getResourceId());
         doThrow(new ResourceNotFoundException(notFoundError)).when(authZService)
-                .findRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+                .getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
         ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
         assertEquals(notFoundError, errResponse.reason());
     }

@@ -249,11 +249,11 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     @Override
     public List<RoleBindingNode> getRoleBindingNodes() {
         ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
-        return zkMetaStore.listChildren(znode).stream().map(this::findRoleBindingNode).toList();
+        return zkMetaStore.listChildren(znode).stream().map(this::getRoleBindingNode).toList();
     }
 
     @Override
-    public RoleBindingNode findRoleBindingNode(String resourceIdWithType) {
+    public RoleBindingNode getRoleBindingNode(String resourceIdWithType) {
         ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceIdWithType);
         return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
     }
@@ -271,7 +271,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public boolean isRoleBindingPresent(ResourceType resourceType, String resourceId) {
+    public boolean isRoleBindingNodePresent(ResourceType resourceType, String resourceId) {
         ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
         return zkMetaStore.zkPathExist(znode);
     }

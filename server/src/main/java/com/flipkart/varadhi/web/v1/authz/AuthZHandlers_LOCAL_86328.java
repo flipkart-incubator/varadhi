@@ -41,7 +41,7 @@ public class AuthZHandlers implements RouteProvider {
                                 .build(this::getAllRoleBindingNodes),
                         RouteDefinition.get("/:resource_type/:resource")
                                 .blocking().authenticated()
-                                .build(this::getRoleBindingNode),
+                                .build(this::findRoleBindingNode),
                         RouteDefinition.delete("/:resource_type/:resource")
                                 .blocking().authenticated()
                                 .build(this::deleteRoleBindingNode)
@@ -121,10 +121,10 @@ public class AuthZHandlers implements RouteProvider {
         routingContext.endApiWithResponse(roleBindings);
     }
 
-    public void getRoleBindingNode(RoutingContext routingContext) {
+    public void findRoleBindingNode(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        RoleBindingNode node = authZService.getRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
+        RoleBindingNode node = authZService.findRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
         routingContext.endApiWithResponse(node);
     }
 

@@ -24,11 +24,8 @@ public class AuthZService {
 
     public RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
-            throw new IllegalArgumentException(String.format(
-                    "Invalid resource id(%s) for resource type(%s).",
-                    resourceId,
-                    resourceType
-            ));
+            throw new ResourceNotFoundException(
+                    "RoleBinding on resource (%s:%s) not found.".formatted(resourceType, resourceId));
         }
         RoleBindingNode node = new RoleBindingNode(resourceId, resourceType, new HashMap<>(), 0);
         roleBindingMetaStore.createRoleBindingNode(node);
@@ -39,12 +36,12 @@ public class AuthZService {
         return roleBindingMetaStore.getRoleBindingNodes();
     }
 
-    public RoleBindingNode findRoleBindingNode(ResourceType resourceType, String resourceId) {
+    public RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId) {
         return roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
     }
 
     public RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(node.getResourceType(), node.getResourceId());
+        boolean exists = roleBindingMetaStore.isRoleBindingNodePresent(node.getResourceType(), node.getResourceId());
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
                     "RoleBinding(%s) not found.",
@@ -76,7 +73,7 @@ public class AuthZService {
     }
 
     public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(resourceType, resourceId);
+        boolean exists = roleBindingMetaStore.isRoleBindingNodePresent(resourceType, resourceId);
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
                     "RoleBinding on resource(%s) not found.",
@@ -87,7 +84,7 @@ public class AuthZService {
     }
 
     private RoleBindingNode createOrGetRoleBindingNode(String resourceId, ResourceType resourceType) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(resourceType, resourceId);
+        boolean exists = roleBindingMetaStore.isRoleBindingNodePresent(resourceType, resourceId);
         if (!exists) {
             return createRoleBindingNode(resourceId, resourceType);
         }

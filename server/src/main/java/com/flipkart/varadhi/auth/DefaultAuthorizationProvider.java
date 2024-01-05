@@ -127,10 +127,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private boolean isAuthorizedInternal(
             String subject, ResourceAction action, ResourceContext resourceContext
     ) {
-        log.debug(
-                "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
-                resourceContext.policyPath()
-        );
         return getRolesForSubject(subject, resourceContext)
                 .stream().anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
@@ -139,15 +135,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         RoleBindingNode node =
                 getAuthZService().getIAMPolicy(resourceContext.resourceType(), resourceContext.resourceId());
         if (node == null) {
-            log.error("No roles on resource for subject {}", subject);
+            log.debug("No roles on resource for subject {}", subject);
             return Set.of();
         }
-        log.info("Fetched roles for subject [{}] and resource [{}]", subject, resourceContext.policyPath());
         return node.getRolesAssignment().getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
-        log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         boolean matching =
                 configuration.getRoleDefinitions().getOrDefault(roleId, EMPTY_ROLE).getPermissions().contains(action);
         if (matching) {

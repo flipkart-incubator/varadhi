@@ -135,20 +135,20 @@ public class AuthZServiceTest {
         String resourceId = org1.getName();
         RoleBindingNode expect = new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(), 0);
         authZService.createRoleBindingNode(resourceId, ResourceType.ORG);
-        RoleBindingNode get = authZService.findRoleBindingNode(ResourceType.ORG, resourceId);
+        RoleBindingNode get = authZService.getRoleBindingNode(ResourceType.ORG, resourceId);
         assertEquals(expect, get);
 
         teamService.createTeam(org1team1);
         resourceId = org1.getName() + ":" + org1team1.getName();
         expect = new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(), 0);
         authZService.createRoleBindingNode(resourceId, ResourceType.TEAM);
-        get = authZService.findRoleBindingNode(ResourceType.TEAM, resourceId);
+        get = authZService.getRoleBindingNode(ResourceType.TEAM, resourceId);
         assertEquals(expect, get);
 
         // non existent
         var rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.findRoleBindingNode(ResourceType.ORG, org2.getName())
+                () -> authZService.getRoleBindingNode(ResourceType.ORG, org2.getName())
         );
         assertEquals(String.format("RoleBinding(%s) not found.", org2.getName()), rne.getMessage());
     }
@@ -222,13 +222,13 @@ public class AuthZServiceTest {
         orgService.createOrg(org1);
         RoleBindingNode expect = new RoleBindingNode(org1.getName(), ResourceType.ORG, Map.of(), 0);
         authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG);
-        RoleBindingNode got = authZService.findRoleBindingNode(ResourceType.ORG, org1.getName());
+        RoleBindingNode got = authZService.getRoleBindingNode(ResourceType.ORG, org1.getName());
         assertEquals(expect, got);
 
         authZService.deleteRoleBindingNode(ResourceType.ORG, org1.getName());
         var rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.findRoleBindingNode(ResourceType.ORG, org1.getName())
+                () -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName())
         );
         assertEquals(String.format("RoleBinding(%s) not found.", org1.getName()), rne.getMessage());
         assertDoesNotThrow(() -> authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG));
@@ -252,7 +252,7 @@ public class AuthZServiceTest {
         // since node is not created, should throw exception on get
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> authZService.findRoleBindingNode(ResourceType.ORG, org1.getName())
+                () -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName())
         );
 
         // now we update the role assignment
@@ -260,7 +260,7 @@ public class AuthZServiceTest {
         assertEquals(org1NodeExpected, gotNode);
 
         // now we should be able to get the node
-        assertDoesNotThrow(() -> authZService.findRoleBindingNode(ResourceType.ORG, org1.getName()));
+        assertDoesNotThrow(() -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName()));
 
         // update existing node
         org1NodeExpected.setRoleAssignment("user2", Set.of("role1", "role2"));
@@ -297,7 +297,7 @@ public class AuthZServiceTest {
         assertEquals(org1team1NodeExpected, gotNode);
 
         // should not modify org node
-        RoleBindingNode org1Node = authZService.findRoleBindingNode(ResourceType.ORG, org1.getName());
+        RoleBindingNode org1Node = authZService.getRoleBindingNode(ResourceType.ORG, org1.getName());
         assertNotEquals(org1team1NodeExpected, org1Node);
 
         // try to update node with invalid resourceId

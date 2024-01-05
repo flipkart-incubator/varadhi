@@ -40,8 +40,16 @@ public class AuthZHandlers implements RouteProvider {
                         RouteDefinition.get("").blocking().authenticated()
                                 .build(this::getAllRoleBindingNodes),
                         RouteDefinition.get("/:resource_type/:resource")
+<<<<<<< HEAD
                                 .blocking().authenticated()
+                                .build(this::findRoleBindingNode),
+||||||| parent of fafb657 (address prev PR comments)
+                                .authenticated().blocking()
+                                .build(this::findRoleBindingNode),
+=======
+                                .authenticated().blocking()
                                 .build(this::getRoleBindingNode),
+>>>>>>> fafb657 (address prev PR comments)
                         RouteDefinition.delete("/:resource_type/:resource")
                                 .blocking().authenticated()
                                 .build(this::deleteRoleBindingNode)
