@@ -12,10 +12,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetrics;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.AuthZService;
-import com.flipkart.varadhi.services.OrgService;
-import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
@@ -27,6 +24,7 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
+import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
@@ -51,6 +49,7 @@ public abstract class VerticleDeployer {
     protected final ProjectService projectService;
     private final TopicHandlers topicHandlers;
     private final ProduceHandlers produceHandlers;
+    private final SubscriptionHandlers subscriptionHandlers;
     private final HealthCheckHandler healthCheckHandler;
     private final Supplier<AuthZHandlers> authZHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
@@ -86,6 +85,7 @@ public abstract class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
+        this.subscriptionHandlers = new SubscriptionHandlers(new VaradhiSubscriptionService(metaStore));
         this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
 
         this.healthCheckHandler = new HealthCheckHandler();
@@ -109,6 +109,7 @@ public abstract class VerticleDeployer {
     public List<RouteDefinition> getRouteDefinitions() {
         return Stream.of(
                         topicHandlers.get(),
+                        subscriptionHandlers.get(),
                         produceHandlers.get(),
                         healthCheckHandler.get()
                 )
