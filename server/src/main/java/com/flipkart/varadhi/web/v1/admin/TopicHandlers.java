@@ -113,6 +113,7 @@ public class TopicHandlers implements RouteProvider {
 
 
     public void delete(RoutingContext ctx) {
+        // TODO: ensure all subscriptions are deleted for the topic
         ctx.todo();
     }
 }
