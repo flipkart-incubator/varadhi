@@ -21,7 +21,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     @NotNull
     Endpoint endpoint;
 
-    protected SubscriptionResource(
+    public SubscriptionResource(
             String name,
             int version,
             String project,
@@ -36,17 +36,5 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.description = description;
         this.grouped = grouped;
         this.endpoint = endpoint;
-    }
-
-    public static SubscriptionResource of(VaradhiSubscription subscription) {
-        return new SubscriptionResource(
-                subscription.getName(),
-                subscription.getVersion(),
-                subscription.getProject(),
-                subscription.getTopic(),
-                subscription.getDescription(),
-                subscription.isGrouped(),
-                subscription.getEndpoint()
-        );
     }
 }

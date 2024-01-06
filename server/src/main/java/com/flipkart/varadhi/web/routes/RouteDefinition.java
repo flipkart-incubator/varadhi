@@ -8,7 +8,6 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -49,9 +48,11 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
         private boolean authenticated;
         private boolean hasBody;
         private boolean blocking;
+        private PermissionAuthorization requiredAuthorization;
 
-        public Builder authenticated() {
+        public Builder authenticatedWith(PermissionAuthorization requiredAuthorization) {
             this.authenticated = true;
+            this.requiredAuthorization = requiredAuthorization;
             return this;
         }
 
@@ -81,7 +82,7 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
                     new LinkedHashSet<>(),
                     reqHandler,
                     blocking,
-                    Optional.empty()
+                    Optional.ofNullable(requiredAuthorization)
             );
         }
     }

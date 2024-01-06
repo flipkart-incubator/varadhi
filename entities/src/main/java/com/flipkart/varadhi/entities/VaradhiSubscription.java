@@ -6,7 +6,6 @@ import lombok.Value;
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class VaradhiSubscription extends MetaStoreEntity {
-
     String project;
     String topic;
     String description;
