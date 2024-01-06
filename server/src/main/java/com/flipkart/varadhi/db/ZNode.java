@@ -11,6 +11,7 @@ public class ZNode {
     public static final ZNodeKind VARADHI_TOPIC = new ZNodeKind("VaradhiTopic");
     public static final ZNodeKind TOPIC_RESOURCE = new ZNodeKind("TopicResource");
     public static final ZNodeKind ROLE_BINDING = new ZNodeKind("RoleBinding");
+    public static final ZNodeKind VARADHI_SUBSCRIPTION = new ZNodeKind("VaradhiSubscription");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";
@@ -64,6 +65,10 @@ public class ZNode {
 
     public static ZNode OfIAMPolicy(ResourceType resourceType, String resourceId) {
         return new ZNode(ROLE_BINDING, resourceType.toString(), resourceId);
+    }
+
+    public static ZNode OfVaradhiSubscription(String projectName, String subscriptionName) {
+        return new ZNode(VARADHI_SUBSCRIPTION, projectName, subscriptionName);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {

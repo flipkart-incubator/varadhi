@@ -30,6 +30,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
         ensureEntityTypePathExists(PROJECT);
         ensureEntityTypePathExists(TOPIC_RESOURCE);
         ensureEntityTypePathExists(VARADHI_TOPIC);
+        ensureEntityTypePathExists(VARADHI_SUBSCRIPTION);
         ensureEntityTypePathExists(ROLE_BINDING);
     }
 
@@ -225,32 +226,43 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
 
     @Override
     public List<String> getVaradhiSubscriptionNames(String projectName) {
-        return null;
+        String projectPrefix = projectName + RESOURCE_NAME_SEPARATOR;
+        ZNode znode = ZNode.OfEntityType(VARADHI_SUBSCRIPTION);
+        return zkMetaStore.listChildren(znode)
+                .stream()
+                .filter(name -> name.contains(projectPrefix))
+                .map(name -> name.split(RESOURCE_NAME_SEPARATOR)[1])
+                .collect(Collectors.toList());
     }
 
     @Override
     public void createVaradhiSubscription(VaradhiSubscription subscription) {
-
+        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getProject(), subscription.getName());
+        zkMetaStore.createZNodeWithData(znode, subscription);
     }
 
     @Override
     public VaradhiSubscription getVaradhiSubscription(String subscriptionName, String projectName) {
-        return null;
+        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+        return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiSubscription.class);
     }
 
     @Override
     public int updateVaradhiSubscription(VaradhiSubscription subscription) {
-        return 0;
+        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getProject(), subscription.getName());
+        return zkMetaStore.updateZNodeWithData(znode, subscription);
     }
 
     @Override
     public boolean checkVaradhiSubscriptionExists(String subscriptionName, String projectName) {
-        return false;
+        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+        return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void deleteVaradhiSubscription(String subscriptionName, String projectName) {
-
+        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+        zkMetaStore.deleteZNode(znode);
     }
 
     @Override
