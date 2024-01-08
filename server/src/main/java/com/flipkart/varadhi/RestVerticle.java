@@ -6,7 +6,10 @@ import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
-import io.vertx.core.*;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.Route;
@@ -66,7 +69,7 @@ public class RestVerticle extends AbstractVerticle {
             if (def.blockingEndHandler()) {
                 route.handler(wrapBlockingExecution(vertx, def.endReqHandler()));
             } else {
-                route.handler(pushMetrics(vertx, def.endReqHandler()));
+                route.handler(def.endReqHandler());
             }
 
             route.failureHandler(failureHandler);
@@ -114,27 +117,5 @@ public class RestVerticle extends AbstractVerticle {
             log.info("HttpServer Stopped.");
             stopPromise.complete();
         });
-    }
-
-    public Handler<RoutingContext> pushMetrics(Vertx vertx, Handler<RoutingContext> routingContextHandler) {
-        return ctx ->
-                //Push Request Metrics here
-                vertx.executeBlocking(future -> {
-                    MultiMap multiMap = ctx.request().headers();
-                    //Collect Tags here & Push
-                    routingContextHandler.handle(ctx);
-                    future.complete();
-                }, resultHandler -> {
-                    // Push Here metrics for response code clubbing
-                    if (resultHandler.succeeded()) {
-                        if (null == ctx.getApiResponse()) {
-                            ctx.endRequest();
-                        } else {
-                            ctx.endRequestWithResponse(ctx.getApiResponse());
-                        }
-                    } else {
-                        ctx.endRequestWithException(resultHandler.cause());
-                    }
-                });
     }
 }
