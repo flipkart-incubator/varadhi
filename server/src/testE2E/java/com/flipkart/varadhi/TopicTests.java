@@ -66,8 +66,8 @@ public class TopicTests extends E2EBase {
                         ZNode.getResourceFQDN(topic.getProject(), topic.getName())
                 );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
-        makeGetRequest(getTopicsUri(o1t1Project1)+"/"+topicName, TopicResource.class, 200);
-        makeDeleteRequest(getTopicsUri(o1t1Project1)+"/"+topicName, 200);
+        makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), 200);
     }
 
     @Test
@@ -101,7 +101,7 @@ public class TopicTests extends E2EBase {
         Assertions.assertEquals(topic2.getName(), r2.getName());
         Assertions.assertEquals(topic2.getProject(), r2.getProject());
 
-        makeDeleteRequest(getTopicsUri(o1t1Project1)+"/"+topic1.getName(), 200);
-        makeDeleteRequest(getTopicsUri(o2t1Project1)+"/"+topic2.getName(), 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topic1.getName()), 200);
+        makeDeleteRequest(getTopicsUri(o2t1Project1, topic2.getName()), 200);
     }
 }

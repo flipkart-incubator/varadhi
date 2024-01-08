@@ -29,7 +29,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.checkTopicExists(storageTopic)) {
+                    if (topicService.checkTopicExists(storageTopic.getName())) {
                         log.warn("Specified StorageTopic({}:{}) already exists.", project.getName(), storageTopic.getName());
                     } else {
                         topicService.create(storageTopic, project);
@@ -54,7 +54,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if(topicService.checkTopicExists(storageTopic)) {
+                    if(topicService.checkTopicExists(storageTopic.getName())) {
                         topicService.delete(storageTopic.getName());
                     } else {
                         log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
@@ -65,8 +65,8 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     @Override
-    public boolean checkTopicExists(VaradhiTopic topic) {
-        return metaStore.checkVaradhiTopicExists(topic.getName());
+    public boolean checkTopicExists(String topicName) {
+        return metaStore.checkVaradhiTopicExists(topicName);
     }
 
 }

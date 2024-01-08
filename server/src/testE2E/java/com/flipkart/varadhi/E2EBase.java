@@ -59,6 +59,10 @@ public class E2EBase {
         return String.join("/", getProjectUri(project), "topics");
     }
 
+    static String getTopicsUri(Project project, String topicName) {
+        return String.join("/",getTopicsUri(project), topicName);
+    }
+
     static List<Org> getOrgs(Response response) {
         return response.readEntity(new GenericType<>() {
         });
@@ -112,7 +116,7 @@ public class E2EBase {
 
     static void cleanupTopic(String topicName, Project project) {
         //TODO: Do subscription/namespace/tenant or any relevant resources cleanup
-        makeDeleteRequest(getTopicsUri(project)+"/"+topicName, 200);
+        makeDeleteRequest(getTopicsUri(project, topicName), 200);
     }
 
     static Client getClient() {

@@ -120,7 +120,7 @@ public class TopicHandlers implements RouteProvider {
 
         Project project = projectService.getCachedProject(topicResource.getProject());
         String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResource.getName());
-        boolean found = metaStore.checkVaradhiTopicExists(varadhiTopicName);
+        boolean found = varadhiTopicService.checkTopicExists(varadhiTopicName);
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
