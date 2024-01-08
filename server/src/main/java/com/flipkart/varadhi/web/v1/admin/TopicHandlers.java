@@ -25,9 +25,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.ArrayList;
 
-import static com.flipkart.varadhi.entities.VaradhiResource.NAME_SEPARATOR;
+
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.entities.VaradhiResource.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;

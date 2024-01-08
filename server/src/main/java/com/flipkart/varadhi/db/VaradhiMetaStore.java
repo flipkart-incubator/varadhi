@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.db.ZNode.*;
-import static com.flipkart.varadhi.entities.VaradhiResource.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 
 
 @Slf4j
