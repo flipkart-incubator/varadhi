@@ -72,15 +72,15 @@ public abstract class VerticleDeployer {
                 metaStoreProvider.getMetaStore()
         );
         MetaStore metaStore = metaStoreProvider.getMetaStore();
+        this.projectService =
+                new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
         this.topicHandlers =
-                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
+                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService, metaStore);
         ProducerService producerService =
                 setupProducerService(
                         configuration.getProducerOptions(), messagingStackProvider.getProducerFactory(),
                         varadhiTopicService, meterRegistry
                 );
-        this.projectService =
-                new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
         this.orgService = new OrgService(metaStore);
         this.teamService = new TeamService(metaStore);
 

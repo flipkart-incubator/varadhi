@@ -12,6 +12,7 @@ import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import io.vertx.core.http.HttpMethod;
@@ -32,6 +33,7 @@ public class TopicHandlersTest extends WebTestBase {
     TopicHandlers topicHandlers;
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
+    ProjectService projectService;
     VaradhiMetaStore varadhiMetaStore;
 
     private final String topicName = "topic1";
@@ -44,8 +46,9 @@ public class TopicHandlersTest extends WebTestBase {
         super.setUp();
         varadhiTopicService = mock(VaradhiTopicService.class);
         varadhiTopicFactory = mock(VaradhiTopicFactory.class);
+        projectService = mock(ProjectService.class);
         varadhiMetaStore = mock(VaradhiMetaStore.class);
-        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, varadhiMetaStore);
+        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService, varadhiMetaStore);
 
         Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::create));
         setupFailureHandler(routeCreate);
@@ -77,7 +80,7 @@ public class TopicHandlersTest extends WebTestBase {
         TopicResource topicResource = getTopicResource(topicName, project);
         VaradhiTopic t1 = VaradhiTopic.of(topicResource);
         String varadhiTopicName = String.join(".", project.getName(), topicName);
-        doReturn(t1).when(varadhiMetaStore).getVaradhiTopic(varadhiTopicName);
+        doReturn(t1).when(varadhiTopicService).get(varadhiTopicName);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTopicUrl(topicName, project));
         TopicResource t1Created = sendRequestWithoutBody(request, TopicResource.class);
