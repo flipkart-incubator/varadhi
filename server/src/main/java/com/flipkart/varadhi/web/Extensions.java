@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.entities.BaseResource;
+import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -22,7 +22,7 @@ public class Extensions {
 
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
-        public static <T extends BaseResource> T asValidatedPojo(RequestBody body, Class<T> clazz) {
+        public static <T extends Validatable> T asValidatedPojo(RequestBody body, Class<T> clazz) {
             T deserialzedObject = asPojo(body, clazz);
             deserialzedObject.validate();
             return deserialzedObject;

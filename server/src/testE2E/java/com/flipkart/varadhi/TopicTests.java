@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 public class TopicTests extends E2EBase {
 

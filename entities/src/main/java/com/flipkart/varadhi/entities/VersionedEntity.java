@@ -6,8 +6,7 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode
-public class VaradhiResource implements BaseResource {
-
+public abstract class VersionedEntity {
     public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";
     public static final String NAME_SEPARATOR_REGEX = "\\.";
@@ -17,8 +16,12 @@ public class VaradhiResource implements BaseResource {
     @Setter
     private int version;
 
-    protected VaradhiResource(String name, int version) {
+    protected VersionedEntity(String name, int version) {
         this.name = name;
         this.version = version;
+    }
+
+    protected VersionedEntity(String name) {
+        this(name, INITIAL_VERSION);
     }
 }
