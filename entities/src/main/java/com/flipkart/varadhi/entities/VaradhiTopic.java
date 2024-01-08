@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,8 +13,10 @@ public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
+
     @Setter
-    private CapacityPolicy capacityPolicy;
+    @JsonIgnore
+    private CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
 
     private VaradhiTopic(
             String name,

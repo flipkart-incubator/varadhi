@@ -60,7 +60,7 @@ public class E2EBase {
     }
 
     static String getTopicsUri(Project project, String topicName) {
-        return String.join("/",getTopicsUri(project), topicName);
+        return String.join("/", getTopicsUri(project), topicName);
     }
 
     static List<Org> getOrgs(Response response) {
