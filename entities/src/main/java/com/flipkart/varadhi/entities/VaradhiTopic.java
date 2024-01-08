@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,6 +12,8 @@ public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
+    @Setter
+    private CapacityPolicy capacityPolicy;
 
     private VaradhiTopic(
             String name,
@@ -44,13 +47,13 @@ public class VaradhiTopic extends AbstractTopic {
         return internalTopics.get(region);
     }
 
-    public TopicResource getTopicResource(String projectName) {
+    public TopicResource getTopicResource() {
         return new TopicResource(
                 this.getName().split(NAME_SEPARATOR_REGEX)[1],
                 this.getVersion(),
                 this.getName().split(NAME_SEPARATOR_REGEX)[0],
                 this.isGrouped(),
-                CapacityPolicy.getDefault()
+                this.capacityPolicy
         );
     }
 }

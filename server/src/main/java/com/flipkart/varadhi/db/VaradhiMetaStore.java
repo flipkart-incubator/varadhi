@@ -184,13 +184,8 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
 
     @Override
     public boolean checkVaradhiTopicExists(String varadhiTopicName) {
-        try {
-            getVaradhiTopic(varadhiTopicName);
-            return true;
-        } catch (ResourceNotFoundException ex) {
-            log.warn("VaradhiTopic:{} does not exist.", varadhiTopicName);
-        }
-        return false;
+        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+        return zkMetaStore.zkPathExist(znode);
     }
 
     @Override

@@ -103,7 +103,7 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String varadhiTopicName = getVaradhiTopicName(ctx);
         VaradhiTopic varadhiTopic = varadhiTopicService.get(varadhiTopicName);
-        TopicResource topicResource = varadhiTopic.getTopicResource(projectName);
+        TopicResource topicResource = varadhiTopic.getTopicResource();
         ctx.endApiWithResponse(topicResource);
     }
 

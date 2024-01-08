@@ -32,6 +32,7 @@ public class VaradhiTopicFactory {
         if (null == capacityPolicy) {
             capacityPolicy = getDefaultCapacityPolicy();
         }
+        varadhiTopic.setCapacityPolicy(capacityPolicy);
         StorageTopic storageTopic =
                 topicFactory.getTopic(varadhiTopic.getName(), project, capacityPolicy);
         // This is likely to change with replicated topics across zones. To be taken care as part of DR.
