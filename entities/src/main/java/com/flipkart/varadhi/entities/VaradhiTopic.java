@@ -50,7 +50,7 @@ public class VaradhiTopic extends AbstractTopic {
         return internalTopics.get(region);
     }
 
-    public TopicResource getTopicResource() {
+    public TopicResource fetchTopicResource() {
         return new TopicResource(
                 this.getName().split(NAME_SEPARATOR_REGEX)[1],
                 this.getVersion(),
