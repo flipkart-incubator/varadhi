@@ -45,16 +45,17 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     @Override
-    public void delete(VaradhiTopic varadhiTopic) {
-        log.info("Deleting Varadhi topic {}", varadhiTopic.getName());
+    public void delete(String varadhiTopicName) {
+        log.info("Deleting Varadhi topic {}", varadhiTopicName);
         /*TODO : delete namespace, tenant also if the only Topic in the namespace+tenant is deleted / cleanup independent of delete
          * check for existing subscriptions before deleting the topic
          */
+        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
                     if(topicService.checkTopicExists(storageTopic)) {
-                        topicService.delete(storageTopic);
+                        topicService.delete(storageTopic.getName());
                     } else {
                         log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
                     }

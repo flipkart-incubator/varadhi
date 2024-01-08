@@ -46,10 +46,10 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     }
 
     @Override
-    public void delete(PulsarStorageTopic topic) {
+    public void delete(String topicName) {
         try {
-            clientProvider.getAdminClient().topics().deletePartitionedTopic(topic.getName(), false, false);
-            log.info("Deleted the pulsar topic:{}", topic.getName());
+            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, false, false);
+            log.info("Deleted the pulsar topic:{}", topicName);
         } catch (PulsarAdminException e) {
             throw new MessagingException(e);
         }
@@ -58,9 +58,11 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
     public boolean checkTopicExists(PulsarStorageTopic topic) {
         try {
             return clientProvider.getAdminClient().topics().getPartitionedTopicMetadata((topic.getName())) != null;
-        } catch (PulsarAdminException e) {
+        } catch (PulsarAdminException.NotFoundException e) {
             //exception occurs if Topic is not found
             return false;
+        } catch (PulsarAdminException e) {
+            throw new MessagingException(String.format("Failed to check existence of Topic. Error: %s.", e.getMessage()), e);
         }
     }
 

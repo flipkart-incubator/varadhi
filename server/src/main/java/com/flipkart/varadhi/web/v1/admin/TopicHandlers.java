@@ -136,8 +136,7 @@ public class TopicHandlers implements RouteProvider {
 
     public void delete(RoutingContext ctx) {
         String varadhiTopicName = getVaradhiTopicName(ctx);
-        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
-        varadhiTopicService.delete(varadhiTopic);
+        varadhiTopicService.delete(varadhiTopicName);
         ctx.endApi();
     }
 

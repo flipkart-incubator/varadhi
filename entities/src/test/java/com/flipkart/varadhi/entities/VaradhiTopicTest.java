@@ -7,7 +7,7 @@ package com.flipkart.varadhi.entities;
 
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VaradhiTopicTest {
