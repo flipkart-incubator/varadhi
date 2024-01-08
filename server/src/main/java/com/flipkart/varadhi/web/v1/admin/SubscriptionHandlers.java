@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.SubscriptionResource;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.services.VaradhiSubscriptionService;
 import com.flipkart.varadhi.utils.SubscriptionFactory;
 import com.flipkart.varadhi.web.Extensions;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_SUBSCRIPTION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
@@ -94,17 +96,18 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        SubscriptionResource subscription = getSubscriptionResource(ctx);
-        SubscriptionResource createdSub =
-                SubscriptionFactory.toResource(subscriptionService.createSubscription(subscription));
-        ctx.endApiWithResponse(createdSub);
+        SubscriptionResource subscription = getValidSubscriptionResource(ctx);
+        VaradhiSubscription varadhiSubscription = SubscriptionFactory.fromResource(subscription, INITIAL_VERSION);
+        VaradhiSubscription createdSubscription = subscriptionService.createSubscription(varadhiSubscription);
+        ctx.endApiWithResponse(SubscriptionFactory.toResource(createdSubscription));
     }
 
     public void update(RoutingContext ctx) {
-        SubscriptionResource subscription = getSubscriptionResource(ctx);
-        SubscriptionResource updatedSub =
-                SubscriptionFactory.toResource(subscriptionService.updateSubscription(subscription));
-        ctx.endApiWithResponse(updatedSub);
+        SubscriptionResource subscription = getValidSubscriptionResource(ctx);
+        VaradhiSubscription varadhiSubscription =
+                SubscriptionFactory.fromResource(subscription, subscription.getVersion());
+        VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(varadhiSubscription);
+        ctx.endApiWithResponse(SubscriptionFactory.toResource(updatedSubscription));
     }
 
     public void delete(RoutingContext ctx) {
@@ -122,7 +125,7 @@ public class SubscriptionHandlers implements RouteProvider {
         ctx.todo();
     }
 
-    private SubscriptionResource getSubscriptionResource(RoutingContext ctx) {
+    private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String subscriptionName = ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION);
         SubscriptionResource subscription = ctx.body().asValidatedPojo(SubscriptionResource.class);

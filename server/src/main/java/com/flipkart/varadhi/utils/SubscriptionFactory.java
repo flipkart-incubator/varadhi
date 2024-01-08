@@ -30,16 +30,4 @@ public final class SubscriptionFactory {
                 subscription.getEndpoint()
         );
     }
-
-    public static VaradhiSubscription fromUpdate(VaradhiSubscription existing, SubscriptionResource update) {
-        return new VaradhiSubscription(
-                existing.getName(),
-                existing.getVersion() + 1,
-                existing.getProject(),
-                existing.getTopic(),
-                update.getDescription(),
-                update.isGrouped(),
-                update.getEndpoint()
-        );
-    }
 }

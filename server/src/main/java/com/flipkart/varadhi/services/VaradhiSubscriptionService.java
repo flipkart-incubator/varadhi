@@ -1,12 +1,10 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.utils.SubscriptionFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,7 +27,7 @@ public class VaradhiSubscriptionService {
         return metaStore.getVaradhiSubscription(subscriptionName, projectName);
     }
 
-    public VaradhiSubscription createSubscription(SubscriptionResource subscription) {
+    public VaradhiSubscription createSubscription(VaradhiSubscription subscription) {
         // check project and topic exists
         Project project = metaStore.getProject(subscription.getProject());
         TopicResource topic = metaStore.getTopicResource(subscription.getTopic(), project.getName());
@@ -45,18 +43,18 @@ public class VaradhiSubscriptionService {
                     "Subscription(%s:%s) already exists".formatted(project.getName(), subscription.getName()));
         }
 
-        // create VaradhiSubscription entity
-        VaradhiSubscription createdSub = SubscriptionFactory.fromResource(subscription, INITIAL_VERSION);
+        // ensure version is set correctly
+        subscription.setVersion(INITIAL_VERSION);
 
         // persist
-        metaStore.createVaradhiSubscription(createdSub);
+        metaStore.createVaradhiSubscription(subscription);
 
-        return createdSub;
+        return subscription;
     }
 
-    public VaradhiSubscription updateSubscription(SubscriptionResource subscription) {
-        String subscriptionName = subscription.getName();
-        String projectName = subscription.getProject();
+    public VaradhiSubscription updateSubscription(VaradhiSubscription update) {
+        String subscriptionName = update.getName();
+        String projectName = update.getProject();
 
         // check subscription exist
         if (!metaStore.checkVaradhiSubscriptionExists(subscriptionName, projectName)) {
@@ -65,7 +63,7 @@ public class VaradhiSubscriptionService {
         }
 
         VaradhiSubscription existingSubscription = metaStore.getVaradhiSubscription(subscriptionName, projectName);
-        if (subscription.getVersion() != existingSubscription.getVersion()) {
+        if (update.getVersion() != existingSubscription.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
                     existingSubscription.getName()
@@ -73,27 +71,34 @@ public class VaradhiSubscriptionService {
         }
 
         // only allow description, grouped, endpoint
-        if (!Objects.equals(subscription.getTopic(), existingSubscription.getTopic())) {
+        if (!Objects.equals(update.getTopic(), existingSubscription.getTopic())) {
             throw new IllegalArgumentException(
                     "Cannot update Topic of Subscription(%s:%s)".formatted(projectName, subscriptionName));
         }
 
         // if set grouped to true, but topic is not grouped
-        TopicResource topic = metaStore.getTopicResource(subscription.getTopic(), projectName);
-        if (subscription.isGrouped() && !topic.isGrouped()) {
+        TopicResource topic = metaStore.getTopicResource(update.getTopic(), projectName);
+        if (update.isGrouped() && !topic.isGrouped()) {
             throw new IllegalArgumentException(
                     "Cannot update Subscription(%s:%s) to grouped as it's Topic(%s:%s) is not grouped".formatted(
-                            projectName, subscriptionName, projectName, subscription.getTopic()));
+                            projectName, subscriptionName, projectName, update.getTopic()));
         }
 
         // update
-        VaradhiSubscription updatedVaradhiSubscription =
-                SubscriptionFactory.fromUpdate(existingSubscription, subscription);
+        VaradhiSubscription updatedSubscription = new VaradhiSubscription(
+                existingSubscription.getName(),
+                existingSubscription.getVersion() + 1,
+                existingSubscription.getProject(),
+                existingSubscription.getTopic(),
+                update.getDescription(),
+                update.isGrouped(),
+                update.getEndpoint()
+        );
 
-        int updatedVersion = metaStore.updateVaradhiSubscription(updatedVaradhiSubscription);
-        updatedVaradhiSubscription.setVersion(updatedVersion);
+        int updatedVersion = metaStore.updateVaradhiSubscription(updatedSubscription);
+        updatedSubscription.setVersion(updatedVersion);
 
-        return updatedVaradhiSubscription;
+        return updatedSubscription;
     }
 
     public void deleteSubscription(String subscriptionName, String projectName) {
@@ -104,5 +109,4 @@ public class VaradhiSubscriptionService {
 
         metaStore.deleteVaradhiSubscription(subscriptionName, projectName);
     }
-
 }
