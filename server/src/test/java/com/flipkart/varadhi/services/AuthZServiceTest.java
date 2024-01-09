@@ -130,7 +130,7 @@ public class AuthZServiceTest {
     }
 
     @Test
-    public void testFindRoleBindingNode() {
+    public void testGetRoleBindingNode() {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
         RoleBindingNode expect = new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(), 0);

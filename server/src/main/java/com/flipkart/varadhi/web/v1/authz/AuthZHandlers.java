@@ -33,22 +33,6 @@ public class AuthZHandlers implements RouteProvider {
         this.authZService = authZService;
     }
 
-    private List<RouteDefinition> getDebugHandlers() {
-        return new SubRoutes(
-                "/v1/authz/debug",
-                List.of(
-                        RouteDefinition.get("").blocking().authenticated()
-                                .build(this::getAllRoleBindingNodes),
-                        RouteDefinition.get("/:resource_type/:resource")
-                                .blocking().authenticated()
-                                .build(this::getRoleBindingNode),
-                        RouteDefinition.delete("/:resource_type/:resource")
-                                .blocking().authenticated()
-                                .build(this::deleteRoleBindingNode)
-                )
-        ).get();
-    }
-
     private List<RouteDefinition> getPolicyHandlers() {
         return new SubRoutes(
                 "/v1",
@@ -84,7 +68,6 @@ public class AuthZHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return Stream.of(
-                getDebugHandlers(),
                 getPolicyHandlers()
         ).flatMap(List::stream).toList();
     }

@@ -88,15 +88,7 @@ public class AuthZService {
         if (!exists) {
             return createRoleBindingNode(resourceId, resourceType);
         }
-        RoleBindingNode existingNode = roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
-        if (existingNode.getResourceType() != resourceType) {
-            throw new IllegalArgumentException(String.format(
-                    "Incorrect resource type(%s) for resource id(%s).",
-                    resourceType,
-                    resourceId
-            ));
-        }
-        return existingNode;
+        return roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
     }
 
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
