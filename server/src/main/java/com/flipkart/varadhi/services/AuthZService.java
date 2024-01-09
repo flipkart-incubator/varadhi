@@ -24,8 +24,8 @@ public class AuthZService {
 
     public IAMPolicyRecord createIAMPolicyRecord(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
-            throw new ResourceNotFoundException(
-                    "IAM Record on resource (%s:%s) not found.".formatted(resourceType, resourceId));
+            throw new IllegalArgumentException(
+                    "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
         }
         IAMPolicyRecord node = new IAMPolicyRecord(resourceId, resourceType, new HashMap<>(), 0);
         iamPolicyMetaStore.createIAMPolicyRecord(node);

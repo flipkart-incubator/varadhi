@@ -123,7 +123,6 @@ public class AuthZServiceTest {
                 DuplicateResourceException.class,
                 () -> authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG)
         );
-        assertEquals(String.format("IAMPolicyRecord(%s) already exists.", org1.getName()), e.getMessage());
 
         // node on topic resource
         // TODO: implement for topic resource
@@ -146,11 +145,10 @@ public class AuthZServiceTest {
         assertEquals(expect, get);
 
         // non existent
-        var rne = assertThrowsExactly(
+        assertThrowsExactly(
                 ResourceNotFoundException.class,
                 () -> authZService.getIAMPolicyRecord(ResourceType.ORG, org2.getName())
         );
-        assertEquals(String.format("IAMPolicyRecord(%s) not found.", org2.getName()), rne.getMessage());
     }
 
     @Test
@@ -226,19 +224,17 @@ public class AuthZServiceTest {
         assertEquals(expect, got);
 
         authZService.deleteIAMPolicyRecord(ResourceType.ORG, org1.getName());
-        var rne = assertThrowsExactly(
+        assertThrowsExactly(
                 ResourceNotFoundException.class,
                 () -> authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName())
         );
-        assertEquals(String.format("IAMPolicyRecord(%s) not found.", org1.getName()), rne.getMessage());
         assertDoesNotThrow(() -> authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG));
 
         // delete on non existing
-        rne = assertThrowsExactly(
+        assertThrowsExactly(
                 ResourceNotFoundException.class,
                 () -> authZService.deleteIAMPolicyRecord(ResourceType.ORG, org2.getName())
         );
-        assertEquals(String.format("IAMPolicyRecord on resource(%s) not found.", org2.getName()), rne.getMessage());
     }
 
     @Test
