@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web.v1.authz;
 
+import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -75,12 +75,12 @@ public class AuthZHandlers implements RouteProvider {
     public Handler<RoutingContext> getIAMPolicyHandler(ResourceType resourceType) {
         return (routingContext) -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
-            RoleBindingNode policy = getIAMPolicy(resourceType, resourceId);
+            IAMPolicyRecord policy = getIAMPolicy(resourceType, resourceId);
             routingContext.endApiWithResponse(policy);
         };
     }
 
-    public RoleBindingNode getIAMPolicy(ResourceType resourceType, String resourceId) {
+    public IAMPolicyRecord getIAMPolicy(ResourceType resourceType, String resourceId) {
         return authZService.getIAMPolicy(resourceType, resourceId);
     }
 
@@ -88,33 +88,33 @@ public class AuthZHandlers implements RouteProvider {
         return (routingContext) -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IAMPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IAMPolicyRequest.class);
-            RoleBindingNode updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
+            IAMPolicyRecord updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
             routingContext.endApiWithResponse(updated);
         };
     }
 
-    public RoleBindingNode setIAMPolicy(
+    public IAMPolicyRecord setIAMPolicy(
             ResourceType resourceType, String resourceId, IAMPolicyRequest policyForSubject
     ) {
         return authZService.setIAMPolicy(resourceType, resourceId, policyForSubject);
     }
 
-    public void getAllRoleBindingNodes(RoutingContext routingContext) {
-        List<RoleBindingNode> roleBindings = authZService.getAllRoleBindingNodes();
-        routingContext.endApiWithResponse(roleBindings);
+    public void getAllIAMPolicyRecords(RoutingContext routingContext) {
+        List<IAMPolicyRecord> records = authZService.getAllIAMPolicyRecords();
+        routingContext.endApiWithResponse(records);
     }
 
-    public void getRoleBindingNode(RoutingContext routingContext) {
+    public void getIAMPolicyRecord(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        RoleBindingNode node = authZService.getRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
+        IAMPolicyRecord node = authZService.getIAMPolicyRecord(ResourceType.valueOf(resourceType), resourceId);
         routingContext.endApiWithResponse(node);
     }
 
-    public void deleteRoleBindingNode(RoutingContext routingContext) {
+    public void deleteIAMPolicyRecord(RoutingContext routingContext) {
         String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
         String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        authZService.deleteRoleBindingNode(ResourceType.valueOf(resourceType), resourceId);
+        authZService.deleteIAMPolicyRecord(ResourceType.valueOf(resourceType), resourceId);
         routingContext.endApi();
     }
 

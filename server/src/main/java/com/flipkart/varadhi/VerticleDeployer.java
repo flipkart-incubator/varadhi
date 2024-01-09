@@ -13,9 +13,9 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.web.AuthHandlers;
@@ -98,11 +98,11 @@ public abstract class VerticleDeployer {
 
     private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {
         return () -> {
-            if (metaStore instanceof RoleBindingMetaStore rbMetaStore) {
+            if (metaStore instanceof IAMPolicyMetaStore rbMetaStore) {
                 return new AuthZHandlers(
                         new AuthZService(metaStore, rbMetaStore));
             }
-            throw new IllegalStateException("MetaStore is not an instance of RoleBindingMetaStore.");
+            throw new IllegalStateException("MetaStore is not an instance of IAMPolicyMetaStore.");
         };
     }
 

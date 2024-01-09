@@ -6,10 +6,10 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -117,12 +117,12 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     private static void cleanupRoleBindings() {
         cleanupOrgs(List.of(oPublic));
-        var allNodes = getAllRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
+        var allNodes = getAllIAMPolicies(makeHttpGetRequest(getRoleBindingsUri()));
         allNodes.forEach(
                 node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
     }
 
-    private static List<RoleBindingNode> getAllRoleBindings(Response response) {
+    private static List<IAMPolicyRecord> getAllIAMPolicies(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
@@ -174,7 +174,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
-        response.readEntity(RoleBindingNode.class);
+        response.readEntity(IAMPolicyRecord.class);
     }
 
     @Test

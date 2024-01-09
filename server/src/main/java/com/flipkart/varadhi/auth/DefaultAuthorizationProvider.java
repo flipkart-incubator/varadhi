@@ -5,10 +5,10 @@ import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
 import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.services.AuthZService;
+import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
@@ -54,11 +54,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         provider.init(options);
         MetaStore store = provider.getMetaStore();
 
-        if (store instanceof RoleBindingMetaStore) {
-            return new AuthZService(store, (RoleBindingMetaStore) store);
+        if (store instanceof IAMPolicyMetaStore) {
+            return new AuthZService(store, (IAMPolicyMetaStore) store);
         }
 
-        throw new IllegalStateException("Provider must implement RoleBindingMetaStore");
+        throw new IllegalStateException("Provider must implement IAMPolicyMetaStore");
     }
 
     /**
@@ -132,13 +132,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
-        RoleBindingNode node =
+        IAMPolicyRecord node =
                 getAuthZService().getIAMPolicy(resourceContext.resourceType(), resourceContext.resourceId());
         if (node == null) {
             log.debug("No roles on resource for subject {}", subject);
             return Set.of();
         }
-        return node.getRolesAssignment().getOrDefault(subject, Set.of());
+        return node.getRoleBindings().getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {

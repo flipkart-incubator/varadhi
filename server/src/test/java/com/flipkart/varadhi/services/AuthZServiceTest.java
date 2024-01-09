@@ -4,9 +4,9 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -66,18 +66,18 @@ public class AuthZServiceTest {
     }
 
     @Test
-    public void testCreateRoleBindingNode() {
+    public void testCreateIAMPolicyRecord() {
         // node on org resource
         String resourceId = org1.getName();
         orgService.createOrg(org1);
-        RoleBindingNode expect = new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(), 0);
-        RoleBindingNode nodeCreated = authZService.createRoleBindingNode(resourceId, ResourceType.ORG);
+        IAMPolicyRecord expect = new IAMPolicyRecord(resourceId, ResourceType.ORG, Map.of(), 0);
+        IAMPolicyRecord nodeCreated = authZService.createIAMPolicyRecord(resourceId, ResourceType.ORG);
         assertEquals(expect, nodeCreated);
 
         // org not exist
         var ior = assertThrowsExactly(
                 IllegalArgumentException.class,
-                () -> authZService.createRoleBindingNode(org2.getName(), ResourceType.ORG)
+                () -> authZService.createIAMPolicyRecord(org2.getName(), ResourceType.ORG)
         );
         assertEquals(
                 String.format("Invalid resource id(%s) for resource type(%s).", org2.getName(), ResourceType.ORG),
@@ -87,14 +87,14 @@ public class AuthZServiceTest {
         // node on team resource
         teamService.createTeam(org1team1);
         resourceId = org1.getName() + ":" + org1team1.getName();
-        expect = new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(), 0);
-        nodeCreated = authZService.createRoleBindingNode(resourceId, ResourceType.TEAM);
+        expect = new IAMPolicyRecord(resourceId, ResourceType.TEAM, Map.of(), 0);
+        nodeCreated = authZService.createIAMPolicyRecord(resourceId, ResourceType.TEAM);
         assertEquals(expect, nodeCreated);
 
         // wrong team name
         ior = assertThrowsExactly(
                 IllegalArgumentException.class,
-                () -> authZService.createRoleBindingNode(org2team1.getName(), ResourceType.TEAM)
+                () -> authZService.createIAMPolicyRecord(org2team1.getName(), ResourceType.TEAM)
         );
         assertEquals(
                 String.format("Invalid resource id(%s) for resource type(%s).", org2team1.getName(), ResourceType.TEAM),
@@ -104,14 +104,14 @@ public class AuthZServiceTest {
         // node on project resource
         projectService.createProject(proj1);
         resourceId = proj1.getName();
-        expect = new RoleBindingNode(resourceId, ResourceType.PROJECT, Map.of(), 0);
-        nodeCreated = authZService.createRoleBindingNode(resourceId, ResourceType.PROJECT);
+        expect = new IAMPolicyRecord(resourceId, ResourceType.PROJECT, Map.of(), 0);
+        nodeCreated = authZService.createIAMPolicyRecord(resourceId, ResourceType.PROJECT);
         assertEquals(expect, nodeCreated);
 
         // wrong project name
         ior = assertThrowsExactly(
                 IllegalArgumentException.class,
-                () -> authZService.createRoleBindingNode(proj2.getName(), ResourceType.PROJECT)
+                () -> authZService.createIAMPolicyRecord(proj2.getName(), ResourceType.PROJECT)
         );
         assertEquals(
                 String.format("Invalid resource id(%s) for resource type(%s).", proj2.getName(), ResourceType.PROJECT),
@@ -121,36 +121,36 @@ public class AuthZServiceTest {
         // duplicate resource
         DuplicateResourceException e = assertThrowsExactly(
                 DuplicateResourceException.class,
-                () -> authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG)
+                () -> authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG)
         );
-        assertEquals(String.format("RoleBinding(%s) already exists.", org1.getName()), e.getMessage());
+        assertEquals(String.format("IAMPolicyRecord(%s) already exists.", org1.getName()), e.getMessage());
 
         // node on topic resource
         // TODO: implement for topic resource
     }
 
     @Test
-    public void testGetRoleBindingNode() {
+    public void testGetIAMPolicyRecord() {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
-        RoleBindingNode expect = new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(), 0);
-        authZService.createRoleBindingNode(resourceId, ResourceType.ORG);
-        RoleBindingNode get = authZService.getRoleBindingNode(ResourceType.ORG, resourceId);
+        IAMPolicyRecord expect = new IAMPolicyRecord(resourceId, ResourceType.ORG, Map.of(), 0);
+        authZService.createIAMPolicyRecord(resourceId, ResourceType.ORG);
+        IAMPolicyRecord get = authZService.getIAMPolicyRecord(ResourceType.ORG, resourceId);
         assertEquals(expect, get);
 
         teamService.createTeam(org1team1);
         resourceId = org1.getName() + ":" + org1team1.getName();
-        expect = new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(), 0);
-        authZService.createRoleBindingNode(resourceId, ResourceType.TEAM);
-        get = authZService.getRoleBindingNode(ResourceType.TEAM, resourceId);
+        expect = new IAMPolicyRecord(resourceId, ResourceType.TEAM, Map.of(), 0);
+        authZService.createIAMPolicyRecord(resourceId, ResourceType.TEAM);
+        get = authZService.getIAMPolicyRecord(ResourceType.TEAM, resourceId);
         assertEquals(expect, get);
 
         // non existent
         var rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.getRoleBindingNode(ResourceType.ORG, org2.getName())
+                () -> authZService.getIAMPolicyRecord(ResourceType.ORG, org2.getName())
         );
-        assertEquals(String.format("RoleBinding(%s) not found.", org2.getName()), rne.getMessage());
+        assertEquals(String.format("IAMPolicyRecord(%s) not found.", org2.getName()), rne.getMessage());
     }
 
     @Test
@@ -162,23 +162,23 @@ public class AuthZServiceTest {
         projectService.createProject(proj1);
         projectService.createProject(proj2);
 
-        List<RoleBindingNode> expected = List.of(
-                new RoleBindingNode(org1.getName(), ResourceType.ORG, Map.of(), 0),
-                new RoleBindingNode(org2.getName(), ResourceType.ORG, Map.of(), 0),
-                new RoleBindingNode(org1.getName() + ":" + org1team1.getName(), ResourceType.TEAM, Map.of(), 0),
-                new RoleBindingNode(org2.getName() + ":" + org2team1.getName(), ResourceType.TEAM, Map.of(), 0),
-                new RoleBindingNode(proj1.getName(), ResourceType.PROJECT, Map.of(), 0),
-                new RoleBindingNode(proj2.getName(), ResourceType.PROJECT, Map.of(), 0)
+        List<IAMPolicyRecord> expected = List.of(
+                new IAMPolicyRecord(org1.getName(), ResourceType.ORG, Map.of(), 0),
+                new IAMPolicyRecord(org2.getName(), ResourceType.ORG, Map.of(), 0),
+                new IAMPolicyRecord(org1.getName() + ":" + org1team1.getName(), ResourceType.TEAM, Map.of(), 0),
+                new IAMPolicyRecord(org2.getName() + ":" + org2team1.getName(), ResourceType.TEAM, Map.of(), 0),
+                new IAMPolicyRecord(proj1.getName(), ResourceType.PROJECT, Map.of(), 0),
+                new IAMPolicyRecord(proj2.getName(), ResourceType.PROJECT, Map.of(), 0)
         );
 
-        authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG);
-        authZService.createRoleBindingNode(org2.getName(), ResourceType.ORG);
-        authZService.createRoleBindingNode(org1.getName() + ":" + org1team1.getName(), ResourceType.TEAM);
-        authZService.createRoleBindingNode(org2.getName() + ":" + org2team1.getName(), ResourceType.TEAM);
-        authZService.createRoleBindingNode(proj1.getName(), ResourceType.PROJECT);
-        authZService.createRoleBindingNode(proj2.getName(), ResourceType.PROJECT);
+        authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG);
+        authZService.createIAMPolicyRecord(org2.getName(), ResourceType.ORG);
+        authZService.createIAMPolicyRecord(org1.getName() + ":" + org1team1.getName(), ResourceType.TEAM);
+        authZService.createIAMPolicyRecord(org2.getName() + ":" + org2team1.getName(), ResourceType.TEAM);
+        authZService.createIAMPolicyRecord(proj1.getName(), ResourceType.PROJECT);
+        authZService.createIAMPolicyRecord(proj2.getName(), ResourceType.PROJECT);
 
-        List<RoleBindingNode> nodes = authZService.getAllRoleBindingNodes();
+        List<IAMPolicyRecord> nodes = authZService.getAllIAMPolicyRecords();
         assertEquals(6, nodes.size());
         assertTrue(expected.containsAll(nodes));
     }
@@ -187,80 +187,80 @@ public class AuthZServiceTest {
     public void testUpdateNode() {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
-        RoleBindingNode expect = new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(), 0);
-        authZService.createRoleBindingNode(resourceId, ResourceType.ORG);
+        IAMPolicyRecord expect = new IAMPolicyRecord(resourceId, ResourceType.ORG, Map.of(), 0);
+        authZService.createIAMPolicyRecord(resourceId, ResourceType.ORG);
 
         // update node but with wrong version
         expect.setRoleAssignment("user1", Set.of("role1", "role2"));
         expect.setVersion(1);
         var ior = assertThrowsExactly(
                 InvalidOperationForResourceException.class,
-                () -> authZService.updateRoleBindingNode(expect)
+                () -> authZService.updateIAMPolicyRecord(expect)
         );
         assertEquals(String.format(
-                "Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
+                "Conflicting update, IAMPolicyRecord(%s) has been modified. Fetch latest and try again.",
                 expect.getResourceId()
         ), ior.getMessage());
 
         // correct update
         expect.setRoleAssignment("user1", Set.of("role1", "role2"));
         expect.setVersion(0);
-        RoleBindingNode updated = authZService.updateRoleBindingNode(expect);
+        IAMPolicyRecord updated = authZService.updateIAMPolicyRecord(expect);
         assertEquals(expect, updated);
 
         // update non existing node
-        RoleBindingNode node = new RoleBindingNode(org2.getName(), ResourceType.ORG, Map.of(), 0);
+        IAMPolicyRecord node = new IAMPolicyRecord(org2.getName(), ResourceType.ORG, Map.of(), 0);
         var rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.updateRoleBindingNode(node)
+                () -> authZService.updateIAMPolicyRecord(node)
         );
-        assertEquals(String.format("RoleBinding(%s) not found.", org2.getName()), rne.getMessage());
+        assertEquals(String.format("IAMPolicyRecord(%s) not found.", org2.getName()), rne.getMessage());
     }
 
     @Test
     public void testDeleteNode() {
         orgService.createOrg(org1);
-        RoleBindingNode expect = new RoleBindingNode(org1.getName(), ResourceType.ORG, Map.of(), 0);
-        authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG);
-        RoleBindingNode got = authZService.getRoleBindingNode(ResourceType.ORG, org1.getName());
+        IAMPolicyRecord expect = new IAMPolicyRecord(org1.getName(), ResourceType.ORG, Map.of(), 0);
+        authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG);
+        IAMPolicyRecord got = authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName());
         assertEquals(expect, got);
 
-        authZService.deleteRoleBindingNode(ResourceType.ORG, org1.getName());
+        authZService.deleteIAMPolicyRecord(ResourceType.ORG, org1.getName());
         var rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName())
+                () -> authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName())
         );
-        assertEquals(String.format("RoleBinding(%s) not found.", org1.getName()), rne.getMessage());
-        assertDoesNotThrow(() -> authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG));
+        assertEquals(String.format("IAMPolicyRecord(%s) not found.", org1.getName()), rne.getMessage());
+        assertDoesNotThrow(() -> authZService.createIAMPolicyRecord(org1.getName(), ResourceType.ORG));
 
         // delete on non existing
         rne = assertThrowsExactly(
                 ResourceNotFoundException.class,
-                () -> authZService.deleteRoleBindingNode(ResourceType.ORG, org2.getName())
+                () -> authZService.deleteIAMPolicyRecord(ResourceType.ORG, org2.getName())
         );
-        assertEquals(String.format("RoleBinding on resource(%s) not found.", org2.getName()), rne.getMessage());
+        assertEquals(String.format("IAMPolicyRecord on resource(%s) not found.", org2.getName()), rne.getMessage());
     }
 
     @Test
     public void testSetIAMPolicy() {
         // create and update new node
         orgService.createOrg(org1);
-        RoleBindingNode org1NodeExpected =
-                new RoleBindingNode(org1.getName(), ResourceType.ORG, Map.of("user1", Set.of("role1", "role2")), 1);
+        IAMPolicyRecord org1NodeExpected =
+                new IAMPolicyRecord(org1.getName(), ResourceType.ORG, Map.of("user1", Set.of("role1", "role2")), 1);
         IAMPolicyRequest org1Upd =
                 new IAMPolicyRequest("user1", Set.of("role1", "role2"));
         // since node is not created, should throw exception on get
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName())
+                () -> authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName())
         );
 
         // now we update the role assignment
-        RoleBindingNode gotNode = authZService.setIAMPolicy(ResourceType.ORG, org1.getName(), org1Upd);
+        IAMPolicyRecord gotNode = authZService.setIAMPolicy(ResourceType.ORG, org1.getName(), org1Upd);
         assertEquals(org1NodeExpected, gotNode);
 
         // now we should be able to get the node
-        assertDoesNotThrow(() -> authZService.getRoleBindingNode(ResourceType.ORG, org1.getName()));
+        assertDoesNotThrow(() -> authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName()));
 
         // update existing node
         org1NodeExpected.setRoleAssignment("user2", Set.of("role1", "role2"));
@@ -288,16 +288,16 @@ public class AuthZServiceTest {
         // new node on team resource
         teamService.createTeam(org1team1);
         String resourceId = org1.getName() + ":" + org1team1.getName();
-        RoleBindingNode org1team1NodeExpected = new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(), 1);
+        IAMPolicyRecord org1team1NodeExpected = new IAMPolicyRecord(resourceId, ResourceType.TEAM, Map.of(), 1);
         org1team1NodeExpected.setRoleAssignment("user1", Set.of("role1", "role2"));
         IAMPolicyRequest org1team1Upd =
                 new IAMPolicyRequest("user1", Set.of("role1", "role2"));
-        authZService.createRoleBindingNode(resourceId, ResourceType.TEAM);
+        authZService.createIAMPolicyRecord(resourceId, ResourceType.TEAM);
         gotNode = authZService.setIAMPolicy(ResourceType.TEAM, resourceId, org1team1Upd);
         assertEquals(org1team1NodeExpected, gotNode);
 
         // should not modify org node
-        RoleBindingNode org1Node = authZService.getRoleBindingNode(ResourceType.ORG, org1.getName());
+        IAMPolicyRecord org1Node = authZService.getIAMPolicyRecord(ResourceType.ORG, org1.getName());
         assertNotEquals(org1team1NodeExpected, org1Node);
 
         // try to update node with invalid resourceId

@@ -12,36 +12,35 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class RoleBindingNode extends MetaStoreEntity {
-
+public class IAMPolicyRecord extends MetaStoreEntity {
     private final String resourceId;
     private final ResourceType resourceType;
     /**
      * Map of subject to roles
      */
-    private final Map<String, Set<String>> rolesAssignment;
+    private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator
-    public RoleBindingNode(
+    public IAMPolicyRecord(
             @JsonProperty("resourceId") String resourceId,
             @JsonProperty("resourceType") ResourceType resourceType,
-            @JsonProperty("rolesAssignment")
-            Map<String, Set<String>> rolesAssignment,
+            @JsonProperty("roleBindings")
+            Map<String, Set<String>> roleBindings,
             @JsonProperty("version")
             int version
     ) {
         super(resourceId, version);
         this.resourceId = resourceId;
         this.resourceType = resourceType;
-        this.rolesAssignment = new HashMap<>();
-        this.rolesAssignment.putAll(rolesAssignment);
+        this.roleBindings = new HashMap<>();
+        this.roleBindings.putAll(roleBindings);
     }
 
     public void setRoleAssignment(String subject, Set<String> roles) {
         if (roles.isEmpty()) {
-            rolesAssignment.remove(subject);
+            roleBindings.remove(subject);
             return;
         }
-        rolesAssignment.put(subject, roles);
+        roleBindings.put(subject, roles);
     }
 }

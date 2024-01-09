@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.services.AuthZService;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -57,7 +57,7 @@ public class DefaultAuthorizationProviderTest {
     }
 
     @Test
-    public void testInitNotImplRoleBindingMetaStoreShouldThrow() throws IOException {
+    public void testInitNotImplIAMPolicyMetaStoreShouldThrow() throws IOException {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent =
                 """
@@ -96,7 +96,7 @@ public class DefaultAuthorizationProviderTest {
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
         when(authZService.getIAMPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture()))
                 .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
+                        new IAMPolicyRecord(resourceId, ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
         doReturn(authZService).when(provider).getAuthZService();
         provider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
@@ -163,7 +163,7 @@ public class DefaultAuthorizationProviderTest {
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
         when(authZService.getIAMPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture()))
                 .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.admin")), 1));
+                        new IAMPolicyRecord(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.admin")), 1));
         doReturn(authZService).when(provider).getAuthZService();
         provider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
@@ -191,10 +191,10 @@ public class DefaultAuthorizationProviderTest {
         String resourcePath = "flipkart/team_a";
         when(authZService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
                 .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.reader")), 1));
+                        new IAMPolicyRecord(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.reader")), 1));
         when(authZService.getIAMPolicy(eq(ResourceType.ORG), anyString()))
                 .thenReturn(
-                        new RoleBindingNode("flipkart", ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
+                        new IAMPolicyRecord("flipkart", ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
 
         doReturn(authZService).when(provider).getAuthZService();
 
@@ -220,11 +220,11 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
         when(authZService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
-                .thenReturn(new RoleBindingNode("flipkart:team_a", ResourceType.TEAM,
+                .thenReturn(new IAMPolicyRecord("flipkart:team_a", ResourceType.TEAM,
                         Map.of(userName, Set.of("team.reader")), 1
                 ));
         when(authZService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT, Map.of(), 1));
+                .thenReturn(new IAMPolicyRecord("proj_a", ResourceType.PROJECT, Map.of(), 1));
 
         doReturn(authZService).when(provider).getAuthZService();
 
@@ -248,7 +248,7 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
         when(authZService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
-                .thenReturn(new RoleBindingNode("flipkart:team_a", ResourceType.TEAM,
+                .thenReturn(new IAMPolicyRecord("flipkart:team_a", ResourceType.TEAM,
                         Map.of(userName, Set.of("team.reader", "project.writer")), 1
                 ));
 
@@ -274,7 +274,7 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
         when(authZService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
+                .thenReturn(new IAMPolicyRecord("proj_a", ResourceType.PROJECT,
                         Map.of(userName, Set.of("project.writer", "topic.admin")), 1
                 ));
 
@@ -300,15 +300,15 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
         when(authZService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
+                .thenReturn(new IAMPolicyRecord("proj_a", ResourceType.PROJECT,
                         Map.of(userName, Set.of("project.writer", "topic.reader")), 1
                 ));
         when(authZService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_a", ResourceType.TOPIC,
+                .thenReturn(new IAMPolicyRecord("proj_a:topic_a", ResourceType.TOPIC,
                         Map.of(userName, Set.of("topic.reader")), 1
                 ));
         when(authZService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_b", ResourceType.TOPIC,
+                .thenReturn(new IAMPolicyRecord("proj_a:topic_b", ResourceType.TOPIC,
                         Map.of(userName, Set.of("topic.admin")), 1
                 ));
 
@@ -334,7 +334,7 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
         when(authZService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), anyString()))
-                .thenReturn(new RoleBindingNode("sub_a", ResourceType.SUBSCRIPTION,
+                .thenReturn(new IAMPolicyRecord("sub_a", ResourceType.SUBSCRIPTION,
                         Map.of(userName, Set.of("project.writer", "subscription.admin")), 1
                 ));
 
@@ -360,15 +360,15 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
         when(authZService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
+                .thenReturn(new IAMPolicyRecord("proj_a", ResourceType.PROJECT,
                         Map.of(userName, Set.of("project.writer", "subscription.reader")), 1
                 ));
         when(authZService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a")))
-                .thenReturn(new RoleBindingNode("proj_a:sub_a", ResourceType.SUBSCRIPTION,
+                .thenReturn(new IAMPolicyRecord("proj_a:sub_a", ResourceType.SUBSCRIPTION,
                         Map.of(userName, Set.of("subscription.reader")), 1
                 ));
         when(authZService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b")))
-                .thenReturn(new RoleBindingNode("proj_a:sub_b", ResourceType.SUBSCRIPTION,
+                .thenReturn(new IAMPolicyRecord("proj_a:sub_b", ResourceType.SUBSCRIPTION,
                         Map.of(userName, Set.of("subscription.admin")), 1
                 ));
 
@@ -394,7 +394,7 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a/wut?";
         when(authZService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_a", ResourceType.TOPIC,
+                .thenReturn(new IAMPolicyRecord("proj_a:topic_a", ResourceType.TOPIC,
                         Map.of(userName, Set.of("topic.admin")), 1
                 ));
 

@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.authz;
 
 import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
@@ -45,11 +45,11 @@ public class AuthZHandlersTest extends WebTestBase {
         authZHandlers = new AuthZHandlers(authZService);
 
         Route routeGetNode =
-                router.get(AUTHZ_DEBUG_PATH).handler(wrapBlocking(authZHandlers::getRoleBindingNode));
+                router.get(AUTHZ_DEBUG_PATH).handler(wrapBlocking(authZHandlers::getIAMPolicyRecord));
         setupFailureHandler(routeGetNode);
 
         Route routeGetAllNodes =
-                router.get(AUTHZ_DEBUG_BASE).handler(wrapBlocking(authZHandlers::getAllRoleBindingNodes));
+                router.get(AUTHZ_DEBUG_BASE).handler(wrapBlocking(authZHandlers::getAllIAMPolicyRecords));
         setupFailureHandler(routeGetAllNodes);
 
         Route routeGetIAMPolicy = router.get(AUTHZ_ORG_POLICY)
@@ -61,7 +61,7 @@ public class AuthZHandlersTest extends WebTestBase {
         setupFailureHandler(routeSetIAMPolicy);
 
         Route routeDeleteNode = router.delete(AUTHZ_DEBUG_PATH)
-                .handler(wrapBlocking(authZHandlers::deleteRoleBindingNode));
+                .handler(wrapBlocking(authZHandlers::deleteIAMPolicyRecord));
         setupFailureHandler(routeDeleteNode);
     }
 
@@ -70,7 +70,7 @@ public class AuthZHandlersTest extends WebTestBase {
         super.tearDown();
     }
 
-    private String getRoleBindingNodeUrl(ResourceType resourceType, String resourceId) {
+    private String getIAMPolicyRecordUrl(ResourceType resourceType, String resourceId) {
         return String.join("/", AUTHZ_DEBUG_BASE, resourceType.name(), resourceId);
     }
 
@@ -91,66 +91,66 @@ public class AuthZHandlersTest extends WebTestBase {
     }
 
     @Test
-    public void testGetRoleBindingNode() throws Exception {
-        RoleBindingNode expected = new RoleBindingNode("testNode", ResourceType.ORG, Map.of(), 0);
+    public void testGetIAMPolicyRecord() throws Exception {
+        IAMPolicyRecord expected = new IAMPolicyRecord("testNode", ResourceType.ORG, Map.of(), 0);
 
         HttpRequest<Buffer> request = createRequest(
                 HttpMethod.GET,
-                getRoleBindingNodeUrl(expected.getResourceType(), expected.getResourceId())
+                getIAMPolicyRecordUrl(expected.getResourceType(), expected.getResourceId())
         );
-        doReturn(expected).when(authZService).getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+        doReturn(expected).when(authZService).getIAMPolicyRecord(expected.getResourceType(), expected.getResourceId());
 
-        RoleBindingNode response = sendRequestWithoutBody(request, RoleBindingNode.class);
+        IAMPolicyRecord response = sendRequestWithoutBody(request, IAMPolicyRecord.class);
         assertEquals(expected, response);
-        verify(authZService, times(1)).getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+        verify(authZService, times(1)).getIAMPolicyRecord(expected.getResourceType(), expected.getResourceId());
 
-        String notFoundError = String.format("RoleBinding on resource(%s) not found.", expected.getResourceId());
+        String notFoundError = String.format("IAMPolicyRecord on resource(%s) not found.", expected.getResourceId());
         doThrow(new ResourceNotFoundException(notFoundError)).when(authZService)
-                .getRoleBindingNode(expected.getResourceType(), expected.getResourceId());
+                .getIAMPolicyRecord(expected.getResourceType(), expected.getResourceId());
         ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
         assertEquals(notFoundError, errResponse.reason());
     }
 
     @Test
-    public void testGetAllRoleBindingNodes() throws Exception {
-        List<RoleBindingNode> expected = List.of(
-                new RoleBindingNode("testNode1", ResourceType.ORG, Map.of(), 0),
-                new RoleBindingNode("testNode2", ResourceType.ORG, Map.of(), 0)
+    public void testGetAllIAMPolicyRecords() throws Exception {
+        List<IAMPolicyRecord> expected = List.of(
+                new IAMPolicyRecord("testNode1", ResourceType.ORG, Map.of(), 0),
+                new IAMPolicyRecord("testNode2", ResourceType.ORG, Map.of(), 0)
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, AUTHZ_DEBUG_BASE);
-        doReturn(expected).when(authZService).getAllRoleBindingNodes();
+        doReturn(expected).when(authZService).getAllIAMPolicyRecords();
 
         HttpResponse<Buffer> responseBuffer = sendRequest(request, null);
-        List<RoleBindingNode> response =
-                jsonDeserialize(responseBuffer.bodyAsString(), List.class, RoleBindingNode.class);
+        List<IAMPolicyRecord> response =
+                jsonDeserialize(responseBuffer.bodyAsString(), List.class, IAMPolicyRecord.class);
 
         assertEquals(expected.size(), response.size());
         assertArrayEquals(expected.toArray(), response.toArray());
-        verify(authZService, times(1)).getAllRoleBindingNodes();
+        verify(authZService, times(1)).getAllIAMPolicyRecords();
     }
 
     @Test
-    public void testDeleteRoleBindingNode() throws Exception {
-        RoleBindingNode node = new RoleBindingNode("testNode", ResourceType.ORG, Map.of(), 0);
+    public void testDeleteIAMPolicyRecord() throws Exception {
+        IAMPolicyRecord node = new IAMPolicyRecord("testNode", ResourceType.ORG, Map.of(), 0);
 
         HttpRequest<Buffer> request =
-                createRequest(HttpMethod.DELETE, getRoleBindingNodeUrl(node.getResourceType(), node.getResourceId()));
-        doNothing().when(authZService).deleteRoleBindingNode(node.getResourceType(), node.getResourceId());
+                createRequest(HttpMethod.DELETE, getIAMPolicyRecordUrl(node.getResourceType(), node.getResourceId()));
+        doNothing().when(authZService).deleteIAMPolicyRecord(node.getResourceType(), node.getResourceId());
 
         sendRequestWithoutBody(request, null);
-        verify(authZService, times(1)).deleteRoleBindingNode(node.getResourceType(), node.getResourceId());
+        verify(authZService, times(1)).deleteIAMPolicyRecord(node.getResourceType(), node.getResourceId());
 
-        String notFoundError = String.format("RoleBinding on resource(%s) not found.", node.getResourceId());
+        String notFoundError = String.format("IAMPolicyRecord on resource(%s) not found.", node.getResourceId());
         doThrow(new ResourceNotFoundException(notFoundError)).when(authZService)
-                .deleteRoleBindingNode(node.getResourceType(), node.getResourceId());
+                .deleteIAMPolicyRecord(node.getResourceType(), node.getResourceId());
         ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
         assertEquals(notFoundError, errResponse.reason());
     }
 
     @Test
     public void testSetOrgIAMPolicy() throws InterruptedException {
-        RoleBindingNode existingNode = new RoleBindingNode("testNode", ResourceType.ORG, Map.of(
+        IAMPolicyRecord existingNode = new IAMPolicyRecord("testNode", ResourceType.ORG, Map.of(
                 "user.a", Set.of("role1", "role2")
         ), 0);
         IAMPolicyRequest assignmentUpdate = new IAMPolicyRequest(
@@ -161,7 +161,7 @@ public class AuthZHandlersTest extends WebTestBase {
         doReturn(existingNode).when(authZService)
                 .setIAMPolicy(eq(ResourceType.ORG), eq("testNode"), eq(assignmentUpdate));
 
-        RoleBindingNode response = sendRequestWithBody(request, assignmentUpdate, RoleBindingNode.class);
+        IAMPolicyRecord response = sendRequestWithBody(request, assignmentUpdate, IAMPolicyRecord.class);
         assertEquals(existingNode, response);
         verify(authZService, times(1)).setIAMPolicy(eq(ResourceType.ORG), eq("testNode"), eq(assignmentUpdate));
 
