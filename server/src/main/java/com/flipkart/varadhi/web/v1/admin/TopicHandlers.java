@@ -96,10 +96,9 @@ public class TopicHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String varadhiTopicName = getVaradhiTopicName(ctx);
         VaradhiTopic varadhiTopic = varadhiTopicService.get(varadhiTopicName);
-        TopicResource topicResource = varadhiTopic.fetchTopicResource();
+        TopicResource topicResource = TopicResource.of(varadhiTopic);
         ctx.endApiWithResponse(topicResource);
     }
 

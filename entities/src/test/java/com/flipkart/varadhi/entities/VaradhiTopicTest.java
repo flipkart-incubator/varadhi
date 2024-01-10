@@ -36,7 +36,7 @@ class VaradhiTopicTest {
     void getTopicResource() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, INITIAL_VERSION, projectName, false, CapacityPolicy.getDefault()));
 
-        TopicResource topicResource = varadhiTopic.fetchTopicResource();
+        TopicResource topicResource = TopicResource.of(varadhiTopic);
 
         assertEquals(topicName, topicResource.getName());
         assertEquals(INITIAL_VERSION, topicResource.getVersion());

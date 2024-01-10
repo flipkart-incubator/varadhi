@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 
 import java.util.HashMap;
@@ -12,8 +11,6 @@ public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
-
-    @JsonIgnore
     private final CapacityPolicy capacityPolicy;
 
     private VaradhiTopic(
@@ -53,16 +50,6 @@ public class VaradhiTopic extends AbstractTopic {
 
     public InternalTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
-    }
-
-    public TopicResource fetchTopicResource() {
-        return new TopicResource(
-                this.getName().split(NAME_SEPARATOR_REGEX)[1],
-                this.getVersion(),
-                this.getName().split(NAME_SEPARATOR_REGEX)[0],
-                this.isGrouped(),
-                this.capacityPolicy
-        );
     }
 
     private static CapacityPolicy fetchDefaultCapacityPolicy() {
