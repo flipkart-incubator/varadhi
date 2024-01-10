@@ -11,23 +11,31 @@ public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
+    private final CapacityPolicy capacityPolicy;
 
     private VaradhiTopic(
             String name,
             int version,
             boolean grouped,
+            CapacityPolicy capacityPolicy,
             Map<String, InternalTopic> internalTopics
     ) {
         super(name, version);
         this.grouped = grouped;
+        this.capacityPolicy = capacityPolicy;
         this.internalTopics = null == internalTopics ? new HashMap<>() : internalTopics;
     }
 
     public static VaradhiTopic of(TopicResource topicResource) {
+        CapacityPolicy capacityPolicy = topicResource.getCapacityPolicy();
+        if (null == capacityPolicy) {
+            capacityPolicy = fetchDefaultCapacityPolicy();
+        }
         return new VaradhiTopic(
                 buildTopicName(topicResource.getProject(), topicResource.getName()),
                 INITIAL_VERSION,
                 topicResource.isGrouped(),
+                capacityPolicy,
                 null
         );
     }
@@ -42,5 +50,10 @@ public class VaradhiTopic extends AbstractTopic {
 
     public InternalTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
+    }
+
+    private static CapacityPolicy fetchDefaultCapacityPolicy() {
+        //TODO:: make default capacity config based instead of hard coding.
+        return CapacityPolicy.getDefault();
     }
 }

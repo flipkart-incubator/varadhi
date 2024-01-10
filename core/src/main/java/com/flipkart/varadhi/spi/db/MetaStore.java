@@ -41,14 +41,6 @@ public interface MetaStore {
 
     List<String> getVaradhiTopicNames(String projectName);
 
-    void createTopicResource(TopicResource topicResourceName);
-
-    TopicResource getTopicResource(String topicResourceName, String projectName);
-
-    boolean checkTopicResourceExists(String topicName, String projectName);
-
-    void deleteTopicResource(String topicResourceName, String projectName);
-
     void createVaradhiTopic(VaradhiTopic varadhiTopicName);
 
     VaradhiTopic getVaradhiTopic(String varadhiTopicName);

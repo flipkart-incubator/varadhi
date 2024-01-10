@@ -26,4 +26,15 @@ public class TopicResource extends MetaStoreEntity implements Validatable {
         this.grouped = grouped;
         this.capacityPolicy = capacityPolicy;
     }
+
+    public static TopicResource of(VaradhiTopic varadhiTopic) {
+        String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
+        return new TopicResource(
+                topicResourceInfo[1],
+                varadhiTopic.getVersion(),
+                topicResourceInfo[0],
+                varadhiTopic.isGrouped(),
+                varadhiTopic.getCapacityPolicy()
+        );
+    }
 }

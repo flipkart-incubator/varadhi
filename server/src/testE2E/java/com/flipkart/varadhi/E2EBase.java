@@ -59,6 +59,10 @@ public class E2EBase {
         return String.join("/", getProjectUri(project), "topics");
     }
 
+    static String getTopicsUri(Project project, String topicName) {
+        return String.join("/", getTopicsUri(project), topicName);
+    }
+
     static List<Org> getOrgs(Response response) {
         return response.readEntity(new GenericType<>() {
         });
@@ -70,6 +74,11 @@ public class E2EBase {
     }
 
     static List<Project> getProjects(Response response) {
+        return response.readEntity(new GenericType<>() {
+        });
+    }
+
+    static List<String> getTopics(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
@@ -98,7 +107,16 @@ public class E2EBase {
 
     static void cleanupProject(Project project) {
         //TODO:: add cleanup of other resources when implemented.
+        List<String> existingTopics = getTopics(makeListRequest(getTopicsUri(project), 200));
+        if (!existingTopics.isEmpty()) {
+            existingTopics.forEach(t -> cleanupTopic(t, project));
+        }
         makeDeleteRequest(getProjectUri(project), 200);
+    }
+
+    static void cleanupTopic(String topicName, Project project) {
+        //TODO: Do subscription/namespace/tenant or any relevant resources cleanup
+        makeDeleteRequest(getTopicsUri(project, topicName), 200);
     }
 
     static Client getClient() {
