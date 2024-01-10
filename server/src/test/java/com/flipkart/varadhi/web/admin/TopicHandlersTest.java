@@ -7,7 +7,6 @@ package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
@@ -34,8 +33,6 @@ public class TopicHandlersTest extends WebTestBase {
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
     ProjectService projectService;
-    VaradhiMetaStore varadhiMetaStore;
-
     private final String topicName = "topic1";
     private final String team1 = "team1";
     private final String org1 = "org1";
@@ -47,8 +44,7 @@ public class TopicHandlersTest extends WebTestBase {
         varadhiTopicService = mock(VaradhiTopicService.class);
         varadhiTopicFactory = mock(VaradhiTopicFactory.class);
         projectService = mock(ProjectService.class);
-        varadhiMetaStore = mock(VaradhiMetaStore.class);
-        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService, varadhiMetaStore);
+        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService);
 
         Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::create));
         setupFailureHandler(routeCreate);
@@ -94,7 +90,7 @@ public class TopicHandlersTest extends WebTestBase {
         List<String> listOfTopics = new ArrayList<>();
         listOfTopics.add(t1.getName());
 
-        doReturn(listOfTopics).when(varadhiMetaStore).getVaradhiTopicNames(project.getName());
+        doReturn(listOfTopics).when(varadhiTopicService).getVaradhiTopics(project.getName());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTopicsUrl(project));
         List<String> t1Created = sendRequestWithoutBody(request, List.class);

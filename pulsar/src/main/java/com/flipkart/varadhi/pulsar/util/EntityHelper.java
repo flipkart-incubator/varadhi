@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.pulsar.util;
 
-import static com.flipkart.varadhi.Constants.PULSAR_PATH_SEPARATOR;
+import static com.flipkart.varadhi.pulsar.Constants.PULSAR_PATH_SEPARATOR;
 
 public class EntityHelper {
     public static String getNamespace(String tenantName, String projectName) {

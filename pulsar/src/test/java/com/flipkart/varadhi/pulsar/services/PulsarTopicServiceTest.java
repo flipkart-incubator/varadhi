@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 

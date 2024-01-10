@@ -8,7 +8,6 @@ import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -40,18 +39,15 @@ public class TopicHandlers implements RouteProvider {
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
     private final ProjectService projectService;
-    private final MetaStore metaStore;
 
     public TopicHandlers(
             VaradhiTopicFactory varadhiTopicFactory,
             VaradhiTopicService varadhiTopicService,
-            ProjectService projectService,
-            MetaStore metaStore
+            ProjectService projectService
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
         this.projectService = projectService;
-        this.metaStore = metaStore;
     }
 
     @Override
@@ -142,7 +138,7 @@ public class TopicHandlers implements RouteProvider {
 
     public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        List<String> varadhiTopics = metaStore.getVaradhiTopicNames(projectName);
+        List<String> varadhiTopics = varadhiTopicService.getVaradhiTopics(projectName);
 
         String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
         List<String> topicResourceNames = new ArrayList<>();

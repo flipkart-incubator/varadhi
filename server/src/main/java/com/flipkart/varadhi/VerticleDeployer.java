@@ -75,7 +75,7 @@ public abstract class VerticleDeployer {
         this.projectService =
                 new ProjectService(metaStore, restOptions.getProjectCacheBuilderSpec(), meterRegistry);
         this.topicHandlers =
-                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService, metaStore);
+                new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService);
         ProducerService producerService =
                 setupProducerService(
                         configuration.getProducerOptions(), messagingStackProvider.getProducerFactory(),

@@ -3,7 +3,6 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import lombok.extern.slf4j.Slf4j;
@@ -189,7 +188,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) throws ResourceNotFoundException {
+    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }

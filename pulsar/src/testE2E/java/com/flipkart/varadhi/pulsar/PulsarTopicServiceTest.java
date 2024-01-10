@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import org.apache.pulsar.client.admin.PulsarAdminException;

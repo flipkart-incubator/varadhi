@@ -8,6 +8,8 @@ import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.spi.services.TopicService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 
 @Slf4j
 public class VaradhiTopicService implements TopicService<VaradhiTopic> {
@@ -69,4 +71,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         return metaStore.checkVaradhiTopicExists(topicName);
     }
 
+    public List<String> getVaradhiTopics(String projectName) {
+        return metaStore.getVaradhiTopicNames(projectName);
+    }
 }
