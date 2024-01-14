@@ -3,6 +3,8 @@ package com.flipkart.varadhi;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.google.common.collect.Sets;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -52,12 +54,13 @@ public class VerticleTest {
                 new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3, true,
                         Optional.empty()
                 );
+        MeterRegistry registry = new OtlpMeterRegistry();
         HttpServerOptions httpServerOptions = new HttpServerOptions();
         httpServerOptions.setPort(6969);
         vertx.deployVerticle(
                 new RestVerticle(
                         Collections.singletonList(routeDefinition), new HashMap<>(), new FailureHandler(),
-                        httpServerOptions
+                        httpServerOptions, registry
                 ),
                 testContext.succeeding(id -> webClient.get(6969, "localhost", "/")
                         .as(BodyCodec.string())

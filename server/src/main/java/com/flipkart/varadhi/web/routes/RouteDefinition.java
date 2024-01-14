@@ -8,7 +8,6 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -84,6 +83,15 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
                     Optional.empty()
             );
         }
+    }
+
+    //This can be taken as params
+    public String getResourceName() {
+        return "dummy_resource_name";
+    }
+
+    public String getResourceDescription() {
+        return "Dummy Resource to Validate";
     }
 
 }

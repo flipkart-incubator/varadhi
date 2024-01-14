@@ -53,6 +53,7 @@ public abstract class VerticleDeployer {
     private final ProduceHandlers produceHandlers;
     private final HealthCheckHandler healthCheckHandler;
     private final Supplier<AuthZHandlers> authZHandlersSupplier;
+    private final MeterRegistry meterRegistry;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
@@ -71,6 +72,7 @@ public abstract class VerticleDeployer {
                 messagingStackProvider.getStorageTopicService(),
                 metaStoreProvider.getMetaStore()
         );
+        this.meterRegistry = meterRegistry;
         MetaStore metaStore = metaStoreProvider.getMetaStore();
         this.topicHandlers =
                 new TopicHandlers(varadhiTopicFactory, varadhiTopicService, metaStore);
@@ -129,7 +131,8 @@ public abstract class VerticleDeployer {
                                 handlerDefinitions,
                                 behaviorConfigurators,
                                 new FailureHandler(),
-                                configuration.getHttpServerOptions()
+                                configuration.getHttpServerOptions(),
+                                meterRegistry
                         ),
                         configuration.getVerticleDeploymentOptions()
                 )

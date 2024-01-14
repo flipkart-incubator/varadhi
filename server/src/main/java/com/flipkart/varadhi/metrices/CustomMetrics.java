@@ -1,18 +1,27 @@
 package com.flipkart.varadhi.metrices;
 
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.core.spi.metrics.HttpServerMetrics;
-import io.vertx.core.spi.metrics.VertxMetrics;
+import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.micrometer.backends.BackendRegistry;
+import io.vertx.micrometer.impl.VertxMetricsImpl;
 
-public class CustomMetrics implements VertxMetrics {
+import java.util.concurrent.ConcurrentMap;
 
-    private final MeterRegistry meterRegistry;
+public class CustomMetrics extends VertxMetricsImpl  {
 
-    public CustomMetrics(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
+    public final MeterRegistry meterRegistry;
+    public CustomMetrics(
+            MicrometerMetricsOptions options, BackendRegistry backendRegistry,
+            ConcurrentMap<Meter.Id, Object> gaugesTable
+    ) {
+        super(options, backendRegistry, gaugesTable);
+        this.meterRegistry = backendRegistry.getMeterRegistry();
     }
+
 
     @Override
     public HttpServerMetrics<?, ?, ?> createHttpServerMetrics(HttpServerOptions options, SocketAddress localAddress) {

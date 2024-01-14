@@ -30,6 +30,7 @@ dependencies {
     implementation("io.vertx:vertx-opentelemetry")
     implementation("io.vertx:vertx-opentracing")
     implementation("io.vertx:vertx-micrometer-metrics")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {

@@ -1,11 +1,13 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.exceptions.InvalidStateException;
+import com.flipkart.varadhi.metrices.MetricConstants;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -31,17 +33,20 @@ public class RestVerticle extends AbstractVerticle {
     private final FailureHandler failureHandler;
     private final HttpServerOptions httpServerOptions;
     private HttpServer httpServer;
+    private MeterRegistry meterRegistry;
 
     public RestVerticle(
             List<RouteDefinition> apiRoutes,
             Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators,
             FailureHandler failureHandler,
-            HttpServerOptions httpServerOptions
+            HttpServerOptions httpServerOptions,
+            MeterRegistry meterRegistry
     ) {
         this.apiRoutes = apiRoutes;
         this.routeBehaviourConfigurators = routeBehaviourConfigurators;
         this.failureHandler = failureHandler;
         this.httpServerOptions = httpServerOptions;
+        this.meterRegistry = meterRegistry;
     }
 
     private void configureApiRoutes(
@@ -67,13 +72,21 @@ public class RestVerticle extends AbstractVerticle {
             }
             def.preHandlers().forEach(route::handler);
             if (def.blockingEndHandler()) {
-                route.handler(wrapBlockingExecution(vertx, def.endReqHandler()));
+                route.handler(wrapBlockingExecution(vertx, getHandler(def)));
             } else {
-                route.handler(def.endReqHandler());
+                route.handler(getHandler(def));
             }
 
             route.failureHandler(failureHandler);
         }
+    }
+
+    private Handler<RoutingContext> getHandler(RouteDefinition routeDefinition) {
+        return ctx -> {
+            ctx.request().headers().add(MetricConstants.RESOURCE_NAME, routeDefinition.getResourceName());
+            ctx.request().headers().add(MetricConstants.RESOURCE_DESCRIPTION, routeDefinition.getResourceDescription());
+            routeDefinition.endReqHandler().handle(ctx);
+        };
     }
 
     public static Handler<RoutingContext> wrapBlockingExecution(Vertx vrtx, Handler<RoutingContext> apiEndHandler) {

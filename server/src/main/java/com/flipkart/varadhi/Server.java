@@ -4,17 +4,15 @@ import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.metrices.CustomMetrics;
+import com.flipkart.varadhi.metrices.CustomFactory;
 import com.flipkart.varadhi.utils.HostUtils;
-import com.flipkart.varadhi.utils.MetricsUtil;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
-import io.vertx.micrometer.MicrometerMetricsOptions;
-import io.vertx.micrometer.VertxPrometheusOptions;
+import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,13 +40,8 @@ public class Server {
         log.debug("Creating Vertex");
         VertxOptions vertxOptions = configuration.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
-                .setMetricsOptions(new MicrometerMetricsOptions()
-                        .setMicrometerRegistry(services.getMetricsRegistry())
-                        .setRegistryName("default")
-                        .setJvmMetricsEnabled(true)
-                        .setFactory(options -> new CustomMetrics(services.getMetricsRegistry()))
-                        .setClientRequestTagsProvider(httpRequest -> MetricsUtil.getCustomHttpHeaders(httpRequest.headers()))
-                        .setPrometheusOptions(new VertxPrometheusOptions().setEnabled(true))
+                .setMetricsOptions(new MetricsOptions()
+                        .setFactory(new CustomFactory(services.getMetricsRegistry()))
                         .setEnabled(true));
         Vertx vertx = Vertx.vertx(vertxOptions);
         log.debug("Created Vertex");
