@@ -71,23 +71,29 @@ public class ProjectService {
     }
 
     public void deleteProject(String projectName) {
-        //TODO:: check no queues for this project.
+        validateDelete(projectName);
+        metaStore.deleteProject(projectName);
+    }
 
-        // ensure no topics exist
+    private void validateDelete(String projectName) {
+        ensureNoTopicExist(projectName);
+        ensureNoSubscriptionExist(projectName);
+    }
+
+    private void ensureNoTopicExist(String projectName) {
         List<String> varadhiTopicNames = metaStore.getVaradhiTopicNames(projectName);
         if (!varadhiTopicNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                     String.format("Can not delete Project(%s), it has associated entities.", projectName));
         }
+    }
 
-        // ensure no subscriptions exist
+    private void ensureNoSubscriptionExist(String projectName) {
         List<String> varadhiSubscriptionNames = metaStore.getSubscriptionNames(projectName);
         if (!varadhiSubscriptionNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                     String.format("Can not delete Project(%s), it has associated subscription entities.", projectName));
         }
-
-        metaStore.deleteProject(projectName);
     }
 
     private VaradhiCache<String, Project> buildProjectCache(

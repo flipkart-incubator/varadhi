@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -9,6 +10,8 @@ import com.flipkart.varadhi.spi.services.TopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
 
 
 @Slf4j
@@ -53,6 +56,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
          * check for existing subscriptions before deleting the topic
          */
         VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
+        validateDelete(varadhiTopicName);
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
@@ -64,6 +68,18 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
                 }
         );
         metaStore.deleteVaradhiTopic(varadhiTopic.getName());
+    }
+
+    private void validateDelete(String varadhiTopicName) {
+        String project = varadhiTopicName.split(NAME_SEPARATOR_REGEX)[0];
+        List<String> subscriptionNames = metaStore.getSubscriptionNames(project);
+        subscriptionNames.forEach(subscriptionName -> {
+            VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+            if (subscription.getTopic().equals(varadhiTopicName)) {
+                throw new IllegalArgumentException(
+                        "Cannot delete topic as it is being used by subscription " + subscriptionName);
+            }
+        });
     }
 
     @Override
