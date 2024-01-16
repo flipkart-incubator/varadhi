@@ -20,11 +20,11 @@ public class VaradhiSubscriptionService {
     }
 
     public List<String> getSubscriptionList(String projectName) {
-        return metaStore.getVaradhiSubscriptionNames(projectName);
+        return metaStore.getSubscriptionNames(projectName);
     }
 
     public VaradhiSubscription getSubscription(String subscriptionName, String projectName) {
-        return metaStore.getVaradhiSubscription(subscriptionName, projectName);
+        return metaStore.getSubscription(subscriptionName, projectName);
     }
 
     public VaradhiSubscription createSubscription(VaradhiSubscription subscription) {
@@ -38,7 +38,7 @@ public class VaradhiSubscriptionService {
         }
 
         // check for duplicate subscription
-        if (metaStore.checkVaradhiSubscriptionExists(subscription.getName(), project.getName())) {
+        if (metaStore.checkSubscriptionExists(subscription.getName(), project.getName())) {
             throw new IllegalArgumentException(
                     "Subscription(%s:%s) already exists".formatted(project.getName(), subscription.getName()));
         }
@@ -47,7 +47,7 @@ public class VaradhiSubscriptionService {
         subscription.setVersion(INITIAL_VERSION);
 
         // persist
-        metaStore.createVaradhiSubscription(subscription);
+        metaStore.createSubscription(subscription);
 
         return subscription;
     }
@@ -57,12 +57,12 @@ public class VaradhiSubscriptionService {
         String projectName = update.getProject();
 
         // check subscription exist
-        if (!metaStore.checkVaradhiSubscriptionExists(subscriptionName, projectName)) {
+        if (!metaStore.checkSubscriptionExists(subscriptionName, projectName)) {
             throw new IllegalArgumentException(
                     "Subscription(%s:%s) does not exist".formatted(projectName, subscriptionName));
         }
 
-        VaradhiSubscription existingSubscription = metaStore.getVaradhiSubscription(subscriptionName, projectName);
+        VaradhiSubscription existingSubscription = metaStore.getSubscription(subscriptionName, projectName);
         if (update.getVersion() != existingSubscription.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
@@ -95,18 +95,18 @@ public class VaradhiSubscriptionService {
                 update.getEndpoint()
         );
 
-        int updatedVersion = metaStore.updateVaradhiSubscription(updatedSubscription);
+        int updatedVersion = metaStore.updateSubscription(updatedSubscription);
         updatedSubscription.setVersion(updatedVersion);
 
         return updatedSubscription;
     }
 
     public void deleteSubscription(String subscriptionName, String projectName) {
-        if (!metaStore.checkVaradhiSubscriptionExists(subscriptionName, projectName)) {
+        if (!metaStore.checkSubscriptionExists(subscriptionName, projectName)) {
             throw new IllegalArgumentException(
                     "Subscription(%s:%s) does not exist".formatted(projectName, subscriptionName));
         }
 
-        metaStore.deleteVaradhiSubscription(subscriptionName, projectName);
+        metaStore.deleteSubscription(subscriptionName, projectName);
     }
 }

@@ -57,15 +57,15 @@ public interface MetaStore {
 
     void deleteVaradhiTopic(String varadhiTopicName);
 
-    List<String> getVaradhiSubscriptionNames(String projectName);
+    List<String> getSubscriptionNames(String projectName);
 
-    void createVaradhiSubscription(VaradhiSubscription subscription);
+    void createSubscription(VaradhiSubscription subscription);
 
-    VaradhiSubscription getVaradhiSubscription(String subscriptionName, String projectName);
+    VaradhiSubscription getSubscription(String subscriptionName, String projectName);
 
-    int updateVaradhiSubscription(VaradhiSubscription subscription);
+    int updateSubscription(VaradhiSubscription subscription);
 
-    boolean checkVaradhiSubscriptionExists(String subscriptionName, String projectName);
+    boolean checkSubscriptionExists(String subscriptionName, String projectName);
 
-    void deleteVaradhiSubscription(String subscriptionName, String projectName);
+    void deleteSubscription(String subscriptionName, String projectName);
 }

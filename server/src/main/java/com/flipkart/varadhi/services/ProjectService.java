@@ -81,7 +81,7 @@ public class ProjectService {
         }
 
         // ensure no subscriptions exist
-        List<String> varadhiSubscriptionNames = metaStore.getVaradhiSubscriptionNames(projectName);
+        List<String> varadhiSubscriptionNames = metaStore.getSubscriptionNames(projectName);
         if (!varadhiSubscriptionNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                     String.format("Can not delete Project(%s), it has associated subscription entities.", projectName));
