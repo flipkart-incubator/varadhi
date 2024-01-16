@@ -16,7 +16,6 @@ public final class SubscriptionHelper {
                 version,
                 subscriptionResource.getProject(),
                 buildTopicName(subscriptionResource.getProject(), subscriptionResource.getTopic()),
-                // can I assume topic name will also be <project>.<topic>?
                 subscriptionResource.getDescription(),
                 subscriptionResource.isGrouped(),
                 subscriptionResource.getEndpoint()

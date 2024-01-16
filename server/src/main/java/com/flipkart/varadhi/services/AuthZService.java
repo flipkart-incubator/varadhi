@@ -116,7 +116,7 @@ public class AuthZService {
                 // project:topic
                 String[] segments = resourceId.split(":");
                 String varadhiTopicName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
-                yield (segments.length == 2) && metaStore.checkVaradhiTopicExists(varadhiTopicName);
+                yield (segments.length == 2) && metaStore.checkTopicExists(varadhiTopicName);
             }
             case SUBSCRIPTION -> false; //TODO
         };

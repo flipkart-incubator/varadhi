@@ -81,7 +81,7 @@ public class ProjectService {
     }
 
     private void ensureNoTopicExist(String projectName) {
-        List<String> varadhiTopicNames = metaStore.getVaradhiTopicNames(projectName);
+        List<String> varadhiTopicNames = metaStore.getTopicNames(projectName);
         if (!varadhiTopicNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                     String.format("Can not delete Project(%s), it has associated entities.", projectName));

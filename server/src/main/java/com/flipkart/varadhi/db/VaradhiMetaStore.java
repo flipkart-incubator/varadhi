@@ -167,7 +167,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
 
 
     @Override
-    public List<String> getVaradhiTopicNames(String projectName) {
+    public List<String> getTopicNames(String projectName) {
         String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
         return zkMetaStore.listChildren(znode)
@@ -177,25 +177,25 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public void createVaradhiTopic(VaradhiTopic varadhiTopic) {
+    public void createTopic(VaradhiTopic varadhiTopic) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopic.getName());
         zkMetaStore.createZNodeWithData(znode, varadhiTopic);
     }
 
     @Override
-    public boolean checkVaradhiTopicExists(String varadhiTopicName) {
+    public boolean checkTopicExists(String varadhiTopicName) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) {
+    public VaradhiTopic getTopic(String varadhiTopicName) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
 
     @Override
-    public void deleteVaradhiTopic(String varadhiTopicName) {
+    public void deleteTopic(String varadhiTopicName) {
         ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
         zkMetaStore.deleteZNode(znode);
     }

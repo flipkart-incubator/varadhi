@@ -36,16 +36,11 @@ public class SubscriptionService {
 
     private void validateCreation(VaradhiSubscription subscription) {
         Project project = metaStore.getProject(subscription.getProject());
-        VaradhiTopic topic = metaStore.getVaradhiTopic(subscription.getTopic());
+        VaradhiTopic topic = metaStore.getTopic(subscription.getTopic());
         if (subscription.isGrouped() && !topic.isGrouped()) {
             throw new IllegalArgumentException(
                     "Cannot create grouped Subscription as it's Topic(%s:%s) is not grouped".formatted(
                             project.getName(), subscription.getTopic()));
-        }
-
-        if (metaStore.checkSubscriptionExists(subscription.getName())) {
-            throw new IllegalArgumentException(
-                    "Subscription(%s:%s) already exists".formatted(project.getName(), subscription.getName()));
         }
     }
 
@@ -81,7 +76,7 @@ public class SubscriptionService {
                     "Cannot update Topic of Subscription(%s)".formatted(update.getName()));
         }
 
-        VaradhiTopic topic = metaStore.getVaradhiTopic(update.getTopic());
+        VaradhiTopic topic = metaStore.getTopic(update.getTopic());
         if (update.isGrouped() && !topic.isGrouped()) {
             throw new IllegalArgumentException(
                     "Cannot update Subscription(%s) to grouped as it's Topic(%s) is not grouped".formatted(
