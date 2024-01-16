@@ -67,8 +67,8 @@ public class ZNode {
         return new ZNode(ROLE_BINDING, resourceType.toString(), resourceId);
     }
 
-    public static ZNode OfVaradhiSubscription(String projectName, String subscriptionName) {
-        return new ZNode(VARADHI_SUBSCRIPTION, projectName, subscriptionName);
+    public static ZNode OfVaradhiSubscription(String subscriptionName) {
+        return new ZNode(VARADHI_SUBSCRIPTION, subscriptionName);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {

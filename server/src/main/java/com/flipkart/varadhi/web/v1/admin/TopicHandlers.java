@@ -18,18 +18,13 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.ArrayList;
-
+import java.util.*;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
@@ -127,7 +122,6 @@ public class TopicHandlers implements RouteProvider {
         varadhiTopicService.create(vt, project);
         ctx.endApiWithResponse(topicResource);
     }
-
 
     public void delete(RoutingContext ctx) {
         String varadhiTopicName = getVaradhiTopicName(ctx);

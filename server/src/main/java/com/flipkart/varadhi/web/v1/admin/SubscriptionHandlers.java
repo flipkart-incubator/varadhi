@@ -3,8 +3,8 @@ package com.flipkart.varadhi.web.v1.admin;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.services.VaradhiSubscriptionService;
-import com.flipkart.varadhi.utils.SubscriptionFactory;
+import com.flipkart.varadhi.services.SubscriptionService;
+import com.flipkart.varadhi.utils.SubscriptionHelper;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -24,9 +24,9 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
 
-    private final VaradhiSubscriptionService subscriptionService;
+    private final SubscriptionService subscriptionService;
 
-    public SubscriptionHandlers(VaradhiSubscriptionService subscriptionService) {
+    public SubscriptionHandlers(SubscriptionService subscriptionService) {
         this.subscriptionService = subscriptionService;
     }
 
@@ -39,7 +39,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .get("")
                                 .blocking()
                                 .authenticatedWith(
-                                        PermissionAuthorization.of(SUBSCRIPTION_LIST, "{project}/{subscription}"))
+                                        PermissionAuthorization.of(SUBSCRIPTION_LIST, "{project}"))
                                 .build(this::list),
                         RouteDefinition
                                 .get("/:subscription")
@@ -48,10 +48,10 @@ public class SubscriptionHandlers implements RouteProvider {
                                         PermissionAuthorization.of(SUBSCRIPTION_GET, "{project}/{subscription}"))
                                 .build(this::get),
                         RouteDefinition
-                                .post("/:subscription")
+                                .post("")
                                 .blocking().hasBody()
                                 .authenticatedWith(
-                                        PermissionAuthorization.of(SUBSCRIPTION_CREATE, "{project}/{subscription}"))
+                                        PermissionAuthorization.of(SUBSCRIPTION_CREATE, "{project}"))
                                 .build(this::create),
                         RouteDefinition
                                 .put("/:subscription")
@@ -90,30 +90,32 @@ public class SubscriptionHandlers implements RouteProvider {
     public void get(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String subscriptionName = ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION);
+        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
         SubscriptionResource subscription =
-                SubscriptionFactory.toResource(subscriptionService.getSubscription(subscriptionName, projectName));
+                SubscriptionHelper.toResource(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
     }
 
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
-        VaradhiSubscription varadhiSubscription = SubscriptionFactory.fromResource(subscription, INITIAL_VERSION);
+        VaradhiSubscription varadhiSubscription = SubscriptionHelper.fromResource(subscription, INITIAL_VERSION);
         VaradhiSubscription createdSubscription = subscriptionService.createSubscription(varadhiSubscription);
-        ctx.endApiWithResponse(SubscriptionFactory.toResource(createdSubscription));
+        ctx.endApiWithResponse(SubscriptionHelper.toResource(createdSubscription));
     }
 
     public void update(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiSubscription varadhiSubscription =
-                SubscriptionFactory.fromResource(subscription, subscription.getVersion());
+                SubscriptionHelper.fromResource(subscription, subscription.getVersion());
         VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(varadhiSubscription);
-        ctx.endApiWithResponse(SubscriptionFactory.toResource(updatedSubscription));
+        ctx.endApiWithResponse(SubscriptionHelper.toResource(updatedSubscription));
     }
 
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
         String subscriptionName = ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION);
-        subscriptionService.deleteSubscription(subscriptionName, projectName);
+        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
+        subscriptionService.deleteSubscription(internalSubscriptionName);
         ctx.endApi();
     }
 
@@ -127,15 +129,11 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION);
         SubscriptionResource subscription = ctx.body().asValidatedPojo(SubscriptionResource.class);
 
         // ensure project name consistent
         if (!projectName.equals(subscription.getProject())) {
             throw new IllegalArgumentException("Specified Project name is different from Project name in url");
-        } else if (!subscriptionName.equals(subscription.getName())) {
-            throw new IllegalArgumentException(
-                    "Specified Subscription name is different from Subscription name in url");
         }
         return subscription;
     }

@@ -208,36 +208,36 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
                 .stream()
                 .filter(name -> name.contains(projectPrefix))
                 .map(name -> name.split(RESOURCE_NAME_SEPARATOR)[1])
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public void createSubscription(VaradhiSubscription subscription) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getProject(), subscription.getName());
+        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getName());
         zkMetaStore.createZNodeWithData(znode, subscription);
     }
 
     @Override
-    public VaradhiSubscription getSubscription(String subscriptionName, String projectName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+    public VaradhiSubscription getSubscription(String subscriptionName) {
+        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiSubscription.class);
     }
 
     @Override
     public int updateSubscription(VaradhiSubscription subscription) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getProject(), subscription.getName());
+        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getName());
         return zkMetaStore.updateZNodeWithData(znode, subscription);
     }
 
     @Override
-    public boolean checkSubscriptionExists(String subscriptionName, String projectName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+    public boolean checkSubscriptionExists(String subscriptionName) {
+        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public void deleteSubscription(String subscriptionName, String projectName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(projectName, subscriptionName);
+    public void deleteSubscription(String subscriptionName) {
+        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
         zkMetaStore.deleteZNode(znode);
     }
 

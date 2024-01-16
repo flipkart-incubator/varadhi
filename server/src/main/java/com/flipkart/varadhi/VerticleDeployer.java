@@ -85,7 +85,7 @@ public abstract class VerticleDeployer {
 
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
-        this.subscriptionHandlers = new SubscriptionHandlers(new VaradhiSubscriptionService(metaStore));
+        this.subscriptionHandlers = new SubscriptionHandlers(new SubscriptionService(metaStore));
         this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
 
         this.healthCheckHandler = new HealthCheckHandler();

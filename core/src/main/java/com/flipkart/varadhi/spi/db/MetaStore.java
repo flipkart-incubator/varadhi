@@ -53,11 +53,11 @@ public interface MetaStore {
 
     void createSubscription(VaradhiSubscription subscription);
 
-    VaradhiSubscription getSubscription(String subscriptionName, String projectName);
+    VaradhiSubscription getSubscription(String subscriptionName);
 
     int updateSubscription(VaradhiSubscription subscription);
 
-    boolean checkSubscriptionExists(String subscriptionName, String projectName);
+    boolean checkSubscriptionExists(String subscriptionName);
 
-    void deleteSubscription(String subscriptionName, String projectName);
+    void deleteSubscription(String subscriptionName);
 }
