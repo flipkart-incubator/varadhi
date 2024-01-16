@@ -28,7 +28,13 @@ public class SubscriptionService {
     }
 
     public VaradhiSubscription createSubscription(VaradhiSubscription subscription) {
-        // check project and topic exists
+        validateCreation(subscription);
+        subscription.setVersion(INITIAL_VERSION);
+        metaStore.createSubscription(subscription);
+        return subscription;
+    }
+
+    private void validateCreation(VaradhiSubscription subscription) {
         Project project = metaStore.getProject(subscription.getProject());
         VaradhiTopic topic = metaStore.getVaradhiTopic(subscription.getTopic());
         if (subscription.isGrouped() && !topic.isGrouped()) {
@@ -37,61 +43,50 @@ public class SubscriptionService {
                             project.getName(), subscription.getTopic()));
         }
 
-        // check for duplicate subscription
         if (metaStore.checkSubscriptionExists(subscription.getName())) {
             throw new IllegalArgumentException(
                     "Subscription(%s:%s) already exists".formatted(project.getName(), subscription.getName()));
         }
-
-        // ensure version is set correctly
-        subscription.setVersion(INITIAL_VERSION);
-
-        // persist
-        metaStore.createSubscription(subscription);
-
-        return subscription;
     }
 
-    public VaradhiSubscription updateSubscription(VaradhiSubscription update) {
-        String subscriptionName = update.getName();
-
-        VaradhiSubscription existingSubscription = metaStore.getSubscription(subscriptionName);
-        if (update.getVersion() != existingSubscription.getVersion()) {
-            throw new InvalidOperationForResourceException(String.format(
-                    "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
-                    existingSubscription.getName()
-            ));
-        }
-
-        // only allow description, grouped, endpoint
-        if (!Objects.equals(update.getTopic(), existingSubscription.getTopic())) {
-            throw new IllegalArgumentException(
-                    "Cannot update Topic of Subscription(%s)".formatted(subscriptionName));
-        }
-
-        // if set grouped to true, but topic is not grouped
-        VaradhiTopic topic = metaStore.getVaradhiTopic(update.getTopic());
-        if (update.isGrouped() && !topic.isGrouped()) {
-            throw new IllegalArgumentException(
-                    "Cannot update Subscription(%s) to grouped as it's Topic(%s) is not grouped".formatted(
-                            subscriptionName, topic.getName()));
-        }
-
-        // update
+    public VaradhiSubscription updateSubscription(VaradhiSubscription subscription) {
+        VaradhiSubscription existingSubscription = metaStore.getSubscription(subscription.getName());
+        validateUpdate(existingSubscription, subscription);
         VaradhiSubscription updatedSubscription = new VaradhiSubscription(
                 existingSubscription.getName(),
                 existingSubscription.getVersion() + 1,
                 existingSubscription.getProject(),
                 existingSubscription.getTopic(),
-                update.getDescription(),
-                update.isGrouped(),
-                update.getEndpoint()
+                subscription.getDescription(),
+                subscription.isGrouped(),
+                subscription.getEndpoint()
         );
 
         int updatedVersion = metaStore.updateSubscription(updatedSubscription);
         updatedSubscription.setVersion(updatedVersion);
 
         return updatedSubscription;
+    }
+
+    private void validateUpdate(VaradhiSubscription existing, VaradhiSubscription update) {
+        if (update.getVersion() != existing.getVersion()) {
+            throw new InvalidOperationForResourceException(String.format(
+                    "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
+                    existing.getName()
+            ));
+        }
+
+        if (!Objects.equals(update.getTopic(), existing.getTopic())) {
+            throw new IllegalArgumentException(
+                    "Cannot update Topic of Subscription(%s)".formatted(update.getName()));
+        }
+
+        VaradhiTopic topic = metaStore.getVaradhiTopic(update.getTopic());
+        if (update.isGrouped() && !topic.isGrouped()) {
+            throw new IllegalArgumentException(
+                    "Cannot update Subscription(%s) to grouped as it's Topic(%s) is not grouped".formatted(
+                            update.getName(), topic.getName()));
+        }
     }
 
     public void deleteSubscription(String subscriptionName) {
