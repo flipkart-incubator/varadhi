@@ -19,6 +19,7 @@ import java.util.Set;
  */
 
 @Slf4j
+//TODO: Add resource as param
 public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour> behaviours,
                               LinkedHashSet<Handler<RoutingContext>> preHandlers,
                               Handler<RoutingContext> endReqHandler,
@@ -88,10 +89,6 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
     //This can be taken as params
     public String getResourceName() {
         return "dummy_resource_name";
-    }
-
-    public String getResourceDescription() {
-        return "Dummy Resource to Validate";
     }
 
 }

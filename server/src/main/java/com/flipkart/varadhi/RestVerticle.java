@@ -33,20 +33,17 @@ public class RestVerticle extends AbstractVerticle {
     private final FailureHandler failureHandler;
     private final HttpServerOptions httpServerOptions;
     private HttpServer httpServer;
-    private MeterRegistry meterRegistry;
 
     public RestVerticle(
             List<RouteDefinition> apiRoutes,
             Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators,
             FailureHandler failureHandler,
-            HttpServerOptions httpServerOptions,
-            MeterRegistry meterRegistry
+            HttpServerOptions httpServerOptions
     ) {
         this.apiRoutes = apiRoutes;
         this.routeBehaviourConfigurators = routeBehaviourConfigurators;
         this.failureHandler = failureHandler;
         this.httpServerOptions = httpServerOptions;
-        this.meterRegistry = meterRegistry;
     }
 
     private void configureApiRoutes(
@@ -84,7 +81,6 @@ public class RestVerticle extends AbstractVerticle {
     private Handler<RoutingContext> getHandler(RouteDefinition routeDefinition) {
         return ctx -> {
             ctx.request().headers().add(MetricConstants.RESOURCE_NAME, routeDefinition.getResourceName());
-            ctx.request().headers().add(MetricConstants.RESOURCE_DESCRIPTION, routeDefinition.getResourceDescription());
             routeDefinition.endReqHandler().handle(ctx);
         };
     }
