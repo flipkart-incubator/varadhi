@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.VersionedEntity;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

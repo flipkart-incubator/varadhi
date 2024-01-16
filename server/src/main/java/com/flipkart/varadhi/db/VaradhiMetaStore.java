@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.db.ZNode.*;
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 
 
 @Slf4j
@@ -167,37 +168,12 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
 
     @Override
     public List<String> getVaradhiTopicNames(String projectName) {
-        String projectPrefixOfTopicName = projectName + RESOURCE_NAME_SEPARATOR;
+        String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefixOfTopicName))
-                .map(name -> name.split(RESOURCE_NAME_SEPARATOR)[1])
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public void createTopicResource(TopicResource resource) {
-        ZNode znode = ZNode.OfTopicResource(resource.getProject(), resource.getName());
-        zkMetaStore.createZNodeWithData(znode, resource);
-    }
-
-    @Override
-    public boolean checkTopicResourceExists(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        return zkMetaStore.zkPathExist(znode);
-    }
-
-    @Override
-    public TopicResource getTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        return zkMetaStore.getZNodeDataAsPojo(znode, TopicResource.class);
-    }
-
-    @Override
-    public void deleteTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        zkMetaStore.deleteZNode(znode);
     }
 
     @Override
