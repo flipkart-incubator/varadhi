@@ -15,7 +15,7 @@ public final class SubscriptionHelper {
                 buildSubscriptionName(subscriptionResource.getProject(), subscriptionResource.getName()),
                 version,
                 subscriptionResource.getProject(),
-                buildTopicName(subscriptionResource.getProject(), subscriptionResource.getTopic()),
+                buildTopicName(subscriptionResource.getTopicProject(), subscriptionResource.getTopic()),
                 subscriptionResource.getDescription(),
                 subscriptionResource.isGrouped(),
                 subscriptionResource.getEndpoint()
@@ -23,13 +23,20 @@ public final class SubscriptionHelper {
     }
 
     public static SubscriptionResource toResource(VaradhiSubscription subscription) {
-        String subscriptionName = subscription.getName().split(NAME_SEPARATOR_REGEX)[1];
-        String topicName = subscription.getTopic().split(NAME_SEPARATOR_REGEX)[1];
+        String[] subscriptionNameSegments = subscription.getName().split(NAME_SEPARATOR_REGEX);
+        String subscriptionProject = subscriptionNameSegments[0];
+        String subscriptionName = subscriptionNameSegments[1];
+
+        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
+        String topicProject = topicNameSegments[0];
+        String topicName = topicNameSegments[1];
+
         return new SubscriptionResource(
                 subscriptionName,
                 subscription.getVersion(),
-                subscription.getProject(),
+                subscriptionProject,
                 topicName,
+                topicProject,
                 subscription.getDescription(),
                 subscription.isGrouped(),
                 subscription.getEndpoint()

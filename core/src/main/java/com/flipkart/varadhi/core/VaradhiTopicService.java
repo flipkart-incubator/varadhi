@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
-
 
 @Slf4j
 public class VaradhiTopicService implements TopicService<VaradhiTopic> {
@@ -71,8 +69,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     private void validateDelete(String varadhiTopicName) {
-        String project = varadhiTopicName.split(NAME_SEPARATOR_REGEX)[0];
-        List<String> subscriptionNames = metaStore.getSubscriptionNames(project);
+        List<String> subscriptionNames = metaStore.getAllSubscriptionNames();
         subscriptionNames.forEach(subscriptionName -> {
             VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
             if (subscription.getTopic().equals(varadhiTopicName)) {

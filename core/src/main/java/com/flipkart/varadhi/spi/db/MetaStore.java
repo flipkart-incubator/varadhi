@@ -49,6 +49,8 @@ public interface MetaStore {
 
     void deleteTopic(String varadhiTopicName);
 
+    List<String> getAllSubscriptionNames();
+
     List<String> getSubscriptionNames(String projectName);
 
     void createSubscription(VaradhiSubscription subscription);

@@ -14,6 +14,9 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     String topic;
 
     @NotBlank
+    String topicProject;
+
+    @NotBlank
     String description;
 
     boolean grouped;
@@ -26,6 +29,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             int version,
             String project,
             String topic,
+            String topicProject,
             String description,
             boolean grouped,
             Endpoint endpoint
@@ -33,6 +37,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         super(name, version);
         this.project = project;
         this.topic = topic;
+        this.topicProject = topicProject;
         this.description = description;
         this.grouped = grouped;
         this.endpoint = endpoint;

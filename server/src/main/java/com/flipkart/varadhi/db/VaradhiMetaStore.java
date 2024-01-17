@@ -201,6 +201,14 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
+    public List<String> getAllSubscriptionNames() {
+        ZNode znode = ZNode.OfEntityType(VARADHI_SUBSCRIPTION);
+        return zkMetaStore.listChildren(znode)
+                .stream()
+                .toList();
+    }
+
+    @Override
     public List<String> getSubscriptionNames(String projectName) {
         String projectPrefix = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(VARADHI_SUBSCRIPTION);
