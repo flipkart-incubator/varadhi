@@ -6,8 +6,7 @@ plugins {
 dependencies {
     api(project(':common'))
     api(project(':spi'))
-    implementation('com.fasterxml.jackson.core:jackson-databind')
+    implementation("io.vertx:vertx-core:${vertx_version}")
 
-    testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
 }
