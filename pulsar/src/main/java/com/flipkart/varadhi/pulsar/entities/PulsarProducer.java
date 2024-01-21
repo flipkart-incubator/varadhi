@@ -40,7 +40,7 @@ public class PulsarProducer implements Producer {
     }
 
     @Override
-    public CompletableFuture<Offset> ProduceAsync(Message message) {
+    public CompletableFuture<Offset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
 

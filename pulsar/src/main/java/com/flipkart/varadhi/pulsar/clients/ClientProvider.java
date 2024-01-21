@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.pulsar.clients;
 
-import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.config.PulsarAdminOptions;
 import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
+import com.flipkart.varadhi.spi.services.MessagingException;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;

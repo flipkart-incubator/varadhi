@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.services;
+package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.entities.AbstractTopic;
 import com.flipkart.varadhi.entities.Project;
@@ -10,5 +10,5 @@ public interface TopicService<T extends AbstractTopic> {
 
     void delete(String topicName);
 
-    boolean checkTopicExists(String topicName);
+    boolean exists(String topicName);
 }

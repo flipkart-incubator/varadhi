@@ -431,7 +431,7 @@ public class DefaultAuthorizationProviderTest {
                         testUser(userName, false), ResourceAction.TEAM_CREATE, resourcePath)
                 )
                 .onComplete(testContext.failing(t -> {
-                    Assertions.assertInstanceOf(com.flipkart.varadhi.exceptions.IllegalArgumentException.class, t);
+                    Assertions.assertInstanceOf(IllegalArgumentException.class, t);
                     checkpoint.flag();
                 }));
     }

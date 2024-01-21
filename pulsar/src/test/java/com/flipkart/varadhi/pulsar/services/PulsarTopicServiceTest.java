@@ -2,15 +2,11 @@ package com.flipkart.varadhi.pulsar.services;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
-import org.apache.pulsar.client.admin.PulsarAdmin;
-import org.apache.pulsar.client.admin.PulsarAdminException;
-import org.apache.pulsar.client.admin.Topics;
-import org.apache.pulsar.client.admin.Tenants;
-import org.apache.pulsar.client.admin.Namespaces;
+import com.flipkart.varadhi.spi.services.MessagingException;
+import org.apache.pulsar.client.admin.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

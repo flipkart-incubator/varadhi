@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -52,7 +51,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
 
     public MetaStore getMetaStore() {
         if (!initialised) {
-            throw new InvalidStateException("Zookeeper MetaStore is not yet initialised.");
+            throw new IllegalStateException("Zookeeper MetaStore is not yet initialised.");
         }
         return this.varadhiMetaStore;
     }

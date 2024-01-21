@@ -13,6 +13,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+/**
+ * TODO: lets not put varadhi word in every other class name. VaradhiCache does not tell us its purpose.
+ *
+ * @param <K>
+ * @param <V>
+ */
 public class VaradhiCache<K, V> {
     // This is NonLoading cache. Get wll invoke loader() on calling thread when needed and hence possibly blocking in
     // some cases.

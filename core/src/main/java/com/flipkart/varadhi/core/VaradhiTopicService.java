@@ -5,7 +5,6 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.spi.services.TopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -14,11 +13,11 @@ import java.util.List;
 @Slf4j
 public class VaradhiTopicService implements TopicService<VaradhiTopic> {
 
-    private final StorageTopicService<StorageTopic> topicService;
+    private final StorageTopicService topicService;
     private final MetaStore metaStore;
 
     public VaradhiTopicService(
-            StorageTopicService<StorageTopic> serviceFactory,
+            StorageTopicService serviceFactory,
             MetaStore metaStore
     ) {
         this.topicService = serviceFactory;
@@ -31,7 +30,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.checkTopicExists(storageTopic.getName())) {
+                    if (topicService.exists(storageTopic.getName())) {
                         log.warn("Specified StorageTopic({}:{}) already exists.", project.getName(), storageTopic.getName());
                     } else {
                         topicService.create(storageTopic, project);
@@ -56,7 +55,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if(topicService.checkTopicExists(storageTopic.getName())) {
+                    if (topicService.exists(storageTopic.getName())) {
                         topicService.delete(storageTopic.getName());
                     } else {
                         log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
@@ -67,7 +66,7 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     @Override
-    public boolean checkTopicExists(String topicName) {
+    public boolean exists(String topicName) {
         return metaStore.checkVaradhiTopicExists(topicName);
     }
 

@@ -18,18 +18,13 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.ArrayList;
-
+import java.util.*;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
 import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
@@ -115,7 +110,7 @@ public class TopicHandlers implements RouteProvider {
 
         Project project = projectService.getCachedProject(topicResource.getProject());
         String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResource.getName());
-        boolean found = varadhiTopicService.checkTopicExists(varadhiTopicName);
+        boolean found = varadhiTopicService.exists(varadhiTopicName);
         if (found) {
             log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(

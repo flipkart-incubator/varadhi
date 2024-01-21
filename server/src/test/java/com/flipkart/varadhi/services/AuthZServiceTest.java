@@ -1,12 +1,13 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.db.VaradhiMetaStore;
-import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import io.micrometer.core.instrument.Clock;
@@ -53,7 +54,8 @@ public class AuthZServiceTest {
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
+        projectService =
+                new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
         authZService = new AuthZService(varadhiMetaStore, varadhiMetaStore);
         org1 = new Org("org1", 0);
         org2 = new Org("org2", 0);
@@ -195,7 +197,8 @@ public class AuthZServiceTest {
                 InvalidOperationForResourceException.class,
                 () -> authZService.updateRoleBindingNode(expect)
         );
-        assertEquals(String.format("Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
+        assertEquals(String.format(
+                "Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
                 expect.getResourceId()
         ), ior.getMessage());
 
@@ -231,7 +234,8 @@ public class AuthZServiceTest {
         assertDoesNotThrow(() -> authZService.createRoleBindingNode(org1.getName(), ResourceType.ORG));
 
         // delete on non existing
-        rne = assertThrowsExactly(ResourceNotFoundException.class,
+        rne = assertThrowsExactly(
+                ResourceNotFoundException.class,
                 () -> authZService.deleteRoleBindingNode(ResourceType.ORG, org2.getName())
         );
         assertEquals(String.format("RoleBinding on resource(%s) not found.", org2.getName()), rne.getMessage());
@@ -246,7 +250,10 @@ public class AuthZServiceTest {
         IAMPolicyRequest org1Upd =
                 new IAMPolicyRequest("user1", Set.of("role1", "role2"));
         // since node is not created, should throw exception on get
-        assertThrows(ResourceNotFoundException.class, () -> authZService.findRoleBindingNode(ResourceType.ORG, org1.getName()));
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> authZService.findRoleBindingNode(ResourceType.ORG, org1.getName())
+        );
 
         // now we update the role assignment
         RoleBindingNode gotNode = authZService.setIAMPolicy(ResourceType.ORG, org1.getName(), org1Upd);
@@ -296,7 +303,8 @@ public class AuthZServiceTest {
         // try to update node with invalid resourceId
         IAMPolicyRequest invalidUpd =
                 new IAMPolicyRequest("user1", Set.of("role1", "role2"));
-        var ior = assertThrowsExactly(IllegalArgumentException.class,
+        var ior = assertThrowsExactly(
+                IllegalArgumentException.class,
                 () -> authZService.setIAMPolicy(ResourceType.ORG, "invalid", invalidUpd)
         );
         assertEquals(
@@ -306,7 +314,8 @@ public class AuthZServiceTest {
 
         IAMPolicyRequest incorrectUpdate =
                 new IAMPolicyRequest("user1", Set.of("role1", "role2"));
-        ior = assertThrowsExactly(IllegalArgumentException.class,
+        ior = assertThrowsExactly(
+                IllegalArgumentException.class,
                 () -> authZService.setIAMPolicy(ResourceType.TEAM, org1.getName(), incorrectUpdate)
         );
         assertEquals(

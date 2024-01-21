@@ -1,7 +1,10 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -206,8 +209,8 @@ public class ZKMetaStoreTests {
                 String.format("Path(%s) not found for entity %s.", zn2.getPath(), zn2.getName()), e.getMessage());
     }
 
-    private <T extends VaradhiException> void validateException(Class<T> clazz, String errorMsg, MethodCaller caller) {
-        T e = Assertions.assertThrows(clazz, () -> caller.call());
+    private <T extends Exception> void validateException(Class<T> clazz, String errorMsg, MethodCaller caller) {
+        T e = Assertions.assertThrows(clazz, caller::call);
         Assertions.assertEquals(errorMsg, e.getMessage());
     }
 

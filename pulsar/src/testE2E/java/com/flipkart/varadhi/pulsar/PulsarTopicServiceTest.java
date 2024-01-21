@@ -2,12 +2,10 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.services.PulsarTopicService;
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
-
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
+import com.flipkart.varadhi.spi.services.MessagingException;
 import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 
 public class PulsarTopicServiceTest extends PulsarTestBase {
@@ -30,7 +30,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     public void init() throws PulsarAdminException {
         super.init();
         topicService = new PulsarTopicService(clientProvider);
-        project =  new Project(NAMESPACE, INITIAL_VERSION, "", "public", TENANT);
+        project = new Project(NAMESPACE, INITIAL_VERSION, "", "public", TENANT);
     }
 
     @Test
@@ -46,7 +46,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, CapacityPolicy.getDefault());
         topicService.create(pt, project);
-        MessagingException m = Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt, project));
+        MessagingException m =
+                Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt, project));
         Throwable realFailure = m.getCause();
         Assertions.assertTrue(
                 realFailure instanceof PulsarAdminException.ConflictException, "Duplicate Topic creation didn't fail.");
@@ -79,6 +80,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
 
     private void validateNamespaceExists(String tenant, String namespace) throws PulsarAdminException {
         List<String> namespaces = clientProvider.getAdminClient().namespaces().getNamespaces(tenant);
-        Assertions.assertTrue(namespaces.contains(namespace), String.format("Failed to find the namespace %s.", namespace));
+        Assertions.assertTrue(
+                namespaces.contains(namespace), String.format("Failed to find the namespace %s.", namespace));
     }
 }

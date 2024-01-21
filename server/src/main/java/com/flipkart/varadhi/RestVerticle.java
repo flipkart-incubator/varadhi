@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -62,7 +61,7 @@ public class RestVerticle extends AbstractVerticle {
                 } else {
                     String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
                     log.error(errMsg);
-                    throw new InvalidStateException(errMsg);
+                    throw new IllegalStateException(errMsg);
                 }
             }
             def.preHandlers().forEach(route::handler);
