@@ -7,7 +7,9 @@ dependencies {
     implementation(project(":entities"))
     implementation("org.apache.pulsar:pulsar-client-admin:2.10.0")
     implementation("org.apache.commons:commons-text:1.10.0")
-    testImplementation(testFixtures(project(':core')))
+
+    testImplementation(testFixtures(project(":spi")))
+
     testE2EImplementation("org.apache.commons:commons-text:1.10.0")
 }
 

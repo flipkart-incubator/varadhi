@@ -49,7 +49,7 @@ dependencies {
     runtimeOnly(project(":pulsar"))
 
     testImplementation(project(":pulsar"))
-    testImplementation(testFixtures(project(":core")))
+    testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
     testImplementation("org.apache.curator:curator-test")
     testImplementation("io.vertx:vertx-junit5")

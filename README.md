@@ -56,11 +56,11 @@ To run the Varadhi server execute below from repo root.
 
 ## Modules
 
-- entities: Contains all entities use by spi and api.
-- spi: Contains all interfaces that are extendable. Contains persistence and messaging related interfaces.
-- pulsar: Contains messaging-spi implementation using Apache Pulsar.
-- core: Contains all core logic of Varadhi relied upon by various other sub-modules.
-- server: Contains all server related logic and is the entry point for Varadhi.
+- entities: It has all the entities used by the spi module and varadhi apis.
+- spi: It has all the interfaces related to persistence and messaging.
+- pulsar: It contains messaging-spi implementation using Apache Pulsar.
+- core: It contains all the core logic of `Varadhi` and is relied upon by various other sub-modules.
+- server: It is the entry point of `Varadhi`. It houses all server related logic and binds together all other modules.
 
 ## Releases
 
