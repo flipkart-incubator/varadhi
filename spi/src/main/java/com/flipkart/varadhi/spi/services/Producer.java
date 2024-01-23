@@ -6,5 +6,5 @@ import com.flipkart.varadhi.entities.Offset;
 import java.util.concurrent.CompletableFuture;
 
 public interface Producer {
-    CompletableFuture<Offset> ProduceAsync(Message message);
+    CompletableFuture<Offset> produceAsync(Message message);
 }

@@ -5,7 +5,6 @@ import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.ProduceStatus;
 import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import lombok.Getter;
 
 @Getter
@@ -32,7 +31,7 @@ public class ProduceResult {
 
     public static ProduceResult ofNonProducingTopic(String messageId, TopicState topicState) {
         if (topicState.isProduceAllowed()) {
-            throw new InvalidStateException(
+            throw new IllegalStateException(
                     String.format(
                             "Incorrect Topic state handling. Topic can produce message(s) in its current state(%s).",
                             topicState

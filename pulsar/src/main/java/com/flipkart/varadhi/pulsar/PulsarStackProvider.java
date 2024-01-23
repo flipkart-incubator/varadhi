@@ -2,8 +2,6 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -12,7 +10,7 @@ import com.flipkart.varadhi.spi.services.*;
 import com.flipkart.varadhi.utils.YamlLoader;
 
 
-public class PulsarStackProvider implements MessagingStackProvider {
+public class PulsarStackProvider implements MessagingStackProvider<PulsarStorageTopic> {
     private PulsarTopicService pulsarTopicService;
     private PulsarTopicFactory pulsarTopicFactory;
     private PulsarProducerFactory pulsarProducerFactory;
@@ -38,25 +36,25 @@ public class PulsarStackProvider implements MessagingStackProvider {
         }
     }
 
-    public <T extends StorageTopic> StorageTopicFactory<T> getStorageTopicFactory() {
+    public StorageTopicFactory<PulsarStorageTopic> getStorageTopicFactory() {
         if (!initialised) {
-            throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
+            throw new IllegalStateException("PulsarStackProvider is not yet initialised.");
         }
-        return (StorageTopicFactory) this.pulsarTopicFactory;
+        return this.pulsarTopicFactory;
     }
 
-    public <T extends StorageTopic> StorageTopicService<T> getStorageTopicService() {
+    public StorageTopicService<PulsarStorageTopic> getStorageTopicService() {
         if (!initialised) {
-            throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
+            throw new IllegalStateException("PulsarStackProvider is not yet initialised.");
         }
-        return (StorageTopicService) this.pulsarTopicService;
+        return this.pulsarTopicService;
     }
 
-    public <T extends StorageTopic> ProducerFactory<T> getProducerFactory() {
+    public ProducerFactory<PulsarStorageTopic> getProducerFactory() {
         if (!initialised) {
-            throw new InvalidStateException("PulsarStackProvider is not yet initialised.");
+            throw new IllegalStateException("PulsarStackProvider is not yet initialised.");
         }
-        return (ProducerFactory) this.pulsarProducerFactory;
+        return this.pulsarProducerFactory;
     }
 
     private void registerSubtypes(ObjectMapper mapper) {
@@ -68,7 +66,6 @@ public class PulsarStackProvider implements MessagingStackProvider {
     }
 
     private PulsarConfig getPulsarConfig(String file) {
-        PulsarConfig pulsarConfig = YamlLoader.loadConfig(file, PulsarConfig.class);
-        return pulsarConfig;
+        return YamlLoader.loadConfig(file, PulsarConfig.class);
     }
 }

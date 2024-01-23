@@ -49,7 +49,7 @@ public class ProducerServiceTests {
         metricProvider = spy(new ProducerMetricsImpl(registry));
         service = new ProducerService(new ProducerOptions(), producerFactory, metricProvider, topicService, registry);
         random = new Random();
-        producer = spy(new DummyProducer());
+        producer = spy(new DummyProducer(JsonMapper.getMapper()));
     }
 
     @Test
@@ -64,14 +64,14 @@ public class ProducerServiceTests {
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        verify(producer, times(1)).ProduceAsync(eq(msg1));
+        verify(producer, times(1)).produceAsync(eq(msg1));
 
         Message msg2 = getMessage(100, 1, null, 2000, ctx);
         result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
         rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        verify(producer, times(1)).ProduceAsync(msg2);
+        verify(producer, times(1)).produceAsync(msg2);
         verify(producerFactory, times(1)).getProducer(any());
         verify(topicService, times(1)).get(vt.getName());
     }
@@ -83,7 +83,7 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
-        doThrow(new RuntimeException("Some random error.")).when(producer).ProduceAsync(msg1);
+        doThrow(new RuntimeException("Some random error.")).when(producer).produceAsync(msg1);
         // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
         // This is not expected in general.
         ProduceException pe = Assertions.assertThrows(
@@ -105,7 +105,7 @@ public class ProducerServiceTests {
                 ResourceNotFoundException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
-        verify(producer, never()).ProduceAsync(any());
+        verify(producer, never()).produceAsync(any());
     }
 
     @Test
@@ -121,7 +121,7 @@ public class ProducerServiceTests {
         );
         Assertions.assertEquals(
                 "Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
-        verify(producer, never()).ProduceAsync(any());
+        verify(producer, never()).produceAsync(any());
     }
 
     @Test
@@ -166,7 +166,7 @@ public class ProducerServiceTests {
         Assertions.assertNull(rc.throwable);
         Assertions.assertEquals(produceStatus, rc.produceResult.getProduceStatus());
         Assertions.assertEquals(message, rc.produceResult.getFailureReason());
-        verify(producer, never()).ProduceAsync(any());
+        verify(producer, never()).produceAsync(any());
     }
 
     @Test
@@ -195,7 +195,7 @@ public class ProducerServiceTests {
                 RuntimeException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
         );
-        verify(producer, never()).ProduceAsync(any());
+        verify(producer, never()).produceAsync(any());
         Assertions.assertEquals(
                 "Failed to create Pulsar producer for Topic(project1.topic1). Topic doesn't exists.", re.getMessage());
     }
@@ -237,7 +237,7 @@ public class ProducerServiceTests {
         ResultCapture rc = getResult(result);
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
-        verify(producer, times(1)).ProduceAsync(eq(msg1));
+        verify(producer, times(1)).produceAsync(eq(msg1));
         verify(metricProvider, times(1)).onMessageProduced(anyBoolean(), anyLong(), any());
         // Exception gets wrapped in CompletionException.
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());

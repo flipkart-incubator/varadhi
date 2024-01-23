@@ -1,11 +1,10 @@
 package com.flipkart.varadhi.pulsar.services;
 
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.MessagingException;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
-import static com.flipkart.varadhi.pulsar.util.EntityHelper.getNamespace;
+import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.Clusters;
@@ -16,8 +15,10 @@ import org.apache.pulsar.common.policies.data.TenantInfoImpl;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.flipkart.varadhi.pulsar.util.EntityHelper.getNamespace;
+
 @Slf4j
-public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> {
+public class PulsarTopicService implements StorageTopicService<PulsarStorageTopic> {
     private ClientProvider clientProvider;
 
     public PulsarTopicService(ClientProvider clientProvider) {
@@ -54,15 +55,17 @@ public class PulsarTopicService extends StorageTopicService<PulsarStorageTopic> 
             throw new MessagingException(e);
         }
     }
+
     @Override
-    public boolean checkTopicExists(String topicName) {
+    public boolean exists(String topicName) {
         try {
             return clientProvider.getAdminClient().topics().getPartitionedTopicMetadata((topicName)) != null;
         } catch (PulsarAdminException.NotFoundException e) {
             //exception occurs if Topic is not found
             return false;
         } catch (PulsarAdminException e) {
-            throw new MessagingException(String.format("Failed to check existence of Topic. Error: %s.", e.getMessage()), e);
+            throw new MessagingException(
+                    String.format("Failed to check existence of Topic. Error: %s.", e.getMessage()), e);
         }
     }
 
