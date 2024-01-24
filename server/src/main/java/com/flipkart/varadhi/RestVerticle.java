@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.metrices.MetricConstants;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.FailureHandler;
