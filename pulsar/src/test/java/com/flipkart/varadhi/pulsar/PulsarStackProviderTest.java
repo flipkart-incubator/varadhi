@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.InvalidStateException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
@@ -19,7 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static com.flipkart.varadhi.entities.VaradhiResource.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -59,7 +58,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetStorageTopicFactory_NotInitialized() {
-        assertThrows(InvalidStateException.class, () -> pulsarStackProvider.getStorageTopicFactory());
+        assertThrows(IllegalStateException.class, () -> pulsarStackProvider.getStorageTopicFactory());
     }
 
     @Test
@@ -80,7 +79,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetStorageTopicService_NotInitialized() {
-        assertThrows(InvalidStateException.class, () -> pulsarStackProvider.getStorageTopicService());
+        assertThrows(IllegalStateException.class, () -> pulsarStackProvider.getStorageTopicService());
     }
 
     @Test
@@ -94,7 +93,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetProducerFactory_NotInitialized() {
-        assertThrows(InvalidStateException.class, () -> pulsarStackProvider.getProducerFactory());
+        assertThrows(IllegalStateException.class, () -> pulsarStackProvider.getProducerFactory());
     }
 
     @Test

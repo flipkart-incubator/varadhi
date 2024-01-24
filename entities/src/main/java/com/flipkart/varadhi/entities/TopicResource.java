@@ -5,8 +5,9 @@ import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
-public class TopicResource extends VaradhiResource {
+@ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
+//TODO: Topic Resource should be VersionedEntity
+public class TopicResource extends MetaStoreEntity implements Validatable {
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
 
     String project;
@@ -24,5 +25,16 @@ public class TopicResource extends VaradhiResource {
         this.project = project;
         this.grouped = grouped;
         this.capacityPolicy = capacityPolicy;
+    }
+
+    public static TopicResource of(VaradhiTopic varadhiTopic) {
+        String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
+        return new TopicResource(
+                topicResourceInfo[1],
+                varadhiTopic.getVersion(),
+                topicResourceInfo[0],
+                varadhiTopic.isGrouped(),
+                varadhiTopic.getCapacityPolicy()
+        );
     }
 }

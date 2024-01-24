@@ -4,7 +4,6 @@ import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
 import com.flipkart.varadhi.entities.auth.*;
-import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;

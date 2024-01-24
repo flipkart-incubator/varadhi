@@ -6,8 +6,8 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Team name. Check naming constraints.")
-public class Team extends VaradhiResource {
+@ValidateResource(message = "Invalid Team name. Check naming constraints.")
+public class Team extends MetaStoreEntity implements Validatable {
 
     @Setter
     private String org;

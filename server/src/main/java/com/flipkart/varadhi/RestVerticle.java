@@ -64,7 +64,7 @@ public class RestVerticle extends AbstractVerticle {
                 } else {
                     String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
                     log.error(errMsg);
-                    throw new InvalidStateException(errMsg);
+                    throw new IllegalStateException(errMsg);
                 }
             }
             def.preHandlers().forEach(route::handler);

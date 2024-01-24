@@ -20,7 +20,7 @@ import static com.flipkart.varadhi.Constants.PathParams.*;
 import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 
 @Slf4j
-@ExtensionMethod(Extensions.RoutingContextExtension.class)
+@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class AuthZHandlers implements RouteProvider {
 
     public static final String REQUEST_PATH_PARAM_RESOURCE = "resource";
@@ -104,7 +104,7 @@ public class AuthZHandlers implements RouteProvider {
     public Handler<RoutingContext> setIAMPolicyHandler(ResourceType resourceType) {
         return (routingContext) -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
-            IAMPolicyRequest policyForSubject = routingContext.body().asPojo(IAMPolicyRequest.class);
+            IAMPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IAMPolicyRequest.class);
             RoleBindingNode updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
             routingContext.endApiWithResponse(updated);
         };

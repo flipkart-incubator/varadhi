@@ -3,7 +3,6 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.exceptions.IllegalArgumentException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -11,6 +10,8 @@ import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 
 import java.util.HashMap;
 import java.util.List;
+
+import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 
 public class AuthZService {
     private final MetaStore metaStore;
@@ -113,7 +114,8 @@ public class AuthZService {
             case TOPIC -> {
                 // project:topic
                 String[] segments = resourceId.split(":");
-                yield (segments.length == 2) && metaStore.checkTopicResourceExists(segments[1], segments[0]);
+                String varadhiTopicName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
+                yield (segments.length == 2) && metaStore.checkVaradhiTopicExists(varadhiTopicName);
             }
             case SUBSCRIPTION -> false; //TODO
         };

@@ -1,17 +1,24 @@
 package com.flipkart.varadhi.spi.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.utils.JsonMapper;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 public class DummyProducer implements Producer {
 
+    private final ObjectMapper objectMapper;
+
+    public DummyProducer(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     @Override
-    public CompletableFuture<Offset> ProduceAsync(Message message) {
+    public CompletableFuture<Offset> produceAsync(Message message) {
         byte[] payload = message.getPayload();
-        DummyMessage dm = JsonMapper.jsonDeserialize(new String(payload), DummyMessage.class);
+        DummyMessage dm = toDummyMsg(payload);
 
         return CompletableFuture.supplyAsync(() -> {
             if (dm.sleepMillis > 0) {
@@ -26,6 +33,16 @@ public class DummyProducer implements Producer {
             }
             return new DummyOffset(dm.offSet);
         });
+    }
+
+    private DummyMessage toDummyMsg(byte[] payload) {
+        DummyMessage dm;
+        try {
+            dm = objectMapper.readValue(payload, DummyMessage.class);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return dm;
     }
 
     private RuntimeException loadClass(String className) {
