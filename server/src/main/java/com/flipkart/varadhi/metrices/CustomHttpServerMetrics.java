@@ -40,11 +40,6 @@ public class CustomHttpServerMetrics  implements HttpServerMetrics<HttpRequest, 
                 .increment();
 
         totalRequest.increment();
-
-        Counter.builder(MetricsUtil.getRequestInitials(request.uri()))
-                .tags(tags)
-                .register(meterRegistry)
-                .increment();
         return request;
     }
 
@@ -52,7 +47,7 @@ public class CustomHttpServerMetrics  implements HttpServerMetrics<HttpRequest, 
     public void responseEnd(HttpRequest requestMetric, HttpResponse response, long bytesWritten) {
 
         Tags tags = MetricsUtil.getCustomHttpHeaders(requestMetric.headers());
-        String resourceName = requestMetric.headers().get(MetricConstants.RESOURCE_NAME);
+        String resourceName = requestMetric.headers().get(MetricConstants.METRIC_NAME_FOR_API);
         if (StringUtils.isNotEmpty(resourceName)) {
             Counter.builder(resourceName)
                     .description("Api to Produce")

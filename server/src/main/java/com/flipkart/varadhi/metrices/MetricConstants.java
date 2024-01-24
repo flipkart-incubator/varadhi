@@ -8,5 +8,5 @@ public class MetricConstants {
     public static final String TOTAL_SUCCESS_COUNT = "http_success_count";
     public static final String OUTPUT_RESPONSE_CODE = "http_output_response";
     public static final String RESPONSE_CODE = "response_code";
-    public static final String RESOURCE_NAME = "RESOURCE_NAME";
+    public static final String METRIC_NAME_FOR_API = "metric_name";
 }

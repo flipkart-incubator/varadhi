@@ -7,7 +7,6 @@ import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -80,7 +79,7 @@ public class RestVerticle extends AbstractVerticle {
 
     private Handler<RoutingContext> getHandler(RouteDefinition routeDefinition) {
         return ctx -> {
-            ctx.request().headers().add(MetricConstants.RESOURCE_NAME, routeDefinition.getResourceName());
+            ctx.request().headers().add(MetricConstants.METRIC_NAME_FOR_API, routeDefinition.getMetricName());
             routeDefinition.endReqHandler().handle(ctx);
         };
     }
