@@ -12,11 +12,7 @@ public class Team extends MetaStoreEntity implements Validatable {
     @Setter
     private String org;
 
-    public Team(
-            String name,
-            int version,
-            String org
-    ) {
+    public Team(String name, int version, String org) {
         super(name, version);
         this.org = org;
     }

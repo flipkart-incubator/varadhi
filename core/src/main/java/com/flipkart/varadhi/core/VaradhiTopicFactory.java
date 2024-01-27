@@ -4,8 +4,6 @@ package com.flipkart.varadhi.core;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
-
 public class VaradhiTopicFactory {
 
     private final StorageTopicFactory<StorageTopic> topicFactory;
@@ -30,10 +28,7 @@ public class VaradhiTopicFactory {
     private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
         StorageTopic storageTopic =
                 topicFactory.getTopic(varadhiTopic.getName(), project, varadhiTopic.getCapacityPolicy());
-        // This is likely to change with replicated topics across zones. To be taken care as part of DR.
-        String internalTopicName = String.join(NAME_SEPARATOR, varadhiTopic.getName(), deploymentRegion);
         InternalTopic internalTopic = new InternalTopic(
-                internalTopicName,
                 deploymentRegion,
                 TopicState.Producing,
                 storageTopic

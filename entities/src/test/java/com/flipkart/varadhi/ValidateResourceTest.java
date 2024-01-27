@@ -2,7 +2,6 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
-import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.VersionedEntity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

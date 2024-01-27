@@ -8,7 +8,6 @@ import java.util.Map;
 @Getter
 public class VaradhiTopic extends AbstractTopic {
 
-
     private final Map<String, InternalTopic> internalTopics;
     private final boolean grouped;
     private final CapacityPolicy capacityPolicy;

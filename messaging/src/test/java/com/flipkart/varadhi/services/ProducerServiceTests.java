@@ -249,9 +249,8 @@ public class ProducerServiceTests {
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
         VaradhiTopic topic = VaradhiTopic.of(new TopicResource(name, 0, project.getName(), false, null));
-        String itName = String.join(MetaStoreEntity.NAME_SEPARATOR, topic.getName(), region);
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
-        topic.addInternalTopic(new InternalTopic(itName, region, state, st));
+        topic.addInternalTopic(new InternalTopic(region, state, st));
         return topic;
     }
 
@@ -313,5 +312,4 @@ public class ProducerServiceTests {
             super(name, version);
         }
     }
-
 }
