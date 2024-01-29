@@ -98,7 +98,10 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint
         );
-        makeCreateRequest(getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid subscription name", true);
+        makeCreateRequest(
+                getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid Subscription name. Check naming constraints.",
+                true
+        );
 
         SubscriptionResource projectNotExist = new SubscriptionResource(
                 "sub12",
