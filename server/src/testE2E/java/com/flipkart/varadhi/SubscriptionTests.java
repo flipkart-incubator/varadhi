@@ -130,7 +130,7 @@ public class SubscriptionTests extends E2EBase {
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), topicNotExist, 404,
-                "Topic(default.some_topic) not found.", true
+                "VaradhiTopic(default.some_topic) not found.", true
         );
 
         SubscriptionResource groupedOnUnGroupTopic = new SubscriptionResource(
