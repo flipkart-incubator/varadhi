@@ -105,7 +105,7 @@ public class SubscriptionTests extends E2EBase {
 
         SubscriptionResource update = new SubscriptionResource(
                 subName,
-                INITIAL_VERSION + 1,
+                INITIAL_VERSION,
                 o1t1p1.getName(),
                 p1t2.getName(),
                 p1t2.getProject(),
