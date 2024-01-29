@@ -85,4 +85,64 @@ public class SubscriptionTests extends E2EBase {
                 getSubscriptionsUri(o1t1p1), sub, 409, "VaradhiSubscription(default.sub1) already exists.", true);
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
     }
+
+    @Test
+    void createSubscriptionWithValidationFailure() {
+        SubscriptionResource shortName = new SubscriptionResource(
+                "ab",
+                INITIAL_VERSION,
+                o1t1p1.getName(),
+                p1t1.getName(),
+                p1t1.getProject(),
+                "desc",
+                false,
+                endpoint
+        );
+        makeCreateRequest(getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid subscription name", true);
+
+        SubscriptionResource projectNotExist = new SubscriptionResource(
+                "sub12",
+                INITIAL_VERSION,
+                "some_proj",
+                p1t1.getName(),
+                p1t1.getProject(),
+                "desc",
+                false,
+                endpoint
+        );
+        makeCreateRequest(
+                getSubscriptionsUri(new Project("some_proj", 0, "desc", "someteam", "org")), projectNotExist, 400,
+                "Project(some_proj) not found.", true
+        );
+
+        SubscriptionResource topicNotExist = new SubscriptionResource(
+                "sub12",
+                INITIAL_VERSION,
+                o1t1p1.getName(),
+                "some_topic",
+                p1t1.getProject(),
+                "desc",
+                false,
+                endpoint
+        );
+        makeCreateRequest(
+                getSubscriptionsUri(o1t1p1), topicNotExist, 400,
+                "Topic(default.some_topic) not found.", true
+        );
+
+        SubscriptionResource groupedOnUnGroupTopic = new SubscriptionResource(
+                "sub12",
+                INITIAL_VERSION,
+                o1t1p1.getName(),
+                "some_topic",
+                p1t1.getProject(),
+                "desc",
+                true,
+                endpoint
+        );
+        makeCreateRequest(
+                getSubscriptionsUri(o1t1p1), groupedOnUnGroupTopic, 400,
+                "Cannot create grouped Subscription as it's Topic(default.topic1) is not grouped", true
+        );
+    }
 }
