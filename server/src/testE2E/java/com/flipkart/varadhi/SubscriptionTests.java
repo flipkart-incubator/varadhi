@@ -18,9 +18,8 @@ public class SubscriptionTests extends E2EBase {
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
-    private static Project o1t1p2;
     private static TopicResource p1t1;
-    private static TopicResource p2t1;
+    private static TopicResource p1t2;
 
     static {
         try {
@@ -35,24 +34,22 @@ public class SubscriptionTests extends E2EBase {
         o1 = new Org("public", 0);
         o1t1 = new Team("team1", 0, o1.getName());
         o1t1p1 = new Project("default", 0, "", o1t1.getName(), o1t1.getOrg());
-        o1t1p2 = new Project("default_p2", 0, "", o1t1.getName(), o1t1.getOrg());
         p1t1 = new TopicResource("topic1", 0, o1t1p1.getName(), false, null);
-        p2t1 = new TopicResource("topic2", 0, o1t1p1.getName(), true, null);
+        p1t2 = new TopicResource("topic2", 0, o1t1p1.getName(), true, null);
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
-        makeCreateRequest(getProjectCreateUri(), o1t1p2, 200);
+        makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
         makeCreateRequest(getTopicsUri(o1t1p1), p1t1, 200);
-        makeCreateRequest(getTopicsUri(o1t1p2), p2t1, 200);
+        makeCreateRequest(getTopicsUri(o1t1p1), p1t2, 200);
     }
 
     @AfterAll
     public static void tearDown() {
         // cleanup subs
         cleanupTopic(p1t1.getName(), o1t1p1);
-        cleanupTopic(p2t1.getName(), o1t1p2);
+        cleanupTopic(p1t2.getName(), o1t1p1);
         cleanupProject(o1t1p1);
-        cleanupProject(o1t1p2);
         cleanupTeam(o1t1);
         cleanupOrgs(List.of(o1));
     }
