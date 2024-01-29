@@ -81,7 +81,8 @@ public class SubscriptionTests extends E2EBase {
         Assertions.assertEquals(sub.isGrouped(), r.isGrouped());
 
         makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
-        makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 409, "", true);
+        makeCreateRequest(
+                getSubscriptionsUri(o1t1p1), sub, 409, "VaradhiSubscription(default.sub1) already exists.", true);
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
     }
 }
