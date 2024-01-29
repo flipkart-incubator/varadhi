@@ -137,7 +137,7 @@ public class SubscriptionTests extends E2EBase {
                 "sub12",
                 INITIAL_VERSION,
                 o1t1p1.getName(),
-                "some_topic",
+                p1t1.getName(),
                 p1t1.getProject(),
                 "desc",
                 true,
