@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javax.ws.rs.core.Response;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
 
@@ -75,10 +77,10 @@ public class SubscriptionTests extends E2EBase {
                 endpoint
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
-        Assertions.assertEquals(sub.getName(), r.getName());
-        Assertions.assertEquals(sub.getProject(), r.getProject());
-        Assertions.assertEquals(sub.getTopic(), r.getTopic());
-        Assertions.assertEquals(sub.isGrouped(), r.isGrouped());
+        assertEquals(sub.getName(), r.getName());
+        assertEquals(sub.getProject(), r.getProject());
+        assertEquals(sub.getTopic(), r.getTopic());
+        assertEquals(sub.isGrouped(), r.isGrouped());
 
         makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
         makeCreateRequest(
@@ -111,11 +113,16 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint
         );
-        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1, subName), update, 200);
 
-        Assertions.assertEquals(update.getName(), updated.getName());
-        Assertions.assertEquals(update.getDescription(), updated.getProject());
-        Assertions.assertEquals(1, updated.getVersion());
+        Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);
+        Assertions.assertNotNull(response);
+        assertEquals("", response.getEntity().toString());
+        assertEquals(200, response.getStatus());
+        SubscriptionResource updated = response.readEntity(SubscriptionResource.class);
+
+        assertEquals(update.getName(), updated.getName());
+        assertEquals(update.getDescription(), updated.getProject());
+        assertEquals(1, updated.getVersion());
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
     }
 
