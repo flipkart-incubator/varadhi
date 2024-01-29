@@ -2,11 +2,9 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javax.ws.rs.core.Response;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -107,19 +105,13 @@ public class SubscriptionTests extends E2EBase {
                 subName,
                 INITIAL_VERSION,
                 o1t1p1.getName(),
-                p1t2.getName(),
-                p1t2.getProject(),
+                p1t1.getName(),
+                p1t1.getProject(),
                 "desc updated",
                 false,
                 endpoint
         );
-
-        Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);
-        Assertions.assertNotNull(response);
-        assertEquals("", response.readEntity(String.class));
-        assertEquals(200, response.getStatus());
-        SubscriptionResource updated = response.readEntity(SubscriptionResource.class);
-
+        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1, subName), update, 200);
         assertEquals(update.getName(), updated.getName());
         assertEquals(update.getDescription(), updated.getProject());
         assertEquals(1, updated.getVersion());
