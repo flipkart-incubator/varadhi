@@ -101,11 +101,11 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint
         );
-        makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
+        SubscriptionResource res = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
 
         SubscriptionResource update = new SubscriptionResource(
                 subName,
-                INITIAL_VERSION,
+                res.getVersion(),
                 o1t1p1.getName(),
                 p1t1.getName(),
                 p1t1.getProject(),
