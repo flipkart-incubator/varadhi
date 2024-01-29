@@ -1,20 +1,32 @@
 package com.flipkart.varadhi.entities;
 
-import jakarta.ws.rs.HttpMethod;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.net.URL;
 
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.DEDUCTION
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(Endpoint.HttpEndpoint.class),
+})
 public abstract sealed class Endpoint {
 
     abstract Protocol getProtocol();
+
+    public enum Protocol {
+        HTTP1_1,
+        HTTP2,
+    }
 
     @EqualsAndHashCode(callSuper = true)
     @Data
     public static final class HttpEndpoint extends Endpoint {
         private final URL url;
-        private final HttpMethod method;
+        private final String method;
         private final String contentType;
 
         private final boolean http2Supported;
@@ -23,10 +35,5 @@ public abstract sealed class Endpoint {
         Protocol getProtocol() {
             return http2Supported ? Protocol.HTTP2 : Protocol.HTTP1_1;
         }
-    }
-
-    public enum Protocol {
-        HTTP1_1,
-        HTTP2,
     }
 }
