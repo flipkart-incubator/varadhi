@@ -111,7 +111,7 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint
         );
-        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1), update, 200);
+        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1, subName), update, 200);
 
         Assertions.assertEquals(update.getName(), updated.getName());
         Assertions.assertEquals(update.getDescription(), updated.getProject());
