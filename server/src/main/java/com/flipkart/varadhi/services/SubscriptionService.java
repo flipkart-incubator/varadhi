@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -35,12 +34,12 @@ public class SubscriptionService {
     }
 
     private void validateCreation(VaradhiSubscription subscription) {
-        Project project = metaStore.getProject(subscription.getProject());
+        metaStore.getProject(subscription.getProject());
         VaradhiTopic topic = metaStore.getTopic(subscription.getTopic());
         if (subscription.isGrouped() && !topic.isGrouped()) {
             throw new IllegalArgumentException(
-                    "Cannot create grouped Subscription as it's Topic(%s:%s) is not grouped".formatted(
-                            project.getName(), subscription.getTopic()));
+                    "Cannot create grouped Subscription as it's Topic(%s) is not grouped".formatted(
+                            subscription.getTopic()));
         }
     }
 

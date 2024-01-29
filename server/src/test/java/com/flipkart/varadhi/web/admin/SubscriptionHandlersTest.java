@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +29,36 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
+
+    public static VaradhiSubscription getVaradhiSubscription(
+            String subscriptionName, Project project, VaradhiTopic topic
+    )
+            throws MalformedURLException {
+        return new VaradhiSubscription(
+                SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
+                1,
+                project.getName(),
+                topic.getName(),
+                UUID.randomUUID().toString(),
+                false,
+                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
+        );
+    }
+
+    public static VaradhiSubscription getVaradhiSubscription(
+            String subscriptionName, boolean grouped, Project project, VaradhiTopic topic
+    )
+            throws MalformedURLException {
+        return new VaradhiSubscription(
+                SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
+                1,
+                project.getName(),
+                topic.getName(),
+                UUID.randomUUID().toString(),
+                grouped,
+                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
+        );
+    }
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
@@ -165,19 +196,6 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 project.getName(),
                 topic.getName(),
                 topic.getProject(),
-                "desc",
-                false,
-                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
-        );
-    }
-
-    private VaradhiSubscription getVaradhiSubscription(String subscriptionName, Project project, VaradhiTopic topic)
-            throws MalformedURLException {
-        return new VaradhiSubscription(
-                SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
-                1,
-                project.getName(),
-                topic.getName(),
                 "desc",
                 false,
                 new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
