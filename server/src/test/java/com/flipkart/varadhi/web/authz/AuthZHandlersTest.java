@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.web.authz;
 
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.MetaStoreException;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.AuthZService;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
@@ -94,7 +94,8 @@ public class AuthZHandlersTest extends WebTestBase {
     public void testGetRoleBindingNode() throws Exception {
         RoleBindingNode expected = new RoleBindingNode("testNode", ResourceType.ORG, Map.of(), 0);
 
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET,
+        HttpRequest<Buffer> request = createRequest(
+                HttpMethod.GET,
                 getRoleBindingNodeUrl(expected.getResourceType(), expected.getResourceId())
         );
         doReturn(expected).when(authZService).findRoleBindingNode(expected.getResourceType(), expected.getResourceId());

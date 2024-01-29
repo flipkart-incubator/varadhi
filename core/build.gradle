@@ -4,9 +4,10 @@ plugins {
 }
 
 dependencies {
-    implementation(project(':common'))
+    api(project(':common'))
+    api(project(':spi'))
     implementation('com.fasterxml.jackson.core:jackson-databind')
-
+    
     testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
 }

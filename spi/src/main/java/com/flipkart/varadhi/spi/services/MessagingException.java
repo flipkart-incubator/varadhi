@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.exceptions;
+package com.flipkart.varadhi.spi.services;
 
 import lombok.experimental.StandardException;
 
@@ -9,5 +9,5 @@ import lombok.experimental.StandardException;
  MessagingException servers as the base class for such cases.
  */
 @StandardException
-public class MessagingException extends VaradhiException {
+public class MessagingException extends RuntimeException {
 }
