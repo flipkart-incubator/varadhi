@@ -114,7 +114,7 @@ public class SubscriptionTests extends E2EBase {
                 endpoint
         );
         makeCreateRequest(
-                getSubscriptionsUri(new Project("some_proj", 0, "desc", "someteam", "org")), projectNotExist, 400,
+                getSubscriptionsUri(new Project("some_proj", 0, "desc", "someteam", "org")), projectNotExist, 404,
                 "Project(some_proj) not found.", true
         );
 
@@ -129,7 +129,7 @@ public class SubscriptionTests extends E2EBase {
                 endpoint
         );
         makeCreateRequest(
-                getSubscriptionsUri(o1t1p1), topicNotExist, 400,
+                getSubscriptionsUri(o1t1p1), topicNotExist, 404,
                 "Topic(default.some_topic) not found.", true
         );
 
