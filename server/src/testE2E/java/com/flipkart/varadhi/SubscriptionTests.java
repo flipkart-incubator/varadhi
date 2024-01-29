@@ -87,6 +87,39 @@ public class SubscriptionTests extends E2EBase {
     }
 
     @Test
+    void updateSubscription() {
+        String subName = "sub1";
+        SubscriptionResource sub = new SubscriptionResource(
+                subName,
+                INITIAL_VERSION,
+                o1t1p1.getName(),
+                p1t1.getName(),
+                p1t1.getProject(),
+                "desc",
+                false,
+                endpoint
+        );
+        makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
+
+        SubscriptionResource update = new SubscriptionResource(
+                subName,
+                INITIAL_VERSION + 1,
+                o1t1p1.getName(),
+                p1t2.getName(),
+                p1t2.getProject(),
+                "desc updated",
+                false,
+                endpoint
+        );
+        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1), update, 200);
+
+        Assertions.assertEquals(update.getName(), updated.getName());
+        Assertions.assertEquals(update.getDescription(), updated.getProject());
+        Assertions.assertEquals(1, updated.getVersion());
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
+    }
+
+    @Test
     void createSubscriptionWithValidationFailure() {
         SubscriptionResource shortName = new SubscriptionResource(
                 "ab",
