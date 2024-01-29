@@ -39,7 +39,6 @@ public class SubscriptionTests extends E2EBase {
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
-        makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
         makeCreateRequest(getTopicsUri(o1t1p1), p1t1, 200);
         makeCreateRequest(getTopicsUri(o1t1p1), p1t2, 200);
     }
