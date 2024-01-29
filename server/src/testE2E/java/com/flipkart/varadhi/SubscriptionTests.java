@@ -116,7 +116,7 @@ public class SubscriptionTests extends E2EBase {
 
         Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);
         Assertions.assertNotNull(response);
-        assertEquals("", response.getEntity().toString());
+        assertEquals("", response.readEntity(String.class));
         assertEquals(200, response.getStatus());
         SubscriptionResource updated = response.readEntity(SubscriptionResource.class);
 
