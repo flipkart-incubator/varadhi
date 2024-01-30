@@ -8,7 +8,7 @@ import java.util.Map;
 @Getter
 public class VaradhiTopic extends AbstractTopic {
 
-    private final Map<String, InternalTopic> internalTopics;
+    private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
     private final CapacityPolicy capacityPolicy;
 
@@ -17,7 +17,7 @@ public class VaradhiTopic extends AbstractTopic {
             int version,
             boolean grouped,
             CapacityPolicy capacityPolicy,
-            Map<String, InternalTopic> internalTopics
+            Map<String, InternalCompositeTopic> internalTopics
     ) {
         super(name, version);
         this.grouped = grouped;
@@ -43,11 +43,11 @@ public class VaradhiTopic extends AbstractTopic {
         return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 
-    public void addInternalTopic(InternalTopic internalTopic) {
+    public void addInternalTopic(InternalCompositeTopic internalTopic) {
         this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
 
-    public InternalTopic getProduceTopicForRegion(String region) {
+    public InternalCompositeTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
     }
 

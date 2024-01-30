@@ -3,15 +3,13 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * TODO: generalize the retryTopic interaction. Currently, we assume that there is a retry topic per retry,
- * but pulsar has delayed topics, which needs evaluation. But maybe that is not a concern for this class. This class is
- * just one impl of RetryTopic, and there may be other impls.
+ * An implementation of RetryTopic where there is one topic per retry.
  */
 public class RetryTopic {
 
-    private final StorageTopic[] retryTopics;
+    private final VaradhiTopic[] retryTopics;
 
-    public RetryTopic(StorageTopic[] retryTopics) {
+    public RetryTopic(VaradhiTopic[] retryTopics) {
         this.retryTopics = retryTopics;
     }
 
@@ -21,7 +19,7 @@ public class RetryTopic {
      * @return the storage topic for the given retry count
      */
     @JsonIgnore
-    public StorageTopic getTopicForRetry(int retryCount) {
+    public VaradhiTopic getTopicForRetry(int retryCount) {
         return retryTopics[retryCount - 1];
     }
 

@@ -27,7 +27,7 @@ class VaradhiTopicTest {
     void addAndGetInternalTopic() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, 1, projectName, false, null));
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
-        InternalTopic internalTopic = new InternalTopic("region1", TopicState.Producing, st);
+        InternalCompositeTopic internalTopic = new InternalCompositeTopic("region1", TopicState.Producing, st);
 
         varadhiTopic.addInternalTopic(internalTopic);
         assertEquals(

@@ -28,7 +28,7 @@ public class VaradhiTopicFactory {
     private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
         StorageTopic storageTopic =
                 topicFactory.getTopic(varadhiTopic.getName(), project, varadhiTopic.getCapacityPolicy());
-        InternalTopic internalTopic = new InternalTopic(
+        InternalCompositeTopic internalTopic = new InternalCompositeTopic(
                 deploymentRegion,
                 TopicState.Producing,
                 storageTopic
