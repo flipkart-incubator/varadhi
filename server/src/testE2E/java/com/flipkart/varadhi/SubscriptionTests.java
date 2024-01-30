@@ -100,17 +100,18 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint
         );
-        SubscriptionResource res = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
-
+        makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
+        SubscriptionResource created =
+                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
         SubscriptionResource update = new SubscriptionResource(
-                subName,
-                res.getVersion(),
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
+                created.getName(),
+                created.getVersion(),
+                created.getProject(),
+                created.getTopic(),
+                created.getTopicProject(),
                 "desc updated",
-                false,
-                endpoint
+                created.isGrouped(),
+                created.getEndpoint()
         );
 
         Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);

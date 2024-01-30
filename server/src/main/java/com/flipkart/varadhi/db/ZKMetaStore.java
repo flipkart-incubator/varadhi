@@ -76,8 +76,8 @@ public class ZKMetaStore {
         } catch (KeeperException.BadVersionException e) {
             throw new InvalidOperationForResourceException(
                     String.format(
-                            "Conflicting update, %s(%s) has been modified. Fetch latest and try again. %s",
-                            znode.getKind(), znode.getName(), e.getMessage()
+                            "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
+                            znode.getKind(), znode.getName()
                     ), e);
         } catch (Exception e) {
             throw new MetaStoreException(
