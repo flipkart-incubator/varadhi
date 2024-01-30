@@ -65,8 +65,8 @@ public class SubscriptionService {
     private void validateUpdate(VaradhiSubscription existing, VaradhiSubscription update) {
         if (update.getVersion() != existing.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
-                    "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
-                    existing.getName()
+                    "Conflicting update, Subscription(%s) has been modified u:%d vs e:%d. Fetch latest and try again.",
+                    existing.getName(), update.getVersion(), existing.getVersion()
             ));
         }
 
