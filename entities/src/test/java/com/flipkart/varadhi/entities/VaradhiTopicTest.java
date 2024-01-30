@@ -5,6 +5,7 @@ package com.flipkart.varadhi.entities;
  * On 22/12/23
  */
 
+import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
@@ -49,6 +50,7 @@ class VaradhiTopicTest {
         assertFalse(topicResource.isGrouped());
     }
 
+    @EqualsAndHashCode(callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
             super(name, version);

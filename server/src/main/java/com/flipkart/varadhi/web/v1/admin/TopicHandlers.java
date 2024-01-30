@@ -84,7 +84,8 @@ public class TopicHandlers implements RouteProvider {
                                 new LinkedHashSet<>(),
                                 this::listTopics,
                                 true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}")) //TODO: Do we need a new permission for this?
+                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}"))
+                                //TODO: Do we need a new permission for this?
                         )
                 )
         ).get();
@@ -112,11 +113,8 @@ public class TopicHandlers implements RouteProvider {
         String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResource.getName());
         boolean found = varadhiTopicService.exists(varadhiTopicName);
         if (found) {
-            log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
-                    String.format("Specified Topic(%s:%s) already exists.", topicResource.getProject(),
-                            topicResource.getName()
-                    ));
+                    String.format("Specified Topic(%s) already exists.", varadhiTopicName));
         }
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt, project);

@@ -1,11 +1,13 @@
 package com.flipkart.varadhi.entities;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalCompositeTopic> internalTopics;
