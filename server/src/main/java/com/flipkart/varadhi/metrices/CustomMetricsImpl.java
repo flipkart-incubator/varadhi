@@ -11,10 +11,10 @@ import io.vertx.micrometer.impl.VertxMetricsImpl;
 
 import java.util.concurrent.ConcurrentMap;
 
-public class CustomMetrics extends VertxMetricsImpl  {
+public class CustomMetricsImpl extends VertxMetricsImpl  {
 
     public final MeterRegistry meterRegistry;
-    public CustomMetrics(
+    public CustomMetricsImpl(
             MicrometerMetricsOptions options, BackendRegistry backendRegistry,
             ConcurrentMap<Meter.Id, Object> gaugesTable
     ) {

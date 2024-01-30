@@ -4,7 +4,7 @@ import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.metrices.CustomFactory;
+import com.flipkart.varadhi.metrices.CustomMetricsFactory;
 import com.flipkart.varadhi.utils.HostUtils;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
@@ -41,7 +41,7 @@ public class Server {
         VertxOptions vertxOptions = configuration.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
                 .setMetricsOptions(new MetricsOptions()
-                        .setFactory(new CustomFactory(services.getMetricsRegistry()))
+                        .setFactory(new CustomMetricsFactory(services.getMetricsRegistry()))
                         .setEnabled(true));
         Vertx vertx = Vertx.vertx(vertxOptions);
         log.debug("Created Vertex");

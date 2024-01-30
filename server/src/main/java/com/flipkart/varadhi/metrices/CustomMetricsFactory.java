@@ -20,12 +20,12 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class CustomFactory implements VertxMetricsFactory {
+public class CustomMetricsFactory implements VertxMetricsFactory {
 
     private static final Map<MeterRegistry, ConcurrentHashMap<Meter.Id, Object>> tables = new WeakHashMap<>(1);
     private final MeterRegistry meterRegistry;
 
-    public CustomFactory(
+    public CustomMetricsFactory(
             MeterRegistry meterRegistry
     ) {
         this.meterRegistry = meterRegistry;
@@ -49,7 +49,7 @@ public class CustomFactory implements VertxMetricsFactory {
                     meterRegistry -> new ConcurrentHashMap<>()
             );
         }
-        CustomMetrics metrics = new CustomMetrics(options, backendRegistry, gaugesTable);
+        CustomMetricsImpl metrics = new CustomMetricsImpl(options, backendRegistry, gaugesTable);
         backendRegistry.init();
 
         if (options.isJvmMetricsEnabled()) {

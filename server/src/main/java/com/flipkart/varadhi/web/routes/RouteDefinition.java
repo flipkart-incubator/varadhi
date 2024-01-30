@@ -86,9 +86,13 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
         }
     }
 
-    //This can be taken as params
+    //This will convert part "/v1/orgs/:org/teams/:team/projects" to "v1_orgs_teams_projects"
     public String getMetricName() {
-        return "dummy_metric_name";
+        // Remove leading and trailing slashes
+        String trimmedPattern = this.path.replaceAll("^/|/$", "");
+        String underscoredPattern = trimmedPattern.replaceAll("/", "_");
+        String cleanedPattern = underscoredPattern.replaceAll(":\\w+", "");
+        return cleanedPattern.concat(this.method.name());
     }
 
 }
