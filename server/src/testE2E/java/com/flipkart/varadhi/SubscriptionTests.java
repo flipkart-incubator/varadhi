@@ -47,7 +47,6 @@ public class SubscriptionTests extends E2EBase {
 
     @AfterAll
     public static void tearDown() {
-        // cleanup subs
         cleanupTopic(p1t1.getName(), o1t1p1);
         cleanupTopic(p1t2.getName(), o1t1p1);
         cleanupProject(o1t1p1);
