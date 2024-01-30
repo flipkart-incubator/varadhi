@@ -7,9 +7,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  */
 public class RetryTopic {
 
-    private final VaradhiTopic[] retryTopics;
+    private final InternalCompositeTopic[] retryTopics;
 
-    public RetryTopic(VaradhiTopic[] retryTopics) {
+    public RetryTopic(InternalCompositeTopic[] retryTopics) {
         this.retryTopics = retryTopics;
     }
 
@@ -19,7 +19,7 @@ public class RetryTopic {
      * @return the storage topic for the given retry count
      */
     @JsonIgnore
-    public VaradhiTopic getTopicForRetry(int retryCount) {
+    public InternalCompositeTopic getTopicForRetry(int retryCount) {
         return retryTopics[retryCount - 1];
     }
 

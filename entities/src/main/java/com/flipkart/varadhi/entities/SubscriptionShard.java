@@ -13,7 +13,7 @@ public class SubscriptionShard {
 
     private final RetryTopic rqTopic;
 
-    private final VaradhiTopic dlqTopic;
+    private final InternalCompositeTopic dlqTopic;
 
     @Value
     public static class ShardAssignment {
