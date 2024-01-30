@@ -90,7 +90,7 @@ public class SubscriptionTests extends E2EBase {
 
     @Test
     void updateSubscription() {
-        String subName = "sub1";
+        String subName = "sub2";
         SubscriptionResource sub = new SubscriptionResource(
                 subName,
                 INITIAL_VERSION,
