@@ -16,6 +16,8 @@ public abstract sealed class Endpoint {
         private final URL url;
         private final HttpMethod method;
         private final String contentType;
+        private final long connectTimeoutMs;
+        private final long requestTimeoutMs;
 
         private final boolean http2Supported;
 

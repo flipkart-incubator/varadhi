@@ -78,11 +78,11 @@ public class ProducerService {
     ) {
         try {
             String produceRegion = context.getTopicContext().getRegion();
-            InternalTopic internalTopic =
+            InternalCompositeTopic internalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
 
             // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
-            if (internalTopic==null) {
+            if (internalTopic == null) {
                 throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
             }
 
@@ -108,8 +108,8 @@ public class ProducerService {
         long produceStart = System.currentTimeMillis();
         return producer.produceAsync(message).handle((result, throwable) -> {
             int producerLatency = (int) (System.currentTimeMillis() - produceStart);
-            emitProducerMetric(result!=null, producerLatency, context);
-            if (throwable!=null) {
+            emitProducerMetric(result != null, producerLatency, context);
+            if (throwable != null) {
                 log.debug(
                         String.format("Produce Message(%s) to StorageTopic(%s) failed.", message.getMessageId(), topic),
                         throwable

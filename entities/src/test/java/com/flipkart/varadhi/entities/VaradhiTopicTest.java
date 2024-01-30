@@ -5,10 +5,12 @@ package com.flipkart.varadhi.entities;
  * On 22/12/23
  */
 
+import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class VaradhiTopicTest {
 
@@ -26,15 +28,19 @@ class VaradhiTopicTest {
     void addAndGetInternalTopic() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, 1, projectName, false, null));
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
-        InternalTopic internalTopic = new InternalTopic("region1", topicName, TopicState.Producing, st);
+        InternalCompositeTopic internalTopic = new InternalCompositeTopic("region1", TopicState.Producing, st);
 
         varadhiTopic.addInternalTopic(internalTopic);
-        assertEquals(internalTopic.getTopicRegion(), varadhiTopic.getProduceTopicForRegion(topicName).getTopicRegion());
+        assertEquals(
+                internalTopic.getTopicRegion(),
+                varadhiTopic.getProduceTopicForRegion(internalTopic.getTopicRegion()).getTopicRegion()
+        );
     }
 
     @Test
     void getTopicResource() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, INITIAL_VERSION, projectName, false, CapacityPolicy.getDefault()));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(
+                new TopicResource(topicName, INITIAL_VERSION, projectName, false, CapacityPolicy.getDefault()));
 
         TopicResource topicResource = TopicResource.of(varadhiTopic);
 
@@ -43,6 +49,8 @@ class VaradhiTopicTest {
         assertEquals(projectName, topicResource.getProject());
         assertFalse(topicResource.isGrouped());
     }
+
+    @EqualsAndHashCode(callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
             super(name, version);
