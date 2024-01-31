@@ -19,7 +19,6 @@ import java.util.Set;
  */
 
 @Slf4j
-//TODO: Add metric Name as param when this is approved
 public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour> behaviours,
                               LinkedHashSet<Handler<RoutingContext>> preHandlers,
                               Handler<RoutingContext> endReqHandler,
@@ -92,7 +91,7 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
         String trimmedPattern = this.path.replaceAll("^/|/$", "");
         String underscoredPattern = trimmedPattern.replaceAll("/", "_");
         String cleanedPattern = underscoredPattern.replaceAll(":\\w+", "");
-        return cleanedPattern.concat(this.method.name());
+        return cleanedPattern.concat("_").concat(this.method.name());
     }
 
 }
