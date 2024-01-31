@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
@@ -68,11 +69,12 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
     }
 
     private void validateDelete(String varadhiTopicName) {
+        // TODO: optimize this flow, currently it scans all subscriptions across all projects
         List<String> subscriptionNames = metaStore.getAllSubscriptionNames();
         subscriptionNames.forEach(subscriptionName -> {
             VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
             if (subscription.getTopic().equals(varadhiTopicName)) {
-                throw new IllegalArgumentException(
+                throw new InvalidOperationForResourceException(
                         "Cannot delete topic as it is being used by subscription " + subscriptionName);
             }
         });
