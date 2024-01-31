@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -13,10 +10,9 @@ import org.apache.curator.framework.CuratorFramework;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.db.ZNode.*;
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 
 @Slf4j
@@ -176,7 +172,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefixOfTopicName))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

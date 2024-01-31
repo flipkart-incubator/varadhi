@@ -1,14 +1,18 @@
 package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.SubscriptionResource;
+import com.flipkart.varadhi.entities.SubscriptionShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 
 public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
+
+    private static final SubscriptionShard[] dummyShards =
+            new SubscriptionShard[]{new SubscriptionShard(0, null, null, null)};
 
     public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, int version) {
         return new VaradhiSubscription(
@@ -18,7 +22,10 @@ public final class SubscriptionHelper {
                 buildTopicName(subscriptionResource.getTopicProject(), subscriptionResource.getTopic()),
                 subscriptionResource.getDescription(),
                 subscriptionResource.isGrouped(),
-                subscriptionResource.getEndpoint()
+                subscriptionResource.getEndpoint(),
+                subscriptionResource.getRetryPolicy(),
+                subscriptionResource.getConsumptionPolicy(),
+                dummyShards // fixme: this is a hack to make the flow work
         );
     }
 
@@ -39,7 +46,9 @@ public final class SubscriptionHelper {
                 topicProject,
                 subscription.getDescription(),
                 subscription.isGrouped(),
-                subscription.getEndpoint()
+                subscription.getEndpoint(),
+                subscription.getRetryPolicy(),
+                subscription.getConsumptionPolicy()
         );
     }
 

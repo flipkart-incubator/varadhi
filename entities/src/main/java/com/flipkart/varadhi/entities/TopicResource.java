@@ -3,8 +3,6 @@ package com.flipkart.varadhi.entities;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
-
 @Value
 @EqualsAndHashCode(callSuper = true)
 @ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)

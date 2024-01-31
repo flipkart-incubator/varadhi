@@ -53,7 +53,10 @@ public class SubscriptionService {
                 existingSubscription.getTopic(),
                 subscription.getDescription(),
                 subscription.isGrouped(),
-                subscription.getEndpoint()
+                subscription.getEndpoint(),
+                subscription.getRetryPolicy(),
+                subscription.getConsumptionPolicy(),
+                existingSubscription.getShards()
         );
 
         int updatedVersion = metaStore.updateSubscription(updatedSubscription);

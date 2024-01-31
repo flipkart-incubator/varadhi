@@ -11,6 +11,9 @@ public class VaradhiSubscription extends MetaStoreEntity {
     String description;
     boolean grouped;
     Endpoint endpoint;
+    RetryPolicy retryPolicy;
+    ConsumptionPolicy consumptionPolicy;
+    SubscriptionShard[] shards;
 
     public VaradhiSubscription(
             String name,
@@ -19,7 +22,10 @@ public class VaradhiSubscription extends MetaStoreEntity {
             String topic,
             String description,
             boolean grouped,
-            Endpoint endpoint
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            SubscriptionShard[] shards
     ) {
         super(name, version);
         this.project = project;
@@ -27,5 +33,11 @@ public class VaradhiSubscription extends MetaStoreEntity {
         this.description = description;
         this.grouped = grouped;
         this.endpoint = endpoint;
+        this.retryPolicy = retryPolicy;
+        this.consumptionPolicy = consumptionPolicy;
+        if (shards == null || shards.length == 0) {
+            throw new IllegalArgumentException("shards cannot be null or empty");
+        }
+        this.shards = shards;
     }
 }

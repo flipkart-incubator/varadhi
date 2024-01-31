@@ -16,20 +16,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
 
+    static {
+        try {
+            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", 500, 500, false);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private final RetryPolicy retryPolicy = new RetryPolicy(
+            new CodeRange[]{new CodeRange(500, 502)},
+            RetryPolicy.BackoffType.LINEAR,
+            1, 1, 1, 1
+    );
+
     private static final Endpoint endpoint;
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
     private static TopicResource p1t1;
     private static TopicResource p1t2;
-
-    static {
-        try {
-            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
 
     @BeforeAll
     public static void setup() {
@@ -73,7 +80,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 false,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertEquals(sub.getName(), r.getName());
@@ -98,7 +107,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 false,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created =
@@ -111,7 +122,9 @@ public class SubscriptionTests extends E2EBase {
                 created.getTopicProject(),
                 "desc updated",
                 created.isGrouped(),
-                created.getEndpoint()
+                created.getEndpoint(),
+                created.getRetryPolicy(),
+                created.getConsumptionPolicy()
         );
 
         Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);
@@ -136,7 +149,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 false,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid Subscription name. Check naming constraints.",
@@ -151,7 +166,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 false,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         makeCreateRequest(
                 getSubscriptionsUri(new Project("some_proj", 0, "desc", "someteam", "org")), projectNotExist, 404,
@@ -166,7 +183,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 false,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), topicNotExist, 404,
@@ -181,7 +200,9 @@ public class SubscriptionTests extends E2EBase {
                 p1t1.getProject(),
                 "desc",
                 true,
-                endpoint
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), groupedOnUnGroupTopic, 400,

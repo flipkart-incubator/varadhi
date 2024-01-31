@@ -27,13 +27,29 @@ import static org.mockito.Mockito.*;
 public class SubscriptionHandlersTest extends WebTestBase {
     private final Project project = new Project("project1", 0, "", "team1", "org1");
     private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
+    private static final Endpoint endpoint;
+    private static final RetryPolicy retryPolicy = new RetryPolicy(
+            new CodeRange[]{new CodeRange(500, 502)},
+            RetryPolicy.BackoffType.LINEAR,
+            1, 1, 1, 1
+    );
+    private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
+    private static final SubscriptionShard[] shards =
+            new SubscriptionShard[]{new SubscriptionShard(0, null, null, null)};
+
+    static {
+        try {
+            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", 500, 500, false);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
 
     public static VaradhiSubscription getVaradhiSubscription(
             String subscriptionName, Project project, VaradhiTopic topic
-    )
-            throws MalformedURLException {
+    ) {
         return new VaradhiSubscription(
                 SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
                 1,
@@ -41,14 +57,16 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 topic.getName(),
                 UUID.randomUUID().toString(),
                 false,
-                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
+                endpoint,
+                retryPolicy,
+                consumptionPolicy,
+                shards
         );
     }
 
     public static VaradhiSubscription getVaradhiSubscription(
             String subscriptionName, boolean grouped, Project project, VaradhiTopic topic
-    )
-            throws MalformedURLException {
+    ) {
         return new VaradhiSubscription(
                 SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
                 1,
@@ -56,7 +74,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 topic.getName(),
                 UUID.randomUUID().toString(),
                 grouped,
-                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
+                endpoint,
+                retryPolicy,
+                consumptionPolicy,
+                shards
         );
     }
 
@@ -93,11 +114,11 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
 
     @Test
-    void testSubscriptionCreate() throws InterruptedException, MalformedURLException {
+    void testSubscriptionCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource));
         when(subscriptionService.createSubscription(any())).thenReturn(subscription);
         SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
         assertEquals(
@@ -107,7 +128,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
 
     @Test
-    void testSubscriptionCreateInconsistentProjectNameFailure() throws MalformedURLException, InterruptedException {
+    void testSubscriptionCreateInconsistentProjectNameFailure() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         SubscriptionResource resource =
                 getSubscriptionResource("sub1", new Project("project2", 0, "", "team1", "org1"), topicResource);
@@ -118,11 +139,11 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
 
     @Test
-    void testSubscriptionGet() throws MalformedURLException, InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub1", project));
-        SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+    void testSubscriptionGet() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub12", project));
+        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource));
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         when(subscriptionService.getSubscription(captor.capture())).thenReturn(subscription);
 
@@ -150,7 +171,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
 
     @Test
-    void testSubscriptionDelete() throws MalformedURLException, InterruptedException {
+    void testSubscriptionDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
 
@@ -164,7 +185,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
 
     @Test
-    void testSubscriptionUpdate() throws MalformedURLException, InterruptedException {
+    void testSubscriptionUpdate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
 
@@ -188,8 +209,9 @@ public class SubscriptionHandlersTest extends WebTestBase {
         return String.join("/", getSubscriptionsUrl(project), subscriptionName);
     }
 
-    private SubscriptionResource getSubscriptionResource(String subscriptionName, Project project, TopicResource topic)
-            throws MalformedURLException {
+    private SubscriptionResource getSubscriptionResource(
+            String subscriptionName, Project project, TopicResource topic
+    ) {
         return new SubscriptionResource(
                 subscriptionName,
                 1,
@@ -198,7 +220,9 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 topic.getProject(),
                 "desc",
                 false,
-                new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", false)
+                endpoint,
+                retryPolicy,
+                consumptionPolicy
         );
     }
 

@@ -24,6 +24,12 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     @NotNull
     Endpoint endpoint;
 
+    @NotNull
+    RetryPolicy retryPolicy;
+
+    @NotNull
+    ConsumptionPolicy consumptionPolicy;
+
     public SubscriptionResource(
             String name,
             int version,
@@ -32,7 +38,9 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             String topicProject,
             String description,
             boolean grouped,
-            Endpoint endpoint
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy
     ) {
         super(name, version);
         this.project = project;
@@ -41,5 +49,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.description = description;
         this.grouped = grouped;
         this.endpoint = endpoint;
+        this.retryPolicy = retryPolicy;
+        this.consumptionPolicy = consumptionPolicy;
     }
 }
