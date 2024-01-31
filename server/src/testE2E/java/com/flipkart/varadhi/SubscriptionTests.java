@@ -2,19 +2,27 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
+
+    private static final Endpoint endpoint;
+    private static Org o1;
+    private static Team o1t1;
+    private static Project o1t1p1;
+    private static TopicResource p1t1;
+    private static TopicResource p1t2;
 
     static {
         try {
@@ -29,13 +37,6 @@ public class SubscriptionTests extends E2EBase {
             RetryPolicy.BackoffType.LINEAR,
             1, 1, 1, 1
     );
-
-    private static final Endpoint endpoint;
-    private static Org o1;
-    private static Team o1t1;
-    private static Project o1t1p1;
-    private static TopicResource p1t1;
-    private static TopicResource p1t2;
     private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
 
     @BeforeAll
@@ -54,11 +55,21 @@ public class SubscriptionTests extends E2EBase {
 
     @AfterAll
     public static void tearDown() {
+        cleanAllSubscriptions(o1t1p1);
         cleanupTopic(p1t1.getName(), o1t1p1);
         cleanupTopic(p1t2.getName(), o1t1p1);
         cleanupProject(o1t1p1);
         cleanupTeam(o1t1);
         cleanupOrgs(List.of(o1));
+    }
+
+    private static void cleanAllSubscriptions(Project project) {
+        Response response = makeHttpGetRequest(getSubscriptionsUri(project));
+        if (response.getStatus() == 404) {
+            return;
+        }
+        response.readEntity(new GenericType<List<String>>() {
+        }).forEach(s -> makeDeleteRequest(getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), 200));
     }
 
     static String getSubscriptionsUri(Project project) {
@@ -127,14 +138,10 @@ public class SubscriptionTests extends E2EBase {
                 created.getConsumptionPolicy()
         );
 
-        Response response = makeHttpPutRequest(getSubscriptionsUri(o1t1p1, subName), update);
-        Assertions.assertNotNull(response);
-        assertEquals("", response.readEntity(String.class));
-        assertEquals(200, response.getStatus());
-        SubscriptionResource updated = response.readEntity(SubscriptionResource.class);
+        SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1, subName), update, 200);
 
         assertEquals(update.getName(), updated.getName());
-        assertEquals(update.getDescription(), updated.getProject());
+        assertEquals(update.getDescription(), updated.getDescription());
         assertEquals(1, updated.getVersion());
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
     }
