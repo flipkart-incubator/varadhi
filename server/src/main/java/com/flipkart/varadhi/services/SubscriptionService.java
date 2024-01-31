@@ -48,7 +48,7 @@ public class SubscriptionService {
         validateUpdate(existingSubscription, subscription);
         VaradhiSubscription updatedSubscription = new VaradhiSubscription(
                 existingSubscription.getName(),
-                existingSubscription.getVersion() + 1,
+                existingSubscription.getVersion(),
                 existingSubscription.getProject(),
                 existingSubscription.getTopic(),
                 subscription.getDescription(),
