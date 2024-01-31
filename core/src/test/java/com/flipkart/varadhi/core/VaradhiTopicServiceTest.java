@@ -62,8 +62,10 @@ public class VaradhiTopicServiceTest {
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(metaStore).createTopic(varadhiTopic);
         Exception exception =
-                Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic,
-                        project));
+                Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(
+                        varadhiTopic,
+                        project
+                ));
         verify(metaStore, times(1)).createTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(st, project);
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
@@ -76,8 +78,10 @@ public class VaradhiTopicServiceTest {
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         doThrow(new VaradhiException("Some error")).when(storageTopicService).create(st, project);
         Exception exception =
-                Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(varadhiTopic,
-                        project));
+                Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.create(
+                        varadhiTopic,
+                        project
+                ));
         verify(metaStore, times(0)).createTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(st, project);
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
@@ -120,7 +124,10 @@ public class VaradhiTopicServiceTest {
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         doThrow(new VaradhiException("Some error")).when(metaStore).deleteTopic(varadhiTopic.getName());
 
-        Exception exception = Assertions.assertThrows(VaradhiException.class, () -> varadhiTopicService.delete(varadhiTopic.getName()));
+        Exception exception = Assertions.assertThrows(
+                VaradhiException.class,
+                () -> varadhiTopicService.delete(varadhiTopic.getName())
+        );
 
         verify(storageTopicService, times(1)).delete(st.getName());
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());

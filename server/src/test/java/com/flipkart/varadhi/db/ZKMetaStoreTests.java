@@ -222,6 +222,7 @@ public class ZKMetaStoreTests {
     @Getter
     @EqualsAndHashCode(callSuper = true)
     public static class TestData extends MetaStoreEntity {
+
         String data;
 
         public TestData(String name, int version, String data) {
@@ -229,5 +230,4 @@ public class ZKMetaStoreTests {
             this.data = data;
         }
     }
-
 }

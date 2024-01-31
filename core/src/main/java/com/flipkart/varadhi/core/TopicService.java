@@ -11,16 +11,4 @@ public interface TopicService<T extends AbstractTopic> {
     void delete(String topicName);
 
     boolean exists(String topicName);
-
-
-    /**
-     * producer-api (TopicName -> TopicObject) // Read part of TopicService
-     *
-     * Producer (TopicObj -> ProducerObject)
-     *
-     * Consumer (producer module, Subscription -> ConsumerObject)
-     *
-     *
-     *
-     */
 }

@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class ConsumptionPolicy {
+
     private final int maxParallelism;
 
     /**
@@ -20,5 +21,6 @@ public class ConsumptionPolicy {
      * In terms of proportion of consumption rate over some time window. Between 0 and 1.
      */
     private final double maxErrorThreshold;
-    private final ThrottleSpec throttleSpec;
+    
+    private final ThrottlePolicy throttlePolicy;
 }

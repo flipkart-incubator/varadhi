@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.db.ZNode;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 public class TopicTests extends E2EBase {
 
@@ -63,7 +63,7 @@ public class TopicTests extends E2EBase {
         String errorDuplicateTopic =
                 String.format(
                         "Specified Topic(%s) already exists.",
-                        ZNode.getResourceFQDN(topic.getProject(), topic.getName())
+                        String.join(NAME_SEPARATOR, topic.getProject(), topic.getName())
                 );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
         makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
@@ -78,7 +78,7 @@ public class TopicTests extends E2EBase {
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
 
-        List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1),200));
+        List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
         Assertions.assertTrue(topics.isEmpty());
     }
 

@@ -10,6 +10,7 @@ import lombok.Setter;
 @EqualsAndHashCode(callSuper = true)
 @ValidateResource(message = "Invalid Project name. Check naming constraints.")
 public class Project extends MetaStoreEntity implements Validatable {
+
     private String org;
     @Setter
     private String team;

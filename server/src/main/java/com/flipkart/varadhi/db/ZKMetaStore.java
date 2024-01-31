@@ -12,11 +12,12 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 
 @Slf4j
-public class ZKMetaStore {
+class ZKMetaStore {
     /*
     Implementation Details: < T extends VaradhiResource>
     Some APIs works on VaradhiResource abstraction. VaradhiResource implements Versioned entities.
@@ -44,8 +45,8 @@ public class ZKMetaStore {
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
-            String response =
-                    zkCurator.create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData.getBytes());
+            String response = zkCurator.create().withMode(CreateMode.PERSISTENT)
+                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
             log.debug("Created znode for {}({}) in at {}: {}.", znode.getKind(), znode.getName(), znode.getPath(),
                     response
             );
@@ -65,7 +66,7 @@ public class ZKMetaStore {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
             Stat stat = zkCurator.setData().withVersion(dataObject.getVersion())
-                    .forPath(znode.getPath(), jsonData.getBytes());
+                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
             log.debug("Updated {}({}) in at {}: New Version{}.", znode.getKind(), znode.getName(), znode.getPath(),
                     stat.getVersion()
             );

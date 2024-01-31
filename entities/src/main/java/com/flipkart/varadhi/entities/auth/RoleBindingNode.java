@@ -13,6 +13,7 @@ import java.util.Set;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class RoleBindingNode extends MetaStoreEntity {
+
     private final String resourceId;
     private final ResourceType resourceType;
     /**

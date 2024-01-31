@@ -17,11 +17,12 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
-import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class AuthZHandlers implements RouteProvider {
+
+    public static final String AUTH_RESOURCE_NAME_SEPARATOR = ":";
 
     public static final String REQUEST_PATH_PARAM_RESOURCE = "resource";
     public static final String REQUEST_PATH_PARAM_RESOURCE_TYPE = "resource_type";
@@ -137,11 +138,11 @@ public class AuthZHandlers implements RouteProvider {
     private String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
         return switch (resourceType) {
             case ORG -> ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-            case TEAM -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
+            case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
                     ctx.pathParam(REQUEST_PATH_PARAM_TEAM)
             );
             case PROJECT -> ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-            case TOPIC -> String.join(RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
+            case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
                     ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
             );
             case SUBSCRIPTION -> ctx.pathParam("sub");
