@@ -23,7 +23,6 @@ public class JsonMapper {
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     }
 
     public static ObjectMapper getMapper() {
