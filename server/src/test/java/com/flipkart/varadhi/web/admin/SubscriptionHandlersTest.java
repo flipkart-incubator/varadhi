@@ -52,7 +52,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     ) {
         return new VaradhiSubscription(
                 SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
-                1,
+                VersionedEntity.INITIAL_VERSION,
                 project.getName(),
                 topic.getName(),
                 UUID.randomUUID().toString(),
@@ -69,7 +69,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     ) {
         return new VaradhiSubscription(
                 SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
-                1,
+                VersionedEntity.INITIAL_VERSION,
                 project.getName(),
                 topic.getName(),
                 UUID.randomUUID().toString(),

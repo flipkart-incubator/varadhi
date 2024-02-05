@@ -1,121 +1,154 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.jmx.JmxConfig;
+import io.micrometer.jmx.JmxMeterRegistry;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
-import java.net.MalformedURLException;
 import java.util.List;
 
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getVaradhiSubscription;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 class SubscriptionServiceTest {
 
-    private final Project project = new Project("project1", 0, "", "team1", "org1");
-    private final VaradhiTopic unGroupedTopic = VaradhiTopic.of(new TopicResource("topic1", 0, "project2", false, null));
-    private final VaradhiTopic groupedTopic = VaradhiTopic.of(new TopicResource("topic2", 0, "project2", true, null));
-
-    MetaStore metaStore;
+    TestingServer zkCuratorTestingServer;
+    OrgService orgService;
+    TeamService teamService;
+    ProjectService projectService;
+    CuratorFramework zkCurator;
+    VaradhiMetaStore varadhiMetaStore;
     SubscriptionService subscriptionService;
+    MeterRegistry meterRegistry;
+    Org o1;
+    Team o1t1;
+    Project o1t1p1, o1t1p2;
+    VaradhiTopic unGroupedTopic, groupedTopic;
+    VaradhiSubscription sub1, sub2;
 
     @BeforeEach
-    void setUp() {
-        metaStore = mock(MetaStore.class);
-        subscriptionService = new SubscriptionService(metaStore);
+    void setUp() throws Exception {
+        zkCuratorTestingServer = new TestingServer();
+        zkCurator = spy(CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCurator.start();
+        varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
+        orgService = new OrgService(varadhiMetaStore);
+        teamService = new TeamService(varadhiMetaStore);
+        meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
+
+        o1 = new Org("TestOrg1", 0);
+        o1t1 = new Team("TestTeam1", 0, o1.getName());
+        o1t1p1 = new Project("o1t1p1", 0, "", o1t1.getName(), o1t1.getOrg());
+        o1t1p2 = new Project("o1t1p2", 0, "", o1t1.getName(), o1t1.getOrg());
+        unGroupedTopic = VaradhiTopic.of(new TopicResource("topic1", 0, o1t1p1.getName(), false, null));
+        groupedTopic = VaradhiTopic.of(new TopicResource("topic2", 0, o1t1p2.getName(), true, null));
+
+        sub1 = getVaradhiSubscription("sub1", o1t1p1, unGroupedTopic);
+        sub2 = getVaradhiSubscription("sub2", o1t1p1, unGroupedTopic);
+
+        orgService.createOrg(o1);
+        teamService.createTeam(o1t1);
+        projectService.createProject(o1t1p1);
+        projectService.createProject(o1t1p2);
+
+        subscriptionService = new SubscriptionService(varadhiMetaStore);
     }
 
     @Test
     void getSubscriptionListReturnsCorrectSubscriptions() {
-        String projectName = "testProject";
-        List<String> expectedSubscriptions = List.of("sub1", "sub2", "sub3");
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        // create multiple subs
+        subscriptionService.createSubscription(sub1);
+        subscriptionService.createSubscription(sub2);
+        subscriptionService.createSubscription(getVaradhiSubscription("sub3", o1t1p2, unGroupedTopic));
 
-        when(metaStore.getSubscriptionNames(projectName)).thenReturn(expectedSubscriptions);
+        List<String> actualSubscriptions = subscriptionService.getSubscriptionList(o1t1p1.getName());
 
-        List<String> actualSubscriptions = subscriptionService.getSubscriptionList(projectName);
+        assertEquals(List.of("o1t1p1.sub2", "o1t1p1.sub1"), actualSubscriptions);
 
-        assertEquals(expectedSubscriptions, actualSubscriptions);
+        actualSubscriptions = subscriptionService.getSubscriptionList(o1t1p2.getName());
+
+        assertEquals(List.of("o1t1p2.sub3"), actualSubscriptions);
     }
 
     @Test
-    void getSubscriptionReturnsCorrectSubscription() throws MalformedURLException {
-        String subscriptionName = "sub1";
-        VaradhiSubscription expectedSubscription = getVaradhiSubscription(subscriptionName, project, unGroupedTopic);
+    void getSubscriptionReturnsCorrectSubscription() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
 
-        when(metaStore.getSubscription(subscriptionName)).thenReturn(expectedSubscription);
+        VaradhiSubscription actualSubscription = subscriptionService.getSubscription(sub1.getName());
 
-        VaradhiSubscription actualSubscription = subscriptionService.getSubscription(subscriptionName);
+        assertSubscriptionsSame(sub1, actualSubscription);
+    }
 
-        assertEquals(expectedSubscription, actualSubscription);
+    private void assertSubscriptionsSame(VaradhiSubscription expected, VaradhiSubscription actual) {
+        assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getTopic(), actual.getTopic());
+        assertEquals(expected.isGrouped(), actual.isGrouped());
+        assertEquals(expected.getDescription(), actual.getDescription());
     }
 
     @Test
     void getSubscriptionForNonExistentThrows() {
-        String subscriptionName = "sub1";
-
-        when(metaStore.getSubscription(subscriptionName)).thenThrow(new ResourceNotFoundException("Subscription not found"));
+        String subscriptionName = sub1.getName();
 
         Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
             subscriptionService.getSubscription(subscriptionName);
         });
 
-        String expectedMessage = "Subscription not found";
+        String expectedMessage = "Subscription(%s) not found.".formatted(subscriptionName);
         String actualMessage = exception.getMessage();
 
         assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    void testCreateSubscription() throws MalformedURLException {
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
+    void testCreateSubscription() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        VaradhiSubscription result = subscriptionService.createSubscription(sub1);
 
-        var projectNameCaptor = ArgumentCaptor.forClass(String.class);
-        var topicNameCaptor = ArgumentCaptor.forClass(String.class);
-        Mockito.when(metaStore.getProject(projectNameCaptor.capture())).thenReturn(project);
-        Mockito.when(metaStore.getTopic(topicNameCaptor.capture())).thenReturn(unGroupedTopic);
-
-        VaradhiSubscription result = subscriptionService.createSubscription(subscription);
-
-        assertEquals(subscription, result);
-        assertEquals(project.getName(), projectNameCaptor.getValue());
-        assertEquals(unGroupedTopic.getName(), topicNameCaptor.getValue());
-        Mockito.verify(metaStore).createSubscription(subscription);
+        assertSubscriptionsSame(sub1, result);
+        assertSubscriptionsSame(sub1, subscriptionService.getSubscription(sub1.getName()));
     }
 
     @Test
-    void testCreateSubscriptionWithNonGroupedTopic() throws MalformedURLException {
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", true, project, unGroupedTopic);
-
-        Mockito.when(metaStore.getProject(anyString())).thenReturn(project);
-        Mockito.when(metaStore.getTopic(anyString())).thenReturn(unGroupedTopic);
+    void testCreateSubscriptionWithNonGroupedTopic() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", true, o1t1p1, unGroupedTopic);
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             subscriptionService.createSubscription(subscription);
         });
 
-        String expectedMessage = "Cannot create grouped Subscription as it's Topic(project2.topic1) is not grouped";
+        String expectedMessage = "Cannot create grouped Subscription as it's Topic(%s) is not grouped".formatted(
+                unGroupedTopic.getName());
         String actualMessage = exception.getMessage();
 
         assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    void testCreateSubscriptionWithGroupedTopic() throws MalformedURLException {
-        VaradhiSubscription unGroupedSub = getVaradhiSubscription("sub1", false, project, groupedTopic);
-        VaradhiSubscription groupedSub = getVaradhiSubscription("sub1", true, project, groupedTopic);
+    void testCreateSubscriptionWithGroupedTopic() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(groupedTopic).when(varadhiMetaStore).getTopic(groupedTopic.getName());
 
-        Mockito.when(metaStore.getProject(anyString())).thenReturn(project);
-        Mockito.when(metaStore.getTopic(anyString())).thenReturn(groupedTopic);
+        VaradhiSubscription unGroupedSub = getVaradhiSubscription("sub1", false, o1t1p1, groupedTopic);
+        VaradhiSubscription groupedSub = getVaradhiSubscription("sub2", true, o1t1p1, groupedTopic);
 
         assertDoesNotThrow(() -> {
             subscriptionService.createSubscription(unGroupedSub);
@@ -127,106 +160,124 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void testCreateSubscriptionWithNonExistentProject() throws MalformedURLException {
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-
-        Mockito.when(metaStore.getProject(anyString())).thenThrow(new ResourceNotFoundException("Project not found"));
+    void testCreateSubscriptionWithNonExistentProject() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        Project anonProj = new Project("anonProj", 0, "", "anonTeam", "anonOrg");
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", anonProj, unGroupedTopic);
 
         Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
             subscriptionService.createSubscription(subscription);
         });
 
-        String expectedMessage = "Project not found";
+        String expectedMessage = "Project(%s) not found.".formatted(anonProj.getName());
         String actualMessage = exception.getMessage();
 
         assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    void testCreateSubscriptionWithNonExistentTopic() throws MalformedURLException {
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-
-        Mockito.when(metaStore.getProject(anyString())).thenReturn(project);
-        Mockito.when(metaStore.getTopic(anyString())).thenThrow(new ResourceNotFoundException("Topic not found"));
+    void testCreateSubscriptionWithNonExistentTopic() {
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", o1t1p1, unGroupedTopic);
 
         Exception exception = assertThrows(ResourceNotFoundException.class, () -> {
             subscriptionService.createSubscription(subscription);
         });
 
-        String expectedMessage = "Topic not found";
+        String expectedMessage = "Topic(%s) not found.".formatted(unGroupedTopic.getName());
         String actualMessage = exception.getMessage();
 
         assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    void updateSubscriptionUpdatesCorrectly() throws MalformedURLException {
-        VaradhiSubscription existingSubscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
+    void updateSubscriptionUpdatesCorrectly() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
+        VaradhiSubscription update =
+                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
 
-        VaradhiSubscription newSubscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-        newSubscription.setVersion(1);
+        VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(update);
 
-        Mockito.when(metaStore.getSubscription(anyString())).thenReturn(existingSubscription);
-        Mockito.when(metaStore.updateSubscription(any())).thenReturn(2);
-
-        VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(newSubscription);
-
-        assertEquals(newSubscription.getDescription(), updatedSubscription.getDescription());
-        assertEquals(2, updatedSubscription.getVersion());
+        assertEquals(update.getDescription(), updatedSubscription.getDescription());
+        assertEquals(1, updatedSubscription.getVersion());
     }
 
     @Test
-    void updateSubscriptionTopicNotAllowed() throws MalformedURLException {
-        VaradhiSubscription existingSubscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-
-        VaradhiSubscription newSubscription = getVaradhiSubscription("sub1", project, groupedTopic);
-        newSubscription.setVersion(1);
-
-        Mockito.when(metaStore.getSubscription(anyString())).thenReturn(existingSubscription);
+    void updateSubscriptionTopicNotAllowed() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
+        VaradhiSubscription update =
+                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, groupedTopic);
 
         Exception ex = assertThrows(java.lang.IllegalArgumentException.class, () -> {
-            subscriptionService.updateSubscription(newSubscription);
+            subscriptionService.updateSubscription(update);
         });
 
-        assertEquals("Cannot update Topic of Subscription(project1.sub1)", ex.getMessage());
+        assertEquals("Cannot update Topic of Subscription(%s)".formatted(update.getName()), ex.getMessage());
     }
 
     @Test
-    void updateSubscriptionWithVersionConflictThrows() throws MalformedURLException {
-        VaradhiSubscription existingSubscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-        existingSubscription.setVersion(1);
+    void updateSubscriptionWithVersionConflictThrows() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
+        VaradhiSubscription update =
+                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+        update.setVersion(2);
 
-        VaradhiSubscription newSubscription = getVaradhiSubscription("sub1", project, unGroupedTopic);
-        newSubscription.setVersion(2);
-
-        Mockito.when(metaStore.getSubscription(anyString())).thenReturn(existingSubscription);
-
-        assertThrows(InvalidOperationForResourceException.class, () -> {
-            subscriptionService.updateSubscription(newSubscription);
+        Exception exception = assertThrows(InvalidOperationForResourceException.class, () -> {
+            subscriptionService.updateSubscription(update);
         });
+
+        String expectedMessage =
+                "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.".formatted(
+                        update.getName());
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    void updateSubscriptionWithUnGroupedTopicThrows() throws MalformedURLException {
-        VaradhiSubscription existingSubscription = getVaradhiSubscription("sub1", false, project, unGroupedTopic);
+    void updateSubscriptionWithUnGroupedTopicThrows() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
+        VaradhiSubscription update =
+                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], true, o1t1p1, unGroupedTopic);
 
-        VaradhiSubscription newSubscription = getVaradhiSubscription("sub1", true, project, unGroupedTopic);
-
-        Mockito.when(metaStore.getSubscription(anyString())).thenReturn(existingSubscription);
-        Mockito.when(metaStore.getTopic(anyString())).thenReturn(unGroupedTopic);
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            subscriptionService.updateSubscription(newSubscription);
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            subscriptionService.updateSubscription(update);
         });
+
+        String expectedMessage =
+                "Cannot update Subscription(%s) to grouped as it's Topic(%s) is not grouped".formatted(
+                        update.getName(),
+                        update.getTopic()
+                );
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
     void deleteSubscriptionRemovesSubscription() {
-        String subscriptionName = "sub1";
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(sub1);
 
-        subscriptionService.deleteSubscription(subscriptionName);
+        String name = sub1.getName();
 
-        verify(metaStore, times(1)).deleteSubscription(subscriptionName);
+        VaradhiSubscription subscription = subscriptionService.getSubscription(name);
+        assertNotNull(subscription);
+
+        subscriptionService.deleteSubscription(name);
+
+        Exception exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> subscriptionService.getSubscription(name)
+        );
+
+        String expectedMessage = "Subscription(%s) not found.".formatted(name);
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 
 }
