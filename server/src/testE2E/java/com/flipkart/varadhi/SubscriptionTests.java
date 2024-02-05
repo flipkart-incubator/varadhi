@@ -5,14 +5,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.Response;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
@@ -55,29 +52,15 @@ public class SubscriptionTests extends E2EBase {
 
     @AfterAll
     public static void tearDown() {
-        cleanAllSubscriptions(o1t1p1);
-        cleanupTopic(p1t1.getName(), o1t1p1);
-        cleanupTopic(p1t2.getName(), o1t1p1);
-        cleanupProject(o1t1p1);
-        cleanupTeam(o1t1);
         cleanupOrgs(List.of(o1));
     }
 
-    private static void cleanAllSubscriptions(Project project) {
-        Response response = makeHttpGetRequest(getSubscriptionsUri(project));
-        if (response.getStatus() == 404) {
-            return;
-        }
-        response.readEntity(new GenericType<List<String>>() {
-        }).forEach(s -> makeDeleteRequest(getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), 200));
-    }
-
-    static String getSubscriptionsUri(Project project) {
-        return String.join("/", getProjectUri(project), "subscriptions");
-    }
-
-    static String getSubscriptionsUri(Project project, String subscriptionName) {
-        return String.join("/", getSubscriptionsUri(project), subscriptionName);
+    private static void assertSubscriptionEquals(SubscriptionResource expected, SubscriptionResource actual) {
+        assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getProject(), actual.getProject());
+        assertEquals(expected.getTopic(), actual.getTopic());
+        assertEquals(expected.getTopicProject(), actual.getTopicProject());
+        assertEquals(expected.isGrouped(), actual.isGrouped());
     }
 
     @Test
@@ -96,12 +79,12 @@ public class SubscriptionTests extends E2EBase {
                 consumptionPolicy
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
-        assertEquals(sub.getName(), r.getName());
-        assertEquals(sub.getProject(), r.getProject());
-        assertEquals(sub.getTopic(), r.getTopic());
-        assertEquals(sub.isGrouped(), r.isGrouped());
+        assertSubscriptionEquals(sub, r);
 
-        makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        SubscriptionResource got =
+                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        assertSubscriptionEquals(sub, got);
+
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), sub, 409, "VaradhiSubscription(default.sub1) already exists.", true);
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
