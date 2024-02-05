@@ -4,6 +4,7 @@ import com.flipkart.varadhi.cluster.NodeResources;
 import com.flipkart.varadhi.config.ZookeeperConnectConfig;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.cluster.NodeInfo;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,9 +34,12 @@ public class ZookeeperClusterManager extends io.vertx.spi.cluster.zookeeper.Zook
 
     @Override
     public void setNodeInfo(NodeInfo nodeInfo, Promise<Void> promise) {
-        nodeInfo.metadata().put("cpuCount", nodeResources.cpuCount());
-        nodeInfo.metadata().put("nicMBps", nodeResources.nicMBps());
-        super.setNodeInfo(nodeInfo, promise);
+        NodeInfo copy = new NodeInfo(nodeInfo.host(), nodeInfo.port(),
+                nodeInfo.metadata() == null ? new JsonObject() : nodeInfo.metadata().copy()
+        );
+        copy.metadata().put("cpuCount", nodeResources.cpuCount());
+        copy.metadata().put("nicMBps", nodeResources.nicMBps());
+        super.setNodeInfo(copy, promise);
     }
 
     public NodeResources toNodeResources(NodeInfo nodeInfo) {

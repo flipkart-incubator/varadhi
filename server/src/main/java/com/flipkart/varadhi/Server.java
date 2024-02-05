@@ -16,6 +16,8 @@ import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.ExecutionException;
+
 @Slf4j
 public class Server {
 
@@ -36,7 +38,8 @@ public class Server {
         // TODO: check need for shutdown hook
     }
 
-    private static Vertx createVertx(ServerConfig configuration, CoreServices services) {
+    private static Vertx createVertx(ServerConfig configuration, CoreServices services)
+            throws ExecutionException, InterruptedException {
         log.debug("Creating Vertex");
 
         VertxOptions vertxOptions = configuration.getVertxOptions()
@@ -54,7 +57,8 @@ public class Server {
         Vertx vertx = Vertx.builder()
                 .with(vertxOptions)
                 .withClusterManager(clusterManager)
-                .buildClustered().result();
+                .buildClustered()
+                .toCompletionStage().toCompletableFuture().get();
         log.debug("Created Vertex");
         return vertx;
     }
