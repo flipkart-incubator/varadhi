@@ -28,9 +28,8 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
         ensureEntityTypePathExists(ORG);
         ensureEntityTypePathExists(TEAM);
         ensureEntityTypePathExists(PROJECT);
-        ensureEntityTypePathExists(TOPIC_RESOURCE);
-        ensureEntityTypePathExists(VARADHI_TOPIC);
-        ensureEntityTypePathExists(VARADHI_SUBSCRIPTION);
+        ensureEntityTypePathExists(TOPIC);
+        ensureEntityTypePathExists(SUBSCRIPTION);
         ensureEntityTypePathExists(ROLE_BINDING);
     }
 
@@ -168,7 +167,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     @Override
     public List<String> getTopicNames(String projectName) {
         String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
+        ZNode znode = ZNode.OfEntityType(TOPIC);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefixOfTopicName))
@@ -176,32 +175,32 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public void createTopic(VaradhiTopic varadhiTopic) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopic.getName());
-        zkMetaStore.createZNodeWithData(znode, varadhiTopic);
+    public void createTopic(VaradhiTopic topic) {
+        ZNode znode = ZNode.OfTopic(topic.getName());
+        zkMetaStore.createZNodeWithData(znode, topic);
     }
 
     @Override
-    public boolean checkTopicExists(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+    public boolean checkTopicExists(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public VaradhiTopic getTopic(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+    public VaradhiTopic getTopic(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
 
     @Override
-    public void deleteTopic(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+    public void deleteTopic(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         zkMetaStore.deleteZNode(znode);
     }
 
     @Override
     public List<String> getAllSubscriptionNames() {
-        ZNode znode = ZNode.OfEntityType(VARADHI_SUBSCRIPTION);
+        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .toList();
@@ -210,7 +209,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     @Override
     public List<String> getSubscriptionNames(String projectName) {
         String projectPrefix = projectName + NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(VARADHI_SUBSCRIPTION);
+        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefix))
@@ -219,31 +218,31 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
 
     @Override
     public void createSubscription(VaradhiSubscription subscription) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getName());
+        ZNode znode = ZNode.ofSubscription(subscription.getName());
         zkMetaStore.createZNodeWithData(znode, subscription);
     }
 
     @Override
     public VaradhiSubscription getSubscription(String subscriptionName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiSubscription.class);
     }
 
     @Override
     public int updateSubscription(VaradhiSubscription subscription) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscription.getName());
+        ZNode znode = ZNode.ofSubscription(subscription.getName());
         return zkMetaStore.updateZNodeWithData(znode, subscription);
     }
 
     @Override
     public boolean checkSubscriptionExists(String subscriptionName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void deleteSubscription(String subscriptionName) {
-        ZNode znode = ZNode.OfVaradhiSubscription(subscriptionName);
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
         zkMetaStore.deleteZNode(znode);
     }
 
