@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.VerticleDeployer;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -21,8 +21,9 @@ public class FullDeploymentVerticleDeployer extends VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
+
     public FullDeploymentVerticleDeployer(
-            String hostName, Vertx vertx, ServerConfiguration configuration,
+            String hostName, Vertx vertx, ServerConfig configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {

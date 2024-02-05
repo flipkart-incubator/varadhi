@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -31,7 +31,7 @@ public class AuthHandlers implements RouteConfigurator {
     private final Handler<RoutingContext> authenticationHandler;
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthHandlers(Vertx vertx, ServerConfiguration configuration) throws InvalidConfigException {
+    public AuthHandlers(Vertx vertx, ServerConfig configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled()) {
             authenticationHandler =
                     switch (configuration.getAuthentication().getMechanism()) {
@@ -61,7 +61,7 @@ public class AuthHandlers implements RouteConfigurator {
         }
     }
 
-    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
+    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfig configuration) {
         if (configuration.isAuthorizationEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
             return new AuthorizationHandlerBuilder(configuration.getAuthorization()
@@ -72,7 +72,7 @@ public class AuthHandlers implements RouteConfigurator {
     }
 
     @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
+    private AuthorizationProvider getAuthorizationProvider(ServerConfig configuration) {
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {

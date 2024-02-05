@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -23,12 +23,11 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class LeanDeploymentVerticleDeployerTest {
 
@@ -43,7 +42,7 @@ public class LeanDeploymentVerticleDeployerTest {
 
     MetaStoreProvider metaStoreProvider;
 
-    ServerConfiguration serverConfiguration;
+    ServerConfig serverConfiguration;
 
     MeterRegistry meterRegistry;
 
@@ -81,14 +80,16 @@ public class LeanDeploymentVerticleDeployerTest {
 
         serverConfiguration = YamlLoader.loadConfig(
                 "src/test/resources/testConfiguration.yml",
-                ServerConfiguration.class);
+                ServerConfig.class
+        );
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
                 varadhiMetaStore,
                 serverConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
-                meterRegistry);
+                meterRegistry
+        );
 
         leanDeploymentVerticleDeployer = new LeanDeploymentVerticleDeployer(
                 "testHostName",
@@ -126,7 +127,8 @@ public class LeanDeploymentVerticleDeployerTest {
         orgService.createOrg(org);
         Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
         teamService.createTeam(team);
-        Project project = new Project(serverConfiguration.getRestOptions().getDefaultProject(),
+        Project project = new Project(
+                serverConfiguration.getRestOptions().getDefaultProject(),
                 0,
                 "",
                 team.getName(),
@@ -156,12 +158,15 @@ public class LeanDeploymentVerticleDeployerTest {
         Org org = new Org(TEST_ORG, 0);
         orgService.createOrg(org);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
         assertEquals(String.format(
                 "Lean deployment can not be enabled as org with %s name is present.",
-                TEST_ORG), exception.getMessage());
+                TEST_ORG
+        ), exception.getMessage());
     }
 
     @Test
@@ -171,11 +176,15 @@ public class LeanDeploymentVerticleDeployerTest {
         orgService.createOrg(org1);
         orgService.createOrg(org2);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
-        assertEquals("Lean deployment can not be enabled as there are more than one orgs.",
-                exception.getMessage());
+        assertEquals(
+                "Lean deployment can not be enabled as there are more than one orgs.",
+                exception.getMessage()
+        );
     }
 
     @Test
@@ -185,12 +194,15 @@ public class LeanDeploymentVerticleDeployerTest {
         Team team = new Team(TEST_TEAM, 0, org.getName());
         teamService.createTeam(team);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
         assertEquals(String.format(
                 "Lean deployment can not be enabled as team with %s name is present.",
-                TEST_TEAM), exception.getMessage());
+                TEST_TEAM
+        ), exception.getMessage());
     }
 
     @Test
@@ -202,11 +214,15 @@ public class LeanDeploymentVerticleDeployerTest {
         teamService.createTeam(team1);
         teamService.createTeam(team2);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
-        assertEquals("Lean deployment can not be enabled as there are more than one teams.",
-                exception.getMessage());
+        assertEquals(
+                "Lean deployment can not be enabled as there are more than one teams.",
+                exception.getMessage()
+        );
     }
 
     @Test
@@ -218,12 +234,15 @@ public class LeanDeploymentVerticleDeployerTest {
         Project project = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
         projectService.createProject(project);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
         assertEquals(String.format(
                 "Lean deployment can not be enabled as project with %s name is present.",
-                TEST_PROJECT), exception.getMessage());
+                TEST_PROJECT
+        ), exception.getMessage());
     }
 
     @Test
@@ -237,11 +256,15 @@ public class LeanDeploymentVerticleDeployerTest {
         projectService.createProject(project1);
         projectService.createProject(project2);
 
-        InvalidConfigException exception = assertThrows(InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration));
+        InvalidConfigException exception = assertThrows(
+                InvalidConfigException.class,
+                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
+        );
 
-        assertEquals("Lean deployment can not be enabled as there are more than one projects.",
-                exception.getMessage());
+        assertEquals(
+                "Lean deployment can not be enabled as there are more than one projects.",
+                exception.getMessage()
+        );
     }
 
     @Test

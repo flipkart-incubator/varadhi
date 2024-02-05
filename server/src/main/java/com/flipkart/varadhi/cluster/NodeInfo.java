@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core.cluster;
+package com.flipkart.varadhi.cluster;
 
 /**
  * TODO: need to see if the id needs to be separate from the 'ip' & 'hostname'. Implementer needs to address this.
