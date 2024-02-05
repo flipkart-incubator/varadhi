@@ -50,6 +50,11 @@ public record RouteDefinition(HttpMethod method, String path, Set<RouteBehaviour
         private boolean blocking;
         private PermissionAuthorization requiredAuthorization;
 
+        public Builder authenticated() {
+            this.authenticated = true;
+            return this;
+        }
+
         public Builder authenticatedWith(PermissionAuthorization requiredAuthorization) {
             this.authenticated = true;
             this.requiredAuthorization = requiredAuthorization;
