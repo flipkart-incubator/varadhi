@@ -56,8 +56,8 @@ public class AuthHandlers implements RouteConfigurator {
             route.handler(authenticationHandler);
         }
 
-        if (authorizationHandlerBuilder != null && routeDef.requiredAuthorization().isPresent()) {
-            route.handler(authorizationHandlerBuilder.build(routeDef.requiredAuthorization().get()));
+        if (authorizationHandlerBuilder != null && routeDef.getRequiredAuthorization().isPresent()) {
+            route.handler(authorizationHandlerBuilder.build(routeDef.getRequiredAuthorization().get()));
         }
     }
 

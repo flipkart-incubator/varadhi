@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 public class Constants {
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
+    public static final String API_CONTEXT_KEY = "apiContext";
 
     public static class PathParams {
         public static final String REQUEST_PATH_PARAM_ORG = "org";
@@ -12,6 +13,8 @@ public class Constants {
 
     public static class Tags {
         public static final String TAG_NAME_REGION = "region";
+        public static final String TAG_NAME_ORG = "org";
+        public static final String TAG_NAME_TEAM = "team";
         public static final String TAG_NAME_PROJECT = "project";
         public static final String TAG_NAME_TOPIC = "topic";
         public static final String TAG_NAME_IDENTITY = "identity";

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.entities.ApiContext;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -25,7 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
+import static com.flipkart.varadhi.MessageConstants.API_PROTOCOL_HTTP;
+import static com.flipkart.varadhi.core.entities.ApiContext.*;
+import static com.flipkart.varadhi.core.entities.ApiContext.MESSAGE;
 import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -33,7 +36,7 @@ import static org.mockito.Mockito.*;
 public class ProducerServiceTests {
     ProducerService service;
     ProducerMetricsImpl metricProvider;
-    ProducerFactory producerFactory;
+    ProducerFactory<StorageTopic> producerFactory;
     VaradhiTopicService topicService;
     Producer producer;
     Random random;
@@ -54,7 +57,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceMessage() throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 10, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -78,7 +81,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWhenProduceAsyncThrows() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 10, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -96,7 +99,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceToNonExistingTopic() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
@@ -110,7 +113,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWithUnknownExceptionInGetTopic() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
@@ -154,7 +157,7 @@ public class ProducerServiceTests {
     public void produceNotAllowedTopicState(
             TopicState topicState, ProduceStatus produceStatus, String message
     ) throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -171,7 +174,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWithUnknownExceptionInGetProducer() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -185,8 +188,8 @@ public class ProducerServiceTests {
     }
 
     @Test
-    public void testProduceWithknownExceptionInGetProducer() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+    public void testProduceWithKnownExceptionInGetProducer() {
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -202,7 +205,7 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWithProducerFailure() throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -227,7 +230,7 @@ public class ProducerServiceTests {
     public void testMetricEmitFailureNotIgnored() throws InterruptedException {
         doThrow(new RuntimeException("Failed to send metric.")).when(metricProvider)
                 .onMessageProduced(anyBoolean(), anyLong(), any());
-        ProduceContext ctx = getProduceContext(topic, project, region);
+        ApiContext ctx = getApiContext(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 10, ctx);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
@@ -255,15 +258,13 @@ public class ProducerServiceTests {
     }
 
     public Message getMessage(
-            int sleepMs, int offset, String exceptionClass, int payloadSize, ProduceContext ctx
+            int sleepMs, int offset, String exceptionClass, int payloadSize, ApiContext ctx
     ) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        byte[] messageId = new byte[30];
-        random.nextBytes(messageId);
-        headers.put(MESSAGE_ID, new String(messageId));
-        headers.put(PRODUCE_IDENTITY, ctx.getRequestContext().getProduceIdentity());
-        headers.put(PRODUCE_REGION, ctx.getTopicContext().getRegion());
-        headers.put(PRODUCE_TIMESTAMP, Long.toString(ctx.getRequestContext().getRequestTimestamp()));
+        headers.put(StandardHeaders.MESSAGE_ID, ctx.get(MESSAGE));
+        headers.put(PRODUCE_IDENTITY, ctx.get(IDENTITY));
+        headers.put(PRODUCE_REGION, ctx.get(REGION));
+        headers.put(PRODUCE_TIMESTAMP, Long.toString(ctx.get(START_TIME)));
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
@@ -275,19 +276,31 @@ public class ProducerServiceTests {
     }
 
 
-    public ProduceContext getProduceContext(String topic, Project project, String region) {
-        ProduceContext.RequestContext requestContext = new ProduceContext.RequestContext();
-        requestContext.setRequestTimestamp(System.currentTimeMillis());
-        requestContext.setBytesReceived(100);
-        requestContext.setProduceIdentity(ANONYMOUS_PRODUCE_IDENTITY);
-        requestContext.setRemoteHost("remotehost");
-        requestContext.setServiceHost("localhost");
-        requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
-        ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
-        topicContext.setTopic(topic);
-        topicContext.setRegion(region);
-        topicContext.setProjectAttributes(project);
-        return new ProduceContext(requestContext, topicContext);
+    public ApiContext getApiContext(String topic, Project project, String region) {
+        ApiContext api = new ApiContext();
+        api.put(API_NAME, "Produce");
+        api.put(IDENTITY, ANONYMOUS_PRODUCE_IDENTITY);
+        api.put(REGION, region);
+        api.put(REQUEST_CHANNEL, API_PROTOCOL_HTTP);
+        api.put(SERVICE_HOST, "localhost");
+        api.put(REMOTE_HOST, "remotehost");
+        api.put(START_TIME, System.currentTimeMillis());
+
+        api.put(ORG, project.getOrg());
+        api.put(TEAM, project.getTeam());
+        api.put(PROJECT, project.getName());
+
+        api.put(TOPIC, topic);
+
+        api.put(MESSAGE, getMessageId());
+        api.put(BYTES_RECEIVED, 100);
+        return api;
+    }
+
+    public String getMessageId() {
+        byte[] messageId = new byte[30];
+        random.nextBytes(messageId);
+        return new String(messageId);
     }
 
     ResultCapture getResult(CompletableFuture<ProduceResult> future) throws InterruptedException {

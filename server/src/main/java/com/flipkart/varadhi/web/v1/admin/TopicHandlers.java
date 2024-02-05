@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.Project;
@@ -13,20 +12,18 @@ import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
 
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
@@ -50,43 +47,19 @@ public class TopicHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/projects/:project/topics",
                 List.of(
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:topic",
-                                Set.of(),
-                                new LinkedHashSet<>(),
-                                this::get,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}/{topic}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "",
-                                Set.of(authenticated, hasBody),
-                                new LinkedHashSet<>(),
-                                this::create,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{project}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.DELETE,
-                                "/:topic",
-                                Set.of(),
-                                new LinkedHashSet<>(),
-                                this::delete,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{project}/{topic}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "",
-                                Set.of(),
-                                new LinkedHashSet<>(),
-                                this::listTopics,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}"))
-                                //TODO: Do we need a new permission for this?
-                        )
+                        RouteDefinition.get("GetTopic", "/:topic")
+                                .authorize(TOPIC_GET, "{project}/{topic}")
+                                .build(this::get),
+                        RouteDefinition.post("CreateTopic", "")
+                                .hasBody()
+                                .authorize(TOPIC_CREATE, "{project}")
+                                .build(this::create),
+                        RouteDefinition.delete("DeleteTopic", "/:topic")
+                                .authorize(TOPIC_DELETE, "{project}/{topic}")
+                                .build(this::delete),
+                        RouteDefinition.get("ListTopics", "")
+                                .authorize(TOPIC_GET, "{project}")
+                                .build(this::listTopics)
                 )
         ).get();
     }

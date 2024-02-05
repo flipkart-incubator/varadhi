@@ -1,28 +1,19 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_DELETE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_GET;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 
 @Slf4j
@@ -39,42 +30,21 @@ public class OrgHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/orgs",
                 List.of(
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::getOrganizations,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:org",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::get,
-                                true,
-                                Optional.of(PermissionAuthorization.of(ORG_GET, "{org}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "",
-                                Set.of(hasBody),
-                                new LinkedHashSet<>(),
-                                this::create,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.DELETE,
-                                "/:org",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::delete,
-                                true,
-                                Optional.of(PermissionAuthorization.of(ORG_DELETE, "{org}"))
-                        )
+                        RouteDefinition.get("GetOrgs", "")
+                                .authorize(ORG_LIST, "")
+                                .build(this::getOrganizations),
+                        RouteDefinition.get("GetOrg", "/:org")
+                                .authorize(ORG_GET, "{org}")
+                                .build(this::get),
+                        RouteDefinition.get("GetOrg", "/:org")
+                                .authorize(ORG_GET, "{org}")
+                                .build(this::get),
+                        RouteDefinition.post("CreateOrg", "")
+                                .hasBody()
+                                .build(this::create),
+                        RouteDefinition.delete("DeleteOrg", "/:org")
+                                .authorize(ORG_DELETE, "{org}")
+                                .build(this::delete)
                 )
         ).get();
     }

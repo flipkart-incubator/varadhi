@@ -3,6 +3,7 @@ package com.flipkart.varadhi.produce.services;
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.entities.ApiContext;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -74,10 +75,10 @@ public class ProducerService {
     public CompletableFuture<ProduceResult> produceToTopic(
             Message message,
             String varadhiTopicName,
-            ProduceContext context
+            ApiContext context
     ) {
         try {
-            String produceRegion = context.getTopicContext().getRegion();
+            String produceRegion = context.get(ApiContext.REGION);
             InternalCompositeTopic internalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
 
@@ -103,7 +104,7 @@ public class ProducerService {
 
 
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
-            Producer producer, ProduceContext context, String topic, Message message
+            Producer producer, ApiContext context, String topic, Message message
     ) {
         long produceStart = System.currentTimeMillis();
         return producer.produceAsync(message).handle((result, throwable) -> {
@@ -119,7 +120,7 @@ public class ProducerService {
         });
     }
 
-    private void emitProducerMetric(boolean succeeded, int produceLatency, ProduceContext context) {
+    private void emitProducerMetric(boolean succeeded, int produceLatency, ApiContext context) {
         producerMetrics.onMessageProduced(succeeded, produceLatency, context);
     }
 }

@@ -37,14 +37,11 @@ public class AuthZHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/authz/debug",
                 List.of(
-                        RouteDefinition.get("")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetAllRoleBindingNodes","")
                                 .build(this::getAllRoleBindingNodes),
-                        RouteDefinition.get("/:resource_type/:resource")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetRoleBindingNode","/:resource_type/:resource")
                                 .build(this::findRoleBindingNode),
-                        RouteDefinition.delete("/:resource_type/:resource")
-                                .authenticated().blocking()
+                        RouteDefinition.delete("DeleteRoleBindingNode","/:resource_type/:resource")
                                 .build(this::deleteRoleBindingNode)
                 )
         ).get();
@@ -54,29 +51,25 @@ public class AuthZHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1",
                 List.of(
-                        RouteDefinition.get("/orgs/:org/policy")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetIAMPolicy", "/orgs/:org/policy")
                                 .build(this.getIAMPolicyHandler(ResourceType.ORG)),
-                        RouteDefinition.put("/orgs/:org/policy")
-                                .hasBody().authenticated().blocking()
+                        RouteDefinition.put("SetIAMPolicy","/orgs/:org/policy")
+                                .hasBody()
                                 .build(this.setIAMPolicyHandler(ResourceType.ORG)),
-                        RouteDefinition.get("/orgs/:org/teams/:team/policy")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetIAMPolicy","/orgs/:org/teams/:team/policy")
                                 .build(this.getIAMPolicyHandler(ResourceType.TEAM)),
-                        RouteDefinition.put("/orgs/:org/teams/:team/policy")
-                                .hasBody().authenticated().blocking()
+                        RouteDefinition.put("SetIAMPolicy","/orgs/:org/teams/:team/policy")
+                                .hasBody()
                                 .build(this.setIAMPolicyHandler(ResourceType.TEAM)),
-                        RouteDefinition.get("/projects/:project/policy")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetIAMPolicy","/projects/:project/policy")
                                 .build(this.getIAMPolicyHandler(ResourceType.PROJECT)),
-                        RouteDefinition.put("/projects/:project/policy")
-                                .hasBody().authenticated().blocking()
+                        RouteDefinition.put("SetIAMPolicy","/projects/:project/policy")
+                                .hasBody()
                                 .build(this.setIAMPolicyHandler(ResourceType.PROJECT)),
-                        RouteDefinition.get("/projects/:project/topics/:topic/policy")
-                                .authenticated().blocking()
+                        RouteDefinition.get("GetIAMPolicy","/projects/:project/topics/:topic/policy")
                                 .build(this.getIAMPolicyHandler(ResourceType.TOPIC)),
-                        RouteDefinition.put("/projects/:project/topics/:topic/policy")
-                                .hasBody().authenticated().blocking()
+                        RouteDefinition.put("SetIAMPolicy","/projects/:project/topics/:topic/policy")
+                                .hasBody()
                                 .build(this.setIAMPolicyHandler(ResourceType.TOPIC))
                 )
         ).get();

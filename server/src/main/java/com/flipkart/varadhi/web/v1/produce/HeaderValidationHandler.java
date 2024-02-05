@@ -10,9 +10,9 @@ import java.util.Set;
 import static com.flipkart.varadhi.entities.StandardHeaders.VARADHI_HEADER_PREFIX;
 
 public class HeaderValidationHandler {
-    private int headerNameSizeMax;
-    private int headerValueSizeMax;
-    private int headersAllowedMax;
+    private final int headerNameSizeMax;
+    private final int headerValueSizeMax;
+    private final int headersAllowedMax;
 
     public HeaderValidationHandler(RestOptions restOptions) {
         this.headerNameSizeMax = restOptions.getHeaderNameSizeMax();

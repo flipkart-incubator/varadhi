@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.core.entities.ApiContext;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.ProduceException;
@@ -21,9 +22,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
+import static com.flipkart.varadhi.MessageConstants.*;
 import static com.flipkart.varadhi.MessageConstants.Headers.REQUIRED_HEADERS;
-import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
 import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
 import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static com.flipkart.varadhi.entities.TopicState.*;
@@ -40,7 +40,9 @@ public class ProduceHandlersTest extends ProduceTestBase {
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
-        route.handler(bodyHandler).handler(produceHandlers::produce);
+        route.handler(bodyHandler)
+                .handler(ctx -> contextBuilder.buildApiContext(ctx, "Produce"))
+                .handler(produceHandlers::produce);
         setupFailureHandler(route);
     }
 
@@ -73,17 +75,17 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Assertions.assertTrue(capturedMessage.getHeaders("x_header2").contains("h2v1"));
         Assertions.assertFalse(capturedMessage.hasHeader("X_HEADER2"));
 
-        Assertions.assertEquals("host1", ctxCapture.getValue().getRequestContext().getRemoteHost());
+        Assertions.assertEquals("host1", ctxCapture.getValue().get(ApiContext.REMOTE_HOST));
         Assertions.assertEquals(
-                ANONYMOUS_PRODUCE_IDENTITY, ctxCapture.getValue().getRequestContext().getProduceIdentity());
-        Assertions.assertEquals(PRODUCE_CHANNEL_HTTP, ctxCapture.getValue().getRequestContext().getRequestChannel());
-        Assertions.assertTrue(requestTimeStamp <= ctxCapture.getValue().getRequestContext().getRequestTimestamp());
-        Assertions.assertEquals(payload.length, ctxCapture.getValue().getRequestContext().getBytesReceived());
+                ANONYMOUS_PRODUCE_IDENTITY, ctxCapture.getValue().get(ApiContext.IDENTITY));
+        Assertions.assertEquals(API_PROTOCOL_HTTP, ctxCapture.getValue().get(ApiContext.REQUEST_CHANNEL));
+        Assertions.assertTrue(requestTimeStamp <= (long)ctxCapture.getValue().get(ApiContext.START_TIME));
+        Assertions.assertEquals(payload.length, (int)ctxCapture.getValue().get(ApiContext.BYTES_RECEIVED));
 
 
-        Assertions.assertEquals(deployedRegion, ctxCapture.getValue().getTopicContext().getRegion());
-        Assertions.assertEquals("topic1", ctxCapture.getValue().getTopicContext().getTopic());
-        Assertions.assertEquals("project1", ctxCapture.getValue().getTopicContext().getProject());
+        Assertions.assertEquals(deployedRegion, ctxCapture.getValue().get(ApiContext.REGION));
+        Assertions.assertEquals("topic1", ctxCapture.getValue().get(ApiContext.TOPIC));
+        Assertions.assertEquals("project1", ctxCapture.getValue().get(ApiContext.PROJECT));
 
         messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);

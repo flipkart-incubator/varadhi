@@ -7,7 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public enum RouteBehaviour {
     authenticated(100),
-    hasBody(200);
+    hasBody(200),
+    enableApiContext(300),
+    requestLoggingOn(400);
 
     RouteBehaviour(int order) {
         this.order = order;

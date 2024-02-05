@@ -21,8 +21,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.flipkart.varadhi.web.AuthHandlers;
-import com.flipkart.varadhi.web.FailureHandler;
+import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -31,6 +30,7 @@ import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BodyHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +61,8 @@ public abstract class VerticleDeployer {
             ServerConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            Tracer tracer
     ) {
         RestOptions restOptions = configuration.getRestOptions();
         String deployedRegion = restOptions.getDeployedRegion();
@@ -85,15 +86,20 @@ public abstract class VerticleDeployer {
         this.teamService = new TeamService(metaStore);
 
         this.produceHandlers =
-                new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
+                new ProduceHandlers(restOptions, producerService);
         this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
-
         this.healthCheckHandler = new HealthCheckHandler();
-        BodyHandler bodyHandler = BodyHandler.create(false);
+
+        ContextBuilder cb = new ContextBuilder(projectService, deployedRegion, hostName);
+        AuthHandlers authHandlers = new AuthHandlers(vertx, configuration);
+        RequestLogger requestLogger = new RequestLogger(new SpanProvider(tracer));
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
-        bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
-        this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
+        BodyHandler bodyHandler = BodyHandler.create(false);
+        bodyHandler.setBodyLimit(restOptions.getPayloadSizeMax());
+        this.behaviorConfigurators.put(RouteBehaviour.authenticated, authHandlers);
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+        this.behaviorConfigurators.put(RouteBehaviour.enableApiContext, cb);
+        this.behaviorConfigurators.put(RouteBehaviour.requestLoggingOn, requestLogger);
     }
 
     private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {

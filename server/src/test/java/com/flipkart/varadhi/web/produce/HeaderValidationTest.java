@@ -4,6 +4,7 @@ import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.web.ContextBuilder;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import io.vertx.core.buffer.Buffer;
@@ -35,9 +36,11 @@ public class HeaderValidationTest extends ProduceTestBase {
         options.setPayloadSizeMax(100);
         options.setHeaderNameSizeMax(20);
         options.setHeaderValueSizeMax(20);
-
         validationHandler = new HeaderValidationHandler(options);
-        route.handler(bodyHandler).handler(validationHandler::validate).handler(produceHandlers::produce);
+        route.handler(bodyHandler)
+                .handler(validationHandler::validate)
+                .handler(ctx -> contextBuilder.buildApiContext(ctx, "Produce"))
+                .handler(produceHandlers::produce);
         setupFailureHandler(route);
 
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));

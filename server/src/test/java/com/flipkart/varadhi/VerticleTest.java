@@ -49,9 +49,13 @@ public class VerticleTest {
         handlers.add(handler2);
 
         RouteDefinition routeDefinition =
-                new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3, true,
-                        Optional.empty()
-                );
+                RouteDefinition.get("test", "/")
+                        .unAuthenticated()
+                        .apiContextOff()
+                        .requestLoggingOff()
+                        .preHandler(handler1)
+                        .preHandler(handler2)
+                        .build(handler3);
         HttpServerOptions httpServerOptions = new HttpServerOptions();
         httpServerOptions.setPort(6969);
         vertx.deployVerticle(
