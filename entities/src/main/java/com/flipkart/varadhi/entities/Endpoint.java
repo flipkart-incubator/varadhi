@@ -8,7 +8,8 @@ import lombok.EqualsAndHashCode;
 import java.net.URL;
 
 @JsonTypeInfo(
-        use = JsonTypeInfo.Id.DEDUCTION
+        use = JsonTypeInfo.Id.NAME,
+        property = "@endpointType"
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(Endpoint.HttpEndpoint.class),
