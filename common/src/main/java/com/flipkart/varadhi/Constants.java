@@ -8,6 +8,7 @@ public class Constants {
         public static final String REQUEST_PATH_PARAM_TEAM = "team";
         public static final String REQUEST_PATH_PARAM_PROJECT = "project";
         public static final String REQUEST_PATH_PARAM_TOPIC = "topic";
+        public static final String REQUEST_PATH_PARAM_SUBSCRIPTION = "subscription";
     }
 
     public static class Tags {

@@ -39,13 +39,27 @@ public interface MetaStore {
 
     int updateProject(Project project);
 
-    List<String> getVaradhiTopicNames(String projectName);
+    List<String> getTopicNames(String projectName);
 
-    void createVaradhiTopic(VaradhiTopic varadhiTopicName);
+    void createTopic(VaradhiTopic topic);
 
-    VaradhiTopic getVaradhiTopic(String varadhiTopicName);
+    VaradhiTopic getTopic(String topicName);
 
-    boolean checkVaradhiTopicExists(String varadhiTopicName);
+    boolean checkTopicExists(String topicName);
 
-    void deleteVaradhiTopic(String varadhiTopicName);
+    void deleteTopic(String topicName);
+
+    List<String> getAllSubscriptionNames();
+
+    List<String> getSubscriptionNames(String projectName);
+
+    void createSubscription(VaradhiSubscription subscription);
+
+    VaradhiSubscription getSubscription(String subscriptionName);
+
+    int updateSubscription(VaradhiSubscription subscription);
+
+    boolean checkSubscriptionExists(String subscriptionName);
+
+    void deleteSubscription(String subscriptionName);
 }

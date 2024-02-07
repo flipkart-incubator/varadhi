@@ -1,20 +1,21 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.Getter;
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 
-@Getter
-public class Subscription extends MetaStoreEntity {
+@Value
+@EqualsAndHashCode(callSuper = true)
+public class VaradhiSubscription extends MetaStoreEntity {
+    String project;
+    String topic;
+    String description;
+    boolean grouped;
+    Endpoint endpoint;
+    RetryPolicy retryPolicy;
+    ConsumptionPolicy consumptionPolicy;
+    SubscriptionShard[] shards;
 
-    private String project;
-    private String topic;
-    private String description;
-    private boolean grouped;
-    private Endpoint endpoint;
-    private RetryPolicy retryPolicy;
-    private ConsumptionPolicy consumptionPolicy;
-    private SubscriptionShard[] shards;
-
-    public Subscription(
+    public VaradhiSubscription(
             String name,
             int version,
             String project,
