@@ -8,4 +8,4 @@
  */
 
 rootProject.name = 'varadhi'
-include('entities', 'spi', 'common', 'core', 'messaging', 'pulsar', 'server', 'authz', 'consumer')
+include('entities', 'spi', 'common', 'core', 'messaging', 'pulsar', 'consumer', 'authz', 'server')
