@@ -48,6 +48,8 @@ dependencies {
     implementation("org.apache.curator:curator-framework")
     runtimeOnly(project(":pulsar"))
 
+    testImplementation("io.vertx:vertx-zookeeper:4.5.1")
+
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
