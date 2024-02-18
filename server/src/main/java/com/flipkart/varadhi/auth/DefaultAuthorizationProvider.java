@@ -102,6 +102,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             return List.of();
         }
 
+        // trim leading and trailing slashes
+        resourcePath = resourcePath.replaceAll("^/+", "").replaceAll("/+$", "");
+
         String[] segments = resourcePath.split("/");
 
         // build the list in reverse order specified: ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|QUEUE

@@ -1,23 +1,27 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
@@ -26,6 +30,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 public class AuthHandlers implements RouteConfigurator {
     private final Handler<RoutingContext> authenticationHandler;
@@ -39,6 +44,7 @@ public class AuthHandlers implements RouteConfigurator {
                                 vertx,
                                 configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
                         );
+                        case dummy -> createDummyHandler();
                     };
         } else {
             authenticationHandler = null;
@@ -123,5 +129,15 @@ public class AuthHandlers implements RouteConfigurator {
         } catch (Exception e) {
             throw new VaradhiException("Failed to Initialise JWT Authentication handler.", e);
         }
+    }
+
+    AuthenticationHandler createDummyHandler() {
+        return SimpleAuthenticationHandler.create().authenticate(ctx -> {
+            String userName = ctx.request().getHeader("X-Auth-Token");
+            if (StringUtils.isBlank(userName)) {
+                return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "no user details present"));
+            }
+            return Future.succeededFuture(User.fromName(userName));
+        });
     }
 }

@@ -19,14 +19,17 @@ verticleDeploymentOptions:
   worker: false
   workerPoolSize: 2
 
-authenticationEnabled: false
+authenticationEnabled: true
+
+#authentication:
+#  jwt:
+#    jwksUrl: "http://localhost:9090/default/jwks"
+#    options:
+#      issuer: "http://localhost:9090/default"
+#      ignoreExpiration: true
 
 authentication:
-  jwt:
-    jwksUrl: "http://localhost:9090/default/jwks"
-    options:
-      issuer: "http://localhost:9090/default"
-      ignoreExpiration: true
+  dummy:
 
 authorizationEnabled: true
 
