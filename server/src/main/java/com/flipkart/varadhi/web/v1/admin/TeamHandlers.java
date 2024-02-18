@@ -8,22 +8,15 @@ import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
 import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TEAM;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TEAM_DELETE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TEAM_GET;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
@@ -39,50 +32,22 @@ public class TeamHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/orgs/:org/teams",
                 List.of(
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::listTeams,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TEAM_GET, "{org}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:team/projects",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::listProjects,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TEAM_GET, "{org}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:team",
-                                Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::get,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TEAM_GET, "{org}/{team}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "",
-                                Set.of(hasBody),
-                                new LinkedHashSet<>(),
-                                this::create,
-                                true,
-                                Optional.empty()
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.DELETE,
-                                "/:team", Set.of(authenticated),
-                                new LinkedHashSet<>(),
-                                this::delete,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TEAM_DELETE, "{org}/{team}"))
-                        )
+                        RouteDefinition.get("")
+                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_LIST, "{org}"))
+                                .build(this::listTeams),
+                        RouteDefinition.get("/:team/projects")
+                                .blocking().authenticatedWith(PermissionAuthorization.of(PROJECT_LIST, "{org}/{team}"))
+                                .build(this::listProjects),
+                        RouteDefinition.get("/:team")
+                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_GET, "{org}/{team}"))
+                                .build(this::get),
+                        RouteDefinition.post("")
+                                .blocking().hasBody()
+                                .authenticatedWith(PermissionAuthorization.of(TEAM_CREATE, "{org}"))
+                                .build(this::create),
+                        RouteDefinition.delete("/:team")
+                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_DELETE, "{org}/{team}"))
+                                .build(this::delete)
                 )
         ).get();
     }
@@ -108,7 +73,6 @@ public class TeamHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
         Team team = ctx.body().asValidatedPojo(Team.class);
         if (!orgName.equals(team.getOrg())) {
