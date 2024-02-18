@@ -30,7 +30,7 @@ public class VaradhiMetaStore implements MetaStore, IAMPolicyMetaStore {
         ensureEntityTypePathExists(PROJECT);
         ensureEntityTypePathExists(TOPIC);
         ensureEntityTypePathExists(SUBSCRIPTION);
-        ensureEntityTypePathExists(ROLE_BINDING);
+        ensureEntityTypePathExists(IAM_POLICY);
     }
 
     public void ensureEntityTypePathExists(ZNodeKind zNodeKind) {
@@ -248,13 +248,13 @@ public class VaradhiMetaStore implements MetaStore, IAMPolicyMetaStore {
 
     @Override
     public List<IAMPolicyRecord> getIAMPolicyRecords() {
-        ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
+        ZNode znode = ZNode.OfEntityType(IAM_POLICY);
         return zkMetaStore.listChildren(znode).stream().map(this::getIAMPolicyRecord).toList();
     }
 
     @Override
     public IAMPolicyRecord getIAMPolicyRecord(String resourceIdWithType) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceIdWithType);
+        ZNode znode = ZNode.OfKind(IAM_POLICY, resourceIdWithType);
         return zkMetaStore.getZNodeDataAsPojo(znode, IAMPolicyRecord.class);
     }
 
