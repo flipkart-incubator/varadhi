@@ -35,6 +35,8 @@ roleDefinitions:
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
       - SUBSCRIPTION_SEEK
+      - IAM_POLICY_SET
+      - IAM_POLICY_GET
   org.reader:
     roleId: org.reader
     permissions:
@@ -47,6 +49,7 @@ roleDefinitions:
       - TOPIC_GET
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
   org.rw:
     roleId: org.rw
     permissions:
@@ -74,6 +77,7 @@ roleDefinitions:
       - SUBSCRIPTION_DELETE
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
   team.admin:
     roleId: team.admin
     permissions:
@@ -99,6 +103,8 @@ roleDefinitions:
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
       - SUBSCRIPTION_SEEK
+      - IAM_POLICY_SET
+      - IAM_POLICY_GET
   team.reader:
     roleId: team.reader
     permissions:
@@ -109,6 +115,7 @@ roleDefinitions:
       - TOPIC_GET
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
   team.rw:
     roleId: team.rw
     permissions:
@@ -131,6 +138,7 @@ roleDefinitions:
       - SUBSCRIPTION_DELETE
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
   project.admin:
     roleId: project.admin
     permissions:
@@ -151,6 +159,8 @@ roleDefinitions:
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
       - SUBSCRIPTION_SEEK
+      - IAM_POLICY_SET
+      - IAM_POLICY_GET
   project.reader:
     roleId: project.reader
     permissions:
@@ -159,6 +169,7 @@ roleDefinitions:
       - TOPIC_GET
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
   project.rw:
     roleId: project.rw
     permissions:
@@ -176,3 +187,4 @@ roleDefinitions:
       - SUBSCRIPTION_DELETE
       - SUBSCRIPTION_GET
       - SUBSCRIPTION_LIST
+      - IAM_POLICY_GET
