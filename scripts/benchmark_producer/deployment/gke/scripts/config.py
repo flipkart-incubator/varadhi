@@ -1,12 +1,6 @@
-# nfr cluster producer vip
-PRODUCE_ENDPOINT = "http://10.83.41.164"
-PRODUCE_URL = "/topics/{}/messages"
+PRODUCE_ENDPOINT = "http://127.0.0.1:8080"
+PRODUCE_URL = "/v1/projects/{}/topics/{}/produce"
 
-# uncomment the above and comment the below to use for actual usage in flash tool.
-# PRODUCE_URL = "/messages"
-# PRODUCE_ENDPOINT = "http://127.0.0.1:8082"
-
-TOPIC_PREFIX = "test_topic_a"
 MESSAGE_COUNT_PER_GROUP = 1
 MIN_MESSAGE_SIZE_KB = 2
 MAX_MESSAGE_SIZE_KB = 8
