@@ -28,6 +28,7 @@ public enum ResourceAction {
     TOPIC_GET(ResourceType.TOPIC, "get"),
     TOPIC_DELETE(ResourceType.TOPIC, "delete"),
     TOPIC_UPDATE(ResourceType.TOPIC, "update"),
+    TOPIC_LIST(ResourceType.TOPIC, "list"),
     TOPIC_CONSUME(ResourceType.TOPIC, "consume"),
     TOPIC_PRODUCE(ResourceType.TOPIC, "produce"),
 

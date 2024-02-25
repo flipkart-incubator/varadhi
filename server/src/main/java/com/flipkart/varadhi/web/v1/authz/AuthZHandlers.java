@@ -55,6 +55,7 @@ public class AuthZHandlers implements RouteProvider {
                                 .hasBody().blocking().authenticatedWith(
                                         PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
                                 .build(this.setIAMPolicyHandler(ResourceType.TEAM)),
+                        // TODO: permission authz for project and topic
                         RouteDefinition.get("/projects/:project/policy")
                                 .blocking().authenticated()
                                 .build(this.getIAMPolicyHandler(ResourceType.PROJECT)),
@@ -66,7 +67,13 @@ public class AuthZHandlers implements RouteProvider {
                                 .build(this.getIAMPolicyHandler(ResourceType.TOPIC)),
                         RouteDefinition.put("/projects/:project/topics/:topic/policy")
                                 .hasBody().blocking().authenticated()
-                                .build(this.setIAMPolicyHandler(ResourceType.TOPIC))
+                                .build(this.setIAMPolicyHandler(ResourceType.TOPIC)),
+                        RouteDefinition.get("/projects/:project/subscriptions/:subscription/policy")
+                                .blocking().authenticated()
+                                .build(this.getIAMPolicyHandler(ResourceType.SUBSCRIPTION)),
+                        RouteDefinition.put("/projects/:project/subscriptions/:subscription/policy")
+                                .hasBody().blocking().authenticated()
+                                .build(this.setIAMPolicyHandler(ResourceType.SUBSCRIPTION))
                 )
         ).get();
     }
@@ -134,7 +141,9 @@ public class AuthZHandlers implements RouteProvider {
             case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
                     ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
             );
-            case SUBSCRIPTION -> ctx.pathParam("sub");
+            case SUBSCRIPTION -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
+                    ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION)
+            );
             case IAM_POLICY -> throw new IllegalArgumentException("IAM Policy is not a resource");
         };
     }

@@ -48,7 +48,7 @@ public class ProjectHandlers implements RouteProvider {
                         ),
                         new RouteDefinition(
                                 HttpMethod.POST,
-                                "",
+                                "", // (aayush) will need body reading here
                                 Set.of(hasBody),
                                 new LinkedHashSet<>(),
                                 this::create,
@@ -84,7 +84,6 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         Project project = ctx.body().asPojo(Project.class);
         Project createdProject = projectService.createProject(project);
         ctx.endApiWithResponse(createdProject);
@@ -92,13 +91,11 @@ public class ProjectHandlers implements RouteProvider {
 
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        //TODO::No topics and subscriptions for this project.
         projectService.deleteProject(projectName);
         ctx.endApi();
     }
 
     public void update(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         Project project = ctx.body().asPojo(Project.class);
         Project updatedProject = projectService.updateProject(project);
         ctx.endApiWithResponse(updatedProject);

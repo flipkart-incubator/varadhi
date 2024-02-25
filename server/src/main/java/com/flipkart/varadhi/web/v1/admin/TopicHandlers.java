@@ -84,8 +84,7 @@ public class TopicHandlers implements RouteProvider {
                                 new LinkedHashSet<>(),
                                 this::listTopics,
                                 true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}"))
-                                //TODO: Do we need a new permission for this?
+                                Optional.of(PermissionAuthorization.of(TOPIC_LIST, "{project}"))
                         )
                 )
         ).get();
@@ -99,7 +98,6 @@ public class TopicHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Enable authn/authz for this flow.
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
