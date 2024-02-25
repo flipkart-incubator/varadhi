@@ -92,8 +92,8 @@ public abstract class VerticleDeployer {
         BodyHandler bodyHandler = BodyHandler.create(false);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         bodyHandler.setBodyLimit(configuration.getRestOptions().getPayloadSizeMax());
-        this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
         this.behaviorConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(bodyHandler));
+        this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
     }
 
     private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {

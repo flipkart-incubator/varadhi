@@ -9,7 +9,7 @@ public class ZNode {
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
-    public static final ZNodeKind ROLE_BINDING = new ZNodeKind("RoleBinding");
+    public static final ZNodeKind IAM_POLICY = new ZNodeKind("IAMPolicy");
     public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
@@ -59,7 +59,7 @@ public class ZNode {
     }
 
     public static ZNode OfIAMPolicy(ResourceType resourceType, String resourceId) {
-        return new ZNode(ROLE_BINDING, resourceType.toString(), resourceId);
+        return new ZNode(IAM_POLICY, resourceType.toString(), resourceId);
     }
 
     public static ZNode ofSubscription(String subscriptionName) {

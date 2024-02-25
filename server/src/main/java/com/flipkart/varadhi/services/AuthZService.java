@@ -107,6 +107,7 @@ public class AuthZService {
                 yield (segments.length == 2) && metaStore.checkTopicExists(varadhiTopicName);
             }
             case SUBSCRIPTION -> false; //TODO
+            case IAM_POLICY -> throw new IllegalArgumentException("IAM Policy is not a resource");
         };
     }
 }

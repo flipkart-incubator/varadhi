@@ -5,7 +5,8 @@ public enum ResourceType {
     TEAM("team"),
     PROJECT("project"),
     TOPIC("topic"),
-    SUBSCRIPTION("subscription");
+    SUBSCRIPTION("subscription"),
+    IAM_POLICY("iam_policy");
     private final String type;
 
     ResourceType(String type) {

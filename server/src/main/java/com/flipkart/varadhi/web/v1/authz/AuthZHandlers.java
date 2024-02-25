@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.web.v1.authz;
 
+import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.AuthZService;
 import com.flipkart.varadhi.web.Extensions;
@@ -38,16 +40,20 @@ public class AuthZHandlers implements RouteProvider {
                 "/v1",
                 List.of(
                         RouteDefinition.get("/orgs/:org/policy")
-                                .blocking().authenticated()
+                                .blocking()
+                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_GET, "{org}"))
                                 .build(this.getIAMPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.put("/orgs/:org/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().blocking()
+                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}"))
                                 .build(this.setIAMPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.get("/orgs/:org/teams/:team/policy")
-                                .blocking().authenticated()
+                                .blocking().authenticatedWith(
+                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_GET, "{org}/{team}"))
                                 .build(this.getIAMPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.put("/orgs/:org/teams/:team/policy")
-                                .hasBody().blocking().authenticated()
+                                .hasBody().blocking().authenticatedWith(
+                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
                                 .build(this.setIAMPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.get("/projects/:project/policy")
                                 .blocking().authenticated()
@@ -73,7 +79,7 @@ public class AuthZHandlers implements RouteProvider {
     }
 
     public Handler<RoutingContext> getIAMPolicyHandler(ResourceType resourceType) {
-        return (routingContext) -> {
+        return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IAMPolicyRecord policy = getIAMPolicy(resourceType, resourceId);
             routingContext.endApiWithResponse(policy);
@@ -85,7 +91,7 @@ public class AuthZHandlers implements RouteProvider {
     }
 
     public Handler<RoutingContext> setIAMPolicyHandler(ResourceType resourceType) {
-        return (routingContext) -> {
+        return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IAMPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IAMPolicyRequest.class);
             IAMPolicyRecord updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
@@ -129,6 +135,7 @@ public class AuthZHandlers implements RouteProvider {
                     ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
             );
             case SUBSCRIPTION -> ctx.pathParam("sub");
+            case IAM_POLICY -> throw new IllegalArgumentException("IAM Policy is not a resource");
         };
     }
 }
