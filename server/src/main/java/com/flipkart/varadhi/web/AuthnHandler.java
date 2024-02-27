@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.config.ServerConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -18,7 +16,6 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.JWTAuthHandler;
-import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,11 +24,10 @@ import java.net.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 
-public class AuthHandlers implements RouteConfigurator {
+public class AuthnHandler implements RouteConfigurator {
     private final Handler<RoutingContext> authenticationHandler;
-    private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthHandlers(Vertx vertx, ServerConfiguration configuration) throws InvalidConfigException {
+    public AuthnHandler(Vertx vertx, ServerConfiguration configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled()) {
             authenticationHandler =
                     switch (configuration.getAuthentication().getMechanism()) {
@@ -43,58 +39,11 @@ public class AuthHandlers implements RouteConfigurator {
         } else {
             authenticationHandler = null;
         }
-
-        if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
-            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
-        } else {
-            authorizationHandlerBuilder = null;
-        }
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
         if (authenticationHandler != null) {
             route.handler(authenticationHandler);
-        }
-
-        if (authorizationHandlerBuilder != null && routeDef.requiredAuthorization().isPresent()) {
-            route.handler(authorizationHandlerBuilder.build(routeDef.requiredAuthorization().get()));
-        }
-    }
-
-    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
-        if (configuration.isAuthorizationEnabled()) {
-            AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
-            return new AuthorizationHandlerBuilder(configuration.getAuthorization()
-                    .getSuperUsers(), authorizationProvider);
-        } else {
-            return null;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
-        String providerClassName = configuration.getAuthorization().getProviderClassName();
-        if (StringUtils.isNotBlank(providerClassName)) {
-            try {
-                Class<? extends AuthorizationProvider> clazz =
-                        (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                return createAuthorizationProvider(clazz, configuration.getAuthorization());
-            } catch (ClassNotFoundException | ClassCastException e) {
-                throw new InvalidConfigException(e);
-            }
-        }
-        return new AuthorizationProvider.NoAuthorizationProvider();
-    }
-
-    AuthorizationProvider createAuthorizationProvider(
-            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options
-    ) throws InvalidConfigException {
-        try {
-            AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();
-            provider.init(options);
-            return provider;
-        } catch (Exception e) {
-            throw new InvalidConfigException(e);
         }
     }
 

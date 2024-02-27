@@ -4,7 +4,7 @@ import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
 import com.flipkart.varadhi.entities.auth.*;
-import com.flipkart.varadhi.services.AuthZService;
+import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -26,7 +26,7 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private static final Role EMPTY_ROLE = new Role("", Set.of());
     private DefaultAuthorizationConfiguration configuration;
-    private AuthZService authZService;
+    private IamPolicyService iamPolicyService;
     private volatile boolean initialised = false;
 
     @Override
@@ -41,21 +41,21 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         return Future.succeededFuture(true);
     }
 
-    protected AuthZService getAuthZService() {
+    protected IamPolicyService getAuthZService() {
         if (this.initialised) {
-            return this.authZService;
+            return this.iamPolicyService;
         }
-        this.authZService = initAuthZService(this.configuration.getMetaStoreOptions());
-        return this.authZService;
+        this.iamPolicyService = initAuthZService(this.configuration.getMetaStoreOptions());
+        return this.iamPolicyService;
     }
 
-    private AuthZService initAuthZService(MetaStoreOptions options) {
+    private IamPolicyService initAuthZService(MetaStoreOptions options) {
         MetaStoreProvider provider = loadClass(options.getProviderClassName());
         provider.init(options);
         MetaStore store = provider.getMetaStore();
 
         if (store instanceof RoleBindingMetaStore) {
-            return new AuthZService(store, (RoleBindingMetaStore) store);
+            return new IamPolicyService(store, (RoleBindingMetaStore) store);
         }
 
         throw new IllegalStateException("Provider must implement RoleBindingMetaStore");

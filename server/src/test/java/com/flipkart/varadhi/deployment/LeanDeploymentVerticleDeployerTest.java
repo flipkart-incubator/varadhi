@@ -96,7 +96,8 @@ public class LeanDeploymentVerticleDeployerTest {
                 serverConfiguration,
                 messagingStackProvider,
                 metaStoreProvider,
-                meterRegistry
+                meterRegistry,
+                null
         );
     }
 
@@ -255,7 +256,7 @@ public class LeanDeploymentVerticleDeployerTest {
         return routeDefinitions.stream()
                 .anyMatch(routeDefinition ->
                         MANAGEABLE_ENTITIES_API_ENDPOINTS.stream()
-                                .anyMatch(apiEndpoint -> apiEndpoint.equals(routeDefinition.path()))
+                                .anyMatch(apiEndpoint -> apiEndpoint.equals(routeDefinition.getPath()))
                 );
     }
 }

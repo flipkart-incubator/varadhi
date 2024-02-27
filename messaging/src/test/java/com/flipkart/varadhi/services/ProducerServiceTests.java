@@ -6,7 +6,8 @@ import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
-import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -20,20 +21,22 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
+import static com.flipkart.varadhi.Constants.Tags.*;
+import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class ProducerServiceTests {
     ProducerService service;
-    ProducerMetricsImpl metricProvider;
-    ProducerFactory producerFactory;
+    ProducerFactory<StorageTopic> producerFactory;
+    MeterRegistry meterRegistry;
     VaradhiTopicService topicService;
     Producer producer;
     Random random;
@@ -45,29 +48,29 @@ public class ProducerServiceTests {
     public void preTest() {
         producerFactory = mock(ProducerFactory.class);
         topicService = mock(VaradhiTopicService.class);
-        MeterRegistry registry = new OtlpMeterRegistry();
-        metricProvider = spy(new ProducerMetricsImpl(registry));
-        service = new ProducerService(new ProducerOptions(), producerFactory, metricProvider, topicService, registry);
+        meterRegistry = new OtlpMeterRegistry();
+        service = new ProducerService(region, new ProducerOptions(), producerFactory, topicService, meterRegistry);
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
+
     }
 
     @Test
     public void testProduceMessage() throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 10, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         verify(producer, times(1)).produceAsync(eq(msg1));
 
-        Message msg2 = getMessage(100, 1, null, 2000, ctx);
-        result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
+        Message msg2 = getMessage(100, 1, null, 2000);
+        result = service.produceToTopic(msg2, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -78,8 +81,8 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWhenProduceAsyncThrows() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 10, ctx);
+        ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
+        Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
@@ -88,36 +91,36 @@ public class ProducerServiceTests {
         // This is not expected in general.
         ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         Assertions.assertEquals("Produce failed due to internal error: Some random error.", pe.getMessage());
-        verify(metricProvider, never()).onMessageProduced(anyBoolean(), anyLong(), any());
+        verify(emitter, never()).emit(anyBoolean(), anyLong());
     }
 
     @Test
     public void testProduceToNonExistingTopic() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
         doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(topicService).get(vt.getName());
         Assertions.assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         verify(producer, never()).produceAsync(any());
     }
 
     @Test
     public void testProduceWithUnknownExceptionInGetTopic() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(producer).when(producerFactory).getProducer(any());
         doThrow(new RuntimeException("Unknown error.")).when(topicService).get(vt.getName());
         ProduceException e = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         Assertions.assertEquals(
                 "Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
@@ -154,13 +157,13 @@ public class ProducerServiceTests {
     public void produceNotAllowedTopicState(
             TopicState topicState, ProduceStatus produceStatus, String message
     ) throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -171,29 +174,29 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWithUnknownExceptionInGetProducer() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).getProducer(any());
         ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         Assertions.assertEquals(
                 "Failed to create Pulsar producer for Topic(project1.topic1). Unknown Error.", pe.getMessage());
     }
 
     @Test
-    public void testProduceWithknownExceptionInGetProducer() {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 0, ctx);
+    public void testProduceWithKnownExceptionInGetProducer() {
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).getProducer(any());
         RuntimeException re = Assertions.assertThrows(
                 RuntimeException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx)
+                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         verify(producer, never()).produceAsync(any());
         Assertions.assertEquals(
@@ -202,14 +205,14 @@ public class ProducerServiceTests {
 
     @Test
     public void testProduceWithProducerFailure() throws InterruptedException {
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0, ctx);
+        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
+        Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
 
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
 
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
@@ -225,20 +228,19 @@ public class ProducerServiceTests {
 
     @Test
     public void testMetricEmitFailureNotIgnored() throws InterruptedException {
-        doThrow(new RuntimeException("Failed to send metric.")).when(metricProvider)
-                .onMessageProduced(anyBoolean(), anyLong(), any());
-        ProduceContext ctx = getProduceContext(topic, project, region);
-        Message msg1 = getMessage(0, 1, null, 10, ctx);
+        ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
+        doThrow(new RuntimeException("Failed to send metric.")).when(emitter).emit(anyBoolean(), anyLong());
+        Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
         doReturn(producer).when(producerFactory).getProducer(any());
         CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), ctx);
+                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
         verify(producer, times(1)).produceAsync(eq(msg1));
-        verify(metricProvider, times(1)).onMessageProduced(anyBoolean(), anyLong(), any());
+        verify(emitter, times(1)).emit(anyBoolean(), anyLong());
         // Exception gets wrapped in CompletionException.
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
@@ -254,16 +256,12 @@ public class ProducerServiceTests {
         return topic;
     }
 
-    public Message getMessage(
-            int sleepMs, int offset, String exceptionClass, int payloadSize, ProduceContext ctx
-    ) {
+    public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        byte[] messageId = new byte[30];
-        random.nextBytes(messageId);
-        headers.put(MESSAGE_ID, new String(messageId));
-        headers.put(PRODUCE_IDENTITY, ctx.getRequestContext().getProduceIdentity());
-        headers.put(PRODUCE_REGION, ctx.getTopicContext().getRegion());
-        headers.put(PRODUCE_TIMESTAMP, Long.toString(ctx.getRequestContext().getRequestTimestamp()));
+        headers.put(StandardHeaders.MESSAGE_ID, getMessageId());
+        headers.put(PRODUCE_IDENTITY, ANONYMOUS_IDENTITY);
+        headers.put(PRODUCE_REGION, region);
+        headers.put(PRODUCE_TIMESTAMP, System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
@@ -274,20 +272,22 @@ public class ProducerServiceTests {
         return new Message(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
+    public ProducerMetricsEmitter getMetricEmitter(String topic, Project project, String region) {
+        Map<String, String> produceAttributes = new HashMap<>();
+        produceAttributes.put(TAG_REGION, region);
+        produceAttributes.put(TAG_ORG, project.getOrg());
+        produceAttributes.put(TAG_TEAM, project.getTeam());
+        produceAttributes.put(TAG_PROJECT, project.getName());
+        produceAttributes.put(TAG_TOPIC, topic);
+        produceAttributes.put(TAG_IDENTITY, ANONYMOUS_IDENTITY);
+        produceAttributes.put(TAG_REMOTEHOST, "remotehost");
+        return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
+    }
 
-    public ProduceContext getProduceContext(String topic, Project project, String region) {
-        ProduceContext.RequestContext requestContext = new ProduceContext.RequestContext();
-        requestContext.setRequestTimestamp(System.currentTimeMillis());
-        requestContext.setBytesReceived(100);
-        requestContext.setProduceIdentity(ANONYMOUS_PRODUCE_IDENTITY);
-        requestContext.setRemoteHost("remotehost");
-        requestContext.setServiceHost("localhost");
-        requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
-        ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
-        topicContext.setTopic(topic);
-        topicContext.setRegion(region);
-        topicContext.setProjectAttributes(project);
-        return new ProduceContext(requestContext, topicContext);
+    public String getMessageId() {
+        byte[] messageId = new byte[30];
+        random.nextBytes(messageId);
+        return new String(messageId);
     }
 
     ResultCapture getResult(CompletableFuture<ProduceResult> future) throws InterruptedException {

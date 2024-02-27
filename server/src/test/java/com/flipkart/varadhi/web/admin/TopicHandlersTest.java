@@ -12,8 +12,11 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.web.RequestTraceAndLogHandler;
+import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import io.opentelemetry.api.trace.Span;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.core.buffer.Buffer;
@@ -26,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.flipkart.varadhi.web.RequestTraceAndLogHandler.REQUEST_SPAN_NAME;
 import static org.mockito.Mockito.*;
 
 public class TopicHandlersTest extends WebTestBase {
@@ -33,6 +37,11 @@ public class TopicHandlersTest extends WebTestBase {
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
     ProjectService projectService;
+    RequestTraceAndLogHandler requestTraceAndLogHandler;
+    SpanProvider spanProvider;
+    Span span;
+    private final String deployedRegion = "region1";
+    private final String serviceHost = "localhost";
     private final String topicName = "topic1";
     private final String team1 = "team1";
     private final String org1 = "org1";
@@ -41,12 +50,24 @@ public class TopicHandlersTest extends WebTestBase {
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
+        spanProvider = mock(SpanProvider.class);
+        span = mock(Span.class);
+        doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
+        requestTraceAndLogHandler = new RequestTraceAndLogHandler(true, spanProvider);
+
         varadhiTopicService = mock(VaradhiTopicService.class);
         varadhiTopicFactory = mock(VaradhiTopicFactory.class);
         projectService = mock(ProjectService.class);
         topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService);
+        doReturn(project).when(projectService).getCachedProject(project.getName());
 
-        Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::create));
+        Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler)
+                .handler(bodyHandler).handler(ctx -> {
+                    topicHandlers.setTopic(ctx);
+                    ctx.next();
+                })
+                .handler(ctx -> requestTraceAndLogHandler.addRequestSpanAndLog(ctx, "CreateTopic"))
+                .handler(wrapBlocking(topicHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
         setupFailureHandler(routeGet);
@@ -68,6 +89,7 @@ public class TopicHandlersTest extends WebTestBase {
 
         TopicResource t1Created = sendRequestWithBody(request, topicResource, TopicResource.class);
         Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
+        verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
     }
 
 
