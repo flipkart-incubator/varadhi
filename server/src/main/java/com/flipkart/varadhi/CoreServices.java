@@ -46,8 +46,8 @@ public class CoreServices {
     }
 
 
-    public Tracer getTracer(String instrumentationScope, String version) {
-        return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope, version);
+    public Tracer getTracer(String instrumentationScope) {
+        return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope);
     }
 
     public MeterRegistry getMetricsRegistry() {
