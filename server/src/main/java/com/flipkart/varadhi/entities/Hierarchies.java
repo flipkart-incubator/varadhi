@@ -80,6 +80,23 @@ public class Hierarchies {
         }
     }
 
+    public record SubscriptionHierarchy(String org, String team, String project, String subscription) implements ResourceHierarchy {
+        @Override
+        public String getResourcePath() {
+            return String.format("/%s/%s/%s/%s", org, team, project, subscription);
+        }
+
+        @Override
+        public Map<String, String> getAttributes() {
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(TAG_ORG, org);
+            attributes.put(TAG_TEAM, team);
+            attributes.put(TAG_PROJECT, project);
+            attributes.put(TAG_TOPIC, subscription);
+            return attributes;
+        }
+    }
+
     public record IamPolicyHierarchy(String resourceType, String resourceName) implements ResourceHierarchy {
         @Override
         public String getResourcePath() {

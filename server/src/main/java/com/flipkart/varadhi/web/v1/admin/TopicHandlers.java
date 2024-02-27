@@ -19,8 +19,8 @@ import java.util.List;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.*;
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
@@ -112,7 +112,6 @@ public class TopicHandlers implements RouteProvider {
         varadhiTopicService.create(vt, project);
         ctx.endApiWithResponse(topicResource);
     }
-
 
     public void delete(RoutingContext ctx) {
         String varadhiTopicName = getVaradhiTopicName(ctx);

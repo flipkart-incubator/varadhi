@@ -78,6 +78,7 @@ public class RouteDefinition {
         private boolean requestTraceAndLogOff;
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
         private Consumer<RoutingContext> bodyParser;
+
         private PermissionAuthorization requiredAuthorization;
 
         public Builder unAuthenticated() {
