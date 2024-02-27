@@ -13,11 +13,11 @@ import java.util.List;
 
 import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
 
-public class AuthZService {
+public class IamPolicyService {
     private final MetaStore metaStore;
     private final RoleBindingMetaStore roleBindingMetaStore;
 
-    public AuthZService(MetaStore metaStore, RoleBindingMetaStore roleBindingMetaStore) {
+    public IamPolicyService(MetaStore metaStore, RoleBindingMetaStore roleBindingMetaStore) {
         this.metaStore = metaStore;
         this.roleBindingMetaStore = roleBindingMetaStore;
     }

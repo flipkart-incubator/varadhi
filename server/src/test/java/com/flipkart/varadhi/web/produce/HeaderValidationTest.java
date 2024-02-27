@@ -2,9 +2,9 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
-import com.flipkart.varadhi.web.ContextBuilder;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import io.vertx.core.buffer.Buffer;
@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
 import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,8 +39,12 @@ public class HeaderValidationTest extends ProduceTestBase {
         options.setHeaderValueSizeMax(20);
         validationHandler = new HeaderValidationHandler(options);
         route.handler(bodyHandler)
+                .handler(ctx -> {
+                    ResourceHierarchy hierarchy = produceHandlers.getHierarchy(ctx, true);
+                    ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchy);
+                    ctx.next();
+                })
                 .handler(validationHandler::validate)
-                .handler(ctx -> contextBuilder.buildApiContext(ctx, "Produce"))
                 .handler(produceHandlers::produce);
         setupFailureHandler(route);
 

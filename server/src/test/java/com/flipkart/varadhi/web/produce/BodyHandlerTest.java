@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
-import com.flipkart.varadhi.web.ContextBuilder;
 import com.flipkart.varadhi.web.ErrorResponse;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
 import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,9 +29,11 @@ public class BodyHandlerTest extends ProduceTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         bodyHandler.setBodyLimit(20);
-        route.handler(bodyHandler)
-                .handler(ctx -> contextBuilder.buildApiContext(ctx, "Produce"))
-                .handler(produceHandlers::produce);
+        route.handler(bodyHandler).handler(ctx -> {
+            ResourceHierarchy hierarchy = produceHandlers.getHierarchy(ctx, true);
+            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchy);
+            ctx.next();
+        }).handler(produceHandlers::produce);
         setupFailureHandler(route);
 
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));

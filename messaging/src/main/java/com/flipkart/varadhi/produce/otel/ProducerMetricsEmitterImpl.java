@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.produce.otel;
 
-import com.flipkart.varadhi.core.entities.ApiContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -8,44 +7,39 @@ import io.micrometer.core.instrument.Timer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.flipkart.varadhi.Constants.Meters.Produce.BYTES_METER;
 import static com.flipkart.varadhi.Constants.Meters.Produce.LATENCY_METER;
 import static com.flipkart.varadhi.Constants.Tags.*;
 
-public class ProducerMetricsImpl implements ProducerMetrics {
+public class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter {
     private final MeterRegistry meterRegistry;
+    private final Map<String, String> produceAttributes;
+    private final int messageSize;
 
-    public ProducerMetricsImpl(MeterRegistry meterRegistry) {
+    public ProducerMetricsEmitterImpl(
+            MeterRegistry meterRegistry, int messageSize, Map<String, String> produceAttributes
+    ) {
         this.meterRegistry = meterRegistry;
+        this.messageSize = messageSize;
+        this.produceAttributes = produceAttributes;
     }
 
     @Override
-    public void onMessageProduced(boolean succeeded, long producerLatency, ApiContext context) {
-        List<Tag> tags = getTags(context);
-        getProducedBytesCounter(tags).increment((int)context.get(ApiContext.BYTES_RECEIVED));
-        tags.add(Tag.of(TAG_NAME_PRODUCE_RESULT, succeeded ? TAG_VALUE_RESULT_SUCCESS : TAG_VALUE_RESULT_FAILED));
+    public void emit(boolean succeeded, long producerLatency) {
+        List<Tag> tags = getTags(produceAttributes);
+        getProducedBytesCounter(tags).increment(messageSize);
+        tags.add(Tag.of(TAG_PRODUCE_RESULT, succeeded ? TAG_VALUE_RESULT_SUCCESS : TAG_VALUE_RESULT_FAILED));
         getLatencyTimer(tags).record(producerLatency, TimeUnit.MILLISECONDS);
     }
 
-    private List<Tag> getTags(ApiContext context) {
+    private List<Tag> getTags(Map<String, String> produceAttributes) {
         // TODO:: All of them needed, can this be driven from config ?
         List<Tag> tags = new ArrayList<>();
-        addTag(context, TAG_NAME_REGION, ApiContext.REGION, tags);
-        addTag(context, TAG_NAME_ORG, ApiContext.ORG, tags);
-        addTag(context, TAG_NAME_TEAM, ApiContext.TEAM, tags);
-        addTag(context, TAG_NAME_PROJECT, ApiContext.PROJECT, tags);
-        addTag(context, TAG_NAME_TOPIC, ApiContext.TOPIC, tags);
-        addTag(context, TAG_NAME_IDENTITY, ApiContext.IDENTITY, tags);
-        addTag(context, TAG_NAME_HOST, ApiContext.SERVICE_HOST, tags);
+        produceAttributes.forEach((k, v) -> tags.add(Tag.of(k, v)));
         return tags;
-    }
-
-    private void addTag(ApiContext context, String tagName, String keyName, List<Tag> tags) {
-        if (context.get(keyName) != null){
-            tags.add(Tag.of(tagName, context.get(keyName)));
-        }
     }
 
     private Counter getProducedBytesCounter(List<Tag> tags) {

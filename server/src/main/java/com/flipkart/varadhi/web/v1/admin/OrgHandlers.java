@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -12,7 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.Constants.PathParams.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 
@@ -32,22 +33,38 @@ public class OrgHandlers implements RouteProvider {
                 List.of(
                         RouteDefinition.get("GetOrgs", "")
                                 .authorize(ORG_LIST, "")
-                                .build(this::getOrganizations),
+                                .build(this::getHierarchy, this::getOrganizations),
                         RouteDefinition.get("GetOrg", "/:org")
                                 .authorize(ORG_GET, "{org}")
-                                .build(this::get),
-                        RouteDefinition.get("GetOrg", "/:org")
-                                .authorize(ORG_GET, "{org}")
-                                .build(this::get),
+                                .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateOrg", "")
                                 .hasBody()
-                                .build(this::create),
+                                .bodyParser(this::setOrg)
+                                .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteOrg", "/:org")
                                 .authorize(ORG_DELETE, "{org}")
-                                .build(this::delete)
+                                .build(this::getHierarchy, this::delete)
                 )
         ).get();
     }
+
+    public void setOrg(RoutingContext ctx) {
+        Org org = ctx.body().asValidatedPojo(Org.class);
+        ctx.put(CONTEXT_KEY_BODY, org);
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        if (hasBody) {
+            Org org = ctx.get(CONTEXT_KEY_BODY);
+            return new Hierarchies.OrgHierarchy(org.getName());
+        }
+        String org = ctx.request().getParam(PATH_PARAM_ORG);
+        if (org == null) {
+            return new Hierarchies.RootHierarchy();
+        }
+        return new Hierarchies.OrgHierarchy(org);
+    }
+
 
     public void getOrganizations(RoutingContext ctx) {
         List<Org> organizations = orgService.getOrgs();
@@ -55,20 +72,20 @@ public class OrgHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
         Org org = orgService.getOrg(orgName);
         ctx.endApiWithResponse(org);
     }
 
     public void create(RoutingContext ctx) {
         //TODO:: Authz check need to be explicit here. This can be done with Authz work.
-        Org org = ctx.body().asValidatedPojo(Org.class);
+        Org org = ctx.get(CONTEXT_KEY_BODY);
         Org createdorg = orgService.createOrg(org);
         ctx.endApiWithResponse(createdorg);
     }
 
     public void delete(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
         orgService.deleteOrg(orgName);
         ctx.endApi();
     }

@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.web.v1;
 
+
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -40,10 +43,13 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
         return List.of(
                 RouteDefinition.get("HealthCheck", "/v1/health-check")
                         .unAuthenticated()
-                        .apiContextOff()
-                        .requestLoggingOff()
-                        .build(this)
+                        .requestTraceAndLogOff()
+                        .build(this::getHierarchy, this)
 
         );
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        return new Hierarchies.RootHierarchy();
     }
 }

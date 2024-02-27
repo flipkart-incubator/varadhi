@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.routes;
 
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
+import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 
 /**
@@ -31,11 +33,13 @@ public class RouteDefinition {
     private final Handler<RoutingContext> endReqHandler;
     private final boolean blockingEndHandler;
     private final Optional<PermissionAuthorization> requiredAuthorization;
+    private final Consumer<RoutingContext> bodyParser;
+    private final HierarchyFunction hierarchyFunction;
     RouteDefinition(String name, HttpMethod method, String path, Set<RouteBehaviour> behaviours,
-                            LinkedHashSet<Handler<RoutingContext>> preHandlers,
-                            Handler<RoutingContext> endReqHandler,
-                            boolean blockingEndHandler,
-                            Optional<PermissionAuthorization> requiredAuthorization) {
+                    LinkedHashSet<Handler<RoutingContext>> preHandlers,
+                    Handler<RoutingContext> endReqHandler,
+                    boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
+                    HierarchyFunction function, Optional<PermissionAuthorization> requiredAuthorization) {
         this.name = name;
         this.method = method;
         this.path = path;
@@ -43,6 +47,8 @@ public class RouteDefinition {
         this.preHandlers = preHandlers;
         this.endReqHandler = endReqHandler;
         this.blockingEndHandler = blockingEndHandler;
+        this.bodyParser = bodyParser;
+        this.hierarchyFunction = function;
         this.requiredAuthorization = requiredAuthorization;
     }
     public static Builder get(String name, String path) {
@@ -69,9 +75,9 @@ public class RouteDefinition {
         private boolean unAuthenticated;
         private boolean hasBody;
         private boolean nonBlocking;
-        private boolean requestLoggingOff;
-        private boolean apiContextOff;
+        private boolean requestTraceAndLogOff;
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
+        private Consumer<RoutingContext> bodyParser;
         private PermissionAuthorization requiredAuthorization;
 
         public Builder unAuthenticated() {
@@ -84,18 +90,19 @@ public class RouteDefinition {
             return this;
         }
 
+        public Builder bodyParser(Consumer<RoutingContext> bodyParser) {
+            this.hasBody = true;
+            this.bodyParser = bodyParser;
+            return this;
+        }
+
         public Builder nonBlocking() {
             this.nonBlocking = true;
             return this;
         }
 
-        public Builder requestLoggingOff() {
-            this.requestLoggingOff = true;
-            return this;
-        }
-
-        public Builder apiContextOff() {
-            this.apiContextOff = true;
+        public Builder requestTraceAndLogOff() {
+            this.requestTraceAndLogOff = true;
             return this;
         }
 
@@ -110,19 +117,24 @@ public class RouteDefinition {
             return this;
         }
 
-        public RouteDefinition build(Handler<RoutingContext> reqHandler) {
+        public RouteDefinition build(HierarchyFunction function, Handler<RoutingContext> reqHandler) {
             Set<RouteBehaviour> behaviours = new LinkedHashSet<>();
+
             if (!unAuthenticated) {
                 behaviours.add(RouteBehaviour.authenticated);
             }
             if (hasBody) {
                 behaviours.add(RouteBehaviour.hasBody);
+                if (null != bodyParser) {
+                    behaviours.add(RouteBehaviour.parseBody);
+                }
             }
-            if (!requestLoggingOff) {
-                behaviours.add(RouteBehaviour.requestLoggingOn);
+            behaviours.add(RouteBehaviour.addHierarchy);
+            if (!requestTraceAndLogOff) {
+                behaviours.add(RouteBehaviour.requestTraceAndLog);
             }
-            if (!apiContextOff) {
-                behaviours.add(RouteBehaviour.enableApiContext);
+            if (null != requiredAuthorization) {
+                behaviours.add(RouteBehaviour.authorized);
             }
 
             return new RouteDefinition(
@@ -133,7 +145,9 @@ public class RouteDefinition {
                     preHandlers,
                     reqHandler,
                     !nonBlocking,
-                    null == requiredAuthorization ? Optional.empty() : Optional.of(requiredAuthorization)
+                    bodyParser,
+                    function,
+                    Optional.ofNullable(requiredAuthorization)
             );
         }
     }

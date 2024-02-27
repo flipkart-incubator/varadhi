@@ -12,6 +12,7 @@ public class RestOptions {
     private String deployedRegion;
     @NotNull
     private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
+    private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;
     private int headerNameSizeMax = HEADER_NAME_SIZE_MAX;

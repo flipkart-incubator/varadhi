@@ -54,7 +54,7 @@ public class Server {
             String hostName, ServerConfiguration configuration, CoreServices services, Vertx vertx
     ) {
         log.debug("Verticle deployment started.");
-        Tracer tracer = services.getTracer("Varadhi");
+        Tracer tracer = services.getTracer("varadhi");
         VerticleDeployer verticleDeployer;
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             verticleDeployer = new LeanDeploymentVerticleDeployer(

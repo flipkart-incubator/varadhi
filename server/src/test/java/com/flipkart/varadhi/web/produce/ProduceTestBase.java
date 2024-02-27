@@ -1,19 +1,22 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.core.entities.ApiContext;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceContext;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.web.ContextBuilder;
+import com.flipkart.varadhi.web.RequestTraceAndLogHandler;
+import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.vertx.ext.web.Route;
-import org.apiguardian.api.API;
 import org.mockito.ArgumentCaptor;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -23,14 +26,15 @@ public class ProduceTestBase extends WebTestBase {
     ProjectService projectService;
     String deployedRegion = "region1";
     String serviceHost = "localhost";
-    ContextBuilder contextBuilder;
 
     ArgumentCaptor<Message> msgCapture;
-    ArgumentCaptor<ApiContext> ctxCapture;
     String topicPath = "/projects/project1/topics/topic1/produce";
     String topicFullName = "project1.topic1";
     String messageId;
     byte[] payload;
+
+    RequestTraceAndLogHandler requestTraceAndLogHandler;
+    SpanProvider spanProvider;
 
     Route route;
 
@@ -39,13 +43,18 @@ public class ProduceTestBase extends WebTestBase {
         super.setUp();
         projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
+        spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        contextBuilder = new ContextBuilder(projectService, deployedRegion, serviceHost );
-        produceHandlers = new ProduceHandlers(options, producerService);
+        requestTraceAndLogHandler = new RequestTraceAndLogHandler(true, spanProvider);
+        HeaderValidationHandler headerHandler = new HeaderValidationHandler(options);
+        ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
+        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
+        produceHandlers = new ProduceHandlers(deployedRegion, headerHandler::validate, producerService, projectService,
+                metricHandler
+        );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);
-        ctxCapture = ArgumentCaptor.forClass(ApiContext.class);
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
         Project project = new Project("project1", 0, "description", "team1", "org1");
