@@ -13,8 +13,7 @@ import java.util.Set;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class IAMPolicyRecord extends MetaStoreEntity {
-    private final String resourceId;
-    private final ResourceType resourceType;
+    private final String authResourceId;
     /**
      * Map of subject to roles
      */
@@ -22,16 +21,14 @@ public class IAMPolicyRecord extends MetaStoreEntity {
 
     @JsonCreator
     public IAMPolicyRecord(
-            @JsonProperty("resourceId") String resourceId,
-            @JsonProperty("resourceType") ResourceType resourceType,
+            @JsonProperty("authResourceId") String authResourceId,
             @JsonProperty("roleBindings")
             Map<String, Set<String>> roleBindings,
             @JsonProperty("version")
             int version
     ) {
-        super(resourceId, version);
-        this.resourceId = resourceId;
-        this.resourceType = resourceType;
+        super(authResourceId, version);
+        this.authResourceId = authResourceId;
         this.roleBindings = new HashMap<>();
         this.roleBindings.putAll(roleBindings);
     }

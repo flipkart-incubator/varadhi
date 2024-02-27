@@ -58,8 +58,8 @@ public class ZNode {
         return new ZNode(TOPIC, topicName);
     }
 
-    public static ZNode OfIAMPolicy(ResourceType resourceType, String resourceId) {
-        return new ZNode(IAM_POLICY, resourceType.toString(), resourceId);
+    public static ZNode OfIAMPolicy(String authResourceId) {
+        return new ZNode(IAM_POLICY, authResourceId);
     }
 
     public static ZNode ofSubscription(String subscriptionName) {

@@ -8,15 +8,13 @@ import java.util.List;
 public interface IAMPolicyMetaStore {
     List<IAMPolicyRecord> getIAMPolicyRecords();
 
-    IAMPolicyRecord getIAMPolicyRecord(String resourceIdWithType);
-
-    IAMPolicyRecord getIAMPolicyRecord(ResourceType resourceType, String resourceId);
+    IAMPolicyRecord getIAMPolicyRecord(String authResourceId);
 
     void createIAMPolicyRecord(IAMPolicyRecord node);
 
-    boolean isIAMPolicyRecordPresent(ResourceType resourceType, String resourceId);
+    boolean isIAMPolicyRecordPresent(String authResourceId);
 
     int updateIAMPolicyRecord(IAMPolicyRecord node);
 
-    void deleteIAMPolicyRecord(ResourceType resourceType, String resourceId);
+    void deleteIAMPolicyRecord(String authResourceId);
 }

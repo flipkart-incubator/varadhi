@@ -2,7 +2,6 @@ package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
@@ -253,38 +252,32 @@ public class VaradhiMetaStore implements MetaStore, IAMPolicyMetaStore {
     }
 
     @Override
-    public IAMPolicyRecord getIAMPolicyRecord(String resourceIdWithType) {
-        ZNode znode = ZNode.OfKind(IAM_POLICY, resourceIdWithType);
-        return zkMetaStore.getZNodeDataAsPojo(znode, IAMPolicyRecord.class);
-    }
-
-    @Override
-    public IAMPolicyRecord getIAMPolicyRecord(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+    public IAMPolicyRecord getIAMPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
         return zkMetaStore.getZNodeDataAsPojo(znode, IAMPolicyRecord.class);
     }
 
     @Override
     public void createIAMPolicyRecord(IAMPolicyRecord node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
+        ZNode znode = ZNode.OfIAMPolicy(node.getAuthResourceId());
         zkMetaStore.createZNodeWithData(znode, node);
     }
 
     @Override
-    public boolean isIAMPolicyRecordPresent(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+    public boolean isIAMPolicyRecordPresent(String authResourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public int updateIAMPolicyRecord(IAMPolicyRecord node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
+        ZNode znode = ZNode.OfIAMPolicy(node.getAuthResourceId());
         return zkMetaStore.updateZNodeWithData(znode, node);
     }
 
     @Override
-    public void deleteIAMPolicyRecord(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+    public void deleteIAMPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
         zkMetaStore.deleteZNode(znode);
     }
 }

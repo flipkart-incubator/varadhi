@@ -1,11 +1,12 @@
 package com.flipkart.varadhi.web.v1.authz;
 
 import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IAMPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.AuthZService;
+import com.flipkart.varadhi.utils.AuthZHelper;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -19,15 +20,12 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.utils.AuthZHelper.AUTH_RESOURCE_NAME_SEPARATOR;
+import static com.flipkart.varadhi.utils.AuthZHelper.toResponse;
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class AuthZHandlers implements RouteProvider {
-
-    public static final String AUTH_RESOURCE_NAME_SEPARATOR = ":";
-
-    public static final String REQUEST_PATH_PARAM_RESOURCE = "resource";
-    public static final String REQUEST_PATH_PARAM_RESOURCE_TYPE = "resource_type";
 
     private final AuthZService authZService;
 
@@ -47,6 +45,10 @@ public class AuthZHandlers implements RouteProvider {
                                 .hasBody().blocking()
                                 .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}"))
                                 .build(this.setIAMPolicyHandler(ResourceType.ORG)),
+                        RouteDefinition.delete("/orgs/:org/policy")
+                                .blocking()
+                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}"))
+                                .build(this.deleteIAMPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.get("/orgs/:org/teams/:team/policy")
                                 .blocking().authenticatedWith(
                                         PermissionAuthorization.of(ResourceAction.IAM_POLICY_GET, "{org}/{team}"))
@@ -55,6 +57,11 @@ public class AuthZHandlers implements RouteProvider {
                                 .hasBody().blocking().authenticatedWith(
                                         PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
                                 .build(this.setIAMPolicyHandler(ResourceType.TEAM)),
+                        RouteDefinition.delete("/orgs/:org/teams/:team/policy")
+                                .blocking()
+                                .authenticatedWith(
+                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
+                                .build(this.deleteIAMPolicyHandler(ResourceType.TEAM)),
                         // TODO: permission authz for project and topic
                         RouteDefinition.get("/projects/:project/policy")
                                 .blocking().authenticated()
@@ -62,18 +69,27 @@ public class AuthZHandlers implements RouteProvider {
                         RouteDefinition.put("/projects/:project/policy")
                                 .hasBody().blocking().authenticated()
                                 .build(this.setIAMPolicyHandler(ResourceType.PROJECT)),
+                        RouteDefinition.delete("/projects/:project/policy")
+                                .blocking().authenticated()
+                                .build(this.deleteIAMPolicyHandler(ResourceType.PROJECT)),
                         RouteDefinition.get("/projects/:project/topics/:topic/policy")
                                 .blocking().authenticated()
                                 .build(this.getIAMPolicyHandler(ResourceType.TOPIC)),
                         RouteDefinition.put("/projects/:project/topics/:topic/policy")
                                 .hasBody().blocking().authenticated()
                                 .build(this.setIAMPolicyHandler(ResourceType.TOPIC)),
+                        RouteDefinition.delete("/projects/:project/topics/:topic/policy")
+                                .blocking().authenticated()
+                                .build(this.deleteIAMPolicyHandler(ResourceType.TOPIC)),
                         RouteDefinition.get("/projects/:project/subscriptions/:subscription/policy")
                                 .blocking().authenticated()
                                 .build(this.getIAMPolicyHandler(ResourceType.SUBSCRIPTION)),
                         RouteDefinition.put("/projects/:project/subscriptions/:subscription/policy")
                                 .hasBody().blocking().authenticated()
-                                .build(this.setIAMPolicyHandler(ResourceType.SUBSCRIPTION))
+                                .build(this.setIAMPolicyHandler(ResourceType.SUBSCRIPTION)),
+                        RouteDefinition.delete("/projects/:project/subscriptions/:subscription/policy")
+                                .blocking().authenticated()
+                                .build(this.deleteIAMPolicyHandler(ResourceType.SUBSCRIPTION))
                 )
         ).get();
     }
@@ -88,47 +104,32 @@ public class AuthZHandlers implements RouteProvider {
     public Handler<RoutingContext> getIAMPolicyHandler(ResourceType resourceType) {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
-            IAMPolicyRecord policy = getIAMPolicy(resourceType, resourceId);
-            routingContext.endApiWithResponse(policy);
+            IAMPolicyResponse response = toResponse(authZService.getIAMPolicy(resourceType, resourceId));
+            routingContext.endApiWithResponse(response);
         };
-    }
-
-    public IAMPolicyRecord getIAMPolicy(ResourceType resourceType, String resourceId) {
-        return authZService.getIAMPolicy(resourceType, resourceId);
     }
 
     public Handler<RoutingContext> setIAMPolicyHandler(ResourceType resourceType) {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IAMPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IAMPolicyRequest.class);
-            IAMPolicyRecord updated = setIAMPolicy(resourceType, resourceId, policyForSubject);
+            IAMPolicyResponse updated =
+                    toResponse(authZService.setIAMPolicy(resourceType, resourceId, policyForSubject));
             routingContext.endApiWithResponse(updated);
         };
     }
 
-    public IAMPolicyRecord setIAMPolicy(
-            ResourceType resourceType, String resourceId, IAMPolicyRequest policyForSubject
-    ) {
-        return authZService.setIAMPolicy(resourceType, resourceId, policyForSubject);
+    public Handler<RoutingContext> deleteIAMPolicyHandler(ResourceType resourceType) {
+        return routingContext -> {
+            String resourceId = getResourceIdFromPath(routingContext, resourceType);
+            authZService.deleteIAMPolicy(resourceType, resourceId);
+            routingContext.end();
+        };
     }
 
-    public void getAllIAMPolicyRecords(RoutingContext routingContext) {
-        List<IAMPolicyRecord> records = authZService.getAllIAMPolicyRecords();
-        routingContext.endApiWithResponse(records);
-    }
-
-    public void getIAMPolicyRecord(RoutingContext routingContext) {
-        String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
-        String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        IAMPolicyRecord node = authZService.getIAMPolicyRecord(ResourceType.valueOf(resourceType), resourceId);
-        routingContext.endApiWithResponse(node);
-    }
-
-    public void deleteIAMPolicyRecord(RoutingContext routingContext) {
-        String resourceId = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE);
-        String resourceType = routingContext.pathParam(REQUEST_PATH_PARAM_RESOURCE_TYPE);
-        authZService.deleteIAMPolicyRecord(ResourceType.valueOf(resourceType), resourceId);
-        routingContext.endApi();
+    public void getAllIAMPolicy(RoutingContext routingContext) {
+        List<IAMPolicyResponse> response = authZService.getAll().stream().map(AuthZHelper::toResponse).toList();
+        routingContext.endApiWithResponse(response);
     }
 
     private String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {

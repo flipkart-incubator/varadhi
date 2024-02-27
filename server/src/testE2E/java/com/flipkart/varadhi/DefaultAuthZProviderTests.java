@@ -6,8 +6,8 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IAMPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.junit5.Checkpoint;
@@ -122,7 +122,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
                 node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
     }
 
-    private static List<IAMPolicyRecord> getAllIAMPolicies(Response response) {
+    private static List<IAMPolicyResponse> getAllIAMPolicies(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
@@ -174,7 +174,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
-        response.readEntity(IAMPolicyRecord.class);
+        response.readEntity(IAMPolicyResponse.class);
     }
 
     @Test
