@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
-import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -15,7 +15,7 @@ import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 
 @Slf4j
-public class VaradhiMetaStore implements MetaStore, IAMPolicyMetaStore {
+public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     private final ZKMetaStore zkMetaStore;
 
     public VaradhiMetaStore(CuratorFramework zkCurator) {
@@ -246,38 +246,38 @@ public class VaradhiMetaStore implements MetaStore, IAMPolicyMetaStore {
     }
 
     @Override
-    public List<IAMPolicyRecord> getIAMPolicyRecords() {
+    public List<IamPolicyRecord> getIamPolicyRecords() {
         ZNode znode = ZNode.OfEntityType(IAM_POLICY);
-        return zkMetaStore.listChildren(znode).stream().map(this::getIAMPolicyRecord).toList();
+        return zkMetaStore.listChildren(znode).stream().map(this::getIamPolicyRecord).toList();
     }
 
     @Override
-    public IAMPolicyRecord getIAMPolicyRecord(String authResourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
-        return zkMetaStore.getZNodeDataAsPojo(znode, IAMPolicyRecord.class);
+    public IamPolicyRecord getIamPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
+        return zkMetaStore.getZNodeDataAsPojo(znode, IamPolicyRecord.class);
     }
 
     @Override
-    public void createIAMPolicyRecord(IAMPolicyRecord node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getAuthResourceId());
+    public void createIamPolicyRecord(IamPolicyRecord node) {
+        ZNode znode = ZNode.OfIamPolicy(node.getAuthResourceId());
         zkMetaStore.createZNodeWithData(znode, node);
     }
 
     @Override
-    public boolean isIAMPolicyRecordPresent(String authResourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
+    public boolean isIamPolicyRecordPresent(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public int updateIAMPolicyRecord(IAMPolicyRecord node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getAuthResourceId());
+    public int updateIamPolicyRecord(IamPolicyRecord node) {
+        ZNode znode = ZNode.OfIamPolicy(node.getAuthResourceId());
         return zkMetaStore.updateZNodeWithData(znode, node);
     }
 
     @Override
-    public void deleteIAMPolicyRecord(String authResourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(authResourceId);
+    public void deleteIamPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
         zkMetaStore.deleteZNode(znode);
     }
 }

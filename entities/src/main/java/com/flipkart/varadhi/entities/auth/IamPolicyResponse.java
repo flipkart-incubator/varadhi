@@ -11,7 +11,7 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class IAMPolicyResponse extends VersionedEntity {
+public class IamPolicyResponse extends VersionedEntity {
     private final String resourceId;
     private final ResourceType resourceType;
     /**
@@ -20,7 +20,7 @@ public class IAMPolicyResponse extends VersionedEntity {
     private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator
-    public IAMPolicyResponse(
+    public IamPolicyResponse(
             @JsonProperty("name") String name,
             @JsonProperty("resourceId") String resourceId,
             @JsonProperty("resourceType") ResourceType resourceType,

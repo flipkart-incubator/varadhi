@@ -1,81 +1,81 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.auth.IAMPolicyRecord;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.HashMap;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.utils.AuthZHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 
-public class AuthZService {
+public class IamPolicyService {
     private final MetaStore metaStore;
-    private final IAMPolicyMetaStore iamPolicyMetaStore;
+    private final IamPolicyMetaStore iamPolicyMetaStore;
 
-    public AuthZService(MetaStore metaStore, IAMPolicyMetaStore iamPolicyMetaStore) {
+    public IamPolicyService(MetaStore metaStore, IamPolicyMetaStore iamPolicyMetaStore) {
         this.metaStore = metaStore;
         this.iamPolicyMetaStore = iamPolicyMetaStore;
     }
 
-    public List<IAMPolicyRecord> getAll() {
-        return iamPolicyMetaStore.getIAMPolicyRecords();
+    public List<IamPolicyRecord> getAll() {
+        return iamPolicyMetaStore.getIamPolicyRecords();
     }
 
-    private IAMPolicyRecord createIAMPolicyRecord(String resourceId, ResourceType resourceType) {
+    private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
             throw new IllegalArgumentException(
                     "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
         }
-        IAMPolicyRecord node = new IAMPolicyRecord(getAuthResourceFQN(resourceType, resourceId), new HashMap<>(), 0);
-        iamPolicyMetaStore.createIAMPolicyRecord(node);
+        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), new HashMap<>(), 0);
+        iamPolicyMetaStore.createIamPolicyRecord(node);
         return node;
     }
 
-    public IAMPolicyRecord getIAMPolicy(ResourceType resourceType, String resourceId) {
-        return iamPolicyMetaStore.getIAMPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+    public IamPolicyRecord getIamPolicy(ResourceType resourceType, String resourceId) {
+        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    public IAMPolicyRecord setIAMPolicy(ResourceType resourceType, String resourceId, IAMPolicyRequest binding) {
-        IAMPolicyRecord node = createOrGetIAMPolicyRecord(resourceId, resourceType);
+    public IamPolicyRecord setIamPolicy(ResourceType resourceType, String resourceId, IamPolicyRequest binding) {
+        IamPolicyRecord node = createOrGetIamPolicyRecord(resourceId, resourceType);
         node.setRoleAssignment(binding.getSubject(), binding.getRoles());
-        return updateIAMPolicyRecord(node);
+        return updateIamPolicyRecord(node);
     }
 
-    public void deleteIAMPolicy(ResourceType resourceType, String resourceId) {
-        boolean exists = iamPolicyMetaStore.isIAMPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
+    public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
+        boolean exists = iamPolicyMetaStore.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
         if (!exists) {
             throw new ResourceNotFoundException(String.format(
-                    "IAM Policy Record on resource(%s) not found.",
+                    "Iam Policy Record on resource(%s) not found.",
                     resourceId
             ));
         }
-        iamPolicyMetaStore.deleteIAMPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+        iamPolicyMetaStore.deleteIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    private IAMPolicyRecord createOrGetIAMPolicyRecord(String resourceId, ResourceType resourceType) {
-        boolean exists = iamPolicyMetaStore.isIAMPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
+    private IamPolicyRecord createOrGetIamPolicyRecord(String resourceId, ResourceType resourceType) {
+        boolean exists = iamPolicyMetaStore.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
         if (!exists) {
-            return createIAMPolicyRecord(resourceId, resourceType);
+            return createIamPolicyRecord(resourceId, resourceType);
         }
-        return iamPolicyMetaStore.getIAMPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    private IAMPolicyRecord updateIAMPolicyRecord(IAMPolicyRecord node) {
-        IAMPolicyRecord existingNode =
-                iamPolicyMetaStore.getIAMPolicyRecord(node.getAuthResourceId());
+    private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord node) {
+        IamPolicyRecord existingNode =
+                iamPolicyMetaStore.getIamPolicyRecord(node.getAuthResourceId());
         if (node.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
-                    "Conflicting update, IAMPolicyRecord(%s) has been modified. Fetch latest and try again.",
+                    "Conflicting update, IamPolicyRecord(%s) has been modified. Fetch latest and try again.",
                     node.getAuthResourceId()
             ));
         }
-        int updatedVersion = iamPolicyMetaStore.updateIAMPolicyRecord(node);
+        int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(node);
         node.setVersion(updatedVersion);
         return node;
     }
@@ -101,7 +101,7 @@ public class AuthZService {
                 String subscriptionName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
                 yield (segments.length == 2) && metaStore.checkSubscriptionExists(subscriptionName);
             }
-            case IAM_POLICY -> throw new IllegalArgumentException("IAM Policy is not a resource");
+            case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
         };
     }
 }

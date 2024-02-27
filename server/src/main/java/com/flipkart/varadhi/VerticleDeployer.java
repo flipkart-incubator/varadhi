@@ -13,7 +13,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricsImpl;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
-import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -26,7 +26,7 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
-import com.flipkart.varadhi.web.v1.authz.AuthZHandlers;
+import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -51,7 +51,7 @@ public abstract class VerticleDeployer {
     private final ProduceHandlers produceHandlers;
     private final SubscriptionHandlers subscriptionHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final Supplier<AuthZHandlers> authZHandlersSupplier;
+    private final Supplier<IamPolicyHandlers> iamPolicyHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
@@ -86,7 +86,7 @@ public abstract class VerticleDeployer {
         this.produceHandlers =
                 new ProduceHandlers(hostName, configuration.getRestOptions(), producerService, projectService);
         this.subscriptionHandlers = new SubscriptionHandlers(new SubscriptionService(metaStore));
-        this.authZHandlersSupplier = getAuthZHandlersSupplier(metaStore);
+        this.iamPolicyHandlersSupplier = getIamPolicyHandlersSuppliers(metaStore);
 
         this.healthCheckHandler = new HealthCheckHandler();
         BodyHandler bodyHandler = BodyHandler.create(false);
@@ -96,13 +96,13 @@ public abstract class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.authenticated, new AuthHandlers(vertx, configuration));
     }
 
-    private static Supplier<AuthZHandlers> getAuthZHandlersSupplier(MetaStore metaStore) {
+    private static Supplier<IamPolicyHandlers> getIamPolicyHandlersSuppliers(MetaStore metaStore) {
         return () -> {
-            if (metaStore instanceof IAMPolicyMetaStore rbMetaStore) {
-                return new AuthZHandlers(
-                        new AuthZService(metaStore, rbMetaStore));
+            if (metaStore instanceof IamPolicyMetaStore rbMetaStore) {
+                return new IamPolicyHandlers(
+                        new IamPolicyService(metaStore, rbMetaStore));
             }
-            throw new IllegalStateException("MetaStore is not an instance of IAMPolicyMetaStore.");
+            throw new IllegalStateException("MetaStore is not an instance of IamPolicyMetaStore.");
         };
     }
 
@@ -123,7 +123,7 @@ public abstract class VerticleDeployer {
     ) {
         List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
         if (shouldEnableAuthZHandlers(configuration)) {
-            handlerDefinitions.addAll(authZHandlersSupplier.get().get());
+            handlerDefinitions.addAll(iamPolicyHandlersSupplier.get().get());
         }
         vertx.deployVerticle(
                         () -> new RestVerticle(

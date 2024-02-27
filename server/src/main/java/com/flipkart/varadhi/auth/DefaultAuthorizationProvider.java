@@ -4,8 +4,8 @@ import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
 import com.flipkart.varadhi.entities.auth.*;
-import com.flipkart.varadhi.services.AuthZService;
-import com.flipkart.varadhi.spi.db.IAMPolicyMetaStore;
+import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -26,7 +26,7 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private static final Role EMPTY_ROLE = new Role("", Set.of());
     private DefaultAuthorizationConfiguration configuration;
-    private AuthZService authZService;
+    private IamPolicyService iamPolicyService;
     private volatile boolean initialised = false;
 
     @Override
@@ -41,24 +41,24 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         return Future.succeededFuture(true);
     }
 
-    protected AuthZService getAuthZService() {
+    protected IamPolicyService getAuthZService() {
         if (this.initialised) {
-            return this.authZService;
+            return this.iamPolicyService;
         }
-        this.authZService = initAuthZService(this.configuration.getMetaStoreOptions());
-        return this.authZService;
+        this.iamPolicyService = initAuthZService(this.configuration.getMetaStoreOptions());
+        return this.iamPolicyService;
     }
 
-    private AuthZService initAuthZService(MetaStoreOptions options) {
+    private IamPolicyService initAuthZService(MetaStoreOptions options) {
         MetaStoreProvider provider = loadClass(options.getProviderClassName());
         provider.init(options);
         MetaStore store = provider.getMetaStore();
 
-        if (store instanceof IAMPolicyMetaStore) {
-            return new AuthZService(store, (IAMPolicyMetaStore) store);
+        if (store instanceof IamPolicyMetaStore) {
+            return new IamPolicyService(store, (IamPolicyMetaStore) store);
         }
 
-        throw new IllegalStateException("Provider must implement IAMPolicyMetaStore");
+        throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
     }
 
     /**
@@ -135,8 +135,8 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
-        IAMPolicyRecord node =
-                getAuthZService().getIAMPolicy(resourceContext.resourceType(), resourceContext.resourceId());
+        IamPolicyRecord node =
+                getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
         if (node == null) {
             log.debug("No roles on resource for subject {}", subject);
             return Set.of();

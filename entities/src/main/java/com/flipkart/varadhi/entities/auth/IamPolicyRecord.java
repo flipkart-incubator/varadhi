@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class IAMPolicyRecord extends MetaStoreEntity {
+public class IamPolicyRecord extends MetaStoreEntity {
     private final String authResourceId;
     /**
      * Map of subject to roles
@@ -20,7 +20,7 @@ public class IAMPolicyRecord extends MetaStoreEntity {
     private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator
-    public IAMPolicyRecord(
+    public IamPolicyRecord(
             @JsonProperty("authResourceId") String authResourceId,
             @JsonProperty("roleBindings")
             Map<String, Set<String>> roleBindings,

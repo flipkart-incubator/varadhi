@@ -6,8 +6,8 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
-import com.flipkart.varadhi.entities.auth.IAMPolicyResponse;
+import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.junit5.Checkpoint;
@@ -68,7 +68,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         cleanupRoleBindings();
     }
 
-    private static void setupProvider(Checkpoint checkpoint) throws IOException, InterruptedException {
+    private static void setupProvider(Checkpoint checkpoint) throws IOException {
         String configContent =
                 """
                         ---
@@ -117,12 +117,12 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     private static void cleanupRoleBindings() {
         cleanupOrgs(List.of(oPublic));
-        var allNodes = getAllIAMPolicies(makeHttpGetRequest(getRoleBindingsUri()));
+        var allNodes = getAllIamPolicies(makeHttpGetRequest(getRoleBindingsUri()));
         allNodes.forEach(
                 node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
     }
 
-    private static List<IAMPolicyResponse> getAllIAMPolicies(Response response) {
+    private static List<IamPolicyResponse> getAllIamPolicies(Response response) {
         return response.readEntity(new GenericType<>() {
         });
     }
@@ -135,46 +135,46 @@ public class DefaultAuthZProviderTests extends E2EBase {
         return String.join("/", getRoleBindingsUri(), resourceType.name(), resourceId);
     }
 
-    private static String getIAMPolicyUri(String resourceUri) {
+    private static String getIamPolicyUri(String resourceUri) {
         return String.join("/", VaradhiBaseUri, "v1", resourceUri, "policy");
     }
 
     private static void bootstrapRoleBindings() {
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public"),
-                new IAMPolicyRequest("abc", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public"),
+                new IamPolicyRequest("abc", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public"),
-                new IAMPolicyRequest("xyz", Set.of("org.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public"),
+                new IamPolicyRequest("xyz", Set.of("org.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public/teams/team_rocket"),
-                new IAMPolicyRequest("team_user1", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public/teams/team_rocket"),
+                new IamPolicyRequest("team_user1", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public/teams/team_ash"),
-                new IAMPolicyRequest("brock", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public/teams/team_ash"),
+                new IamPolicyRequest("brock", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default"),
-                new IAMPolicyRequest("proj_user1", Set.of("project.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default"),
+                new IamPolicyRequest("proj_user1", Set.of("project.read"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default"),
-                new IAMPolicyRequest("proj_user2", Set.of("topic.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default"),
+                new IamPolicyRequest("proj_user2", Set.of("topic.read"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default/topics/topic001"),
-                new IAMPolicyRequest("proj_user3", Set.of("topic.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default/topics/topic001"),
+                new IamPolicyRequest("proj_user3", Set.of("topic.read"))
         );
     }
 
-    private static void setIAMPolicy(String targetUrl, IAMPolicyRequest entity) {
+    private static void setIamPolicy(String targetUrl, IamPolicyRequest entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
-        response.readEntity(IAMPolicyResponse.class);
+        response.readEntity(IamPolicyResponse.class);
     }
 
     @Test

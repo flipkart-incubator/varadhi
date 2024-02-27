@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import lombok.Getter;
 
 @Getter
@@ -9,7 +8,7 @@ public class ZNode {
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
-    public static final ZNodeKind IAM_POLICY = new ZNodeKind("IAMPolicy");
+    public static final ZNodeKind IAM_POLICY = new ZNodeKind("IamPolicy");
     public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
@@ -58,7 +57,7 @@ public class ZNode {
         return new ZNode(TOPIC, topicName);
     }
 
-    public static ZNode OfIAMPolicy(String authResourceId) {
+    public static ZNode OfIamPolicy(String authResourceId) {
         return new ZNode(IAM_POLICY, authResourceId);
     }
 
