@@ -86,7 +86,7 @@ public class RequestTraceAndLogHandler implements RouteConfigurator {
 
     private String getResourceHierarchy(RoutingContext ctx) {
         ResourceHierarchy resourceHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
-        return null != resourceHierarchy ? resourceHierarchy.getResourcePath() : "Unknown Resource Specification.";
+        return null != resourceHierarchy ? resourceHierarchy.getResourcePath() : String.format("(%s) - unresolved path.", ctx.request().path());
     }
 
     private String getMessageInfo(RoutingContext ctx) {

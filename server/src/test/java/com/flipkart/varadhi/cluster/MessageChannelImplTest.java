@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.cluster;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.core.cluster.ClusterMessage;
-import com.flipkart.varadhi.core.cluster.MessageHandler;
-import com.flipkart.varadhi.core.cluster.ResponseMessage;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;

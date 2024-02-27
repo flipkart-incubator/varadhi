@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core.cluster;
+package com.flipkart.varadhi.cluster;
 
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

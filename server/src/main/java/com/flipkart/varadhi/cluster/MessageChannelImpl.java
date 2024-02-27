@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.cluster;
 
-import com.flipkart.varadhi.core.cluster.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.Vertx;
