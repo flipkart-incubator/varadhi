@@ -6,8 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Getter
 public enum RouteBehaviour {
-    hasBody(100),
-    authenticated(200);
+    requestTraceAndLog(0),
+    authenticated(100),
+    hasBody(200),
+    parseBody(300),
+    addHierarchy(400),
+    authorized(500);
 
     RouteBehaviour(int order) {
         this.order = order;

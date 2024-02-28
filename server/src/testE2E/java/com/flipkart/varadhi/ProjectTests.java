@@ -164,11 +164,11 @@ public class ProjectTests extends E2EBase {
     @Test
     public void testProjectInvalidOps() {
         Project pCreated = makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
-        Project p1 = new Project("p1", 0, "", "t1", "o1");
+        Project p1 = new Project("prj1", 0, "", "team_1", "org_1");
         makeGetRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
         makeDeleteRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
 
-        p1 = new Project("p1", 0, "", pCreated.getTeam(), "o1");
+        p1 = new Project("prj1", 0, "", pCreated.getTeam(), "org_1");
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(
@@ -177,7 +177,7 @@ public class ProjectTests extends E2EBase {
                 ), true
         );
 
-        p1 = new Project("p1", 0, "", "t1", pCreated.getOrg());
+        p1 = new Project("prj1", 0, "", "team_1", pCreated.getOrg());
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(
@@ -192,7 +192,7 @@ public class ProjectTests extends E2EBase {
                 true
         );
         makeListRequest(
-                getProjectListUri("o1", o1t1Project1.getTeam()), 404, String.format("Org(%s) not found.", "o1"),
+                getProjectListUri("org_1", o1t1Project1.getTeam()), 404, String.format("Org(%s) not found.", "org_1"),
                 true
         );
 

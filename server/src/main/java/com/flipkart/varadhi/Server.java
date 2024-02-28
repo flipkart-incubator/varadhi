@@ -5,6 +5,7 @@ import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.HostUtils;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -53,6 +54,7 @@ public class Server {
             String hostName, ServerConfiguration configuration, CoreServices services, Vertx vertx
     ) {
         log.debug("Verticle deployment started.");
+        Tracer tracer = services.getTracer("varadhi");
         VerticleDeployer verticleDeployer;
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             verticleDeployer = new LeanDeploymentVerticleDeployer(
@@ -61,7 +63,9 @@ public class Server {
                     configuration,
                     services.getMessagingStackProvider(),
                     services.getMetaStoreProvider(),
-                    services.getMetricsRegistry()
+                    services.getMetricsRegistry(),
+                    tracer
+
             );
         } else {
             verticleDeployer = new FullDeploymentVerticleDeployer(
@@ -70,7 +74,8 @@ public class Server {
                     configuration,
                     services.getMessagingStackProvider(),
                     services.getMetaStoreProvider(),
-                    services.getMetricsRegistry()
+                    services.getMetricsRegistry(),
+                    tracer
             );
         }
 

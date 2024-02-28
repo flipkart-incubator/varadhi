@@ -6,6 +6,7 @@ import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -36,12 +37,14 @@ public class IamPolicyHandlersTest extends WebTestBase {
     public static final String AUTHZ_TOPIC_POLICY = "/projects/:project/topics/:topic/policy";
     IamPolicyHandlers iamPolicyHandlers;
     IamPolicyService iamPolicyService;
+    ProjectService projectService;
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
         iamPolicyService = mock(IamPolicyService.class);
-        iamPolicyHandlers = new IamPolicyHandlers(iamPolicyService);
+        projectService = mock(ProjectService.class);
+        iamPolicyHandlers = new IamPolicyHandlers(projectService, iamPolicyService);
 
         Route routeGetAllNodes =
                 router.get(AUTHZ_DEBUG_BASE).handler(wrapBlocking(iamPolicyHandlers::getAllIamPolicy));

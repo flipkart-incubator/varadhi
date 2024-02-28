@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.web.v1.authz;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.IamPolicyHelper;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -27,71 +30,94 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class IamPolicyHandlers implements RouteProvider {
 
+    private final ProjectService projectService;
     private final IamPolicyService iamPolicyService;
 
-    public IamPolicyHandlers(IamPolicyService iamPolicyService) {
+    public IamPolicyHandlers(ProjectService projectService, IamPolicyService iamPolicyService) {
         this.iamPolicyService = iamPolicyService;
+        this.projectService = projectService;
+    }
+
+    public ResourceHierarchy getIamHierarchy(RoutingContext ctx, boolean hasBody) {
+        String resourceType = ctx.request().getParam("resource_type");
+        String resourceName = ctx.request().getParam("resource");
+        if (null != resourceType && null != resourceName) {
+            return new Hierarchies.IamPolicyHierarchy(resourceType, resourceName);
+        }
+        return new Hierarchies.RootHierarchy();
     }
 
     private List<RouteDefinition> getPolicyHandlers() {
         return new SubRoutes(
                 "/v1",
                 List.of(
-                        RouteDefinition.get("/orgs/:org/policy")
-                                .blocking()
-                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_GET, "{org}"))
-                                .build(this.getIamPolicyHandler(ResourceType.ORG)),
-                        RouteDefinition.put("/orgs/:org/policy")
-                                .hasBody().blocking()
-                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}"))
-                                .build(this.setIamPolicyHandler(ResourceType.ORG)),
-                        RouteDefinition.delete("/orgs/:org/policy")
-                                .blocking()
-                                .authenticatedWith(PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}"))
-                                .build(this.deleteIamPolicyHandler(ResourceType.ORG)),
-                        RouteDefinition.get("/orgs/:org/teams/:team/policy")
-                                .blocking().authenticatedWith(
-                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_GET, "{org}/{team}"))
-                                .build(this.getIamPolicyHandler(ResourceType.TEAM)),
-                        RouteDefinition.put("/orgs/:org/teams/:team/policy")
-                                .hasBody().blocking().authenticatedWith(
-                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
-                                .build(this.setIamPolicyHandler(ResourceType.TEAM)),
-                        RouteDefinition.delete("/orgs/:org/teams/:team/policy")
-                                .blocking()
-                                .authenticatedWith(
-                                        PermissionAuthorization.of(ResourceAction.IAM_POLICY_SET, "{org}/{team}"))
-                                .build(this.deleteIamPolicyHandler(ResourceType.TEAM)),
-                        // TODO: permission authz for project and topic
-                        RouteDefinition.get("/projects/:project/policy")
-                                .blocking().authenticated()
-                                .build(this.getIamPolicyHandler(ResourceType.PROJECT)),
-                        RouteDefinition.put("/projects/:project/policy")
-                                .hasBody().blocking().authenticated()
-                                .build(this.setIamPolicyHandler(ResourceType.PROJECT)),
-                        RouteDefinition.delete("/projects/:project/policy")
-                                .blocking().authenticated()
-                                .build(this.deleteIamPolicyHandler(ResourceType.PROJECT)),
-                        RouteDefinition.get("/projects/:project/topics/:topic/policy")
-                                .blocking().authenticated()
-                                .build(this.getIamPolicyHandler(ResourceType.TOPIC)),
-                        RouteDefinition.put("/projects/:project/topics/:topic/policy")
-                                .hasBody().blocking().authenticated()
-                                .build(this.setIamPolicyHandler(ResourceType.TOPIC)),
-                        RouteDefinition.delete("/projects/:project/topics/:topic/policy")
-                                .blocking().authenticated()
-                                .build(this.deleteIamPolicyHandler(ResourceType.TOPIC)),
-                        RouteDefinition.get("/projects/:project/subscriptions/:subscription/policy")
-                                .blocking().authenticated()
-                                .build(this.getIamPolicyHandler(ResourceType.SUBSCRIPTION)),
-                        RouteDefinition.put("/projects/:project/subscriptions/:subscription/policy")
-                                .hasBody().blocking().authenticated()
-                                .build(this.setIamPolicyHandler(ResourceType.SUBSCRIPTION)),
-                        RouteDefinition.delete("/projects/:project/subscriptions/:subscription/policy")
-                                .blocking().authenticated()
-                                .build(this.deleteIamPolicyHandler(ResourceType.SUBSCRIPTION))
+                        RouteDefinition.get("GetIAMPolicy", "/orgs/:org/policy")
+                                .authorize(ResourceAction.IAM_POLICY_GET, "{org}")
+                                .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.ORG)),
+                        RouteDefinition.put("SetIAMPolicy", "/orgs/:org/policy")
+                                .hasBody()
+                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}")
+                                .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.ORG)),
+                        RouteDefinition.delete("DeleteIAMPolicy", "/orgs/:org/policy")
+                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}")
+                                .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.ORG)),
+                        RouteDefinition.get("GetIAMPolicy", "/orgs/:org/teams/:team/policy")
+                                .authorize(ResourceAction.IAM_POLICY_GET, "{org}/{team}")
+                                .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.TEAM)),
+                        RouteDefinition.put("SetIAMPolicy", "/orgs/:org/teams/:team/policy")
+                                .hasBody()
+                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}/{team}")
+                                .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.TEAM)),
+                        RouteDefinition.delete("DeleteIAMPolicy", "/orgs/:org/teams/:team/policy")
+                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}/{team}")
+                                .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.TEAM)),
+
+                        RouteDefinition.get("GetIAMPolicy", "/projects/:project/policy")
+                                .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.PROJECT)),
+                        RouteDefinition.put("SetIAMPolicy", "/projects/:project/policy")
+                                .hasBody()
+                                .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.PROJECT)),
+                        RouteDefinition.delete("DeleteIAMPolicy", "/projects/:project/policy")
+                                .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.PROJECT)),
+                        RouteDefinition.get("GetIAMPolicy", "/projects/:project/topics/:topic/policy")
+                                .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.TOPIC)),
+                        RouteDefinition.put("SetIAMPolicy", "/projects/:project/topics/:topic/policy")
+                                .hasBody()
+                                .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.TOPIC)),
+                        RouteDefinition.delete("DeleteIAMPolicy", "/projects/:project/topics/:topic/policy")
+                                .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.TOPIC)),
+                        RouteDefinition.get("GetIAMPolicy", "/projects/:project/subscriptions/:subscription/policy")
+                                .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.SUBSCRIPTION)),
+                        RouteDefinition.put("SetIAMPolicy", "/projects/:project/subscriptions/:subscription/policy")
+                                .hasBody()
+                                .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.SUBSCRIPTION)),
+                        RouteDefinition.delete(
+                                        "DeleteIAMPolicy", "/projects/:project/subscriptions/:subscription/policy")
+                                .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.SUBSCRIPTION))
                 )
         ).get();
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        String orgName = ctx.request().getParam(PATH_PARAM_ORG);
+        String teamName = ctx.request().getParam(PATH_PARAM_TEAM);
+        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
+        String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
+        if (topicName != null) {
+            Project project = projectService.getProject(projectName);
+            return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+        }
+        if (projectName != null) {
+            Project project = projectService.getProject(projectName);
+            return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
+        }
+        if (teamName != null) {
+            return new Hierarchies.TeamHierarchy(orgName, teamName);
+        }
+        if (orgName != null) {
+            return new Hierarchies.OrgHierarchy(orgName);
+        }
+        return new Hierarchies.RootHierarchy();
     }
 
     @Override
@@ -134,18 +160,19 @@ public class IamPolicyHandlers implements RouteProvider {
 
     private String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
         return switch (resourceType) {
-            case ORG -> ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-            case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_ORG),
-                    ctx.pathParam(REQUEST_PATH_PARAM_TEAM)
+            case ORG -> ctx.pathParam(PATH_PARAM_ORG);
+            case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_ORG),
+                    ctx.pathParam(PATH_PARAM_TEAM)
             );
-            case PROJECT -> ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-            case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
-                    ctx.pathParam(REQUEST_PATH_PARAM_TOPIC)
+            case PROJECT -> ctx.pathParam(PATH_PARAM_PROJECT);
+            case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_PROJECT),
+                    ctx.pathParam(PATH_PARAM_TOPIC)
             );
-            case SUBSCRIPTION -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(REQUEST_PATH_PARAM_PROJECT),
-                    ctx.pathParam(REQUEST_PATH_PARAM_SUBSCRIPTION)
+            case SUBSCRIPTION -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_PROJECT),
+                    ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
             );
             case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
+
         };
     }
 }

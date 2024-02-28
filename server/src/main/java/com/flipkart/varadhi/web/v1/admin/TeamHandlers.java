@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
+import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.web.Extensions;
@@ -14,8 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_ORG;
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TEAM;
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_ORG;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
@@ -32,49 +34,69 @@ public class TeamHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/orgs/:org/teams",
                 List.of(
-                        RouteDefinition.get("")
-                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_LIST, "{org}"))
-                                .build(this::listTeams),
-                        RouteDefinition.get("/:team/projects")
-                                .blocking().authenticatedWith(PermissionAuthorization.of(PROJECT_LIST, "{org}/{team}"))
-                                .build(this::listProjects),
-                        RouteDefinition.get("/:team")
-                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_GET, "{org}/{team}"))
-                                .build(this::get),
-                        RouteDefinition.post("")
-                                .blocking().hasBody()
-                                .authenticatedWith(PermissionAuthorization.of(TEAM_CREATE, "{org}"))
-                                .build(this::create),
-                        RouteDefinition.delete("/:team")
-                                .blocking().authenticatedWith(PermissionAuthorization.of(TEAM_DELETE, "{org}/{team}"))
-                                .build(this::delete)
+                        RouteDefinition.get("ListTeams", "")
+                                .authorize(TEAM_LIST, "{org}")
+                                .build(this::getHierarchy, this::listTeams),
+                        RouteDefinition.get("ListProjects", "/:team/projects")
+                                .authorize(PROJECT_LIST, "{org}")
+                                .build(this::getHierarchy, this::listProjects),
+                        RouteDefinition.get("GetTeam", "/:team")
+                                .authorize(TEAM_GET, "{org}/{team}")
+                                .build(this::getHierarchy, this::get),
+                        RouteDefinition.post("CreateTeam", "")
+                                .hasBody()
+                                .bodyParser(this::setTeam)
+                                .authorize(TEAM_CREATE, "{org}")
+                                .build(this::getHierarchy, this::create),
+                        RouteDefinition.delete("DeleteTeam", "/:team")
+                                .authorize(TEAM_DELETE, "{org}/{team}")
+                                .build(this::getHierarchy, this::delete)
                 )
         ).get();
     }
 
+    public void setTeam(RoutingContext ctx) {
+        Team team = ctx.body().asValidatedPojo(Team.class);
+        ctx.put(CONTEXT_KEY_BODY, team);
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        if (hasBody) {
+            Team team = ctx.get(CONTEXT_KEY_BODY);
+            return new Hierarchies.TeamHierarchy(team.getOrg(), team.getName());
+        }
+        String org = ctx.request().getParam(PATH_PARAM_ORG);
+        String team = ctx.request().getParam(PATH_PARAM_TEAM);
+        if (team == null) {
+            return new Hierarchies.OrgHierarchy(org);
+        }
+        return new Hierarchies.TeamHierarchy(org, team);
+    }
+
+
     public void listTeams(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
         List<Team> teams = teamService.getTeams(orgName);
         ctx.endApiWithResponse(teams);
     }
 
     public void listProjects(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-        String teamName = ctx.pathParam(REQUEST_PATH_PARAM_TEAM);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
+        String teamName = ctx.pathParam(PATH_PARAM_TEAM);
         List<Project> projects = teamService.getProjects(teamName, orgName);
         ctx.endApiWithResponse(projects);
     }
 
     public void get(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-        String teamName = ctx.pathParam(REQUEST_PATH_PARAM_TEAM);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
+        String teamName = ctx.pathParam(PATH_PARAM_TEAM);
         Team team = teamService.getTeam(teamName, orgName);
         ctx.endApiWithResponse(team);
     }
 
     public void create(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-        Team team = ctx.body().asValidatedPojo(Team.class);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
+        Team team = ctx.get(CONTEXT_KEY_BODY);
         if (!orgName.equals(team.getOrg())) {
             throw new IllegalArgumentException("Specified org name is different from org name in url");
         }
@@ -84,8 +106,8 @@ public class TeamHandlers implements RouteProvider {
     }
 
     public void delete(RoutingContext ctx) {
-        String orgName = ctx.pathParam(REQUEST_PATH_PARAM_ORG);
-        String teamName = ctx.pathParam(REQUEST_PATH_PARAM_TEAM);
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
+        String teamName = ctx.pathParam(PATH_PARAM_TEAM);
         teamService.deleteTeam(teamName, orgName);
         ctx.endApi();
     }
