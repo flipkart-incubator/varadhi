@@ -2,7 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -25,6 +25,7 @@ import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,7 +53,7 @@ public abstract class VerticleDeployer {
     public VerticleDeployer(
             String hostName,
             Vertx vertx,
-            ServerConfiguration configuration,
+            AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry,
@@ -131,31 +132,28 @@ public abstract class VerticleDeployer {
                 .collect(Collectors.toList());
     }
 
-    public void deployVerticle(Vertx vertx, ServerConfiguration configuration) {
+    public Future<String> deployVerticle(Vertx vertx, AppConfiguration configuration) {
         List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
         if (shouldEnableAuthZHandlers(configuration)) {
             handlerDefinitions.addAll(authZHandlersSupplier.get().get());
         }
-        vertx.deployVerticle(
-                        () -> new RestVerticle(
-                                handlerDefinitions,
-                                behaviorConfigurators,
-                                new FailureHandler(),
-                                configuration.getHttpServerOptions()
-                        ),
-                        configuration.getVerticleDeploymentOptions()
-                )
-                .onFailure(t -> {
-                    log.error("Could not start HttpServer Verticle.", t);
-                    throw new VaradhiException("Failed to Deploy Rest API.", t);
-                })
-                .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
+        return vertx.deployVerticle(
+                () -> new RestVerticle(
+                        handlerDefinitions,
+                        behaviorConfigurators,
+                        new FailureHandler(),
+                        configuration.getHttpServerOptions()
+                ),
+                configuration.getVerticleDeploymentOptions()
+        ).onFailure(t -> {
+            log.error("Could not start HttpServer Verticle.", t);
+            throw new VaradhiException("Failed to Deploy Rest API.", t);
+        }).onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
 
-    private boolean shouldEnableAuthZHandlers(ServerConfiguration configuration) {
+    private boolean shouldEnableAuthZHandlers(AppConfiguration configuration) {
         String defaultProviderClass = DefaultAuthorizationProvider.class.getName();
         return configuration.isAuthorizationEnabled()
                 && defaultProviderClass.equals(configuration.getAuthorization().getProviderClassName());
     }
-
 }

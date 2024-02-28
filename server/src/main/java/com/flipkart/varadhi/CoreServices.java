@@ -1,7 +1,7 @@
 package com.flipkart.varadhi;
 
 
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -39,7 +39,7 @@ public class CoreServices {
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
 
-    public CoreServices(ServerConfiguration configuration) {
+    public CoreServices(AppConfiguration configuration) {
         this.observabilityStack = setupObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
@@ -50,7 +50,7 @@ public class CoreServices {
         return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope);
     }
 
-    public MeterRegistry getMetricsRegistry() {
+    public MeterRegistry getMeterRegistry() {
         return this.observabilityStack.getMeterRegistry();
     }
 
@@ -76,7 +76,7 @@ public class CoreServices {
         return provider;
     }
 
-    private ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
+    private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 

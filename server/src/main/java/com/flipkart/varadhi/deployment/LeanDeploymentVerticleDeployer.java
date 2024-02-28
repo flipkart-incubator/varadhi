@@ -3,7 +3,7 @@ package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.VerticleDeployer;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -11,7 +11,12 @@ import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import io.micrometer.core.instrument.MeterRegistry;
+<<<<<<< Updated upstream
 import io.opentelemetry.api.trace.Tracer;
+=======
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+>>>>>>> Stashed changes
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,7 +25,7 @@ import java.util.List;
 @Slf4j
 public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     public LeanDeploymentVerticleDeployer(
-            String hostName, Vertx vertx, ServerConfiguration configuration,
+            String hostName, Vertx vertx, AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry,
             Tracer tracer
@@ -29,12 +34,16 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     }
 
     @Override
-    public void deployVerticle(
+    public Future<String> deployVerticle(
             Vertx vertx,
-            ServerConfiguration configuration
+            AppConfiguration configuration
     ) {
-        ensureLeanDeploymentConstraints(configuration.getRestOptions());
-        super.deployVerticle(vertx, configuration);
+        Promise<String> promise = Promise.promise();
+        vertx.executeBlocking(future -> {
+            ensureLeanDeploymentConstraints(configuration.getRestOptions());
+            future.complete();
+        }, promise);
+        return promise.future().compose(v -> super.deployVerticle(vertx, configuration));
     }
 
     private void ensureLeanDeploymentConstraints(RestOptions restOptions) {
