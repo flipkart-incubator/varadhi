@@ -116,7 +116,7 @@ public class IamPolicyHandlers implements RouteProvider {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             iamPolicyService.deleteIamPolicy(resourceType, resourceId);
-            routingContext.end();
+            routingContext.endApi();
         };
     }
 

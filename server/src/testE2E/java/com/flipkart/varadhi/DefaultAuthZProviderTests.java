@@ -117,22 +117,6 @@ public class DefaultAuthZProviderTests extends E2EBase {
 
     private static void cleanupRoleBindings() {
         cleanupOrgs(List.of(oPublic));
-        var allNodes = getAllIamPolicies(makeHttpGetRequest(getRoleBindingsUri()));
-        allNodes.forEach(
-                node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
-    }
-
-    private static List<IamPolicyResponse> getAllIamPolicies(Response response) {
-        return response.readEntity(new GenericType<>() {
-        });
-    }
-
-    private static String getRoleBindingsUri() {
-        return String.format("%s/v1/authz/debug", VaradhiBaseUri);
-    }
-
-    private static String getRoleBindingsUri(ResourceType resourceType, String resourceId) {
-        return String.join("/", getRoleBindingsUri(), resourceType.name(), resourceId);
     }
 
     private static String getIamPolicyUri(String resourceUri) {
