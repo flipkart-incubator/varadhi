@@ -51,8 +51,8 @@ public class RestVerticle extends AbstractVerticle {
     ) {
         log.info("Configuring API routes.");
         for (RouteDefinition def : apiRoutes) {
-            Route route = router.route().method(def.method()).path(def.path());
-            RouteBehaviour[] behaviours = def.behaviours().toArray(new RouteBehaviour[0]);
+            Route route = router.route().method(def.getMethod()).path(def.getPath());
+            RouteBehaviour[] behaviours = def.getBehaviours().toArray(new RouteBehaviour[0]);
             Arrays.sort(behaviours, Comparator.comparingInt(RouteBehaviour::getOrder));
             for (RouteBehaviour behaviour : behaviours) {
                 RouteConfigurator routeConfigurator = routeBehaviourConfigurators.getOrDefault(behaviour, null);
@@ -64,13 +64,12 @@ public class RestVerticle extends AbstractVerticle {
                     throw new IllegalStateException(errMsg);
                 }
             }
-            def.preHandlers().forEach(route::handler);
-            if (def.blockingEndHandler()) {
-                route.handler(wrapBlockingExecution(vertx, def.endReqHandler()));
+            def.getPreHandlers().forEach(route::handler);
+            if (def.isBlockingEndHandler()) {
+                route.handler(wrapBlockingExecution(vertx, def.getEndReqHandler()));
             } else {
-                route.handler(def.endReqHandler());
+                route.handler(def.getEndReqHandler());
             }
-
             route.failureHandler(failureHandler);
         }
     }

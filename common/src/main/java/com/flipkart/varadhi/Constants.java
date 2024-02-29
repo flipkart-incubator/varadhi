@@ -2,22 +2,27 @@ package com.flipkart.varadhi;
 
 public class Constants {
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
+    public static final String CONTEXT_KEY_BODY = "varadhi.body";
+    public static final String CONTEXT_KEY_RESOURCE_HIERARCHY = "varadhi.resourceHierarchy";
 
     public static class PathParams {
-        public static final String REQUEST_PATH_PARAM_ORG = "org";
-        public static final String REQUEST_PATH_PARAM_TEAM = "team";
-        public static final String REQUEST_PATH_PARAM_PROJECT = "project";
-        public static final String REQUEST_PATH_PARAM_TOPIC = "topic";
-        public static final String REQUEST_PATH_PARAM_SUBSCRIPTION = "subscription";
+        public static final String PATH_PARAM_ORG = "org";
+        public static final String PATH_PARAM_TEAM = "team";
+        public static final String PATH_PARAM_PROJECT = "project";
+        public static final String PATH_PARAM_TOPIC = "topic";
+        public static final String PATH_PARAM_SUBSCRIPTION = "subscription";
     }
 
     public static class Tags {
-        public static final String TAG_NAME_REGION = "region";
-        public static final String TAG_NAME_PROJECT = "project";
-        public static final String TAG_NAME_TOPIC = "topic";
-        public static final String TAG_NAME_IDENTITY = "identity";
-        public static final String TAG_NAME_HOST = "host";
-        public static final String TAG_NAME_PRODUCE_RESULT = "result";
+        public static final String TAG_REGION = "region";
+        public static final String TAG_ORG = "org";
+        public static final String TAG_TEAM = "team";
+        public static final String TAG_PROJECT = "project";
+        public static final String TAG_TOPIC = "topic";
+        public static final String TAG_SUBSCRIPTION = "subscription";
+        public static final String TAG_IDENTITY = "identity";
+        public static final String TAG_REMOTEHOST = "host";
+        public static final String TAG_PRODUCE_RESULT = "result";
         public static final String TAG_VALUE_RESULT_SUCCESS = "success";
         public static final String TAG_VALUE_RESULT_FAILED = "failed";
     }

@@ -7,7 +7,7 @@ import lombok.Data;
 import java.util.Map;
 
 @Data
-public class DefaultAuthorizationConfiguration {
+public class DefaultAuthorizationConfig {
     /**
      * role_id to Role{role_id, [permissions...]} mappings
      */

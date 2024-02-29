@@ -41,7 +41,10 @@ public class TeamHandlersTest extends WebTestBase {
         teamHandlers = new TeamHandlers(teamService);
 
         Route routeCreate =
-                router.post("/orgs/:org/teams").handler(bodyHandler).handler(wrapBlocking(teamHandlers::create));
+                router.post("/orgs/:org/teams").handler(bodyHandler).handler(ctx -> {
+                    teamHandlers.setTeam(ctx);
+                    ctx.next();
+                }).handler(wrapBlocking(teamHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org/teams/:team").handler(wrapBlocking(teamHandlers::get));
         setupFailureHandler(routeGet);

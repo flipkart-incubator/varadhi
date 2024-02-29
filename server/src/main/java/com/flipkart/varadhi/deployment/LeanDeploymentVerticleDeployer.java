@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.deployment;
 
+
 import com.flipkart.varadhi.VerticleDeployer;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -10,6 +11,7 @@ import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,17 +20,18 @@ import java.util.List;
 @Slf4j
 public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     public LeanDeploymentVerticleDeployer(
-            String hostName, Vertx vertx, ServerConfiguration configuration,
+            String hostName, Vertx vertx, ServerConfig configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            Tracer tracer
     ) {
-        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry);
+        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry, tracer);
     }
 
     @Override
     public void deployVerticle(
             Vertx vertx,
-            ServerConfiguration configuration
+            ServerConfig configuration
     ) {
         ensureLeanDeploymentConstraints(configuration.getRestOptions());
         super.deployVerticle(vertx, configuration);
@@ -55,7 +58,8 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
         if (orgs.size() == 1 && !defaultOrg.equals(orgs.get(0).getName())) {
             throw new InvalidConfigException(String.format(
                     "Lean deployment can not be enabled as org with %s name is present.",
-                    orgs.get(0).getName()));
+                    orgs.get(0).getName()
+            ));
         }
 
         if (orgs.isEmpty()) {
@@ -74,7 +78,8 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
         if (teams.size() == 1 && !defaultTeam.equals(teams.get(0).getName())) {
             throw new InvalidConfigException(String.format(
                     "Lean deployment can not be enabled as team with %s name is present.",
-                    teams.get(0).getName()));
+                    teams.get(0).getName()
+            ));
         }
         if (teams.isEmpty()) {
             log.debug("Creating default team no team is present.");
@@ -85,10 +90,12 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
         }
 
     }
+
     private void ensureProjectConstraints(
             String defaultOrg,
             String defaultTeam,
-            String defaultProject) {
+            String defaultProject
+    ) {
 
         List<Project> projects = teamService.getProjects(defaultTeam, defaultOrg);
 
@@ -98,7 +105,8 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
         if (projects.size() == 1 && !defaultProject.equals(projects.get(0).getName())) {
             throw new InvalidConfigException(String.format(
                     "Lean deployment can not be enabled as project with %s name is present.",
-                    projects.get(0).getName()));
+                    projects.get(0).getName()
+            ));
         }
         if (projects.isEmpty()) {
             log.debug("Creating default project as no team is present.");

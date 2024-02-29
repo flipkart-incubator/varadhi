@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.utils.SubscriptionHelper;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -46,6 +47,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     }
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
+    ProjectService projectService;
 
     public static VaradhiSubscription getVaradhiSubscription(
             String subscriptionName, Project project, VaradhiTopic topic
@@ -85,9 +87,13 @@ public class SubscriptionHandlersTest extends WebTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         subscriptionService = mock(SubscriptionService.class);
-        subscriptionHandlers = new SubscriptionHandlers(subscriptionService);
+        projectService = mock(ProjectService.class);
+        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
 
-        Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler)
+        Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
+                    subscriptionHandlers.setSubscription(ctx);
+                    ctx.next();
+                })
                 .handler(wrapBlocking(subscriptionHandlers::create));
         setupFailureHandler(routeCreate);
 
@@ -104,6 +110,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
         setupFailureHandler(routeDelete);
 
         Route routeUpdate = router.put("/projects/:project/subscriptions/:subscription").handler(bodyHandler)
+                .handler(ctx -> {
+                    subscriptionHandlers.setSubscription(ctx);
+                    ctx.next();
+                })
                 .handler(wrapBlocking(subscriptionHandlers::update));
         setupFailureHandler(routeUpdate);
     }

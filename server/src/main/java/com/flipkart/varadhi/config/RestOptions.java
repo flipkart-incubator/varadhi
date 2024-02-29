@@ -12,12 +12,14 @@ public class RestOptions {
     private String deployedRegion;
     @NotNull
     private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
+    private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;
     private int headerNameSizeMax = HEADER_NAME_SIZE_MAX;
     private int headerValueSizeMax = HEADER_VALUE_SIZE_MAX;
+
+    // TODO: These dont look related to rest. Looks related to lean deployment.
     private String defaultOrg = DEFAULT_ORG;
     private String defaultTeam = DEFAULT_TEAM;
     private String defaultProject = DEFAULT_PROJECT;
-
 }
