@@ -11,11 +11,8 @@ public final class IamPolicyHelper {
     public static final String AUTH_RESOURCE_NAME_SEPARATOR = ":";
 
     public static IamPolicyResponse toResponse(IamPolicyRecord policy) {
-        String[] segments = policy.getAuthResourceId().split(AUTH_RESOURCE_NAME_SEPARATOR, 2);
         return new IamPolicyResponse(
                 policy.getName(),
-                segments[1],
-                ResourceType.valueOf(segments[0]),
                 policy.getRoleBindings(),
                 policy.getVersion()
         );

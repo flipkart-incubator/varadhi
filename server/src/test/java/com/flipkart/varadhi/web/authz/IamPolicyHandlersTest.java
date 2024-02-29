@@ -95,9 +95,9 @@ public class IamPolicyHandlersTest extends WebTestBase {
 
         List<IamPolicyResponse> expected = List.of(
                 new IamPolicyResponse(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode1"), "testNode1", ResourceType.ORG, Map.of(), 0),
+                        getAuthResourceFQN(ResourceType.ORG, "testNode1"), Map.of(), 0),
                 new IamPolicyResponse(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode2"), "testNode2", ResourceType.ORG, Map.of(), 0)
+                        getAuthResourceFQN(ResourceType.ORG, "testNode2"), Map.of(), 0)
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, AUTHZ_DEBUG_BASE);
@@ -141,7 +141,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
                 new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, orgName), Map.of(user, roles), 0);
         IamPolicyResponse expected =
                 new IamPolicyResponse(
-                        policyRecord.getName(), orgName, ResourceType.ORG, policyRecord.getRoleBindings(), 0);
+                        policyRecord.getName(), policyRecord.getRoleBindings(), 0);
         IamPolicyRequest assignmentUpdate = new IamPolicyRequest(user, roles);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getOrgIamPolicyUrl(orgName));
