@@ -1,10 +1,11 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.auth.PermissionAuthorization;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.entities.VertxUserContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -17,8 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
@@ -47,12 +48,15 @@ public class AuthorizationHandlerBuilder {
         @Override
         public void handle(RoutingContext ctx) {
             UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
-            Function<String, String> env =
-                    v -> resolveVariable(v, ctx.pathParams(), ctx.request().params(), ctx.request().headers());
-            authorize(user, env).onFailure(ctx::fail).onSuccess(result -> ctx.next());
+            ResourceHierarchy resourceHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+//            Function<String, String> env =
+//                    v -> resolveVariable(v, ctx.pathParams(), ctx.request().params(), ctx.request().headers());
+            authorize(user, resourceHierarchy).onFailure(ctx::fail).onSuccess(result -> ctx.next());
         }
 
-        Future<Void> authorize(UserContext userContext, Function<String, String> env) {
+        Future<Void> authorize(
+                UserContext userContext, ResourceHierarchy resourceHierarchy
+        ) {
 
             if (userContext == null) {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "the request is not authenticated"));
@@ -67,7 +71,8 @@ public class AuthorizationHandlerBuilder {
             }
 
             ResourceAction action = requiredAuthorization.action();
-            String resource = requiredAuthorization.resource().resolve(env);
+//            String resource = requiredAuthorization.resource().resolve(env);
+            String resource = resourceHierarchy.getResourcePath();
             return provider.isAuthorized(userContext, action, resource)
                     .compose(authorized -> {
                         if (!authorized) {
