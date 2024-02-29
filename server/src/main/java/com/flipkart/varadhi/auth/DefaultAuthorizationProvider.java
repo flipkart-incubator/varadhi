@@ -54,8 +54,8 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         provider.init(options);
         MetaStore store = provider.getMetaStore();
 
-        if (store instanceof IamPolicyMetaStore) {
-            return new IamPolicyService(store, (IamPolicyMetaStore) store);
+        if (store instanceof IamPolicyMetaStore ipm) {
+            return new IamPolicyService(store, ipm);
         }
 
         throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
@@ -135,13 +135,17 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
-        IamPolicyRecord node =
-                getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
-        if (node == null) {
-            log.debug("No roles on resource for subject {}", subject);
+        try {
+            IamPolicyRecord node =
+                    getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
+            if (node == null) {
+                log.debug("No roles on resource for subject {}", subject);
+                return Set.of();
+            }
+            return node.getRoleBindings().getOrDefault(subject, Set.of());
+        } catch (Exception e) {
             return Set.of();
         }
-        return node.getRoleBindings().getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
@@ -209,6 +213,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                                 "/projects/%s/subscriptions/%s".formatted(segments[2], segments[3])
                         )
                 ));
+                // TODO: This fails when action is SET/GET IAM policy on topic or sub. Here, we rely on action since we don't know the leaf resource type. But it breaks in case of IAM actions.
                 default -> throw new IllegalArgumentException(
                         "Invalid resource type under project : " + action.getResourceType());
             }

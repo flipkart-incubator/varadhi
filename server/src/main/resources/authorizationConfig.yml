@@ -37,6 +37,7 @@ roleDefinitions:
       - SUBSCRIPTION_SEEK
       - IAM_POLICY_SET
       - IAM_POLICY_GET
+      - IAM_POLICY_DELETE
   org.reader:
     roleId: org.reader
     permissions:
@@ -105,6 +106,7 @@ roleDefinitions:
       - SUBSCRIPTION_SEEK
       - IAM_POLICY_SET
       - IAM_POLICY_GET
+      - IAM_POLICY_DELETE
   team.reader:
     roleId: team.reader
     permissions:
@@ -161,6 +163,7 @@ roleDefinitions:
       - SUBSCRIPTION_SEEK
       - IAM_POLICY_SET
       - IAM_POLICY_GET
+      - IAM_POLICY_DELETE
   project.reader:
     roleId: project.reader
     permissions:
