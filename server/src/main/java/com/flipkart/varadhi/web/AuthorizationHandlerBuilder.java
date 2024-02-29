@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
@@ -36,21 +35,19 @@ public class AuthorizationHandlerBuilder {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
     }
 
-    public AuthorizationHandler build(PermissionAuthorization requiredAuthorization) {
-        return new AuthorizationHandler(requiredAuthorization);
+    public AuthorizationHandler build(ResourceAction authorizationOnResource) {
+        return new AuthorizationHandler(authorizationOnResource);
     }
 
     @AllArgsConstructor
     class AuthorizationHandler implements Handler<RoutingContext> {
 
-        private final PermissionAuthorization requiredAuthorization;
+        private final ResourceAction authorizationOnAction;
 
         @Override
         public void handle(RoutingContext ctx) {
             UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
             ResourceHierarchy resourceHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
-//            Function<String, String> env =
-//                    v -> resolveVariable(v, ctx.pathParams(), ctx.request().params(), ctx.request().headers());
             authorize(user, resourceHierarchy).onFailure(ctx::fail).onSuccess(result -> ctx.next());
         }
 
@@ -70,12 +67,11 @@ public class AuthorizationHandlerBuilder {
                 return Future.succeededFuture();
             }
 
-            ResourceAction action = requiredAuthorization.action();
-//            String resource = requiredAuthorization.resource().resolve(env);
+            ResourceAction action = authorizationOnAction;
             String resource = resourceHierarchy.getResourcePath();
             return provider.isAuthorized(userContext, action, resource)
                     .compose(authorized -> {
-                        if (!authorized) {
+                        if (Boolean.FALSE.equals(authorized)) {
                             return Future.failedFuture(new HttpException(
                                     HTTP_FORBIDDEN,
                                     "user is not authorized to perform action '" + action.toString() +

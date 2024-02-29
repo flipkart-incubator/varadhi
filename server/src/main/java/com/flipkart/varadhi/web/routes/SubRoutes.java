@@ -18,7 +18,7 @@ public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implem
                                 r.isBlockingEndHandler(),
                                 r.getBodyParser(),
                                 r.getHierarchyFunction(),
-                                r.getRequiredAuthorization()
+                                r.getAuthorizationOnAction()
                         ))
                         .collect(Collectors.toList());
     }

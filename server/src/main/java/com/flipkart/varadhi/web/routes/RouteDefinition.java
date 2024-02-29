@@ -32,14 +32,15 @@ public class RouteDefinition {
     private final LinkedHashSet<Handler<RoutingContext>> preHandlers;
     private final Handler<RoutingContext> endReqHandler;
     private final boolean blockingEndHandler;
-    private final Optional<PermissionAuthorization> requiredAuthorization;
+    private final ResourceAction authorizationOnAction;
     private final Consumer<RoutingContext> bodyParser;
     private final HierarchyFunction hierarchyFunction;
     RouteDefinition(String name, HttpMethod method, String path, Set<RouteBehaviour> behaviours,
                     LinkedHashSet<Handler<RoutingContext>> preHandlers,
                     Handler<RoutingContext> endReqHandler,
                     boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
-                    HierarchyFunction function, Optional<PermissionAuthorization> requiredAuthorization) {
+                    HierarchyFunction function, ResourceAction authorizationOnAction
+    ) {
         this.name = name;
         this.method = method;
         this.path = path;
@@ -49,7 +50,7 @@ public class RouteDefinition {
         this.blockingEndHandler = blockingEndHandler;
         this.bodyParser = bodyParser;
         this.hierarchyFunction = function;
-        this.requiredAuthorization = requiredAuthorization;
+        this.authorizationOnAction = authorizationOnAction;
     }
     public static Builder get(String name, String path) {
         return new Builder(name, HttpMethod.GET, path);
@@ -79,7 +80,7 @@ public class RouteDefinition {
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
         private Consumer<RoutingContext> bodyParser;
 
-        private PermissionAuthorization requiredAuthorization;
+        private ResourceAction authorizationOnAction;
 
         public Builder unAuthenticated() {
             this.unAuthenticated = true;
@@ -107,8 +108,8 @@ public class RouteDefinition {
             return this;
         }
 
-        public Builder authorize(ResourceAction action, String resource) {
-            this.requiredAuthorization = PermissionAuthorization.of(action, resource);
+        public Builder authorize(ResourceAction action) {
+            this.authorizationOnAction = action;
             return this;
         }
         public Builder preHandler(Handler<RoutingContext> preHandler) {
@@ -134,7 +135,7 @@ public class RouteDefinition {
             if (!requestTraceAndLogOff) {
                 behaviours.add(RouteBehaviour.requestTraceAndLog);
             }
-            if (null != requiredAuthorization) {
+            if (null != authorizationOnAction) {
                 behaviours.add(RouteBehaviour.authorized);
             }
 
@@ -148,7 +149,7 @@ public class RouteDefinition {
                     !nonBlocking,
                     bodyParser,
                     function,
-                    Optional.ofNullable(requiredAuthorization)
+                    authorizationOnAction
             );
         }
     }

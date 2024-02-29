@@ -35,21 +35,21 @@ public class TeamHandlers implements RouteProvider {
                 "/v1/orgs/:org/teams",
                 List.of(
                         RouteDefinition.get("ListTeams", "")
-                                .authorize(TEAM_LIST, "{org}")
+                                .authorize(TEAM_LIST)
                                 .build(this::getHierarchy, this::listTeams),
                         RouteDefinition.get("ListProjects", "/:team/projects")
-                                .authorize(PROJECT_LIST, "{org}")
+                                .authorize(PROJECT_LIST)
                                 .build(this::getHierarchy, this::listProjects),
                         RouteDefinition.get("GetTeam", "/:team")
-                                .authorize(TEAM_GET, "{org}/{team}")
+                                .authorize(TEAM_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateTeam", "")
                                 .hasBody()
                                 .bodyParser(this::setTeam)
-                                .authorize(TEAM_CREATE, "{org}")
+                                .authorize(TEAM_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteTeam", "/:team")
-                                .authorize(TEAM_DELETE, "{org}/{team}")
+                                .authorize(TEAM_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();

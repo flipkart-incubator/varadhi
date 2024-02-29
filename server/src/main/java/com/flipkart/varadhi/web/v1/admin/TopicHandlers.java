@@ -47,18 +47,18 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/projects/:project/topics",
                 List.of(
                         RouteDefinition.get("GetTopic", "/:topic")
-                                .authorize(TOPIC_GET, "{project}/{topic}")
+                                .authorize(TOPIC_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateTopic", "")
                                 .hasBody()
                                 .bodyParser(this::setTopic)
-                                .authorize(TOPIC_CREATE, "{project}")
+                                .authorize(TOPIC_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteTopic", "/:topic")
-                                .authorize(TOPIC_DELETE, "{project}/{topic}")
+                                .authorize(TOPIC_DELETE)
                                 .build(this::getHierarchy, this::delete),
                         RouteDefinition.get("ListTopics", "")
-                                .authorize(TOPIC_LIST, "{project}")
+                                .authorize(TOPIC_LIST)
                                 .build(this::getHierarchy, this::listTopics)
                 )
         ).get();

@@ -34,18 +34,18 @@ public class OrgHandlers implements RouteProvider {
                 "/v1/orgs",
                 List.of(
                         RouteDefinition.get("GetOrgs", "")
-                                .authorize(ORG_LIST, "")
+                                .authorize(ORG_LIST)
                                 .build(this::getHierarchy, this::getOrganizations),
                         RouteDefinition.get("GetOrg", "/:org")
-                                .authorize(ORG_GET, "{org}")
+                                .authorize(ORG_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateOrg", "")
-                                .authorize(ORG_CREATE, "")
+                                .authorize(ORG_CREATE)
                                 .hasBody()
                                 .bodyParser(this::setOrg)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteOrg", "/:org")
-                                .authorize(ORG_DELETE, "{org}")
+                                .authorize(ORG_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();

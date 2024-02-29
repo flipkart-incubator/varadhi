@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.IAM_POLICY_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.IAM_POLICY_SET;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 
@@ -52,24 +54,24 @@ public class IamPolicyHandlers implements RouteProvider {
                 "/v1",
                 List.of(
                         RouteDefinition.get("GetIAMPolicy", "/orgs/:org/policy")
-                                .authorize(ResourceAction.IAM_POLICY_GET, "{org}")
+                                .authorize(IAM_POLICY_GET)
                                 .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.put("SetIAMPolicy", "/orgs/:org/policy")
                                 .hasBody()
-                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}")
+                                .authorize(IAM_POLICY_SET)
                                 .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.delete("DeleteIAMPolicy", "/orgs/:org/policy")
-                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}")
+                                .authorize(IAM_POLICY_SET)
                                 .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.ORG)),
                         RouteDefinition.get("GetIAMPolicy", "/orgs/:org/teams/:team/policy")
-                                .authorize(ResourceAction.IAM_POLICY_GET, "{org}/{team}")
+                                .authorize(IAM_POLICY_GET)
                                 .build(this::getHierarchy, this.getIamPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.put("SetIAMPolicy", "/orgs/:org/teams/:team/policy")
                                 .hasBody()
-                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}/{team}")
+                                .authorize(IAM_POLICY_SET)
                                 .build(this::getHierarchy, this.setIamPolicyHandler(ResourceType.TEAM)),
                         RouteDefinition.delete("DeleteIAMPolicy", "/orgs/:org/teams/:team/policy")
-                                .authorize(ResourceAction.IAM_POLICY_SET, "{org}/{team}")
+                                .authorize(IAM_POLICY_SET)
                                 .build(this::getHierarchy, this.deleteIamPolicyHandler(ResourceType.TEAM)),
 
                         RouteDefinition.get("GetIAMPolicy", "/projects/:project/policy")

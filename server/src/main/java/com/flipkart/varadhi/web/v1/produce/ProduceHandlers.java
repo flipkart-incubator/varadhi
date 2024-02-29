@@ -67,7 +67,7 @@ public class ProduceHandlers implements RouteProvider {
                                 .hasBody()
                                 .nonBlocking()
                                 .preHandler(headerValidationHandler)
-                                .authorize(TOPIC_PRODUCE, "{project}/{topic}")
+                                .authorize(TOPIC_PRODUCE)
                                 .build(this::getHierarchy, this::produce)
                 )
         ).get();

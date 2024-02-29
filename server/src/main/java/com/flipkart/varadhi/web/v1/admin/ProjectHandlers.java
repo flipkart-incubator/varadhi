@@ -34,20 +34,20 @@ public class ProjectHandlers implements RouteProvider {
                 "/v1/projects",
                 List.of(
                         RouteDefinition.get("GetProject", "/:project")
-                                .authorize(PROJECT_GET, "{project}")
+                                .authorize(PROJECT_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
-                                .authorize(PROJECT_CREATE, "")
+                                .authorize(PROJECT_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.put("UpdateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
-                                .authorize(PROJECT_UPDATE, "")
+                                .authorize(PROJECT_UPDATE)
                                 .build(this::getHierarchy, this::update),
                         RouteDefinition.delete("DeleteProject", "/:project")
-                                .authorize(PROJECT_DELETE, "{project}")
+                                .authorize(PROJECT_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();
