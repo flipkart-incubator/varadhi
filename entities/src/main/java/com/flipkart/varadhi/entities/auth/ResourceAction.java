@@ -33,6 +33,7 @@ public enum ResourceAction {
 
     SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, "create"),
     SUBSCRIPTION_GET(ResourceType.SUBSCRIPTION, "get"),
+    SUBSCRIPTION_LIST(ResourceType.SUBSCRIPTION, "list"),
     SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, "delete"),
     SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update"),
     SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek");

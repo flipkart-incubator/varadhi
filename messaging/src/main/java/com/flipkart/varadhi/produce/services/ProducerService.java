@@ -9,7 +9,7 @@ import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
-import com.flipkart.varadhi.produce.otel.ProducerMetrics;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,12 +23,12 @@ import java.util.function.Function;
 public class ProducerService {
     private final VaradhiCache<StorageTopic, Producer> producerCache;
     private final VaradhiCache<String, VaradhiTopic> internalTopicCache;
-    private final ProducerMetrics producerMetrics;
+    private final String produceRegion;
 
     public ProducerService(
+            String produceRegion,
             ProducerOptions producerOptions,
             ProducerFactory<StorageTopic> producerFactory,
-            ProducerMetrics producerMetrics,
             VaradhiTopicService varadhiTopicService,
             MeterRegistry meterRegistry
     ) {
@@ -38,7 +38,7 @@ public class ProducerService {
                 setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerFactory::getProducer,
                         meterRegistry
                 );
-        this.producerMetrics = producerMetrics;
+        this.produceRegion = produceRegion;
     }
 
     private VaradhiCache<String, VaradhiTopic> setupTopicCache(
@@ -74,10 +74,9 @@ public class ProducerService {
     public CompletableFuture<ProduceResult> produceToTopic(
             Message message,
             String varadhiTopicName,
-            ProduceContext context
+            ProducerMetricsEmitter metricsEmitter
     ) {
         try {
-            String produceRegion = context.getTopicContext().getRegion();
             InternalCompositeTopic internalTopic =
                     internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
 
@@ -92,7 +91,7 @@ public class ProducerService {
             }
             Producer producer = producerCache.get(internalTopic.getStorageTopic());
             return produceToStorageProducer(
-                    producer, context, internalTopic.getStorageTopic().getName(), message).thenApply(result ->
+                    producer, metricsEmitter, internalTopic.getStorageTopic().getName(), message).thenApply(result ->
                     ProduceResult.of(message.getMessageId(), result));
         } catch (VaradhiException e) {
             throw e;
@@ -103,12 +102,12 @@ public class ProducerService {
 
 
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
-            Producer producer, ProduceContext context, String topic, Message message
+            Producer producer, ProducerMetricsEmitter metricsEmitter, String topic, Message message
     ) {
         long produceStart = System.currentTimeMillis();
         return producer.produceAsync(message).handle((result, throwable) -> {
             int producerLatency = (int) (System.currentTimeMillis() - produceStart);
-            emitProducerMetric(result != null, producerLatency, context);
+            metricsEmitter.emit(result != null, producerLatency);
             if (throwable != null) {
                 log.debug(
                         String.format("Produce Message(%s) to StorageTopic(%s) failed.", message.getMessageId(), topic),
@@ -117,9 +116,5 @@ public class ProducerService {
             }
             return Result.of(result, throwable);
         });
-    }
-
-    private void emitProducerMetric(boolean succeeded, int produceLatency, ProduceContext context) {
-        producerMetrics.onMessageProduced(succeeded, produceLatency, context);
     }
 }

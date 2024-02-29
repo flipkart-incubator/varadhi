@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.deployment;
 
+
 import com.flipkart.varadhi.VerticleDeployer;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.ServerConfig;
@@ -10,6 +11,7 @@ import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,9 +22,10 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     public LeanDeploymentVerticleDeployer(
             String hostName, Vertx vertx, ServerConfig configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            Tracer tracer
     ) {
-        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry);
+        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry, tracer);
     }
 
     @Override

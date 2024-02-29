@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.entities;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.Value;
 
-
+@Getter
 @AllArgsConstructor
 public class SubscriptionShard {
 

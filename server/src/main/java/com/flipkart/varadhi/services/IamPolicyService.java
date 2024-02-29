@@ -11,13 +11,13 @@ import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.MetaStoreEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
-public class AuthZService {
+public class IamPolicyService {
     private final MetaStore metaStore;
     private final RoleBindingMetaStore roleBindingMetaStore;
 
-    public AuthZService(MetaStore metaStore, RoleBindingMetaStore roleBindingMetaStore) {
+    public IamPolicyService(MetaStore metaStore, RoleBindingMetaStore roleBindingMetaStore) {
         this.metaStore = metaStore;
         this.roleBindingMetaStore = roleBindingMetaStore;
     }
@@ -115,7 +115,7 @@ public class AuthZService {
                 // project:topic
                 String[] segments = resourceId.split(":");
                 String varadhiTopicName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
-                yield (segments.length == 2) && metaStore.checkVaradhiTopicExists(varadhiTopicName);
+                yield (segments.length == 2) && metaStore.checkTopicExists(varadhiTopicName);
             }
             case SUBSCRIPTION -> false; //TODO
         };

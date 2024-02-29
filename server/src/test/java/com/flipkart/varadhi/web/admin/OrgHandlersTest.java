@@ -35,7 +35,10 @@ public class OrgHandlersTest extends WebTestBase {
         orgService = mock(OrgService.class);
         orgHandlers = new OrgHandlers(orgService);
 
-        Route routeCreate = router.post("/orgs").handler(bodyHandler).handler(wrapBlocking(orgHandlers::create));
+        Route routeCreate = router.post("/orgs").handler(bodyHandler).handler(ctx -> {
+            orgHandlers.setOrg(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(orgHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org").handler(wrapBlocking(orgHandlers::get));
         setupFailureHandler(routeGet);
