@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web.routes;
 
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import io.vertx.core.Handler;
@@ -12,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
