@@ -40,7 +40,8 @@ public enum ResourceAction {
     SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek"),
 
     IAM_POLICY_GET(ResourceType.IAM_POLICY, "get"),
-    IAM_POLICY_SET(ResourceType.IAM_POLICY, "set");
+    IAM_POLICY_SET(ResourceType.IAM_POLICY, "set"),
+    IAM_POLICY_DELETE(ResourceType.IAM_POLICY, "delete");
 
     private final ResourceType resourceType;
     private final String action;

@@ -40,9 +40,9 @@ public class OrgHandlers implements RouteProvider {
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateOrg", "")
-                                .authorize(ORG_CREATE)
                                 .hasBody()
                                 .bodyParser(this::setOrg)
+                                .authorize(ORG_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteOrg", "/:org")
                                 .authorize(ORG_DELETE)
