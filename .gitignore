@@ -38,3 +38,4 @@ target/
 scratch
 
 scripts/benchmark/infra/
+nohup.out

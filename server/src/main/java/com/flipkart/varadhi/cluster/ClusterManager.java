@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core.cluster;
+package com.flipkart.varadhi.cluster;
 
 import java.util.List;
 
@@ -8,9 +8,6 @@ import java.util.List;
  * be notified of the same.
  */
 public interface ClusterManager {
-    void join();
-
-    void leave();
 
     List<NodeInfo> getAllMembers();
 
