@@ -10,7 +10,7 @@ public interface VaradhiConsumer {
 
     VaradhiSubscription getSubscription();
 
-    ConsumerStatus getStatus();
+    ConsumerState getState();
 
     /**
      * Start the consumer. It will start message delivery from the last committed offset. If no offset is committed, it

@@ -25,12 +25,10 @@ public interface Consumer<O extends Offset> {
      *
      * @return
      */
-    CompletableFuture<Void> commitCummulative(String topic, int partition, O offset);
+    CompletableFuture<Void> commitCumulative(String topic, int partition, O offset);
 
     /**
      * Unsubscribes the topics and closes the consumer object and any associated resources.
      */
     void close();
-
-    // TODO: evaluate pause and resume methods.
 }

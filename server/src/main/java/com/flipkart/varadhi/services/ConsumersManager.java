@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.consumer.ConsumerStatus;
+import com.flipkart.varadhi.consumer.ConsumerState;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import io.vertx.core.Future;
 
@@ -25,7 +25,7 @@ public interface ConsumersManager {
 
     Future<Void> resumeSubscription(String subscription, int shardId);
 
-    ConsumerStatus getConsumerStatus(String subscription, int shardId);
+    ConsumerState getConsumerState(String subscription, int shardId);
 
     // TODO likely need status on the starting / stopping as well; as the above status is for a running consumer..
 }
