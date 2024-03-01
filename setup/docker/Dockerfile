@@ -27,8 +27,6 @@ RUN sed -i 's|".*zkConfig.yml"|"/etc/varadhi/zkConfig.yml"|' /etc/varadhi/author
 
 # ensure test mechanism is enabled for authn
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "/authentication:/ {N; s|authentication:\n  .*|authentication:\n  test:|}" /etc/varadhi/configuration.yml ; fi
-# ensure "super" is recognized as superuser, for our e2e tests to work
-RUN  if [ "$ENV" = "test" ] ; then sed -i  's/superusers: \[.*\]/superusers: \["super"\]/' /etc/varadhi/configuration.yml ; fi
 
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1:8081|10.5.5.3:8080|" /etc/varadhi/pulsarConfig.yml ; fi
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml ; fi

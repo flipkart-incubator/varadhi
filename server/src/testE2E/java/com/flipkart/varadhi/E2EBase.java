@@ -29,7 +29,7 @@ public class E2EBase {
     protected static final String VaradhiBaseUri = "http://localhost:8080";
     private static final int ConnectTimeoutMs = 10 * 1000;
     private static final int ReadTimeoutMs = 10 * 1000;
-    public static final String SUPER_USER = "super";
+    public static final String SUPER_USER = "thanos";
 
     static String getOrgsUri() {
         return String.format("%s/v1/orgs", VaradhiBaseUri);
