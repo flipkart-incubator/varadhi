@@ -23,6 +23,7 @@ COPY $VARADHI_HOME/server/build/resources/main/ /etc/varadhi/
 RUN sed -i 's|".*pulsarConfig.yml"|"/etc/varadhi/pulsarConfig.yml"|' /etc/varadhi/configuration.yml
 RUN sed -i 's|".*zkConfig.yml"|"/etc/varadhi/zkConfig.yml"|' /etc/varadhi/configuration.yml
 RUN sed -i 's|".*authorizationConfig.yml"|"/etc/varadhi/authorizationConfig.yml"|' /etc/varadhi/configuration.yml
+RUN sed -i 's|".*zkConfig.yml"|"/etc/varadhi/zkConfig.yml"|' /etc/varadhi/authorizationConfig.yml
 
 # ensure test mechanism is enabled for authn
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "/authentication:/ {N; s|authentication:\n  .*|authentication:\n  test:|}" /etc/varadhi/configuration.yml ; fi
