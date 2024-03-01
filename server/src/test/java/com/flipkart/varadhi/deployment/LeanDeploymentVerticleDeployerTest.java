@@ -5,7 +5,6 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
@@ -28,12 +27,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(VertxExtension.class)
 public class LeanDeploymentVerticleDeployerTest {
@@ -48,7 +46,6 @@ public class LeanDeploymentVerticleDeployerTest {
     MessagingStackProvider messagingStackProvider;
 
     MetaStoreProvider metaStoreProvider;
-
     AppConfiguration appConfiguration;
 
     MeterRegistry meterRegistry;
@@ -89,12 +86,14 @@ public class LeanDeploymentVerticleDeployerTest {
                 "src/test/resources/testConfiguration.yml",
                 AppConfiguration.class);
 
+
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
                 varadhiMetaStore,
                 appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
                 meterRegistry);
+
 
         leanDeploymentVerticleDeployer = new LeanDeploymentVerticleDeployer(
                 "testHostName",
@@ -141,6 +140,7 @@ public class LeanDeploymentVerticleDeployerTest {
         teamService.createTeam(team);
         Project project = new Project(
                 appConfiguration.getRestOptions().getDefaultProject(),
+
                 0,
                 "",
                 team.getName(),
@@ -173,7 +173,6 @@ public class LeanDeploymentVerticleDeployerTest {
         Checkpoint cp = testContext.checkpoint(1);
         Org org = new Org(TEST_ORG, 0);
         orgService.createOrg(org);
-
         leanDeploymentVerticleDeployer
                         .deployVerticle(vertx, appConfiguration)
                         .onComplete(testContext.failing(t -> {
@@ -191,13 +190,13 @@ public class LeanDeploymentVerticleDeployerTest {
         Org org2 = new Org(TEST_ORG + "2", 0);
         orgService.createOrg(org1);
         orgService.createOrg(org2);
-
         leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t ->
         {
             assertEquals("Lean deployment can not be enabled as there are more than one orgs.",
                     t.getMessage());
             cp.flag();
         }));
+
     }
 
     @Test
@@ -240,7 +239,6 @@ public class LeanDeploymentVerticleDeployerTest {
         teamService.createTeam(team);
         Project project = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
         projectService.createProject(project);
-
         leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t -> {
             assertEquals(String.format(
                     "Lean deployment can not be enabled as project with %s name is present.",
@@ -260,7 +258,6 @@ public class LeanDeploymentVerticleDeployerTest {
         Project project2 = new Project(TEST_PROJECT + "2", 0, "", team.getName(), org.getName());
         projectService.createProject(project1);
         projectService.createProject(project2);
-
         leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t -> {
             assertEquals("Lean deployment can not be enabled as there are more than one projects.",
                     t.getMessage());

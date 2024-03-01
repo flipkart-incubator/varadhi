@@ -8,9 +8,6 @@ import java.util.List;
  * be notified of the same.
  */
 public interface ClusterManager {
-    void join();
-
-    void leave();
 
     List<NodeInfo> getAllMembers();
 

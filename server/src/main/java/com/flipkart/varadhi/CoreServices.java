@@ -77,6 +77,7 @@ public class CoreServices {
     }
 
     private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
+
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 

@@ -1,4 +1,4 @@
 package com.flipkart.varadhi.cluster;
 
-public record NodeResources(int cpuCount, int networkBandwidthMBps) {
+public record NodeResources(int cpuCount, int nicMBps) {
 }

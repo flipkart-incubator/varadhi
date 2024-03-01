@@ -22,6 +22,7 @@ public class FullDeploymentVerticleDeployer extends VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
+
     public FullDeploymentVerticleDeployer(
             String hostName, Vertx vertx, AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
