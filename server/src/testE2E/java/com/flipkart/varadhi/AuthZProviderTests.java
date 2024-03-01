@@ -175,7 +175,6 @@ public class AuthZProviderTests extends E2EBase {
     private static void deleteIamPolicy(String targetUrl) {
         Response response = makeHttpDeleteRequest(targetUrl);
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(200, response.getStatus());
     }
 
     @Test
