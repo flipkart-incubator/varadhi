@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -20,19 +19,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
-import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 @ExtendWith(VertxExtension.class)
-public class DefaultAuthZProviderTests extends E2EBase {
+public class AuthZProviderTests extends E2EBase {
 
     public static Org oPublic;
     public static Team fkTeamRocket, fkTeamAsh;
@@ -115,9 +114,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         provider.init(authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
-    private static void cleanupRoleBindings() {
-        cleanupOrgs(List.of(oPublic));
-    }
+    private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();
 
     private static String getIamPolicyUri(String resourceUri) {
         return String.join("/", VaradhiBaseUri, "v1", resourceUri, "policy");
@@ -154,11 +151,31 @@ public class DefaultAuthZProviderTests extends E2EBase {
         );
     }
 
+    private static void cleanupRoleBindings() {
+        cleanupPolicies();
+        cleanupOrgs(List.of(oPublic));
+    }
+
+    private static void registerPolicyCleanupHandler(String targetUrl) {
+        policyCleanupHandlers.putIfAbsent(targetUrl, () -> deleteIamPolicy(getIamPolicyUri(targetUrl)));
+    }
+
+    private static void cleanupPolicies() {
+        policyCleanupHandlers.forEach((k, v) -> v.run());
+    }
+
     private static void setIamPolicy(String targetUrl, IamPolicyRequest entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
+        registerPolicyCleanupHandler(targetUrl);
         response.readEntity(IamPolicyResponse.class);
+    }
+
+    private static void deleteIamPolicy(String targetUrl) {
+        Response response = makeHttpDeleteRequest(targetUrl);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(200, response.getStatus());
     }
 
     @Test

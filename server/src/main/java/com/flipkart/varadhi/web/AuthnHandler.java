@@ -20,6 +20,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
+import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
@@ -27,22 +28,25 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import static com.flipkart.varadhi.Constants.AUTHN_TEST_HEADER;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 public class AuthnHandler implements RouteConfigurator {
-    private final Handler<RoutingContext> authenticationHandler;
+    private final AuthenticationHandlerWrapper authenticationHandler;
 
     public AuthnHandler(Vertx vertx, ServerConfiguration configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled()) {
-            authenticationHandler =
+            // we do the wrapping to force vertx to consider this as USER handler and prevent imposing its own priority.
+            authenticationHandler = new AuthenticationHandlerWrapper(
                     switch (configuration.getAuthentication().getMechanism()) {
                         case jwt -> createJWTHandler(
                                 vertx,
                                 configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
                         );
-                        case dummy -> createDummyHandler();
-                    };
+                        case test -> createTestHandler();
+                    }
+            );
         } else {
             authenticationHandler = null;
         }
@@ -81,13 +85,23 @@ public class AuthnHandler implements RouteConfigurator {
         }
     }
 
-    AuthenticationHandler createDummyHandler() {
+    AuthenticationHandler createTestHandler() {
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {
-            String userName = ctx.request().getHeader("X-Auth-Token");
+            String userName = ctx.request().getHeader(AUTHN_TEST_HEADER);
             if (StringUtils.isBlank(userName)) {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "no user details present"));
             }
             return Future.succeededFuture(User.fromName(userName));
         });
+    }
+
+    @AllArgsConstructor
+    static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
+        private final Handler<RoutingContext> wrappedHandler;
+
+        @Override
+        public void handle(RoutingContext ctx) {
+            wrappedHandler.handle(ctx);
+        }
     }
 }

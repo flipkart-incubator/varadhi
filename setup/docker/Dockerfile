@@ -22,6 +22,12 @@ COPY $VARADHI_HOME/server/build/resources/main/ /etc/varadhi/
 # Fix configuration files for dev setup, this should move out of docker build
 RUN sed -i 's|".*pulsarConfig.yml"|"/etc/varadhi/pulsarConfig.yml"|' /etc/varadhi/configuration.yml
 RUN sed -i  's|".*zkConfig.yml"|"/etc/varadhi/zkConfig.yml"|' /etc/varadhi/configuration.yml
+
+# ensure test mechanism is enabled for authn
+RUN  if [ "$ENV" = "test" ] ; then sed -i  "/authentication:/ {N; s|authentication:\n  .*|authentication:\n  test:|}" /etc/varadhi/configuration.yml ; fi
+# ensure "super" is recognized as superuser, for our e2e tests to work
+RUN  if [ "$ENV" = "test" ] ; then sed -i  's/superusers: \[.*\]/superusers: \["super"\]/' /etc/varadhi/configuration.yml ; fi
+
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1:8081|10.5.5.3:8080|" /etc/varadhi/pulsarConfig.yml ; fi
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml ; fi
 
