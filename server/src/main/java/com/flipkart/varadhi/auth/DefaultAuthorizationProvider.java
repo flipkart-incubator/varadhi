@@ -2,7 +2,7 @@ package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.config.DefaultAuthorizationConfiguration;
+import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
@@ -25,7 +25,7 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private static final Role EMPTY_ROLE = new Role("", Set.of());
-    private DefaultAuthorizationConfiguration configuration;
+    private DefaultAuthorizationConfig configuration;
     private IamPolicyService iamPolicyService;
     private volatile boolean initialised = false;
 
@@ -34,7 +34,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         if (!this.initialised) {
             this.configuration =
                     YamlLoader.loadConfig(
-                            authorizationOptions.getConfigFile(), DefaultAuthorizationConfiguration.class);
+                            authorizationOptions.getConfigFile(), DefaultAuthorizationConfig.class);
             getAuthZService();
             this.initialised = true;
         }

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -12,7 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthzHandler(ServerConfiguration configuration) throws InvalidConfigException {
+    public AuthzHandler(ServerConfig configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration);
         } else {
@@ -26,7 +26,7 @@ public class AuthzHandler implements RouteConfigurator {
         }
     }
 
-    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfiguration configuration) {
+    AuthorizationHandlerBuilder createAuthorizationHandler(ServerConfig configuration) {
         if (configuration.isAuthorizationEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
             return new AuthorizationHandlerBuilder(configuration.getAuthorization()
@@ -37,7 +37,7 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(ServerConfiguration configuration) {
+    private AuthorizationProvider getAuthorizationProvider(ServerConfig configuration) {
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {

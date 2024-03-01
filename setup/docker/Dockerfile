@@ -30,6 +30,7 @@ RUN  if [ "$ENV" = "test" ] ; then sed -i  's/superusers: \[.*\]/superusers: \["
 
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1:8081|10.5.5.3:8080|" /etc/varadhi/pulsarConfig.yml ; fi
 RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/zkConfig.yml ; fi
+RUN  if [ "$ENV" = "test" ] ; then sed -i  "s|127.0.0.1|10.5.5.4|" /etc/varadhi/configuration.yml ; fi
 
 
 RUN useradd varadhi

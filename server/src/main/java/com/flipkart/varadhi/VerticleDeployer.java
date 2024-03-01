@@ -2,7 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.exceptions.VaradhiException;
@@ -51,7 +51,7 @@ public abstract class VerticleDeployer {
     public VerticleDeployer(
             String hostName,
             Vertx vertx,
-            ServerConfiguration configuration,
+            ServerConfig configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry,
@@ -130,7 +130,7 @@ public abstract class VerticleDeployer {
                 .toList();
     }
 
-    public void deployVerticle(Vertx vertx, ServerConfiguration configuration) {
+    public void deployVerticle(Vertx vertx, ServerConfig configuration) {
         List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
         if (shouldEnableAuthZHandlers(configuration)) {
             handlerDefinitions.addAll(iamPolicyHandlersSupplier.get().get());
@@ -151,10 +151,9 @@ public abstract class VerticleDeployer {
                 .onSuccess(name -> log.debug("Successfully deployed the Verticle id({}).", name));
     }
 
-    private boolean shouldEnableAuthZHandlers(ServerConfiguration configuration) {
+    private boolean shouldEnableAuthZHandlers(ServerConfig configuration) {
         String defaultProviderClass = DefaultAuthorizationProvider.class.getName();
         return configuration.isAuthorizationEnabled()
                 && defaultProviderClass.equals(configuration.getAuthorization().getProviderClassName());
     }
-
 }
