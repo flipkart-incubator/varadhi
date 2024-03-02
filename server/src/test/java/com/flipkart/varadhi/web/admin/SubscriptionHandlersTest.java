@@ -35,8 +35,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
             1, 1, 1, 1
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-    private static final SubscriptionShard[] shards =
-            new SubscriptionShard[]{new SubscriptionShard(0, null, null, null)};
+    private static final SubscriptionShards shards = new UnitSubscriptionShard(0, null, null);
 
     static {
         try {

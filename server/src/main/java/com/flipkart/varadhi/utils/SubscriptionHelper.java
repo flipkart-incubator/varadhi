@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.utils;
 
+import com.flipkart.varadhi.entities.UnitSubscriptionShard;
 import com.flipkart.varadhi.entities.SubscriptionResource;
-import com.flipkart.varadhi.entities.SubscriptionShard;
+import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
@@ -11,8 +12,7 @@ public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
 
-    private static final SubscriptionShard[] dummyShards =
-            new SubscriptionShard[]{new SubscriptionShard(0, null, null, null)};
+    private static final SubscriptionShards dummyShards = new UnitSubscriptionShard(0, null, null);
 
     public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, int version) {
         return new VaradhiSubscription(
