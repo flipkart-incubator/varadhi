@@ -7,14 +7,14 @@ public class UnitSubscriptionShard extends SubscriptionShards {
 
     private final int shardId;
 
-    private final RetryTopic rqTopic;
+    private final RetryTopic retryTopic;
 
-    private final InternalCompositeTopic dlqTopic;
+    private final InternalCompositeTopic deadLetterTopic;
 
-    public UnitSubscriptionShard(int shardId, RetryTopic rqTopic, InternalCompositeTopic dlqTopic) {
+    public UnitSubscriptionShard(int shardId, RetryTopic retryTopic, InternalCompositeTopic deadLetterTopic) {
         super(1);
         this.shardId = shardId;
-        this.rqTopic = rqTopic;
-        this.dlqTopic = dlqTopic;
+        this.retryTopic = retryTopic;
+        this.deadLetterTopic = deadLetterTopic;
     }
 }

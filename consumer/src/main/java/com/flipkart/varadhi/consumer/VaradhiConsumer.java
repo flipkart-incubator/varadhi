@@ -8,7 +8,9 @@ import com.flipkart.varadhi.entities.VaradhiSubscription;
  */
 public interface VaradhiConsumer {
 
-    VaradhiSubscription getSubscription();
+    String getSubscriptionName();
+
+    int getShardId();
 
     ConsumerState getState();
 

@@ -1,9 +1,7 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.consumer.ConsumerState;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
-import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.spi.services.TopicPartitions;
 import io.vertx.core.Future;
 
@@ -26,8 +24,8 @@ public interface ConsumersManager {
             TopicPartitions<?> topics,
             boolean grouped,
             Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy
+            ConsumptionPolicy consumptionPolicy,
+            ConsumptionFailurePolicy failurePolicy
     );
 
     Future<Void> stopSubscription(String subscription, int shardId);
