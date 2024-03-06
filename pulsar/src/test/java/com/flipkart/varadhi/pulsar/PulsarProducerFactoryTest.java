@@ -2,9 +2,9 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.exceptions.ProduceException;
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.YamlLoader;
 import org.apache.pulsar.client.api.ProducerBuilder;

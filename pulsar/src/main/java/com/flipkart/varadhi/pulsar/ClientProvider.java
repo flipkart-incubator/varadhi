@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.pulsar.clients;
+package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.pulsar.config.PulsarAdminOptions;
 import com.flipkart.varadhi.pulsar.config.PulsarClientOptions;

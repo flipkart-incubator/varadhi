@@ -7,7 +7,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Consumer interface to receive messages from a topic.
  */
-public interface Consumer<O extends Offset> {
+public interface Consumer<O extends Offset> extends AutoCloseable {
 
     /**
      * Receive a batch of messages from the subscribed topics.
@@ -25,10 +25,5 @@ public interface Consumer<O extends Offset> {
      *
      * @return
      */
-    CompletableFuture<Void> commitCumulative(String topic, int partition, O offset);
-
-    /**
-     * Unsubscribes the topics and closes the consumer object and any associated resources.
-     */
-    void close();
+    CompletableFuture<Void> commitCumulativeAsync(String topic, int partition, O offset);
 }
