@@ -42,5 +42,9 @@ public interface MessageChannel {
         Method(String name) {
             this.name = name;
         }
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }
