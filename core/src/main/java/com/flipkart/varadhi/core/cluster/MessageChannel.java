@@ -1,5 +1,7 @@
-package com.flipkart.varadhi.cluster;
+package com.flipkart.varadhi.core.cluster;
 
+
+import com.flipkart.varadhi.core.cluster.messages.*;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -21,7 +23,24 @@ public interface MessageChannel {
 
     CompletableFuture<ResponseMessage> request(String path, ClusterMessage msg);
 
-    void addMessageHandler(String path, MessageHandler messageHandler);
+    //    void addMessageHandler(String path, MessageHandler messageHandler);
+    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, SendHandler<E> handler);
+
+    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, RequestHandler<E> handler);
+
+    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, PublishHandler<E> handler);
 
     void removeMessageHandler(String path);
+
+    public static enum Method {
+        SEND("send"),
+        PUBLISH("publish"),
+        REQUEST("request");
+
+        private String name;
+
+        Method(String name) {
+            this.name = name;
+        }
+    }
 }

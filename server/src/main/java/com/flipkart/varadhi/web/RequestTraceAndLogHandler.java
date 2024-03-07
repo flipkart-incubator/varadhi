@@ -32,6 +32,7 @@ public class RequestTraceAndLogHandler implements RouteConfigurator {
     }
 
     public void addRequestSpanAndLog(RoutingContext ctx, String apiName) {
+        //TODO:: Add localhost and remote host information here.
         long start = System.currentTimeMillis();
         Span span = addRequestSpan(apiName);
         ctx.response().endHandler(r -> {

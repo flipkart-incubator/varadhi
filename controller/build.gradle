@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    api(project(":entities"))
     api(project(":spi"))
     api(project(":core"))
 

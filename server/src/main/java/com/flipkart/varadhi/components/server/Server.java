@@ -1,34 +1,43 @@
-package com.flipkart.varadhi.components;
+package com.flipkart.varadhi.components.server;
 
 import com.flipkart.varadhi.CoreServices;
+import com.flipkart.varadhi.ServerOpManager;
 import com.flipkart.varadhi.VerticleDeployer;
+import com.flipkart.varadhi.cluster.ClusterManager;
+import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.MessageChannel;
+import com.flipkart.varadhi.core.cluster.messages.SubscriptionMessage;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class Server implements Component {
-    private String verticleId;
     private final AppConfiguration configuration;
     private final CoreServices coreServices;
-    private final String hostName;
+    private String verticleId;
+    private ServerOperationHandler handler;
 
-    public Server(String hostname, AppConfiguration configuration, CoreServices coreServices) {
-        this.hostName = hostname;
+    public Server(AppConfiguration configuration, CoreServices coreServices) {
         this.configuration = configuration;
         this.coreServices = coreServices;
+        this.handler =
+                new ServerOperationHandler(new ServerOpManager(), coreServices.getMetaStoreProvider().getMetaStore());
     }
 
     @Override
-    public Future<Void> start(Vertx vertx) {
-        return deployVerticle(vertx);
+    public Future<Void> start(Vertx vertx, ClusterManager clusterManager) {
+        MessageChannel messageChannel = clusterManager.connect(null);
+        setupMessageHandlers(messageChannel);
+        return deployVerticle(vertx, messageChannel);
     }
 
     @Override
-    public Future<Void> shutdown(Vertx vertx) {
+    public Future<Void> shutdown(Vertx vertx, ClusterManager clusterManager) {
         //TODO::
         // - fail health check.
         // - reject any new request for retry (may be via a custom handler ?).
@@ -44,13 +53,14 @@ public class Server implements Component {
                     log.error("Undeploy failed.", ar.cause());
                 }
             });
-        }else{
+        } else {
             return Future.succeededFuture();
         }
     }
-    private Future<Void> deployVerticle( Vertx vertx) {
+
+    private Future<Void> deployVerticle(Vertx vertx, MessageChannel messageChannel) {
         log.info("Verticle deployment started.");
-        VerticleDeployer verticleDeployer = createVerticleDeployer(vertx);
+        VerticleDeployer verticleDeployer = createVerticleDeployer(vertx, messageChannel);
         return verticleDeployer.deployVerticle(vertx, configuration).compose(r -> {
             log.info("Verticle() deployment completed {}.", r);
             verticleId = r;
@@ -61,28 +71,34 @@ public class Server implements Component {
         });
     }
 
-    private VerticleDeployer createVerticleDeployer(Vertx vertx) {
+    private VerticleDeployer createVerticleDeployer(Vertx vertx, MessageChannel messageChannel) {
         VerticleDeployer verticleDeployer;
+        Tracer tracer = coreServices.getTracer("varadhi");
         if (configuration.getFeatureFlags().isLeanDeployment()) {
-            verticleDeployer = new LeanDeploymentVerticleDeployer(hostName,
+            verticleDeployer = new LeanDeploymentVerticleDeployer(
                     vertx,
                     configuration,
                     coreServices.getMessagingStackProvider(),
                     coreServices.getMetaStoreProvider(),
+                    messageChannel,
                     coreServices.getMeterRegistry(),
-                    coreServices.getTracer()
+                    tracer
             );
         } else {
-            verticleDeployer = new FullDeploymentVerticleDeployer(hostName,
+            verticleDeployer = new FullDeploymentVerticleDeployer(
                     vertx,
                     configuration,
                     coreServices.getMessagingStackProvider(),
                     coreServices.getMetaStoreProvider(),
+                    messageChannel,
                     coreServices.getMeterRegistry(),
-                    coreServices.getTracer()
+                    tracer
             );
         }
         return verticleDeployer;
+    }
+    public void setupMessageHandlers(MessageChannel messageChannel) {
+        messageChannel.register("Server", SubscriptionMessage.class, handler::update);
     }
 
 }

@@ -1,9 +1,11 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.cluster.ClusterManager;
+import com.flipkart.varadhi.cluster.impl.ClusterManagerImpl;
 import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.components.ComponentKind;
-import com.flipkart.varadhi.components.Controller;
-import com.flipkart.varadhi.components.Server;
+import com.flipkart.varadhi.components.controller.Controller;
+import com.flipkart.varadhi.components.server.Server;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.HostUtils;
@@ -34,9 +36,10 @@ public class VaradhiApplication {
             AppConfiguration configuration = readConfiguration(args);
             CoreServices services = new CoreServices(configuration);
             Vertx vertx = createVertex(configuration, services);
+            ClusterManager clusterManager = createClusterManager(vertx);
             Map<ComponentKind, Component> components = getComponents(configuration, services);
 
-            Future.all(components.entrySet().stream().map(e -> e.getValue().start(vertx).onComplete(ar -> {
+            Future.all(components.entrySet().stream().map(e -> e.getValue().start(vertx, clusterManager).onComplete(ar -> {
                 if (ar.succeeded()) {
                     log.info("Component({}) started.", e.getKey());
                 } else {
@@ -70,6 +73,12 @@ public class VaradhiApplication {
         Vertx vertx = Vertx.vertx(vertxOptions);
         log.debug("Created Vertex");
         return vertx;
+    }
+
+    private static ClusterManager createClusterManager(Vertx vertx) {
+        // TODO:: Placeholder for now. This node joining the cluster needs to be closed
+        // along with ClusterManager related changes.
+        return new ClusterManagerImpl(vertx);
     }
 
     public static AppConfiguration readConfiguration(String[] args) {
@@ -114,7 +123,7 @@ public class VaradhiApplication {
                                 configuration.getComponents().contains(kind)
                 ))
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                    case Server -> new Server("hostName", configuration, coreServices);
+                    case Server -> new Server(configuration, coreServices);
                     case Controller -> new Controller(configuration, coreServices);
                     default -> throw new IllegalArgumentException("Unknown Component Kind: " + kind);
                 }));

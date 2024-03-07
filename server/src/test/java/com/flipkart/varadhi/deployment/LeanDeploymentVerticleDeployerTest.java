@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.MessageChannel;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -23,6 +24,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,11 +52,12 @@ public class LeanDeploymentVerticleDeployerTest {
 
     MeterRegistry meterRegistry;
 
-    Vertx vertx = Vertx.vertx();
+    Vertx vertx;
 
     private OrgService orgService;
     private TeamService teamService;
     private ProjectService projectService;
+    private MessageChannel messageChannel;
 
 
     private static final String TEST_ORG = "testOrg";
@@ -69,6 +72,7 @@ public class LeanDeploymentVerticleDeployerTest {
 
     @BeforeEach
     public void setup() throws Exception {
+        vertx = Vertx.vertx();
         zkCuratorTestingServer = new TestingServer();
         zkCurator = spy(CuratorFrameworkFactory.newClient(
                 zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
@@ -78,6 +82,8 @@ public class LeanDeploymentVerticleDeployerTest {
         messagingStackProvider = mock(MessagingStackProvider.class);
         metaStoreProvider = mock(MetaStoreProvider.class);
         meterRegistry = mock(MeterRegistry.class);
+        messageChannel = mock(MessageChannel.class);
+
 
         when(metaStoreProvider.getMetaStore()).thenReturn(varadhiMetaStore);
         when(messagingStackProvider.getProducerFactory()).thenReturn(mock(ProducerFactory.class));
@@ -96,14 +102,22 @@ public class LeanDeploymentVerticleDeployerTest {
 
 
         leanDeploymentVerticleDeployer = new LeanDeploymentVerticleDeployer(
-                "testHostName",
                 vertx,
                 appConfiguration,
                 messagingStackProvider,
                 metaStoreProvider,
+                messageChannel,
                 meterRegistry,
                 null
         );
+    }
+
+    @AfterEach
+    public void tearDown(VertxTestContext testContext) throws Exception {
+        Checkpoint cp = testContext.checkpoint(1);
+        vertx.close().onComplete(testContext.succeeding(v -> {
+            cp.flag();
+        }));
     }
 
     @Test

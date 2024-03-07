@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.core.proxies.ControllerMgrProxy;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -140,7 +141,7 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);;
+        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);
 
         // ensure project name consistent
         if (!projectName.equals(subscription.getProject())) {

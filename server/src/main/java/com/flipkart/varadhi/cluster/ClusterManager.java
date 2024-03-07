@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.cluster;
 
+import com.flipkart.varadhi.core.cluster.MessageChannel;
+
 import java.util.List;
 
 /**

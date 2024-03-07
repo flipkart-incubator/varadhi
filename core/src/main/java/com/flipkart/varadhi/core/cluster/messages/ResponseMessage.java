@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.cluster;
+package com.flipkart.varadhi.core.cluster.messages;
 
 public class ResponseMessage extends ClusterMessage {
     // indicates a response to a request message.

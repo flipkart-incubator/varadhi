@@ -5,6 +5,9 @@ import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.cluster.MessageChannel;
+import com.flipkart.varadhi.core.ophandlers.ControllerOpHandler;
+import com.flipkart.varadhi.core.proxies.ControllerMgrProxy;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -51,11 +54,11 @@ public abstract class VerticleDeployer {
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
-            String hostName,
             Vertx vertx,
             AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
+            MessageChannel messageChannel,
             MeterRegistry meterRegistry,
             Tracer tracer
     ) {
@@ -87,7 +90,9 @@ public abstract class VerticleDeployer {
                         producerMetricsHandler
                 );
         this.authZHandlersSupplier = getIamPolicyHandlersSupplier(projectService, metaStore);
-        this.subscriptionHandlers = new SubscriptionHandlers(new SubscriptionService(metaStore), projectService);
+        ControllerOpHandler controllerOpHandler = new ControllerMgrProxy(messageChannel);
+        SubscriptionService subscriptionService = new SubscriptionService(metaStore, controllerOpHandler);
+        this.subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
         this.healthCheckHandler = new HealthCheckHandler();
 
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);

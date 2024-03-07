@@ -102,8 +102,8 @@ public class RestVerticle extends AbstractVerticle {
                 log.info("HttpServer Started.");
                 startPromise.complete();
             } else {
-                log.warn("HttpServer Start Failed.");
-                startPromise.fail("HttpServer Start Failed.");
+                log.warn("HttpServer Start Failed." + h.cause());
+                startPromise.fail("HttpServer Start Failed." + h.cause());
             }
         });
     }

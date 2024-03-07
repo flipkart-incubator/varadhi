@@ -1,5 +1,8 @@
-package com.flipkart.varadhi.cluster;
+package com.flipkart.varadhi.core.cluster;
 
+
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 
 import java.util.concurrent.CompletableFuture;
 

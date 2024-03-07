@@ -1,3 +1,5 @@
+components : ["Server"]
+
 restOptions:
   deployedRegion: "test"
   defaultOrg: "test"
