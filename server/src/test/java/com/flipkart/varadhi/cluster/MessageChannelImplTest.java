@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.cluster;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.core.cluster.MessageHandler;
+import com.flipkart.varadhi.core.cluster.MessageChannel;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.core.cluster.messages.SendHandler;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -57,29 +57,23 @@ public class MessageChannelImplTest {
         Future.fromCompletionStage(c.send("foo", cm)).onComplete(testContext.failing(v -> checkpoint.flag()));
     }
 
-//    @Test
-//    public void testSendMessageConsumerCollocated(VertxTestContext testContext) throws Exception {
-//        Checkpoint checkpoint = testContext.checkpoint(2);
-//        Vertx vertx = createClusteredVertx();
-//        MessageChannelImpl c = new MessageChannelImpl(vertx.eventBus());
-//        c.addMessageHandler("foo", new MessageHandler() {
-//            @Override
-//            public <E extends ClusterMessage> CompletableFuture<Void> handle(E message) {
-//                if (message instanceof ExtendedTestClusterMessage) {
-//                    checkpoint.flag();
-//                }
-//                return CompletableFuture.completedFuture(null);
-//            }
-//
-//            @Override
-//            public <E extends ClusterMessage> CompletableFuture<ResponseMessage> request(E message) {
-//                return null;
-//            }
-//        });
-//
-//        ClusterMessage cm = getClusterMessage("foo");
-//        Future.fromCompletionStage(c.send("foo", cm)).onComplete(testContext.succeeding(v -> checkpoint.flag()));
-//    }
+    @Test
+    public void testSendMessageConsumerCollocated(VertxTestContext testContext) throws Exception {
+        Checkpoint checkpoint = testContext.checkpoint(2);
+        Vertx vertx = createClusteredVertx();
+        MessageChannelImpl c = new MessageChannelImpl(vertx.eventBus());
+        c.register("testAddress", ExtendedTestClusterMessage.class, new SendHandler<>() {
+            @Override
+            public CompletableFuture<Void> handle(ExtendedTestClusterMessage message) {
+                checkpoint.flag();
+                return CompletableFuture.completedFuture(null);
+            }
+        });
+
+        ClusterMessage cm = getClusterMessage("foo");
+        String address = "testAddress" + "." + ExtendedTestClusterMessage.class.getSimpleName() + "." + MessageChannel.Method.SEND;
+        Future.fromCompletionStage(c.send(address, cm)).onComplete(testContext.succeeding(v -> checkpoint.flag()));
+    }
 
     ClusterMessage getClusterMessage(String data) {
         ExtendedTestClusterMessage dm = new ExtendedTestClusterMessage();
