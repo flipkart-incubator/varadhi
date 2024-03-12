@@ -8,9 +8,9 @@ public class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
-    public static final ZNodeKind VARADHI_TOPIC = new ZNodeKind("VaradhiTopic");
-    public static final ZNodeKind TOPIC_RESOURCE = new ZNodeKind("TopicResource");
+    public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
     public static final ZNodeKind ROLE_BINDING = new ZNodeKind("RoleBinding");
+    public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";
@@ -54,16 +54,16 @@ public class ZNode {
         return new ZNode(PROJECT, projectName);
     }
 
-    public static ZNode OfVaradhiTopic(String varadhiTopicName) {
-        return new ZNode(VARADHI_TOPIC, varadhiTopicName);
-    }
-
-    public static ZNode OfTopicResource(String projectName, String topicResourceName) {
-        return new ZNode(TOPIC_RESOURCE, projectName, topicResourceName);
+    public static ZNode OfTopic(String topicName) {
+        return new ZNode(TOPIC, topicName);
     }
 
     public static ZNode OfIAMPolicy(ResourceType resourceType, String resourceId) {
         return new ZNode(ROLE_BINDING, resourceType.toString(), resourceId);
+    }
+
+    public static ZNode ofSubscription(String subscriptionName) {
+        return new ZNode(SUBSCRIPTION, subscriptionName);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {

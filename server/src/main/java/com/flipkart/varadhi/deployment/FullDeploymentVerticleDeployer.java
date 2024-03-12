@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.VerticleDeployer;
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -9,6 +9,7 @@ import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.Vertx;
 
 import java.util.Collection;
@@ -21,12 +22,14 @@ public class FullDeploymentVerticleDeployer extends VerticleDeployer {
     private final OrgHandlers orgHandlers;
     private final TeamHandlers teamHandlers;
     private final ProjectHandlers projectHandlers;
+
     public FullDeploymentVerticleDeployer(
-            String hostName, Vertx vertx, ServerConfiguration configuration,
+            String hostName, Vertx vertx, ServerConfig configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            Tracer tracer
     ) {
-        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry);
+        super(hostName, vertx, configuration, messagingStackProvider, metaStoreProvider, meterRegistry, tracer);
         this.orgHandlers = new OrgHandlers(this.orgService);
         this.teamHandlers = new TeamHandlers(this.teamService);
         this.projectHandlers = new ProjectHandlers(this.projectService);

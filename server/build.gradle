@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":messaging"))
     implementation(project(":entities"))
     implementation(project(":authz"))
+    implementation(project(":consumer"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.apache.logging.log4j:log4j-core")
@@ -27,6 +28,7 @@ dependencies {
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-auth-common")
     implementation("io.vertx:vertx-auth-jwt")
+    implementation("io.vertx:vertx-zookeeper")
     implementation("io.vertx:vertx-opentelemetry")
     implementation("io.vertx:vertx-opentracing")
     implementation("io.vertx:vertx-micrometer-metrics")

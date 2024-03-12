@@ -6,8 +6,7 @@ import lombok.Value;
 @Value
 @EqualsAndHashCode(callSuper = true)
 @ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
-//TODO: Topic Resource should be VersionedEntity
-public class TopicResource extends MetaStoreEntity implements Validatable {
+public class TopicResource extends VersionedEntity implements Validatable {
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
 
     String project;

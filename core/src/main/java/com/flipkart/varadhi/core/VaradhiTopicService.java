@@ -2,7 +2,9 @@ package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +39,12 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
                     }
                 }
         );
-        metaStore.createVaradhiTopic(varadhiTopic);
+        metaStore.createTopic(varadhiTopic);
     }
 
     @Override
     public VaradhiTopic get(String topicName) {
-        return metaStore.getVaradhiTopic(topicName);
+        return metaStore.getTopic(topicName);
     }
 
     @Override
@@ -51,7 +53,8 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         /*TODO : delete namespace, tenant also if the only Topic in the namespace+tenant is deleted / cleanup independent of delete
          * check for existing subscriptions before deleting the topic
          */
-        VaradhiTopic varadhiTopic = metaStore.getVaradhiTopic(varadhiTopicName);
+        VaradhiTopic varadhiTopic = metaStore.getTopic(varadhiTopicName);
+        validateDelete(varadhiTopicName);
         varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
                 {
                     StorageTopic storageTopic = internalTopic.getStorageTopic();
@@ -62,15 +65,27 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
                     }
                 }
         );
-        metaStore.deleteVaradhiTopic(varadhiTopic.getName());
+        metaStore.deleteTopic(varadhiTopic.getName());
+    }
+
+    private void validateDelete(String varadhiTopicName) {
+        // TODO: optimize this flow, currently it scans all subscriptions across all projects
+        List<String> subscriptionNames = metaStore.getAllSubscriptionNames();
+        subscriptionNames.forEach(subscriptionName -> {
+            VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+            if (subscription.getTopic().equals(varadhiTopicName)) {
+                throw new InvalidOperationForResourceException(
+                        "Cannot delete topic as it is being used by subscription " + subscriptionName);
+            }
+        });
     }
 
     @Override
     public boolean exists(String topicName) {
-        return metaStore.checkVaradhiTopicExists(topicName);
+        return metaStore.checkTopicExists(topicName);
     }
 
     public List<String> getVaradhiTopics(String projectName) {
-        return metaStore.getVaradhiTopicNames(projectName);
+        return metaStore.getTopicNames(projectName);
     }
 }

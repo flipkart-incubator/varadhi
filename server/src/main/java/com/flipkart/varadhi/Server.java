@@ -1,11 +1,13 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.config.ServerConfiguration;
+import com.flipkart.varadhi.cluster.custom.ZookeeperClusterManager;
+import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.metrices.CustomMetricsFactory;
 import com.flipkart.varadhi.utils.HostUtils;
+import io.opentelemetry.api.trace.Tracer;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -16,6 +18,8 @@ import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.ExecutionException;
+
 @Slf4j
 public class Server {
 
@@ -24,9 +28,9 @@ public class Server {
         try {
             String hostName = HostUtils.getHostName();
             log.info("Server Starting on {}.", hostName);
-            ServerConfiguration configuration = readConfiguration(args);
+            ServerConfig configuration = readConfiguration(args);
             CoreServices services = new CoreServices(configuration);
-            Vertx vertx = createVertex(configuration, services);
+            Vertx vertx = createVertx(configuration, services);
             deployVerticle(hostName, configuration, services, vertx);
             log.info("Server Started on {}.", hostName);
         } catch (Exception e) {
@@ -36,22 +40,34 @@ public class Server {
         // TODO: check need for shutdown hook
     }
 
-    private static Vertx createVertex(ServerConfiguration configuration, CoreServices services) {
+    private static Vertx createVertx(ServerConfig configuration, CoreServices services)
+            throws ExecutionException, InterruptedException {
         log.debug("Creating Vertex");
+
         VertxOptions vertxOptions = configuration.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
                 .setMetricsOptions(new MetricsOptions()
                         .setFactory(new CustomMetricsFactory(services.getMetricsRegistry()))
                         .setEnabled(true));
-        Vertx vertx = Vertx.vertx(vertxOptions);
+        ZookeeperClusterManager clusterManager = new ZookeeperClusterManager(
+                configuration.getZookeeperOptions(),
+                configuration.getNodeId(),
+                configuration.getNodeResourcesOverride()
+        );
+        Vertx vertx = Vertx.builder()
+                .with(vertxOptions)
+                .withClusterManager(clusterManager)
+                .buildClustered()
+                .toCompletionStage().toCompletableFuture().get();
         log.debug("Created Vertex");
         return vertx;
     }
 
     private static void deployVerticle(
-            String hostName, ServerConfiguration configuration, CoreServices services, Vertx vertx
+            String hostName, ServerConfig configuration, CoreServices services, Vertx vertx
     ) {
         log.debug("Verticle deployment started.");
+        Tracer tracer = services.getTracer("varadhi");
         VerticleDeployer verticleDeployer;
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             verticleDeployer = new LeanDeploymentVerticleDeployer(
@@ -60,7 +76,9 @@ public class Server {
                     configuration,
                     services.getMessagingStackProvider(),
                     services.getMetaStoreProvider(),
-                    services.getMetricsRegistry()
+                    services.getMetricsRegistry(),
+                    tracer
+
             );
         } else {
             verticleDeployer = new FullDeploymentVerticleDeployer(
@@ -69,7 +87,8 @@ public class Server {
                     configuration,
                     services.getMessagingStackProvider(),
                     services.getMetaStoreProvider(),
-                    services.getMetricsRegistry()
+                    services.getMetricsRegistry(),
+                    tracer
             );
         }
 
@@ -78,7 +97,7 @@ public class Server {
     }
 
 
-    public static ServerConfiguration readConfiguration(String[] args) {
+    public static ServerConfig readConfiguration(String[] args) {
         if (args.length < 1) {
             log.error("Usage: java com.flipkart.varadhi.Server configuration.yml");
             System.exit(-1);
@@ -86,7 +105,7 @@ public class Server {
         return readConfigFromFile(args[0]);
     }
 
-    public static ServerConfiguration readConfigFromFile(String filePath) throws InvalidConfigException {
+    public static ServerConfig readConfigFromFile(String filePath) throws InvalidConfigException {
         log.info("Loading Configuration.");
         Vertx vertx = Vertx.vertx();
 
@@ -101,7 +120,7 @@ public class Server {
 
         try {
             JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
-            return content.mapTo(ServerConfiguration.class);
+            return content.mapTo(ServerConfig.class);
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to load Application Configuration", e);
         } finally {

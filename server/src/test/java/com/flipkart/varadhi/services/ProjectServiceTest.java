@@ -184,7 +184,7 @@ public class ProjectServiceTest {
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
 
-        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getVaradhiTopicNames(o1t1p2.getName());
+        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
         InvalidOperationForResourceException e = Assertions.assertThrows(
                 InvalidOperationForResourceException.class,
                 () -> projectService.deleteProject(o1t1p2.getName())
