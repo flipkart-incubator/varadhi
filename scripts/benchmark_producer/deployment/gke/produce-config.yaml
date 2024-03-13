@@ -3,14 +3,12 @@ kind: ConfigMap
 metadata:
   name: produce-config
 data:
-  NUM_USERS: "100"
-  HATCH_RATE: "10"
-  MESSAGE_COUNT: "1000"
+  MESSAGE_COUNT: "100"
   TOPIC_NAME: "topic-9jan3"
   PROJECT_NAME: "project-dec5"
   MESSAGE_COUNT_PER_GROUP: "100"
-  MIN_MESSAGE_SIZE_KB: "2"
-  MAX_MESSAGE_SIZE_KB: "8"
+  MIN_MESSAGE_SIZE_KB: "100"
+  MAX_MESSAGE_SIZE_KB: "200"
   RANDOM_PAYLOAD_POOL_SIZE: "1024"
   RANDOM_PAYLOAD_MAX_USAGE: "10"
   PRODUCE_ENDPOINT: "http://host.docker.internal:8080"

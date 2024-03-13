@@ -1,10 +1,10 @@
-from locust import TaskSet, HttpUser
+from locust import TaskSet, HttpUser, events, between
 
 import random
 import string
 import os
 
-from util import handle_response, getPublishHeaders, getId
+from util import handle_response, getPublishHeaders, getId, stop
 
 class PayloadUsage:
     payload = ""
@@ -52,22 +52,29 @@ def publish_to_topic(task, topic_name, grouped=True, project_name="project-dec5"
     handle_response(task, response, topic_name)
 
 def publish(task):
+    task.requestsCount = task.requestsCount + 1
+    print("task.requestsCount : " + str(task.requestsCount))
+    if task.requestsCount == max_task_requests and task.user.environment.runner.state == "running":
+        task.user.environment.runner.quit()
+        # stop(task)
     topic_name = os.environ.get("TOPIC_NAME")
     project_name = os.environ.get("PROJECT_NAME")
     publish_to_topic(task, topic_name, project_name)
 
 
 class PublishMessageTaskSet(TaskSet):
-    min_wait = 0
-    max_wait = 0
+    requestsCount = 0
+    # max_requests = int(os.environ.get("MESSAGE_COUNT"))
     tasks = {
         publish: 1
     }
 
-
 class PublishMessageUser(HttpUser):
+    global max_task_requests
+    max_task_requests = int(os.environ.get("MESSAGE_COUNT"))
     host = ""
     metadataMap = {}
+    wait_time = between(1, 2)
     global RANDOM_PAYLOAD_POOL_SIZE
     RANDOM_PAYLOAD_POOL_SIZE = int(os.environ.get("RANDOM_PAYLOAD_POOL_SIZE", "1024"))
     random_payloads = list(map(lambda i: new_payload(i + 1), range(0, RANDOM_PAYLOAD_POOL_SIZE)))
@@ -97,3 +104,7 @@ class PublishMessageUser(HttpUser):
             return new_group_metadata.groupId
         else:
             return getId()
+
+def stop_locust():
+    events.quitting.fire()
+    # PublishMessageUser().stop(environment)
