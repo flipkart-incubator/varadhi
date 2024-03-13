@@ -5,7 +5,6 @@ import com.flipkart.varadhi.config.ServerConfig;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.metrices.CustomMetricsFactory;
 import com.flipkart.varadhi.utils.HostUtils;
 import io.opentelemetry.api.trace.Tracer;
 import io.vertx.config.ConfigRetriever;
@@ -14,7 +13,9 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.metrics.MetricsOptions;
+import io.vertx.micrometer.MetricsDomain;
+import io.vertx.micrometer.MetricsNaming;
+import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,16 +45,24 @@ public class Server {
             throws ExecutionException, InterruptedException {
         log.debug("Creating Vertex");
 
+        // Disabling http server metrics by default, as we are tracking spans and metrics ourselves
+        // TODO: configure metrics categories to include as config
         VertxOptions vertxOptions = configuration.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
-                .setMetricsOptions(new MetricsOptions()
-                        .setFactory(new CustomMetricsFactory(services.getMetricsRegistry()))
+                .setMetricsOptions(new MicrometerMetricsOptions()
+                        .setMicrometerRegistry(services.getMetricsRegistry())
+                        .setMetricsNaming(MetricsNaming.v4Names())
+                        .setRegistryName("default")
+                        .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
+                        .setJvmMetricsEnabled(true)
                         .setEnabled(true));
+
         ZookeeperClusterManager clusterManager = new ZookeeperClusterManager(
                 configuration.getZookeeperOptions(),
                 configuration.getNodeId(),
                 configuration.getNodeResourcesOverride()
         );
+
         Vertx vertx = Vertx.builder()
                 .with(vertxOptions)
                 .withClusterManager(clusterManager)
@@ -67,7 +76,10 @@ public class Server {
             String hostName, ServerConfig configuration, CoreServices services, Vertx vertx
     ) {
         log.debug("Verticle deployment started.");
+
+        // TODO: what is the correct scope name for tracer?
         Tracer tracer = services.getTracer("varadhi");
+
         VerticleDeployer verticleDeployer;
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             verticleDeployer = new LeanDeploymentVerticleDeployer(

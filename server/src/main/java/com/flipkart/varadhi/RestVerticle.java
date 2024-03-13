@@ -1,6 +1,5 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.metrices.MetricConstants;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -73,13 +72,6 @@ public class RestVerticle extends AbstractVerticle {
             }
             route.failureHandler(failureHandler);
         }
-    }
-
-    private Handler<RoutingContext> getHandler(RouteDefinition routeDefinition) {
-        return ctx -> {
-            ctx.request().headers().add(MetricConstants.METRIC_NAME_FOR_API, routeDefinition.getMetricName());
-            routeDefinition.endReqHandler().handle(ctx);
-        };
     }
 
     public static Handler<RoutingContext> wrapBlockingExecution(Vertx vrtx, Handler<RoutingContext> apiEndHandler) {

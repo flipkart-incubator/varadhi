@@ -53,7 +53,7 @@ public class VerticleTest {
                 RouteDefinition.get("test", "/")
                         .unAuthenticated()
 //                        .apiContextOff()
-                        .requestTraceAndLogOff()
+                        .logsDisabled().tracingDisabled()
                         .preHandler(handler1)
                         .preHandler(handler2)
                         .build(this::getHierarchy, handler3);

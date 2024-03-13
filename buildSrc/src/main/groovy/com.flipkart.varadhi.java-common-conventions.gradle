@@ -19,7 +19,8 @@ ext {
     slf4j_version = "2.0.7"
     vertx_version = "4.5.2"
 
-    otl_version = "1.25.0"
+    otl_version = "1.36.0"
+    otl_semconv_version = "1.30.1-alpha"
     micrometer_version = "1.10.6"
     ws_rs_version = "2.1.1"
     jersey_version = "2.25.1"
@@ -79,7 +80,8 @@ dependencies {
         implementation("io.opentelemetry:opentelemetry-sdk:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-semconv:$otl_version-alpha")
+        implementation("io.opentelemetry:opentelemetry-exporter-prometheus:$otl_version-alpha")
+        implementation("io.opentelemetry:opentelemetry-semconv:$otl_semconv_version")
 
         implementation("io.micrometer:micrometer-core:$micrometer_version")
         implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
