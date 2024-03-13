@@ -10,6 +10,7 @@ build
 *.iml
 *.iws
 .fleet/*
+*/out/
 
 # Eclipse
 .classpath

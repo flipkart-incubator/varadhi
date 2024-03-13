@@ -35,11 +35,14 @@ public class RouteDefinition {
     private final Optional<PermissionAuthorization> requiredAuthorization;
     private final Consumer<RoutingContext> bodyParser;
     private final HierarchyFunction hierarchyFunction;
+    private final TelemetryType telemetryType;
+
     RouteDefinition(String name, HttpMethod method, String path, Set<RouteBehaviour> behaviours,
                     LinkedHashSet<Handler<RoutingContext>> preHandlers,
                     Handler<RoutingContext> endReqHandler,
                     boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
-                    HierarchyFunction function, Optional<PermissionAuthorization> requiredAuthorization) {
+                    HierarchyFunction function, Optional<PermissionAuthorization> requiredAuthorization,
+                    TelemetryType telemetryType) {
         this.name = name;
         this.method = method;
         this.path = path;
@@ -50,6 +53,7 @@ public class RouteDefinition {
         this.bodyParser = bodyParser;
         this.hierarchyFunction = function;
         this.requiredAuthorization = requiredAuthorization;
+        this.telemetryType = telemetryType;
     }
     public static Builder get(String name, String path) {
         return new Builder(name, HttpMethod.GET, path);
@@ -75,7 +79,9 @@ public class RouteDefinition {
         private boolean unAuthenticated;
         private boolean hasBody;
         private boolean nonBlocking;
-        private boolean requestTraceAndLogOff;
+        private boolean metricsEnabled;
+        private boolean logsDisabled;
+        private boolean tracingDisabled;
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
         private Consumer<RoutingContext> bodyParser;
 
@@ -102,8 +108,18 @@ public class RouteDefinition {
             return this;
         }
 
-        public Builder requestTraceAndLogOff() {
-            this.requestTraceAndLogOff = true;
+        public Builder logsDisabled() {
+            this.logsDisabled = true;
+            return this;
+        }
+
+        public Builder tracingDisabled() {
+            this.tracingDisabled = true;
+            return this;
+        }
+
+        public Builder metricsEnabled() {
+            this.metricsEnabled = true;
             return this;
         }
 
@@ -131,8 +147,8 @@ public class RouteDefinition {
                 }
             }
             behaviours.add(RouteBehaviour.addHierarchy);
-            if (!requestTraceAndLogOff) {
-                behaviours.add(RouteBehaviour.requestTraceAndLog);
+            if (metricsEnabled || !logsDisabled || !tracingDisabled) {
+                behaviours.add(RouteBehaviour.telemetry);
             }
             if (null != requiredAuthorization) {
                 behaviours.add(RouteBehaviour.authorized);
@@ -148,9 +164,9 @@ public class RouteDefinition {
                     !nonBlocking,
                     bodyParser,
                     function,
-                    Optional.ofNullable(requiredAuthorization)
+                    Optional.ofNullable(requiredAuthorization),
+                    new TelemetryType(metricsEnabled, !logsDisabled, !tracingDisabled)
             );
         }
     }
-
 }

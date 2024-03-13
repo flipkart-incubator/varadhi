@@ -33,4 +33,4 @@ USER varadhi
 WORKDIR /usr/share/varadhi
 
 # Start Varadhi server
-CMD java -cp ./*:dependencies/* com.flipkart.varadhi.Server /etc/varadhi/configuration.yml
+CMD java -cp ./*:dependencies/* -Dcom.sun.management.jmxremote.port=9990 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false com.flipkart.varadhi.Server /etc/varadhi/configuration.yml
