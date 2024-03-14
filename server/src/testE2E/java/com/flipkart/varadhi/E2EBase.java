@@ -21,7 +21,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.AUTHN_TEST_HEADER;
+import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 
 public class E2EBase {
@@ -265,7 +265,7 @@ public class E2EBase {
         return getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(AUTHN_TEST_HEADER, SUPER_USER)
+                .header(USER_ID_HEADER, SUPER_USER)
                 .post(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
     }
 
@@ -273,7 +273,7 @@ public class E2EBase {
         return getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(AUTHN_TEST_HEADER, SUPER_USER)
+                .header(USER_ID_HEADER, SUPER_USER)
                 .get();
     }
 
@@ -281,7 +281,7 @@ public class E2EBase {
         return getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(AUTHN_TEST_HEADER, SUPER_USER)
+                .header(USER_ID_HEADER, SUPER_USER)
                 .put(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
     }
 
@@ -289,7 +289,7 @@ public class E2EBase {
         return getClient()
                 .target(targetUrl)
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(AUTHN_TEST_HEADER, SUPER_USER)
+                .header(USER_ID_HEADER, SUPER_USER)
                 .delete();
     }
 

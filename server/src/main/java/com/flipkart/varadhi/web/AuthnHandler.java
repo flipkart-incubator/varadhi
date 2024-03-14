@@ -28,7 +28,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import static com.flipkart.varadhi.Constants.AUTHN_TEST_HEADER;
+import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
@@ -44,7 +44,7 @@ public class AuthnHandler implements RouteConfigurator {
                                 vertx,
                                 configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
                         );
-                        case test -> createTestHandler();
+                        case user_header -> createUserHeaderHandler();
                     }
             );
         } else {
@@ -85,9 +85,9 @@ public class AuthnHandler implements RouteConfigurator {
         }
     }
 
-    AuthenticationHandler createTestHandler() {
+    AuthenticationHandler createUserHeaderHandler() {
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {
-            String userName = ctx.request().getHeader(AUTHN_TEST_HEADER);
+            String userName = ctx.request().getHeader(USER_ID_HEADER);
             if (StringUtils.isBlank(userName)) {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "no user details present"));
             }
