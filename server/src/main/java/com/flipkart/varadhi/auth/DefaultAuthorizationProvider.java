@@ -215,7 +215,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                                 "/projects/%s/subscriptions/%s".formatted(segments[2], segments[3])
                         )
                 ));
-                // TODO: This fails when action is SET/GET IAM policy on topic or sub. Here, we rely on action since we don't know the leaf resource type. But it breaks in case of IAM actions.
                 default -> throw new IllegalArgumentException(
                         "Invalid resource type under project : " + action.getResourceType());
             }
