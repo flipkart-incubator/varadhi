@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;
@@ -61,13 +62,37 @@ public class IamPolicyHandlers implements RouteProvider {
         };
     }
 
+    private static ResourceAction getActionBasedOnResource(ResourceType type) {
+        return switch (type) {
+            case TOPIC -> TOPIC_IAM_POLICY_GET;
+            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_GET;
+            default -> IAM_POLICY_GET;
+        };
+    }
+
+    private static ResourceAction setActionBasedOnResource(ResourceType type) {
+        return switch (type) {
+            case TOPIC -> TOPIC_IAM_POLICY_SET;
+            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_SET;
+            default -> IAM_POLICY_SET;
+        };
+    }
+
+    private static ResourceAction deleteActionBasedOnResource(ResourceType type) {
+        return switch (type) {
+            case TOPIC -> TOPIC_IAM_POLICY_DELETE;
+            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_DELETE;
+            default -> IAM_POLICY_DELETE;
+        };
+    }
+
     private List<RouteDefinition> getHandlersFor(String path, ResourceType resourceType) {
         return List.of(
-                RouteDefinition.get("GetIAMPolicy", path).authorize(IAM_POLICY_GET)
+                RouteDefinition.get("GetIAMPolicy", path).authorize(getActionBasedOnResource(resourceType))
                         .build(this::getHierarchy, this.getIamPolicyHandler(resourceType)),
-                RouteDefinition.put("SetIAMPolicy", path).hasBody().authorize(IAM_POLICY_SET)
+                RouteDefinition.put("SetIAMPolicy", path).hasBody().authorize(setActionBasedOnResource(resourceType))
                         .build(this::getHierarchy, this.setIamPolicyHandler(resourceType)),
-                RouteDefinition.delete("DeleteIAMPolicy", path).authorize(IAM_POLICY_DELETE)
+                RouteDefinition.delete("DeleteIAMPolicy", path).authorize(deleteActionBasedOnResource(resourceType))
                         .build(this::getHierarchy, this.deleteIamPolicyHandler(resourceType))
         );
     }

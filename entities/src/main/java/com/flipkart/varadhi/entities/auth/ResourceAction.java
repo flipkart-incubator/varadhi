@@ -31,6 +31,9 @@ public enum ResourceAction {
     TOPIC_LIST(ResourceType.TOPIC, "list"),
     TOPIC_CONSUME(ResourceType.TOPIC, "consume"),
     TOPIC_PRODUCE(ResourceType.TOPIC, "produce"),
+    TOPIC_IAM_POLICY_SET(ResourceType.TOPIC, "set_iam_policy"),
+    TOPIC_IAM_POLICY_GET(ResourceType.TOPIC, "get_iam_policy"),
+    TOPIC_IAM_POLICY_DELETE(ResourceType.TOPIC, "delete_iam_policy"),
 
     SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, "create"),
     SUBSCRIPTION_GET(ResourceType.SUBSCRIPTION, "get"),
@@ -38,6 +41,9 @@ public enum ResourceAction {
     SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, "delete"),
     SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update"),
     SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek"),
+    SUBSCRIPTION_IAM_POLICY_SET(ResourceType.SUBSCRIPTION, "set_iam_policy"),
+    SUBSCRIPTION_IAM_POLICY_GET(ResourceType.SUBSCRIPTION, "get_iam_policy"),
+    SUBSCRIPTION_IAM_POLICY_DELETE(ResourceType.SUBSCRIPTION, "delete_iam_policy"),
 
     IAM_POLICY_GET(ResourceType.IAM_POLICY, "get"),
     IAM_POLICY_SET(ResourceType.IAM_POLICY, "set"),
