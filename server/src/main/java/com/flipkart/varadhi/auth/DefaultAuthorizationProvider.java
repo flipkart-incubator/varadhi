@@ -4,6 +4,7 @@ import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -143,7 +144,8 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 return Set.of();
             }
             return node.getRoleBindings().getOrDefault(subject, Set.of());
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException e) {
+            // IAM Policy is not created for the resource. So, no roles are assigned for the given context.
             return Set.of();
         }
     }
