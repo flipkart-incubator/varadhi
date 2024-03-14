@@ -4,7 +4,7 @@ import random
 import string
 import os
 
-from util import handle_response, getPublishHeaders, getId, stop
+from util import handle_response, getPublishHeaders, getId
 
 class PayloadUsage:
     payload = ""
@@ -48,7 +48,7 @@ def publish_to_topic(task, topic_name, grouped=True, project_name="project-dec5"
     response = task.client.post(PRODUCE_ENDPOINT + url, headers=headers, data=data,
                                 timeout=(1, 60), verify=False, catch_response=True,
                                 name=topic_name)
-    # Passing the catched response to handle_response utility method.
+    # Passing the cached response to handle_response utility method.
     handle_response(task, response, topic_name)
 
 def publish(task):
@@ -56,7 +56,6 @@ def publish(task):
     print("task.requestsCount : " + str(task.requestsCount))
     if task.requestsCount == max_task_requests and task.user.environment.runner.state == "running":
         task.user.environment.runner.quit()
-        # stop(task)
     topic_name = os.environ.get("TOPIC_NAME")
     project_name = os.environ.get("PROJECT_NAME")
     publish_to_topic(task, topic_name, project_name)
@@ -64,7 +63,6 @@ def publish(task):
 
 class PublishMessageTaskSet(TaskSet):
     requestsCount = 0
-    # max_requests = int(os.environ.get("MESSAGE_COUNT"))
     tasks = {
         publish: 1
     }
@@ -104,7 +102,3 @@ class PublishMessageUser(HttpUser):
             return new_group_metadata.groupId
         else:
             return getId()
-
-def stop_locust():
-    events.quitting.fire()
-    # PublishMessageUser().stop(environment)
