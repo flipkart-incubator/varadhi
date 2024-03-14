@@ -11,19 +11,11 @@ public interface Consumer<O extends Offset> extends AutoCloseable {
 
     /**
      * Receive a batch of messages from the subscribed topics.
-     *
-     * @return
      */
     CompletableFuture<PolledMessages<O>> receiveAsync();
 
     /**
      * Commit upto the offset, signifying that all messages upto (& including) the offset have been processed.
-     *
-     * @param topic
-     * @param partition
-     * @param offset
-     *
-     * @return
      */
-    CompletableFuture<Void> commitCumulativeAsync(String topic, int partition, O offset);
+    CompletableFuture<Void> commitCumulativeAsync(PolledMessage<O> message);
 }

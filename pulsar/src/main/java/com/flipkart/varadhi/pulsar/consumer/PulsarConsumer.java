@@ -3,6 +3,7 @@ package com.flipkart.varadhi.pulsar.consumer;
 import com.flipkart.varadhi.pulsar.entities.PulsarMessages;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.services.Consumer;
+import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.RequiredArgsConstructor;
 
@@ -19,8 +20,8 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
     }
 
     @Override
-    public CompletableFuture<Void> commitCumulativeAsync(String topic, int partition, PulsarOffset offset) {
-        return pulsarConsumer.acknowledgeCumulativeAsync(offset.getMessageId());
+    public CompletableFuture<Void> commitCumulativeAsync(PolledMessage<PulsarOffset> message) {
+        return pulsarConsumer.acknowledgeCumulativeAsync(message.getOffset().getMessageId());
     }
 
     @Override

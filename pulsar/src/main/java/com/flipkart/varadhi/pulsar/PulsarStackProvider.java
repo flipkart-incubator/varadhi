@@ -16,6 +16,11 @@ public class PulsarStackProvider implements MessagingStackProvider<PulsarStorage
     private PulsarProducerFactory pulsarProducerFactory;
     private volatile boolean initialised = false;
 
+    @Override
+    public String getName() {
+        return "pulsar";
+    }
+
     public synchronized void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper) {
         if (initialised) {
             return;

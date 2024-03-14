@@ -24,7 +24,7 @@ public class PulsarProducerFactory implements ProducerFactory<PulsarStorageTopic
     }
 
     @Override
-    public Producer getProducer(PulsarStorageTopic storageTopic) {
+    public Producer newProducer(PulsarStorageTopic storageTopic) {
         try {
             return new PulsarProducer(pulsarClient, storageTopic, producerOptions, hostName);
         } catch (PulsarClientException e) {
