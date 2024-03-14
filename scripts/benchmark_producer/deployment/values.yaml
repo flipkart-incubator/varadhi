@@ -7,7 +7,7 @@ container:
   imagePullPolicy: IfNotPresent
 
 ports:
-  containerPort: 8089  # Or the port your application listens on
+  containerPort: 8089
 
 configMapRefName: produce-config
 
