@@ -66,6 +66,7 @@ public class ProduceHandlers implements RouteProvider {
                         RouteDefinition.post("Produce", "/topics/:topic/produce")
                                 .hasBody()
                                 .nonBlocking()
+                                .metricsEnabled()
                                 .preHandler(headerValidationHandler)
                                 .authorize(TOPIC_PRODUCE)
                                 .build(this::getHierarchy, this::produce)

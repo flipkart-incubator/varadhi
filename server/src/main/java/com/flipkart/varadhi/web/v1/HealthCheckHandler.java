@@ -43,7 +43,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
         return List.of(
                 RouteDefinition.get("HealthCheck", "/v1/health-check")
                         .unAuthenticated()
-                        .requestTraceAndLogOff()
+                        .logsDisabled().tracingDisabled()
                         .build(this::getHierarchy, this)
 
         );

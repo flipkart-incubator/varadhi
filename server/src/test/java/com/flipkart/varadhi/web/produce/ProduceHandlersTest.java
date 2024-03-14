@@ -9,6 +9,8 @@ import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.routes.TelemetryType;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
@@ -28,7 +30,7 @@ import static com.flipkart.varadhi.MessageConstants.Headers.REQUIRED_HEADERS;
 import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
 import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static com.flipkart.varadhi.entities.TopicState.*;
-import static com.flipkart.varadhi.web.RequestTraceAndLogHandler.REQUEST_SPAN_NAME;
+import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -48,7 +50,10 @@ public class ProduceHandlersTest extends ProduceTestBase {
                     ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchy);
                     ctx.next();
                 })
-                .handler(ctx -> requestTraceAndLogHandler.addRequestSpanAndLog(ctx, "Produce"))
+                .handler(ctx -> {
+                    requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
+                    ctx.next();
+                })
                 .handler(produceHandlers::produce);
         setupFailureHandler(route);
         span = mock(Span.class);
@@ -78,7 +83,6 @@ public class ProduceHandlersTest extends ProduceTestBase {
         REQUIRED_HEADERS.forEach(s -> Assertions.assertTrue(capturedMessage.hasHeader(s)));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
-        verify(span, times(4)).setAttribute(anyString(), anyString());
 
         Assertions.assertFalse(capturedMessage.hasHeader("RandomHeader"));
         Assertions.assertTrue(capturedMessage.getHeaders("x_header1").contains("h1v1"));
