@@ -5,7 +5,6 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import java.util.List;
 
 public interface IamPolicyMetaStore {
-    List<IamPolicyRecord> getIamPolicyRecords();
 
     IamPolicyRecord getIamPolicyRecord(String authResourceId);
 

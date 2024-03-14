@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.utils.IamPolicyHelper;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -143,11 +142,6 @@ public class IamPolicyHandlers implements RouteProvider {
             iamPolicyService.deleteIamPolicy(resourceType, resourceId);
             routingContext.endApi();
         };
-    }
-
-    public void getAllIamPolicy(RoutingContext routingContext) {
-        List<IamPolicyResponse> response = iamPolicyService.getAll().stream().map(IamPolicyHelper::toResponse).toList();
-        routingContext.endApiWithResponse(response);
     }
 
     @Override

@@ -246,12 +246,6 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     @Override
-    public List<IamPolicyRecord> getIamPolicyRecords() {
-        ZNode znode = ZNode.OfEntityType(IAM_POLICY);
-        return zkMetaStore.listChildren(znode).stream().map(this::getIamPolicyRecord).toList();
-    }
-
-    @Override
     public IamPolicyRecord getIamPolicyRecord(String authResourceId) {
         ZNode znode = ZNode.OfIamPolicy(authResourceId);
         return zkMetaStore.getZNodeDataAsPojo(znode, IamPolicyRecord.class);

@@ -27,6 +27,7 @@ roleDefinitions:
       - TOPIC_UPDATE
       - TOPIC_DELETE
       - TOPIC_GET
+      - TOPIC_LIST
       - TOPIC_CONSUME
       - TOPIC_PRODUCE
       - SUBSCRIPTION_CREATE

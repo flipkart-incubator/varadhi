@@ -33,7 +33,7 @@ public class AuthorizationHandlerBuilder {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
     }
 
-    public AuthorizationHandler build(ResourceAction authorizationOnResource) {
+    public Handler<RoutingContext> build(ResourceAction authorizationOnResource) {
         return new AuthorizationHandler(authorizationOnResource);
     }
 

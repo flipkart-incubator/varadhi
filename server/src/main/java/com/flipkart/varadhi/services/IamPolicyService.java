@@ -23,10 +23,6 @@ public class IamPolicyService {
         this.iamPolicyMetaStore = iamPolicyMetaStore;
     }
 
-    public List<IamPolicyRecord> getAll() {
-        return iamPolicyMetaStore.getIamPolicyRecords();
-    }
-
     private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
             throw new IllegalArgumentException(

@@ -15,22 +15,18 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 public class IamPolicyHandlersTest extends WebTestBase {
-    public static final String AUTHZ_DEBUG_BASE = "/authz/debug";
     public static final String AUTHZ_ORG_POLICY = "/orgs/:org/policy";
     public static final String AUTHZ_TEAM_POLICY = "/orgs/:org/teams/:team/policy";
     public static final String AUTHZ_PROJECT_POLICY = "/projects/:project/policy";
@@ -45,10 +41,6 @@ public class IamPolicyHandlersTest extends WebTestBase {
         iamPolicyService = mock(IamPolicyService.class);
         projectService = mock(ProjectService.class);
         iamPolicyHandlers = new IamPolicyHandlers(projectService, iamPolicyService);
-
-        Route routeGetAllNodes =
-                router.get(AUTHZ_DEBUG_BASE).handler(wrapBlocking(iamPolicyHandlers::getAllIamPolicy));
-        setupFailureHandler(routeGetAllNodes);
 
         Route routeGetIamPolicy = router.get(AUTHZ_ORG_POLICY)
                 .handler(wrapBlocking(iamPolicyHandlers.getIamPolicyHandler(ResourceType.ORG)));
@@ -82,34 +74,6 @@ public class IamPolicyHandlersTest extends WebTestBase {
 
     private String getTopicIamPolicyUrl(String projectId, String topicId) {
         return AUTHZ_TOPIC_POLICY.replace(":project", projectId).replace(":topic", topicId);
-    }
-
-    @Test
-    void testGetAllIamPolicyRecords() throws Exception {
-        List<IamPolicyRecord> recordsList = List.of(
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode1"), Map.of(), 0),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode2"), Map.of(), 0)
-        );
-
-        List<IamPolicyResponse> expected = List.of(
-                new IamPolicyResponse(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode1"), Map.of(), 0),
-                new IamPolicyResponse(
-                        getAuthResourceFQN(ResourceType.ORG, "testNode2"), Map.of(), 0)
-        );
-
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, AUTHZ_DEBUG_BASE);
-        doReturn(recordsList).when(iamPolicyService).getAll();
-
-        HttpResponse<Buffer> responseBuffer = sendRequest(request, null);
-        List<IamPolicyRecord> response =
-                jsonDeserialize(responseBuffer.bodyAsString(), List.class, IamPolicyResponse.class);
-
-        assertEquals(expected.size(), response.size());
-        assertArrayEquals(expected.toArray(), response.toArray());
-        verify(iamPolicyService, times(1)).getAll();
     }
 
     @Test

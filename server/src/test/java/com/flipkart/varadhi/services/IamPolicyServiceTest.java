@@ -164,55 +164,6 @@ class IamPolicyServiceTest {
     }
 
     @Test
-    void testGetAllNodes() {
-        orgService.createOrg(org1);
-        orgService.createOrg(org2);
-        teamService.createTeam(org1team1);
-        teamService.createTeam(org2team1);
-        projectService.createProject(proj1);
-        projectService.createProject(proj2);
-
-        IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1"));
-        List<IamPolicyRecord> expected = List.of(
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.ORG, org1.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                ),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.ORG, org2.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                ),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.TEAM, org1.getName() + ":" + org1team1.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                ),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.TEAM, org2.getName() + ":" + org2team1.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                ),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.PROJECT, proj1.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                ),
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.PROJECT, proj2.getName()),
-                        Map.of(request.getSubject(), request.getRoles()), 0
-                )
-        );
-
-        iamPolicyService.setIamPolicy(ResourceType.ORG, org1.getName(), request);
-        iamPolicyService.setIamPolicy(ResourceType.ORG, org2.getName(), request);
-        iamPolicyService.setIamPolicy(ResourceType.TEAM, org1.getName() + ":" + org1team1.getName(), request);
-        iamPolicyService.setIamPolicy(ResourceType.TEAM, org2.getName() + ":" + org2team1.getName(), request);
-        iamPolicyService.setIamPolicy(ResourceType.PROJECT, proj1.getName(), request);
-        iamPolicyService.setIamPolicy(ResourceType.PROJECT, proj2.getName(), request);
-
-        List<IamPolicyRecord> nodes = iamPolicyService.getAll();
-        assertEquals(6, nodes.size());
-        assertTrue(expected.containsAll(nodes));
-    }
-
-    @Test
     void testUpdateNode() {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
