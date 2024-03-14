@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.utils.YamlLoader;
 import org.apache.commons.text.RandomStringGenerator;

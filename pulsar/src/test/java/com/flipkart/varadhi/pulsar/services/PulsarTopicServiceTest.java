@@ -2,7 +2,8 @@ package com.flipkart.varadhi.pulsar.services;
 
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
+import com.flipkart.varadhi.pulsar.ClientProvider;
+import com.flipkart.varadhi.pulsar.PulsarTopicService;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import com.flipkart.varadhi.spi.services.MessagingException;
