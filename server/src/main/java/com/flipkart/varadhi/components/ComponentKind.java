@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.components;
 
 public enum ComponentKind {
-    Server("Server"),
-    Controller("Controller"),
-    All("All");
+    Server("server"),
+    Controller("controller"),
+    All("all");
 
     private final String name;
     ComponentKind(String name) {

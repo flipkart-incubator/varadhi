@@ -11,6 +11,8 @@ import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -84,6 +86,7 @@ public class CoreServices {
         // TODO: make tracing togglable and configurable.
         float sampleRatio = 1.0f;
 
+        // exporting spans as logs, but can be replaced with otlp exporter.
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
                 .setResource(resource)
@@ -95,11 +98,13 @@ public class CoreServices {
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
 
-        // TODO: make meter registry config configurable.
+        // TODO: make meter registry config configurable. each registry comes with its own config.
         String meterExporter = "jmx";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-            default -> new OtlpMeterRegistry();
+            case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+            case "otlp" -> new OtlpMeterRegistry();
+            default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);
     }

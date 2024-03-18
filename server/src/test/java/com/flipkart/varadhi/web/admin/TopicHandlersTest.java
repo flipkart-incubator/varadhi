@@ -12,10 +12,12 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.web.RequestTraceAndLogHandler;
+import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
@@ -29,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.flipkart.varadhi.web.RequestTraceAndLogHandler.REQUEST_SPAN_NAME;
+import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.mockito.Mockito.*;
 
 public class TopicHandlersTest extends WebTestBase {
@@ -37,7 +39,7 @@ public class TopicHandlersTest extends WebTestBase {
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
     ProjectService projectService;
-    RequestTraceAndLogHandler requestTraceAndLogHandler;
+    RequestTelemetryConfigurator requestTelemetryConfigurator;
     SpanProvider spanProvider;
     Span span;
     private final String deployedRegion = "region1";
@@ -53,7 +55,7 @@ public class TopicHandlersTest extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
-        requestTraceAndLogHandler = new RequestTraceAndLogHandler(true, spanProvider);
+        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
 
         varadhiTopicService = mock(VaradhiTopicService.class);
         varadhiTopicFactory = mock(VaradhiTopicFactory.class);
@@ -66,7 +68,10 @@ public class TopicHandlersTest extends WebTestBase {
                     topicHandlers.setTopic(ctx);
                     ctx.next();
                 })
-                .handler(ctx -> requestTraceAndLogHandler.addRequestSpanAndLog(ctx, "CreateTopic"))
+                .handler(ctx -> {
+                    requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "CreateTopic", TelemetryType.ALL);
+                    ctx.next();
+                })
                 .handler(wrapBlocking(topicHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));

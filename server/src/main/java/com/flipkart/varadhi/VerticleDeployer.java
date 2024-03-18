@@ -97,9 +97,8 @@ public abstract class VerticleDeployer {
 
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
         AuthzHandler authzHandler = new AuthzHandler(configuration);
-        RequestTraceAndLogHandler
-                requestTraceAndLogHandler =
-                new RequestTraceAndLogHandler(restOptions.isTraceRequestEnabled(), new SpanProvider(tracer));
+        RequestTelemetryConfigurator requestTelemetryConfigurator =
+                new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(restOptions.getPayloadSizeMax());
         RequestBodyParser bodyParser = new RequestBodyParser();
@@ -109,7 +108,7 @@ public abstract class VerticleDeployer {
         this.behaviorConfigurators.put(RouteBehaviour.parseBody, bodyParser);
         this.behaviorConfigurators.put(RouteBehaviour.addHierarchy, hierarchyHandler);
         this.behaviorConfigurators.put(RouteBehaviour.authorized, authzHandler);
-        this.behaviorConfigurators.put(RouteBehaviour.requestTraceAndLog, requestTraceAndLogHandler);
+        this.behaviorConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
     }
 
     private static Supplier<IamPolicyHandlers> getIamPolicyHandlersSupplier(

@@ -4,18 +4,27 @@ import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
 
 import java.util.Collection;
+import java.util.Map;
 
 public interface ConsumerFactory<T extends StorageTopic, O extends Offset> {
 
-    // TODO: need to see if we need property bag param or other params
-
     /**
-     * @param topics to be consumed
-     * @param name   name of the consumer. synonymous to consumer group / subscription name
+     * Retrieves a consumer instance for consuming messages from given topics.
      *
-     * @return Consumer instance
+     * @param topics     The topics to be consumed.
+     * @param subscriptionName The name of the consumer, synonymous with consumer group or subscription name.
+     * @param consumerName The name of this consumer instance.
+     * @param properties The properties to be used for creating the consumer. The impl needs to use reasonable defaults,
+     *                   but provided properties allows for overriding those defaults.
      *
-     * @throws MessagingException
+     * @return A Consumer instance.
+     *
+     * @throws MessagingException if an error occurs while creating the consumer.
      */
-    Consumer<O> getConsumer(Collection<TopicPartitions<T>> topics, String name) throws MessagingException;
+    Consumer<O> newConsumer(
+            Collection<TopicPartitions<T>> topics,
+            String subscriptionName,
+            String consumerName,
+            Map<String, Object> properties
+    ) throws MessagingException;
 }

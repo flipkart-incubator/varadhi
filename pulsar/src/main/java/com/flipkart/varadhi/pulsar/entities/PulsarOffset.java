@@ -10,6 +10,10 @@ public class PulsarOffset implements Offset {
         this.messageId = messageId;
     }
 
+    public MessageId getMessageId() {
+        return this.messageId;
+    }
+
     @Override
     public int compareTo(Offset o) {
         if (null == o) {

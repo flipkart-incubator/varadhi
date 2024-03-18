@@ -7,11 +7,13 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.web.RequestTraceAndLogHandler;
+import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.jmx.JmxMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
@@ -33,7 +35,7 @@ public class ProduceTestBase extends WebTestBase {
     String messageId;
     byte[] payload;
 
-    RequestTraceAndLogHandler requestTraceAndLogHandler;
+    RequestTelemetryConfigurator requestTelemetryConfigurator;
     SpanProvider spanProvider;
 
     Route route;
@@ -46,7 +48,7 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        requestTraceAndLogHandler = new RequestTraceAndLogHandler(true, spanProvider);
+        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         HeaderValidationHandler headerHandler = new HeaderValidationHandler(options);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());

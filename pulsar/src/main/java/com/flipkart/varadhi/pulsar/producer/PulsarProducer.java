@@ -1,14 +1,16 @@
-package com.flipkart.varadhi.pulsar.entities;
+package com.flipkart.varadhi.pulsar.producer;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
+import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
+import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.api.ProducerAccessMode;
+import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 
@@ -23,20 +25,17 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class PulsarProducer implements Producer {
-
-    private final ClientProvider clientProvider;
     private final RandomStringGenerator stringGenerator;
     private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
-            ClientProvider clientProvider, PulsarStorageTopic storageTopic, ProducerOptions producerOptions,
+            PulsarClient pulsarClient, PulsarStorageTopic storageTopic, ProducerOptions producerOptions,
             String hostName
     )
             throws PulsarClientException {
-        this.clientProvider = clientProvider;
         this.stringGenerator =
                 new RandomStringGenerator.Builder().withinRange('0', 'z').filteredBy(DIGITS, LETTERS).build();
-        this.pulsarProducer = getProducer(storageTopic, producerOptions, hostName);
+        this.pulsarProducer = getProducer(pulsarClient, storageTopic, producerOptions, hostName);
     }
 
     @Override
@@ -65,11 +64,11 @@ public class PulsarProducer implements Producer {
 
 
     private org.apache.pulsar.client.api.Producer<byte[]> getProducer(
-            PulsarStorageTopic topic, ProducerOptions options, String hostname
+            PulsarClient pulsarClient, PulsarStorageTopic topic, ProducerOptions options, String hostname
     )
             throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, options, hostname);
-        return clientProvider.getPulsarClient().newProducer().loadConf(producerConfig).create();
+        return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 
     private Map<String, Object> getProducerConfig(PulsarStorageTopic topic, ProducerOptions options, String hostName) {

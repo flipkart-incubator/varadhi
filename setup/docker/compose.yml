@@ -23,6 +23,7 @@ services:
         ipv4_address: 10.5.5.2
     ports:
       - 8080:8080
+      - 9990:9990
     volumes:
       - ../../server/build/jacoco:/jacoco
     restart: "no"

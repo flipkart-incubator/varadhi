@@ -1,6 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.cluster.ClusterManager;
+import com.flipkart.varadhi.cluster.custom.ZookeeperClusterManager;
 import com.flipkart.varadhi.cluster.impl.ClusterManagerImpl;
 import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.components.ComponentKind;
@@ -16,12 +17,15 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.micrometer.MetricsDomain;
+import io.vertx.micrometer.MetricsNaming;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -35,7 +39,7 @@ public class VaradhiApplication {
             log.info("VaradhiApplication Starting on {}.", hostName);
             AppConfiguration configuration = readConfiguration(args);
             CoreServices services = new CoreServices(configuration);
-            Vertx vertx = createVertex(configuration, services);
+            Vertx vertx = createVertx(configuration, services);
             ClusterManager clusterManager = createClusterManager(vertx);
             Map<ComponentKind, Component> components = getComponents(configuration, services);
 
@@ -61,16 +65,34 @@ public class VaradhiApplication {
 //        Runtime.getRuntime().addShutdownHook();
     }
 
-    private static Vertx createVertex(AppConfiguration configuration, CoreServices services) {
+
+    private static Vertx createVertx(AppConfiguration configuration, CoreServices services)
+            throws ExecutionException, InterruptedException {
         log.debug("Creating Vertex");
+
+        // Disabling http server metrics by default, as we are tracking spans and metrics ourselves
+        // TODO: configure metrics categories to include as config
         VertxOptions vertxOptions = configuration.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
                 .setMetricsOptions(new MicrometerMetricsOptions()
                         .setMicrometerRegistry(services.getMeterRegistry())
+                        .setMetricsNaming(MetricsNaming.v4Names())
                         .setRegistryName("default")
+                        .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
                         .setJvmMetricsEnabled(true)
                         .setEnabled(true));
-        Vertx vertx = Vertx.vertx(vertxOptions);
+
+        ZookeeperClusterManager clusterManager = new ZookeeperClusterManager(
+                configuration.getZookeeperOptions(),
+                configuration.getNodeId(),
+                configuration.getNodeResourcesOverride()
+        );
+
+        Vertx vertx = Vertx.builder()
+                .with(vertxOptions)
+                .withClusterManager(clusterManager)
+                .buildClustered()
+                .toCompletionStage().toCompletableFuture().get();
         log.debug("Created Vertex");
         return vertx;
     }
