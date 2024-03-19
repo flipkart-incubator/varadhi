@@ -99,9 +99,7 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
+        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(ctx);
         SubscriptionResource subscription =
                 SubscriptionHelper.toResource(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
@@ -123,15 +121,12 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void delete(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
-        subscriptionService.deleteSubscription(internalSubscriptionName);
+        subscriptionService.deleteSubscription(SubscriptionHelper.buildSubscriptionName(ctx));
         ctx.endApi();
     }
 
     public void start(RoutingContext ctx) {
-        ctx.todo();
+        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
     }
 
     public void stop(RoutingContext ctx) {
@@ -140,7 +135,7 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);;
+        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);
 
         // ensure project name consistent
         if (!projectName.equals(subscription.getProject())) {

@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.services;
 
+
+import com.flipkart.varadhi.core.cluster.messages.SubscriptionOperation;
+import com.flipkart.varadhi.core.ophandlers.ControllerApi;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -11,11 +14,12 @@ import java.util.Objects;
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 public class SubscriptionService {
-
     private final MetaStore metaStore;
+    private final ControllerApi controllerApi;
 
-    public SubscriptionService(MetaStore metaStore) {
+    public SubscriptionService(MetaStore metaStore, ControllerApi controllerApi) {
         this.metaStore = metaStore;
+        this.controllerApi = controllerApi;
     }
 
     public List<String> getSubscriptionList(String projectName) {
@@ -31,6 +35,11 @@ public class SubscriptionService {
         subscription.setVersion(INITIAL_VERSION);
         metaStore.createSubscription(subscription);
         return subscription;
+    }
+
+    public void start(String subscriptionName, String requestedBy){
+        SubscriptionOperation op = SubscriptionOperation.startOp(subscriptionName, requestedBy);
+        controllerApi.StartSubscription((SubscriptionOperation.StartData) op.getData());
     }
 
     private void validateCreation(VaradhiSubscription subscription) {

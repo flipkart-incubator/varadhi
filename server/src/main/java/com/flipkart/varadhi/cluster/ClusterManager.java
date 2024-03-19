@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.cluster;
 
+import com.flipkart.varadhi.core.cluster.MessageChannel;
+
 import java.util.List;
 
 /**
@@ -13,7 +15,7 @@ public interface ClusterManager {
 
     void addMembershipListener(MembershipListener listener);
 
-    NodeConnection connect(String nodeId);
+    MessageChannel connect(String nodeId);
 
     // TODO: Any publish to all methods?
 

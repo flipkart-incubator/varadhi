@@ -1,0 +1,24 @@
+package com.flipkart.varadhi.core.cluster.messages;
+
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
+
+@Getter
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME,  property = "@messageType")
+@JsonSubTypes({@JsonSubTypes.Type(value = SubscriptionMessage.class, name = "subscription_message"),})
+public class ClusterMessage {
+    String id;
+    long timeStamp;
+
+    public ClusterMessage() {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.timeStamp = System.currentTimeMillis();
+    }
+
+    public ClusterMessage(String id, long timeStamp) {
+        this.id = id;
+        this.timeStamp = timeStamp;
+    }
+}
