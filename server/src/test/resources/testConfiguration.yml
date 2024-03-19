@@ -1,4 +1,4 @@
-components : ["server"]
+components : ["Server"]
 
 restOptions:
   deployedRegion: "test"

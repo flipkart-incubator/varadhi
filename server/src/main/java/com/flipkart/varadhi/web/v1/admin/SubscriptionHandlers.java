@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.proxies.ControllerMgrProxy;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -100,9 +99,7 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
+        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(ctx);
         SubscriptionResource subscription =
                 SubscriptionHelper.toResource(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
@@ -124,15 +121,12 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void delete(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
-        subscriptionService.deleteSubscription(internalSubscriptionName);
+        subscriptionService.deleteSubscription(SubscriptionHelper.buildSubscriptionName(ctx));
         ctx.endApi();
     }
 
     public void start(RoutingContext ctx) {
-        ctx.todo();
+        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
     }
 
     public void stop(RoutingContext ctx) {

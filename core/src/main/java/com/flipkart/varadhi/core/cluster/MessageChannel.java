@@ -17,27 +17,22 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface MessageChannel {
 
-    void publish(String path, ClusterMessage msg);
+    void publish(String apiPath, ClusterMessage msg);
 
-    CompletableFuture<Void> send(String path, ClusterMessage msg);
+    CompletableFuture<Void> send(String apiPath, ClusterMessage msg);
 
-    CompletableFuture<ResponseMessage> request(String path, ClusterMessage msg);
+    CompletableFuture<ResponseMessage> request(String apiPath, ClusterMessage msg);
 
-    //    void addMessageHandler(String path, MessageHandler messageHandler);
-    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, SendHandler<E> handler);
+    <E extends ClusterMessage> void register(String basePath, Class<E> messageClazz, SendHandler<E> handler);
 
-    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, RequestHandler<E> handler);
+    void removeMessageHandler(String apiPath);
 
-    <E extends ClusterMessage> void register(String address, Class<E> messageClazz, PublishHandler<E> handler);
-
-    void removeMessageHandler(String path);
-
-    public static enum Method {
+    enum Method {
         SEND("send"),
         PUBLISH("publish"),
         REQUEST("request");
 
-        private String name;
+        private final String name;
 
         Method(String name) {
             this.name = name;

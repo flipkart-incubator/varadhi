@@ -1,25 +1,20 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.core.cluster.messages.SubscriptionOperation;
-import com.flipkart.varadhi.core.ophandlers.ControllerOpHandler;
-import com.flipkart.varadhi.core.ophandlers.ServerOpHandler;
-import com.flipkart.varadhi.core.proxies.ServerOpMgrProxy;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import io.micrometer.core.instrument.MeterRegistry;
+import com.flipkart.varadhi.core.ophandlers.ControllerApi;
+import com.flipkart.varadhi.core.ophandlers.WebServerApi;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerMgr implements ControllerOpHandler {
-    private ServerOpHandler serverOpHandler;
+public class ControllerMgr implements ControllerApi {
+    private final WebServerApi webServerApiProxy;
 
-    public ControllerMgr(ServerOpHandler serverOpHandler) {
-        this.serverOpHandler = serverOpHandler;
+    public ControllerMgr(WebServerApi webServerApiProxy) {
+        this.webServerApiProxy = webServerApiProxy;
     }
     @Override
-    public CompletableFuture<Void> StartSubscription(SubscriptionOperation operation) {
+    public CompletableFuture<Void> StartSubscription(SubscriptionOperation.StartData operation) {
         operation.markInProgress();
-        serverOpHandler.update(operation);
-        return CompletableFuture.completedFuture(null);
+        return webServerApiProxy.update(operation);
     }
 }

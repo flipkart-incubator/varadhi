@@ -1,12 +1,17 @@
 package com.flipkart.varadhi.components;
 
 public enum ComponentKind {
-    Server("server"),
-    Controller("controller"),
-    All("all");
+    Server("Server"),
+    Controller("Controller"),
+    All("All");
 
     private final String name;
     ComponentKind(String name) {
         this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }

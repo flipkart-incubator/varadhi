@@ -64,9 +64,8 @@ public class MessageChannelImplTest {
         MessageChannelImpl c = new MessageChannelImpl(vertx.eventBus());
         c.register("testAddress", ExtendedTestClusterMessage.class, new SendHandler<>() {
             @Override
-            public CompletableFuture<Void> handle(ExtendedTestClusterMessage message) {
+            public void handle(ExtendedTestClusterMessage message) {
                 checkpoint.flag();
-                return CompletableFuture.completedFuture(null);
             }
         });
 

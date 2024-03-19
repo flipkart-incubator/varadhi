@@ -6,12 +6,15 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class SubscriptionMessage extends ClusterMessage {
-    private final String subscriptionId;
-    private final SubscriptionOperation operation;
+    private final SubscriptionOperation.OpData operation;
 
-    public SubscriptionMessage(SubscriptionOperation operation) {
+    public SubscriptionMessage(SubscriptionOperation.OpData operation) {
         super();
-        this.subscriptionId = operation.getSubscriptionId();
+        this.operation = operation;
+    }
+
+    public SubscriptionMessage(String id, long timestamp, SubscriptionOperation.OpData operation) {
+        super(id, timestamp);
         this.operation = operation;
     }
 }

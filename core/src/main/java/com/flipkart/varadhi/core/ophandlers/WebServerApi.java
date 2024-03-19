@@ -4,6 +4,6 @@ import com.flipkart.varadhi.core.cluster.messages.SubscriptionOperation;
 
 import java.util.concurrent.CompletableFuture;
 
-public interface ControllerOpHandler {
-    CompletableFuture<Void> StartSubscription(SubscriptionOperation operation);
+public interface WebServerApi {
+    CompletableFuture<Void> update(SubscriptionOperation.OpData operation);
 }

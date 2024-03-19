@@ -1,45 +1,63 @@
 package com.flipkart.varadhi.core.cluster.messages;
 
 
-import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.UUID;
 
 @Data
 public class SubscriptionOperation {
-    public static enum Kind {
-        CREATE, START, STOP, DELETE, UPDATE
+    public enum Kind {
+        START, STOP, UPDATE
     }
-    public static enum State {
+    public enum State {
         SCHEDULED, ERRORED, COMPLETED, IN_PROGRESS
     }
 
-    private String operationId;
     private Kind kind;
     private State state;
-    private String subscriptionId;
     private String requestedBy;
-    private String errorMessage;
     private long startTime;
     private long endTime;
+    private OpData data;
 
-    public void markInProgress() {
-        state = State.IN_PROGRESS;
-    }
-
-    public SubscriptionMessage toMessage() {
-        return new SubscriptionMessage(this);
-    }
-
-    public static SubscriptionOperation getSubscriptionOp(Kind opKind, String subscriptionId, String requestedBy) {
+    public static SubscriptionOperation startOp(String subscriptionId, String requestedBy) {
         SubscriptionOperation op = new SubscriptionOperation();
-        op.setOperationId(UUID.randomUUID().toString());
-        op.setKind(opKind);
-        op.setState(State.SCHEDULED);
-        op.setSubscriptionId(subscriptionId);
+        op.setKind(Kind.START);
         op.setRequestedBy(requestedBy);
         op.setStartTime(System.currentTimeMillis());
+        op.data = new StartData(subscriptionId, UUID.randomUUID().toString());
         return op;
+    }
+
+    @Data
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME,  property = "@opDataType")
+    @JsonSubTypes({@JsonSubTypes.Type(value = StartData.class, name = "startData"),})
+    public static class OpData {
+        private String subscriptionId;
+        private String operationId;
+        private State state;
+        private String errorMsg;
+
+        public void markFail(String reason) {
+            state = State.ERRORED;
+            errorMsg = reason;
+        }
+        public void markInProgress() {
+            state = State.IN_PROGRESS;
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class StartData extends OpData {
+        public StartData(String subscriptionId, String operationId) {
+            this.setOperationId(operationId);
+            this.setSubscriptionId(subscriptionId);
+            this.setState(State.SCHEDULED);
+        }
     }
 }

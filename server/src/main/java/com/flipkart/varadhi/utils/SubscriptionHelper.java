@@ -4,7 +4,10 @@ import com.flipkart.varadhi.entities.UnitSubscriptionShard;
 import com.flipkart.varadhi.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import io.vertx.ext.web.RoutingContext;
 
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 
@@ -54,6 +57,12 @@ public final class SubscriptionHelper {
 
     public static String buildSubscriptionName(String projectName, String subscriptionName) {
         return String.join(NAME_SEPARATOR, projectName, subscriptionName);
+    }
+
+    public static String buildSubscriptionName(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
+        return SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
     }
 
     public static String buildTopicName(String projectName, String topicName) {

@@ -1,7 +1,7 @@
-package com.flipkart.varadhi.components.server;
+package com.flipkart.varadhi.components.webserver;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.ServerOpManager;
+import com.flipkart.varadhi.WebServerOpManager;
 import com.flipkart.varadhi.VerticleDeployer;
 import com.flipkart.varadhi.cluster.ClusterManager;
 import com.flipkart.varadhi.components.Component;
@@ -16,23 +16,22 @@ import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class Server implements Component {
+public class WebServer implements Component {
     private final AppConfiguration configuration;
     private final CoreServices coreServices;
     private String verticleId;
-    private ServerOperationHandler handler;
+    private final WebServerApiHandler handler;
 
-    public Server(AppConfiguration configuration, CoreServices coreServices) {
+    public WebServer(AppConfiguration configuration, CoreServices coreServices) {
         this.configuration = configuration;
         this.coreServices = coreServices;
-        this.handler =
-                new ServerOperationHandler(new ServerOpManager(), coreServices.getMetaStoreProvider().getMetaStore());
+        this.handler = new WebServerApiHandler(new WebServerOpManager());
     }
 
     @Override
     public Future<Void> start(Vertx vertx, ClusterManager clusterManager) {
         MessageChannel messageChannel = clusterManager.connect(null);
-        setupMessageHandlers(messageChannel);
+        setupApiHandlers(messageChannel);
         return deployVerticle(vertx, messageChannel);
     }
 
@@ -97,8 +96,8 @@ public class Server implements Component {
         }
         return verticleDeployer;
     }
-    public void setupMessageHandlers(MessageChannel messageChannel) {
-        messageChannel.register("Server", SubscriptionMessage.class, handler::update);
+    public void setupApiHandlers(MessageChannel messageChannel) {
+        messageChannel.register("webserver", SubscriptionMessage.class, handler::update);
     }
 
 }

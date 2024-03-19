@@ -6,7 +6,7 @@ import com.flipkart.varadhi.cluster.impl.ClusterManagerImpl;
 import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.components.ComponentKind;
 import com.flipkart.varadhi.components.controller.Controller;
-import com.flipkart.varadhi.components.server.Server;
+import com.flipkart.varadhi.components.webserver.WebServer;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.HostUtils;
@@ -145,7 +145,7 @@ public class VaradhiApplication {
                                 configuration.getComponents().contains(kind)
                 ))
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                    case Server -> new Server(configuration, coreServices);
+                    case Server -> new WebServer(configuration, coreServices);
                     case Controller -> new Controller(configuration, coreServices);
                     default -> throw new IllegalArgumentException("Unknown Component Kind: " + kind);
                 }));

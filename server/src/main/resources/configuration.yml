@@ -1,5 +1,5 @@
 
-components : ["server", "controller", "all"]
+components : ["Server", "Controller", "All"]
 
 restOptions:
   deployedRegion: "default"
