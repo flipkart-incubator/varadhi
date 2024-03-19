@@ -46,7 +46,7 @@ metaStoreOptions:
   configFile: "src/main/resources/zkConfig.yml"
 
 httpServerOptions:
-  port: 8080
+  port: 8091
   alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
   decompressionSupported: false
   useAlpn: true
