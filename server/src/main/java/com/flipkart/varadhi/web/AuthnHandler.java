@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
-import com.flipkart.varadhi.config.ServerConfig;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -35,7 +35,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 public class AuthnHandler implements RouteConfigurator {
     private final AuthenticationHandlerWrapper authenticationHandler;
 
-    public AuthnHandler(Vertx vertx, ServerConfig configuration) throws InvalidConfigException {
+    public AuthnHandler(Vertx vertx, AppConfiguration configuration) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled()) {
             // we do the wrapping to force vertx to consider this as USER handler and prevent imposing its own priority.
             authenticationHandler = new AuthenticationHandlerWrapper(

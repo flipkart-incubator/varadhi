@@ -1,8 +1,8 @@
-package com.flipkart.varadhi.pulsar.services;
+package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
-import com.flipkart.varadhi.pulsar.clients.ClientProvider;
+import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.spi.services.StorageTopicService;

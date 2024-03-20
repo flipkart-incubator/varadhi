@@ -61,7 +61,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result =
                 service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);
@@ -75,7 +75,7 @@ public class ProducerServiceTests {
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         verify(producer, times(1)).produceAsync(msg2);
-        verify(producerFactory, times(1)).getProducer(any());
+        verify(producerFactory, times(1)).newProducer(any());
         verify(topicService, times(1)).get(vt.getName());
     }
 
@@ -85,7 +85,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new RuntimeException("Some random error.")).when(producer).produceAsync(msg1);
         // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
         // This is not expected in general.
@@ -102,7 +102,7 @@ public class ProducerServiceTests {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(topicService).get(vt.getName());
         Assertions.assertThrows(
                 ResourceNotFoundException.class,
@@ -116,7 +116,7 @@ public class ProducerServiceTests {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new RuntimeException("Unknown error.")).when(topicService).get(vt.getName());
         ProduceException e = Assertions.assertThrows(
                 ProduceException.class,
@@ -161,7 +161,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result =
                 service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);
@@ -178,7 +178,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).getProducer(any());
+        doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).newProducer(any());
         ProduceException pe = Assertions.assertThrows(
                 ProduceException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
@@ -193,7 +193,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).getProducer(any());
+        doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).newProducer(any());
         RuntimeException re = Assertions.assertThrows(
                 RuntimeException.class,
                 () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
@@ -209,7 +209,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
 
         CompletableFuture<ProduceResult> result =
                 service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
@@ -222,7 +222,7 @@ public class ProducerServiceTests {
         Assertions.assertEquals(
                 "Produce failure from messaging stack for Topic/Queue. null", rc.produceResult.getFailureReason()
         );
-        verify(producerFactory, times(1)).getProducer(any());
+        verify(producerFactory, times(1)).newProducer(any());
     }
 
 
@@ -233,7 +233,7 @@ public class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicService).get(vt.getName());
-        doReturn(producer).when(producerFactory).getProducer(any());
+        doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result =
                 service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
         ResultCapture rc = getResult(result);

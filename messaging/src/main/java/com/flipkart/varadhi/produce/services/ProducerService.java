@@ -35,7 +35,7 @@ public class ProducerService {
         this.internalTopicCache =
                 setupTopicCache(producerOptions.getTopicCacheBuilderSpec(), varadhiTopicService::get, meterRegistry);
         this.producerCache =
-                setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerFactory::getProducer,
+                setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerFactory::newProducer,
                         meterRegistry
                 );
         this.produceRegion = produceRegion;
