@@ -5,6 +5,7 @@ plugins {
 dependencies {
     api(project(':entities'))
     api(project(':spi'))
+    api(project(':common'))
 
     // async interface are using vertx.Future
     api("io.vertx:vertx-core")
