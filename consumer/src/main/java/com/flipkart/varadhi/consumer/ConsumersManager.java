@@ -3,8 +3,10 @@ package com.flipkart.varadhi.consumer;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.spi.services.TopicPartitions;
-import io.vertx.core.Future;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Management layer that will manage consumers for multiple subscriptions.
@@ -18,22 +20,22 @@ public interface ConsumersManager {
      *
      * @return
      */
-    Future<Void> startSubscription(
+    CompletableFuture<Void> startSubscription(
             Project project,
             String subscription,
             String shardName,
-            TopicPartitions<?> topic,
+            TopicPartitions<StorageTopic> topic,
             boolean grouped,
             Endpoint endpoint,
             ConsumptionPolicy consumptionPolicy,
             ConsumptionFailurePolicy failurePolicy
     );
 
-    Future<Void> stopSubscription(String subscription, String shardName);
+    CompletableFuture<Void> stopSubscription(String subscription, String shardName);
 
-    Future<Void> pauseSubscription(String subscription, String shardName);
+    void pauseSubscription(String subscription, String shardName);
 
-    Future<Void> resumeSubscription(String subscription, String shardName);
+    void resumeSubscription(String subscription, String shardName);
 
     ConsumerState getConsumerState(String subscription, String shardName);
 

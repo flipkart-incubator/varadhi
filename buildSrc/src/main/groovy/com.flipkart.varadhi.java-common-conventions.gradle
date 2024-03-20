@@ -28,6 +28,7 @@ ext {
     curator_version = "5.5.0"
     jackson_version = "2.15.1"
     jakarta_validation_version = "3.0.2"
+    jakarta_annotation_version = "2.1.1"
     jakarta_ws_version = "3.1.0"
     commons_lang_version = "3.11"
 
@@ -93,6 +94,7 @@ dependencies {
         implementation("com.google.guava:guava:$guava_version")
 
         implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
+        implementation("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
@@ -116,6 +118,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
     implementation("jakarta.validation:jakarta.validation-api")
+    implementation("jakarta.annotation:jakarta.annotation-api")
 
     // common test framework
     testCompileOnly("org.projectlombok:lombok")
