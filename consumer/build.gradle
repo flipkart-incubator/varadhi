@@ -5,7 +5,10 @@ plugins {
 dependencies {
     api(project(':entities'))
     api(project(':spi'))
+    api(project(':common'))
 
     // async interface are using vertx.Future
     api("io.vertx:vertx-core")
+    api("jakarta.annotation:jakarta.annotation-api")
+    implementation("org.jctools:jctools-core:4.0.3")
 }

@@ -8,6 +8,7 @@ import java.util.List;
 
 @Getter
 public class Message {
+
     private final byte[] payload;
     private final ArrayListMultimap<String, String> requestHeaders;
 
@@ -22,6 +23,10 @@ public class Message {
     // TODO:: This will affect json, verify it.
     public String getMessageId() {
         return getHeader(StandardHeaders.MESSAGE_ID);
+    }
+
+    public String getGroupId() {
+        return getHeader(StandardHeaders.GROUP_ID);
     }
 
     public boolean hasHeader(String key) {
