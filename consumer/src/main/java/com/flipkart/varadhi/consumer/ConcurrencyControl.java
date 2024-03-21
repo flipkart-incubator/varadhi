@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -27,7 +26,7 @@ public class ConcurrencyControl<T> {
 
     private final TaskQueue<T>[] queues;
 
-    private final AtomicBoolean wakeUpEnqueued = new AtomicBoolean(false);
+    private final AtomicInteger schedulePendingTaskCounter = new AtomicInteger(0);
 
     /**
      * @param maxConcurrency
@@ -46,17 +45,7 @@ public class ConcurrencyControl<T> {
     public Collection<CompletableFuture<T>> enqueue(
             InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks
     ) {
-        int freeConcurrency = maxConcurrency - concurrency.get();
-
-        // go through all the queued tasks in priority order and execute them
-        for (TaskQueue<T> queue : queues) {
-            while (freeConcurrency > 0 && !queue.tasks.isEmpty()) {
-                Holder<T> taskHolder = queue.tasks.poll();
-                taskHolder.execute();
-                freeConcurrency--;
-                concurrency.incrementAndGet();
-            }
-        }
+        int freeConcurrency = executePendingTasksInternal();
 
         List<CompletableFuture<T>> futures = new ArrayList<>();
         Iterator<Supplier<CompletableFuture<T>>> tasksIt = tasks.iterator();
@@ -64,7 +53,7 @@ public class ConcurrencyControl<T> {
         // these tasks, we can directly launch
         while (freeConcurrency > 0 && tasksIt.hasNext()) {
             Supplier<CompletableFuture<T>> task = tasksIt.next();
-            futures.add(task.get().whenComplete(this::onComplete));
+            futures.add(task.get().whenComplete(this::onTaskCompletion));
             freeConcurrency--;
             concurrency.incrementAndGet();
         }
@@ -75,12 +64,37 @@ public class ConcurrencyControl<T> {
 
             for (Supplier<CompletableFuture<T>> task : tasks) {
                 CompletableFuture<T> future = new CompletableFuture<>();
-                queue.tasks.add(new Holder<>(future, task, this::onComplete));
+                queue.tasks.add(new Holder<>(future, task, this::onTaskCompletion));
                 futures.add(future);
             }
         }
 
         return futures;
+    }
+
+    public void executePendingTasks() {
+        executePendingTasksInternal();
+    }
+
+    int executePendingTasksInternal() {
+        int freeConcurrency = maxConcurrency - concurrency.get();
+
+        assert freeConcurrency >= 0;
+
+        if(freeConcurrency == 0) {
+            return 0;
+        }
+
+        // go through all the queued tasks in priority order and execute them
+        for (TaskQueue<T> queue : queues) {
+            while (freeConcurrency > 0 && !queue.tasks.isEmpty()) {
+                Holder<T> taskHolder = queue.tasks.poll();
+                taskHolder.execute();
+                freeConcurrency--;
+                concurrency.incrementAndGet();
+            }
+        }
+        return freeConcurrency;
     }
 
     private TaskQueue<T> getQueue(InternalQueueType type) {
@@ -92,7 +106,7 @@ public class ConcurrencyControl<T> {
         throw new IllegalStateException("Queue not found for type: " + type);
     }
 
-    int getPendingCount() {
+    public int getPendingCount() {
         int count = 0;
         for (TaskQueue<T> queue : queues) {
             count += queue.tasks.size();
@@ -100,17 +114,34 @@ public class ConcurrencyControl<T> {
         return count;
     }
 
-    void onComplete(T result, Throwable ex) {
-        concurrency.decrementAndGet();
-        if (wakeUpEnqueued.compareAndSet(false, true)) {
-            context.getExecutor().execute(() -> {
-                enqueue(queues[0].type, Collections.emptyList());
-                wakeUpEnqueued.set(false);
-            });
+    /**
+     * Computation to be run when the enqueued task finishes its execution.
+     *
+     * 1. Free up the concurrency slot, so that this slot can be used by pending tasks.
+     * 2. If this was the "last" concurrency slot, then we should enqueue a task to schedule any pending tasks.
+     * Otherwise, pending tasks may sit idle forever.
+     * 3. If there is no task running at the moment to schedule any pending task, then we should schedule it regardless.
+     *
+     * @param result
+     * @param ex
+     */
+    private void onTaskCompletion(T result, Throwable ex) {
+        int newConcurrency = concurrency.decrementAndGet();
+
+        boolean scheduleRequired = false;
+        if (schedulePendingTaskCounter.compareAndSet(0, 1)) {
+            scheduleRequired = true;
+        } else if (newConcurrency == 0) {
+            schedulePendingTaskCounter.incrementAndGet();
+            scheduleRequired = true;
         }
 
-        // TODO: there is a corner case here. If this method finishes while not taking care of all pending tasks, and
-        // concurrency reduced to 0, then there wont be no-one to execute this wakeUp call.
+        if (scheduleRequired) {
+            context.getExecutor().execute(() -> {
+                executePendingTasks();
+                schedulePendingTaskCounter.decrementAndGet();
+            });
+        }
     }
 
     @RequiredArgsConstructor
