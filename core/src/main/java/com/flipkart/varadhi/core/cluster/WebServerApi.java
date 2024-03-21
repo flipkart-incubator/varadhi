@@ -1,9 +1,8 @@
-package com.flipkart.varadhi.core.ophandlers;
-
-import com.flipkart.varadhi.core.cluster.messages.SubscriptionOperation;
+package com.flipkart.varadhi.core.cluster;
 
 import java.util.concurrent.CompletableFuture;
 
 public interface WebServerApi {
+    String ROUTE_WEBSERVER = "webserver";
     CompletableFuture<Void> update(SubscriptionOperation.OpData operation);
 }

@@ -1,5 +1,6 @@
-package com.flipkart.varadhi.core.cluster.messages;
+package com.flipkart.varadhi.cluster.messages;
 
+import com.flipkart.varadhi.core.cluster.SubscriptionOperation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -13,8 +14,8 @@ public class SubscriptionMessage extends ClusterMessage {
         this.operation = operation;
     }
 
-    public SubscriptionMessage(String id, long timestamp, SubscriptionOperation.OpData operation) {
-        super(id, timestamp);
+    public SubscriptionMessage(String id, long timeStamp, SubscriptionOperation.OpData operation) {
+        super(id, timeStamp);
         this.operation = operation;
     }
 }

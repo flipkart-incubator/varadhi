@@ -49,6 +49,8 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.micrometer:micrometer-registry-jmx")
 
+    implementation("dev.failsafe:failsafe:3.3.2")
+
     //For ZK persistence, curator-framework.
     implementation("org.apache.curator:curator-framework")
     runtimeOnly(project(":pulsar"))

@@ -1,5 +1,9 @@
 
-components : ["Server", "Controller", "All"]
+member:
+  nodeId: "app-1"
+  roles : ["Server", "Controller", "All"]
+  cpuCount: 1
+  nicMBps: 100
 
 restOptions:
   deployedRegion: "default"
@@ -16,6 +20,7 @@ vertxOptions:
   eventLoopPoolSize: 1
   workerPoolSize: 1
   internalBlockingPoolSize: 1
+  blockedThreadCheckInterval: 1800000
 
 verticleDeploymentOptions:
   instances: 1
@@ -60,9 +65,3 @@ zookeeperOptions:
   connectUrl: "127.0.0.1:2181"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
-
-nodeResourcesOverride:
-  cpuCount: 1
-  nicMBps: 100
-
-nodeId: "test"

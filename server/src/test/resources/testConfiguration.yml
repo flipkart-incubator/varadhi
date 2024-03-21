@@ -1,4 +1,8 @@
-components : ["Server"]
+member:
+  nodeId: "app-1"
+  roles : ["Server"]
+  cpuCount: 1
+  nicMBps: 100
 
 restOptions:
   deployedRegion: "test"
@@ -59,9 +63,3 @@ zookeeperOptions:
   connectUrl: "127.0.0.1:2181"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
-
-nodeResourcesOverride:
-  cpuCount: 1
-  nicMBps: 100
-
-nodeId: "test"
