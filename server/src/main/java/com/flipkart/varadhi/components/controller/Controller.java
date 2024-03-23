@@ -6,6 +6,7 @@ import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.components.webserver.WebServerApiProxy;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.WebServerApi;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -23,7 +24,13 @@ public class Controller implements Component {
 
     @Override
     public Future<Void> start(Vertx vertx) {
-        setupApiHandlers(vertx);
+        MessageRouter messageRouter =  clusterManager.getRouter(vertx);
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        WebServerApi serverApiProxy = new WebServerApiProxy(messageExchange);
+        ControllerApiMgr controllerApiMgr = new ControllerApiMgr(serverApiProxy);
+        ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr, serverApiProxy);
+        setupApiHandlers(messageRouter, handler);
+        setupMembershipListener(controllerApiMgr);
         return Future.succeededFuture();
     }
 
@@ -31,26 +38,23 @@ public class Controller implements Component {
     public Future<Void> shutdown(Vertx vertx) {
         return Future.succeededFuture();
     }
-    private void setupApiHandlers(Vertx vertx) {
-        MessageRouter messageRouter =  clusterManager.getRouter(vertx);
-        MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        WebServerApi serverApiProxy = new WebServerApiProxy(messageExchange);
-        ControllerApiMgr controllerApiMgr = new ControllerApiMgr(serverApiProxy);
-        ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr, serverApiProxy);
-        //TODO::move controller to constants.
+    private void setupApiHandlers(MessageRouter messageRouter, ControllerApiHandler handler) {
         messageRouter.sendHandler(ROUTE_CONTROLLER, "start", handler::start);
         messageRouter.sendHandler(ROUTE_CONTROLLER,"stop", handler::stop);
     }
+
     private void setupMembershipListener(ControllerApiMgr controllerApiMgr) {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
             public void joined(MemberInfo memberInfo) {
-
+                log.debug("Member joined: {}", memberInfo);
+                controllerApiMgr.memberJoined(memberInfo);
             }
 
             @Override
-            public void left(String id) {
-
+            public void left(String memberId) {
+                log.debug("Member left: {}", memberId);
+                controllerApiMgr.memberLeft(memberId);
             }
         });
     }

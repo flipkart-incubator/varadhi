@@ -1,16 +1,17 @@
 package com.flipkart.varadhi;
 
 
-import com.flipkart.varadhi.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.components.Component;
-import com.flipkart.varadhi.components.ComponentKind;
+import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.components.controller.Controller;
 import com.flipkart.varadhi.components.webserver.WebServer;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.utils.HostUtils;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
@@ -18,6 +19,7 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBusOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.cluster.ClusterManager;
@@ -26,6 +28,7 @@ import io.vertx.micrometer.MetricsNaming;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Arrays;
 import java.util.List;
@@ -42,12 +45,9 @@ public class VaradhiApplication {
             String host = HostUtils.getHostName();
             log.info("VaradhiApplication Starting on {}.", host);
             AppConfiguration configuration = readConfiguration(args);
-            String clusterNodeId = configuration.getMember().getNodeId();
+            String memberId = configuration.getMember().getMemberId();
             CoreServices services = new CoreServices(configuration);
-
-            VaradhiZkClusterManager
-                    clusterManager = new VaradhiZkClusterManager(configuration.getZookeeperOptions(), clusterNodeId);
-
+            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberId);
             Map<ComponentKind, Component> components = getComponents(configuration, services, clusterManager);
 
             createClusteredVertx(configuration, clusterManager, services, "127.0.0.1").compose(vertx ->
@@ -71,6 +71,14 @@ public class VaradhiApplication {
             System.exit(-1);
         }
         // TODO: check need for shutdown hook
+    }
+
+    private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String memberId) {
+        CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
+        DeliveryOptions deliveryOptions = new DeliveryOptions();
+        deliveryOptions.setTracingPolicy(config.getDeliveryOptions().getTracingPolicy());
+        deliveryOptions.setSendTimeout(config.getDeliveryOptions().getTimeoutMs());
+        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, memberId);
     }
 
     private static Future<Vertx> createClusteredVertx(
@@ -98,7 +106,8 @@ public class VaradhiApplication {
 
     private static JsonObject getMemberInfoAsJson(MemberConfig config, String host, int port) {
         MemberInfo info =
-                new MemberInfo(config.getNodeId(), host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
+                new MemberInfo(
+                        config.getMemberId(), host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
         return JsonObject.mapFrom(info);
     }
 

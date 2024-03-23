@@ -1,6 +1,6 @@
 
 member:
-  nodeId: "app-1"
+  memberId: "app-1"
   roles : ["Server", "Controller", "All"]
   cpuCount: 1
   nicMBps: 100
@@ -26,6 +26,11 @@ verticleDeploymentOptions:
   instances: 1
   worker: false
   workerPoolSize: 2
+
+# Refer Vertx DeliveryOptions for details, used for inter node communication.
+deliveryOptions:
+  timeoutMs: 1000
+  tracingPolicy: "PROPAGATE"
 
 authenticationEnabled: false
 

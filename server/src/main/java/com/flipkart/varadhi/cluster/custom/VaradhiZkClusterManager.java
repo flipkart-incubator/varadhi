@@ -1,9 +1,8 @@
 package com.flipkart.varadhi.cluster.custom;
 
 import com.flipkart.varadhi.cluster.*;
-import com.flipkart.varadhi.config.ZookeeperConnectConfig;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
-import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.vertx.core.Future;
@@ -12,11 +11,16 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.spi.cluster.NodeInfo;
 import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.core.tracing.TracingPolicy;
 import io.vertx.spi.cluster.zookeeper.ZookeeperClusterManager;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Customized zkClusterManager that only works with provided zk configuration. The curatorFramework, needs to be
@@ -24,15 +28,13 @@ import java.util.List;
  * In the future, we will customize this so that curator is not required to be namespace aware, instead this class will
  * handle the namespacing all the paths. This should allow usage of curator client for other purposes other than just cluster
  * management. We also need to remove curator.close() from leave method, in case the curator instance is provided.
- * This class also customizes 1 method:
- * 1. setNodeInfo() - to include {@link MemberInfo} as part of the nodeInfo
  */
 @Slf4j
 public class VaradhiZkClusterManager extends ZookeeperClusterManager implements VaradhiClusterManager {
     private final DeliveryOptions deliveryOptions;
     private final RetryPolicy<NodeInfo> NodeInfoRetryPolicy = RetryPolicy
             .<NodeInfo>builder()
-            .withMaxAttempts(50)
+            .withMaxAttempts(10)
             .withDelay(Duration.ofMillis(200))
             .onRetry(
                     e -> log.warn("Failed to get nodeInfo error:{}. Retrying ... {}", e.getLastException().getMessage(),
@@ -40,15 +42,29 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                     ))
             .build();
 
-    public VaradhiZkClusterManager(ZookeeperConnectConfig zkConnectConfig, String host) {
-        super(CuratorFrameworkCreator.create(zkConnectConfig), host);
-        //TODO:: Add config details to DeliveryOptions e.g. timeouts, tracing etc as part of cluster manager changes.
-        deliveryOptions = new DeliveryOptions();
+    public VaradhiZkClusterManager(CuratorFramework curatorFramework, DeliveryOptions deliveryOptions, String host
+    ) {
+        super(curatorFramework, host);
+        this.deliveryOptions = deliveryOptions == null ? new DeliveryOptions().setSendTimeout(1000).setTracingPolicy(
+                TracingPolicy.PROPAGATE) : deliveryOptions;
     }
 
     @Override
-    public List<MemberInfo> getAllMembers() {
-        throw new NotImplementedException("getAllMembers not implemented");
+    public Future<List<MemberInfo>> getAllMembers() {
+        List<CompletableFuture<MemberInfo>> allFutures = new ArrayList<>();
+        getNodes().forEach(
+                nodeId -> allFutures.add(Failsafe.with(NodeInfoRetryPolicy)
+                        .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
+                        .thenApply(nodeInfo -> nodeInfo.metadata().mapTo(MemberInfo.class))
+                        .whenComplete((nodeInfo, throwable) -> {
+                            if (throwable != null) {
+                                log.error("Failed to get nodeInfo for node: {}.", nodeId, throwable);
+                            }
+                        })
+                ));
+
+        return Future.fromCompletionStage(CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> allFutures.stream().map(CompletableFuture::join).collect(Collectors.toList())));
     }
 
     @Override
@@ -59,9 +75,10 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                 Failsafe.with(NodeInfoRetryPolicy).getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
-                                log.error("Failed to get nodeInfo for node: {}.", nodeId, throwable);
+                                // ignore the failure for now. Listener will not be notified of the change.
+                                log.error("Failed to get nodeInfo for member: {}.", nodeId, throwable);
                             } else {
-                                log.debug("Node {} joined from {}:{}.", nodeId, nodeInfo.host(), nodeInfo.port());
+                                log.debug("Member {} joined from {}:{}.", nodeId, nodeInfo.host(), nodeInfo.port());
                                 MemberInfo memberInfo = nodeInfo.metadata().mapTo(MemberInfo.class);
                                 listener.joined(memberInfo);
                             }
@@ -87,6 +104,7 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
     }
 
     public Future<Void> lock(String lockName) {
+        //TODO::work on interface for lock
         throw new NotImplementedException("lock not implemented");
     }
 

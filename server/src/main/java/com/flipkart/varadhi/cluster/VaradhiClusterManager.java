@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.cluster;
 
+import com.flipkart.varadhi.core.cluster.MemberInfo;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 import java.util.List;
@@ -11,7 +13,7 @@ import java.util.List;
  */
 public interface VaradhiClusterManager {
 
-    List<MemberInfo> getAllMembers();
+    Future<List<MemberInfo>> getAllMembers();
 
     void addMembershipListener(MembershipListener listener);
 

@@ -1,13 +1,12 @@
-package com.flipkart.varadhi.cluster;
+package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.components.ComponentKind;
 
 /**
- * 'nodeId' is unique, and is the identifier for a node.
+ * 'memberId' is unique, and is the identifier for a node.
  * TODO::confirm if globally unique or with in a scope of a role.
  */
 public record MemberInfo(
-        String nodeId,
+        String memberId,
         String hostname,
         int port,
         ComponentKind[] roles,

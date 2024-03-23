@@ -8,17 +8,17 @@ import com.flipkart.varadhi.core.cluster.WebServerApi;
 import java.util.concurrent.CompletableFuture;
 
 public class ControllerApiHandler {
-    private final ControllerApi opHandler;
+    private final ControllerApi controllerMgr;
     private final WebServerApi webServerApiProxy;
 
-    public ControllerApiHandler(ControllerApi opHandler, WebServerApi webServerApiProxy) {
-        this.opHandler = opHandler;
+    public ControllerApiHandler(ControllerApi controllerMgr, WebServerApi webServerApiProxy) {
+        this.controllerMgr = controllerMgr;
         this.webServerApiProxy = webServerApiProxy;
     }
 
     public CompletableFuture<Void> start(SubscriptionMessage message) {
         SubscriptionOperation.StartData operation = (SubscriptionOperation.StartData) message.getOperation();
-        return  opHandler.startSubscription(operation).exceptionally(throwable -> {
+        return  controllerMgr.startSubscription(operation).exceptionally(throwable -> {
             operation.markFail(throwable.getMessage());
             webServerApiProxy.update(operation);
             return null;
@@ -27,7 +27,7 @@ public class ControllerApiHandler {
 
     public CompletableFuture<Void> stop(SubscriptionMessage message) {
         SubscriptionOperation.StopData operation = (SubscriptionOperation.StopData) message.getOperation();
-        return  opHandler.stopSubscription(operation).exceptionally(throwable -> {
+        return  controllerMgr.stopSubscription(operation).exceptionally(throwable -> {
             operation.markFail(throwable.getMessage());
             webServerApiProxy.update(operation);
             return null;

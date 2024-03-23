@@ -1,8 +1,12 @@
 member:
-  nodeId: "app-1"
+  memberId: "app-1"
   roles : ["Server"]
   cpuCount: 1
   nicMBps: 100
+
+deliveryOptions:
+  timeoutMs: 1200
+  tracingPolicy: "PROPAGATE"
 
 restOptions:
   deployedRegion: "test"

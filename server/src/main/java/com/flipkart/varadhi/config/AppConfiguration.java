@@ -19,6 +19,12 @@ public class AppConfiguration {
     @NotNull
     private DeploymentOptions verticleDeploymentOptions;
 
+    /**
+     * Refer Vertx DeliveryOptions for details, used for inter node communication.
+     * Use it to configure delivery timeout (default 1000ms) and tracing options (default PROPAGATE)
+     */
+    private DeliveryConfig deliveryOptions;
+
     @NotNull
     private HttpServerOptions httpServerOptions;
 
