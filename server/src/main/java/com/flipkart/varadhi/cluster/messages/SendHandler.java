@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core.cluster.messages;
+package com.flipkart.varadhi.cluster.messages;
 
 @FunctionalInterface
 public interface SendHandler<E extends ClusterMessage> {

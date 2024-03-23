@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.cluster;
 
-import com.flipkart.varadhi.core.cluster.MessageChannel;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 import java.util.List;
 
@@ -9,15 +11,15 @@ import java.util.List;
  * node resources, local ip & hostname, so that they can be used while registering to the cluster and other nodes can
  * be notified of the same.
  */
-public interface ClusterManager {
+public interface VaradhiClusterManager {
 
-    List<NodeInfo> getAllMembers();
+    Future<List<MemberInfo>> getAllMembers();
 
     void addMembershipListener(MembershipListener listener);
 
-    MessageChannel connect(String nodeId);
+    MessageRouter getRouter(Vertx vertx);
 
-    // TODO: Any publish to all methods?
+    MessageExchange getExchange(Vertx vertx);
 
     // TODO: lock & leader election related methods to go in here.
 }

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.VerticleDeployer;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.MessageChannel;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -27,9 +27,9 @@ public class FullDeploymentVerticleDeployer extends VerticleDeployer {
     public FullDeploymentVerticleDeployer(
             Vertx vertx, AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            MessageChannel messageChannel, MeterRegistry meterRegistry, Tracer tracer
+            VaradhiClusterManager clusterManager, MeterRegistry meterRegistry, Tracer tracer
     ) {
-        super(vertx, configuration, messagingStackProvider, metaStoreProvider, messageChannel, meterRegistry, tracer);
+        super(vertx, configuration, messagingStackProvider, metaStoreProvider, clusterManager, meterRegistry, tracer);
         this.orgHandlers = new OrgHandlers(this.orgService);
         this.teamHandlers = new TeamHandlers(this.teamService);
         this.projectHandlers = new ProjectHandlers(this.projectService);

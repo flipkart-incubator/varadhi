@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.services;
 
 
-import com.flipkart.varadhi.core.cluster.messages.SubscriptionOperation;
-import com.flipkart.varadhi.core.ophandlers.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.core.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -39,7 +39,12 @@ public class SubscriptionService {
 
     public void start(String subscriptionName, String requestedBy){
         SubscriptionOperation op = SubscriptionOperation.startOp(subscriptionName, requestedBy);
-        controllerApi.StartSubscription((SubscriptionOperation.StartData) op.getData());
+        controllerApi.startSubscription((SubscriptionOperation.StartData) op.getData());
+    }
+
+    public void stop(String subscriptionName, String requestedBy){
+        SubscriptionOperation op = SubscriptionOperation.stopOp(subscriptionName, requestedBy);
+        controllerApi.stopSubscription((SubscriptionOperation.StopData) op.getData());
     }
 
     private void validateCreation(VaradhiSubscription subscription) {
