@@ -4,7 +4,6 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
@@ -44,13 +43,6 @@ public class IamPolicyService {
     }
 
     public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
-        boolean exists = iamPolicyMetaStore.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
-        if (!exists) {
-            throw new ResourceNotFoundException(String.format(
-                    "Iam Policy Record on resource(%s) not found.",
-                    resourceId
-            ));
-        }
         iamPolicyMetaStore.deleteIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
