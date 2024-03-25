@@ -4,7 +4,7 @@ public class Constants {
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
     public static final String CONTEXT_KEY_BODY = "varadhi.body";
     public static final String CONTEXT_KEY_RESOURCE_HIERARCHY = "varadhi.resourceHierarchy";
-    public static final String USER_ID_HEADER = "X-User-Id";
+    public static final String USER_ID_HEADER = "x_user_id";
 
     public static class PathParams {
         public static final String PATH_PARAM_ORG = "org";
