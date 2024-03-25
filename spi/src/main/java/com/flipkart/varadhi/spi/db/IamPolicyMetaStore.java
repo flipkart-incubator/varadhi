@@ -2,17 +2,15 @@ package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 
-import java.util.List;
-
 public interface IamPolicyMetaStore {
 
     IamPolicyRecord getIamPolicyRecord(String authResourceId);
 
-    void createIamPolicyRecord(IamPolicyRecord node);
+    void createIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
 
     boolean isIamPolicyRecordPresent(String authResourceId);
 
-    int updateIamPolicyRecord(IamPolicyRecord node);
+    int updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
 
     void deleteIamPolicyRecord(String authResourceId);
 }

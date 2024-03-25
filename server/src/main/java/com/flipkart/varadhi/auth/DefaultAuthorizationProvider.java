@@ -137,13 +137,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
         try {
-            IamPolicyRecord node =
+            IamPolicyRecord policyRecord =
                     getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
-            if (node == null) {
+            if (policyRecord == null) {
                 log.debug("No roles on resource for subject {}", subject);
                 return Set.of();
             }
-            return node.getRoleBindings().getOrDefault(subject, Set.of());
+            return policyRecord.getRoleBindings().getOrDefault(subject, Set.of());
         } catch (ResourceNotFoundException e) {
             // IAM Policy is not created for the resource. So, no roles are assigned for the given context.
             return Set.of();

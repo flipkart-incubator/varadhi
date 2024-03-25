@@ -79,7 +79,6 @@ public class IamPolicyHandlersTest extends WebTestBase {
     @Test
     void testDeleteIamPolicyRecord() throws Exception {
         String resourceId = "testNode";
-        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, "testNode"), 0, Map.of());
 
         HttpRequest<Buffer> request =
                 createRequest(HttpMethod.DELETE, getOrgIamPolicyUrl(resourceId));

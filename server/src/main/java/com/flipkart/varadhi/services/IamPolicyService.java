@@ -27,9 +27,10 @@ public class IamPolicyService {
             throw new IllegalArgumentException(
                     "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
         }
-        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), 0, new HashMap<>());
-        iamPolicyMetaStore.createIamPolicyRecord(node);
-        return node;
+        IamPolicyRecord policyRecord =
+                new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), 0, new HashMap<>());
+        iamPolicyMetaStore.createIamPolicyRecord(policyRecord);
+        return policyRecord;
     }
 
     public IamPolicyRecord getIamPolicy(ResourceType resourceType, String resourceId) {
@@ -37,9 +38,9 @@ public class IamPolicyService {
     }
 
     public IamPolicyRecord setIamPolicy(ResourceType resourceType, String resourceId, IamPolicyRequest binding) {
-        IamPolicyRecord node = createOrGetIamPolicyRecord(resourceId, resourceType);
-        node.setRoleAssignment(binding.getSubject(), binding.getRoles());
-        return updateIamPolicyRecord(node);
+        IamPolicyRecord policyRecord = createOrGetIamPolicyRecord(resourceId, resourceType);
+        policyRecord.setRoleAssignment(binding.getSubject(), binding.getRoles());
+        return updateIamPolicyRecord(policyRecord);
     }
 
     public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
@@ -61,18 +62,18 @@ public class IamPolicyService {
         return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord node) {
+    private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
         IamPolicyRecord existingNode =
-                iamPolicyMetaStore.getIamPolicyRecord(node.getName());
-        if (node.getVersion() != existingNode.getVersion()) {
+                iamPolicyMetaStore.getIamPolicyRecord(iamPolicyRecord.getName());
+        if (iamPolicyRecord.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Conflicting update, IamPolicyRecord(%s) has been modified. Fetch latest and try again.",
-                    node.getName()
+                    iamPolicyRecord.getName()
             ));
         }
-        int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(node);
-        node.setVersion(updatedVersion);
-        return node;
+        int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
+        iamPolicyRecord.setVersion(updatedVersion);
+        return iamPolicyRecord;
     }
 
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
