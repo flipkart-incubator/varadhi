@@ -79,7 +79,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
     @Test
     void testDeleteIamPolicyRecord() throws Exception {
         String resourceId = "testNode";
-        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, "testNode"), Map.of(), 0);
+        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, "testNode"), 0, Map.of());
 
         HttpRequest<Buffer> request =
                 createRequest(HttpMethod.DELETE, getOrgIamPolicyUrl(resourceId));
@@ -102,7 +102,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         Set<String> roles = Set.of("role1", "role2");
 
         IamPolicyRecord policyRecord =
-                new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, orgName), Map.of(user, roles), 0);
+                new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, orgName), 0, Map.of(user, roles));
         IamPolicyResponse expected =
                 new IamPolicyResponse(
                         policyRecord.getName(), policyRecord.getRoleBindings(), 0);

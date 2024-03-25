@@ -18,7 +18,6 @@ import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -74,7 +73,7 @@ class IamPolicyServiceTest {
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         IamPolicyRecord expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.ORG, resourceId),
-                Map.of(request.getSubject(), request.getRoles()), 0
+                0, Map.of(request.getSubject(), request.getRoles())
         );
         IamPolicyRecord nodeCreated = iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
         verify(varadhiMetaStore, times(1)).createIamPolicyRecord(any());
@@ -96,7 +95,7 @@ class IamPolicyServiceTest {
         IamPolicyRequest request2 = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TEAM, resourceId),
-                Map.of(request2.getSubject(), request2.getRoles()), 0
+                0, Map.of(request2.getSubject(), request2.getRoles())
         );
         nodeCreated = iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, request);
         assertEquals(expect, nodeCreated);
@@ -117,7 +116,7 @@ class IamPolicyServiceTest {
         IamPolicyRequest request3 = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.PROJECT, resourceId),
-                Map.of(request3.getSubject(), request3.getRoles()), 0
+                0, Map.of(request3.getSubject(), request3.getRoles())
         );
         nodeCreated = iamPolicyService.setIamPolicy(ResourceType.PROJECT, resourceId, request3);
         assertEquals(expect, nodeCreated);
@@ -140,7 +139,7 @@ class IamPolicyServiceTest {
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         IamPolicyRecord expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.ORG, resourceId),
-                Map.of(request.getSubject(), request.getRoles()), 0
+                0, Map.of(request.getSubject(), request.getRoles())
         );
         iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
         IamPolicyRecord get = iamPolicyService.getIamPolicy(ResourceType.ORG, resourceId);
@@ -150,7 +149,7 @@ class IamPolicyServiceTest {
         resourceId = org1.getName() + ":" + org1team1.getName();
         expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TEAM, resourceId),
-                Map.of(request.getSubject(), request.getRoles()), 0
+                0, Map.of(request.getSubject(), request.getRoles())
         );
         iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, request);
         get = iamPolicyService.getIamPolicy(ResourceType.TEAM, resourceId);
@@ -173,7 +172,7 @@ class IamPolicyServiceTest {
         // update node
         IamPolicyRecord expect = new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.ORG, resourceId),
-                Map.of("usr1", Set.of("role1")), 1
+                1, Map.of("usr1", Set.of("role1"))
         );
         IamPolicyRequest update = new IamPolicyRequest("usr1", Set.of("role1"));
         IamPolicyRecord updated = iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, update);
@@ -208,7 +207,7 @@ class IamPolicyServiceTest {
         IamPolicyRecord org1NodeExpected =
                 new IamPolicyRecord(
                         getAuthResourceFQN(ResourceType.ORG, org1.getName()),
-                        Map.of("user1", Set.of("role1", "role2")), 1
+                        1, Map.of("user1", Set.of("role1", "role2"))
                 );
         IamPolicyRequest org1Upd =
                 new IamPolicyRequest("user1", Set.of("role1", "role2"));
@@ -252,7 +251,7 @@ class IamPolicyServiceTest {
         teamService.createTeam(org1team1);
         String resourceId = org1.getName() + ":" + org1team1.getName();
         IamPolicyRecord org1team1NodeExpected =
-                new IamPolicyRecord(getAuthResourceFQN(ResourceType.TEAM, resourceId), Map.of(), 1);
+                new IamPolicyRecord(getAuthResourceFQN(ResourceType.TEAM, resourceId), 1, Map.of());
         org1team1NodeExpected.setRoleAssignment("user1", Set.of("role1", "role2"));
         IamPolicyRequest org1team1Upd =
                 new IamPolicyRequest("user1", Set.of("role1", "role2"));

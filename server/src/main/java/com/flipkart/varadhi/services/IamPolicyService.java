@@ -9,7 +9,6 @@ import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.HashMap;
-import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
@@ -28,7 +27,7 @@ public class IamPolicyService {
             throw new IllegalArgumentException(
                     "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
         }
-        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), new HashMap<>(), 0);
+        IamPolicyRecord node = new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), 0, new HashMap<>());
         iamPolicyMetaStore.createIamPolicyRecord(node);
         return node;
     }
@@ -64,11 +63,11 @@ public class IamPolicyService {
 
     private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord node) {
         IamPolicyRecord existingNode =
-                iamPolicyMetaStore.getIamPolicyRecord(node.getAuthResourceId());
+                iamPolicyMetaStore.getIamPolicyRecord(node.getName());
         if (node.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Conflicting update, IamPolicyRecord(%s) has been modified. Fetch latest and try again.",
-                    node.getAuthResourceId()
+                    node.getName()
             ));
         }
         int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(node);

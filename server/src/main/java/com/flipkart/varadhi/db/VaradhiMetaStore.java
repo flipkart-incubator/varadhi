@@ -253,7 +253,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public void createIamPolicyRecord(IamPolicyRecord node) {
-        ZNode znode = ZNode.OfIamPolicy(node.getAuthResourceId());
+        ZNode znode = ZNode.OfIamPolicy(node.getName());
         zkMetaStore.createZNodeWithData(znode, node);
     }
 
@@ -265,7 +265,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public int updateIamPolicyRecord(IamPolicyRecord node) {
-        ZNode znode = ZNode.OfIamPolicy(node.getAuthResourceId());
+        ZNode znode = ZNode.OfIamPolicy(node.getName());
         return zkMetaStore.updateZNodeWithData(znode, node);
     }
 
