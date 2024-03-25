@@ -61,6 +61,10 @@ public class AuthorizationHandlerBuilder {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "the user / token has been expired"));
             }
 
+            if (resourceHierarchy == null) {
+                return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set"));
+            }
+
             if (superUsers.contains(userContext.getSubject())) {
                 return Future.succeededFuture();
             }
