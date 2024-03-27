@@ -101,6 +101,11 @@ public class IamPolicyHandlers implements RouteProvider {
         String teamName = ctx.request().getParam(PATH_PARAM_TEAM);
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
+        String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
+        if (subscriptionName != null) {
+            Project project = projectService.getProject(projectName);
+            return new Hierarchies.SubscriptionHierarchy(project.getOrg(), project.getTeam(), project.getName(), subscriptionName);
+        }
         if (topicName != null) {
             Project project = projectService.getProject(projectName);
             return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
