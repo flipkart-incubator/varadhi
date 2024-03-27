@@ -1,105 +1,71 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 
 import java.util.HashMap;
-import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 
 public class IamPolicyService {
     private final MetaStore metaStore;
-    private final RoleBindingMetaStore roleBindingMetaStore;
+    private final IamPolicyMetaStore iamPolicyMetaStore;
 
-    public IamPolicyService(MetaStore metaStore, RoleBindingMetaStore roleBindingMetaStore) {
+    public IamPolicyService(MetaStore metaStore, IamPolicyMetaStore iamPolicyMetaStore) {
         this.metaStore = metaStore;
-        this.roleBindingMetaStore = roleBindingMetaStore;
+        this.iamPolicyMetaStore = iamPolicyMetaStore;
     }
 
-    public RoleBindingNode createRoleBindingNode(String resourceId, ResourceType resourceType) {
+    private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
-            throw new IllegalArgumentException(String.format(
-                    "Invalid resource id(%s) for resource type(%s).",
-                    resourceId,
-                    resourceType
-            ));
+            throw new IllegalArgumentException(
+                    "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
         }
-        RoleBindingNode node = new RoleBindingNode(resourceId, resourceType, new HashMap<>(), 0);
-        roleBindingMetaStore.createRoleBindingNode(node);
-        return node;
+        IamPolicyRecord policyRecord =
+                new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), 0, new HashMap<>());
+        iamPolicyMetaStore.createIamPolicyRecord(policyRecord);
+        return policyRecord;
     }
 
-    public List<RoleBindingNode> getAllRoleBindingNodes() {
-        return roleBindingMetaStore.getRoleBindingNodes();
+    public IamPolicyRecord getIamPolicy(ResourceType resourceType, String resourceId) {
+        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    public RoleBindingNode findRoleBindingNode(ResourceType resourceType, String resourceId) {
-        return roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
+    public IamPolicyRecord setIamPolicy(ResourceType resourceType, String resourceId, IamPolicyRequest binding) {
+        IamPolicyRecord policyRecord = createOrGetIamPolicyRecord(resourceId, resourceType);
+        policyRecord.setRoleAssignment(binding.getSubject(), binding.getRoles());
+        return updateIamPolicyRecord(policyRecord);
     }
 
-    public RoleBindingNode updateRoleBindingNode(RoleBindingNode node) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(node.getResourceType(), node.getResourceId());
+    public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
+        iamPolicyMetaStore.deleteIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+    }
+
+    private IamPolicyRecord createOrGetIamPolicyRecord(String resourceId, ResourceType resourceType) {
+        boolean exists = iamPolicyMetaStore.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
         if (!exists) {
-            throw new ResourceNotFoundException(String.format(
-                    "RoleBinding(%s) not found.",
-                    node.getResourceId()
-            ));
+            return createIamPolicyRecord(resourceId, resourceType);
         }
+        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+    }
 
-        RoleBindingNode existingNode =
-                roleBindingMetaStore.getRoleBindingNode(node.getResourceType(), node.getResourceId());
-        if (node.getVersion() != existingNode.getVersion()) {
+    private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
+        IamPolicyRecord existingNode =
+                iamPolicyMetaStore.getIamPolicyRecord(iamPolicyRecord.getName());
+        if (iamPolicyRecord.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(String.format(
-                    "Conflicting update, RoleBinding(%s) has been modified. Fetch latest and try again.",
-                    node.getResourceId()
+                    "Conflicting update, IamPolicyRecord(%s) has been modified. Fetch latest and try again.",
+                    iamPolicyRecord.getName()
             ));
         }
-        int updatedVersion = roleBindingMetaStore.updateRoleBindingNode(node);
-        node.setVersion(updatedVersion);
-        return node;
-    }
-
-    public RoleBindingNode getIAMPolicy(ResourceType resourceType, String resourceId) {
-        return roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
-    }
-
-    public RoleBindingNode setIAMPolicy(ResourceType resourceType, String resourceId, IAMPolicyRequest binding) {
-        RoleBindingNode node = createOrGetRoleBindingNode(resourceId, resourceType);
-        node.setRoleAssignment(binding.getSubject(), binding.getRoles());
-        return updateRoleBindingNode(node);
-    }
-
-    public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(resourceType, resourceId);
-        if (!exists) {
-            throw new ResourceNotFoundException(String.format(
-                    "RoleBinding on resource(%s) not found.",
-                    resourceId
-            ));
-        }
-        roleBindingMetaStore.deleteRoleBindingNode(resourceType, resourceId);
-    }
-
-    private RoleBindingNode createOrGetRoleBindingNode(String resourceId, ResourceType resourceType) {
-        boolean exists = roleBindingMetaStore.isRoleBindingPresent(resourceType, resourceId);
-        if (!exists) {
-            return createRoleBindingNode(resourceId, resourceType);
-        }
-        RoleBindingNode existingNode = roleBindingMetaStore.getRoleBindingNode(resourceType, resourceId);
-        if (existingNode.getResourceType() != resourceType) {
-            throw new IllegalArgumentException(String.format(
-                    "Incorrect resource type(%s) for resource id(%s).",
-                    resourceType,
-                    resourceId
-            ));
-        }
-        return existingNode;
+        int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
+        iamPolicyRecord.setVersion(updatedVersion);
+        return iamPolicyRecord;
     }
 
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
@@ -117,7 +83,13 @@ public class IamPolicyService {
                 String varadhiTopicName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
                 yield (segments.length == 2) && metaStore.checkTopicExists(varadhiTopicName);
             }
-            case SUBSCRIPTION -> false; //TODO
+            case SUBSCRIPTION -> {
+                // project:subscription
+                String[] segments = resourceId.split(":");
+                String subscriptionName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
+                yield (segments.length == 2) && metaStore.checkSubscriptionExists(subscriptionName);
+            }
+            case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
         };
     }
 }

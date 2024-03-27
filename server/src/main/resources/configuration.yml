@@ -22,7 +22,7 @@ verticleDeploymentOptions:
   worker: false
   workerPoolSize: 2
 
-authenticationEnabled: false
+authenticationEnabled: true
 
 authentication:
   jwt:

@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.auth;
 
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.internal.stubbing.answers.ThrowsException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,11 +24,12 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(VertxExtension.class)
-public class DefaultAuthorizationProviderTest {
+class DefaultAuthorizationProviderTest {
 
     @TempDir
     private Path tempDir;
@@ -43,11 +46,12 @@ public class DefaultAuthorizationProviderTest {
         authorizationOptions.setConfigFile("src/test/resources/testAuthorizationConfig.yml");
 
         provider = spy(new DefaultAuthorizationProvider());
-        iamPolicyService = mock(IamPolicyService.class);
+        iamPolicyService =
+                mock(IamPolicyService.class, new ThrowsException(new ResourceNotFoundException("resource not found")));
     }
 
     @Test
-    public void testInit(VertxTestContext testContext) {
+    void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
         provider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
@@ -57,7 +61,7 @@ public class DefaultAuthorizationProviderTest {
     }
 
     @Test
-    public void testInitNotImplRoleBindingMetaStoreShouldThrow() throws IOException {
+    void testInitNotImplIamPolicyMetaStoreShouldThrow() throws IOException {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent =
                 """
@@ -81,7 +85,7 @@ public class DefaultAuthorizationProviderTest {
     }
 
     @Test
-    public void testNotInit() {
+    void testNotInit() {
         Assertions.assertThrows(IllegalStateException.class, () ->
                 provider.isAuthorized(
                         testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
@@ -94,9 +98,11 @@ public class DefaultAuthorizationProviderTest {
         String resourceId = "flipkart";
         var resourceTypeCaptor = ArgumentCaptor.forClass(ResourceType.class);
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
-        when(iamPolicyService.getIAMPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture()))
-                .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.ORG, resourceId),
+                1, Map.of(userName, Set.of("org.admin"))
+        )).when(iamPolicyService).getIamPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture());
         doReturn(iamPolicyService).when(provider).getAuthZService();
         provider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
@@ -161,9 +167,11 @@ public class DefaultAuthorizationProviderTest {
         String resourceId = "flipkart:team_a";
         String resourcePath = "flipkart/team_a";
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture()))
-                .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.admin")), 1));
+
+        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.TEAM, resourceId), 1,
+                Map.of(userName, Set.of("team.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
+
         doReturn(iamPolicyService).when(provider).getAuthZService();
         provider.init(authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
@@ -177,8 +185,8 @@ public class DefaultAuthorizationProviderTest {
                     Assertions.assertTrue(t);
                     assertEquals(resourceId, resourceIdCaptor.getValue());
                     // since is auth was true on team, we should not check for org
-                    verify(iamPolicyService, times(1)).getIAMPolicy(eq(ResourceType.TEAM), eq(resourceId));
-                    verify(iamPolicyService, times(0)).getIAMPolicy(eq(ResourceType.ORG), eq("flipkart"));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.TEAM), eq(resourceId));
+                    verify(iamPolicyService, times(0)).getIamPolicy(eq(ResourceType.ORG), eq("flipkart"));
                     checkpoint.flag();
                 }));
     }
@@ -189,12 +197,18 @@ public class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourceId = "flipkart:team_a";
         String resourcePath = "flipkart/team_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
-                .thenReturn(
-                        new RoleBindingNode(resourceId, ResourceType.TEAM, Map.of(userName, Set.of("team.reader")), 1));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.ORG), anyString()))
-                .thenReturn(
-                        new RoleBindingNode("flipkart", ResourceType.ORG, Map.of(userName, Set.of("org.admin")), 1));
+
+        doReturn(
+                new IamPolicyRecord(
+                        getAuthResourceFQN(ResourceType.TEAM, resourceId),
+                        1, Map.of(userName, Set.of("team.reader"))
+                )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
+
+        doReturn(
+                new IamPolicyRecord(
+                        getAuthResourceFQN(ResourceType.ORG, "flipkart"),
+                        1, Map.of(userName, Set.of("org.admin"))
+                )).when(iamPolicyService).getIamPolicy(eq(ResourceType.ORG), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -208,8 +222,8 @@ public class DefaultAuthorizationProviderTest {
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
-                    verify(iamPolicyService, times(1)).getIAMPolicy(eq(ResourceType.TEAM), eq(resourceId));
-                    verify(iamPolicyService, times(1)).getIAMPolicy(eq(ResourceType.ORG), eq("flipkart"));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.TEAM), eq(resourceId));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.ORG), eq("flipkart"));
                     checkpoint.flag();
                 }));
     }
@@ -219,12 +233,13 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
-                .thenReturn(new RoleBindingNode("flipkart:team_a", ResourceType.TEAM,
-                        Map.of(userName, Set.of("team.reader")), 1
-                ));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT, Map.of(), 1));
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
+                1, Map.of(userName, Set.of("team.reader"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
+
+        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.PROJECT, "proj_a"), 1, Map.of()))
+                .when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -247,10 +262,11 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TEAM), anyString()))
-                .thenReturn(new RoleBindingNode("flipkart:team_a", ResourceType.TEAM,
-                        Map.of(userName, Set.of("team.reader", "project.writer")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
+                1, Map.of(userName, Set.of("team.reader", "project.writer"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -273,10 +289,11 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
-                        Map.of(userName, Set.of("project.writer", "topic.admin")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
+                1, Map.of(userName, Set.of("project.writer", "topic.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -299,18 +316,19 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
-                        Map.of(userName, Set.of("project.writer", "topic.reader")), 1
-                ));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_a", ResourceType.TOPIC,
-                        Map.of(userName, Set.of("topic.reader")), 1
-                ));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_b", ResourceType.TOPIC,
-                        Map.of(userName, Set.of("topic.admin")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
+                1, Map.of(userName, Set.of("project.writer", "topic.reader"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), eq("proj_a"));
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
+                1, Map.of(userName, Set.of("topic.reader"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_b"),
+                1, Map.of(userName, Set.of("topic.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -333,10 +351,11 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), anyString()))
-                .thenReturn(new RoleBindingNode("sub_a", ResourceType.SUBSCRIPTION,
-                        Map.of(userName, Set.of("project.writer", "subscription.admin")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "sub_a"),
+                1, Map.of(userName, Set.of("project.writer", "subscription.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -359,18 +378,19 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.PROJECT), anyString()))
-                .thenReturn(new RoleBindingNode("proj_a", ResourceType.PROJECT,
-                        Map.of(userName, Set.of("project.writer", "subscription.reader")), 1
-                ));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a")))
-                .thenReturn(new RoleBindingNode("proj_a:sub_a", ResourceType.SUBSCRIPTION,
-                        Map.of(userName, Set.of("subscription.reader")), 1
-                ));
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b")))
-                .thenReturn(new RoleBindingNode("proj_a:sub_b", ResourceType.SUBSCRIPTION,
-                        Map.of(userName, Set.of("subscription.admin")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
+                1, Map.of(userName, Set.of("project.writer", "subscription.reader"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
+                1, Map.of(userName, Set.of("subscription.reader"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a"));
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
+                1, Map.of(userName, Set.of("subscription.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -393,10 +413,11 @@ public class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a/wut?";
-        when(iamPolicyService.getIAMPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a")))
-                .thenReturn(new RoleBindingNode("proj_a:topic_a", ResourceType.TOPIC,
-                        Map.of(userName, Set.of("topic.admin")), 1
-                ));
+
+        doReturn(new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
+                1, Map.of(userName, Set.of("topic.admin"))
+        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 

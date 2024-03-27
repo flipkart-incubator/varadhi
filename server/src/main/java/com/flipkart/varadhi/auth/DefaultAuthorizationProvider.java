@@ -4,11 +4,12 @@ import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
@@ -54,11 +55,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         provider.init(options);
         MetaStore store = provider.getMetaStore();
 
-        if (store instanceof RoleBindingMetaStore) {
-            return new IamPolicyService(store, (RoleBindingMetaStore) store);
+        if (store instanceof IamPolicyMetaStore ipm) {
+            return new IamPolicyService(store, ipm);
         }
 
-        throw new IllegalStateException("Provider must implement RoleBindingMetaStore");
+        throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
     }
 
     /**
@@ -102,6 +103,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
             return List.of();
         }
 
+        // trim leading and trailing slashes
+        resourcePath = resourcePath.replaceAll("^/+", "").replaceAll("/+$", "");
+
         String[] segments = resourcePath.split("/");
 
         // build the list in reverse order specified: ROOT -> ORG -> TEAM -> PROJECT -> TOPIC|SUBSCRIPTION|QUEUE
@@ -127,27 +131,22 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private boolean isAuthorizedInternal(
             String subject, ResourceAction action, ResourceContext resourceContext
     ) {
-        log.debug(
-                "Checking authorization for subject [{}] and action [{}] on resource [{}]", subject, action,
-                resourceContext.policyPath()
-        );
         return getRolesForSubject(subject, resourceContext)
                 .stream().anyMatch(role -> doesActionBelongToRole(subject, role, action));
     }
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
-        RoleBindingNode node =
-                getAuthZService().getIAMPolicy(resourceContext.resourceType(), resourceContext.resourceId());
-        if (node == null) {
-            log.error("No roles on resource for subject {}", subject);
+        try {
+            IamPolicyRecord policyRecord =
+                    getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
+            return policyRecord.getRoleBindings().getOrDefault(subject, Set.of());
+        } catch (ResourceNotFoundException e) {
+            // IAM Policy is not created for the resource. So, no roles are assigned for the given context.
             return Set.of();
         }
-        log.info("Fetched roles for subject [{}] and resource [{}]", subject, resourceContext.policyPath());
-        return node.getRolesAssignment().getOrDefault(subject, Set.of());
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
-        log.debug("Evaluating action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         boolean matching =
                 configuration.getRoleDefinitions().getOrDefault(roleId, EMPTY_ROLE).getPermissions().contains(action);
         if (matching) {
