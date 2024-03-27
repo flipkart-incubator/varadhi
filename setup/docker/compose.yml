@@ -22,6 +22,7 @@ services:
       hostnet:
     ports:
       - 8488:8488
+      - 9990:9990
     volumes:
       - ../../server/build/jacoco:/jacoco
     restart: "no"

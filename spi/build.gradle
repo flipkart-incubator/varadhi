@@ -1,0 +1,9 @@
+plugins {
+    id "com.flipkart.varadhi.java-published-library-conventions"
+    id 'java-test-fixtures'
+}
+
+dependencies {
+    api(project(':entities'))
+    api('com.fasterxml.jackson.core:jackson-databind')
+}

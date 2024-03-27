@@ -17,18 +17,21 @@ repositories {
 ext {
     lombok_version = "1.18.26"
     slf4j_version = "2.0.7"
-    javax_version = "1.3.2"
-    vertx_version = "4.4.4"
+    vertx_version = "4.5.2"
 
-    otl_version = "1.25.0"
+    otl_version = "1.36.0"
+    otl_semconv_version = "1.30.1-alpha"
     micrometer_version = "1.10.6"
     ws_rs_version = "2.1.1"
     jersey_version = "2.25.1"
     guava_version = "32.1.1-jre"
     curator_version = "5.5.0"
-    jackson_version = "2.14.2"
-    jakarta_version = "3.0.2"
+    jackson_version = "2.15.1"
+    jakarta_validation_version = "3.0.2"
+    jakarta_ws_version = "3.1.0"
     commons_lang_version = "3.11"
+
+    hibernate_validator_version = "8.0.1.Final"
 }
 
 sourceSets {
@@ -46,6 +49,7 @@ configurations {
 }
 
 dependencies {
+    // TODO: Get rid of these unnecessary constraints. We are probably using it wrong. Need to check.
     constraints {
         implementation("org.slf4j:slf4j-api:$slf4j_version")
         implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
@@ -64,9 +68,11 @@ dependencies {
         implementation("io.vertx:vertx-web:$vertx_version")
         implementation("io.vertx:vertx-auth-common:$vertx_version")
         implementation("io.vertx:vertx-auth-jwt:$vertx_version")
+        implementation("io.vertx:vertx-zookeeper:$vertx_version")
         implementation("io.vertx:vertx-opentelemetry:$vertx_version")
         implementation("io.vertx:vertx-opentracing:$vertx_version")
         implementation("io.vertx:vertx-micrometer-metrics:$vertx_version")
+        implementation("io.micrometer:micrometer-registry-prometheus:1.12.0")
         runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
 
 
@@ -74,7 +80,8 @@ dependencies {
         implementation("io.opentelemetry:opentelemetry-sdk:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-semconv:$otl_version-alpha")
+        implementation("io.opentelemetry:opentelemetry-exporter-prometheus:$otl_version-alpha")
+        implementation("io.opentelemetry:opentelemetry-semconv:$otl_semconv_version")
 
         implementation("io.micrometer:micrometer-core:$micrometer_version")
         implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
@@ -85,8 +92,7 @@ dependencies {
         implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
         implementation("com.google.guava:guava:$guava_version")
 
-
-        implementation("jakarta.validation:jakarta.validation-api:$jakarta_version")
+        implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
@@ -109,6 +115,7 @@ dependencies {
     implementation("com.google.guava:guava")
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
+    implementation("jakarta.validation:jakarta.validation-api")
 
     // common test framework
     testCompileOnly("org.projectlombok:lombok")

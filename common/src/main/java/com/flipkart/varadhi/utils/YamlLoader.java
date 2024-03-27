@@ -1,10 +1,13 @@
 package com.flipkart.varadhi.utils;
 
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.entities.Validator;
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
 
 import java.io.File;
+import java.util.List;
 
 public class YamlLoader {
 
@@ -15,10 +18,18 @@ public class YamlLoader {
     }
 
     public static <T> T loadConfig(String configFile, Class<T> clazz) {
+        T config;
         try {
-            return mapper.readValue(new File(configFile), clazz);
+            config = mapper.readValue(new File(configFile), clazz);
         } catch (Exception e) {
-            throw new VaradhiException(String.format("Failed to load config file: %s as %s.", configFile, clazz), e);
+            throw new InvalidConfigException(
+                    String.format("Failed to load config file: %s as %s.", configFile, clazz), e);
         }
+        List<String> failures = Validator.validate(config);
+        if (failures.isEmpty()) {
+            return config;
+        }
+        throw new InvalidConfigException(
+                String.format("Failed to load config file: %s. %s", configFile, String.join(",", failures)));
     }
 }

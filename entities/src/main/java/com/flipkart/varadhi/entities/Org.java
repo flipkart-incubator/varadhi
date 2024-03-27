@@ -1,18 +1,14 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.ValidateVaradhiResource;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Org name. Check naming constraints.")
-public class Org extends VaradhiResource {
+@ValidateResource(message = "Invalid Org name. Check naming constraints.")
+public class Org extends MetaStoreEntity implements Validatable {
 
-    public Org(
-            String name,
-            int version
-    ) {
+    public Org(String name, int version) {
         super(name, version);
     }
 }

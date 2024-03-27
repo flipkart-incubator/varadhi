@@ -1,8 +1,7 @@
 package com.flipkart.varadhi;
 
 
-import com.flipkart.varadhi.config.ServerConfiguration;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -12,6 +11,8 @@ import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -29,6 +30,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
+
 @Slf4j
 @Getter
 public class CoreServices {
@@ -38,18 +41,18 @@ public class CoreServices {
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
 
-    public CoreServices(ServerConfiguration configuration) {
+    public CoreServices(AppConfiguration configuration) {
         this.observabilityStack = setupObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
     }
 
 
-    public Tracer getTracer(String instrumentationScope, String version) {
-        return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope, version);
+    public Tracer getTracer(String instrumentationScope) {
+        return this.observabilityStack.getOpenTelemetry().getTracer(instrumentationScope);
     }
 
-    public MeterRegistry getMetricsRegistry() {
+    public MeterRegistry getMeterRegistry() {
         return this.observabilityStack.getMeterRegistry();
     }
 
@@ -75,26 +78,15 @@ public class CoreServices {
         return provider;
     }
 
-    private <T> T loadClass(String className) {
-        try {
-            if (null != className && !className.isBlank()) {
-                Class<T> pluginClass = (Class<T>) Class.forName(className);
-                return pluginClass.getDeclaredConstructor().newInstance();
-            }
-            throw new InvalidConfigException("No class provided.");
-        } catch (Exception e) {
-            throw new InvalidConfigException(String.format("Fail to load class %s.", className), e);
-        }
-    }
+    private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
 
-
-    private ObservabilityStack setupObservabilityStack(ServerConfiguration configuration) {
         Resource resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
         // TODO: make tracing togglable and configurable.
         float sampleRatio = 1.0f;
 
+        // exporting spans as logs, but can be replaced with otlp exporter.
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
                 .setResource(resource)
@@ -106,11 +98,13 @@ public class CoreServices {
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal();
 
-        // TODO: make meter registry config configurable.
+        // TODO: make meter registry config configurable. each registry comes with its own config.
         String meterExporter = "jmx";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-            default -> new OtlpMeterRegistry();
+            case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+            case "otlp" -> new OtlpMeterRegistry();
+            default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);
     }

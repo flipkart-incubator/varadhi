@@ -1,36 +1,42 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.INITIAL_VERSION;
-import static com.flipkart.varadhi.Constants.NAME_SEPARATOR;
-
-
 @Getter
+@EqualsAndHashCode(callSuper = true)
 public class VaradhiTopic extends AbstractTopic {
-    private final Map<String, InternalTopic> internalTopics;
+
+    private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
+    private final CapacityPolicy capacityPolicy;
 
     private VaradhiTopic(
             String name,
             int version,
             boolean grouped,
-            Map<String, InternalTopic> internalTopics
+            CapacityPolicy capacityPolicy,
+            Map<String, InternalCompositeTopic> internalTopics
     ) {
         super(name, version);
         this.grouped = grouped;
+        this.capacityPolicy = capacityPolicy;
         this.internalTopics = null == internalTopics ? new HashMap<>() : internalTopics;
     }
 
     public static VaradhiTopic of(TopicResource topicResource) {
+        CapacityPolicy capacityPolicy = topicResource.getCapacityPolicy();
+        if (null == capacityPolicy) {
+            capacityPolicy = fetchDefaultCapacityPolicy();
+        }
         return new VaradhiTopic(
                 buildTopicName(topicResource.getProject(), topicResource.getName()),
                 INITIAL_VERSION,
                 topicResource.isGrouped(),
+                capacityPolicy,
                 null
         );
     }
@@ -39,15 +45,16 @@ public class VaradhiTopic extends AbstractTopic {
         return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 
-    public void addInternalTopic(InternalTopic internalTopic) {
+    public void addInternalTopic(InternalCompositeTopic internalTopic) {
         this.internalTopics.put(internalTopic.getTopicRegion(), internalTopic);
     }
 
-    public InternalTopic getProduceTopicForRegion(String region) {
-        InternalTopic internalTopic = internalTopics.get(region);
-        if (null == internalTopic) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", region));
-        }
-        return internalTopic;
+    public InternalCompositeTopic getProduceTopicForRegion(String region) {
+        return internalTopics.get(region);
+    }
+
+    private static CapacityPolicy fetchDefaultCapacityPolicy() {
+        //TODO:: make default capacity config based instead of hard coding.
+        return CapacityPolicy.getDefault();
     }
 }

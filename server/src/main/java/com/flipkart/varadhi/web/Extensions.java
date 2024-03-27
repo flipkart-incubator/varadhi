@@ -1,14 +1,18 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.entities.BaseResource;
+import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
+
 
 public class Extensions {
 
@@ -21,7 +25,7 @@ public class Extensions {
 
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
-        public static <T extends BaseResource> T asValidatedPojo(RequestBody body, Class<T> clazz) {
+        public static <T extends Validatable> T asValidatedPojo(RequestBody body, Class<T> clazz) {
             T deserialzedObject = asPojo(body, clazz);
             deserialzedObject.validate();
             return deserialzedObject;
@@ -98,5 +102,12 @@ public class Extensions {
         public static void todo(RoutingContext context) {
             throw new NotImplementedException("Not Implemented.");
         }
+
+        public static String  getIdentityOrDefault(RoutingContext ctx) {
+            User user = ctx.user();
+            return null != user ? user.subject() : ANONYMOUS_IDENTITY;
+        }
+
+
     }
 }

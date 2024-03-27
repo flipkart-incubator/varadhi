@@ -1,13 +1,12 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.db.VaradhiMetaStore;
-import com.flipkart.varadhi.db.ZNode;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.CreateBuilder;
@@ -73,9 +72,6 @@ public class OrgServiceTest {
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any(), any());
         MetaStoreException e =
                 Assertions.assertThrows(MetaStoreException.class, () -> orgService.createOrg(org));
-        ZNode zNode = ZNode.OfOrg(org.getName());
-        Assertions.assertEquals(
-                String.format("Failed to create Org(%s) at %s.", zNode.getName(), zNode.getPath()), e.getMessage());
     }
 
     @Test
@@ -116,6 +112,4 @@ public class OrgServiceTest {
         List<Org> orgListNew = orgService.getOrgs();
         Assertions.assertTrue(orgListNew.contains(org));
     }
-
-
 }

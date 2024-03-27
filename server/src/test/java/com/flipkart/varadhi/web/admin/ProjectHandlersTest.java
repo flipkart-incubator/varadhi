@@ -3,8 +3,11 @@ package com.flipkart.varadhi.web.admin;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
@@ -25,8 +28,8 @@ public class ProjectHandlersTest extends WebTestBase {
     ProjectHandlers projectHandlers;
     ProjectService projectService;
 
-    Org o1 = new Org("OrgOne", 0);
-    Team t1 = new Team("TeamOne", 0, o1.getName());
+    Org o1 = new Org("org_one", 0);
+    Team t1 = new Team("team_one", 0, o1.getName());
 
 
     @BeforeEach
@@ -35,10 +38,15 @@ public class ProjectHandlersTest extends WebTestBase {
         projectService = mock(ProjectService.class);
         projectHandlers = new ProjectHandlers(projectService);
 
-        Route routeCreate =
-                router.post("/projects").handler(bodyHandler).handler(wrapBlocking(projectHandlers::create));
+        Route routeCreate = router.post("/projects").handler(bodyHandler).handler(ctx -> {
+            projectHandlers.setProject(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(projectHandlers::create));
         setupFailureHandler(routeCreate);
-        Route routePut = router.put("/projects").handler(bodyHandler).handler(wrapBlocking(projectHandlers::update));
+        Route routePut = router.put("/projects").handler(bodyHandler).handler(ctx -> {
+            projectHandlers.setProject(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(projectHandlers::update));
         setupFailureHandler(routePut);
         Route routeGet = router.get("/projects/:project").handler(wrapBlocking(projectHandlers::get));
         setupFailureHandler(routeGet);
@@ -69,7 +77,7 @@ public class ProjectHandlersTest extends WebTestBase {
     public void testProjectCreate() throws InterruptedException {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getProjectsUrl());
-        Project p1 = getProject("Project1");
+        Project p1 = getProject("project1");
 
         doReturn(p1).when(projectService).createProject(p1);
         Project p1Created = sendRequestWithBody(request, p1, Project.class);
@@ -96,7 +104,7 @@ public class ProjectHandlersTest extends WebTestBase {
 
     @Test
     public void testProjectGet() throws InterruptedException {
-        Project p1 = getProject("Project1");
+        Project p1 = getProject("project1");
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getProjectUrl(p1.getName()));
         doReturn(p1).when(projectService).getProject(p1.getName());
@@ -114,14 +122,14 @@ public class ProjectHandlersTest extends WebTestBase {
 
     @Test
     public void testProjectUpdate() throws Exception {
-        Project p1 = getProject("Project1");
+        Project p1 = getProject("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getProjectsUrl());
         doReturn(p1).when(projectService).updateProject(p1);
         Project p1Updated = sendRequestWithBody(request, p1, Project.class);
         Assertions.assertEquals(p1, p1Updated);
 
         String argumentError = String.format("Project(%s) can not be moved across organisation.", p1.getName());
-        doThrow(new ArgumentException(argumentError)).when(projectService).updateProject(p1);
+        doThrow(new IllegalArgumentException(argumentError)).when(projectService).updateProject(p1);
         ErrorResponse response = sendRequestWithBody(request, p1, 400, argumentError, ErrorResponse.class);
         Assertions.assertEquals(argumentError, response.reason());
 

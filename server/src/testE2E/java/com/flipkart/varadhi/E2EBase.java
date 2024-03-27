@@ -3,6 +3,7 @@ package com.flipkart.varadhi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -19,6 +20,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import java.util.List;
+
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 
 public class E2EBase {
 
@@ -59,6 +62,18 @@ public class E2EBase {
         return String.join("/", getProjectUri(project), "topics");
     }
 
+    static String getTopicsUri(Project project, String topicName) {
+        return String.join("/", getTopicsUri(project), topicName);
+    }
+
+    static String getSubscriptionsUri(Project project) {
+        return String.join("/", getProjectUri(project), "subscriptions");
+    }
+
+    static String getSubscriptionsUri(Project project, String subscriptionName) {
+        return String.join("/", getSubscriptionsUri(project), subscriptionName);
+    }
+
     static List<Org> getOrgs(Response response) {
         return response.readEntity(new GenericType<>() {
         });
@@ -74,6 +89,16 @@ public class E2EBase {
         });
     }
 
+    static List<String> getTopics(Response response) {
+        return response.readEntity(new GenericType<>() {
+        });
+    }
+
+    static List<String> getSubscriptions(Response response) {
+        return response.readEntity(new GenericType<>() {
+        });
+    }
+
     static void cleanupOrgs(List<Org> orgs) {
         List<Org> existingOrgs = getOrgs(makeListRequest(getOrgsUri(), 200));
         existingOrgs.forEach(o -> {
@@ -85,20 +110,58 @@ public class E2EBase {
 
     static void cleanupOrg(Org org) {
         List<Team> existingTeams = getTeams(makeListRequest(getTeamsUri(org.getName()), 200));
-        existingTeams.forEach(t -> cleanupTeam(t));
+        existingTeams.forEach(E2EBase::cleanupTeam);
         makeDeleteRequest(getOrgUri(org), 200);
     }
 
     static void cleanupTeam(Team team) {
         List<Project> existingProjects =
                 getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), 200));
-        existingProjects.forEach(p -> cleanupProject(p));
+        existingProjects.forEach(E2EBase::cleanupProject);
         makeDeleteRequest(getTeamUri(team), 200);
     }
 
     static void cleanupProject(Project project) {
-        //TODO:: add cleanup of other resources when implemented.
+        cleanupSubscriptionsOnProject(project);
+        List<String> existingTopics = getTopics(makeListRequest(getTopicsUri(project), 200));
+        if (!existingTopics.isEmpty()) {
+            cleanupSubscriptionsOnTopics(existingTopics, project.getName());
+            existingTopics.forEach(t -> cleanupTopic(t, project));
+        }
         makeDeleteRequest(getProjectUri(project), 200);
+    }
+
+    static void cleanupTopic(String topicName, Project project) {
+        makeDeleteRequest(getTopicsUri(project, topicName), 200);
+    }
+
+    // this method traverses the resource hierarchy and clean-ups all subscriptions on the matching topics
+    // since the subscription can be on any project, it needs to traverse all projects
+    static void cleanupSubscriptionsOnTopics(List<String> topicNames, String projectName) {
+        List<Org> orgs = getOrgs(makeListRequest(getOrgsUri(), 200));
+        orgs.forEach(org -> {
+            List<Team> teams = getTeams(makeListRequest(getTeamsUri(org.getName()), 200));
+            teams.forEach(team -> {
+                List<Project> projects =
+                        getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), 200));
+                projects.forEach(project -> {
+                    List<String> subscriptionNames =
+                            getSubscriptions(makeListRequest(getSubscriptionsUri(project), 200));
+                    subscriptionNames.forEach(sub -> {
+                        SubscriptionResource res =
+                                makeGetRequest(getSubscriptionsUri(project, sub), SubscriptionResource.class, 200);
+                        if (topicNames.contains(res.getTopic()) && projectName.equals(res.getTopicProject())) {
+                            makeDeleteRequest(getSubscriptionsUri(project, sub), 200);
+                        }
+                    });
+                });
+            });
+        });
+    }
+
+    static void cleanupSubscriptionsOnProject(Project project) {
+        getSubscriptions(makeListRequest(getSubscriptionsUri(project), 200)).forEach(
+                s -> makeDeleteRequest(getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), 200));
     }
 
     static Client getClient() {

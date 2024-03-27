@@ -14,13 +14,14 @@ dependencies {
     implementation(project(":messaging"))
     implementation(project(":entities"))
     implementation(project(":authz"))
+    implementation(project(":controller"))
+    implementation(project(":consumer"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.commons:commons-lang3")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("javax.annotation:javax.annotation-api:$javax_version")
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-config")
@@ -28,9 +29,11 @@ dependencies {
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-auth-common")
     implementation("io.vertx:vertx-auth-jwt")
+    implementation("io.vertx:vertx-zookeeper")
     implementation("io.vertx:vertx-opentelemetry")
     implementation("io.vertx:vertx-opentracing")
     implementation("io.vertx:vertx-micrometer-metrics")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
@@ -40,6 +43,7 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk")
     implementation("io.opentelemetry:opentelemetry-exporter-logging")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    implementation("io.opentelemetry:opentelemetry-exporter-prometheus")
     implementation("io.opentelemetry:opentelemetry-semconv")
 
     implementation("io.micrometer:micrometer-registry-otlp")
@@ -49,9 +53,11 @@ dependencies {
     implementation("org.apache.curator:curator-framework")
     runtimeOnly(project(":pulsar"))
 
+    testImplementation("io.vertx:vertx-zookeeper:4.5.1")
+
     testImplementation(project(":pulsar"))
-    testImplementation(testFixtures(project(":core")))
-    testImplementation(testFixtures(project(":authz")))
+    testImplementation(testFixtures(project(":spi")))
+    testImplementation(testFixtures(project(":entities")))
     testImplementation("org.apache.curator:curator-test")
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("io.vertx:vertx-web-client")

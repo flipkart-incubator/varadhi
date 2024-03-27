@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.ext.auth.User;
 
 public class VertxUserContext implements UserContext {

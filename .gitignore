@@ -10,6 +10,7 @@ build
 *.iml
 *.iws
 .fleet/*
+*/out/
 
 # Eclipse
 .classpath
@@ -38,3 +39,4 @@ target/
 scratch
 
 scripts/benchmark/infra/
+nohup.out

@@ -4,10 +4,11 @@ plugins {
 }
 
 dependencies {
-    implementation(project(':common'))
-    implementation(project(':entities'))
+    api(project(':common'))
+    api(project(':spi'))
+    implementation("io.vertx:vertx-core:${vertx_version}")
     implementation('com.fasterxml.jackson.core:jackson-databind')
+    
+    testFixturesImplementation(project(":common"))
     testImplementation(project(':pulsar'))
-    testFixturesImplementation(project(':entities'))
-    testFixturesImplementation(project(':common'))
 }

@@ -1,0 +1,67 @@
+
+components : ["Server", "Controller", "All"]
+
+restOptions:
+  deployedRegion: "default"
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
+
+vertxOptions:
+  eventLoopPoolSize: 1
+  workerPoolSize: 1
+  internalBlockingPoolSize: 1
+
+verticleDeploymentOptions:
+  instances: 1
+  worker: false
+  workerPoolSize: 2
+
+authenticationEnabled: false
+authentication:
+  jwt:
+    jwksUrl: "http://localhost:9090/default/jwks"
+    options:
+      issuer: "http://localhost:9090/default"
+      ignoreExpiration: true
+
+authorizationEnabled: false
+
+authorization:
+  superUsers: [ "thanos" ]
+  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  configFile: "src/main/resources/authorizationConfig.yml"
+
+messagingStackOptions:
+  providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
+  configFile: "src/main/resources/pulsarConfig.yml"
+
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+  configFile: "src/main/resources/zkConfig.yml"
+
+httpServerOptions:
+  port: 8488
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+featureFlags:
+  leanDeployment: false
+
+zookeeperOptions:
+  connectUrl: "127.0.0.1:2181"
+  sessionTimeoutMs: 60000
+  connectTimeoutMs: 2000
+
+nodeResourcesOverride:
+  cpuCount: 1
+  nicMBps: 100
+
+nodeId: "test"

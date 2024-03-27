@@ -5,9 +5,9 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
@@ -41,7 +41,10 @@ public class TeamHandlersTest extends WebTestBase {
         teamHandlers = new TeamHandlers(teamService);
 
         Route routeCreate =
-                router.post("/orgs/:org/teams").handler(bodyHandler).handler(wrapBlocking(teamHandlers::create));
+                router.post("/orgs/:org/teams").handler(bodyHandler).handler(ctx -> {
+                    teamHandlers.setTeam(ctx);
+                    ctx.next();
+                }).handler(wrapBlocking(teamHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org/teams/:team").handler(wrapBlocking(teamHandlers::get));
         setupFailureHandler(routeGet);

@@ -1,49 +1,43 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.exceptions.ArgumentException;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.entities.ResourceAction.*;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final MetaStore metaStore;
+    private final ProjectService projectService;
 
     public TopicHandlers(
             VaradhiTopicFactory varadhiTopicFactory,
             VaradhiTopicService varadhiTopicService,
-            MetaStore metaStore
+            ProjectService projectService
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
-        this.metaStore = metaStore;
+        this.projectService = projectService;
     }
 
     @Override
@@ -51,39 +45,49 @@ public class TopicHandlers implements RouteProvider {
         return new SubRoutes(
                 "/v1/projects/:project/topics",
                 List.of(
-                        new RouteDefinition(
-                                HttpMethod.GET,
-                                "/:topic",
-                                Set.of(),
-                                new LinkedHashSet<>(),
-                                this::get,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_GET, "{project}/{topic}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "",
-                                Set.of(authenticated, hasBody),
-                                new LinkedHashSet<>(),
-                                this::create,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_CREATE, "{project}"))
-                        ),
-                        new RouteDefinition(
-                                HttpMethod.DELETE,
-                                "/:topic",
-                                Set.of(),
-                                new LinkedHashSet<>(),
-                                this::delete,
-                                true,
-                                Optional.of(PermissionAuthorization.of(TOPIC_DELETE, "{project}/{topic}"))
-                        )
+                        RouteDefinition.get("GetTopic", "/:topic")
+                                .authorize(TOPIC_GET, "{project}/{topic}")
+                                .build(this::getHierarchy, this::get),
+                        RouteDefinition.post("CreateTopic", "")
+                                .hasBody()
+                                .bodyParser(this::setTopic)
+                                .authorize(TOPIC_CREATE, "{project}")
+                                .build(this::getHierarchy, this::create),
+                        RouteDefinition.delete("DeleteTopic", "/:topic")
+                                .authorize(TOPIC_DELETE, "{project}/{topic}")
+                                .build(this::getHierarchy, this::delete),
+                        RouteDefinition.get("ListTopics", "")
+                                .authorize(TOPIC_GET, "{project}")
+                                .build(this::getHierarchy, this::listTopics)
                 )
         ).get();
     }
 
+    public void setTopic(RoutingContext ctx) {
+        TopicResource topic = ctx.body().asValidatedPojo(TopicResource.class);
+        ctx.put(CONTEXT_KEY_BODY, topic);
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
+        Project project = projectService.getCachedProject(projectName);
+        if (hasBody) {
+            TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
+            return new Hierarchies.TopicHierarchy(
+                    project.getOrg(), project.getTeam(), project.getName(), topicResource.getName());
+        }
+        String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
+        if (null == topicName) {
+            return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
+        }
+        return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+    }
+
     public void get(RoutingContext ctx) {
-        ctx.todo();
+        String varadhiTopicName = getVaradhiTopicName(ctx);
+        VaradhiTopic varadhiTopic = varadhiTopicService.get(varadhiTopicName);
+        TopicResource topicResource = TopicResource.of(varadhiTopic);
+        ctx.endApiWithResponse(topicResource);
     }
 
     public void create(RoutingContext ctx) {
@@ -91,29 +95,49 @@ public class TopicHandlers implements RouteProvider {
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 
-        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
         if (!projectName.equals(topicResource.getProject())) {
-            throw new ArgumentException("Specified Project name is different from Project name in url");
+            throw new IllegalArgumentException("Specified Project name is different from Project name in url");
         }
 
-        Project project = metaStore.getProject(topicResource.getProject());
-        boolean found = metaStore.checkTopicResourceExists(topicResource.getName(), topicResource.getProject());
+        Project project = projectService.getCachedProject(topicResource.getProject());
+        String varadhiTopicName = String.join(NAME_SEPARATOR, projectName, topicResource.getName());
+        boolean found = varadhiTopicService.exists(varadhiTopicName);
         if (found) {
-            log.error("Specified Topic({}:{}) already exists.", topicResource.getProject(), topicResource.getName());
             throw new DuplicateResourceException(
-                    String.format("Specified Topic(%s:%s) already exists.", topicResource.getProject(),
-                            topicResource.getName()
-                    ));
+                    String.format("Specified Topic(%s) already exists.", varadhiTopicName));
         }
-        metaStore.createTopicResource(topicResource);
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
-        varadhiTopicService.create(vt);
+        varadhiTopicService.create(vt, project);
         ctx.endApiWithResponse(topicResource);
     }
 
-
     public void delete(RoutingContext ctx) {
-        ctx.todo();
+        String varadhiTopicName = getVaradhiTopicName(ctx);
+        varadhiTopicService.delete(varadhiTopicName);
+        ctx.endApi();
+    }
+
+    public void listTopics(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        List<String> varadhiTopics = varadhiTopicService.getVaradhiTopics(projectName);
+
+        String projectPrefixOfVaradhiTopic = projectName + NAME_SEPARATOR;
+        List<String> topicResourceNames = new ArrayList<>();
+        varadhiTopics.forEach(varadhiTopic -> {
+                    if (varadhiTopic.startsWith(projectPrefixOfVaradhiTopic)) {
+                        String[] splits = varadhiTopic.split(NAME_SEPARATOR_REGEX);
+                        topicResourceNames.add(splits[1]);
+                    }
+                }
+        );
+        ctx.endApiWithResponse(topicResourceNames);
+    }
+
+    private String getVaradhiTopicName(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String topicResourceName = ctx.pathParam(PATH_PARAM_TOPIC);
+        return String.join(NAME_SEPARATOR, projectName, topicResourceName);
     }
 }

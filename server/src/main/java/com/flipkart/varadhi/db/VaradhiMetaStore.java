@@ -1,19 +1,22 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.db.ZNode.*;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 
 @Slf4j
-public class VaradhiMetaStore implements MetaStore {
+public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     private final ZKMetaStore zkMetaStore;
 
     public VaradhiMetaStore(CuratorFramework zkCurator) {
@@ -25,8 +28,9 @@ public class VaradhiMetaStore implements MetaStore {
         ensureEntityTypePathExists(ORG);
         ensureEntityTypePathExists(TEAM);
         ensureEntityTypePathExists(PROJECT);
-        ensureEntityTypePathExists(TOPIC_RESOURCE);
-        ensureEntityTypePathExists(VARADHI_TOPIC);
+        ensureEntityTypePathExists(TOPIC);
+        ensureEntityTypePathExists(SUBSCRIPTION);
+        ensureEntityTypePathExists(ROLE_BINDING);
     }
 
     public void ensureEntityTypePathExists(ZNodeKind zNodeKind) {
@@ -161,62 +165,126 @@ public class VaradhiMetaStore implements MetaStore {
 
 
     @Override
-    public List<String> getVaradhiTopicNames(String projectName) {
-        String projectPrefixOfTopicName = projectName + RESOURCE_NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(VARADHI_TOPIC);
+    public List<String> getTopicNames(String projectName) {
+        String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
+        ZNode znode = ZNode.OfEntityType(TOPIC);
         return zkMetaStore.listChildren(znode)
                 .stream()
                 .filter(name -> name.contains(projectPrefixOfTopicName))
-                .map(name -> name.split(RESOURCE_NAME_SEPARATOR)[1])
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
-    public void createTopicResource(TopicResource resource) {
-        ZNode znode = ZNode.OfTopicResource(resource.getProject(), resource.getName());
-        zkMetaStore.createZNodeWithData(znode, resource);
+    public void createTopic(VaradhiTopic topic) {
+        ZNode znode = ZNode.OfTopic(topic.getName());
+        zkMetaStore.createZNodeWithData(znode, topic);
     }
 
     @Override
-    public boolean checkTopicResourceExists(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
+    public boolean checkTopicExists(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public TopicResource getTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        return zkMetaStore.getZNodeDataAsPojo(znode, TopicResource.class);
-    }
-
-    @Override
-    public void deleteTopicResource(String topicResourceName, String projectName) {
-        ZNode znode = ZNode.OfTopicResource(projectName, topicResourceName);
-        zkMetaStore.deleteZNode(znode);
-    }
-
-    @Override
-    public void createVaradhiTopic(VaradhiTopic varadhiTopic) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopic.getName());
-        zkMetaStore.createZNodeWithData(znode, varadhiTopic);
-    }
-
-    @Override
-    public boolean checkVaradhiTopicExists(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
-        return zkMetaStore.zkPathExist(znode);
-    }
-
-    @Override
-    public VaradhiTopic getVaradhiTopic(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+    public VaradhiTopic getTopic(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
 
     @Override
-    public void deleteVaradhiTopic(String varadhiTopicName) {
-        ZNode znode = ZNode.OfVaradhiTopic(varadhiTopicName);
+    public void deleteTopic(String topicName) {
+        ZNode znode = ZNode.OfTopic(topicName);
         zkMetaStore.deleteZNode(znode);
     }
 
+    @Override
+    public List<String> getAllSubscriptionNames() {
+        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
+        return zkMetaStore.listChildren(znode)
+                .stream()
+                .toList();
+    }
+
+    @Override
+    public List<String> getSubscriptionNames(String projectName) {
+        String projectPrefix = projectName + NAME_SEPARATOR;
+        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
+        return zkMetaStore.listChildren(znode)
+                .stream()
+                .filter(name -> name.contains(projectPrefix))
+                .toList();
+    }
+
+    @Override
+    public void createSubscription(VaradhiSubscription subscription) {
+        ZNode znode = ZNode.ofSubscription(subscription.getName());
+        zkMetaStore.createZNodeWithData(znode, subscription);
+    }
+
+    @Override
+    public VaradhiSubscription getSubscription(String subscriptionName) {
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
+        return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiSubscription.class);
+    }
+
+    @Override
+    public int updateSubscription(VaradhiSubscription subscription) {
+        ZNode znode = ZNode.ofSubscription(subscription.getName());
+        return zkMetaStore.updateZNodeWithData(znode, subscription);
+    }
+
+    @Override
+    public boolean checkSubscriptionExists(String subscriptionName) {
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
+        return zkMetaStore.zkPathExist(znode);
+    }
+
+    @Override
+    public void deleteSubscription(String subscriptionName) {
+        ZNode znode = ZNode.ofSubscription(subscriptionName);
+        zkMetaStore.deleteZNode(znode);
+    }
+
+    @Override
+    public List<RoleBindingNode> getRoleBindingNodes() {
+        ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
+        return zkMetaStore.listChildren(znode).stream().map(this::findRoleBindingNode).toList();
+    }
+
+    @Override
+    public RoleBindingNode findRoleBindingNode(String resourceIdWithType) {
+        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceIdWithType);
+        return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
+    }
+
+    @Override
+    public RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+        return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
+    }
+
+    @Override
+    public void createRoleBindingNode(RoleBindingNode node) {
+        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
+        zkMetaStore.createZNodeWithData(znode, node);
+    }
+
+    @Override
+    public boolean isRoleBindingPresent(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+        return zkMetaStore.zkPathExist(znode);
+    }
+
+    @Override
+    public int updateRoleBindingNode(RoleBindingNode node) {
+        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
+        return zkMetaStore.updateZNodeWithData(znode, node);
+    }
+
+    @Override
+    public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
+        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+        zkMetaStore.deleteZNode(znode);
+    }
 }

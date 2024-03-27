@@ -3,9 +3,9 @@ package com.flipkart.varadhi.web.admin;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.MetaStoreException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
@@ -35,7 +35,10 @@ public class OrgHandlersTest extends WebTestBase {
         orgService = mock(OrgService.class);
         orgHandlers = new OrgHandlers(orgService);
 
-        Route routeCreate = router.post("/orgs").handler(bodyHandler).handler(wrapBlocking(orgHandlers::create));
+        Route routeCreate = router.post("/orgs").handler(bodyHandler).handler(ctx -> {
+            orgHandlers.setOrg(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(orgHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org").handler(wrapBlocking(orgHandlers::get));
         setupFailureHandler(routeGet);

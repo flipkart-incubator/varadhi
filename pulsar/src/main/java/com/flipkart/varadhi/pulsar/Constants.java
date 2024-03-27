@@ -2,6 +2,8 @@ package com.flipkart.varadhi.pulsar;
 
 public class Constants {
     public static final String PROPERTY_MULTI_VALUE_SEPARATOR = ",";
+    public static String PULSAR_PATH_SEPARATOR = "/";
+
 
     public static class Producer {
         public static final int MIN_PENDING_MESSAGES = 100;

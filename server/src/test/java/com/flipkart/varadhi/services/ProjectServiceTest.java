@@ -4,10 +4,14 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.jmx.JmxConfig;
+import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -29,6 +33,7 @@ public class ProjectServiceTest {
     ProjectService projectService;
     CuratorFramework zkCurator;
     VaradhiMetaStore varadhiMetaStore;
+    MeterRegistry meterRegistry;
 
     Org org1, org2;
     Team o1t1, o1t2, o2t1;
@@ -43,7 +48,8 @@ public class ProjectServiceTest {
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore);
+        meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+        projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
         org1 = new Org("TestOrg1", 0);
         org2 = new Org("TestOrg2", 0);
         o1t1 = new Team("TestTeam1", 0, org1.getName());
@@ -52,8 +58,6 @@ public class ProjectServiceTest {
         o1t1p1 = new Project("o1t1p1", 0, "", o1t1.getName(), o1t1.getOrg());
         o1t1p2 = new Project("o1t1p2", 0, "", o1t1.getName(), o1t1.getOrg());
         o2t1p1 = new Project("o2t1p1", 0, "", o2t1.getName(), o2t1.getOrg());
-
-//        teamDummy = new Team("TeamDummy", 0, "DummyOrg");
         orgService.createOrg(org1);
         teamService.createTeam(o1t1);
     }
@@ -157,7 +161,7 @@ public class ProjectServiceTest {
         String argumentErr =
                 String.format("Project(%s) has same team name and description. Nothing to update.", pLatest.getName());
         validateException(
-                argumentErr, ArgumentException.class,
+                argumentErr, IllegalArgumentException.class,
                 () -> projectService.updateProject(pLatest)
         );
 
@@ -169,7 +173,7 @@ public class ProjectServiceTest {
 
         argumentErr = String.format("Project(%s) can not be moved across organisation.", orgUpdate.getName());
         validateException(
-                argumentErr, ArgumentException.class,
+                argumentErr, IllegalArgumentException.class,
                 () -> projectService.updateProject(orgUpdate)
         );
     }
@@ -180,7 +184,7 @@ public class ProjectServiceTest {
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
 
-        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getVaradhiTopicNames(o1t1p2.getName());
+        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
         InvalidOperationForResourceException e = Assertions.assertThrows(
                 InvalidOperationForResourceException.class,
                 () -> projectService.deleteProject(o1t1p2.getName())
@@ -192,7 +196,22 @@ public class ProjectServiceTest {
         );
     }
 
+    @Test
+    public void testGetCachedProject() {
+        Counter getCounter = meterRegistry.counter("varadhi.cache.project.gets");
+        Counter loadCounter = meterRegistry.counter("varadhi.cache.project.loads");
+        projectService.createProject(o1t1p1);
+        projectService.createProject(o1t1p2);
+        for (int i = 0; i < 100; i++) {
+            projectService.getCachedProject(o1t1p1.getName());
+            projectService.getCachedProject(o1t1p2.getName());
+        }
+        Assertions.assertEquals(200, (int) getCounter.count());
+        Assertions.assertEquals(2, (int) loadCounter.count());
+    }
+
     interface MethodCaller {
         void call();
     }
+
 }

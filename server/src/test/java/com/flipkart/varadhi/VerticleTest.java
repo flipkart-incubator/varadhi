@@ -1,11 +1,15 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.FailureHandler;
+import com.flipkart.varadhi.web.HierarchyHandler;
+import com.flipkart.varadhi.web.routes.RouteBehaviour;
+import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.google.common.collect.Sets;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
@@ -16,10 +20,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Optional;
+import java.util.*;
 
 @ExtendWith(VertxExtension.class)
 public class VerticleTest {
@@ -49,14 +50,20 @@ public class VerticleTest {
         handlers.add(handler2);
 
         RouteDefinition routeDefinition =
-                new RouteDefinition(HttpMethod.GET, "/", Sets.newHashSet(), handlers, handler3, true,
-                        Optional.empty()
-                );
+                RouteDefinition.get("test", "/")
+                        .unAuthenticated()
+//                        .apiContextOff()
+                        .logsDisabled().tracingDisabled()
+                        .preHandler(handler1)
+                        .preHandler(handler2)
+                        .build(this::getHierarchy, handler3);
         HttpServerOptions httpServerOptions = new HttpServerOptions();
         httpServerOptions.setPort(6969);
+        Map<RouteBehaviour, RouteConfigurator> configuratorMap = new HashMap<>();
+        configuratorMap.put(RouteBehaviour.addHierarchy, new HierarchyHandler());
         vertx.deployVerticle(
                 new RestVerticle(
-                        Collections.singletonList(routeDefinition), new HashMap<>(), new FailureHandler(),
+                        Collections.singletonList(routeDefinition), configuratorMap, new FailureHandler(),
                         httpServerOptions
                 ),
                 testContext.succeeding(id -> webClient.get(6969, "localhost", "/")
@@ -66,5 +73,9 @@ public class VerticleTest {
                             testContext.completeNow();
                         }))))
         );
+    }
+
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        return new Hierarchies.RootHierarchy();
     }
 }

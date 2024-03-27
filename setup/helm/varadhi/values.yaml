@@ -141,7 +141,17 @@ varadhi:
   app:
     name: server
     configMapName: server
-    configFileName: serverConfig.yml
+    configFileName: configuration.yml
+    components: [ "Server", "Controller" ]
+    restOptions:
+      deployedRegion: "default"
+      defaultOrg: "default"
+      defaultTeam: "public"
+      defaultProject: "public"
+    producerOptions:
+      producerCacheBuilderSpec: ""
+      topicCacheBuilderSpec: ""
+      metricEnabled: true
     vertxOptions:
       eventLoopPoolSize: 1
       workerPoolSize: 1
@@ -155,11 +165,6 @@ varadhi:
       alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
       decompressionSupported: false
       useAlpn: true
-    varadhiOptions:
-      deployedRegion: "default"
-      producerOptions:
-        producerCacheBuilderSpec: ""
-        topicCacheBuilderSpec: ""
     authenticationEnabled: false
     authentication:
       jwt:
@@ -175,6 +180,16 @@ varadhi:
       providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
     metaStoreOptions:
       providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+    featureFlags:
+      leanDeployment: false
+    nodeResourcesOverride:
+      cpuCount: 1
+      nicMBps: 100
+    nodeId: test
+    zookeeperOptions:
+      connectUrl: "127.0.0.1:2181"
+      sessionTimeoutMs: 60000
+      connectTimeoutMs: 2000
 
 #############################################
 # Varadhi Server logging config

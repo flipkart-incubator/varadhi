@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -14,85 +16,93 @@ import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_RATE_LIMITED;
 import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.REQUEST_PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_PRODUCE_IDENTITY;
-import static com.flipkart.varadhi.MessageConstants.Headers.*;
-import static com.flipkart.varadhi.MessageConstants.PRODUCE_CHANNEL_HTTP;
-import static com.flipkart.varadhi.entities.ResourceAction.TOPIC_PRODUCE;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.authenticated;
-import static com.flipkart.varadhi.web.routes.RouteBehaviour.hasBody;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
+import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
+import static com.flipkart.varadhi.entities.StandardHeaders.*;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class ProduceHandlers implements RouteProvider {
-    private final String deployedRegion;
     private final ProducerService producerService;
-    private final String serviceHostName;
-    private final HeaderValidationHandler headerValidationHandler;
+    private final Handler<RoutingContext> headerValidationHandler;
+    private final ProjectService projectService;
+    private final ProducerMetricHandler metricHandler;
+    private final String produceRegion;
 
-    public ProduceHandlers(String serviceHostName, RestOptions restOptions, ProducerService producerService) {
-        this.deployedRegion = restOptions.getDeployedRegion();
+    public ProduceHandlers(
+            String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
+            ProjectService projectService, ProducerMetricHandler metricHandler
+    ) {
+        this.produceRegion = produceRegion;
         this.producerService = producerService;
-        this.serviceHostName = serviceHostName;
-        this.headerValidationHandler = new HeaderValidationHandler(restOptions);
+        this.headerValidationHandler = headerValidationHandler;
+        this.projectService = projectService;
+        this.metricHandler = metricHandler;
     }
 
     @Override
     public List<RouteDefinition> get() {
 
-        LinkedHashSet<Handler<RoutingContext>> producePreHandlers = new LinkedHashSet<>();
-        producePreHandlers.add(headerValidationHandler::validate);
-
         return new SubRoutes(
                 "/v1/projects/:project",
                 List.of(
-                        new RouteDefinition(
-                                HttpMethod.POST,
-                                "/topics/:topic/produce",
-                                Set.of(authenticated, hasBody),
-                                producePreHandlers,
-                                this::produce,
-                                false,
-                                Optional.of(PermissionAuthorization.of(TOPIC_PRODUCE, "{project}/{topic}"))
-                        )
+                        RouteDefinition.post("Produce", "/topics/:topic/produce")
+                                .hasBody()
+                                .nonBlocking()
+                                .metricsEnabled()
+                                .preHandler(headerValidationHandler)
+                                .authorize(TOPIC_PRODUCE, "{project}/{topic}")
+                                .build(this::getHierarchy, this::produce)
                 )
         ).get();
     }
 
+    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
+        String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
+        Project project = projectService.getCachedProject(projectName);
+        return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+    }
+
     public void produce(RoutingContext ctx) {
+
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
+        Hierarchies.TopicHierarchy topicHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+
+        Map<String, String> produceAttributes = topicHierarchy.getAttributes();
+        //TODO FIx attribute name semantics here.
+        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+        produceAttributes.put(TAG_REGION, produceRegion);
+        produceAttributes.put(TAG_IDENTITY, produceIdentity);
+        ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
+
+        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
 
         // TODO:: Below is making extra copy, this needs to be avoided.
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-//         TODO:: Add project validations.
-
-
-        String projectName = ctx.pathParam(REQUEST_PATH_PARAM_PROJECT);
-        String topicName = ctx.pathParam(REQUEST_PATH_PARAM_TOPIC);
-        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
-
-        ProduceContext produceContext = buildProduceContext(ctx, payload.length);
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceContext);
+        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
         CompletableFuture<ProduceResult> produceFuture =
-                producerService.produceToTopic(messageToProduce, varadhiTopicName, produceContext);
+                producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->
                 ctx.vertx().runOnContext((Void) -> {
                             if (null != produceResult) {
@@ -136,49 +146,13 @@ public class ProduceHandlers implements RouteProvider {
     private Message buildMessageToProduce(
             byte[] payload,
             MultiMap headers,
-            ProduceContext produceContext
+            String produceIdentity
     ) {
         Multimap<String, String> requestHeaders = HeaderUtils.copyVaradhiHeaders(headers);
-        requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(produceContext.getRequestContext().getRequestTimestamp()));
-        requestHeaders.put(PRODUCE_IDENTITY, produceContext.getRequestContext().getProduceIdentity());
-        requestHeaders.put(PRODUCE_REGION, produceContext.getTopicContext().getRegion());
+        requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(System.currentTimeMillis()));
+        requestHeaders.put(PRODUCE_IDENTITY, produceIdentity);
+        requestHeaders.put(PRODUCE_REGION, produceRegion);
         MessageHelper.ensureRequiredHeaders(requestHeaders);
         return new Message(payload, requestHeaders);
-    }
-
-    private ProduceContext buildProduceContext(RoutingContext ctx, int payloadSize) {
-        ProduceContext.RequestContext requestContext = buildRequestContext(ctx, payloadSize);
-        ProduceContext.TopicContext topicContext = buildTopicContext(ctx.request(), this.deployedRegion);
-        return new ProduceContext(requestContext, topicContext);
-    }
-
-    private ProduceContext.RequestContext buildRequestContext(RoutingContext ctx, int payloadSize) {
-        HttpServerRequest request = ctx.request();
-        ProduceContext.RequestContext requestContext = new ProduceContext.RequestContext();
-        String produceIdentity = ctx.user() == null ? ANONYMOUS_PRODUCE_IDENTITY : ctx.user().subject();
-        requestContext.setProduceIdentity(produceIdentity);
-        requestContext.setRequestTimestamp(System.currentTimeMillis());
-        requestContext.setBytesReceived(payloadSize);
-        requestContext.setRequestChannel(PRODUCE_CHANNEL_HTTP);
-        String remoteHost = request.remoteAddress().host();
-        String xForwardedForValue = request.getHeader(FORWARDED_FOR);
-        if (null != xForwardedForValue && !xForwardedForValue.isEmpty()) {
-            // This could be multivalued (comma separated), take the original initiator i.e. left most in the list.
-            String[] proxies = xForwardedForValue.trim().split(",");
-            if (!proxies[0].isBlank()) {
-                remoteHost = proxies[0];
-            }
-        }
-        requestContext.setRemoteHost(remoteHost);
-        requestContext.setServiceHost(serviceHostName);
-        return requestContext;
-    }
-
-    private ProduceContext.TopicContext buildTopicContext(HttpServerRequest request, String produceRegion) {
-        ProduceContext.TopicContext topicContext = new ProduceContext.TopicContext();
-        topicContext.setRegion(produceRegion);
-        topicContext.setTopicName(request.getParam(REQUEST_PATH_PARAM_TOPIC));
-        topicContext.setProjectName(request.getParam(REQUEST_PATH_PARAM_PROJECT));
-        return topicContext;
     }
 }

@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.entities;
 
 
-import com.flipkart.varadhi.ValidateVaradhiResource;
 import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -9,15 +8,16 @@ import lombok.Setter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-@ValidateVaradhiResource(message = "Invalid Project name. Check naming constraints.")
-public class Project extends VaradhiResource {
-    String org;
+@ValidateResource(message = "Invalid Project name. Check naming constraints.")
+public class Project extends MetaStoreEntity implements Validatable {
+
+    private String org;
     @Setter
-    String team;
+    private String team;
 
     @Setter
     @Size(max = 100)
-    String description;
+    private String description;
 
     public Project(
             String name,

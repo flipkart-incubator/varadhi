@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities;
 
-public class AbstractTopic extends VaradhiResource {
+public abstract class AbstractTopic extends MetaStoreEntity {
+
     public AbstractTopic(String name, int version) {
         super(name, version);
     }

@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.exceptions.ArgumentException;
 import org.apache.pulsar.client.api.MessageId;
 
 public class PulsarOffset implements Offset {
@@ -11,15 +10,19 @@ public class PulsarOffset implements Offset {
         this.messageId = messageId;
     }
 
+    public MessageId getMessageId() {
+        return this.messageId;
+    }
+
     @Override
     public int compareTo(Offset o) {
         if (null == o) {
-            throw new ArgumentException("Can not compare null Offset.");
+            throw new IllegalArgumentException("Can not compare null Offset.");
         }
         if (o instanceof PulsarOffset) {
             return messageId.compareTo(((PulsarOffset) o).messageId);
         } else {
-            throw new ArgumentException(String.format(
+            throw new IllegalArgumentException(String.format(
                     "Can not compare different Offset types. Expected Offset is %s, given  %s.",
                     PulsarOffset.class.getName(), o.getClass().getName()
             ));

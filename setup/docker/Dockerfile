@@ -46,8 +46,8 @@ COPY --chmod=777 $VARADHI_HOME/server/build/resources/main/ /etc/varadhi/
 RUN mkdir -p /usr/share/varadhi/scripts && chmod -R 777 /usr/share/varadhi/scripts
 COPY  --chmod=777 $VARADHI_HOME/setup/docker/scripts/* /usr/share/varadhi/scripts/
 
-# Fix configuration files references in the serverConfig.yml.
-RUN sed -i 's|src/main/resources/|/etc/varadhi/|' /etc/varadhi/serverConfig.yml
+# Fix configuration files references in the configuration.yml.
+RUN sed -i 's|src/main/resources/|/etc/varadhi/|' /etc/varadhi/configuration.yml
 
 USER varadhi
 WORKDIR /usr/share/varadhi
