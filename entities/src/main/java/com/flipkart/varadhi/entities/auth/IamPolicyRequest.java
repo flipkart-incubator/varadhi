@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode
-public class IAMPolicyRequest implements Validatable {
+public class IamPolicyRequest implements Validatable {
     @NotBlank
     String subject;
 
@@ -20,7 +20,7 @@ public class IAMPolicyRequest implements Validatable {
     Set<String> roles;
 
     @JsonCreator
-    public IAMPolicyRequest(@JsonProperty("subject") String subject, @JsonProperty("roles") Set<String> roles) {
+    public IamPolicyRequest(@JsonProperty("subject") String subject, @JsonProperty("roles") Set<String> roles) {
         this.subject = subject;
         this.roles = roles;
     }

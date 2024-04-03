@@ -12,9 +12,9 @@ import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -50,7 +49,7 @@ public abstract class VerticleDeployer {
     private final ProduceHandlers produceHandlers;
     private final SubscriptionHandlers subscriptionHandlers;
     private final HealthCheckHandler healthCheckHandler;
-    private final Supplier<IamPolicyHandlers> authZHandlersSupplier;
+    private final Supplier<IamPolicyHandlers> iamPolicyHandlersSupplier;
     private final Map<RouteBehaviour, RouteConfigurator> behaviorConfigurators = new HashMap<>();
 
     public VerticleDeployer(
@@ -89,7 +88,8 @@ public abstract class VerticleDeployer {
                         deployedRegion, headerValidator::validate, producerService, projectService,
                         producerMetricsHandler
                 );
-        this.authZHandlersSupplier = getIamPolicyHandlersSupplier(projectService, metaStore);
+
+        this.iamPolicyHandlersSupplier = getIamPolicyHandlersSupplier(projectService, metaStore);
         ControllerApi controllerApiProxy = new ControllerApiProxy(clusterManager.getExchange(vertx));
         SubscriptionService subscriptionService = new SubscriptionService(metaStore, controllerApiProxy);
         this.subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
@@ -115,13 +115,13 @@ public abstract class VerticleDeployer {
             ProjectService projectService, MetaStore metaStore
     ) {
         return () -> {
-            if (metaStore instanceof RoleBindingMetaStore rbMetaStore) {
+            if (metaStore instanceof IamPolicyMetaStore rbMetaStore) {
                 return new IamPolicyHandlers(
                         projectService,
                         new IamPolicyService(metaStore, rbMetaStore)
                 );
             }
-            throw new IllegalStateException("MetaStore is not an instance of RoleBindingMetaStore.");
+            throw new IllegalStateException("MetaStore is not an instance of IamPolicyMetaStore.");
         };
     }
 
@@ -133,13 +133,13 @@ public abstract class VerticleDeployer {
                         healthCheckHandler.get()
                 )
                 .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public Future<String> deployVerticle(Vertx vertx, AppConfiguration configuration) {
         List<RouteDefinition> handlerDefinitions = getRouteDefinitions();
         if (shouldEnableAuthZHandlers(configuration)) {
-            handlerDefinitions.addAll(authZHandlersSupplier.get().get());
+            handlerDefinitions.addAll(iamPolicyHandlersSupplier.get().get());
         }
         return vertx.deployVerticle(
                 () -> new RestVerticle(

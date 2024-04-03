@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -32,21 +35,21 @@ public class TeamHandlers implements RouteProvider {
                 "/v1/orgs/:org/teams",
                 List.of(
                         RouteDefinition.get("ListTeams", "")
-                                .authorize(TEAM_GET, "{org}")
+                                .authorize(TEAM_LIST)
                                 .build(this::getHierarchy, this::listTeams),
                         RouteDefinition.get("ListProjects", "/:team/projects")
-                                .authorize(PROJECT_LIST, "{org}")
+                                .authorize(PROJECT_LIST)
                                 .build(this::getHierarchy, this::listProjects),
                         RouteDefinition.get("GetTeam", "/:team")
-                                .authorize(TEAM_GET, "{org}/{team}")
+                                .authorize(TEAM_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateTeam", "")
                                 .hasBody()
                                 .bodyParser(this::setTeam)
-                                .authorize(TEAM_CREATE, "{org}")
+                                .authorize(TEAM_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteTeam", "/:team")
-                                .authorize(TEAM_DELETE, "{org}/{team}")
+                                .authorize(TEAM_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();
@@ -92,7 +95,6 @@ public class TeamHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         Team team = ctx.get(CONTEXT_KEY_BODY);
         if (!orgName.equals(team.getOrg())) {

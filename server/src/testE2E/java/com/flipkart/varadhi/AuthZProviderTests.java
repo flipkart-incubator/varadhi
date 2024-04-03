@@ -6,10 +6,9 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.auth.IAMPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
+import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -20,19 +19,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
-import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 @ExtendWith(VertxExtension.class)
-public class DefaultAuthZProviderTests extends E2EBase {
+public class AuthZProviderTests extends E2EBase {
 
     public static Org oPublic;
     public static Team fkTeamRocket, fkTeamAsh;
@@ -68,7 +67,7 @@ public class DefaultAuthZProviderTests extends E2EBase {
         cleanupRoleBindings();
     }
 
-    private static void setupProvider(Checkpoint checkpoint) throws IOException, InterruptedException {
+    private static void setupProvider(Checkpoint checkpoint) throws IOException {
         String configContent =
                 """
                         ---
@@ -115,66 +114,67 @@ public class DefaultAuthZProviderTests extends E2EBase {
         provider.init(authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
-    private static void cleanupRoleBindings() {
-        cleanupOrgs(List.of(oPublic));
-        var allNodes = getAllRoleBindings(makeHttpGetRequest(getRoleBindingsUri()));
-        allNodes.forEach(
-                node -> makeDeleteRequest(getRoleBindingsUri(node.getResourceType(), node.getResourceId()), 200));
-    }
+    private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();
 
-    private static List<RoleBindingNode> getAllRoleBindings(Response response) {
-        return response.readEntity(new GenericType<>() {
-        });
-    }
-
-    private static String getRoleBindingsUri() {
-        return String.format("%s/v1/authz/debug", VaradhiBaseUri);
-    }
-
-    private static String getRoleBindingsUri(ResourceType resourceType, String resourceId) {
-        return String.join("/", getRoleBindingsUri(), resourceType.name(), resourceId);
-    }
-
-    private static String getIAMPolicyUri(String resourceUri) {
+    private static String getIamPolicyUri(String resourceUri) {
         return String.join("/", VaradhiBaseUri, "v1", resourceUri, "policy");
     }
 
     private static void bootstrapRoleBindings() {
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public"),
-                new IAMPolicyRequest("abc", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public"),
+                new IamPolicyRequest("abc", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public"),
-                new IAMPolicyRequest("xyz", Set.of("org.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public"),
+                new IamPolicyRequest("xyz", Set.of("org.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public/teams/team_rocket"),
-                new IAMPolicyRequest("team_user1", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public/teams/team_rocket"),
+                new IamPolicyRequest("team_user1", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("orgs/public/teams/team_ash"),
-                new IAMPolicyRequest("brock", Set.of("team.admin"))
+        setIamPolicy(
+                getIamPolicyUri("orgs/public/teams/team_ash"),
+                new IamPolicyRequest("brock", Set.of("team.admin"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default"),
-                new IAMPolicyRequest("proj_user1", Set.of("project.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default"),
+                new IamPolicyRequest("proj_user1", Set.of("project.read"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default"),
-                new IAMPolicyRequest("proj_user2", Set.of("topic.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default"),
+                new IamPolicyRequest("proj_user2", Set.of("topic.read"))
         );
-        setIAMPolicy(
-                getIAMPolicyUri("projects/default/topics/topic001"),
-                new IAMPolicyRequest("proj_user3", Set.of("topic.read"))
+        setIamPolicy(
+                getIamPolicyUri("projects/default/topics/topic001"),
+                new IamPolicyRequest("proj_user3", Set.of("topic.read"))
         );
     }
 
-    private static void setIAMPolicy(String targetUrl, IAMPolicyRequest entity) {
+    private static void cleanupRoleBindings() {
+        cleanupPolicies();
+        cleanupOrgs(List.of(oPublic));
+    }
+
+    private static void registerPolicyCleanupHandler(String targetUrl) {
+        policyCleanupHandlers.putIfAbsent(targetUrl, () -> deleteIamPolicy(getIamPolicyUri(targetUrl)));
+    }
+
+    private static void cleanupPolicies() {
+        policyCleanupHandlers.forEach((k, v) -> v.run());
+    }
+
+    private static void setIamPolicy(String targetUrl, IamPolicyRequest entity) {
         Response response = makeHttpPutRequest(targetUrl, entity);
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.getStatus());
-        response.readEntity(RoleBindingNode.class);
+        registerPolicyCleanupHandler(targetUrl);
+        response.readEntity(IamPolicyResponse.class);
+    }
+
+    private static void deleteIamPolicy(String targetUrl) {
+        Response response = makeHttpDeleteRequest(targetUrl);
+        Assertions.assertNotNull(response);
     }
 
     @Test

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.core.Future;
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
@@ -31,34 +30,34 @@ public class AuthorizationHandlerTests {
         Checkpoint checks = testCtx.checkpoint(5);
 
         authzHandlerBuilder
-                .build(PermissionAuthorization.of(ResourceAction.TOPIC_CREATE, "{topic}"))
-                .authorize(testUser("a", false), Map.of("topic", "t1")::get)
+                .build(ResourceAction.TOPIC_CREATE)
+                .authorize(testUser("a", false), new Hierarchies.ProjectHierarchy("org1", "team1", "p1"))
                 .onComplete(testCtx.succeeding(v -> checks.flag()));
 
         authzHandlerBuilder
-                .build(PermissionAuthorization.of(ResourceAction.SUBSCRIPTION_DELETE, "{topic}"))
-                .authorize(testUser("a", true), Map.of("topic", "t1")::get)
+                .build(ResourceAction.SUBSCRIPTION_DELETE)
+                .authorize(testUser("a", true), new Hierarchies.SubscriptionHierarchy("org1", "team1", "p1", "s1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(401, ((HttpException) t).getStatusCode());
                     checks.flag();
                 }));
 
         authzHandlerBuilder
-                .build(PermissionAuthorization.of(ResourceAction.TOPIC_DELETE, "{topic}"))
-                .authorize(testUser("alice", false), Map.of("topic", "t1")::get)
+                .build(ResourceAction.TOPIC_DELETE)
+                .authorize(testUser("alice", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(403, ((HttpException) t).getStatusCode());
                     checks.flag();
                 }));
 
         authzHandlerBuilder
-                .build(PermissionAuthorization.of(ResourceAction.TOPIC_GET, "{topic}"))
-                .authorize(testUser("intern", false), Map.of("topic", "t1")::get)
+                .build(ResourceAction.TOPIC_GET)
+                .authorize(testUser("intern", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
                 .onComplete(testCtx.succeeding(v -> checks.flag()));
 
         authzHandlerBuilder
-                .build(PermissionAuthorization.of(ResourceAction.TOPIC_GET, "{topic}"))
-                .authorize(testUser("doom", false), Map.of("topic", "t1")::get)
+                .build(ResourceAction.TOPIC_GET)
+                .authorize(testUser("doom", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(500, ((HttpException) t).getStatusCode());
                     checks.flag();
