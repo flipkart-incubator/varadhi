@@ -2,9 +2,9 @@ package com.flipkart.varadhi.deployment;
 
 
 import com.flipkart.varadhi.VerticleDeployer;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.MessageChannel;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -25,9 +25,9 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     public LeanDeploymentVerticleDeployer(
             Vertx vertx, AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            MessageChannel messageChannel, MeterRegistry meterRegistry, Tracer tracer
+            VaradhiClusterManager clusterManager, MeterRegistry meterRegistry, Tracer tracer
     ) {
-        super(vertx, configuration, messagingStackProvider, metaStoreProvider, messageChannel, meterRegistry, tracer);
+        super(vertx, configuration, messagingStackProvider, metaStoreProvider, clusterManager, meterRegistry, tracer);
     }
 
     @Override

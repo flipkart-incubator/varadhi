@@ -1,13 +1,12 @@
 package com.flipkart.varadhi.components.webserver;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.WebServerOpManager;
+import com.flipkart.varadhi.WebServerApiManager;
 import com.flipkart.varadhi.VerticleDeployer;
-import com.flipkart.varadhi.cluster.ClusterManager;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.MessageChannel;
-import com.flipkart.varadhi.core.cluster.messages.SubscriptionMessage;
+import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.deployment.FullDeploymentVerticleDeployer;
 import com.flipkart.varadhi.deployment.LeanDeploymentVerticleDeployer;
 import io.opentelemetry.api.trace.Tracer;
@@ -15,31 +14,36 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.core.cluster.WebServerApi.ROUTE_WEBSERVER;
+
 @Slf4j
 public class WebServer implements Component {
     private final AppConfiguration configuration;
     private final CoreServices coreServices;
     private String verticleId;
     private final WebServerApiHandler handler;
+    private final VaradhiClusterManager clusterManager;
 
-    public WebServer(AppConfiguration configuration, CoreServices coreServices) {
+    public WebServer(AppConfiguration configuration, CoreServices coreServices, VaradhiClusterManager clusterManager) {
         this.configuration = configuration;
         this.coreServices = coreServices;
-        this.handler = new WebServerApiHandler(new WebServerOpManager());
+        this.clusterManager = clusterManager;
+        this.handler = new WebServerApiHandler(new WebServerApiManager());
     }
 
     @Override
-    public Future<Void> start(Vertx vertx, ClusterManager clusterManager) {
-        MessageChannel messageChannel = clusterManager.connect(null);
-        setupApiHandlers(messageChannel);
-        return deployVerticle(vertx, messageChannel);
+    public Future<Void> start(Vertx vertx) {
+        MessageRouter messageRouter =  clusterManager.getRouter(vertx);
+        setupApiHandlers(messageRouter);
+        return deployVerticle(vertx, clusterManager);
     }
 
     @Override
-    public Future<Void> shutdown(Vertx vertx, ClusterManager clusterManager) {
+    public Future<Void> shutdown(Vertx vertx) {
         //TODO::
         // - fail health check.
-        // - reject any new request for retry (may be via a custom handler ?).
+        // - reject any new request for retry (may be via a custom handler ?). -- What does this mean
+        // TODO:: is undeploy needed explicitly or taken care by Vertx (in close()) ?
 
         // Not taking care of concurrent execution, in general not expected for startup/shutdown.
         if (null != verticleId) {
@@ -57,20 +61,20 @@ public class WebServer implements Component {
         }
     }
 
-    private Future<Void> deployVerticle(Vertx vertx, MessageChannel messageChannel) {
+    private Future<Void> deployVerticle(Vertx vertx, VaradhiClusterManager clusterManager) {
         log.info("Verticle deployment started.");
-        VerticleDeployer verticleDeployer = createVerticleDeployer(vertx, messageChannel);
+        VerticleDeployer verticleDeployer = createVerticleDeployer(vertx, clusterManager);
         return verticleDeployer.deployVerticle(vertx, configuration).compose(r -> {
             log.info("Verticle() deployment completed {}.", r);
             verticleId = r;
-            return Future.succeededFuture();
+            return Future.succeededFuture(null);
         }, t -> {
             log.error("Verticle() deployment failed.", t);
             return Future.failedFuture(t);
         });
     }
 
-    private VerticleDeployer createVerticleDeployer(Vertx vertx, MessageChannel messageChannel) {
+    private VerticleDeployer createVerticleDeployer(Vertx vertx, VaradhiClusterManager clusterManager) {
         VerticleDeployer verticleDeployer;
         Tracer tracer = coreServices.getTracer("varadhi");
         if (configuration.getFeatureFlags().isLeanDeployment()) {
@@ -79,7 +83,7 @@ public class WebServer implements Component {
                     configuration,
                     coreServices.getMessagingStackProvider(),
                     coreServices.getMetaStoreProvider(),
-                    messageChannel,
+                    clusterManager,
                     coreServices.getMeterRegistry(),
                     tracer
             );
@@ -89,15 +93,16 @@ public class WebServer implements Component {
                     configuration,
                     coreServices.getMessagingStackProvider(),
                     coreServices.getMetaStoreProvider(),
-                    messageChannel,
+                    clusterManager,
                     coreServices.getMeterRegistry(),
                     tracer
             );
         }
         return verticleDeployer;
     }
-    public void setupApiHandlers(MessageChannel messageChannel) {
-        messageChannel.register("webserver", SubscriptionMessage.class, handler::update);
+
+    public void setupApiHandlers(MessageRouter router) {
+        router.sendHandler(ROUTE_WEBSERVER, "update", handler::update);
     }
 
 }

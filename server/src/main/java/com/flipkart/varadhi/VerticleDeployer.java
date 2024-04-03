@@ -1,13 +1,13 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.components.controller.ControllerApiProxy;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.MessageChannel;
-import com.flipkart.varadhi.core.ophandlers.ControllerApi;
-import com.flipkart.varadhi.core.proxies.ControllerApiProxy;
+import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -57,7 +57,7 @@ public abstract class VerticleDeployer {
             AppConfiguration configuration,
             MessagingStackProvider messagingStackProvider,
             MetaStoreProvider metaStoreProvider,
-            MessageChannel messageChannel,
+            VaradhiClusterManager clusterManager,
             MeterRegistry meterRegistry,
             Tracer tracer
     ) {
@@ -88,9 +88,10 @@ public abstract class VerticleDeployer {
                         deployedRegion, headerValidator::validate, producerService, projectService,
                         producerMetricsHandler
                 );
+
         this.iamPolicyHandlersSupplier = getIamPolicyHandlersSupplier(projectService, metaStore);
-        ControllerApi controllerApi = new ControllerApiProxy(messageChannel);
-        SubscriptionService subscriptionService = new SubscriptionService(metaStore, controllerApi);
+        ControllerApi controllerApiProxy = new ControllerApiProxy(clusterManager.getExchange(vertx));
+        SubscriptionService subscriptionService = new SubscriptionService(metaStore, controllerApiProxy);
         this.subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
         this.healthCheckHandler = new HealthCheckHandler();
 

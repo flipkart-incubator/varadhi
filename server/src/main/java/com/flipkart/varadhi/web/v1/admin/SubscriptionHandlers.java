@@ -131,7 +131,7 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void stop(RoutingContext ctx) {
-        ctx.todo();
+        subscriptionService.stop(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
     }
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {

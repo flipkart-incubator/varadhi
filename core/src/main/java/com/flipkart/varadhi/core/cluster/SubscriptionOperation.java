@@ -1,5 +1,4 @@
-package com.flipkart.varadhi.core.cluster.messages;
-
+package com.flipkart.varadhi.core.cluster;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -16,20 +15,27 @@ public class SubscriptionOperation {
     public enum State {
         SCHEDULED, ERRORED, COMPLETED, IN_PROGRESS
     }
-
     private Kind kind;
     private State state;
     private String requestedBy;
     private long startTime;
     private long endTime;
     private OpData data;
-
     public static SubscriptionOperation startOp(String subscriptionId, String requestedBy) {
         SubscriptionOperation op = new SubscriptionOperation();
         op.setKind(Kind.START);
         op.setRequestedBy(requestedBy);
         op.setStartTime(System.currentTimeMillis());
-        op.data = new StartData(subscriptionId, UUID.randomUUID().toString());
+        op.data = new StartData(subscriptionId);
+        return op;
+    }
+
+    public static SubscriptionOperation stopOp(String subscriptionId, String requestedBy) {
+        SubscriptionOperation op = new SubscriptionOperation();
+        op.setKind(Kind.STOP);
+        op.setRequestedBy(requestedBy);
+        op.setStartTime(System.currentTimeMillis());
+        op.data = new StopData(subscriptionId);
         return op;
     }
 
@@ -54,8 +60,18 @@ public class SubscriptionOperation {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends OpData {
-        public StartData(String subscriptionId, String operationId) {
-            this.setOperationId(operationId);
+        public StartData(String subscriptionId) {
+            this.setOperationId(UUID.randomUUID().toString());
+            this.setSubscriptionId(subscriptionId);
+            this.setState(State.SCHEDULED);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class StopData extends OpData {
+        public StopData(String subscriptionId) {
+            this.setOperationId(UUID.randomUUID().toString());
             this.setSubscriptionId(subscriptionId);
             this.setState(State.SCHEDULED);
         }
