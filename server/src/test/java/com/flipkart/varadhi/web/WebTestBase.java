@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.fasterxml.jackson.databind.JavaType;
-import com.flipkart.varadhi.RestVerticle;
+import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -78,7 +78,7 @@ public class WebTestBase {
     }
 
     public Handler<RoutingContext> wrapBlocking(Handler<RoutingContext> handler) {
-        return RestVerticle.wrapBlockingExecution(vertx, handler);
+        return WebServerVerticle.wrapBlockingExecution(vertx, handler);
     }
 
     public Route setupFailureHandler(Route route) {

@@ -1,48 +1,32 @@
-package com.flipkart.varadhi.deployment;
+package com.flipkart.varadhi.verticles.webserver;
 
-
-import com.flipkart.varadhi.VerticleDeployer;
-import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.opentelemetry.api.trace.Tracer;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.TeamService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 @Slf4j
-public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
-    public LeanDeploymentVerticleDeployer(
-            Vertx vertx, AppConfiguration configuration,
-            MessagingStackProvider messagingStackProvider, MetaStoreProvider metaStoreProvider,
-            VaradhiClusterManager clusterManager, MeterRegistry meterRegistry, Tracer tracer
-    ) {
-        super(vertx, configuration, messagingStackProvider, metaStoreProvider, clusterManager, meterRegistry, tracer);
+public class LeanDeploymentValidator {
+    private final OrgService orgService;
+    private final TeamService teamService;
+    private final ProjectService projectService;
+    public LeanDeploymentValidator(OrgService orgService, TeamService teamService, ProjectService projectService) {
+        this.orgService = orgService;
+        this.teamService = teamService;
+        this.projectService = projectService;
+
     }
 
-    @Override
-    public Future<String> deployVerticle(
-            Vertx vertx,
-            AppConfiguration configuration
-    ) {
-        Promise<String> promise = Promise.promise();
-        vertx.executeBlocking(future -> {
-            ensureLeanDeploymentConstraints(configuration.getRestOptions());
-            future.complete();
-        }, promise);
-        return promise.future().compose(v -> super.deployVerticle(vertx, configuration));
+    public void validate(RestOptions restOptions) {
+        ensureLeanDeploymentConstraints(restOptions);
     }
-
     private void ensureLeanDeploymentConstraints(RestOptions restOptions) {
         String defaultOrg = restOptions.getDefaultOrg();
         String defaultTeam = restOptions.getDefaultTeam();
@@ -54,9 +38,7 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
     }
 
     private void ensureOrgConstraints(String defaultOrg) {
-
         List<Org> orgs = orgService.getOrgs();
-
         if (orgs.size() > 1) {
             throw new InvalidConfigException("Lean deployment can not be enabled as there are more than one orgs.");
         }
@@ -120,6 +102,4 @@ public class LeanDeploymentVerticleDeployer extends VerticleDeployer {
             log.debug("Created default project as no team is present.");
         }
     }
-
 }
-

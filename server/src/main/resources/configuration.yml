@@ -1,7 +1,7 @@
 
 member:
   memberId: "app-1"
-  roles : ["Server", "Controller", "All"]
+  roles : ["Server", "Controller"]
   cpuCount: 1
   nicMBps: 100
 
@@ -32,7 +32,7 @@ deliveryOptions:
   timeoutMs: 1000
   tracingPolicy: "PROPAGATE"
 
-authenticationEnabled: true
+authenticationEnabled: false
 authentication:
   jwt:
     jwksUrl: "http://localhost:9090/default/jwks"

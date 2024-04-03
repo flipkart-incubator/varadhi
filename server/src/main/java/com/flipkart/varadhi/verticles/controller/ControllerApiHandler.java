@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.components.controller;
+package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.cluster.messages.SubscriptionMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
