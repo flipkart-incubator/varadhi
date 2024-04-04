@@ -48,7 +48,7 @@ public class VaradhiApplication {
             CoreServices services = new CoreServices(configuration);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberId);
             Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);
-            createClusteredVertx(configuration, clusterManager, services, "127.0.0.1").compose(vertx ->
+            createClusteredVertx(configuration, clusterManager, services, host).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
                                         if (ar.succeeded()) {
