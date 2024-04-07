@@ -30,7 +30,7 @@ authentication:
       issuer: "http://localhost:9090/default"
       ignoreExpiration: true
 
-authorizationEnabled: false
+authorizationEnabled: true
 
 authorization:
   superUsers: [ "thanos" ]
@@ -39,11 +39,11 @@ authorization:
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-  configFile: "src/main/resources/pulsarConfig.yml"
+  configFile: "src/main/resources/messaging.yml"
 
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: "src/main/resources/zkConfig.yml"
+  configFile: "src/main/resources/metastore.yml"
 
 httpServerOptions:
   port: 8488

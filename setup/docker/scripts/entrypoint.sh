@@ -1,25 +1,28 @@
 #!/bin/bash
-set -e
 set -x
 
 # Modify config files based on environment variables and exec Varadhi Application.
-
-if [[ ! -z "$ZK_URL" ]]; then
-    sed -i  "s|127.0.0.1:2181|$ZK_URL|" /etc/varadhi/zkConfig.yml
+if [[ ! -z "$ZOOKEEPER_SERVERS" ]]; then
+    sed -i  "s|127.0.0.1:2181|$ZOOKEEPER_SERVERS|" /etc/varadhi/metastore.yml
+    sed -i  "s|127.0.0.1:2181|$ZOOKEEPER_SERVERS|" /etc/varadhi/configuration.yml
 fi
 if [[ ! -z "$PULSAR_URL" ]]; then
-    sed -i  "s|http://127.0.0.1:8080|$PULSAR_URL|" /etc/varadhi/pulsarConfig.yml
+    sed -i  "s|http://127.0.0.1:8080|$PULSAR_URL|" /etc/varadhi/messaging.yml
 fi
 
-# update node id index, based on replica index.
-HOSTNAME="$(hostname -s)"
-echo "Fixing the nodeid for the host $HOSTNAME."
-if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
-    ORD=${BASH_REMATCH[2]}
-    sed -i "/nodeId:/s/$/$ORD/" /etc/varadhi/configuration.yml
+# update node id index, based on replica index, if not disabled
+if [[ "$DISABLE_NODEID_SUFFIX" -eq "yes" ]]; then
+    echo "NodeId suffix is disabled."
 else
-    echo "Failed to get index from hostname $HOSTNAME"
-    exit 1
+    HOSTNAME="$(hostname -s)"
+    echo "Fixing the nodeid for the host $HOSTNAME."
+    if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+        ORD=${BASH_REMATCH[2]}
+        sed -i "/nodeId:/s/$/$ORD/" /etc/varadhi/configuration.yml
+    else
+        echo "Failed to get index from hostname $HOSTNAME"
+        exit 1
+    fi
 fi
 
 # JAVA JMX options

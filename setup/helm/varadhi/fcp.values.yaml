@@ -6,7 +6,7 @@ clusterDomain: cluster.local
 
 deployment:
   name: server
-  replicaCount: 1
+  replicaCount: 3
   autoscaling:
     enabled: false
     minReplicas: 1
@@ -33,12 +33,24 @@ deployment:
       cpu: 100m
   service:
     annotations:
+      elb.fcp/do-not-delete-vip: 'true'
+      elb.fcp/mode: http
+      elb.fcp/name: varadhi-oss-varadhi-server-vip
+      elb.fcp/scope: REGIONAL
+      elb.fcp/frontend-port: '80'
+      elb.fcp/backend-port: '8488'
+      elb.fcp/health-check-port: '8488'
+      elb.fcp/health-check-path: /v1/health-check
+      elb.fcp/health-check-timeout: 1s
+      elb.fcp/health-check-interval: 5s
+      elb.fcp/load-balancing-algorithm: leastconn
+      elb.fcp/capacity-scalar: '1'
     frontendPort: 8888
 
 zkDeployment:
   enabled: true
   name: zookeeper
-  replicaCount: 1
+  replicaCount: 3
   updateStrategy:
     type: RollingUpdate
   podManagementPolicy: Parallel
@@ -59,13 +71,13 @@ zkDeployment:
     leaderElection: 3888
   probe:
     liveness:
-      enabled: true
+      enabled: false
       failureThreshold: 10
       initialDelaySeconds: 20
       periodSeconds: 30
       timeoutSeconds: 30
     readiness:
-      enabled: true
+      enabled: false
       failureThreshold: 10
       initialDelaySeconds: 20
       periodSeconds: 30
@@ -76,12 +88,25 @@ zkDeployment:
       initialDelaySeconds: 20
       periodSeconds: 30
       timeoutSeconds: 30
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      add:
+        - NET_ADMIN
+  resources:
+    requests:
+      memory: 500Mi
+      cpu: 100m
+    limits:
+      memory: 500Mi
+      cpu: 100m
   volumes:
     # use a persistent volume or emptyDir
     persistence: true
     ## If you already have an existent storage class and want to reuse it, you can specify its name with the option below
     ##
-    storageClassName: local-path
+    storageClassName: ssd-jbod-ext4-0
     #
     ## Instead if you want to create a new storage class define it below
     ## If left undefined no storage class will be defined along with PVC
@@ -121,13 +146,13 @@ zkDeployment:
 images:
   pullPolicy: IfNotPresent
   appImage:
-    registry: varadhi.docker.registry
-    repository: varadhi
-    tag: latest
+    registry: jfrog.fkinternal.com
+    repository: varadhi-oss/varadhi
+    tag: 0.0.0-1unstable
   zookeeper:
-    registry: docker.io
-    repository: zookeeper
-    tag: latest
+    registry: jfrog.fkinternal.com
+    repository: varadhi-oss/zookeeper
+    tag: 3.6.0
 
 
 #############################################################################

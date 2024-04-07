@@ -40,25 +40,22 @@ authorizationEnabled: {{ .Values.varadhi.app.authorizationEnabled }}
 authorization:
   superUsers: {{ .Values.varadhi.app.authorization.superUsers }}
   providerClassName: {{ .Values.varadhi.app.authorization.providerClassName }}
-  configFile: {{ .Values.deployment.configMountPath }}/{{ .Values.authzProvider.configFileName }}
+  configFile: {{ .Values.deployment.configMountPath }}/authzProvider.yml
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-  configFile: {{ .Values.deployment.configMountPath }}/{{ .Values.messaging.configFileName }}
+  configFile: {{ .Values.deployment.configMountPath }}/messaging.yml
 
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: {{ .Values.deployment.configMountPath }}/{{ .Values.metastore.configFileName }}
+  configFile: {{ .Values.deployment.configMountPath }}/metastore.yml
 
 {{ with .Values.varadhi.app.featureFlags }}
 featureFlags:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
-{{ with .Values.varadhi.app.zookeeperOptions }}
-zookeeperOptions:
-  {{- toYaml . | nindent 2 }}
-{{- end }}
+{{ template "configMap.metastore.zookeeper" . }}
 
 {{ with .Values.varadhi.app.nodeResourcesOverride }}
 nodeResourcesOverride:

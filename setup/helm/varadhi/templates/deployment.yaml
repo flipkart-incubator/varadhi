@@ -8,7 +8,7 @@ metadata:
     component: {{ .Values.deployment.name }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
-  replicas: {{ .Values.deployment.replica_count }}
+  replicas: {{ .Values.deployment.replicaCount }}
   {{- end }}
   selector:
     matchLabels:

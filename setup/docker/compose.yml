@@ -16,8 +16,9 @@ services:
     profiles: [ "test", "service" ]
     environment:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
-      - ZK_URL=zookeeper:2181
+      - ZOOKEEPER_SERVERS=zookeeper:2181
       - PULSAR_URL=http://pulsar:8080
+      - DISABLE_NODEID_SUFFIX=yes
     networks:
       hostnet:
     ports:
