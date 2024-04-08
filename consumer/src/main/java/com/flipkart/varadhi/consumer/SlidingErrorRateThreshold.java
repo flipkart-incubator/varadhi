@@ -112,23 +112,22 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
 
     @Override
     public void close() throws Exception {
-        if(thresholdUpdater != null) {
+        if (thresholdUpdater != null) {
             thresholdUpdater.cancel(true);
         }
     }
 
-    void scheduleTask() {
+    private void scheduleTask() {
         // schedule it at double the tick rate, so that we "don't miss" any tick changes.
         thresholdUpdater = scheduler.scheduleAtFixedRate(() -> {
-            long currentTick = currentWindowBeginTick();
-            if (currentTick != windowBeginTick) {
-                moveWindow(currentTick);
+            boolean moved = moveWindow();
+            if (moved) {
+                notifyListeners(getThreshold());
             }
-            notifyListeners(getThreshold());
         }, 0, tickRateMs / 2, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
-    void notifyListeners(float threshold) {
+    private void notifyListeners(float threshold) {
         for (ErrorThresholdChangeListener listener : listeners) {
             listener.onThresholdChange(threshold);
         }
@@ -137,10 +136,13 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     /**
      * Move the window so that the currentTick - ticksInWindow is the new window beginning tick.
      * Decrement all tick values are now too old, and add new tick values that got added in the window.
-     *
-     * @param currentTick
      */
-    private void moveWindow(long currentTick) {
+    boolean moveWindow() {
+        long currentTick = currentWindowBeginTick();
+        if (currentTick == windowBeginTick) {
+            return false;
+        }
+
         long newWindowBeginTick = currentTick - ticksInWindow;
 
         // decrement the old ticks
@@ -152,5 +154,6 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
         }
 
         windowBeginTick = newWindowBeginTick;
+        return true;
     }
 }
