@@ -2,18 +2,19 @@ package com.flipkart.varadhi.consumer;
 
 import com.google.common.base.Ticker;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
  * A sliding window based error rate threshold.
  * - Window size: dictates the averaging window size.
  * - Tick rate: The rate at which the window slides. Tick rate <= window size.
- *
- * TODO: thread safety
  */
+@ThreadSafe
 public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, AutoCloseable {
 
     private final ScheduledExecutorService scheduler;
@@ -26,27 +27,12 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
 
     /**
      * The ticks array is used to store the number of data points in each tick. This array acts as circular queue.
+     * Can be updated by arbitrary threads.
      */
-    private final int[] ticks;
+    private final AtomicIntegerArray ticks;
 
 
     private long windowBeginTick;
-
-    /**
-     * The last window beginning index in the ticks array. Inclusive.
-     */
-    int windowBeginIdx() {
-        return (int) (windowBeginTick % totalTicks);
-    }
-
-    /**
-     * The last window ending index in the ticks array. Inclusive.
-     *
-     * @return
-     */
-    int windowEndIdx() {
-        return (int) ((windowBeginTick + ticksInWindow - 1) % totalTicks);
-    }
 
     /**
      * total data points from the last window. It is the summation of the values in the ticks array between windowBeginIdx and windowEndIdx.
@@ -75,7 +61,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
 
         // We are using 2 times, so that we can track 2 window worth of datapoints.
         this.totalTicks = 2 * ticksInWindow;
-        this.ticks = new int[totalTicks];
+        this.ticks = new AtomicIntegerArray(totalTicks);
         this.totalDatapoints = 0;
         this.windowBeginTick = currentWindowBeginTick();
         scheduleTask();
@@ -83,12 +69,13 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
 
     /**
      * Add a new datapoint to the current tick. If the tick has changed, then move the window adjusting the total data points.
+     * Can be called by arbitrary threads.
      */
     public void mark() {
         long currentTick = currentWindowBeginTick();
         // mark
         int idx = (int) (currentTick % totalTicks);
-        ticks[idx]++;
+        ticks.incrementAndGet(idx);
     }
 
     long currentWindowBeginTick() {
@@ -137,7 +124,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
      * Move the window so that the currentTick - ticksInWindow is the new window beginning tick.
      * Decrement all tick values are now too old, and add new tick values that got added in the window.
      */
-    boolean moveWindow() {
+    synchronized boolean moveWindow() {
         long currentTick = currentWindowBeginTick();
         if (currentTick == windowBeginTick) {
             return false;
@@ -149,8 +136,8 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
             int beginIdx = (int) (i % totalTicks);
             int endIdx = (int) ((i + ticksInWindow) % totalTicks);
-            totalDatapoints += (ticks[endIdx] - ticks[beginIdx]);
-            ticks[beginIdx] = 0;
+            totalDatapoints += (ticks.get(endIdx) - ticks.get(beginIdx));
+            ticks.set(beginIdx, 0);
         }
 
         windowBeginTick = newWindowBeginTick;
