@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.config.ServerConfig;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
@@ -17,18 +17,25 @@ import com.flipkart.varadhi.utils.YamlLoader;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(VertxExtension.class)
 public class LeanDeploymentVerticleDeployerTest {
 
     TestingServer zkCuratorTestingServer;
@@ -41,16 +48,16 @@ public class LeanDeploymentVerticleDeployerTest {
     MessagingStackProvider messagingStackProvider;
 
     MetaStoreProvider metaStoreProvider;
-
-    ServerConfig serverConfiguration;
+    AppConfiguration appConfiguration;
 
     MeterRegistry meterRegistry;
 
-    Vertx vertx = Vertx.vertx();
+    Vertx vertx;
 
     private OrgService orgService;
     private TeamService teamService;
     private ProjectService projectService;
+    private VaradhiClusterManager clusterManager;
 
 
     private static final String TEST_ORG = "testOrg";
@@ -65,6 +72,7 @@ public class LeanDeploymentVerticleDeployerTest {
 
     @BeforeEach
     public void setup() throws Exception {
+        vertx = Vertx.vertx();
         zkCuratorTestingServer = new TestingServer();
         zkCurator = spy(CuratorFrameworkFactory.newClient(
                 zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
@@ -74,62 +82,79 @@ public class LeanDeploymentVerticleDeployerTest {
         messagingStackProvider = mock(MessagingStackProvider.class);
         metaStoreProvider = mock(MetaStoreProvider.class);
         meterRegistry = mock(MeterRegistry.class);
+        clusterManager = mock(VaradhiClusterManager.class);
+
 
         when(metaStoreProvider.getMetaStore()).thenReturn(varadhiMetaStore);
         when(messagingStackProvider.getProducerFactory()).thenReturn(mock(ProducerFactory.class));
 
-        serverConfiguration = YamlLoader.loadConfig(
+        appConfiguration = YamlLoader.loadConfig(
                 "src/test/resources/testConfiguration.yml",
-                ServerConfig.class
-        );
+                AppConfiguration.class);
+
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
                 varadhiMetaStore,
-                serverConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
-                meterRegistry
-        );
+                appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
+                meterRegistry);
+
 
         leanDeploymentVerticleDeployer = new LeanDeploymentVerticleDeployer(
-                "testHostName",
                 vertx,
-                serverConfiguration,
+                appConfiguration,
                 messagingStackProvider,
                 metaStoreProvider,
+                clusterManager,
                 meterRegistry,
                 null
         );
     }
 
-    @Test
-    public void testNoEntitiesPresent_Success() {
-        leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration);
-
-        Org org = orgService.getOrg(
-                serverConfiguration.getRestOptions().getDefaultOrg());
-        assertNotNull(org);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultOrg(), org.getName());
-
-        Team team = teamService.getTeam(
-                org.getName(), serverConfiguration.getRestOptions().getDefaultTeam());
-        assertNotNull(team);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultTeam(), team.getName());
-
-        Project project = projectService.getProject(
-                serverConfiguration.getRestOptions().getDefaultProject());
-        assertNotNull(project);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultProject(), project.getName());
+    @AfterEach
+    public void tearDown(VertxTestContext testContext) throws Exception {
+        Checkpoint cp = testContext.checkpoint(1);
+        vertx.close().onComplete(testContext.succeeding(v -> {
+            cp.flag();
+        }));
     }
 
     @Test
-    public void testEntitiesPresentWithDefaultName_Success() {
-        Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
+    public void testNoEntitiesPresent_Success(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        leanDeploymentVerticleDeployer
+                .deployVerticle(vertx, appConfiguration)
+                .onComplete(testContext.succeeding( id -> {
+                    Org org = orgService.getOrg(
+                            appConfiguration.getRestOptions().getDefaultOrg());
+                    assertNotNull(org);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), org.getName());
+
+                    Team team = teamService.getTeam(
+                            org.getName(), appConfiguration.getRestOptions().getDefaultTeam());
+                    assertNotNull(team);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), team.getName());
+
+                    Project project = projectService.getProject(
+                            appConfiguration.getRestOptions().getDefaultProject());
+                    assertNotNull(project);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultProject(), project.getName());
+                    cp.flag();
+                }
+        ));
+    }
+
+    @Test
+    public void testEntitiesPresentWithDefaultName_Success(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
         orgService.createOrg(org);
-        Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
         teamService.createTeam(team);
         Project project = new Project(
-                serverConfiguration.getRestOptions().getDefaultProject(),
+                appConfiguration.getRestOptions().getDefaultProject(),
+
                 0,
                 "",
                 team.getName(),
@@ -137,135 +162,121 @@ public class LeanDeploymentVerticleDeployerTest {
         );
         projectService.createProject(project);
 
-        leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration);
+        leanDeploymentVerticleDeployer
+                .deployVerticle(vertx, appConfiguration)
+                .onComplete(testContext.succeeding( id -> {
+                    Org orgObtained = orgService.getOrg(appConfiguration.getRestOptions().getDefaultOrg());
+                    assertNotNull(orgObtained);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), orgObtained.getName());
 
-        org = orgService.getOrg(serverConfiguration.getRestOptions().getDefaultOrg());
-        assertNotNull(org);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultOrg(), org.getName());
+                    Team teamObtained = teamService.getTeam(
+                            org.getName(), appConfiguration.getRestOptions().getDefaultTeam());
+                    assertNotNull(teamObtained);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), teamObtained.getName());
 
-        team = teamService.getTeam(
-                org.getName(), serverConfiguration.getRestOptions().getDefaultTeam());
-        assertNotNull(team);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultTeam(), team.getName());
-
-        project = projectService.getProject(
-                serverConfiguration.getRestOptions().getDefaultProject());
-        assertNotNull(project);
-        assertEquals(serverConfiguration.getRestOptions().getDefaultProject(), project.getName());
+                    Project pObtained = projectService.getProject(
+                            appConfiguration.getRestOptions().getDefaultProject());
+                    assertNotNull(pObtained);
+                    assertEquals(appConfiguration.getRestOptions().getDefaultProject(), pObtained.getName());
+                    cp.flag();
+                }));
     }
 
     @Test
-    public void testDifferentOrgPresent_Failure() {
+    public void testDifferentOrgPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
         Org org = new Org(TEST_ORG, 0);
         orgService.createOrg(org);
-
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(String.format(
-                "Lean deployment can not be enabled as org with %s name is present.",
-                TEST_ORG
-        ), exception.getMessage());
+        leanDeploymentVerticleDeployer
+                        .deployVerticle(vertx, appConfiguration)
+                        .onComplete(testContext.failing(t -> {
+                        assertEquals(String.format(
+                                "Lean deployment can not be enabled as org with %s name is present.",
+                                TEST_ORG), t.getMessage());
+                        cp.flag();
+                        }));
     }
 
     @Test
-    public void testMultipleOrgsPresent_Failure() {
+    public void testMultipleOrgsPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
         Org org1 = new Org(TEST_ORG, 0);
         Org org2 = new Org(TEST_ORG + "2", 0);
         orgService.createOrg(org1);
         orgService.createOrg(org2);
+        leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t ->
+        {
+            assertEquals("Lean deployment can not be enabled as there are more than one orgs.",
+                    t.getMessage());
+            cp.flag();
+        }));
 
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(
-                "Lean deployment can not be enabled as there are more than one orgs.",
-                exception.getMessage()
-        );
     }
 
     @Test
-    public void testDifferentTeamPresent_Failure() {
-        Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
+    public void testDifferentTeamPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
         orgService.createOrg(org);
         Team team = new Team(TEST_TEAM, 0, org.getName());
         teamService.createTeam(team);
-
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(String.format(
-                "Lean deployment can not be enabled as team with %s name is present.",
-                TEST_TEAM
-        ), exception.getMessage());
+        leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing(t -> {
+            assertEquals(String.format(
+                    "Lean deployment can not be enabled as team with %s name is present.",
+                    TEST_TEAM), t.getMessage());
+            cp.flag();
+        }));
     }
 
     @Test
-    public void testMultipleTeamsPresent_Failure() {
-        Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
+    public void testMultipleTeamsPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
         orgService.createOrg(org);
         Team team1 = new Team(TEST_TEAM, 0, org.getName());
         Team team2 = new Team(TEST_TEAM + "2", 0, org.getName());
         teamService.createTeam(team1);
         teamService.createTeam(team2);
-
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(
-                "Lean deployment can not be enabled as there are more than one teams.",
-                exception.getMessage()
-        );
+        leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t -> {
+            assertEquals("Lean deployment can not be enabled as there are more than one teams.",
+                    t.getMessage());
+            cp.flag();
+        } ));
     }
 
     @Test
-    public void testDifferentProjectPresent_Failure() {
-        Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
+    public void testDifferentProjectPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
         orgService.createOrg(org);
-        Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
         teamService.createTeam(team);
         Project project = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
         projectService.createProject(project);
-
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(String.format(
-                "Lean deployment can not be enabled as project with %s name is present.",
-                TEST_PROJECT
-        ), exception.getMessage());
+        leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t -> {
+            assertEquals(String.format(
+                    "Lean deployment can not be enabled as project with %s name is present.",
+                    TEST_PROJECT), t.getMessage());
+            cp.flag();
+        }));
     }
 
     @Test
-    public void testMultipleProjectsPresent_Failure() {
-        Org org = new Org(serverConfiguration.getRestOptions().getDefaultOrg(), 0);
+    public void testMultipleProjectsPresent_Failure(VertxTestContext testContext) {
+        Checkpoint cp = testContext.checkpoint(1);
+        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
         orgService.createOrg(org);
-        Team team = new Team(serverConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
         teamService.createTeam(team);
         Project project1 = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
         Project project2 = new Project(TEST_PROJECT + "2", 0, "", team.getName(), org.getName());
         projectService.createProject(project1);
         projectService.createProject(project2);
-
-        InvalidConfigException exception = assertThrows(
-                InvalidConfigException.class,
-                () -> leanDeploymentVerticleDeployer.deployVerticle(vertx, serverConfiguration)
-        );
-
-        assertEquals(
-                "Lean deployment can not be enabled as there are more than one projects.",
-                exception.getMessage()
-        );
+        leanDeploymentVerticleDeployer.deployVerticle(vertx, appConfiguration).onComplete(testContext.failing( t -> {
+            assertEquals("Lean deployment can not be enabled as there are more than one projects.",
+                    t.getMessage());
+            cp.flag();
+        }));
     }
 
     @Test

@@ -32,7 +32,8 @@ public class AuthenticationOptions extends HashMap<AuthenticationOptions.Mechani
     }
 
     public enum Mechanism {
-        jwt
+        jwt,
+        user_header
     }
 
     @Data

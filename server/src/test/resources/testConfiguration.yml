@@ -1,3 +1,13 @@
+member:
+  memberId: "app-1"
+  roles : ["Server"]
+  cpuCount: 1
+  nicMBps: 100
+
+deliveryOptions:
+  timeoutMs: 1200
+  tracingPolicy: "PROPAGATE"
+
 restOptions:
   deployedRegion: "test"
   defaultOrg: "test"
@@ -44,7 +54,7 @@ metaStoreOptions:
   configFile: "src/main/resources/zkConfig.yml"
 
 httpServerOptions:
-  port: 8080
+  port: 8091
   alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
   decompressionSupported: false
   useAlpn: true
@@ -57,9 +67,3 @@ zookeeperOptions:
   connectUrl: "127.0.0.1:2181"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
-
-nodeResourcesOverride:
-  cpuCount: 1
-  nicMBps: 100
-
-nodeId: "test"

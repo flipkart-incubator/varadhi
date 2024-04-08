@@ -2,7 +2,6 @@ package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.cluster.NodeResources;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -13,12 +12,18 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class ServerConfig {
+public class AppConfiguration {
     @NotNull
     private VertxOptions vertxOptions;
 
     @NotNull
     private DeploymentOptions verticleDeploymentOptions;
+
+    /**
+     * Refer Vertx DeliveryOptions for details, used for inter node communication.
+     * Use it to configure delivery timeout (default 1000ms) and tracing options (default PROPAGATE)
+     */
+    private DeliveryConfig deliveryOptions;
 
     @NotNull
     private HttpServerOptions httpServerOptions;
@@ -56,12 +61,5 @@ public class ServerConfig {
      * In the future, when this becomes auto-detected, this parameter will become optional.
      */
     @NotNull
-    private NodeResources nodeResourcesOverride;
-    
-    /**
-     * A unique node Id across the whole cluster
-     */
-
-    @NotNull
-    private String nodeId;
+    private MemberConfig member;
 }

@@ -46,6 +46,7 @@ class SubscriptionServiceTest {
                 zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
+
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
@@ -66,7 +67,7 @@ class SubscriptionServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
 
-        subscriptionService = new SubscriptionService(varadhiMetaStore);
+        subscriptionService = new SubscriptionService(varadhiMetaStore, null);
     }
 
     @Test

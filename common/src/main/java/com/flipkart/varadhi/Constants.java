@@ -5,6 +5,9 @@ public class Constants {
     public static final String CONTEXT_KEY_BODY = "varadhi.body";
     public static final String CONTEXT_KEY_RESOURCE_HIERARCHY = "varadhi.resourceHierarchy";
 
+    // TODO: this header is only for testing and x_ convention may cause it to be sent to the destination during consume
+    public static final String USER_ID_HEADER = "x_user_id";
+
     public static class PathParams {
         public static final String PATH_PARAM_ORG = "org";
         public static final String PATH_PARAM_TEAM = "team";

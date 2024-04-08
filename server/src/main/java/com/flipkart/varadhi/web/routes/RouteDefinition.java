@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web.routes;
 
 
-import com.flipkart.varadhi.auth.PermissionAuthorization;
 import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import io.vertx.core.Handler;
@@ -12,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -32,7 +30,7 @@ public class RouteDefinition {
     private final LinkedHashSet<Handler<RoutingContext>> preHandlers;
     private final Handler<RoutingContext> endReqHandler;
     private final boolean blockingEndHandler;
-    private final Optional<PermissionAuthorization> requiredAuthorization;
+    private final ResourceAction authorizationOnAction;
     private final Consumer<RoutingContext> bodyParser;
     private final HierarchyFunction hierarchyFunction;
     private final TelemetryType telemetryType;
@@ -41,7 +39,7 @@ public class RouteDefinition {
                     LinkedHashSet<Handler<RoutingContext>> preHandlers,
                     Handler<RoutingContext> endReqHandler,
                     boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
-                    HierarchyFunction function, Optional<PermissionAuthorization> requiredAuthorization,
+                    HierarchyFunction function, ResourceAction authorizationOnAction,
                     TelemetryType telemetryType) {
         this.name = name;
         this.method = method;
@@ -52,7 +50,7 @@ public class RouteDefinition {
         this.blockingEndHandler = blockingEndHandler;
         this.bodyParser = bodyParser;
         this.hierarchyFunction = function;
-        this.requiredAuthorization = requiredAuthorization;
+        this.authorizationOnAction = authorizationOnAction;
         this.telemetryType = telemetryType;
     }
     public static Builder get(String name, String path) {
@@ -85,7 +83,7 @@ public class RouteDefinition {
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
         private Consumer<RoutingContext> bodyParser;
 
-        private PermissionAuthorization requiredAuthorization;
+        private ResourceAction authorizationOnAction;
 
         public Builder unAuthenticated() {
             this.unAuthenticated = true;
@@ -123,8 +121,8 @@ public class RouteDefinition {
             return this;
         }
 
-        public Builder authorize(ResourceAction action, String resource) {
-            this.requiredAuthorization = PermissionAuthorization.of(action, resource);
+        public Builder authorize(ResourceAction action) {
+            this.authorizationOnAction = action;
             return this;
         }
         public Builder preHandler(Handler<RoutingContext> preHandler) {
@@ -150,7 +148,7 @@ public class RouteDefinition {
             if (metricsEnabled || !logsDisabled || !tracingDisabled) {
                 behaviours.add(RouteBehaviour.telemetry);
             }
-            if (null != requiredAuthorization) {
+            if (null != authorizationOnAction) {
                 behaviours.add(RouteBehaviour.authorized);
             }
 
@@ -164,7 +162,7 @@ public class RouteDefinition {
                     !nonBlocking,
                     bodyParser,
                     function,
-                    Optional.ofNullable(requiredAuthorization),
+                    authorizationOnAction,
                     new TelemetryType(metricsEnabled, !logsDisabled, !tracingDisabled)
             );
         }

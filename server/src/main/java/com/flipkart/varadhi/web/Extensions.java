@@ -6,9 +6,12 @@ import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 
 
 public class Extensions {
@@ -99,5 +102,12 @@ public class Extensions {
         public static void todo(RoutingContext context) {
             throw new NotImplementedException("Not Implemented.");
         }
+
+        public static String  getIdentityOrDefault(RoutingContext ctx) {
+            User user = ctx.user();
+            return null != user ? user.subject() : ANONYMOUS_IDENTITY;
+        }
+
+
     }
 }

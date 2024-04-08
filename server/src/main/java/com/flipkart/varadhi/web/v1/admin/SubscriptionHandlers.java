@@ -15,7 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
@@ -38,34 +39,34 @@ public class SubscriptionHandlers implements RouteProvider {
                 List.of(
                         RouteDefinition
                                 .get("ListSubscriptions", "")
-                                .authorize(SUBSCRIPTION_LIST, "{project}")
+                                .authorize(SUBSCRIPTION_LIST)
                                 .build(this::getHierarchy, this::list),
                         RouteDefinition
                                 .get("GetSubscription", "/:subscription")
-                                .authorize(SUBSCRIPTION_GET, "{project}/{subscription}")
+                                .authorize(SUBSCRIPTION_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition
                                 .post("CreateSubscription", "")
                                 .hasBody()
                                 .bodyParser(this::setSubscription)
-                                .authorize(SUBSCRIPTION_CREATE, "{project}")
+                                .authorize(SUBSCRIPTION_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition
                                 .put("UpdateSubscription", "/:subscription")
                                 .hasBody()
                                 .bodyParser(this::setSubscription)
-                                .authorize(SUBSCRIPTION_UPDATE, "{project}/{subscription}")
+                                .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::update),
                         RouteDefinition
                                 .delete("DeleteSubscription", "/:subscription")
-                                .authorize(SUBSCRIPTION_DELETE, "{project}/{subscription}")
+                                .authorize(SUBSCRIPTION_DELETE)
                                 .build(this::getHierarchy, this::delete),
                         RouteDefinition
                                 .post("StartSubscription", "/:subscription/start")
-                                .authorize(SUBSCRIPTION_UPDATE, "{project}/{subscription}")
+                                .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::start),
                         RouteDefinition.post("StopSubscription", "/:subscription/stop")
-                                .authorize(SUBSCRIPTION_UPDATE, "{project}/{subscription}")
+                                .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::stop)
                 )
         ).get();
@@ -99,9 +100,7 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
+        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(ctx);
         SubscriptionResource subscription =
                 SubscriptionHelper.toResource(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
@@ -123,24 +122,21 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void delete(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(projectName, subscriptionName);
-        subscriptionService.deleteSubscription(internalSubscriptionName);
+        subscriptionService.deleteSubscription(SubscriptionHelper.buildSubscriptionName(ctx));
         ctx.endApi();
     }
 
     public void start(RoutingContext ctx) {
-        ctx.todo();
+        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
     }
 
     public void stop(RoutingContext ctx) {
-        ctx.todo();
+        subscriptionService.stop(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
     }
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);;
+        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);
 
         // ensure project name consistent
         if (!projectName.equals(subscription.getProject())) {
