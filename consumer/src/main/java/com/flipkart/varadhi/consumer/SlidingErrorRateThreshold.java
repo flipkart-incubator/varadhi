@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
@@ -64,7 +65,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
         this.ticks = new AtomicIntegerArray(totalTicks);
         this.totalDatapoints = 0;
         this.windowBeginTick = currentWindowBeginTick();
-        scheduleTask();
+        thresholdUpdater = scheduleTask();
     }
 
     /**
@@ -104,14 +105,14 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
         }
     }
 
-    private void scheduleTask() {
+    private ScheduledFuture<?> scheduleTask() {
         // schedule it at double the tick rate, so that we "don't miss" any tick changes.
-        thresholdUpdater = scheduler.scheduleAtFixedRate(() -> {
+        return scheduler.scheduleAtFixedRate(() -> {
             boolean moved = moveWindow();
             if (moved) {
                 notifyListeners(getThreshold());
             }
-        }, 0, tickRateMs / 2, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, 0, tickRateMs / 2, TimeUnit.MILLISECONDS);
     }
 
     private void notifyListeners(float threshold) {
@@ -132,12 +133,10 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
 
         long newWindowBeginTick = currentTick - ticksInWindow;
 
-        // decrement the old ticks
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
             int beginIdx = (int) (i % totalTicks);
             int endIdx = (int) ((i + ticksInWindow) % totalTicks);
-            totalDatapoints += (ticks.get(endIdx) - ticks.get(beginIdx));
-            ticks.set(beginIdx, 0);
+            totalDatapoints += (ticks.get(endIdx) - ticks.getAndSet(beginIdx, 0));
         }
 
         windowBeginTick = newWindowBeginTick;
