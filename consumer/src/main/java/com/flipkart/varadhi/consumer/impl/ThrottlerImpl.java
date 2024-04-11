@@ -37,7 +37,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
 
     private final ScheduledExecutorService scheduler;
     private final Ticker ticker;
-    private final long tickRateMs;
+    private final long tickMs;
     private final int ticksInWindow;
     private final int totalTicks;
     private volatile float threshold;
@@ -61,18 +61,18 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     private ScheduledFuture<?> throttledTaskExecutor;
 
     public ThrottlerImpl(
-            ScheduledExecutorService scheduler, Ticker ticker, float intitialThreshold, int windowSizeMs, int tickRateMs,
+            ScheduledExecutorService scheduler, Ticker ticker, float intitialThreshold, int windowSizeMs, int tickMs,
             InternalQueueType[] priorityOrder
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
         this.threshold = intitialThreshold;
-        this.tickRateMs = tickRateMs;
+        this.tickMs = tickMs;
 
-        if (windowSizeMs % tickRateMs != 0) {
+        if (windowSizeMs % tickMs != 0) {
             throw new IllegalArgumentException("Window size should be a multiple of tick rate");
         }
-        this.ticksInWindow = windowSizeMs / tickRateMs;
+        this.ticksInWindow = windowSizeMs / tickMs;
 
         // We are using 2 times, so that we can track 2 window worth of datapoints.
         this.totalTicks = 2 * ticksInWindow;
@@ -82,6 +82,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
         for (int i = 0; i < priorityOrder.length; i++) {
             this.queues[i] = new TaskQueue<>(priorityOrder[i]);
         }
+        this.windowBeginTick = (ticker.read() / 1_000_000) / tickMs - ticksInWindow;
         this.throttledTaskExecutor = scheduleTask();
     }
 
@@ -97,8 +98,9 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     }
 
     @Override
-    public void onThresholdChange(float newThreshold) {
-        this.threshold = newThreshold;
+    public void onThresholdChange(float newThresholdPerSec) {
+        // scale the threshold for the window.
+        this.threshold = newThresholdPerSec * (tickMs * ticksInWindow / 1000.0f);
     }
 
     @Override
@@ -118,7 +120,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
         }
 
         long now = ticker.read() / 1_000_000;
-        long currentTick = now / tickRateMs;
+        long currentTick = now / tickMs;
 
         moveWindow(currentTick);
 
@@ -180,7 +182,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     }
 
     private float getPermitsConsumedPrecise(long now, long currentTick) {
-        float factor = ((float) (now % tickRateMs)) / tickRateMs;
+        float factor = ((float) (now % tickMs)) / tickMs;
         long beginningTick = currentTick - ticksInWindow;
         return permitsConsumedInLastWindow -
                 ((1.0f - factor) * permitsPerTick.get((int) (beginningTick % totalTicks))) +
@@ -199,7 +201,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     private ScheduledFuture<?> scheduleTask() {
         // schedule it at double the tick rate, so that we "don't miss" any tick changes.
         return scheduler.scheduleAtFixedRate(
-                this::executePendingTasksInternal, 0, tickRateMs / 2,
+                this::executePendingTasksInternal, 0, tickMs / 2,
                 TimeUnit.MILLISECONDS
         );
     }

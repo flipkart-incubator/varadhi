@@ -3,10 +3,7 @@ package com.flipkart.varadhi.consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-public abstract sealed class InternalQueueType permits
-        InternalQueueType.Main,
-        InternalQueueType.Retry,
-        InternalQueueType.DeadLetter {
+public abstract sealed class InternalQueueType {
 
     abstract InternalQueueCategory getCategory();
 

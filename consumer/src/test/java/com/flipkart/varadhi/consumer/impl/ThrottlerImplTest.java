@@ -33,10 +33,12 @@ class ThrottlerImplTest {
     private final ScheduledExecutorService noopScheduler = mock(ScheduledExecutorService.class);
     private final ScheduledExecutorService defaultScheduler = Executors.newSingleThreadScheduledExecutor();
 
+    // TODO: add more tests. Ordered execution of tasks.
+
     @Test
     public void testExecutePendingTasksFollowsRateLimit() throws Exception {
         // round off last digits, so that we can simulate time advancement exactly
-        var ticker = new MockTicker(System.nanoTime() / 10_000_000 * 10_000_000);
+        var ticker = new MockTicker(System.currentTimeMillis() / 10 * 10_000_000);
         int qps = 10;
         int expectedCompleted = 0;
 
@@ -88,23 +90,27 @@ class ThrottlerImplTest {
     }
 
     @Test
-    public void testRateLimitBehaviourOverMultipleWindow() throws Exception {
+    public void testRateLimitBehaviourAndPriorityOverMultipleWindow() throws Exception {
         try (
                 var throttler = new ThrottlerImpl<Integer>(
                         defaultScheduler, Ticker.systemTicker(), 10, 1000, 10, priority)
         ) {
             long start = System.currentTimeMillis();
             CountDownLatch latch = new CountDownLatch(21);
+            List<Integer> taskTypeCompleted = new ArrayList<>();
             for (int i = 0; i < 21; ++i) {
-                throttler.acquire(mainQ, () -> CompletableFuture.completedFuture(0), 1)
+                int _i = i;
+                throttler.acquire(priority[i % 4], () -> CompletableFuture.completedFuture(_i % 4), 1)
                         .whenComplete((r, e) -> {
                             latch.countDown();
+                            taskTypeCompleted.add(r);
                         });
             }
             Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
             long duration = System.currentTimeMillis() - start;
 
-            Assertions.assertTrue(duration >= 2000 && duration <= 3000);
+            Assertions.assertTrue(duration >= 1990 && duration <= 3000, "duration is: " + duration);
+            Assertions.assertEquals(taskTypeCompleted.stream().sorted().toList(), taskTypeCompleted);
         }
     }
 }

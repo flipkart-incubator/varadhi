@@ -1,5 +1,6 @@
-package com.flipkart.varadhi.consumer;
+package com.flipkart.varadhi.consumer.impl;
 
+import com.flipkart.varadhi.consumer.ErrorRateThreshold;
 import com.google.common.base.Ticker;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -21,7 +22,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     private final ScheduledExecutorService scheduler;
     private final Ticker ticker;
     private final float pctErrorThreshold;
-    private final long tickRateMs;
+    private final long tickMs;
     private final int ticksInWindow;
     private final int totalTicks;
 
@@ -46,23 +47,23 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     private ScheduledFuture<?> thresholdUpdater;
 
     public SlidingErrorRateThreshold(
-            ScheduledExecutorService scheduler, Ticker ticker, int windowSizeMs, int tickRateMs, float pctErrorThreshold
+            ScheduledExecutorService scheduler, Ticker ticker, int windowSizeMs, int tickMs, float pctErrorThreshold
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
         this.pctErrorThreshold = pctErrorThreshold;
-        this.tickRateMs = tickRateMs;
+        this.tickMs = tickMs;
 
-        if (windowSizeMs % tickRateMs != 0) {
+        if (windowSizeMs % tickMs != 0) {
             throw new IllegalArgumentException("Window size should be a multiple of tick rate");
         }
-        this.ticksInWindow = windowSizeMs / tickRateMs;
+        this.ticksInWindow = windowSizeMs / tickMs;
 
         // We are using 2 times, so that we can track 2 window worth of datapoints.
         this.totalTicks = 2 * ticksInWindow;
         this.ticks = new AtomicIntegerArray(totalTicks);
         this.totalDatapoints = 0;
-        this.windowBeginTick = currentWindowBeginTick();
+        this.windowBeginTick = currentTick() - ticksInWindow;
         thresholdUpdater = scheduleTask();
     }
 
@@ -71,19 +72,19 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
      * Can be called by arbitrary threads.
      */
     public void mark() {
-        long currentTick = currentWindowBeginTick();
+        long currentTick = currentTick();
         // mark
         int idx = (int) (currentTick % totalTicks);
         ticks.incrementAndGet(idx);
     }
 
-    long currentWindowBeginTick() {
-        return ((ticker.read() / 1_000_000) / tickRateMs) - ticksInWindow;
+    long currentTick() {
+        return (ticker.read() / 1_000_000) / tickMs;
     }
 
     @Override
     public float getThreshold() {
-        return totalDatapoints * pctErrorThreshold / 100.0f;
+        return totalDatapoints * (pctErrorThreshold / 100.0f) / (ticksInWindow * tickMs / 1000.0f);
     }
 
     @Override
@@ -110,7 +111,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
             if (moved) {
                 notifyListeners(getThreshold());
             }
-        }, 0, tickRateMs / 2, TimeUnit.MILLISECONDS);
+        }, 0, tickMs / 2, TimeUnit.MILLISECONDS);
     }
 
     private void notifyListeners(float threshold) {
@@ -124,7 +125,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
      * Decrement all tick values are now too old, and add new tick values that got added in the window.
      */
     synchronized boolean moveWindow() {
-        long newWindowBeginTick = currentWindowBeginTick();
+        long newWindowBeginTick = currentTick() - ticksInWindow;
         if (newWindowBeginTick == windowBeginTick) {
             return false;
         }
