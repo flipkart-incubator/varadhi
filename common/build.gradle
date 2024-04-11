@@ -1,5 +1,6 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
+    id 'java-test-fixtures'
 }
 
 dependencies {
@@ -9,5 +10,8 @@ dependencies {
     implementation("io.micrometer:micrometer-core")
     implementation('org.hibernate:hibernate-validator:8.0.1.Final')
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
+
+    testFixturesApi("com.google.guava:guava:$guava_version")
+
     testImplementation("io.micrometer:micrometer-registry-jmx")
 }

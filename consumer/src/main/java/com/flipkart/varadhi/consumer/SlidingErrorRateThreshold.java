@@ -21,7 +21,6 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     private final ScheduledExecutorService scheduler;
     private final Ticker ticker;
     private final float pctErrorThreshold;
-    private final long windowSizeMs;
     private final long tickRateMs;
     private final int ticksInWindow;
     private final int totalTicks;
@@ -52,7 +51,6 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
         this.scheduler = scheduler;
         this.ticker = ticker;
         this.pctErrorThreshold = pctErrorThreshold;
-        this.windowSizeMs = windowSizeMs;
         this.tickRateMs = tickRateMs;
 
         if (windowSizeMs % tickRateMs != 0) {
@@ -80,7 +78,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     }
 
     long currentWindowBeginTick() {
-        return ((ticker.read() / 1_000_000) - windowSizeMs) / tickRateMs;
+        return ((ticker.read() / 1_000_000) / tickRateMs) - ticksInWindow;
     }
 
     @Override
@@ -126,12 +124,10 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
      * Decrement all tick values are now too old, and add new tick values that got added in the window.
      */
     synchronized boolean moveWindow() {
-        long currentTick = currentWindowBeginTick();
-        if (currentTick == windowBeginTick) {
+        long newWindowBeginTick = currentWindowBeginTick();
+        if (newWindowBeginTick == windowBeginTick) {
             return false;
         }
-
-        long newWindowBeginTick = currentTick - ticksInWindow;
 
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
             int beginIdx = (int) (i % totalTicks);

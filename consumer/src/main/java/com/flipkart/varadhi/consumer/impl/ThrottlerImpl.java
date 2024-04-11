@@ -37,7 +37,6 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
 
     private final ScheduledExecutorService scheduler;
     private final Ticker ticker;
-    private final long windowSizeMs;
     private final long tickRateMs;
     private final int ticksInWindow;
     private final int totalTicks;
@@ -62,12 +61,12 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     private ScheduledFuture<?> throttledTaskExecutor;
 
     public ThrottlerImpl(
-            ScheduledExecutorService scheduler, Ticker ticker, int windowSizeMs, int tickRateMs,
+            ScheduledExecutorService scheduler, Ticker ticker, float intitialThreshold, int windowSizeMs, int tickRateMs,
             InternalQueueType[] priorityOrder
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
-        this.windowSizeMs = windowSizeMs;
+        this.threshold = intitialThreshold;
         this.tickRateMs = tickRateMs;
 
         if (windowSizeMs % tickRateMs != 0) {
@@ -164,11 +163,11 @@ public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorT
     }
 
     private boolean moveWindow(long currentTick) {
-        if (currentTick == windowBeginTick) {
+        long newWindowBeginTick = currentTick - ticksInWindow;
+
+        if (newWindowBeginTick == windowBeginTick) {
             return false;
         }
-
-        long newWindowBeginTick = currentTick - ticksInWindow;
 
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
             int beginIdx = (int) (i % totalTicks);

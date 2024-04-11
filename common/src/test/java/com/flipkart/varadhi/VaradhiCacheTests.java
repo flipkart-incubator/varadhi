@@ -2,7 +2,6 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
-import com.google.common.base.Ticker;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -15,6 +14,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.mockito.Mockito.*;
 
 public class VaradhiCacheTests {
@@ -26,11 +27,11 @@ public class VaradhiCacheTests {
     Counter loadFailureCounter;
     Gauge cacheSize;
     VaradhiCacheTests entityProvider;
-    DummyTicker ticker;
+    MockTicker ticker;
 
     @BeforeEach
     public void PreTest() {
-        ticker = new DummyTicker(System.nanoTime());
+        ticker = new MockTicker(System.nanoTime());
         String cacheSpec = "expireAfterWrite=3600s";
         entityProvider = spy(this);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
@@ -90,7 +91,7 @@ public class VaradhiCacheTests {
     @Test
     public void testDataExpiry() throws InterruptedException {
         DummyData data1 = testCache.get("key1");
-        ticker.advance(3601);
+        ticker.advance(3601, TimeUnit.SECONDS);
         DummyData data2 = testCache.get("key1");
         validateCounters(2, 2, 0, 1);
         verify(entityProvider, times(2)).getData("key1");
@@ -101,7 +102,7 @@ public class VaradhiCacheTests {
     public void testEntryRemovalOnDataExpiryWithLoaderException() throws InterruptedException {
         testCache.get("key1");
         validateCounters(1, 1, 0, 1);
-        ticker.advance(3601);
+        ticker.advance(3601, TimeUnit.SECONDS);
         Thread.sleep(1); // to ensure new version of DummyData().
         doThrow(new ResourceNotFoundException("Data not found.")).when(entityProvider).getData("key1");
         ResourceNotFoundException re =
@@ -127,22 +128,5 @@ public class VaradhiCacheTests {
     @StandardException
     public static class CustomException extends VaradhiException {
 
-    }
-
-    public static class DummyTicker extends Ticker {
-        long value;
-
-        public DummyTicker(long value) {
-            this.value = value;
-        }
-
-        public void advance(long seconds) {
-            value += seconds * 1000 * 1000 * 1000;
-        }
-
-        @Override
-        public long read() {
-            return value;
-        }
     }
 }

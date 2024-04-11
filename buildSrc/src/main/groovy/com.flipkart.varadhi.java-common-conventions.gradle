@@ -17,6 +17,7 @@ repositories {
 ext {
     lombok_version = "1.18.26"
     slf4j_version = "2.0.7"
+    log4j2_version = "2.20.0"
     vertx_version = "4.5.2"
 
     otl_version = "1.36.0"
@@ -34,6 +35,10 @@ ext {
 
     hibernate_validator_version = "8.0.1.Final"
     failsafe_version="3.3.2"
+
+    junit_version = "5.9.1"
+    mockito_version = "5.11.0"
+    jmh_version = "1.37"
 }
 
 sourceSets {
@@ -54,8 +59,8 @@ dependencies {
     // TODO: Get rid of these unnecessary constraints. We are probably using it wrong. Need to check.
     constraints {
         implementation("org.slf4j:slf4j-api:$slf4j_version")
-        implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
-        implementation('org.apache.logging.log4j:log4j-core:2.20.0')
+        implementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
+        implementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
         implementation("org.apache.commons:commons-lang3:$commons_lang_version")
 
         compileOnly("org.projectlombok:lombok:$lombok_version")
@@ -100,8 +105,8 @@ dependencies {
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
-        testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
-        testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
+        testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
+        testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
         testImplementation("io.vertx:vertx-web-client:$vertx_version")
         testImplementation("org.apache.curator:curator-test:$curator_version")
