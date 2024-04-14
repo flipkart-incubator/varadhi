@@ -15,30 +15,31 @@ repositories {
 }
 
 ext {
-    lombok_version = "1.18.26"
-    slf4j_version = "2.0.7"
-    log4j2_version = "2.20.0"
-    vertx_version = "4.5.2"
+    lombok_version = "1.18.32"
+    slf4j_version = "2.0.13"
+    log4j2_version = "2.23.1"
+    vertx_version = "4.5.7"
 
-    otl_version = "1.36.0"
+    otl_version = "1.37.0"
     otl_semconv_version = "1.30.1-alpha"
-    micrometer_version = "1.10.6"
+    micrometer_version = "1.12.5"
     ws_rs_version = "2.1.1"
-    jersey_version = "2.25.1"
-    guava_version = "32.1.1-jre"
-    curator_version = "5.5.0"
-    jackson_version = "2.15.1"
+    jersey_version = "3.1.6"
+    guava_version = "33.1.0-jre"
+    curator_version = "5.6.0"
+    jackson_version = "2.17.0"
     jakarta_validation_version = "3.0.2"
     jakarta_annotation_version = "2.1.1"
     jakarta_ws_version = "3.1.0"
-    commons_lang_version = "3.11"
+    commons_lang_version = "3.14.0"
 
     hibernate_validator_version = "8.0.1.Final"
     failsafe_version="3.3.2"
 
-    junit_version = "5.9.1"
+    junit_version = "5.10.2"
     mockito_version = "5.11.0"
     jmh_version = "1.37"
+    awaitility_version = "4.2.1"
 }
 
 sourceSets {
@@ -111,7 +112,6 @@ dependencies {
         testImplementation("io.vertx:vertx-web-client:$vertx_version")
         testImplementation("org.apache.curator:curator-test:$curator_version")
 
-        testE2EImplementation("javax.ws.rs:javax.ws.rs-api:$ws_rs_version")
         testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
         testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version")
     }
@@ -177,7 +177,7 @@ tasks.withType(Test).configureEach {
         showCauses true
         showExceptions true
         showStackTraces true
-        showStandardStreams false
+        showStandardStreams true
     }
     afterSuite { desc, result ->
         if (!desc.parent) { // will match the outermost suite

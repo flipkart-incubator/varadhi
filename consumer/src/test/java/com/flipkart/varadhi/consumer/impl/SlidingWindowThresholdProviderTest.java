@@ -13,7 +13,7 @@ import java.util.stream.IntStream;
 
 import static org.mockito.Mockito.mock;
 
-class SlidingErrorRateThresholdTest {
+class SlidingWindowThresholdProviderTest {
 
     private final ScheduledExecutorService noopScheduler = mock(ScheduledExecutorService.class);
     private final ScheduledExecutorService defaultScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -21,7 +21,7 @@ class SlidingErrorRateThresholdTest {
     @Test
     public void testManualMoveWindow() throws Exception {
         MockTicker ticker = new MockTicker(System.currentTimeMillis() / 10 * 10_000_000);
-        try (var rt = new SlidingErrorRateThreshold(noopScheduler, ticker, 10_000, 1_000, 50.0f)) {
+        try (var rt = new SlidingWindowThresholdProvider(noopScheduler, ticker, 10_000, 1_000, 50.0f)) {
             Assertions.assertEquals(0.0f, rt.getThreshold(), 0.01f);
 
             // mark for full window. the threshold should increase by 5 at every sec. after 10 sec it should say 50.
@@ -45,7 +45,7 @@ class SlidingErrorRateThresholdTest {
 
     @Test
     public void testRateComputationIsCorrect() throws Exception {
-        try (var rt = new SlidingErrorRateThreshold(defaultScheduler, Ticker.systemTicker(), 1_000, 10, 10.0f)) {
+        try (var rt = new SlidingWindowThresholdProvider(defaultScheduler, Ticker.systemTicker(), 1_000, 10, 10.0f)) {
             ScheduledFuture<?> eventEmitter = defaultScheduler.scheduleAtFixedRate(rt::mark, 0, 1, TimeUnit.MILLISECONDS);
 
             Thread.sleep(1000);

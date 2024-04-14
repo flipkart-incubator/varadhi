@@ -5,8 +5,10 @@ plugins {
 
 dependencies {
     api(project(":entities"))
-    implementation('com.fasterxml.jackson.module:jackson-module-parameter-names:2.14.2')
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
+
+    implementation("com.fasterxml.jackson.core:jackson-core:$jackson_version")
+    implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:$jackson_version")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version")
     implementation("io.micrometer:micrometer-core")
     implementation('org.hibernate:hibernate-validator:8.0.1.Final')
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')

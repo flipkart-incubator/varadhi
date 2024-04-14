@@ -1,9 +1,8 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.ErrorRateThreshold;
+import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.google.common.base.Ticker;
 
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,9 +14,10 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
  * A sliding window based error rate threshold.
  * - Window size: dictates the averaging window size.
  * - Tick rate: The rate at which the window slides. Tick rate <= window size.
+ *
+ * @Threadsafe
  */
-@ThreadSafe
-public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, AutoCloseable {
+public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic, AutoCloseable {
 
     private final ScheduledExecutorService scheduler;
     private final Ticker ticker;
@@ -42,11 +42,11 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     private int totalDatapoints;
 
     // listeners
-    private final List<ErrorThresholdChangeListener> listeners = new CopyOnWriteArrayList<>();
+    private final List<ThresholdChangeListener> listeners = new CopyOnWriteArrayList<>();
 
     private ScheduledFuture<?> thresholdUpdater;
 
-    public SlidingErrorRateThreshold(
+    public SlidingWindowThresholdProvider(
             ScheduledExecutorService scheduler, Ticker ticker, int windowSizeMs, int tickMs, float pctErrorThreshold
     ) {
         this.scheduler = scheduler;
@@ -88,12 +88,12 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     }
 
     @Override
-    public void addListener(ErrorThresholdChangeListener listener) {
+    public void addListener(ThresholdChangeListener listener) {
         listeners.add(listener);
     }
 
     @Override
-    public void removeListener(ErrorThresholdChangeListener listener) {
+    public void removeListener(ThresholdChangeListener listener) {
         listeners.remove(listener);
     }
 
@@ -115,7 +115,7 @@ public class SlidingErrorRateThreshold implements ErrorRateThreshold.Dynamic, Au
     }
 
     private void notifyListeners(float threshold) {
-        for (ErrorThresholdChangeListener listener : listeners) {
+        for (ThresholdChangeListener listener : listeners) {
             listener.onThresholdChange(threshold);
         }
     }

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.ErrorRateThreshold;
+import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.flipkart.varadhi.consumer.InternalQueueType;
 import com.flipkart.varadhi.consumer.Throttler;
 import com.google.common.base.Ticker;
@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-public class ThrottlerImpl<T> implements Throttler<T>, ErrorRateThreshold.ErrorThresholdChangeListener, AutoCloseable {
+public class ThrottlerImpl<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
 
     /*
         Approach:

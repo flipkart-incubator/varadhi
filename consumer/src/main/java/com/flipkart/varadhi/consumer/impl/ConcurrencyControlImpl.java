@@ -60,11 +60,12 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
             concurrency.incrementAndGet();
         }
 
-        if (freeConcurrency <= 0) {
+        if(tasksIt.hasNext()) {
             // add all tasks to the queue
             TaskQueue<T> queue = getQueue(type);
 
-            for (Supplier<CompletableFuture<T>> task : tasks) {
+            while (tasksIt.hasNext()) {
+                Supplier<CompletableFuture<T>> task = tasksIt.next();
                 CompletableFuture<T> future = new CompletableFuture<>();
                 queue.tasks.add(new Holder<>(future, task, this::onTaskCompletion));
                 futures.add(future);
