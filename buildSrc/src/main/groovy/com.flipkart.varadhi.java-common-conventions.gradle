@@ -177,7 +177,7 @@ tasks.withType(Test).configureEach {
         showCauses true
         showExceptions true
         showStackTraces true
-        showStandardStreams true
+        showStandardStreams false
     }
     afterSuite { desc, result ->
         if (!desc.parent) { // will match the outermost suite
