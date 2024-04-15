@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-
 /**
  * Base varadhi consumer to consume messages from a varadhi topic. It corresponds to a single shard of some
  * subscription.
@@ -10,17 +8,22 @@ public interface VaradhiConsumer {
 
     String getSubscriptionName();
 
-    int getShardId();
+    String getShardName();
 
     ConsumerState getState();
 
     /**
-     * Start the consumer. It will start message delivery from the last committed offset. If no offset is committed, it
-     * can start from the earliest or latest offset based on the implementation.
+     * Initializes the consumer.
      *
      * @throws Exception bad configuration can result in exception in which case the consumer will not start.
      */
-    void start() throws Exception;
+    void connect();
+
+    /**
+     * It will start message delivery from the last committed offset. If no offset is committed, it
+     * can start from the earliest or latest offset based on the implementation.
+     */
+    void start();
 
     /**
      * Pause the consumer. It just means that message delivery will stop happening immediately.

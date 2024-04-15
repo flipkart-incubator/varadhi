@@ -15,24 +15,32 @@ repositories {
 }
 
 ext {
-    lombok_version = "1.18.26"
-    slf4j_version = "2.0.7"
-    vertx_version = "4.5.2"
+    lombok_version = "1.18.32"
+    slf4j_version = "2.0.13"
+    log4j2_version = "2.23.1"
+    vertx_version = "4.5.7"
 
-    otl_version = "1.36.0"
+    otl_version = "1.37.0"
     otl_semconv_version = "1.30.1-alpha"
-    micrometer_version = "1.10.6"
-    ws_rs_version = "2.1.1"
-    jersey_version = "2.25.1"
-    guava_version = "32.1.1-jre"
-    curator_version = "5.5.0"
-    jackson_version = "2.15.1"
+    micrometer_version = "1.12.5"
+    jersey_version = "3.1.6"
+    guava_version = "33.1.0-jre"
+    curator_version = "5.6.0"
+    jackson_version = "2.17.0"
     jakarta_validation_version = "3.0.2"
+    jakarta_annotation_version = "2.1.1"
     jakarta_ws_version = "3.1.0"
-    commons_lang_version = "3.11"
+    commons_lang_version = "3.14.0"
+    commons_collections_version = "4.4"
+    jctools_version = "4.0.3"
 
     hibernate_validator_version = "8.0.1.Final"
     failsafe_version="3.3.2"
+
+    junit_version = "5.10.2"
+    mockito_version = "5.11.0"
+    jmh_version = "1.37"
+    awaitility_version = "4.2.1"
 }
 
 sourceSets {
@@ -53,8 +61,8 @@ dependencies {
     // TODO: Get rid of these unnecessary constraints. We are probably using it wrong. Need to check.
     constraints {
         implementation("org.slf4j:slf4j-api:$slf4j_version")
-        implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
-        implementation('org.apache.logging.log4j:log4j-core:2.20.0')
+        implementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
+        implementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
         implementation("org.apache.commons:commons-lang3:$commons_lang_version")
 
         compileOnly("org.projectlombok:lombok:$lombok_version")
@@ -94,17 +102,17 @@ dependencies {
         implementation("com.google.guava:guava:$guava_version")
 
         implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
+        implementation("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
         implementation("dev.failsafe:failsafe:$failsafe_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
-        testImplementation('org.junit.jupiter:junit-jupiter:5.9.1')
-        testImplementation('org.mockito:mockito-junit-jupiter:5.4.0')
+        testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
+        testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
         testImplementation("io.vertx:vertx-junit5:$vertx_version")
         testImplementation("io.vertx:vertx-web-client:$vertx_version")
         testImplementation("org.apache.curator:curator-test:$curator_version")
 
-        testE2EImplementation("javax.ws.rs:javax.ws.rs-api:$ws_rs_version")
         testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
         testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version")
     }
@@ -118,6 +126,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api")
     implementation("io.opentelemetry:opentelemetry-api")
     implementation("jakarta.validation:jakarta.validation-api")
+    implementation("jakarta.annotation:jakarta.annotation-api")
 
     // common test framework
     testCompileOnly("org.projectlombok:lombok")

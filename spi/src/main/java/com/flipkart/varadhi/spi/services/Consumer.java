@@ -18,4 +18,9 @@ public interface Consumer<O extends Offset> extends AutoCloseable {
      * Commit upto the offset, signifying that all messages upto (& including) the offset have been processed.
      */
     CompletableFuture<Void> commitCumulativeAsync(PolledMessage<O> message);
+
+    /**
+     * Commit the individual message, signifying that the message has been processed.\
+     */
+    CompletableFuture<Void> commitIndividualAsync(PolledMessage<O> message);
 }
