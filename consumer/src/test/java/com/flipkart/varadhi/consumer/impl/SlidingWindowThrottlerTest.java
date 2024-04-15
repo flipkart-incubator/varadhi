@@ -20,7 +20,7 @@ import java.util.stream.IntStream;
 import static org.mockito.Mockito.mock;
 
 @Slf4j
-class ThrottlerImplTest {
+class SlidingWindowThrottlerTest {
 
     private final InternalQueueType[] priority = new InternalQueueType[]{
             new InternalQueueType.Retry(3),
@@ -42,7 +42,7 @@ class ThrottlerImplTest {
         int qps = 10;
         int expectedCompleted = 0;
 
-        try (var throttler = new ThrottlerImpl<Integer>(noopScheduler, ticker, qps, 1000, 10, priority)) {
+        try (var throttler = new SlidingWindowThrottler<Integer>(noopScheduler, ticker, qps, 1000, 10, priority)) {
 
             // acquire 1000 permits
             List<CompletableFuture<Integer>> tasks = new ArrayList<>();
@@ -92,7 +92,7 @@ class ThrottlerImplTest {
     @Test
     public void testRateLimitBehaviourAndPriorityOverMultipleWindow() throws Exception {
         try (
-                var throttler = new ThrottlerImpl<Integer>(
+                var throttler = new SlidingWindowThrottler<Integer>(
                         defaultScheduler, Ticker.systemTicker(), 10, 1000, 10, priority)
         ) {
             long start = System.currentTimeMillis();

@@ -47,20 +47,19 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
     public Collection<CompletableFuture<T>> enqueueTasks(
             InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks
     ) {
-        int freeConcurrency = executePendingTasksInternal();
+        int currentConcurrency = executePendingTasksInternal();
 
         List<CompletableFuture<T>> futures = new ArrayList<>();
         Iterator<Supplier<CompletableFuture<T>>> tasksIt = tasks.iterator();
 
         // these tasks, we can directly launch
-        while (freeConcurrency > 0 && tasksIt.hasNext()) {
+        while (currentConcurrency < maxConcurrency && tasksIt.hasNext()) {
             Supplier<CompletableFuture<T>> task = tasksIt.next();
             futures.add(task.get().whenComplete(this::onTaskCompletion));
-            freeConcurrency--;
-            concurrency.incrementAndGet();
+            currentConcurrency = concurrency.incrementAndGet();
         }
 
-        if(tasksIt.hasNext()) {
+        if (tasksIt.hasNext()) {
             // add all tasks to the queue
             TaskQueue<T> queue = getQueue(type);
 
@@ -79,25 +78,27 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         executePendingTasksInternal();
     }
 
+    /**
+     * @return currentConcurrency
+     */
     int executePendingTasksInternal() {
-        int freeConcurrency = maxConcurrency - concurrency.get();
+        int currentConcurrency = concurrency.get();
 
-        assert freeConcurrency >= 0;
+        assert currentConcurrency <= maxConcurrency;
 
-        if(freeConcurrency == 0) {
-            return 0;
+        if (currentConcurrency == maxConcurrency) {
+            return currentConcurrency;
         }
 
         // go through all the queued tasks in priority order and execute them
         for (TaskQueue<T> queue : queues) {
-            while (freeConcurrency > 0 && !queue.tasks.isEmpty()) {
+            while (currentConcurrency < maxConcurrency && !queue.tasks.isEmpty()) {
                 Holder<T> taskHolder = queue.tasks.poll();
                 taskHolder.execute();
-                freeConcurrency--;
-                concurrency.incrementAndGet();
+                currentConcurrency = concurrency.incrementAndGet();
             }
         }
-        return freeConcurrency;
+        return currentConcurrency;
     }
 
     private TaskQueue<T> getQueue(InternalQueueType type) {

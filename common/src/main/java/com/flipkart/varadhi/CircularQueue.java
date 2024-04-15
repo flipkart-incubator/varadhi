@@ -1,122 +1,98 @@
 package com.flipkart.varadhi;
 
-import java.util.Arrays;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 
 public class CircularQueue<T> implements Queue<T> {
-    private T[] array;
-    private int head = 0;
-    private int tail = 0;
-    private int size = 0;
 
-    /**
-     * call it with power of 2, for better perf.
-     * @param initialCapacity
-     */
-    public CircularQueue(int initialCapacity) {
-        this.array = (T[]) new Object[initialCapacity];
+    private CircularFifoQueue<T> delegate;
+
+    public CircularQueue(int size) {
+        delegate = new CircularFifoQueue<>(size);
+    }
+
+    public CircularQueue() {
+        delegate = new CircularFifoQueue<>();
     }
 
     @Override
     public int size() {
-        return size;
+        return delegate.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return size == 0;
+        return delegate.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
-        for (int i = 0; i < size; i++) {
-            if (array[(head + i) % array.length].equals(o)) {
-                return true;
-            }
-        }
-        return false;
+        return delegate.contains(o);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return new Iterator<T>() {
-            private int index = 0;
-
-            @Override
-            public boolean hasNext() {
-                return index < size;
-            }
-
-            @Override
-            public T next() {
-                return array[(head + index++) % array.length];
-            }
-        };
+        return delegate.iterator();
     }
 
     @Override
     public Object[] toArray() {
-        throw new IllegalStateException("not implemented");
+        return delegate.toArray();
     }
 
     @Override
     public <T1> T1[] toArray(T1[] a) {
-        throw new IllegalStateException("not implemented");
+        return delegate.toArray(a);
     }
 
+    /**
+     * If the delegate is full, then create a new queue with double the size and copy all previous elements to the new
+     * queue, and then add this new element.
+     *
+     * @param t element whose presence in this collection is to be ensured
+     * @return Must always return true.
+     */
     @Override
     public boolean add(T t) {
-        if (size == array.length) {
-            grow();
+        if (delegate.isAtFullCapacity()) {
+            CircularFifoQueue<T> newDelegate = new CircularFifoQueue<>(delegate.maxSize() * 2);
+            newDelegate.addAll(delegate);
+            delegate = newDelegate;
         }
-        array[tail] = t;
-        tail = (tail + 1) % array.length;
-        size++;
-        return true;
+        return delegate.add(t);
     }
 
     @Override
     public boolean remove(Object o) {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.remove(o);
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.containsAll(c);
     }
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        // if enough space is not left, then grow by twice, and then copy all elements.
-        if (size + c.size() > array.length) {
-            grow();
-        }
-        for (T t : c) {
-            array[tail] = t;
-            tail = (tail + 1) % array.length;
-            size++;
-        }
-        return true;
+        return delegate.addAll(c);
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.removeAll(c);
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.retainAll(c);
     }
 
     @Override
     public void clear() {
-        head = 0;
-        tail = 0;
-        size = 0;
-        Arrays.fill(array, null);
+        delegate.clear();
     }
 
     @Override
@@ -126,40 +102,21 @@ public class CircularQueue<T> implements Queue<T> {
 
     @Override
     public T remove() {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.remove();
     }
 
     @Override
     public T poll() {
-        if (size == 0) {
-            return null;
-        }
-        T t = array[head];
-        head = (head + 1) % array.length;
-        size--;
-        return t;
+        return delegate.poll();
     }
 
     @Override
     public T element() {
-        throw new UnsupportedOperationException("not implemented");
+        return delegate.element();
     }
 
     @Override
     public T peek() {
-        if (size == 0) {
-            return null;
-        }
-        return array[head];
-    }
-
-    private void grow() {
-        T[] newArray = (T[]) new Object[array.length * 2];
-        for (int i = 0; i < size; i++) {
-            newArray[i] = array[(head + i) % array.length];
-        }
-        array = newArray;
-        head = 0;
-        tail = size;
+        return delegate.peek();
     }
 }

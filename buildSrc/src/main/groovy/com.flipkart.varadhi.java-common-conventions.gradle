@@ -23,7 +23,6 @@ ext {
     otl_version = "1.37.0"
     otl_semconv_version = "1.30.1-alpha"
     micrometer_version = "1.12.5"
-    ws_rs_version = "2.1.1"
     jersey_version = "3.1.6"
     guava_version = "33.1.0-jre"
     curator_version = "5.6.0"
@@ -32,6 +31,8 @@ ext {
     jakarta_annotation_version = "2.1.1"
     jakarta_ws_version = "3.1.0"
     commons_lang_version = "3.14.0"
+    commons_collections_version = "4.4"
+    jctools_version = "4.0.3"
 
     hibernate_validator_version = "8.0.1.Final"
     failsafe_version="3.3.2"

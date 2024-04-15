@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-public class ThrottlerImpl<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
+public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
 
     /*
         Approach:
@@ -60,7 +60,7 @@ public class ThrottlerImpl<T> implements Throttler<T>, ThresholdProvider.Thresho
 
     private ScheduledFuture<?> throttledTaskExecutor;
 
-    public ThrottlerImpl(
+    public SlidingWindowThrottler(
             ScheduledExecutorService scheduler, Ticker ticker, float intitialThreshold, int windowSizeMs, int tickMs,
             InternalQueueType[] priorityOrder
     ) {

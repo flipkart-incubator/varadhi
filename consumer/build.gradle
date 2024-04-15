@@ -8,10 +8,10 @@ dependencies {
     api(project(':common'))
 
     // async interface are using vertx.Future
-    api("io.vertx:vertx-core")
-    api("jakarta.annotation:jakarta.annotation-api")
-    implementation("org.jctools:jctools-core:4.0.3")
+    api("io.vertx:vertx-core:$vertx_version")
+    api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
     implementation("org.slf4j:slf4j-api:$slf4j_version")
+    implementation("org.jctools:jctools-core:$jctools_version")
 
     testImplementation(testFixtures(project(':common')))
     testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
@@ -20,5 +20,5 @@ dependencies {
     testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
     testImplementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
     testImplementation("org.openjdk.jmh:jmh-core:$jmh_version")
-    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
+//    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
 }

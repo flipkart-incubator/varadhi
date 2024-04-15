@@ -7,6 +7,7 @@ module com.flipkart.varadhi.common {
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.dataformat.yaml;
     requires com.fasterxml.jackson.module.paramnames;
+    requires org.apache.commons.collections4;
 
     exports com.flipkart.varadhi;
 }
