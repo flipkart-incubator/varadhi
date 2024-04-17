@@ -1,123 +1,149 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.spi.services.Consumer;
-import com.flipkart.varadhi.spi.services.PolledMessage;
-import com.flipkart.varadhi.spi.services.PolledMessages;
+import com.flipkart.varadhi.spi.services.DummyConsumer;
+import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 class UnGroupedMessageSrcTest {
 
     @Test
-    void testMessageSrcDriver() {
-        Consumer<DummyOffset> consumer = new DummyConsumer();
+    void testShouldNotBufferMessagesWhenConsumerReturnExactBatch() {
+        List<String> messages = List.of("a", "b", "c");
+        MessageTracker[] messageTrackers = new MessageTracker[messages.size()];
+
+        DummyConsumer consumer = new DummyConsumer(messages);
         UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
-        MessageTracker[] messages = new MessageTracker[3];
-        Integer res = messageSrc.nextMessages(messages).join();
-        for (MessageTracker message : messages) {
+        Integer res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(3, res);
+
+        for (MessageTracker message : messageTrackers) {
             message.onConsumed(MessageConsumptionStatus.SENT);
         }
-        Integer res2 = messageSrc.nextMessages(messages).join();
-        for (MessageTracker message : messages) {
+
+        assertEquals(3, consumer.getCommittedMessagesCount());
+
+        messageTrackers = new MessageTracker[messages.size()];
+        res = messageSrc.nextMessages(messageTrackers).join();
+        assertEquals(0, res);
+    }
+
+    @Test
+    void testShouldBufferMessagesWhenConsumerReturnMoreThanTrackerSize() {
+        List<String> messages = List.of("a", "b", "c", "d", "e");
+        MessageTracker[] messageTrackers = new MessageTracker[3];
+
+        DummyConsumer consumer = new DummyConsumer(messages);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
+        Integer res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(3, res);
+
+        List<String> committedList = new ArrayList<>();
+        for (MessageTracker message : messageTrackers) {
             message.onConsumed(MessageConsumptionStatus.SENT);
+            committedList.add(new String(message.getMessage().getPayload()));
         }
-        Assertions.assertEquals(3, res);
-        Assertions.assertEquals(1, res2);
+
+        assertEquals(3, consumer.getCommittedMessagesCount());
+        assertListEquals(committedList, consumer.getCommittedMessages());
+
+
+        // now it should fetch buffered messages
+        messageTrackers = new MessageTracker[3];
+        res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(2, res);
+
+        for (int i = 0; i < res; i++) {
+            messageTrackers[i].onConsumed(MessageConsumptionStatus.SENT);
+            committedList.add(new String(messageTrackers[i].getMessage().getPayload()));
+        }
+
+        assertEquals(5, consumer.getCommittedMessagesCount());
+        assertListEquals(committedList, consumer.getCommittedMessages());
     }
 
-    static class DummyConsumer implements Consumer<DummyOffset> {
-        @Override
-        public CompletableFuture<PolledMessages<DummyOffset>> receiveAsync() {
-            return CompletableFuture.supplyAsync(() -> new PolledMessages<>() {
-                final List<String> messages = List.of("m1", "m2", "m3", "m4");
+    @Test
+    void testUseBufferAndConsumer() {
+        List<String> messages = List.of("a", "b", "c", "d", "e", "f");
+        MessageTracker[] messageTrackers = new MessageTracker[4];
 
-                @Override
-                public int getCount() {
-                    return messages.size();
-                }
+        DummyConsumer consumer = new DummyConsumer(messages);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
+        Integer res = messageSrc.nextMessages(messageTrackers).join();
 
-                @Override
-                public Iterator<PolledMessage<DummyOffset>> iterator() {
-                    Iterator<String> iter = messages.iterator();
-                    return new Iterator<>() {
-                        @Override
-                        public boolean hasNext() {
-                            return iter.hasNext();
-                        }
+        assertEquals(4, res);
 
-                        @Override
-                        public PolledMessage<DummyOffset> next() {
-                            var message = iter.next();
-                            return new PolledMessage<>() {
-                                @Override
-                                public String getTopicName() {
-                                    return null;
-                                }
-
-                                @Override
-                                public int getPartition() {
-                                    return 0;
-                                }
-
-                                @Override
-                                public DummyOffset getOffset() {
-                                    return new DummyOffset(1);
-                                }
-
-                                @Override
-                                public byte[] getPayload() {
-                                    return message.getBytes(StandardCharsets.UTF_8);
-                                }
-
-                                @Override
-                                public void release() {
-
-                                }
-                            };
-                        }
-                    };
-                }
-            });
+        List<String> committedList = new ArrayList<>();
+        // a, b, c, d
+        for (MessageTracker message : messageTrackers) {
+            message.onConsumed(MessageConsumptionStatus.SENT);
+            committedList.add(new String(message.getMessage().getPayload()));
         }
 
-        @Override
-        public CompletableFuture<Void> commitCumulativeAsync(PolledMessage<DummyOffset> message) {
-            return null;
+        assertEquals(4, consumer.getCommittedMessagesCount());
+        assertListEquals(committedList, consumer.getCommittedMessages());
+
+        // e (from buffer), f (from buffer), a, b
+        messageTrackers = new MessageTracker[4];
+        consumer.permitMoreMessages();
+        res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(4, res);
+
+        List<String> nextMessages = new ArrayList<>();
+        for (MessageTracker message : messageTrackers) {
+            nextMessages.add(new String(message.getMessage().getPayload()));
         }
 
-        @Override
-        public CompletableFuture<Void> commitIndividualAsync(PolledMessage<DummyOffset> message) {
-            return CompletableFuture.supplyAsync(() -> {
-                log.info("Committing message: {}", message.getPayload());
-                return null;
-            });
-        }
-
-        @Override
-        public void close() throws Exception {
-
-        }
+        assertListEquals(List.of("e", "f", "a", "b"), nextMessages);
     }
 
-    public static class DummyOffset implements Offset {
-        int offset;
+    @Test
+    void testUseOnlyBufferNoCallToConsumer() {
+        List<String> messages = List.of("a", "b", "c", "d", "e", "f");
+        MessageTracker[] messageTrackers = new MessageTracker[3];
 
-        public DummyOffset(int offset) {
-            this.offset = offset;
+        DummyConsumer consumer = new DummyConsumer(messages);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
+        Integer res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(3, res);
+
+        List<String> committedList = new ArrayList<>();
+        // a, b, c
+        for (MessageTracker message : messageTrackers) {
+            message.onConsumed(MessageConsumptionStatus.SENT);
+            committedList.add(new String(message.getMessage().getPayload()));
         }
 
-        @Override
-        public int compareTo(Offset o) {
-            return offset - ((DummyOffset) o).offset;
+        assertEquals(3, consumer.getCommittedMessagesCount());
+        assertListEquals(committedList, consumer.getCommittedMessages());
+
+        // d (from buffer), e (from buffer), f (from buffer)
+        messageTrackers = new MessageTracker[3];
+        res = messageSrc.nextMessages(messageTrackers).join();
+
+        assertEquals(3, res);
+
+        List<String> nextMessages = new ArrayList<>();
+        for (MessageTracker message : messageTrackers) {
+            nextMessages.add(new String(message.getMessage().getPayload()));
         }
+
+        assertListEquals(List.of("d", "e", "f"), nextMessages);
     }
 
+    private void assertListEquals(List<String> expect, List<String> actual) {
+        assertTrue(expect.size() == actual.size() && expect.containsAll(actual) && actual.containsAll(expect));
+    }
 }

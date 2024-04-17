@@ -14,6 +14,7 @@ dependencies {
     implementation("org.jctools:jctools-core:$jctools_version")
 
     testImplementation(testFixtures(project(':common')))
+    testImplementation(testFixtures(project(":spi")))
     testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
     testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
     testImplementation("org.awaitility:awaitility:$awaitility_version")
