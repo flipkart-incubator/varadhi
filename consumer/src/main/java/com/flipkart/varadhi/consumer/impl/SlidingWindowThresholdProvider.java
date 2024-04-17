@@ -2,6 +2,9 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.google.common.base.Ticker;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,6 +20,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
  *
  * @Threadsafe
  */
+@Slf4j
 public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic, AutoCloseable {
 
     private final ScheduledExecutorService scheduler;

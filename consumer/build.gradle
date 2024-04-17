@@ -21,4 +21,8 @@ dependencies {
     testImplementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
     testImplementation("org.openjdk.jmh:jmh-core:$jmh_version")
 //    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
+
+    // demo
+    testImplementation("io.vertx:vertx-web:$vertx_version")
+    testImplementation 'io.dropwizard.metrics:metrics-core:4.2.25'
 }
