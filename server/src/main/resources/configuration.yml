@@ -1,5 +1,9 @@
 
-components : ["Server", "Controller", "All"]
+member:
+  memberId: "app-1"
+  roles : ["Server", "Controller", "All"]
+  cpuCount: 1
+  nicMBps: 100
 
 restOptions:
   deployedRegion: "default"
@@ -16,13 +20,19 @@ vertxOptions:
   eventLoopPoolSize: 1
   workerPoolSize: 1
   internalBlockingPoolSize: 1
+  blockedThreadCheckInterval: 1800000
 
 verticleDeploymentOptions:
   instances: 1
   worker: false
   workerPoolSize: 2
 
-authenticationEnabled: false
+# Refer Vertx DeliveryOptions for details, used for inter node communication.
+deliveryOptions:
+  timeoutMs: 1000
+  tracingPolicy: "PROPAGATE"
+
+authenticationEnabled: true
 authentication:
   jwt:
     jwksUrl: "http://localhost:9090/default/jwks"
@@ -59,9 +69,3 @@ zookeeperOptions:
   connectUrl: "127.0.0.1:2181"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
-
-nodeResourcesOverride:
-  cpuCount: 1
-  nicMBps: 100
-
-nodeId: "test"

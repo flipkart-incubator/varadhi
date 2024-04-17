@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.deployment;
 
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.MessageChannel;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -57,7 +57,7 @@ public class LeanDeploymentVerticleDeployerTest {
     private OrgService orgService;
     private TeamService teamService;
     private ProjectService projectService;
-    private MessageChannel messageChannel;
+    private VaradhiClusterManager clusterManager;
 
 
     private static final String TEST_ORG = "testOrg";
@@ -82,7 +82,7 @@ public class LeanDeploymentVerticleDeployerTest {
         messagingStackProvider = mock(MessagingStackProvider.class);
         metaStoreProvider = mock(MetaStoreProvider.class);
         meterRegistry = mock(MeterRegistry.class);
-        messageChannel = mock(MessageChannel.class);
+        clusterManager = mock(VaradhiClusterManager.class);
 
 
         when(metaStoreProvider.getMetaStore()).thenReturn(varadhiMetaStore);
@@ -106,7 +106,7 @@ public class LeanDeploymentVerticleDeployerTest {
                 appConfiguration,
                 messagingStackProvider,
                 metaStoreProvider,
-                messageChannel,
+                clusterManager,
                 meterRegistry,
                 null
         );

@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -32,19 +34,20 @@ public class ProjectHandlers implements RouteProvider {
                 "/v1/projects",
                 List.of(
                         RouteDefinition.get("GetProject", "/:project")
-                                .authorize(PROJECT_GET, "{project}")
+                                .authorize(PROJECT_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
+                                .authorize(PROJECT_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.put("UpdateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
-                                .authorize(PROJECT_UPDATE, "")
+                                .authorize(PROJECT_UPDATE)
                                 .build(this::getHierarchy, this::update),
                         RouteDefinition.delete("DeleteProject", "/:project")
-                                .authorize(PROJECT_DELETE, "{project}")
+                                .authorize(PROJECT_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();
@@ -73,7 +76,6 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         Project project = ctx.get(CONTEXT_KEY_BODY);
         Project createdProject = projectService.createProject(project);
         ctx.endApiWithResponse(createdProject);
@@ -81,13 +83,11 @@ public class ProjectHandlers implements RouteProvider {
 
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        //TODO::No topics and subscriptions for this project.
         projectService.deleteProject(projectName);
         ctx.endApi();
     }
 
     public void update(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here.
         Project project = ctx.get(CONTEXT_KEY_BODY);
         Project updatedProject = projectService.updateProject(project);
         ctx.endApiWithResponse(updatedProject);

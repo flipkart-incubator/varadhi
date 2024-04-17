@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.components;
+package com.flipkart.varadhi.core.cluster;
 
 public enum ComponentKind {
     Server("Server"),

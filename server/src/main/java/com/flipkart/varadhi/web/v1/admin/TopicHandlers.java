@@ -18,7 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -46,18 +47,18 @@ public class TopicHandlers implements RouteProvider {
                 "/v1/projects/:project/topics",
                 List.of(
                         RouteDefinition.get("GetTopic", "/:topic")
-                                .authorize(TOPIC_GET, "{project}/{topic}")
+                                .authorize(TOPIC_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateTopic", "")
                                 .hasBody()
                                 .bodyParser(this::setTopic)
-                                .authorize(TOPIC_CREATE, "{project}")
+                                .authorize(TOPIC_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteTopic", "/:topic")
-                                .authorize(TOPIC_DELETE, "{project}/{topic}")
+                                .authorize(TOPIC_DELETE)
                                 .build(this::getHierarchy, this::delete),
                         RouteDefinition.get("ListTopics", "")
-                                .authorize(TOPIC_GET, "{project}")
+                                .authorize(TOPIC_LIST)
                                 .build(this::getHierarchy, this::listTopics)
                 )
         ).get();
@@ -91,7 +92,6 @@ public class TopicHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Enable authn/authz for this flow.
         //TODO:: Consider using Vertx ValidationHandlers to validate the request body.
         //TODO:: Consider reverting on failure and ≠≠ kind of semantics for all operations.
 

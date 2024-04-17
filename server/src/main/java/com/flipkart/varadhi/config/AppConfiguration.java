@@ -2,30 +2,28 @@ package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.cluster.NodeResources;
-import com.flipkart.varadhi.components.ComponentKind;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
-import java.util.List;
-
 @Getter
 public class AppConfiguration {
-    @NotEmpty
-    List<ComponentKind> components;
-
     @NotNull
     private VertxOptions vertxOptions;
 
     @NotNull
     private DeploymentOptions verticleDeploymentOptions;
+
+    /**
+     * Refer Vertx DeliveryOptions for details, used for inter node communication.
+     * Use it to configure delivery timeout (default 1000ms) and tracing options (default PROPAGATE)
+     */
+    private DeliveryConfig deliveryOptions;
 
     @NotNull
     private HttpServerOptions httpServerOptions;
@@ -63,12 +61,5 @@ public class AppConfiguration {
      * In the future, when this becomes auto-detected, this parameter will become optional.
      */
     @NotNull
-    private NodeResources nodeResourcesOverride;
-    
-    /**
-     * A unique node Id across the whole cluster
-     */
-
-    @NotNull
-    private String nodeId;
+    private MemberConfig member;
 }

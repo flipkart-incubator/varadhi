@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -13,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 
@@ -32,17 +34,18 @@ public class OrgHandlers implements RouteProvider {
                 "/v1/orgs",
                 List.of(
                         RouteDefinition.get("GetOrgs", "")
-                                .authorize(ORG_LIST, "")
+                                .authorize(ORG_LIST)
                                 .build(this::getHierarchy, this::getOrganizations),
                         RouteDefinition.get("GetOrg", "/:org")
-                                .authorize(ORG_GET, "{org}")
+                                .authorize(ORG_GET)
                                 .build(this::getHierarchy, this::get),
                         RouteDefinition.post("CreateOrg", "")
                                 .hasBody()
                                 .bodyParser(this::setOrg)
+                                .authorize(ORG_CREATE)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition.delete("DeleteOrg", "/:org")
-                                .authorize(ORG_DELETE, "{org}")
+                                .authorize(ORG_DELETE)
                                 .build(this::getHierarchy, this::delete)
                 )
         ).get();
@@ -78,7 +81,6 @@ public class OrgHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        //TODO:: Authz check need to be explicit here. This can be done with Authz work.
         Org org = ctx.get(CONTEXT_KEY_BODY);
         Org createdorg = orgService.createOrg(org);
         ctx.endApiWithResponse(createdorg);

@@ -28,15 +28,26 @@ public enum ResourceAction {
     TOPIC_GET(ResourceType.TOPIC, "get"),
     TOPIC_DELETE(ResourceType.TOPIC, "delete"),
     TOPIC_UPDATE(ResourceType.TOPIC, "update"),
+    TOPIC_LIST(ResourceType.TOPIC, "list"),
     TOPIC_CONSUME(ResourceType.TOPIC, "consume"),
     TOPIC_PRODUCE(ResourceType.TOPIC, "produce"),
+    TOPIC_IAM_POLICY_SET(ResourceType.TOPIC, "setIamPolicy"),
+    TOPIC_IAM_POLICY_GET(ResourceType.TOPIC, "getIamPolicy"),
+    TOPIC_IAM_POLICY_DELETE(ResourceType.TOPIC, "deleteIamPolicy"),
 
     SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, "create"),
     SUBSCRIPTION_GET(ResourceType.SUBSCRIPTION, "get"),
     SUBSCRIPTION_LIST(ResourceType.SUBSCRIPTION, "list"),
     SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, "delete"),
     SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update"),
-    SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek");
+    SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek"),
+    SUBSCRIPTION_IAM_POLICY_SET(ResourceType.SUBSCRIPTION, "setIamPolicy"),
+    SUBSCRIPTION_IAM_POLICY_GET(ResourceType.SUBSCRIPTION, "getIamPolicy"),
+    SUBSCRIPTION_IAM_POLICY_DELETE(ResourceType.SUBSCRIPTION, "deleteIamPolicy"),
+
+    IAM_POLICY_GET(ResourceType.IAM_POLICY, "get"),
+    IAM_POLICY_SET(ResourceType.IAM_POLICY, "set"),
+    IAM_POLICY_DELETE(ResourceType.IAM_POLICY, "delete");
 
     private final ResourceType resourceType;
     private final String action;

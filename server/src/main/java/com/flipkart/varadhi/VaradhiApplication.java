@@ -1,14 +1,17 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.cluster.ClusterManager;
-import com.flipkart.varadhi.cluster.custom.ZookeeperClusterManager;
-import com.flipkart.varadhi.cluster.impl.ClusterManagerImpl;
+
+import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.components.Component;
-import com.flipkart.varadhi.components.ComponentKind;
+import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.components.controller.Controller;
 import com.flipkart.varadhi.components.webserver.WebServer;
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.utils.HostUtils;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
@@ -16,16 +19,20 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBusOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.micrometer.MetricsDomain;
 import io.vertx.micrometer.MetricsNaming;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -35,44 +42,55 @@ public class VaradhiApplication {
     public static void main(String[] args) {
 
         try {
-            String hostName = HostUtils.getHostName();
-            log.info("VaradhiApplication Starting on {}.", hostName);
+            String host = HostUtils.getHostName();
+            log.info("VaradhiApplication Starting on {}.", host);
             AppConfiguration configuration = readConfiguration(args);
+            String memberId = configuration.getMember().getMemberId();
             CoreServices services = new CoreServices(configuration);
-            Vertx vertx = createVertx(configuration, services);
-            ClusterManager clusterManager = createClusterManager(vertx);
-            Map<ComponentKind, Component> components = getComponents(configuration, services);
+            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberId);
+            Map<ComponentKind, Component> components = getComponents(configuration, services, clusterManager);
 
-            Future.all(components.entrySet().stream().map(e -> e.getValue().start(vertx, clusterManager).onComplete(ar -> {
+            createClusteredVertx(configuration, clusterManager, services, "127.0.0.1").compose(vertx ->
+                    Future.all(components.entrySet().stream()
+                            .map(es -> es.getValue().start(vertx).onComplete(ar -> {
+                                if (ar.succeeded()) {
+                                    log.info("component: {} started.", es.getKey());
+                                } else {
+                                    log.error("component: {} failed to start. {}", es.getKey(), ar.cause());
+                                }
+                            })).collect(Collectors.toList()))
+            ).onComplete(ar -> {
                 if (ar.succeeded()) {
-                    log.info("Component({}) started.", e.getKey());
+                    log.info("VaradhiApplication Started on {}.", host);
                 } else {
-                    log.error("Component({}) failed to start.", e.getKey(), ar.cause());
-                }
-            })).collect(Collectors.toList())).onComplete(ar -> {
-                if (ar.succeeded()) {
-                    log.info("VaradhiApplication Started on {}.", hostName);
-                } else {
-                    log.error("VaradhiApplication failed to start.", ar.cause());
+                    log.error("VaradhiApplication on host {} failed to start. {} ", host, ar.cause());
                 }
             });
         } catch (Exception e) {
             log.error("Failed to initialise the VaradhiApplication.", e);
             System.exit(-1);
         }
-
         // TODO: check need for shutdown hook
-//        Runtime.getRuntime().addShutdownHook();
     }
 
+    private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String memberId) {
+        CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
+        DeliveryOptions deliveryOptions = new DeliveryOptions();
+        deliveryOptions.setTracingPolicy(config.getDeliveryOptions().getTracingPolicy());
+        deliveryOptions.setSendTimeout(config.getDeliveryOptions().getTimeoutMs());
+        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, memberId);
+    }
 
-    private static Vertx createVertx(AppConfiguration configuration, CoreServices services)
-            throws ExecutionException, InterruptedException {
-        log.debug("Creating Vertex");
+    private static Future<Vertx> createClusteredVertx(
+            AppConfiguration config, ClusterManager clusterManager, CoreServices services, String host
+    ) {
+        int port = 0;
+        EventBusOptions eventBusOptions = new EventBusOptions()
+                .setHost(host)
+                .setPort(port)
+                .setClusterNodeMetadata(getMemberInfoAsJson(config.getMember(), host, port));
 
-        // Disabling http server metrics by default, as we are tracking spans and metrics ourselves
-        // TODO: configure metrics categories to include as config
-        VertxOptions vertxOptions = configuration.getVertxOptions()
+        VertxOptions vertxOptions = config.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
                 .setMetricsOptions(new MicrometerMetricsOptions()
                         .setMicrometerRegistry(services.getMeterRegistry())
@@ -80,27 +98,17 @@ public class VaradhiApplication {
                         .setRegistryName("default")
                         .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
                         .setJvmMetricsEnabled(true)
-                        .setEnabled(true));
+                        .setEnabled(true))
+                .setEventBusOptions(eventBusOptions);
 
-        ZookeeperClusterManager clusterManager = new ZookeeperClusterManager(
-                configuration.getZookeeperOptions(),
-                configuration.getNodeId(),
-                configuration.getNodeResourcesOverride()
-        );
-
-        Vertx vertx = Vertx.builder()
-                .with(vertxOptions)
-                .withClusterManager(clusterManager)
-                .buildClustered()
-                .toCompletionStage().toCompletableFuture().get();
-        log.debug("Created Vertex");
-        return vertx;
+        return Vertx.builder().with(vertxOptions).withClusterManager(clusterManager).buildClustered();
     }
 
-    private static ClusterManager createClusterManager(Vertx vertx) {
-        // TODO:: Placeholder for now. This node joining the cluster needs to be closed
-        // along with ClusterManager related changes.
-        return new ClusterManagerImpl(vertx);
+    private static JsonObject getMemberInfoAsJson(MemberConfig config, String host, int port) {
+        MemberInfo info =
+                new MemberInfo(
+                        config.getMemberId(), host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
+        return JsonObject.mapFrom(info);
     }
 
     public static AppConfiguration readConfiguration(String[] args) {
@@ -136,17 +144,17 @@ public class VaradhiApplication {
     }
 
     private static Map<ComponentKind, Component> getComponents(
-            AppConfiguration configuration, CoreServices coreServices
+            AppConfiguration config, CoreServices coreServices, VaradhiClusterManager clusterManager
     ) {
+        List<ComponentKind> configuredComponents = Arrays.stream(config.getMember().getRoles()).toList();
         //TODO:: check if there is need for ordered sequence of component.
         return Arrays.stream(ComponentKind.values())
                 .filter(kind -> !kind.equals(ComponentKind.All) && (
-                        configuration.getComponents().contains(ComponentKind.All) ||
-                                configuration.getComponents().contains(kind)
+                        configuredComponents.contains(ComponentKind.All) || configuredComponents.contains(kind)
                 ))
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                    case Server -> new WebServer(configuration, coreServices);
-                    case Controller -> new Controller(configuration, coreServices);
+                    case Server -> new WebServer(config, coreServices, clusterManager);
+                    case Controller -> new Controller(config, coreServices, clusterManager);
                     default -> throw new IllegalArgumentException("Unknown Component Kind: " + kind);
                 }));
     }

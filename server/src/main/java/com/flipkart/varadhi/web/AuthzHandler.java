@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -21,8 +21,8 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
-        if (authorizationHandlerBuilder != null && routeDef.getRequiredAuthorization().isPresent()) {
-            route.handler(authorizationHandlerBuilder.build(routeDef.getRequiredAuthorization().get()));
+        if (authorizationHandlerBuilder != null && routeDef.getAuthorizationOnAction() != null) {
+            route.handler(authorizationHandlerBuilder.build(routeDef.getAuthorizationOnAction()));
         }
     }
 

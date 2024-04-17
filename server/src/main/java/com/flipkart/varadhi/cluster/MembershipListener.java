@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.cluster;
 
-public interface MembershipListener {
-    void joined(NodeInfo nodeInfo);
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 
-    void left(NodeInfo nodeInfo);
+public interface MembershipListener {
+    void joined(MemberInfo memberInfo);
+
+    void left(String id);
 }

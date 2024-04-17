@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.RoleBindingNode;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.RoleBindingMetaStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -16,7 +15,7 @@ import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 
 @Slf4j
-public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
+public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     private final ZKMetaStore zkMetaStore;
 
     public VaradhiMetaStore(CuratorFramework zkCurator) {
@@ -30,7 +29,7 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
         ensureEntityTypePathExists(PROJECT);
         ensureEntityTypePathExists(TOPIC);
         ensureEntityTypePathExists(SUBSCRIPTION);
-        ensureEntityTypePathExists(ROLE_BINDING);
+        ensureEntityTypePathExists(IAM_POLICY);
     }
 
     public void ensureEntityTypePathExists(ZNodeKind zNodeKind) {
@@ -247,44 +246,32 @@ public class VaradhiMetaStore implements MetaStore, RoleBindingMetaStore {
     }
 
     @Override
-    public List<RoleBindingNode> getRoleBindingNodes() {
-        ZNode znode = ZNode.OfEntityType(ROLE_BINDING);
-        return zkMetaStore.listChildren(znode).stream().map(this::findRoleBindingNode).toList();
+    public IamPolicyRecord getIamPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
+        return zkMetaStore.getZNodeDataAsPojo(znode, IamPolicyRecord.class);
     }
 
     @Override
-    public RoleBindingNode findRoleBindingNode(String resourceIdWithType) {
-        ZNode znode = ZNode.OfKind(ROLE_BINDING, resourceIdWithType);
-        return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
+    public void createIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
+        ZNode znode = ZNode.OfIamPolicy(iamPolicyRecord.getName());
+        zkMetaStore.createZNodeWithData(znode, iamPolicyRecord);
     }
 
     @Override
-    public RoleBindingNode getRoleBindingNode(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
-        return zkMetaStore.getZNodeDataAsPojo(znode, RoleBindingNode.class);
-    }
-
-    @Override
-    public void createRoleBindingNode(RoleBindingNode node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
-        zkMetaStore.createZNodeWithData(znode, node);
-    }
-
-    @Override
-    public boolean isRoleBindingPresent(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+    public boolean isIamPolicyRecordPresent(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
-    public int updateRoleBindingNode(RoleBindingNode node) {
-        ZNode znode = ZNode.OfIAMPolicy(node.getResourceType(), node.getResourceId());
-        return zkMetaStore.updateZNodeWithData(znode, node);
+    public int updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
+        ZNode znode = ZNode.OfIamPolicy(iamPolicyRecord.getName());
+        return zkMetaStore.updateZNodeWithData(znode, iamPolicyRecord);
     }
 
     @Override
-    public void deleteRoleBindingNode(ResourceType resourceType, String resourceId) {
-        ZNode znode = ZNode.OfIAMPolicy(resourceType, resourceId);
+    public void deleteIamPolicyRecord(String authResourceId) {
+        ZNode znode = ZNode.OfIamPolicy(authResourceId);
         zkMetaStore.deleteZNode(znode);
     }
 }

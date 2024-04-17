@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.components.webserver;
 
-import com.flipkart.varadhi.WebServerOpManager;
-import com.flipkart.varadhi.core.cluster.messages.SubscriptionMessage;
+import com.flipkart.varadhi.WebServerApiManager;
+import com.flipkart.varadhi.cluster.messages.SubscriptionMessage;
 
 import java.util.concurrent.CompletableFuture;
 
 public class WebServerApiHandler {
-    private final WebServerOpManager serverOpMgr;
+    private final WebServerApiManager serverOpMgr;
 
-    public WebServerApiHandler(WebServerOpManager serverOpMgr) {
+    public WebServerApiHandler(WebServerApiManager serverOpMgr) {
         this.serverOpMgr = serverOpMgr;
     }
 
