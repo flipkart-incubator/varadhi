@@ -1,13 +1,11 @@
 package com.flipkart.varadhi;
 
-
+import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
-import com.flipkart.varadhi.components.Component;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
-import com.flipkart.varadhi.components.controller.Controller;
-import com.flipkart.varadhi.components.webserver.WebServer;
+import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
@@ -17,6 +15,7 @@ import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -31,8 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,30 +47,32 @@ public class VaradhiApplication {
             String memberId = configuration.getMember().getMemberId();
             CoreServices services = new CoreServices(configuration);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberId);
-            Map<ComponentKind, Component> components = getComponents(configuration, services, clusterManager);
-
-            createClusteredVertx(configuration, clusterManager, services, "127.0.0.1").compose(vertx ->
-                    Future.all(components.entrySet().stream()
-                            .map(es -> es.getValue().start(vertx).onComplete(ar -> {
-                                if (ar.succeeded()) {
-                                    log.info("component: {} started.", es.getKey());
-                                } else {
-                                    log.error("component: {} failed to start. {}", es.getKey(), ar.cause());
-                                }
-                            })).collect(Collectors.toList()))
-            ).onComplete(ar -> {
-                if (ar.succeeded()) {
-                    log.info("VaradhiApplication Started on {}.", host);
-                } else {
-                    log.error("VaradhiApplication on host {} failed to start. {} ", host, ar.cause());
-                }
-            });
+            Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);
+            createClusteredVertx(configuration, clusterManager, services, host).compose(vertx ->
+                            Future.all(verticles.entrySet().stream()
+                                    .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
+                                        if (ar.succeeded()) {
+                                            log.info("component: {} started.", es.getKey());
+                                        } else {
+                                            log.error("component: {} failed to start. {}", es.getKey(), ar.cause());
+                                        }
+                                    })).collect(Collectors.toList()))
+                    )
+                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", host))
+                    .onFailure(t -> {
+                        log.error("VaradhiApplication on host {} failed to start. {} ", host, t);
+                        log.error("Closing the application.");
+                        System.exit(-1);
+                    });
         } catch (Exception e) {
             log.error("Failed to initialise the VaradhiApplication.", e);
+            log.error("Closing the application.");
             System.exit(-1);
         }
         // TODO: check need for shutdown hook
     }
+
+
 
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String memberId) {
         CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
@@ -143,19 +144,13 @@ public class VaradhiApplication {
         }
     }
 
-    private static Map<ComponentKind, Component> getComponents(
+    private static Map<ComponentKind, Verticle> getComponentVerticles(
             AppConfiguration config, CoreServices coreServices, VaradhiClusterManager clusterManager
     ) {
-        List<ComponentKind> configuredComponents = Arrays.stream(config.getMember().getRoles()).toList();
-        //TODO:: check if there is need for ordered sequence of component.
-        return Arrays.stream(ComponentKind.values())
-                .filter(kind -> !kind.equals(ComponentKind.All) && (
-                        configuredComponents.contains(ComponentKind.All) || configuredComponents.contains(kind)
-                ))
+        return Arrays.stream(config.getMember().getRoles()).distinct()
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                    case Server -> new WebServer(config, coreServices, clusterManager);
-                    case Controller -> new Controller(config, coreServices, clusterManager);
-                    default -> throw new IllegalArgumentException("Unknown Component Kind: " + kind);
+                    case Server -> new WebServerVerticle(config, coreServices, clusterManager);
+                    case Controller -> new ControllerVerticle(config, coreServices, clusterManager);
                 }));
     }
 }
