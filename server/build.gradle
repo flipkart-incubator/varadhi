@@ -91,6 +91,6 @@ reporting {
 }
 
 application {
-    mainClass = "com.flipkart.varadhi.Server"
+    mainClass = "com.flipkart.varadhi.VaradhiApplication"
 }
 
