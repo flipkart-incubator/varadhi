@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.components.webserver;
+package com.flipkart.varadhi.verticles.webserver;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.SubscriptionMessage;
