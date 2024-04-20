@@ -1,0 +1,17 @@
+################################################################
+# ConfigMap for Varadhi component getting deployed.
+# Actual config keys/values are defined in respective .tpl file
+###############################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.varadhi.app.configMapName }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+data:
+  configuration.yml: |
+    {{- if eq .Values.deployment.name "server" }}
+    {{ include "configMap.varadhi.server" . | nindent 4 }}
+    {{- end }}

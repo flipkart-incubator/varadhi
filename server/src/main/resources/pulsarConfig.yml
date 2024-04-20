@@ -1,4 +1,0 @@
-pulsarAdminOptions:
-  serviceHttpUrl: "http://127.0.0.1:8081"
-pulsarClientOptions:
-  serviceUrl: "http://127.0.0.1:8081"

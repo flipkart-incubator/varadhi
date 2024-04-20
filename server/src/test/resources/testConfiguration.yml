@@ -1,5 +1,4 @@
 member:
-  memberId: "app-1"
   roles : ["Server"]
   cpuCount: 1
   nicMBps: 100

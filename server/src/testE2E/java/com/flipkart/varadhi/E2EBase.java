@@ -26,7 +26,7 @@ import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX
 
 public class E2EBase {
 
-    protected static final String VaradhiBaseUri = "http://localhost:8080";
+    protected static final String VaradhiBaseUri = "http://localhost:18488";
     private static final int ConnectTimeoutMs = 10 * 1000;
     private static final int ReadTimeoutMs = 10 * 1000;
     public static final String SUPER_USER = "thanos";

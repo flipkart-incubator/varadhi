@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+spec:
+  {{- if not .Values.deployment.autoscaling.enabled }}
+  replicas: {{ .Values.deployment.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "varadhi.matchLabels" . | nindent 6 }}
+      component: {{ .Values.deployment.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "varadhi.commonLabels" . | nindent 8 }}
+        component: {{ .Values.deployment.name }}
+        {{- with .Values.deployment.podAnnotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+    # specification of container
+    spec:
+      volumes:
+        - name: configs
+          projected:
+            sources:
+            - configMap:
+                name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.varadhi.app.configMapName }}"
+            - configMap:
+                name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.messaging.configMapName }}"
+            - configMap:
+                name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.metastore.configMapName }}"
+            - configMap:
+                name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.logging.configMapName }}"
+            {{- if eq .Values.deployment.name "server" }}
+            - configMap:
+                name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.authzProvider.configMapName }}"
+            {{- end }}
+
+      {{- with .Values.deployment.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - image: {{ .Values.images.appImage.registry }}/{{ .Values.images.appImage.repository }}:{{ .Values.images.appImage.tag }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}"
+          {{- with .Values.deployment.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+          {{- toYaml .Values.deployment.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /etc/varadhi
+              name: configs
+          # include any container specific startup, readiness and liveness probes, if any.
+          {{- with .Values.deployment.probes }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      #  include DNS config related to pod, if any.
+      {{- with .Values.deployment.dnsSettings }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}

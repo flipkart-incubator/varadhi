@@ -1,0 +1,42 @@
+################################################################################################
+# ConfigMap for Zookeeper setup script. This sets up the myid file based on hostname.
+# Image docker.io/zookeeper -- sets up the myid file based on ZOO_MY_ID env var, but no good
+# way to set the environment variable dynamically based on statefulset pod index (in k8 podx index
+# label support is under feature flag).
+# This script calls the  docker entry point script after creating the myid file based on hostname
+################################################################################################
+{{- if .Values.zkDeployment.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.scriptsConfigMapName }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.zkDeployment.name }}
+data:
+  setup.sh: |-
+    #!/bin/bash
+    set -e
+    # Execute docker-entrypoint.sh as usual after ensuring myid is set.
+    # If already set, do nothing.
+    # Else, use pod ordinal from pod name.
+    
+    if [[ -f "/data/myid" ]]; then
+        echo "/data/myid already exists, using it."
+        cat /data/myid
+    else
+        HOSTNAME="$(hostname -s)"
+        echo "/data/myid not found, using $HOSTNAME to create it."
+        if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+            ORD=${BASH_REMATCH[2]}
+            echo "$ORD" > /data/myid
+            echo "set $ORD as Server id in /data/myid"
+        else
+            echo "Failed to get index from hostname $HOSTNAME"
+            exit 1
+        fi
+    fi
+    echo ZOO_LOG4J_PROP=$ZOO_LOG4J_PROP
+    exec /docker-entrypoint.sh zkServer.sh start-foreground
+{{- end }}
