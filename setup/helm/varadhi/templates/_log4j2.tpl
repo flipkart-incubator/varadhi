@@ -1,4 +1,4 @@
-{{- define "configMap.logging.log4j2" }}
+{{- define "configMap.logging.log4j2" -}}
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 TODO:: This is not being auto picked. Needs to be fixed.
@@ -7,7 +7,7 @@ TODO:: This is not being auto picked. Needs to be fixed.
   Preferring Log4j2 over logback primarily for Async logger feature.
   However detailed evaluation and configuration for Async loggers by default  yet to be done.
  -->
-<Configuration status="info">
+<Configuration status="warn">
   <Appenders>
     <!-- Console appender configuration -->
     <Console name="console" target="SYSTEM_OUT">
@@ -16,7 +16,7 @@ TODO:: This is not being auto picked. Needs to be fixed.
   </Appenders>
   <Loggers>
     <!-- Root logger referring to console appender -->
-    <Root level="info" additivity="false">
+    <Root level="{{ .Values.logging.level }}" additivity="false">
       <AppenderRef ref="console"/>
     </Root>
   </Loggers>

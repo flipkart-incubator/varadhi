@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class MemberConfig {
-    private String memberId;
     private ComponentKind[] roles;
     private int cpuCount;
     private int nicMBps;

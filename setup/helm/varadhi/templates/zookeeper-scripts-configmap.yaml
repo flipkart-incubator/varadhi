@@ -37,5 +37,6 @@ data:
             exit 1
         fi
     fi
+    echo ZOO_LOG4J_PROP=$ZOO_LOG4J_PROP
     exec /docker-entrypoint.sh zkServer.sh start-foreground
 {{- end }}

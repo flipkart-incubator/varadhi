@@ -92,6 +92,8 @@ spec:
           env:
             - name: ZOOKEEPER_SERVERS
               value: {{ template "varadhi.zookeeper.connectUrl" . }}
+            - name: ZOO_LOG4J_PROP
+              value: "{{ .Values.zkDeployment.logLevel }},CONSOLE"
 
           {{- $zkConnectCommand := print "nc -q 1 localhost " .Values.zkDeployment.ports.client -}}
           {{- if .Values.zkDeployment.probe.readiness.enabled }}
@@ -142,7 +144,8 @@ spec:
             - name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.volumes.dataLog.name }}"
               mountPath: /datalog
             - name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.volumes.conf.name }}"
-              mountPath: /conf
+              mountPath: /conf/zoo.cfg
+              subPath: zoo.cfg
             - name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.volumes.scripts.name }}"
               mountPath: /scripts
       volumes:
@@ -155,6 +158,9 @@ spec:
         - name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.volumes.conf.name }}"
           configMap:
             name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.configMapName }}"
+            items:
+              - key: zoo.cfg
+                path: zoo.cfg
         - name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.volumes.scripts.name }}"
           configMap:
             name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}-{{ .Values.zkDeployment.scriptsConfigMapName }}"

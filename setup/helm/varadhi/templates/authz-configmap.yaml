@@ -11,7 +11,8 @@ metadata:
     {{- include "varadhi.commonLabels" . | nindent 4 }}
     component: {{ .Values.deployment.name }}
 data:
-  authzProvider.yml: |
-    {{- if .Values.authzProvider.default }}
+  authorizationConfig.yml: |
     {{ include "configMap.authzProvider.default" . | nindent 4}}
-    {{- end }}
+#    {{- if .Values.authzProvider.default }}
+#    {{ include "configMap.authzProvider.default" . | nindent 4}}
+#    {{- end }}

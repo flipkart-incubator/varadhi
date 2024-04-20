@@ -8,7 +8,7 @@ metadata:
     {{- include "varadhi.commonLabels" . | nindent 4 }}
     component: {{ .Values.zkDeployment.name }}
 data:
-  {{ .Values.zkDeployment.configFileName }}: |
+  zoo.cfg: |
     tickTime = {{ .Values.zkDeployment.configData.tickTime }}
     dataDir = /data
     dataLogDir = /datalog

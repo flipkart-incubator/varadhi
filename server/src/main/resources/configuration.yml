@@ -1,20 +1,8 @@
 
 member:
-  memberId: "app-1"
   roles : ["Server", "Controller"]
   cpuCount: 1
   nicMBps: 100
-
-restOptions:
-  deployedRegion: "default"
-  defaultOrg: "default"
-  defaultTeam: "public"
-  defaultProject: "public"
-
-producerOptions:
-  producerCacheBuilderSpec: ""
-  topicCacheBuilderSpec: ""
-  metricEnabled: true
 
 vertxOptions:
   eventLoopPoolSize: 1
@@ -31,6 +19,24 @@ verticleDeploymentOptions:
 deliveryOptions:
   timeoutMs: 1000
   tracingPolicy: "PROPAGATE"
+
+httpServerOptions:
+  port: 18488
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+restOptions:
+  deployedRegion: "default"
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
 
 authenticationEnabled: false
 authentication:
@@ -55,12 +61,6 @@ metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: "src/main/resources/metastore.yml"
 
-httpServerOptions:
-  port: 8488
-  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
-  decompressionSupported: false
-  useAlpn: true
-  tracingPolicy: "ALWAYS"
 
 featureFlags:
   leanDeployment: false

@@ -2,16 +2,9 @@
 Varadhi Server configuration.
 */}}
 {{- define "configMap.varadhi.server" -}}
-components:{{- range .Values.varadhi.app.components }}
-  - {{.}} {{- end }}
 
-{{ with .Values.varadhi.app.restOptions }}
-restOptions:
-  {{- toYaml . | nindent 2 }}
-{{- end }}
-
-{{ with .Values.varadhi.app.producerOptions }}
-producerOptions:
+{{ with .Values.varadhi.app.member }}
+member:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
@@ -25,8 +18,23 @@ verticleDeploymentOptions:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
+{{ with .Values.varadhi.app.deliveryOptions }}
+deliveryOptions:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+
 {{ with .Values.varadhi.app.httpServerOptions }}
 httpServerOptions:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+
+{{ with .Values.varadhi.app.restOptions }}
+restOptions:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+
+{{ with .Values.varadhi.app.producerOptions }}
+producerOptions:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
@@ -40,15 +48,15 @@ authorizationEnabled: {{ .Values.varadhi.app.authorizationEnabled }}
 authorization:
   superUsers: {{ .Values.varadhi.app.authorization.superUsers }}
   providerClassName: {{ .Values.varadhi.app.authorization.providerClassName }}
-  configFile: {{ .Values.deployment.configMountPath }}/authzProvider.yml
+  configFile: /etc/varadhi/authorizationConfig.yml
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-  configFile: {{ .Values.deployment.configMountPath }}/messaging.yml
+  configFile: /etc/varadhi/messaging.yml
 
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: {{ .Values.deployment.configMountPath }}/metastore.yml
+  configFile: /etc/varadhi/metastore.yml
 
 {{ with .Values.varadhi.app.featureFlags }}
 featureFlags:
@@ -57,10 +65,4 @@ featureFlags:
 
 {{ template "configMap.metastore.zookeeper" . }}
 
-{{ with .Values.varadhi.app.nodeResourcesOverride }}
-nodeResourcesOverride:
-  {{- toYaml . | nindent 2 }}
-{{- end }}
-
-nodeId: {{ .Values.varadhi.app.nodeId }}
 {{- end }}

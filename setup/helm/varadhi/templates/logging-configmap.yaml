@@ -11,7 +11,6 @@ metadata:
     {{- include "varadhi.commonLabels" . | nindent 4 }}
     component: {{ .Values.deployment.name }}
 data:
-  {{ .Values.logging.configFileName }}: |
-    {{- if .Values.logging.log4j2 }}
-    {{ include "configMap.logging.log4j2" .  | nindent 4}}
-    {{- end }}
+  log4j2.xml: |
+    {{- include "configMap.logging.log4j2" .  | nindent 4}}
+

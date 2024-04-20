@@ -58,7 +58,7 @@ spec:
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
           volumeMounts:
-            - mountPath: {{ .Values.deployment.configMountPath }}
+            - mountPath: /etc/varadhi
               name: configs
           # include any container specific startup, readiness and liveness probes, if any.
           {{- with .Values.deployment.probes }}

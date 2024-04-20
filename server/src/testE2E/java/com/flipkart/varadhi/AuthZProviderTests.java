@@ -74,7 +74,7 @@ public class AuthZProviderTests extends E2EBase {
                         ---
                         metaStoreOptions:
                           providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-                          configFile: "src/main/resources/zkConfig.yml"
+                          configFile: "src/main/resources/metastore.yml"
 
                         roleDefinitions:
                           org.admin:

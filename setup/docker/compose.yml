@@ -18,17 +18,16 @@ services:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
       - ZOOKEEPER_SERVERS=zookeeper:2181
       - PULSAR_URL=http://pulsar:8080
-      - DISABLE_NODEID_SUFFIX=yes
     networks:
       hostnet:
     ports:
-      - 8488:8488
+      - 18488:18488
       - 9990:9990
     volumes:
       - ../../server/build/jacoco:/jacoco
     restart: "no"
     healthcheck:
-      test: curl -s http://localhost:8488/v1/health-check | grep iam_ok
+      test: curl -s http://localhost:18488/v1/health-check | grep iam_ok
       interval: 10s
       timeout: 10s
       retries: 5
@@ -61,8 +60,7 @@ services:
 
 
   zookeeper:
-    # image: zookeeper:3.8.1-temurin
-    image: zookeeper:latest
+    image: zookeeper:3.7.1
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "*"
       ZOO_ADMINSERVER_ENABLED: false
