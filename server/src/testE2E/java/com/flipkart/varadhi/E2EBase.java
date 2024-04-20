@@ -7,18 +7,18 @@ import com.flipkart.varadhi.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.GenericType;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ContextResolver;
+import jakarta.ws.rs.ext.Provider;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.junit.jupiter.api.Assertions;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
 import java.util.List;
 
 import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
@@ -26,7 +26,7 @@ import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX
 
 public class E2EBase {
 
-    protected static final String VaradhiBaseUri = "http://localhost:8080";
+    protected static final String VaradhiBaseUri = "http://localhost:18488";
     private static final int ConnectTimeoutMs = 10 * 1000;
     private static final int ReadTimeoutMs = 10 * 1000;
     public static final String SUPER_USER = "thanos";

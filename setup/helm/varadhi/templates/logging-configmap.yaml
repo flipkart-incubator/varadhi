@@ -1,0 +1,16 @@
+#####################################################################
+# ConfigMap for Varadhi logging/tracing.
+# Actual config keys/values are defined in stack specific .tpl file
+#####################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.logging.configMapName }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+data:
+  log4j2.xml: |
+    {{- include "configMap.logging.log4j2" .  | nindent 4}}
+

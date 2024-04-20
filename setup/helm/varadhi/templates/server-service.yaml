@@ -1,0 +1,28 @@
+################################################
+# Service defintion for the Varadhi rest server
+# LoadBalancer which is exrernally accessible.
+################################################
+{{- if eq .Values.deployment.name "server" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+  annotations:
+{{- with .Values.deployment.service.annotations }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.deployment.service.frontendPort }}
+      targetPort: {{ .Values.varadhi.app.httpServerOptions.port }}
+      protocol: TCP
+      name: server-http
+  selector:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+{{- end }}

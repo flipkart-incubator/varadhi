@@ -1,0 +1,35 @@
+################################################
+# Service defintion for the Zookeeper server(s)
+# ClusterIP type w/o specific IP assigned.
+################################################
+
+{{- if .Values.zkDeployment.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.zkDeployment.name }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.zkDeployment.name }}
+  {{- with .Values.zkDeployment.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 6 }}
+  {{- end }}
+spec:
+  ports:
+    # TODO:: Check why all these ports are needed.
+    # prometheus needs to access /metrics endpoint
+    - name: http
+      port: {{ .Values.zkDeployment.ports.http }}
+    - name: follower
+      port: {{ .Values.zkDeployment.ports.follower }}
+    - name: leader-election
+      port: {{ .Values.zkDeployment.ports.leaderElection }}
+    - name: client
+      port: {{ .Values.zkDeployment.ports.client }}
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.zkDeployment.name }}
+{{- end }}

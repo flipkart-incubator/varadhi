@@ -31,7 +31,6 @@ import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,9 +43,8 @@ public class VaradhiApplication {
             String host = HostUtils.getHostName();
             log.info("VaradhiApplication Starting on {}.", host);
             AppConfiguration configuration = readConfiguration(args);
-            String memberId = configuration.getMember().getMemberId();
             CoreServices services = new CoreServices(configuration);
-            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberId);
+            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, host);
             Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);
             createClusteredVertx(configuration, clusterManager, services, host).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
@@ -72,14 +70,12 @@ public class VaradhiApplication {
         // TODO: check need for shutdown hook
     }
 
-
-
-    private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String memberId) {
+    private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
         CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
         DeliveryOptions deliveryOptions = new DeliveryOptions();
         deliveryOptions.setTracingPolicy(config.getDeliveryOptions().getTracingPolicy());
         deliveryOptions.setSendTimeout(config.getDeliveryOptions().getTimeoutMs());
-        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, memberId);
+        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, host);
     }
 
     private static Future<Vertx> createClusteredVertx(
@@ -107,8 +103,7 @@ public class VaradhiApplication {
 
     private static JsonObject getMemberInfoAsJson(MemberConfig config, String host, int port) {
         MemberInfo info =
-                new MemberInfo(
-                        config.getMemberId(), host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
+                new MemberInfo(host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
         return JsonObject.mapFrom(info);
     }
 

@@ -1,0 +1,18 @@
+################################################################
+# ConfigMap for Varadhi Default Authz Provider.
+# Actual config keys/values are defined in respective .tpl file
+###############################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "varadhi.name" . }}-{{ .Values.deployment.name }}-{{ .Values.authzProvider.configMapName }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "varadhi.commonLabels" . | nindent 4 }}
+    component: {{ .Values.deployment.name }}
+data:
+  authorizationConfig.yml: |
+    {{ include "configMap.authzProvider.default" . | nindent 4}}
+#    {{- if .Values.authzProvider.default }}
+#    {{ include "configMap.authzProvider.default" . | nindent 4}}
+#    {{- end }}

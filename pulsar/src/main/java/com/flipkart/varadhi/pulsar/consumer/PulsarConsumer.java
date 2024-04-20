@@ -25,6 +25,11 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
     }
 
     @Override
+    public CompletableFuture<Void> commitIndividualAsync(PolledMessage<PulsarOffset> message) {
+        return pulsarConsumer.acknowledgeAsync(message.getOffset().getMessageId());
+    }
+
+    @Override
     public void close() throws Exception {
         pulsarConsumer.close();
     }

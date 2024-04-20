@@ -5,7 +5,7 @@ plugins {
     id "jacoco-report-aggregation"
 }
 
-def jacoco_ver = "0.8.10"
+def jacoco_version = "0.8.10"
 
 dependencies {
 
@@ -64,11 +64,10 @@ dependencies {
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("io.vertx:vertx-web-client")
 
-    testE2EImplementation("javax.ws.rs:javax.ws.rs-api")
-    testE2EImplementation("org.glassfish.jersey.core:jersey-client")
-    testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson")
+    testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
+    testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version")
 
-    testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_ver:runtime")
+    testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_version:runtime")
 
 
     // jacoco aggregation dependency -- explicit inclusion.
@@ -77,9 +76,9 @@ dependencies {
 }
 
 task copyJacocoAgent(type: Copy) {
-    from configurations.testE2ERuntime.find { it.name.contentEquals("org.jacoco.agent-$jacoco_ver-runtime.jar") }
+    from configurations.testE2ERuntime.find { it.name.contentEquals("org.jacoco.agent-$jacoco_version-runtime.jar") }
     into "$buildDir/jacoco"
-    rename("org.jacoco.agent-$jacoco_ver-runtime.jar", "org.jacoco.agent-runtime.jar")
+    rename("org.jacoco.agent-$jacoco_version-runtime.jar", "org.jacoco.agent-runtime.jar")
 }
 
 reporting {

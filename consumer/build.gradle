@@ -5,7 +5,20 @@ plugins {
 dependencies {
     api(project(':entities'))
     api(project(':spi'))
+    api(project(':common'))
 
     // async interface are using vertx.Future
-    api("io.vertx:vertx-core")
+    api("io.vertx:vertx-core:$vertx_version")
+    api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
+    implementation("org.slf4j:slf4j-api:$slf4j_version")
+    implementation("org.jctools:jctools-core:$jctools_version")
+
+    testImplementation(testFixtures(project(':common')))
+    testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
+    testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
+    testImplementation("org.awaitility:awaitility:$awaitility_version")
+    testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
+    testImplementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
+    testImplementation("org.openjdk.jmh:jmh-core:$jmh_version")
+//    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
 }
