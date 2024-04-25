@@ -6,16 +6,15 @@ import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.RequiredArgsConstructor;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @RequiredArgsConstructor
 public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
 
     final Consumer<O> consumer;
 
-    private final BlockingQueue<MessageTracker> buffer = new LinkedBlockingQueue<>();
+    private final ConcurrentLinkedQueue<MessageTracker> buffer = new ConcurrentLinkedQueue<>();
 
     @Override
     public CompletableFuture<Integer> nextMessages(MessageTracker[] messages) {
@@ -34,7 +33,7 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
             if (i < messages.length) {
                 messages[i++] = messageTracker;
             } else {
-                buffer.add(messageTracker);
+                buffer.offer(messageTracker);
             }
         }
         return i;
