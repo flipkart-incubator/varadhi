@@ -23,7 +23,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
     private final BlockingDeque<String> freeGroups = new LinkedBlockingDeque<>();
     private final AtomicLong totalInFlightMessages = new AtomicLong(0);
-    private final long maxInFlightMessages = 100; // todo: make configurable
+    private final long maxInFlightMessages = 100; // todo(aayush): make configurable
 
     private final Consumer<O> consumer;
 
@@ -36,14 +36,12 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     }
 
     private int nextMessagesInternal(MessageTracker[] messages) {
-        GroupTracker groupTracker = getGroupTracker();
-        if (null == groupTracker) {
-            return 0;
+        int i = 0;
+        GroupTracker groupTracker;
+        while (i < messages.length && (groupTracker = getGroupTracker()) != null) {
+            messages[i++] = new GroupedMessageTracker(groupTracker.messages.getFirst().nextMessage());
         }
-
-        MessageTracker messageTracker = groupTracker.messages.getFirst().nextMessage();
-        messages[0] = new GroupedMessageTracker(messageTracker);
-        return 1;
+        return i;
     }
 
     private GroupTracker getGroupTracker() {
@@ -138,7 +136,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                 if (tracker == null || tracker.status == GroupStatus.FREE) {
                     throw new IllegalStateException(String.format("Tried to free group %s: %s", gId, tracker));
                 }
-                // todo: update group consumption status in tracker?
+                // todo(aayush): how will the status be used?
                 var messages = tracker.messages;
                 if (!messages.isEmpty() && messages.getFirst().remaining() == 0) {
                     messages.removeFirst();

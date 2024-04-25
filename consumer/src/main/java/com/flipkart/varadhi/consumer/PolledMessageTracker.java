@@ -22,14 +22,13 @@ public class PolledMessageTracker<O extends Offset> implements MessageTracker {
 
     @Override
     public void onConsumed(MessageConsumptionStatus status) {
-        if (status == MessageConsumptionStatus.SENT || status == MessageConsumptionStatus.FILTERED) {
-            committer.commitIndividualAsync(message);
-        }
+        committer.commitIndividualAsync(message);
     }
 
-    // TODO(aayush): dummy class for poc
+    // TODO(aayush): come up with better modeling of message and message with offset
     static class PolledMessageWrapper<O extends Offset> extends Message {
         PolledMessage<O> polledMessage;
+        // keeping headers as properties and outside the payload
 
         public PolledMessageWrapper(PolledMessage<O> polledMessage) {
             super(polledMessage.getPayload(), ArrayListMultimap.create());
