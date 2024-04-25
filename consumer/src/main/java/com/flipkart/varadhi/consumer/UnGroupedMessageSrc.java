@@ -9,13 +9,27 @@ import lombok.RequiredArgsConstructor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Message source that does not maintain any kind of ordering.
+ */
 @RequiredArgsConstructor
 public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
 
-    final Consumer<O> consumer;
+    private final Consumer<O> consumer;
 
+    /**
+     * Lock free buffer to store excess messages in case the consumer fetches a batch larger than the requested size.
+     */
     private final ConcurrentLinkedQueue<MessageTracker> buffer = new ConcurrentLinkedQueue<>();
 
+    /**
+     * Fetches the next batch of messages from the consumer.
+     * Attempts to first fetch from the buffer and then from the consumer.
+     *
+     * @param messages Array of message trackers to populate.
+     *
+     * @return CompletableFuture that completes when the messages are fetched.
+     */
     @Override
     public CompletableFuture<Integer> nextMessages(MessageTracker[] messages) {
         int offset = fetchFromBuffer(messages);

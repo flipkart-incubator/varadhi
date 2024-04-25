@@ -6,6 +6,9 @@ import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.google.common.collect.ArrayListMultimap;
 
+/**
+ * Message tracking implementation for PolledMessage type.
+ */
 public class PolledMessageTracker<O extends Offset> implements MessageTracker {
     private final PolledMessage<O> message;
     private final Consumer<O> committer;

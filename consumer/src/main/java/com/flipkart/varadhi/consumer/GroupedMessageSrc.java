@@ -11,22 +11,40 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
 import java.util.*;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Message source that maintains ordering among messages of the same groupId.
+ */
 @RequiredArgsConstructor
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
 
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
-    private final BlockingDeque<String> freeGroups = new LinkedBlockingDeque<>();
+    private final ConcurrentLinkedDeque<String> freeGroups = new ConcurrentLinkedDeque<>();
+
+    /**
+     * Maintains the count of total messages read from the consumer so far.
+     * Required for watermark checks, for when this value runs low we can fetch more messages from the consumer.
+     * Counter gets decremented when the message is committed/consumed.
+     */
     private final AtomicLong totalInFlightMessages = new AtomicLong(0);
+
+    // Used for watermark checks against the totalInFlightMessages. Will be driven via consumer configuration.
     private final long maxInFlightMessages = 100; // todo(aayush): make configurable
 
     private final Consumer<O> consumer;
 
+    /**
+     * Attempt to fill the message array with one message from each group.
+     * Subsequent messages from a group are not fetched until the previous message is consumed.
+     *
+     * @param messages Array of message trackers to populate.
+     *
+     * @return CompletableFuture that completes when the messages are fetched.
+     */
     @Override
     public CompletableFuture<Integer> nextMessages(MessageTracker[] messages) {
         if (hasMaxInFlightMessages()) {
@@ -136,7 +154,6 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                 if (tracker == null || tracker.status == GroupStatus.FREE) {
                     throw new IllegalStateException(String.format("Tried to free group %s: %s", gId, tracker));
                 }
-                // todo(aayush): how will the status be used?
                 var messages = tracker.messages;
                 if (!messages.isEmpty() && messages.getFirst().remaining() == 0) {
                     messages.removeFirst();
