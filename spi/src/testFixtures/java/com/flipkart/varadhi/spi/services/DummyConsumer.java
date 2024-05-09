@@ -126,4 +126,27 @@ public class DummyConsumer implements Consumer<DummyOffset> {
     public void close() throws Exception {
         // no op
     }
+
+    // Simulate a slow consumer that takes a delay to return each batch of messages
+    public static class SlowConsumer extends DummyConsumer {
+
+        private final long delayInSeconds;
+
+        public SlowConsumer(List<String> messages, int delayInSeconds) {
+            super(messages);
+            this.delayInSeconds = delayInSeconds;
+        }
+
+        @Override
+        public CompletableFuture<PolledMessages<DummyOffset>> receiveAsync() {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    Thread.sleep(delayInSeconds * 1000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return super.receiveAsync().join();
+            });
+        }
+    }
 }

@@ -73,7 +73,7 @@ class UnGroupedMessageSrcTest {
     }
 
     @Test
-    void testUseBufferAndConsumer() {
+    void testUseOnlyBufferWhenPresent() {
         List<String> messages = List.of("a", "b", "c", "d", "e", "f");
         MessageTracker[] messageTrackers = new MessageTracker[4];
 
@@ -94,18 +94,18 @@ class UnGroupedMessageSrcTest {
         assertListEquals(committedList, consumer.getCommittedMessages());
 
         // e (from buffer), f (from buffer), a, b
-        messageTrackers = new MessageTracker[4];
+        messageTrackers = new MessageTracker[2];
         consumer.permitMoreMessages();
         res = messageSrc.nextMessages(messageTrackers).join();
 
-        assertEquals(4, res);
+        assertEquals(messageTrackers.length, res);
 
         List<String> nextMessages = new ArrayList<>();
         for (MessageTracker message : messageTrackers) {
             nextMessages.add(new String(message.getMessage().getPayload()));
         }
 
-        assertListEquals(List.of("e", "f", "a", "b"), nextMessages);
+        assertListEquals(List.of("e", "f"), nextMessages);
     }
 
     @Test
@@ -141,6 +141,25 @@ class UnGroupedMessageSrcTest {
         }
 
         assertListEquals(List.of("d", "e", "f"), nextMessages);
+    }
+
+    @Test
+    void testConcurrencyInConsumerFetchNotAllowed() {
+        // we will simulate a slow consumer, now when continuous calls are made to fetch messages, 2nd one should immediately return with 0 messages
+        List<String> messages = List.of("a", "b", "c", "d", "e", "f");
+        MessageTracker[] messageTrackers = new MessageTracker[3];
+
+        DummyConsumer.SlowConsumer consumer = new DummyConsumer.SlowConsumer(messages, 3);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
+        var f1 = messageSrc.nextMessages(messageTrackers);
+        var f2 = messageSrc.nextMessages(messageTrackers);
+
+        assertEquals(0, f2.join());
+        assertEquals(messageTrackers.length, f1.join());
+
+        // since f1 is completed now, next invocation should return remaining messages
+        messageTrackers = new MessageTracker[3];
+        assertEquals(3, messageSrc.nextMessages(messageTrackers).join());
     }
 
     private void assertListEquals(List<String> expect, List<String> actual) {
