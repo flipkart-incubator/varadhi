@@ -122,7 +122,10 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     }
 
     enum GroupStatus {
+        // no message for this group is in active processing by the consumer
         FREE,
+
+        // at least one message for this group is in active processing by the consumer
         IN_FLIGHT
     }
 
