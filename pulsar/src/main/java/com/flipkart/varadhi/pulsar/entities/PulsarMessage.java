@@ -1,9 +1,12 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.spi.services.PolledMessage;
+import com.google.common.collect.Multimap;
 import lombok.RequiredArgsConstructor;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.impl.MessageIdImpl;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 public class PulsarMessage implements PolledMessage<PulsarOffset> {
@@ -26,8 +29,38 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     }
 
     @Override
+    public String getMessageId() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public String getGroupId() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public boolean hasHeader(String key) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public String getHeader(String key) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public List<String> getHeaders(String key) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
     public byte[] getPayload() {
         return msg.getValue();
+    }
+
+    @Override
+    public Multimap<String, String> getRequestHeaders() {
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
