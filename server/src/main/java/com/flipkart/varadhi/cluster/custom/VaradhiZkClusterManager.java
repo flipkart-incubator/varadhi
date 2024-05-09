@@ -2,7 +2,7 @@ package com.flipkart.varadhi.cluster.custom;
 
 import com.flipkart.varadhi.cluster.*;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.utils.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.vertx.core.Future;
@@ -55,7 +55,7 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
         getNodes().forEach(
                 nodeId -> allFutures.add(Failsafe.with(NodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
-                        .thenApply(nodeInfo -> nodeInfo.metadata().mapTo(MemberInfo.class))
+                        .thenApply(nodeInfo -> JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(), MemberInfo.class))
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
                                 log.error("Failed to get nodeInfo for node: {}.", nodeId, throwable);
@@ -101,11 +101,6 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
     @Override
     public MessageExchange getExchange(Vertx vertx) {
         return new MessageExchange(vertx.eventBus(), deliveryOptions);
-    }
-
-    public Future<Void> lock(String lockName) {
-        //TODO::work on interface for lock
-        throw new NotImplementedException("lock not implemented");
     }
 
     private Future<NodeInfo> fetchNodeInfo(String nodeId) {

@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
 
 @Getter
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME,  property = "@messageType")
-@JsonSubTypes({@JsonSubTypes.Type(value = SubscriptionMessage.class, name = "subscription_message"),})
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@messageType")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = SubscriptionMessage.class, name = "subMessage"),
+        @JsonSubTypes.Type(value = ShardMessage.class, name = "shardMessage"),
+})
 public class ClusterMessage {
     String id;
     long timeStamp;

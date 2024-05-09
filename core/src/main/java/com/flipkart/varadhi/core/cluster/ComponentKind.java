@@ -2,7 +2,8 @@ package com.flipkart.varadhi.core.cluster;
 
 public enum ComponentKind {
     Server("Server"),
-    Controller("Controller");
+    Controller("Controller"),
+    Consumer("Consumer");
 
     private final String name;
     ComponentKind(String name) {

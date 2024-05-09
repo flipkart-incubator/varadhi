@@ -39,11 +39,12 @@ public class MessageRouter {
     }
 
     public <E extends ClusterMessage> void sendHandler(String routeName, String apiName, SendHandler<E> handler) {
-        vertxEventBus.consumer(getApiPath(routeName, apiName, RouteMethod.SEND), message -> {
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.SEND);
+        vertxEventBus.consumer(apiPath, message -> {
             E cm = (E) JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
-            log.debug("Received(send, {})", cm.getId());
+            log.debug("Received msg via - send({}, {})", apiPath, cm.getId());
+            handler.handle(cm); // this is async invocation.
             message.reply("received", deliveryOptions);
-            handler.handle(cm);
         });
     }
 

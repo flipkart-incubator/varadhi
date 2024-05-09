@@ -1,6 +1,6 @@
 
 member:
-  roles : ["Server", "Controller"]
+  roles : ["Server", "Controller", "Consumer"]
   cpuCount: 1
   nicMBps: 100
 

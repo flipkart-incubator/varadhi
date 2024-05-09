@@ -6,6 +6,8 @@ dependencies {
     api(project(':entities'))
     api(project(':spi'))
     api(project(':common'))
+    api(project(":core"))
+
 
     // async interface are using vertx.Future
     api("io.vertx:vertx-core:$vertx_version")

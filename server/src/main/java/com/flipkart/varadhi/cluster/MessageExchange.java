@@ -30,13 +30,13 @@ public class MessageExchange {
 
     public CompletableFuture<Void> send(String routeName, String apiName, ClusterMessage msg) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        vertxEventBus.request(
-                getPath(routeName, apiName, RouteMethod.SEND), JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
+        String apiPath = getPath(routeName, apiName, RouteMethod.SEND);
+        vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
                     if (ar.succeeded()) {
-                        log.debug("send({}) delivered. {} ", msg.getId(), ar.result().body());
+                        log.debug("send({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
                         future.complete(null);
                     } else {
-                        log.error("send failure: " + ar.cause().getMessage());
+                        log.error("send({}, {}) failure: {}.", apiPath, msg.getId(), ar.cause().getMessage());
                         future.completeExceptionally(ar.cause());
                     }
                 });

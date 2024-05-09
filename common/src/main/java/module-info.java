@@ -10,4 +10,5 @@ module com.flipkart.varadhi.common {
     requires org.apache.commons.collections4;
 
     exports com.flipkart.varadhi;
+    exports com.flipkart.varadhi.exceptions;
 }

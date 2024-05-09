@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.entities.UnitSubscriptionShard;
-import com.flipkart.varadhi.entities.SubscriptionResource;
-import com.flipkart.varadhi.entities.SubscriptionShards;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.*;
 import io.vertx.ext.web.RoutingContext;
 
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -15,7 +12,8 @@ public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
 
-    private static final SubscriptionShards dummyShards = new UnitSubscriptionShard(0, null, null);
+    private static final MemberResources dummyRequests = new MemberResources(0, 10);
+    private static final SubscriptionShards dummyShards = new SubscriptionUnitShard(0, dummyRequests, null, null);
 
     public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, int version) {
         return new VaradhiSubscription(

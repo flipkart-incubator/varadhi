@@ -1,8 +1,10 @@
 package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.messages.ShardMessage;
 import com.flipkart.varadhi.cluster.messages.SubscriptionMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ShardOperation;
 import com.flipkart.varadhi.core.cluster.SubscriptionOperation;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,6 +25,12 @@ public class ControllerApiProxy implements ControllerApi {
     public CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation) {
         SubscriptionMessage message = new SubscriptionMessage(operation);
         return exchange.send(ROUTE_CONTROLLER, "stop", message);
+    }
+
+    @Override
+    public CompletableFuture<Void> update(ShardOperation.OpData operation) {
+        ShardMessage shardMessage = new ShardMessage(operation);
+        return exchange.send(ROUTE_CONTROLLER, "update", shardMessage);
     }
 
 }

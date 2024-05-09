@@ -12,4 +12,5 @@ public interface ControllerApi {
     String ROUTE_CONTROLLER = "controller";
     CompletableFuture<Void> startSubscription(SubscriptionOperation.StartData operation);
     CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation);
+    CompletableFuture<Void> update(ShardOperation.OpData operation);
 }

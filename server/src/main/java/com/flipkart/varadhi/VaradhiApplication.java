@@ -1,5 +1,8 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.entities.MemberResources;
+import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
@@ -36,13 +39,17 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class VaradhiApplication {
+    private static MemberInfo memberInfo;
 
     public static void main(String[] args) {
 
         try {
             String host = HostUtils.getHostName();
+            int port = 0;
             log.info("VaradhiApplication Starting on {}.", host);
             AppConfiguration configuration = readConfiguration(args);
+            MemberConfig mConfig = configuration.getMember();
+            memberInfo = new MemberInfo(host, port, mConfig.getRoles(),getMemberResources(mConfig));
             CoreServices services = new CoreServices(configuration);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, host);
             Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);
@@ -70,6 +77,11 @@ public class VaradhiApplication {
         // TODO: check need for shutdown hook
     }
 
+    private static MemberResources getMemberResources(MemberConfig memberConfig) {
+        //TODO:: need to get from API, instead of config
+        return new MemberResources(memberConfig.getCpuCount(), memberConfig.getNicMBps());
+    }
+
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
         CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
         DeliveryOptions deliveryOptions = new DeliveryOptions();
@@ -82,10 +94,11 @@ public class VaradhiApplication {
             AppConfiguration config, ClusterManager clusterManager, CoreServices services, String host
     ) {
         int port = 0;
+        JsonObject memberInfoJson = new JsonObject(JsonMapper.jsonSerialize(memberInfo));
         EventBusOptions eventBusOptions = new EventBusOptions()
                 .setHost(host)
                 .setPort(port)
-                .setClusterNodeMetadata(getMemberInfoAsJson(config.getMember(), host, port));
+                .setClusterNodeMetadata(memberInfoJson);
 
         VertxOptions vertxOptions = config.getVertxOptions()
                 .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
@@ -99,12 +112,6 @@ public class VaradhiApplication {
                 .setEventBusOptions(eventBusOptions);
 
         return Vertx.builder().with(vertxOptions).withClusterManager(clusterManager).buildClustered();
-    }
-
-    private static JsonObject getMemberInfoAsJson(MemberConfig config, String host, int port) {
-        MemberInfo info =
-                new MemberInfo(host, port, config.getRoles(), config.getCpuCount(), config.getNicMBps());
-        return JsonObject.mapFrom(info);
     }
 
     public static AppConfiguration readConfiguration(String[] args) {
@@ -145,7 +152,8 @@ public class VaradhiApplication {
         return Arrays.stream(config.getMember().getRoles()).distinct()
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
                     case Server -> new WebServerVerticle(config, coreServices, clusterManager);
-                    case Controller -> new ControllerVerticle(config, coreServices, clusterManager);
+                    case Controller -> new ControllerVerticle(coreServices, clusterManager);
+                    case Consumer -> new ConsumerVerticle(memberInfo, clusterManager);
                 }));
     }
 }
