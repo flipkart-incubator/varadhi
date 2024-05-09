@@ -2,6 +2,7 @@ package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.google.common.collect.ArrayListMultimap;
@@ -29,7 +30,7 @@ public class PolledMessageTracker<O extends Offset> implements MessageTracker {
     }
 
     // TODO(aayush): come up with better modeling of message and message with offset
-    static class PolledMessageWrapper<O extends Offset> extends Message {
+    static class PolledMessageWrapper<O extends Offset> extends ProducerMessage {
         PolledMessage<O> polledMessage;
         // keeping headers as properties and outside the payload
 

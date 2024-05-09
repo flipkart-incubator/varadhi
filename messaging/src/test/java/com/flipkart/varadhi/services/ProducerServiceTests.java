@@ -269,7 +269,7 @@ public class ProducerServiceTests {
         }
         DummyProducer.DummyMessage message =
                 new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
-        return new Message(JsonMapper.jsonSerialize(message).getBytes(), headers);
+        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
     public ProducerMetricsEmitter getMetricEmitter(String topic, Project project, String region) {
