@@ -102,7 +102,6 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
     public void onThresholdChange(float newThresholdPerSec) {
         // scale the threshold for the window.
         this.threshold = newThresholdPerSec * (tickMs * ticksInWindow / 1000.0f);
-        log.info("new threshold to be used: {}", threshold);
     }
 
     @Override
