@@ -5,6 +5,7 @@ import com.flipkart.varadhi.consumer.InternalQueueType;
 import com.flipkart.varadhi.consumer.Throttler;
 import com.google.common.base.Ticker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -16,6 +17,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
+@Slf4j
 public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
 
     /*
@@ -90,7 +92,6 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
     public CompletableFuture<T> acquire(InternalQueueType type, Supplier<CompletableFuture<T>> task, int permits) {
 
         // TODO: evaluate if we should call executePendingTasksInternal()?
-
         CompletableFuture<T> future = new CompletableFuture<>();
         Holder<T> holder = new Holder<>(future, task, permits);
         getQueue(type).tasks.add(holder);
@@ -152,6 +153,7 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
                         int permitsToConsume = ((int) (freePermits) + 1);
                         freePermits -= permitsToConsume;
                         top.pendingPermits -= permitsToConsume;
+                        permitsPerTick.addAndGet((int) (currentTick % totalTicks), permitsToConsume);
                     }
                 }
 
@@ -185,7 +187,7 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
         float factor = ((float) (now % tickMs)) / tickMs;
         long beginningTick = currentTick - ticksInWindow;
         return permitsConsumedInLastWindow -
-                ((1.0f - factor) * permitsPerTick.get((int) (beginningTick % totalTicks))) +
+                (factor * permitsPerTick.get((int) (beginningTick % totalTicks))) +
                 permitsPerTick.get((int) (currentTick % totalTicks));
     }
 
