@@ -8,11 +8,13 @@ import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -34,9 +36,11 @@ class ZKMetaStore {
 
     void createZNode(ZNode znode) {
         try {
-            String response = zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
-                    .forPath(znode.getPath());
-            log.debug("Created zk path {} in ZK: {}", znode, response);
+            if (!zkPathExist(znode)) {
+                String response = zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
+                        .forPath(znode.getPath());
+                log.debug("Created zk path {} in ZK: {}", znode, response);
+            }
         } catch (Exception e) {
             throw new MetaStoreException(String.format("Failed to create path %s.", znode.getPath()), e);
         }
@@ -147,4 +151,43 @@ class ZKMetaStore {
                     ), e);
         }
     }
+
+    //TODO::Fix the exception semantics.
+    //Fix the return value as well.
+    public void multi(List<ZNode> toAdd, List<ZNode> toDelete) {
+        try {
+            List<CuratorOp> ops = new ArrayList<>();
+            toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
+            toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
+            zkCurator.transaction().forOperations(ops);
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to execute multi operation.", e);
+        }
+    }
+
+    private CuratorOp addCreateZNodeOp(ZNode zNode) {
+        try {
+            return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(zNode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to create create operation for znode.", e);
+        }
+    }
+
+    private CuratorOp addDeleteZNodeOp(ZNode zNode) {
+        try {
+            return zkCurator.transactionOp().delete().forPath(zNode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to create create operation for znode.", e);
+        }
+    }
+
+    private CuratorOp addUpdateZNodeOp(ZNode zNode) {
+        try {
+            //TODO::fix data
+            return zkCurator.transactionOp().setData().forPath(zNode.getPath(), JsonMapper.jsonSerialize(zNode).getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to create create operation for znode.", e);
+        }
+    }
+
 }

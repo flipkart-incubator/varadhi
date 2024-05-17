@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.core.cluster;
 
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+
 import java.util.concurrent.CompletableFuture;
 
 /**

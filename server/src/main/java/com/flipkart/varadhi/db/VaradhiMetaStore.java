@@ -24,19 +24,12 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     private void ensureEntityTypePathExists() {
-        ensureEntityTypePathExists(ORG);
-        ensureEntityTypePathExists(TEAM);
-        ensureEntityTypePathExists(PROJECT);
-        ensureEntityTypePathExists(TOPIC);
-        ensureEntityTypePathExists(SUBSCRIPTION);
-        ensureEntityTypePathExists(IAM_POLICY);
-    }
-
-    public void ensureEntityTypePathExists(ZNodeKind zNodeKind) {
-        ZNode znode = ZNode.OfEntityType(zNodeKind);
-        if (!zkMetaStore.zkPathExist(znode)) {
-            zkMetaStore.createZNode(znode);
-        }
+        zkMetaStore.createZNode(ZNode.OfEntityType(ORG));
+        zkMetaStore.createZNode(ZNode.OfEntityType(TEAM));
+        zkMetaStore.createZNode(ZNode.OfEntityType(PROJECT));
+        zkMetaStore.createZNode(ZNode.OfEntityType(TOPIC));
+        zkMetaStore.createZNode(ZNode.OfEntityType(SUBSCRIPTION));
+        zkMetaStore.createZNode(ZNode.OfEntityType(IAM_POLICY));
     }
 
     @Override

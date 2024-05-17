@@ -1,10 +1,7 @@
 package com.flipkart.varadhi.cluster;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.cluster.messages.SendHandler;
-import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -31,9 +28,6 @@ public class MessageRouterImplTest {
     // TODO:: Tests needs to be added, so this will go under refactor
     @BeforeEach
     public void setup() throws Exception{
-        JsonMapper.getMapper().registerSubtypes(new NamedType(TestClusterMessage.class, "TestClusterMessage"));
-        JsonMapper.getMapper()
-                .registerSubtypes(new NamedType(ExtendedTestClusterMessage.class, "ExtendedTestClusterMessage"));
         TestingServer zkCuratorTestingServer = new TestingServer();
         zkCuratorFramework = spy(
                 CuratorFrameworkFactory.newClient(
@@ -61,27 +55,12 @@ public class MessageRouterImplTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-
-        mr.sendHandler("testAddress", "customApi", (SendHandler<ExtendedTestClusterMessage>) message -> checkpoint.flag());
-
+        mr.sendHandler("testAddress", "customApi", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
         Future.fromCompletionStage(me.send("testAddress", "customApi", cm)).onComplete(testContext.succeeding(v -> checkpoint.flag()));
     }
 
     ClusterMessage getClusterMessage(String data) {
-        ExtendedTestClusterMessage dm = new ExtendedTestClusterMessage();
-        dm.data1 = data;
-        dm.data2 = data;
-        return dm;
+        return new ClusterMessage(data);
     }
-
-    public static class TestClusterMessage extends ClusterMessage {
-        String data1;
-    }
-
-    public static class ExtendedTestClusterMessage extends TestClusterMessage {
-        String data2;
-    }
-
-
 }

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.entities.Assignment;
-import com.flipkart.varadhi.controller.entities.ConsumerNode;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.cluster.ConsumerNode;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 

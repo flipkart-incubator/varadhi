@@ -1,13 +1,13 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.MemberResources;
+import com.flipkart.varadhi.entities.cluster.MemberResources;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
-import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
-import com.flipkart.varadhi.core.cluster.ComponentKind;
+import com.flipkart.varadhi.entities.cluster.ComponentKind;
 import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
@@ -78,8 +78,8 @@ public class VaradhiApplication {
     }
 
     private static MemberResources getMemberResources(MemberConfig memberConfig) {
-        //TODO:: need to get from API, instead of config
-        return new MemberResources(memberConfig.getCpuCount(), memberConfig.getNicMBps());
+        //TODO:: need to get auto detect, and provide override via config .
+        return new MemberResources(memberConfig.getCpuCount(), memberConfig.getNetworkMBps());
     }
 
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {

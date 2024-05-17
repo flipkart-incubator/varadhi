@@ -1,11 +1,12 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.entities.Assignment;
-import com.flipkart.varadhi.controller.entities.ConsumerNode;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.cluster.ConsumerNode;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.spi.db.AssignmentStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
@@ -19,10 +20,12 @@ import java.util.stream.Collectors;
 public class ShardAssigner {
     private final AssignmentStrategy strategy;
     private final Map<String, ConsumerNode> consumerNodes;
+    private final AssignmentStore assignmentStore;
 
-    public ShardAssigner() {
+    public ShardAssigner(AssignmentStore assignmentStore) {
         this.strategy = new LeastAssignedStrategy();
         this.consumerNodes = new ConcurrentHashMap<>();
+        this.assignmentStore =  assignmentStore;
     }
 
     public void addConsumerNodes(List<ConsumerNode> clusterConsumers) {
@@ -32,18 +35,17 @@ public class ShardAssigner {
         });
     }
 
-    // Assign shards of single subscription to consumer nodes
-    // TODO:: Should this take care of bulk mode (i.e. assign shards from multiple subscription -- node failure case)
     public List<Assignment> assignShard(List<SubscriptionUnitShard> shards, VaradhiSubscription subscription) {
         List<ConsumerNode> activeConsumers =
                 consumerNodes.values().stream().filter(c -> !c.isMarkedForDeletion()).collect(Collectors.toList());
         log.info("AssignShards consumer nodes active:{} of total:{}", activeConsumers.size(), consumerNodes.size());
-        return strategy.assign(shards, subscription, activeConsumers);
+        List<Assignment> assignments = strategy.assign(shards, subscription, activeConsumers);
+        assignmentStore.createAssignments(assignments);
+        return assignments;
     }
 
-    // returns shard assignments for the given set of shards if done (from persistent store).
-    public List<Assignment> getShardsAssignment(SubscriptionShards shards, VaradhiSubscription subscription) {
-        return new ArrayList<>();
+    public List<Assignment> getSubscriptionAssignment(String subscriptionName) {
+        return assignmentStore.getSubscriptionAssignments(subscriptionName);
     }
 
     public void consumerNodeJoined(ConsumerNode consumerNode) {

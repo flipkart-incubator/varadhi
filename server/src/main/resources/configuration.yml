@@ -2,7 +2,7 @@
 member:
   roles : ["Server", "Controller", "Consumer"]
   cpuCount: 1
-  nicMBps: 100
+  networkMBps: 100
 
 vertxOptions:
   eventLoopPoolSize: 1

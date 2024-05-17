@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import lombok.extern.slf4j.Slf4j;

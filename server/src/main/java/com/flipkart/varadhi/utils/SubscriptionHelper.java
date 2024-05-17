@@ -12,10 +12,7 @@ public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
 
-    private static final MemberResources dummyRequests = new MemberResources(0, 10);
-    private static final SubscriptionShards dummyShards = new SubscriptionUnitShard(0, dummyRequests, null, null);
-
-    public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, int version) {
+    public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, VaradhiTopic topic, int version) {
         return new VaradhiSubscription(
                 buildSubscriptionName(subscriptionResource.getProject(), subscriptionResource.getName()),
                 version,
@@ -26,7 +23,7 @@ public final class SubscriptionHelper {
                 subscriptionResource.getEndpoint(),
                 subscriptionResource.getRetryPolicy(),
                 subscriptionResource.getConsumptionPolicy(),
-                dummyShards // fixme: this is a hack to make the flow work
+                getSubscriptionShards(topic) // fixme: this is a hack to make the flow work
         );
     }
 
@@ -65,5 +62,9 @@ public final class SubscriptionHelper {
 
     public static String buildTopicName(String projectName, String topicName) {
         return String.join(NAME_SEPARATOR, projectName, topicName);
+    }
+
+    public static SubscriptionShards getSubscriptionShards(VaradhiTopic topic) {
+        return new SubscriptionUnitShard(0, topic.getCapacityPolicy(), null, null);
     }
 }

@@ -1,7 +1,5 @@
-package com.flipkart.varadhi.core.cluster;
+package com.flipkart.varadhi.entities.cluster;
 
-
-import com.flipkart.varadhi.entities.MemberResources;
 
 public record MemberInfo(
         String hostname,

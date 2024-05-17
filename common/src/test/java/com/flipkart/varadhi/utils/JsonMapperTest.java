@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -23,6 +25,7 @@ public class JsonMapperTest {
 
         // Register subtypes at runtime
         objectMapper.registerSubtypes(new NamedType(Car.class, "car"));
+        objectMapper.registerSubtypes(new NamedType(zoobar.class, "zoobar"));
     }
 
     @Test
@@ -33,6 +36,18 @@ public class JsonMapperTest {
         Vehicle deserialized = JsonMapper.jsonDeserialize(json, Vehicle.class);
         assertNotNull(deserialized);
         assertEquals(car.getManufacturer(), deserialized.getManufacturer());
+    }
+
+    @Test
+    public void test_test() {
+        Vehicle car = new Car("Honda", "Civic", 2022);
+        zoobar<Vehicle> zoobar = new zoobar<>(car);
+        String json = JsonMapper.jsonSerialize(zoobar);
+        assertNotNull(json);
+        zoobar<Vehicle> deserialized = JsonMapper.jsonDeserialize(json, zoobar.class);
+        assertNotNull(deserialized);
+        assertEquals(car.getManufacturer(), deserialized.data.getManufacturer());
+        assertEquals(((Car)car).year, ((Car)deserialized.data).year);
     }
 
     @Test
@@ -84,4 +99,33 @@ public class JsonMapperTest {
 
         }
     }
-}
+
+    public class foobar {
+        String id;
+        long time;
+
+        public foobar() {
+            id = UUID.randomUUID().toString();
+            time = System.currentTimeMillis();
+        }
+        public foobar(String id, long time) {
+            this.id = id;
+            this.time = time;
+        }
+    }
+
+    public class zoobar<T> extends foobar {
+        T data;
+        public zoobar() {
+            super();
+        }
+        public zoobar(T t) {
+            super();
+            data = t;
+        }
+        public zoobar(String id, long time, T t) {
+            super(id, time);
+            data = t;
+        }
+    }
+ }

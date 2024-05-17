@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
+import com.flipkart.varadhi.core.TopicService;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -35,8 +37,9 @@ public class SubscriptionHandlersTest extends WebTestBase {
             1, 1, 1, 1
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-    private static final MemberResources requests = new MemberResources(0, 10);
-    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, requests,null, null);
+
+    private static final CapacityPolicy capacityPolicy = new CapacityPolicy(1, 10);
+    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy,null, null);
 
     static {
         try {
@@ -88,7 +91,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
         super.setUp();
         subscriptionService = mock(SubscriptionService.class);
         projectService = mock(ProjectService.class);
-        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
+        TopicService<VaradhiTopic> topicService = mock(VaradhiTopicService.class);
+        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService, topicService);
 
         Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
                     subscriptionHandlers.setSubscription(ctx);

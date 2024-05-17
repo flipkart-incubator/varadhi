@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.core.TopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -15,9 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
+import static com.flipkart.varadhi.Constants.PathParams.*;
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
@@ -26,10 +27,12 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private final SubscriptionService subscriptionService;
     private final ProjectService projectService;
+    private final TopicService<VaradhiTopic> topicService;
 
-    public SubscriptionHandlers(SubscriptionService subscriptionService, ProjectService projectService) {
+    public SubscriptionHandlers(SubscriptionService subscriptionService, ProjectService projectService, TopicService<VaradhiTopic> topicService) {
         this.subscriptionService = subscriptionService;
         this.projectService = projectService;
+        this.topicService = topicService;
     }
 
     @Override
@@ -108,15 +111,18 @@ public class SubscriptionHandlers implements RouteProvider {
 
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
-        VaradhiSubscription varadhiSubscription = SubscriptionHelper.fromResource(subscription, INITIAL_VERSION);
+        VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
+        VaradhiSubscription varadhiSubscription =
+                SubscriptionHelper.fromResource(subscription, subscribedTopic, INITIAL_VERSION);
         VaradhiSubscription createdSubscription = subscriptionService.createSubscription(varadhiSubscription);
         ctx.endApiWithResponse(SubscriptionHelper.toResource(createdSubscription));
     }
 
     public void update(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
+        VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
         VaradhiSubscription varadhiSubscription =
-                SubscriptionHelper.fromResource(subscription, subscription.getVersion());
+                SubscriptionHelper.fromResource(subscription, subscribedTopic, subscription.getVersion());
         VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(varadhiSubscription);
         ctx.endApiWithResponse(SubscriptionHelper.toResource(updatedSubscription));
     }
@@ -143,5 +149,12 @@ public class SubscriptionHandlers implements RouteProvider {
             throw new IllegalArgumentException("Specified Project name is different from Project name in url");
         }
         return subscription;
+    }
+
+    private VaradhiTopic getSubscribedTopic(SubscriptionResource subscription) {
+        String projectName = subscription.getTopicProject();
+        String topicResourceName = subscription.getTopic();
+        String topicName = String.join(NAME_SEPARATOR, projectName, topicResourceName);
+        return topicService.get(topicName);
     }
 }

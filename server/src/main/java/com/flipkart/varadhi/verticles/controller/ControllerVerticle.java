@@ -2,14 +2,15 @@ package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.*;
-import com.flipkart.varadhi.controller.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.ComponentKind;
+import com.flipkart.varadhi.entities.cluster.ConsumerNode;
+import com.flipkart.varadhi.entities.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerApiFactory;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerApiFactoryImpl;
 import com.flipkart.varadhi.verticles.webserver.WebServerApiProxy;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
-import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.WebServerApi;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -23,11 +24,11 @@ import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
 @Slf4j
 public class ControllerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
-    private final MetaStore metaStore;
+    private final MetaStoreProvider metaStoreProvider;
 
     public ControllerVerticle(CoreServices coreServices, VaradhiClusterManager clusterManager) {
         this.clusterManager = clusterManager;
-        this.metaStore = coreServices.getMetaStoreProvider().getMetaStore();
+        this.metaStoreProvider = coreServices.getMetaStoreProvider();
     }
 
     @Override
@@ -37,7 +38,7 @@ public class ControllerVerticle extends AbstractVerticle {
         WebServerApi serverApiProxy = new WebServerApiProxy(messageExchange);
         ConsumerApiFactory consumerApiFactory = new ConsumerApiFactoryImpl(messageExchange);
 
-        ControllerApiMgr controllerApiMgr = new ControllerApiMgr(serverApiProxy, consumerApiFactory, metaStore);
+        ControllerApiMgr controllerApiMgr = new ControllerApiMgr(serverApiProxy, consumerApiFactory, metaStoreProvider);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr, serverApiProxy);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.

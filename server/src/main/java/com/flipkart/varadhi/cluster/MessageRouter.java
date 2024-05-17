@@ -6,11 +6,7 @@ import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.MessageConsumer;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * API handler registration for message exchange between nodes. This is a subset of similar methods from
@@ -38,26 +34,29 @@ public class MessageRouter {
         this.deliveryOptions = deliveryOptions;
     }
 
-    public <E extends ClusterMessage> void sendHandler(String routeName, String apiName, SendHandler<E> handler) {
+    public void sendHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.SEND);
         vertxEventBus.consumer(apiPath, message -> {
-            E cm = (E) JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
-            log.debug("Received msg via - send({}, {})", apiPath, cm.getId());
-            handler.handle(cm); // this is async invocation.
-            message.reply("received", deliveryOptions);
+            ClusterMessage msg =  JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            log.debug("Received msg via - send({}, {})", apiPath, msg.getId());
+            handler.handle(msg); // this is async invocation.
+            message.reply("received ok", deliveryOptions);
         });
     }
 
-    public <E extends ClusterMessage, R extends ResponseMessage> void requestHandler(
-            String routeName, String apiName, RequestHandler<E, R> handler
+    public void requestHandler(String routeName, String apiName, RequestHandler handler
     ) {
-        throw new NotImplementedException("handleRequest not implemented");
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.REQUEST);
+        vertxEventBus.consumer(apiPath, message -> {
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            log.debug("Received msg via - request({}, {})", apiPath, msg.getId());
+            handler.handle(msg).thenAccept( response ->  message.reply(JsonMapper.jsonSerialize(response), deliveryOptions)); // this is async invocation.
+        });
     }
 
-    public <E extends ClusterMessage> void publishHandler(String routeName, String apiName, PublishHandler<E> handler) {
+    public void publishHandler(String routeName, String apiName, MsgHandler handler) {
         throw new NotImplementedException("handlePublish not implemented");
     }
-
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {
         return String.format("%s.%s.%s", routeName, apiName, method);

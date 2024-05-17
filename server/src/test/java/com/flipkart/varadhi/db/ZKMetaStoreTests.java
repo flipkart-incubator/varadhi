@@ -90,6 +90,16 @@ public class ZKMetaStoreTests {
     }
 
     @Test
+    public void testCreateWhenAlreadyExists() throws Exception {
+        zkMetaStore.createZNode(zn);
+        CreateBuilder builder = spy(zkCuratorFramework.create());
+        doReturn(builder).when(zkCuratorFramework).create();
+        zkMetaStore.createZNode(zn);
+        verify(builder, never()).forPath(zn.getPath());
+        zkMetaStore.deleteZNode(zn);
+    }
+
+    @Test
     public void testCreateZNodeWithDataFailure() throws Exception {
         CreateBuilder builder = spy(zkCuratorFramework.create());
         doReturn(builder).when(zkCuratorFramework).create();

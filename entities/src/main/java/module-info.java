@@ -5,5 +5,6 @@ module com.flipkart.varadhi.entities {
     requires jakarta.validation;
 
     exports com.flipkart.varadhi.entities;
+    exports com.flipkart.varadhi.entities.cluster;
     exports com.flipkart.varadhi.entities.auth;
 }

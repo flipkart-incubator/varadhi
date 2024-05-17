@@ -1,5 +1,11 @@
 package com.flipkart.varadhi.core.cluster;
 
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.ShardStatus;
+
+import java.util.concurrent.CompletableFuture;
+
 public interface ConsumerApi {
-    void start(ShardOperation.StartData operation);
+    CompletableFuture<Void> start(ShardOperation.StartData operation);
+    CompletableFuture<ShardStatus> getStatus(String subscriptionId, int shardId);
 }

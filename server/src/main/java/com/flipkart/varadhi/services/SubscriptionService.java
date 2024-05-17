@@ -2,7 +2,8 @@ package com.flipkart.varadhi.services;
 
 
 import com.flipkart.varadhi.core.cluster.ControllerApi;
-import com.flipkart.varadhi.core.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.core.cluster.OperationMgr;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -16,10 +17,12 @@ import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 public class SubscriptionService {
     private final MetaStore metaStore;
     private final ControllerApi controllerApi;
+    private final OperationMgr operationMgr;
 
-    public SubscriptionService(MetaStore metaStore, ControllerApi controllerApi) {
+    public SubscriptionService(ControllerApi controllerApi, OperationMgr operationMgr, MetaStore metaStore) {
         this.metaStore = metaStore;
         this.controllerApi = controllerApi;
+        this.operationMgr = operationMgr;
     }
 
     public List<String> getSubscriptionList(String projectName) {
@@ -38,12 +41,12 @@ public class SubscriptionService {
     }
 
     public void start(String subscriptionName, String requestedBy){
-        SubscriptionOperation op = SubscriptionOperation.startOp(subscriptionName, requestedBy);
+        SubscriptionOperation op = operationMgr.requestSubStart(subscriptionName, requestedBy);
         controllerApi.startSubscription((SubscriptionOperation.StartData) op.getData());
     }
 
     public void stop(String subscriptionName, String requestedBy){
-        SubscriptionOperation op = SubscriptionOperation.stopOp(subscriptionName, requestedBy);
+        SubscriptionOperation op = operationMgr.requestSubStop(subscriptionName, requestedBy);
         controllerApi.stopSubscription((SubscriptionOperation.StopData) op.getData());
     }
 
