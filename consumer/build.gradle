@@ -14,8 +14,10 @@ dependencies {
     api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
     implementation("org.slf4j:slf4j-api:$slf4j_version")
     implementation("org.jctools:jctools-core:$jctools_version")
+    implementation("org.apache.commons:commons-lang3")
 
     testImplementation(testFixtures(project(':common')))
+    testImplementation(testFixtures(project(":spi")))
     testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
     testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
     testImplementation("org.awaitility:awaitility:$awaitility_version")
@@ -23,4 +25,8 @@ dependencies {
     testImplementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
     testImplementation("org.openjdk.jmh:jmh-core:$jmh_version")
 //    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
+
+    // demo
+    testImplementation("io.vertx:vertx-web:$vertx_version")
+    testImplementation 'io.dropwizard.metrics:metrics-core:4.2.25'
 }

@@ -77,8 +77,9 @@ See the Wiki page [Roadmap](https://github.com/flipkart-incubator/varadhi/wiki/R
 [ TBD ]
 
 ## Want to Contribute ?
+Refer to [Contributing](./CONTRIBUTING.md).
 
-Reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com incase you want to contribute here :)
+You can also reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com.
 
 ## Bugs and Feedback
 
