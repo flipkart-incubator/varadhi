@@ -51,6 +51,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
     ProjectService projectService;
+    TopicService<VaradhiTopic> topicService;
 
     public static VaradhiSubscription getVaradhiSubscription(
             String subscriptionName, Project project, VaradhiTopic topic
@@ -91,7 +92,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         super.setUp();
         subscriptionService = mock(SubscriptionService.class);
         projectService = mock(ProjectService.class);
-        TopicService<VaradhiTopic> topicService = mock(VaradhiTopicService.class);
+        topicService = mock(VaradhiTopicService.class);
         subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService, topicService);
 
         Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
@@ -131,8 +132,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
     void testSubscriptionCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic);
         when(subscriptionService.createSubscription(any())).thenReturn(subscription);
         SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
         assertEquals(
@@ -202,8 +205,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
     void testSubscriptionUpdate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, vTopic);
         ArgumentCaptor<VaradhiSubscription> captor = ArgumentCaptor.forClass(VaradhiSubscription.class);
         when(subscriptionService.updateSubscription(captor.capture())).thenReturn(subscription);
 
