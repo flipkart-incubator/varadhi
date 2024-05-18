@@ -2,7 +2,6 @@ package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardState;
 import com.flipkart.varadhi.entities.cluster.ShardStatus;

@@ -8,21 +8,22 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerApiProxy implements ControllerApi {
+public class ControllerClient implements ControllerApi {
     private final MessageExchange exchange;
 
-    public ControllerApiProxy(MessageExchange exchange) {
+    public ControllerClient(MessageExchange exchange) {
         this.exchange = exchange;
     }
+
     @Override
     public CompletableFuture<Void> startSubscription(SubscriptionOperation.StartData operation) {
-        ClusterMessage message =  ClusterMessage.of(operation);
+        ClusterMessage message = ClusterMessage.of(operation);
         return exchange.send(ROUTE_CONTROLLER, "start", message);
     }
 
     @Override
     public CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation) {
-        ClusterMessage message =  ClusterMessage.of(operation);
+        ClusterMessage message = ClusterMessage.of(operation);
         return exchange.send(ROUTE_CONTROLLER, "stop", message);
     }
 

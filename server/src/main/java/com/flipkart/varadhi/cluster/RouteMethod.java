@@ -6,6 +6,7 @@ public enum RouteMethod {
     REQUEST("request"),
     PUBLISH("publish");
     private final String name;
+
     RouteMethod(String name) {
         this.name = name;
     }

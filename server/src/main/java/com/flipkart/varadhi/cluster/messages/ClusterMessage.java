@@ -24,15 +24,6 @@ public class ClusterMessage {
         this.payload = payload;
     }
 
-    public <T> T getData(Class<T> clazz) {
-        return JsonMapper.jsonDeserialize(payload, clazz);
-    }
-
-    public <T> T getRequest(Class<T> clazz) {
-        //TODO:: there is no enforcement on payload, i.e. request can be deserialized as data.
-        return JsonMapper.jsonDeserialize(payload, clazz);
-    }
-
     public static ClusterMessage of(ShardOperation.OpData operation) {
         // This will result in double serialization of the operation object, below and during eventbus call.
         return new ClusterMessage(JsonMapper.jsonSerialize(operation));
@@ -46,6 +37,15 @@ public class ClusterMessage {
     public static ClusterMessage of(ShardRequest request) {
         // This will result in double serialization of the operation object, below and during eventbus call.
         return new ClusterMessage(JsonMapper.jsonSerialize(request));
+    }
+
+    public <T> T getData(Class<T> clazz) {
+        return JsonMapper.jsonDeserialize(payload, clazz);
+    }
+
+    public <T> T getRequest(Class<T> clazz) {
+        //TODO:: there is no enforcement on payload, i.e. request can be deserialized as data.
+        return JsonMapper.jsonDeserialize(payload, clazz);
     }
 
     public ResponseMessage getResponseMessage(Object payload) {

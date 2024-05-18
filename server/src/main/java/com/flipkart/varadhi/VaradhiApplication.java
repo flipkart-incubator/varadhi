@@ -49,7 +49,7 @@ public class VaradhiApplication {
             log.info("VaradhiApplication Starting on {}.", host);
             AppConfiguration configuration = readConfiguration(args);
             MemberConfig mConfig = configuration.getMember();
-            memberInfo = new MemberInfo(host, port, mConfig.getRoles(),getMemberResources(mConfig));
+            memberInfo = new MemberInfo(host, port, mConfig.getRoles(), getMemberResources(mConfig));
             CoreServices services = new CoreServices(configuration);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, host);
             Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);

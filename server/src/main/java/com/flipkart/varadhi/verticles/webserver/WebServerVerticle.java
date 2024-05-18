@@ -6,8 +6,7 @@ import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.OperationMgr;
-import com.flipkart.varadhi.spi.db.OpStore;
-import com.flipkart.varadhi.verticles.controller.ControllerApiProxy;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
@@ -61,7 +60,9 @@ public class WebServerVerticle extends AbstractVerticle {
     private SubscriptionService subscriptionService;
     private HttpServer httpServer;
 
-    public WebServerVerticle(AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager) {
+    public WebServerVerticle(
+            AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
+    ) {
         this.deployedRegion = configuration.getRestOptions().getDeployedRegion();
         this.configuration = configuration;
         this.clusterManager = clusterManager;
@@ -72,7 +73,7 @@ public class WebServerVerticle extends AbstractVerticle {
         this.tracer = services.getTracer("varadhi");
     }
 
-    public  static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
+    public static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
         // no try/catch around apiEndHandler.handle as executeBlocking does the same and fails the future.
         return ctx -> {
             Future<Void> future = vertx.executeBlocking(() -> {
@@ -116,14 +117,14 @@ public class WebServerVerticle extends AbstractVerticle {
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
-        ControllerApi controllerApiProxy = new ControllerApiProxy(clusterManager.getExchange(vertx));
+        ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
         subscriptionService = new SubscriptionService(controllerApiProxy, operationMgr, metaStore);
     }
 
     private void performValidations() {
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             // Its sync execution for time being, can be changed to Async.
-            LeanDeploymentValidator validator =  new LeanDeploymentValidator(orgService, teamService, projectService);
+            LeanDeploymentValidator validator = new LeanDeploymentValidator(orgService, teamService, projectService);
             validator.validate(configuration.getRestOptions());
         }
     }

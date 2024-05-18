@@ -22,22 +22,23 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
             List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<ConsumerNode> consumerNodes
     ) {
         if (consumerNodes.isEmpty()) {
-            log.warn("Shard Assignment Failure: No active consumer nodes.");
+            log.error("Shard Assignment Failure: No active consumer nodes.");
             throw new CapacityException("No active consumer node for Subscription assignment.");
         }
         List<Assignment> assignments = new ArrayList<>();
-        TreeSet<ConsumerNode> consumers = new TreeSet<>(Comparator.comparingDouble(o -> o.getAvailable().getNetworkMBps()));
+        TreeSet<ConsumerNode> consumers = new TreeSet<>(ConsumerNode.NodeComparator);
         consumers.addAll(consumerNodes);
 
         shards.forEach(shard -> {
                     ConsumerNode consumerNode = consumers.pollLast();
                     Objects.requireNonNull(consumerNode);
+
                     //TODO::handle for creating required capacity via re-assigning the shards.
-                    float nodeAvailableThroughputKBps = consumerNode.getAvailable().getNetworkMBps() * 1000;
-                    if (shard.getCapacityRequest().getMaxThroughputKBps() > nodeAvailableThroughputKBps) {
-                        log.warn(
-                                "Shard Assignment Failure: ResourcesNeeded:{} Max ResourcesAvailable on any node {}.",
-                                shard.getCapacityRequest().getMaxThroughputKBps(), nodeAvailableThroughputKBps
+                    if (shard.getCapacityRequest().compareTo(consumerNode.getAvailable()) > 0) {
+                        log.error(
+                                "Subscription:{} Shard:{} Assignment Failure: ResourcesNeeded:{}  max ResourcesAvailable on any node {}.",
+                                subscription.getName(), shard.getShardId(), shard.getCapacityRequest(),
+                                consumerNode.getAvailable()
                         );
                         throw new CapacityException("Not enough Resources for Subscription assignment.");
                     }

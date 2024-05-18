@@ -27,7 +27,7 @@ public class MessageRouterImplTest {
 
     // TODO:: Tests needs to be added, so this will go under refactor
     @BeforeEach
-    public void setup() throws Exception{
+    public void setup() throws Exception {
         TestingServer zkCuratorTestingServer = new TestingServer();
         zkCuratorFramework = spy(
                 CuratorFrameworkFactory.newClient(
@@ -37,7 +37,8 @@ public class MessageRouterImplTest {
     }
 
     private Vertx createClusteredVertx() throws Exception {
-        return Vertx.builder().withClusterManager(vZkCm).buildClustered().toCompletionStage().toCompletableFuture().get();
+        return Vertx.builder().withClusterManager(vZkCm).buildClustered().toCompletionStage().toCompletableFuture()
+                .get();
     }
 
     @Test
@@ -57,7 +58,8 @@ public class MessageRouterImplTest {
         MessageRouter mr = vZkCm.getRouter(vertx);
         mr.sendHandler("testAddress", "customApi", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
-        Future.fromCompletionStage(me.send("testAddress", "customApi", cm)).onComplete(testContext.succeeding(v -> checkpoint.flag()));
+        Future.fromCompletionStage(me.send("testAddress", "customApi", cm))
+                .onComplete(testContext.succeeding(v -> checkpoint.flag()));
     }
 
     ClusterMessage getClusterMessage(String data) {

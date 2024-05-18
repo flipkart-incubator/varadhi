@@ -5,9 +5,9 @@ import lombok.Data;
 @Data
 public class MemberResources {
     private int cpuCount;
-    private float networkMBps;
+    private int networkMBps;
 
-    public MemberResources(int cpuCount, float networkMBps) {
+    public MemberResources(int cpuCount, int networkMBps) {
         this.cpuCount = cpuCount;
         this.networkMBps = networkMBps;
     }

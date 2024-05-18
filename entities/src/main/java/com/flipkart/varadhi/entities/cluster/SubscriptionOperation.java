@@ -19,7 +19,7 @@ public class SubscriptionOperation extends MetaStoreEntity {
     @JsonCreator
     SubscriptionOperation(
             String operationId, String requestedBy, long startTime, long endTime, OpData data, int version
-            ) {
+    ) {
         super(operationId, version);
         this.requestedBy = requestedBy;
         this.startTime = startTime;
@@ -46,7 +46,6 @@ public class SubscriptionOperation extends MetaStoreEntity {
     }
 
     public void update(OpData updated) {
-        //TODO::check & fix setters
         if (!data.operationId.equals(updated.operationId)) {
             throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
         }

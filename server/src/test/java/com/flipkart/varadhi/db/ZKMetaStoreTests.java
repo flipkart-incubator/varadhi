@@ -28,11 +28,11 @@ import static org.mockito.Mockito.*;
 public class ZKMetaStoreTests {
 
     CuratorFramework zkCuratorFramework;
+    TestData data1;
+    ZNode zn;
     private TestingServer zkCuratorTestingServer;
     private ZKMetaStore zkMetaStore;
     private ZNodeKind testKind;
-    TestData data1;
-    ZNode zn;
 
     @BeforeEach
     public void setUp() throws Exception {

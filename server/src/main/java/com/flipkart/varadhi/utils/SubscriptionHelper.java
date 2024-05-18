@@ -12,7 +12,9 @@ public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
 
-    public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, VaradhiTopic topic, int version) {
+    public static VaradhiSubscription fromResource(
+            SubscriptionResource subscriptionResource, VaradhiTopic topic, int version
+    ) {
         return new VaradhiSubscription(
                 buildSubscriptionName(subscriptionResource.getProject(), subscriptionResource.getName()),
                 version,

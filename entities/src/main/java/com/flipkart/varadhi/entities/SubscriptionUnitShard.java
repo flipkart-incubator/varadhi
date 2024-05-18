@@ -10,7 +10,9 @@ public class SubscriptionUnitShard extends SubscriptionShards {
     private final InternalCompositeTopic deadLetterTopic;
     private final CapacityPolicy capacityRequest;
 
-    public SubscriptionUnitShard(int shardId, CapacityPolicy capacityRequest, RetryTopic retryTopic, InternalCompositeTopic deadLetterTopic) {
+    public SubscriptionUnitShard(
+            int shardId, CapacityPolicy capacityRequest, RetryTopic retryTopic, InternalCompositeTopic deadLetterTopic
+    ) {
         super(1);
         this.shardId = shardId;
         this.retryTopic = retryTopic;
@@ -20,6 +22,9 @@ public class SubscriptionUnitShard extends SubscriptionShards {
 
     @Override
     public SubscriptionUnitShard getShard(int shardId) {
-        return this.shardId == shardId ? this : null;
+        if (shardId == this.shardId) {
+            return this;
+        }
+        throw new IllegalArgumentException("Invalid shard Id, no shard found.");
     }
 }

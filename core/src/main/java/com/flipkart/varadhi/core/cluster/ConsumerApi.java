@@ -7,5 +7,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface ConsumerApi {
     CompletableFuture<Void> start(ShardOperation.StartData operation);
+
     CompletableFuture<ShardStatus> getStatus(String subscriptionId, int shardId);
 }

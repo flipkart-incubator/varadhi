@@ -4,11 +4,10 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerNode;
 import com.flipkart.varadhi.entities.cluster.ComponentKind;
-import com.flipkart.varadhi.core.cluster.ConsumerApiFactory;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.verticles.consumer.ConsumerApiFactoryImpl;
-import com.flipkart.varadhi.verticles.webserver.WebServerApiProxy;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
+import com.flipkart.varadhi.verticles.webserver.WebServerClient;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.WebServerApi;
@@ -35,17 +34,18 @@ public class ControllerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        WebServerApi serverApiProxy = new WebServerApiProxy(messageExchange);
-        ConsumerApiFactory consumerApiFactory = new ConsumerApiFactoryImpl(messageExchange);
+        WebServerApi serverApiProxy = new WebServerClient(messageExchange);
+        ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
 
-        ControllerApiMgr controllerApiMgr = new ControllerApiMgr(serverApiProxy, consumerApiFactory, metaStoreProvider);
+        ControllerApiMgr controllerApiMgr =
+                new ControllerApiMgr(serverApiProxy, consumerClientFactory, metaStoreProvider);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr, serverApiProxy);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
         onLeaderElected(controllerApiMgr, handler, messageRouter).onComplete(ar -> {
             if (ar.failed()) {
                 startPromise.fail(ar.cause());
-            }else{
+            } else {
                 startPromise.complete();
             }
         });
@@ -58,16 +58,16 @@ public class ControllerVerticle extends AbstractVerticle {
         setupMembershipListener(controllerApiMgr);
 
         return clusterManager.getAllMembers().onComplete(ar -> {
-            if (ar.failed()) {
-                log.error("Failed to get all members. Giving up leadership.", ar.cause());
-                return;
-            }
-            List<ConsumerNode> consumerNodes =
-                    ar.result().stream().filter(memberInfo -> memberInfo.hasRole(ComponentKind.Consumer))
-                            .map(ConsumerNode::new).toList();
-            controllerApiMgr.addConsumerNodes(consumerNodes);
+            if (ar.succeeded()) {
+                List<ConsumerNode> consumerNodes =
+                        ar.result().stream().filter(memberInfo -> memberInfo.hasRole(ComponentKind.Consumer))
+                                .map(ConsumerNode::new).toList();
 
-            setupApiHandlers(messageRouter, handler);
+                controllerApiMgr.addConsumerNodes(consumerNodes);
+                setupApiHandlers(messageRouter, handler);
+            } else {
+                log.error("Failed to get all members. Giving up leadership.", ar.cause());
+            }
         }).map(a -> null);
     }
 
@@ -86,14 +86,19 @@ public class ControllerVerticle extends AbstractVerticle {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
             public void joined(MemberInfo memberInfo) {
-                log.debug("Member joined: {}", memberInfo);
-                ConsumerNode consumerNode = new ConsumerNode(memberInfo);
-                controllerApiMgr.consumerNodeJoined(consumerNode);
+                log.info("Member joined: {}", memberInfo);
+                if (memberInfo.hasRole(ComponentKind.Consumer)) {
+                    ConsumerNode consumerNode = new ConsumerNode(memberInfo);
+                    controllerApiMgr.consumerNodeJoined(consumerNode);
+                }
             }
 
             @Override
             public void left(String memberId) {
-                log.debug("Member left: {}", memberId);
+                // Vertx cluster manager provides only the path (i.e.) id and not data of the node.
+                // It will be good, to have a data, so filtering can be done for non-consumer nodes.
+                // Currently, this filtering is taken care implicitly.
+                log.info("Member left: {}", memberId);
                 controllerApiMgr.consumerNodeLeft(memberId);
             }
         });

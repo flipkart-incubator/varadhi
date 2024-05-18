@@ -42,7 +42,8 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                     ))
             .build();
 
-    public VaradhiZkClusterManager(CuratorFramework curatorFramework, DeliveryOptions deliveryOptions, String host
+    public VaradhiZkClusterManager(
+            CuratorFramework curatorFramework, DeliveryOptions deliveryOptions, String host
     ) {
         super(curatorFramework, host);
         this.deliveryOptions = deliveryOptions == null ? new DeliveryOptions().setSendTimeout(1000).setTracingPolicy(
@@ -55,7 +56,9 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
         getNodes().forEach(
                 nodeId -> allFutures.add(Failsafe.with(NodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
-                        .thenApply(nodeInfo -> JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(), MemberInfo.class))
+                        .thenApply(nodeInfo -> JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(),
+                                MemberInfo.class
+                        ))
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
                                 log.error("Failed to get nodeInfo for node: {}.", nodeId, throwable);

@@ -37,20 +37,23 @@ public class MessageRouter {
     public void sendHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.SEND);
         vertxEventBus.consumer(apiPath, message -> {
-            ClusterMessage msg =  JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
             log.debug("Received msg via - send({}, {})", apiPath, msg.getId());
             handler.handle(msg); // this is async invocation.
             message.reply("received ok", deliveryOptions);
         });
     }
 
-    public void requestHandler(String routeName, String apiName, RequestHandler handler
+    public void requestHandler(
+            String routeName, String apiName, RequestHandler handler
     ) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.REQUEST);
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
             log.debug("Received msg via - request({}, {})", apiPath, msg.getId());
-            handler.handle(msg).thenAccept( response ->  message.reply(JsonMapper.jsonSerialize(response), deliveryOptions)); // this is async invocation.
+            handler.handle(msg).thenAccept(response -> message.reply(JsonMapper.jsonSerialize(response),
+                    deliveryOptions
+            )); // this is async invocation.
         });
     }
 

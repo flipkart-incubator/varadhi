@@ -82,7 +82,7 @@ public class ShardOperation extends MetaStoreEntity {
         public String toString() {
             return String.format(
                     "OpData{Id='%s', shardId=%d, subscriptionId='%s', state=%s, errorMsg='%s'}",
-                    operationId, shard.getShardId(), subscription.getName(),  state, errorMsg
+                    operationId, shard.getShardId(), subscription.getName(), state, errorMsg
             );
         }
     }

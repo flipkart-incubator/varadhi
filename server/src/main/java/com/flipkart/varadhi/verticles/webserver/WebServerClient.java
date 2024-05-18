@@ -7,16 +7,16 @@ import com.flipkart.varadhi.core.cluster.WebServerApi;
 
 import java.util.concurrent.CompletableFuture;
 
-public class WebServerApiProxy implements WebServerApi {
+public class WebServerClient implements WebServerApi {
     private final MessageExchange exchange;
 
-    public WebServerApiProxy(MessageExchange exchange) {
+    public WebServerClient(MessageExchange exchange) {
         this.exchange = exchange;
     }
 
     @Override
     public CompletableFuture<Void> update(SubscriptionOperation.OpData operation) {
-        ClusterMessage message =  ClusterMessage.of(operation);
+        ClusterMessage message = ClusterMessage.of(operation);
         return exchange.send(ROUTE_WEBSERVER, "update", message);
     }
 }

@@ -29,7 +29,10 @@ public class SubscriptionHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final TopicService<VaradhiTopic> topicService;
 
-    public SubscriptionHandlers(SubscriptionService subscriptionService, ProjectService projectService, TopicService<VaradhiTopic> topicService) {
+    public SubscriptionHandlers(
+            SubscriptionService subscriptionService, ProjectService projectService,
+            TopicService<VaradhiTopic> topicService
+    ) {
         this.subscriptionService = subscriptionService;
         this.projectService = projectService;
         this.topicService = topicService;

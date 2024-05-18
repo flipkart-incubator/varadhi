@@ -31,14 +31,14 @@ public class MessageExchange {
         CompletableFuture<Void> future = new CompletableFuture<>();
         String apiPath = getPath(routeName, apiName, RouteMethod.SEND);
         vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
-                    if (ar.succeeded()) {
-                        log.debug("send({}, {}) delivered successfully.", apiPath, msg.getId());
-                        future.complete(null);
-                    } else {
-                        log.error("send({}, {}) failed: {}.", apiPath, msg.getId(), ar.cause().getMessage());
-                        future.completeExceptionally(ar.cause());
-                    }
-                });
+            if (ar.succeeded()) {
+                log.debug("send({}, {}) delivered successfully.", apiPath, msg.getId());
+                future.complete(null);
+            } else {
+                log.error("send({}, {}) failed: {}.", apiPath, msg.getId(), ar.cause().getMessage());
+                future.completeExceptionally(ar.cause());
+            }
+        });
         return future;
     }
 

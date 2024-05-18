@@ -17,6 +17,7 @@ public class InvalidMetaStoreProvider implements MetaStoreProvider {
     public OpStore getOpStore() {
         return null;
     }
+
     @Override
     public AssignmentStore getAssignmentStore() {
         return null;

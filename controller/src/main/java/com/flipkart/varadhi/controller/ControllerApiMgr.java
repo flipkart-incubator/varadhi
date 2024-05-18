@@ -22,15 +22,15 @@ import lombok.extern.slf4j.Slf4j;
 public class ControllerApiMgr implements ControllerApi {
     private final WebServerApi webServerApiProxy;
     private final ShardAssigner shardAssigner;
-    private final ConsumerApiFactory consumerApiFactory;
+    private final ConsumerClientFactory consumerClientFactory;
     private final MetaStore metaStore;
     private final OperationMgr operationMgr;
 
     public ControllerApiMgr(
-            WebServerApi webServerApiProxy, ConsumerApiFactory consumerApiFactory, MetaStoreProvider metaStoreProvider
+            WebServerApi webServerApiProxy, ConsumerClientFactory consumerClientFactory, MetaStoreProvider metaStoreProvider
     ) {
         this.webServerApiProxy = webServerApiProxy;
-        this.consumerApiFactory = consumerApiFactory;
+        this.consumerClientFactory = consumerClientFactory;
         this.shardAssigner = new ShardAssigner(metaStoreProvider.getAssignmentStore());
         this.metaStore = metaStoreProvider.getMetaStore();
         this.operationMgr = new OperationMgr(metaStoreProvider.getOpStore());
@@ -120,7 +120,7 @@ public class ControllerApiMgr implements ControllerApi {
     }
 
     private ConsumerApi getAssignedConsumer(Assignment assignment) {
-        return consumerApiFactory.getConsumerProxy(assignment.getConsumerId());
+        return consumerClientFactory.getInstance(assignment.getConsumerId());
     }
 
     private List<SubscriptionUnitShard> getSubscriptionShards(SubscriptionShards shards) {

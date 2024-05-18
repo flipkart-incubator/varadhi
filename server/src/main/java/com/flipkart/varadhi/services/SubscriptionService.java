@@ -40,12 +40,12 @@ public class SubscriptionService {
         return subscription;
     }
 
-    public void start(String subscriptionName, String requestedBy){
+    public void start(String subscriptionName, String requestedBy) {
         SubscriptionOperation op = operationMgr.requestSubStart(subscriptionName, requestedBy);
         controllerApi.startSubscription((SubscriptionOperation.StartData) op.getData());
     }
 
-    public void stop(String subscriptionName, String requestedBy){
+    public void stop(String subscriptionName, String requestedBy) {
         SubscriptionOperation op = operationMgr.requestSubStop(subscriptionName, requestedBy);
         controllerApi.stopSubscription((SubscriptionOperation.StopData) op.getData());
     }

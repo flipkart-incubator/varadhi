@@ -3,7 +3,6 @@ package com.flipkart.varadhi.consumer.impl;
 import com.flipkart.varadhi.consumer.ConsumerState;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.ConsumptionFailurePolicy;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.Project;

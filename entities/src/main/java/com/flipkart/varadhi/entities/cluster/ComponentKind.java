@@ -6,6 +6,7 @@ public enum ComponentKind {
     Consumer("Consumer");
 
     private final String name;
+
     ComponentKind(String name) {
         this.name = name;
     }

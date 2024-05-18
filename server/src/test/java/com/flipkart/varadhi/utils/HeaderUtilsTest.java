@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.google.common.collect.Multimap;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
@@ -75,21 +74,5 @@ public class HeaderUtilsTest {
         Assertions.assertEquals(2, values.length);
         Assertions.assertEquals("multi_value2_1", values[0]);
         Assertions.assertEquals("multi_Value2_1", values[1]);
-    }
-
-
-    @Test
-    void serde() {
-//        SubscriptionOperation.StartData data = new SubscriptionOperation.StartData();
-//        data.setOperationId("aaaaa");
-//        data.setErrorMsg("fddfgdgdgdf");
-//        data.setState(SubscriptionOperation.State.SCHEDULED);
-//        data.setSubscriptionId("ffffff");
-//        SubscriptionOperation subOp = new SubscriptionOperation("aaaaa", "cccc", 2, 0, data, 0);
-        SubscriptionOperation subOp = SubscriptionOperation.startOp("foob", "bar");
-        String d = JsonMapper.jsonSerialize(subOp);
-        System.out.println(d);
-        SubscriptionOperation o1 = JsonMapper.jsonDeserialize(d, SubscriptionOperation.class);
-        Assertions.assertEquals(subOp.getData().getOperationId(),  o1.getName());
     }
 }

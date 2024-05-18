@@ -28,7 +28,7 @@ public class AssignmentStoreImpl implements AssignmentStore {
     public void createAssignments(List<Assignment> assignments) {
         List<ZNode> zNodes = new ArrayList<>();
         assignments.forEach(a -> zNodes.add(ZNode.OfAssignment(getAssignmentMapping(a))));
-        zkMetaStore.multi(zNodes, new ArrayList<>());
+        zkMetaStore.executeInTransaction(zNodes, new ArrayList<>());
     }
 
     @Override

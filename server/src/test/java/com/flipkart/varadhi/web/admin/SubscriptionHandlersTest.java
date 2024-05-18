@@ -28,8 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class SubscriptionHandlersTest extends WebTestBase {
-    private final Project project = new Project("project1", 0, "", "team1", "org1");
-    private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
     private static final Endpoint endpoint;
     private static final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
@@ -37,9 +35,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
             1, 1, 1, 1
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-
     private static final CapacityPolicy capacityPolicy = new CapacityPolicy(1, 10);
-    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy,null, null);
+    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null);
 
     static {
         try {
@@ -48,6 +45,9 @@ public class SubscriptionHandlersTest extends WebTestBase {
             throw new RuntimeException(e);
         }
     }
+
+    private final Project project = new Project("project1", 0, "", "team1", "org1");
+    private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
     ProjectService projectService;

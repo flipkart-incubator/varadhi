@@ -12,6 +12,7 @@ public class OperationMgr {
     public OperationMgr(OpStore opStore) {
         this.opStore = opStore;
     }
+
     public SubscriptionOperation requestSubStart(String subscriptionId, String requestedBy) {
         SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
         opStore.createSubOp(operation);
@@ -39,6 +40,6 @@ public class OperationMgr {
     public ShardOperation.StartData requestShardStart(SubscriptionUnitShard shard, VaradhiSubscription subscription) {
         ShardOperation startOp = ShardOperation.startOp(shard, subscription);
         opStore.createShardOp(startOp);
-        return (ShardOperation.StartData)startOp.getOpData();
+        return (ShardOperation.StartData) startOp.getOpData();
     }
 }

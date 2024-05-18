@@ -9,6 +9,7 @@ import java.util.Map;
 @Getter
 public class SubscriptionMultiShard extends SubscriptionShards {
     private final Map<Integer, SubscriptionUnitShard> shards;
+
     public SubscriptionMultiShard(List<SubscriptionUnitShard> shards) {
         super(shards.size());
         this.shards = new HashMap<>();
@@ -17,7 +18,9 @@ public class SubscriptionMultiShard extends SubscriptionShards {
 
     @Override
     public SubscriptionUnitShard getShard(int shardId) {
-        //TODO:: null or exception.
-        return shards.getOrDefault(shardId, null);
+        if (shards.containsKey(shardId)) {
+            return shards.get(shardId);
+        }
+        throw new IllegalArgumentException("Invalid shard Id, no shard found.");
     }
 }

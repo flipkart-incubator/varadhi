@@ -7,7 +7,7 @@ import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
-import com.flipkart.varadhi.verticles.controller.ControllerApiProxy;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 
@@ -15,6 +15,7 @@ import io.vertx.core.Promise;
 public class ConsumerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final String consumerId;
+
     public ConsumerVerticle(MemberInfo memberInfo, VaradhiClusterManager clusterManager) {
         this.clusterManager = clusterManager;
         consumerId = memberInfo.hostname();
@@ -26,9 +27,9 @@ public class ConsumerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ConsumersManager consumersManager = new ConsumersManagerImpl();
 
-        ControllerApiProxy controllerApiProxy = new ControllerApiProxy(messageExchange);
+        ControllerClient controllerClient = new ControllerClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager);
-        ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerApiProxy);
+        ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
         setupApiHandlers(messageRouter, handler);
         startPromise.complete();
     }

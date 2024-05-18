@@ -11,11 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
-public class ConsumerApiProxy implements ConsumerApi {
+public class ConsumerClient implements ConsumerApi {
     private final MessageExchange exchange;
     private final String consumerId;
 
-    public ConsumerApiProxy(String consumerId, MessageExchange exchange) {
+    public ConsumerClient(String consumerId, MessageExchange exchange) {
         this.consumerId = consumerId;
         this.exchange = exchange;
     }

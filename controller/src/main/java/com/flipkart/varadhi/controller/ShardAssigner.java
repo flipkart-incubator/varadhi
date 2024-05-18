@@ -3,14 +3,12 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.ConsumerNode;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +23,7 @@ public class ShardAssigner {
     public ShardAssigner(AssignmentStore assignmentStore) {
         this.strategy = new LeastAssignedStrategy();
         this.consumerNodes = new ConcurrentHashMap<>();
-        this.assignmentStore =  assignmentStore;
+        this.assignmentStore = assignmentStore;
     }
 
     public void addConsumerNodes(List<ConsumerNode> clusterConsumers) {
@@ -36,6 +34,7 @@ public class ShardAssigner {
     }
 
     public List<Assignment> assignShard(List<SubscriptionUnitShard> shards, VaradhiSubscription subscription) {
+        //TODO:: It need to ensure, assignment is not using stale values, specifically if they are running in parallel.
         List<ConsumerNode> activeConsumers =
                 consumerNodes.values().stream().filter(c -> !c.isMarkedForDeletion()).collect(Collectors.toList());
         log.info("AssignShards consumer nodes active:{} of total:{}", activeConsumers.size(), consumerNodes.size());
