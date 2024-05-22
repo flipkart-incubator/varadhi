@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.services;
 
-import com.flipkart.varadhi.entities.MessageWithOffset;
+import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 
 /**
@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.Offset;
  */
 // TODO: Keeping payload as byte[] only for now. When implementing, there will be opportunity to evaluate how to avoid
 // unnecessary deserialization / array copy & then we can tweak this interface.
-public interface PolledMessage<O extends Offset> extends MessageWithOffset<O> {
+public interface PolledMessage<O extends Offset> extends Message {
 
     String getTopicName();
 
@@ -16,6 +16,11 @@ public interface PolledMessage<O extends Offset> extends MessageWithOffset<O> {
      * @return partition info if available. -1 otherwise.
      */
     int getPartition();
+
+    /**
+     * @return the offset of this message in the partition.
+     */
+    O getOffset();
 
     /**
      * @return the payload of this message.
