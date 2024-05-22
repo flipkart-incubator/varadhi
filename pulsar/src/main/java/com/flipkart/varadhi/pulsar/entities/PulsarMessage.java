@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.entities;
 
+import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.google.common.collect.Multimap;
 import lombok.RequiredArgsConstructor;
@@ -30,27 +31,27 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public String getMessageId() {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("fetching message Id from pulsar message");
     }
 
     @Override
     public String getGroupId() {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("fetching group id from pulsar message");
     }
 
     @Override
     public boolean hasHeader(String key) {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("checking header from pulsar message");
     }
 
     @Override
     public String getHeader(String key) {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("fetching header from pulsar message");
     }
 
     @Override
     public List<String> getHeaders(String key) {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("fetching headers from pulsar message");
     }
 
     @Override
@@ -60,7 +61,7 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public Multimap<String, String> getRequestHeaders() {
-        throw new UnsupportedOperationException("Not implemented");
+        throw new NotImplementedException("get all headers from pulsar message");
     }
 
     @Override
