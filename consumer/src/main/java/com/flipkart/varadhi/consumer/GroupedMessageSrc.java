@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
+import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
@@ -7,6 +8,7 @@ import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
@@ -14,28 +16,50 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Message source that maintains ordering among messages of the same groupId.
  */
 @RequiredArgsConstructor
+@Slf4j
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
 
+    private final Context context;
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
+
+    // I need a concurrent queue but with the future based api.
     private final ConcurrentLinkedDeque<String> freeGroups = new ConcurrentLinkedDeque<>();
+
+    private final Consumer<O> consumer;
+
+    /**
+     * Used to limit the message buffering. Will be driven via consumer configuration.
+     */
+    private final long maxUnAckedMessages;
 
     /**
      * Maintains the count of total messages read from the consumer so far.
      * Required for watermark checks, for when this value runs low we can fetch more messages from the consumer.
      * Counter gets decremented when the message is committed/consumed.
      */
-    private final AtomicLong totalInFlightMessages = new AtomicLong(0);
+    private final AtomicLong totalUnAckedMessages = new AtomicLong(0);
 
-    // Used for watermark checks against the totalInFlightMessages. Will be driven via consumer configuration.
-    private final long maxInFlightMessages = 100; // todo(aayush): make configurable
+    // Internal states to manage async state
 
-    private final Consumer<O> consumer;
+    /**
+     * flag to indicate whether a task to fetch messages from consumer is ongoing.
+     */
+    private final AtomicBoolean pendingAsyncFetch = new AtomicBoolean(false);
+
+    /**
+     * holder to keep the incomplete future object while waiting for new messages or groups to get freed up.
+     */
+    private final AtomicReference<NextMsgsRequest> pendingRequest = new AtomicReference<>();
+
+    private final AtomicBoolean pendingRequestWaitingOnFreeGroups = new AtomicBoolean(false);
 
     /**
      * Attempt to fill the message array with one message from each group.
@@ -47,22 +71,69 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
      */
     @Override
     public CompletableFuture<Integer> nextMessages(MessageTracker[] messages) {
-        if (!hasMaxInFlightMessages()) {
-            return replenishAvailableGroups().thenApply(v -> nextMessagesInternal(messages));
+        int count = nextMessagesInternal(messages);
+        if (count > 0) {
+            return CompletableFuture.completedFuture(count);
         }
-        return CompletableFuture.completedFuture(nextMessagesInternal(messages));
+
+        NextMsgsRequest request = new NextMsgsRequest(new CompletableFuture<>(), messages);
+        if (!pendingRequest.compareAndSet(null, request)) {
+            throw new IllegalStateException(
+                    "nextMessages method is not supposed to be called concurrently. There seems to be a pending nextMessage call");
+        }
+        pendingRequestWaitingOnFreeGroups.set(true);
+
+        // incomplete result is saved. trigger new message fetch.
+        optionallyFetchNewMessages();
+
+        // double check, if any free group is available now.
+        if (isFreeGroupPresent()) {
+            tryCompletePendingRequest();
+        }
+
+        return request.result;
+    }
+
+    private void tryCompletePendingRequest() {
+        if (pendingRequestWaitingOnFreeGroups.compareAndSet(true, false)) {
+            // ohh, a free group was there and I am able to grab the request for completion.
+            NextMsgsRequest request = pendingRequest.getAndSet(null);
+            request.result.complete(nextMessagesInternal(request.messages));
+        }
+    }
+
+    private void optionallyFetchNewMessages() {
+        if (!isMaxUnAckedMessagesBreached() && pendingAsyncFetch.compareAndSet(false, true)) {
+            // there is more room for new messages. We can initiate a new fetch request, as none is ongoing.
+            consumer.receiveAsync().whenComplete((polledMessages, ex) -> {
+                if (ex != null) {
+                    context.getExecutor().execute(() -> {
+                        replenishAvailableGroups(polledMessages);
+                        pendingAsyncFetch.set(false);
+                    });
+                } else {
+                    log.error("Error while fetching messages from consumer", ex);
+                    throw new IllegalStateException(
+                            "should be unreachable. consumer.receiveAsync() should not throw exception.");
+                }
+            });
+        }
     }
 
     private int nextMessagesInternal(MessageTracker[] messages) {
         int i = 0;
         GroupTracker groupTracker;
-        while (i < messages.length && (groupTracker = getGroupTracker()) != null) {
+        while (i < messages.length && (groupTracker = pollFreeGroup()) != null) {
             messages[i++] = new GroupedMessageTracker(groupTracker.messages.getFirst().nextMessage());
         }
         return i;
     }
 
-    private GroupTracker getGroupTracker() {
+    boolean isFreeGroupPresent() {
+        return !freeGroups.isEmpty();
+    }
+
+    private GroupTracker pollFreeGroup() {
         String freeGroup = freeGroups.poll();
         if (freeGroup == null) {
             return null;
@@ -75,13 +146,6 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
 
         tracker.status = GroupStatus.IN_FLIGHT;
         return tracker;
-    }
-
-    private CompletableFuture<Void> replenishAvailableGroups() {
-        return consumer.receiveAsync().thenApply(polledMessages -> {
-            replenishAvailableGroups(polledMessages);
-            return null;
-        });
     }
 
     private void replenishAvailableGroups(PolledMessages<O> polledMessages) {
@@ -97,9 +161,10 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                 tracker.messages.add(newBatch);
                 return tracker;
             });
-            totalInFlightMessages.addAndGet(newBatch.count());
+            totalUnAckedMessages.addAndGet(newBatch.count());
             if (isNewGroup.isTrue()) {
                 freeGroups.add(group.getKey());
+                tryCompletePendingRequest();
             }
         }
     }
@@ -117,8 +182,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
         return groups;
     }
 
-    private boolean hasMaxInFlightMessages() {
-        return totalInFlightMessages.get() >= maxInFlightMessages;
+    boolean isMaxUnAckedMessagesBreached() {
+        return totalUnAckedMessages.get() >= maxUnAckedMessages;
     }
 
     enum GroupStatus {
@@ -158,7 +223,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                     throw new IllegalStateException(String.format("Tried to free group %s: %s", gId, tracker));
                 }
                 var messages = tracker.messages;
-                if (!messages.isEmpty() && messages.getFirst().remaining() == 0) {
+                while (!messages.isEmpty() && messages.getFirst().remaining() == 0) {
                     messages.removeFirst();
                 }
                 if (!messages.isEmpty()) {
@@ -169,10 +234,14 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                     return null;
                 }
             });
-            totalInFlightMessages.decrementAndGet();
+            totalUnAckedMessages.decrementAndGet();
             if (isRemaining.isTrue()) {
                 freeGroups.addFirst(groupId);
+                tryCompletePendingRequest();
             }
         }
+    }
+
+    record NextMsgsRequest(CompletableFuture<Integer> result, MessageTracker[] messages) {
     }
 }
