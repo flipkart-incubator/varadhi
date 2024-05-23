@@ -59,8 +59,6 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
      */
     private final AtomicReference<NextMsgsRequest> pendingRequest = new AtomicReference<>();
 
-    private final AtomicBoolean pendingRequestWaitingOnFreeGroups = new AtomicBoolean(false);
-
     /**
      * Attempt to fill the message array with one message from each group.
      * Subsequent messages from a group are not fetched until the previous message is consumed.
@@ -81,7 +79,6 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
             throw new IllegalStateException(
                     "nextMessages method is not supposed to be called concurrently. There seems to be a pending nextMessage call");
         }
-        pendingRequestWaitingOnFreeGroups.set(true);
 
         // incomplete result is saved. trigger new message fetch.
         optionallyFetchNewMessages();
@@ -95,9 +92,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     }
 
     private void tryCompletePendingRequest() {
-        if (pendingRequestWaitingOnFreeGroups.compareAndSet(true, false)) {
-            // ohh, a free group was there and I am able to grab the request for completion.
-            NextMsgsRequest request = pendingRequest.getAndSet(null);
+        NextMsgsRequest request;
+        if ((request = pendingRequest.getAndSet(null)) != null) {
             request.result.complete(nextMessagesInternal(request.messages));
         }
     }
