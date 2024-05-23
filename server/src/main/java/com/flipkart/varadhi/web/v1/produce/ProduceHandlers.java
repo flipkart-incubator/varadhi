@@ -153,6 +153,6 @@ public class ProduceHandlers implements RouteProvider {
         requestHeaders.put(PRODUCE_IDENTITY, produceIdentity);
         requestHeaders.put(PRODUCE_REGION, produceRegion);
         MessageHelper.ensureRequiredHeaders(requestHeaders);
-        return new Message(payload, requestHeaders);
+        return new ProducerMessage(payload, requestHeaders);
     }
 }
