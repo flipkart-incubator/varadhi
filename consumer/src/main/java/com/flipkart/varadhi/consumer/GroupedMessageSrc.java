@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
@@ -26,8 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 @Slf4j
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
-
-    private final Context context;
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
 
     // I need a concurrent queue but with the future based api.
@@ -103,10 +100,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
             // there is more room for new messages. We can initiate a new fetch request, as none is ongoing.
             consumer.receiveAsync().whenComplete((polledMessages, ex) -> {
                 if (ex != null) {
-                    context.getExecutor().execute(() -> {
-                        replenishAvailableGroups(polledMessages);
-                        pendingAsyncFetch.set(false);
-                    });
+                    replenishAvailableGroups(polledMessages);
+                    pendingAsyncFetch.set(false);
                 } else {
                     log.error("Error while fetching messages from consumer", ex);
                     throw new IllegalStateException(
@@ -160,9 +155,9 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
             totalUnAckedMessages.addAndGet(newBatch.count());
             if (isNewGroup.isTrue()) {
                 freeGroups.add(group.getKey());
-                tryCompletePendingRequest();
             }
         }
+        tryCompletePendingRequest();
     }
 
     private Map<String, List<MessageTracker>> groupMessagesByGroupId(PolledMessages<O> polledMessages) {
