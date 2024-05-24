@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 @Slf4j
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
+
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
 
-    // I need a concurrent queue but with the future based api.
     private final ConcurrentLinkedDeque<String> freeGroups = new ConcurrentLinkedDeque<>();
 
     private final Consumer<O> consumer;
