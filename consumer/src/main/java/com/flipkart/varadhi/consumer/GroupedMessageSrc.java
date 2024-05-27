@@ -47,10 +47,10 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
      */
     @Override
     public CompletableFuture<Integer> nextMessages(MessageTracker[] messages) {
-        if (hasMaxInFlightMessages()) {
+        if (!hasMaxInFlightMessages()) {
             return replenishAvailableGroups().thenApply(v -> nextMessagesInternal(messages));
         }
-        return CompletableFuture.supplyAsync(() -> nextMessagesInternal(messages));
+        return CompletableFuture.completedFuture(nextMessagesInternal(messages));
     }
 
     private int nextMessagesInternal(MessageTracker[] messages) {

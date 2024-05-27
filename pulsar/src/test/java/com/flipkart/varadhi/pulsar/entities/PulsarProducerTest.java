@@ -3,6 +3,7 @@ package com.flipkart.varadhi.pulsar.entities;
 import com.flipkart.varadhi.entities.CapacityPolicy;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducer;
 import com.google.common.collect.ArrayListMultimap;
@@ -115,7 +116,7 @@ public class PulsarProducerTest {
 
     Message getMessage(String payload) {
         ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
-        return new Message(payload.getBytes(), requestHeaders);
+        return new ProducerMessage(payload.getBytes(), requestHeaders);
     }
 
     @Test

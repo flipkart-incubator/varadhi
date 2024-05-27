@@ -1,43 +1,22 @@
 package com.flipkart.varadhi.entities;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import lombok.Getter;
 
 import java.util.List;
 
-@Getter
-public class Message {
+public interface Message {
 
-    private final byte[] payload;
-    private final ArrayListMultimap<String, String> requestHeaders;
+    String getMessageId();
 
-    public Message(
-            byte[] payload,
-            Multimap<String, String> requestHeaders
-    ) {
-        this.payload = payload;
-        this.requestHeaders = ArrayListMultimap.create(requestHeaders);
-    }
+    String getGroupId();
 
-    // TODO:: This will affect json, verify it.
-    public String getMessageId() {
-        return getHeader(StandardHeaders.MESSAGE_ID);
-    }
+    boolean hasHeader(String key);
 
-    public String getGroupId() {
-        return getHeader(StandardHeaders.GROUP_ID);
-    }
+    String getHeader(String key);
 
-    public boolean hasHeader(String key) {
-        return requestHeaders.containsKey(key);
-    }
+    List<String> getHeaders(String key);
 
-    public String getHeader(String key) {
-        return requestHeaders.get(key).get(0);
-    }
+    byte[] getPayload();
 
-    public List<String> getHeaders(String key) {
-        return (requestHeaders).get(key);
-    }
+    Multimap<String, String> getRequestHeaders();
 }

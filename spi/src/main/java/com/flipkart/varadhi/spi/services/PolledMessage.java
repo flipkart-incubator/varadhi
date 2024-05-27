@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.spi.services;
 
+import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 
 /**
@@ -7,7 +8,7 @@ import com.flipkart.varadhi.entities.Offset;
  */
 // TODO: Keeping payload as byte[] only for now. When implementing, there will be opportunity to evaluate how to avoid
 // unnecessary deserialization / array copy & then we can tweak this interface.
-public interface PolledMessage<O extends Offset> {
+public interface PolledMessage<O extends Offset> extends Message {
 
     String getTopicName();
 
@@ -28,7 +29,6 @@ public interface PolledMessage<O extends Offset> {
     byte[] getPayload();
 
     // TODO: evaluate method for message properties that live outside of payload.
-
 
     /**
      * releases any resources that may be associated to it. Accessing message object once released is undefined.

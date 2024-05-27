@@ -13,7 +13,6 @@ import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.jmx.JmxMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 

@@ -83,7 +83,7 @@ class SlidingWindowThrottlerTest {
             expectedCompleted += (qps / 2);
             assertions.accept(expectedCompleted);
 
-            ticker.advance(1, TimeUnit.SECONDS);
+            ticker.advance(1010, TimeUnit.MILLISECONDS);
             expectedCompleted += qps;
             assertions.accept(expectedCompleted);
         }

@@ -10,7 +10,6 @@ import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.routes.TelemetryType;
-import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;

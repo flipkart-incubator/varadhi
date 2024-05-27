@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
+import com.google.common.collect.Multimap;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
@@ -84,8 +85,38 @@ public class DummyConsumer implements Consumer<DummyOffset> {
                             }
 
                             @Override
+                            public String getMessageId() {
+                                return null;
+                            }
+
+                            @Override
+                            public String getGroupId() {
+                                return null;
+                            }
+
+                            @Override
+                            public boolean hasHeader(String key) {
+                                return false;
+                            }
+
+                            @Override
+                            public String getHeader(String key) {
+                                return null;
+                            }
+
+                            @Override
+                            public List<String> getHeaders(String key) {
+                                return null;
+                            }
+
+                            @Override
                             public byte[] getPayload() {
                                 return message.getBytes(StandardCharsets.UTF_8);
+                            }
+
+                            @Override
+                            public Multimap<String, String> getRequestHeaders() {
+                                return null;
                             }
 
                             @Override
