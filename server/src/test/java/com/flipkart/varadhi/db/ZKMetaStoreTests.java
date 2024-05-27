@@ -28,11 +28,11 @@ import static org.mockito.Mockito.*;
 public class ZKMetaStoreTests {
 
     CuratorFramework zkCuratorFramework;
+    TestData data1;
+    ZNode zn;
     private TestingServer zkCuratorTestingServer;
     private ZKMetaStore zkMetaStore;
     private ZNodeKind testKind;
-    TestData data1;
-    ZNode zn;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -87,6 +87,16 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any());
         MetaStoreException e = Assertions.assertThrows(MetaStoreException.class, () -> zkMetaStore.createZNode(zn));
         Assertions.assertEquals(String.format("Failed to create path %s.", zn.getPath()), e.getMessage());
+    }
+
+    @Test
+    public void testCreateWhenAlreadyExists() throws Exception {
+        zkMetaStore.createZNode(zn);
+        CreateBuilder builder = spy(zkCuratorFramework.create());
+        doReturn(builder).when(zkCuratorFramework).create();
+        zkMetaStore.createZNode(zn);
+        verify(builder, never()).forPath(zn.getPath());
+        zkMetaStore.deleteZNode(zn);
     }
 
     @Test

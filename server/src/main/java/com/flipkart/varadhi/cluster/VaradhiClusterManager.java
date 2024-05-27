@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.cluster;
 
-import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 

@@ -7,10 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.varadhi.exceptions.VaradhiException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class JsonMapper {
+    @Getter
     private static final ObjectMapper mapper = new ObjectMapper();
 
     static {
@@ -19,14 +21,10 @@ public class JsonMapper {
         // 2. Possibly security information identifiable with parameter names. (this should not be concern
         // in case of Varadhi)
         // Benefit of ParameterNamesModule
-        // avoid annotation cluster for jackson serialisation, i.e. (de)serialization works by default w/o annotation.
+        // avoid annotation cluster for jackson serialization, i.e. (de)serialization works by default w/o annotation.
         mapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    }
-
-    public static ObjectMapper getMapper() {
-        return mapper;
     }
 
     public static <T> String jsonSerialize(T entity) {

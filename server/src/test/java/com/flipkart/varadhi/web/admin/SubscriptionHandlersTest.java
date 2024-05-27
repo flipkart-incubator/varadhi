@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
+import com.flipkart.varadhi.core.TopicService;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -26,8 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class SubscriptionHandlersTest extends WebTestBase {
-    private final Project project = new Project("project1", 0, "", "team1", "org1");
-    private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
     private static final Endpoint endpoint;
     private static final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
@@ -35,7 +35,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
             1, 1, 1, 1
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-    private static final SubscriptionShards shards = new UnitSubscriptionShard(0, null, null);
+    private static final CapacityPolicy capacityPolicy = new CapacityPolicy(1, 10);
+    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null);
 
     static {
         try {
@@ -44,9 +45,13 @@ public class SubscriptionHandlersTest extends WebTestBase {
             throw new RuntimeException(e);
         }
     }
+
+    private final Project project = new Project("project1", 0, "", "team1", "org1");
+    private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
     ProjectService projectService;
+    TopicService<VaradhiTopic> topicService;
 
     public static VaradhiSubscription getVaradhiSubscription(
             String subscriptionName, Project project, VaradhiTopic topic
@@ -87,7 +92,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
         super.setUp();
         subscriptionService = mock(SubscriptionService.class);
         projectService = mock(ProjectService.class);
-        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService);
+        topicService = mock(VaradhiTopicService.class);
+        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService, topicService);
 
         Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
                     subscriptionHandlers.setSubscription(ctx);
@@ -126,8 +132,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
     void testSubscriptionCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic);
         when(subscriptionService.createSubscription(any())).thenReturn(subscription);
         SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
         assertEquals(
@@ -197,8 +205,10 @@ public class SubscriptionHandlersTest extends WebTestBase {
     void testSubscriptionUpdate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, vTopic);
         ArgumentCaptor<VaradhiSubscription> captor = ArgumentCaptor.forClass(VaradhiSubscription.class);
         when(subscriptionService.updateSubscription(captor.capture())).thenReturn(subscription);
 

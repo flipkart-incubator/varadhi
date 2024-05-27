@@ -10,6 +10,10 @@ public class ZNode {
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
     public static final ZNodeKind IAM_POLICY = new ZNodeKind("IamPolicy");
     public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription");
+    public static final ZNodeKind SUB_OP = new ZNodeKind("SubOperation");
+    public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment");
+    //TODO:: hierarchical or flat ?
+    public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation");
     public static final String BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";
@@ -18,6 +22,7 @@ public class ZNode {
     private final String kind;
     private final String name;
 
+    //TODO:: This class can be simplified using Builder pattern.
     private ZNode(ZNodeKind znodeKind) {
         this.name = znodeKind.getKind();
         this.kind = znodeKind.getKind();
@@ -63,6 +68,18 @@ public class ZNode {
 
     public static ZNode ofSubscription(String subscriptionName) {
         return new ZNode(SUBSCRIPTION, subscriptionName);
+    }
+
+    public static ZNode OfSubOperation(String operationId) {
+        return new ZNode(SUB_OP, operationId);
+    }
+
+    public static ZNode OfShardOperation(String operationId) {
+        return new ZNode(SHARD_OP, operationId);
+    }
+
+    public static ZNode OfAssignment(String assignment) {
+        return new ZNode(ASSIGNMENT, assignment);
     }
 
     public static ZNode OfKind(ZNodeKind zNodeKind, String name) {

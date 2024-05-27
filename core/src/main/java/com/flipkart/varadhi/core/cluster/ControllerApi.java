@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.core.cluster;
 
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+
 import java.util.concurrent.CompletableFuture;
 
 
@@ -10,6 +13,10 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface ControllerApi {
     String ROUTE_CONTROLLER = "controller";
+
     CompletableFuture<Void> startSubscription(SubscriptionOperation.StartData operation);
+
     CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation);
+
+    CompletableFuture<Void> update(ShardOperation.OpData operation);
 }

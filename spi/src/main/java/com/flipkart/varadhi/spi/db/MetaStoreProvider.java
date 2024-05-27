@@ -4,4 +4,9 @@ public interface MetaStoreProvider {
     void init(MetaStoreOptions MetaStoreOptions);
 
     MetaStore getMetaStore();
+
+    OpStore getOpStore();
+
+    AssignmentStore getAssignmentStore();
+
 }

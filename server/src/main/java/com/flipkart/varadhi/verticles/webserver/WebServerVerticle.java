@@ -5,7 +5,8 @@ import com.flipkart.varadhi.WebServerApiManager;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.verticles.controller.ControllerApiProxy;
+import com.flipkart.varadhi.core.cluster.OperationMgr;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
@@ -49,6 +50,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
+    private final OperationMgr operationMgr;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private OrgService orgService;
@@ -58,17 +60,20 @@ public class WebServerVerticle extends AbstractVerticle {
     private SubscriptionService subscriptionService;
     private HttpServer httpServer;
 
-    public WebServerVerticle(AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager) {
+    public WebServerVerticle(
+            AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
+    ) {
         this.deployedRegion = configuration.getRestOptions().getDeployedRegion();
         this.configuration = configuration;
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
+        this.operationMgr = new OperationMgr(services.getMetaStoreProvider().getOpStore());
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
     }
 
-    public  static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
+    public static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
         // no try/catch around apiEndHandler.handle as executeBlocking does the same and fails the future.
         return ctx -> {
             Future<Void> future = vertx.executeBlocking(() -> {
@@ -112,21 +117,21 @@ public class WebServerVerticle extends AbstractVerticle {
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
-        ControllerApi controllerApiProxy = new ControllerApiProxy(clusterManager.getExchange(vertx));
-        subscriptionService = new SubscriptionService(metaStore, controllerApiProxy);
+        ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
+        subscriptionService = new SubscriptionService(controllerApiProxy, operationMgr, metaStore);
     }
 
     private void performValidations() {
         if (configuration.getFeatureFlags().isLeanDeployment()) {
             // Its sync execution for time being, can be changed to Async.
-            LeanDeploymentValidator validator =  new LeanDeploymentValidator(orgService, teamService, projectService);
+            LeanDeploymentValidator validator = new LeanDeploymentValidator(orgService, teamService, projectService);
             validator.validate(configuration.getRestOptions());
         }
     }
 
     private void setupClusterApiRoutes() {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
-        WebServerApiHandler handler = new WebServerApiHandler(new WebServerApiManager());
+        WebServerApiHandler handler = new WebServerApiHandler(new WebServerApiManager(operationMgr));
         messageRouter.sendHandler(ROUTE_WEBSERVER, "update", handler::update);
     }
 
@@ -190,7 +195,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
         routes.addAll(getManagementEntitiesApiRoutes());
         routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
-        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService).get());
+        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
     }

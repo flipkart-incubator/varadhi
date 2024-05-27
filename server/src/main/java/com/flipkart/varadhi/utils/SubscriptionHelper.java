@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.entities.UnitSubscriptionShard;
-import com.flipkart.varadhi.entities.SubscriptionResource;
-import com.flipkart.varadhi.entities.SubscriptionShards;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.*;
 import io.vertx.ext.web.RoutingContext;
 
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -15,9 +12,9 @@ public final class SubscriptionHelper {
     private SubscriptionHelper() {
     }
 
-    private static final SubscriptionShards dummyShards = new UnitSubscriptionShard(0, null, null);
-
-    public static VaradhiSubscription fromResource(SubscriptionResource subscriptionResource, int version) {
+    public static VaradhiSubscription fromResource(
+            SubscriptionResource subscriptionResource, VaradhiTopic topic, int version
+    ) {
         return new VaradhiSubscription(
                 buildSubscriptionName(subscriptionResource.getProject(), subscriptionResource.getName()),
                 version,
@@ -28,7 +25,7 @@ public final class SubscriptionHelper {
                 subscriptionResource.getEndpoint(),
                 subscriptionResource.getRetryPolicy(),
                 subscriptionResource.getConsumptionPolicy(),
-                dummyShards // fixme: this is a hack to make the flow work
+                getSubscriptionShards(topic) // fixme: this is a hack to make the flow work
         );
     }
 
@@ -67,5 +64,9 @@ public final class SubscriptionHelper {
 
     public static String buildTopicName(String projectName, String topicName) {
         return String.join(NAME_SEPARATOR, projectName, topicName);
+    }
+
+    public static SubscriptionShards getSubscriptionShards(VaradhiTopic topic) {
+        return new SubscriptionUnitShard(0, topic.getCapacityPolicy(), null, null);
     }
 }

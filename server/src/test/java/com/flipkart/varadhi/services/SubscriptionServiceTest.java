@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.core.cluster.OperationMgr;
+import com.flipkart.varadhi.db.OpStoreImpl;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -46,6 +48,7 @@ class SubscriptionServiceTest {
                 zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
+        OperationMgr operationMgr = new OperationMgr(new OpStoreImpl(zkCurator));
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
@@ -67,7 +70,7 @@ class SubscriptionServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
 
-        subscriptionService = new SubscriptionService(varadhiMetaStore, null);
+        subscriptionService = new SubscriptionService(null, operationMgr, varadhiMetaStore);
     }
 
     @Test

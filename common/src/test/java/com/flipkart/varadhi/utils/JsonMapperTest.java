@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -34,7 +35,6 @@ public class JsonMapperTest {
         assertNotNull(deserialized);
         assertEquals(car.getManufacturer(), deserialized.getManufacturer());
     }
-
     @Test
     public void testJsonDeserialize_InvalidPolymorphicData() {
         String invalidJson = "{\"manufacturer\":\"Honda\",\"@vehicleType\":\"InvalidType\"}";
@@ -84,4 +84,4 @@ public class JsonMapperTest {
 
         }
     }
-}
+ }

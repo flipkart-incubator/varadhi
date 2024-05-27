@@ -8,11 +8,16 @@ import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.transaction.CuratorOp;
+import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Op;
+import org.apache.zookeeper.OpResult;
 import org.apache.zookeeper.data.Stat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -34,9 +39,11 @@ class ZKMetaStore {
 
     void createZNode(ZNode znode) {
         try {
-            String response = zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
-                    .forPath(znode.getPath());
-            log.debug("Created zk path {} in ZK: {}", znode, response);
+            if (!zkPathExist(znode)) {
+                String response = zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
+                        .forPath(znode.getPath());
+                log.debug("Created zk path {} in ZK: {}", znode, response);
+            }
         } catch (Exception e) {
             throw new MetaStoreException(String.format("Failed to create path %s.", znode.getPath()), e);
         }
@@ -145,6 +152,52 @@ class ZKMetaStore {
                     String.format("Failed to list children for entity type %s at path %s.", znode.getName(),
                             znode.getPath()
                     ), e);
+        }
+    }
+
+    public void executeInTransaction(List<ZNode> toAdd, List<ZNode> toDelete) {
+        List<CuratorOp> ops = new ArrayList<>();
+        toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
+        toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
+        try {
+            List<CuratorTransactionResult> results = zkCurator.transaction().forOperations(ops);
+            //TODO::understand the partial failure scenario (if possible) ?
+            results.forEach(r -> {
+                if (r.getError() != 0) {
+                    log.error(
+                            "Operation({}, {}) failed: code-{},{}", r.getType(), r.getForPath(), r.getError(),
+                            r.getResultPath()
+                    );
+                }
+            });
+        } catch (KeeperException e) {
+            e.getResults().forEach(r -> {
+                Op op = ops.get(e.getResults().indexOf(r)).get();
+                if (r instanceof OpResult.ErrorResult er) {
+                    log.error("Operation({}, {}, {}) failed: {}.", op.getKind(), op.getType(), op.getPath(), er.getErr());
+                }
+            });
+            throw  new MetaStoreException(String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to execute batch operation.", e);
+        }
+    }
+
+    private CuratorOp addCreateZNodeOp(ZNode zNode) {
+        try {
+            return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(zNode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException(
+                    String.format("Failed to create Create Operation for path %s.", zNode.getPath()), e);
+        }
+    }
+
+    private CuratorOp addDeleteZNodeOp(ZNode zNode) {
+        try {
+            return zkCurator.transactionOp().delete().forPath(zNode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException(
+                    String.format("Failed to create Delete operation for path %s.", zNode.getPath()), e);
         }
     }
 }

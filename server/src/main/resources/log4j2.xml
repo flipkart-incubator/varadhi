@@ -15,7 +15,7 @@ TODO:: This is not being auto picked. Needs to be fixed.
   </Appenders>
   <Loggers>
     <!-- Root logger referring to console appender -->
-    <Root level="info" additivity="false">
+    <Root level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Root>
   </Loggers>

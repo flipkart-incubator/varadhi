@@ -17,6 +17,7 @@ public class LeanDeploymentValidator {
     private final OrgService orgService;
     private final TeamService teamService;
     private final ProjectService projectService;
+
     public LeanDeploymentValidator(OrgService orgService, TeamService teamService, ProjectService projectService) {
         this.orgService = orgService;
         this.teamService = teamService;
@@ -27,6 +28,7 @@ public class LeanDeploymentValidator {
     public void validate(RestOptions restOptions) {
         ensureLeanDeploymentConstraints(restOptions);
     }
+
     private void ensureLeanDeploymentConstraints(RestOptions restOptions) {
         String defaultOrg = restOptions.getDefaultOrg();
         String defaultTeam = restOptions.getDefaultTeam();

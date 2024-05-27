@@ -1,7 +1,7 @@
 member:
   roles : ["Server"]
   cpuCount: 1
-  nicMBps: 100
+  networkMBps: 100
 
 deliveryOptions:
   timeoutMs: 1200

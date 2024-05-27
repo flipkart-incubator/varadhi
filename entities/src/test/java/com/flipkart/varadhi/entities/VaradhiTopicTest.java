@@ -1,10 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-/**
- * @author kaur.prabhpreet
- * On 22/12/23
- */
-
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 

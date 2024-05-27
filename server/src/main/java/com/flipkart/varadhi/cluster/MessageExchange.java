@@ -12,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * This is a subset of similar methods from vertx.EventBus for messages exchange between nodes.
- *
  * Supported methods are
  * send(): dispatch message to one of handler registered at <routeName>.<apiName>.send, delivery can be tracked using the future.
  * request(): dispatch message to one of handler registered at <routeName>.<apiName>.request and wait for a response.
@@ -30,16 +29,16 @@ public class MessageExchange {
 
     public CompletableFuture<Void> send(String routeName, String apiName, ClusterMessage msg) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        vertxEventBus.request(
-                getPath(routeName, apiName, RouteMethod.SEND), JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
-                    if (ar.succeeded()) {
-                        log.debug("send({}) delivered. {} ", msg.getId(), ar.result().body());
-                        future.complete(null);
-                    } else {
-                        log.error("send failure: " + ar.cause().getMessage());
-                        future.completeExceptionally(ar.cause());
-                    }
-                });
+        String apiPath = getPath(routeName, apiName, RouteMethod.SEND);
+        vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
+            if (ar.succeeded()) {
+                log.debug("send({}, {}) delivered successfully.", apiPath, msg.getId());
+                future.complete(null);
+            } else {
+                log.error("send({}, {}) failed: {}.", apiPath, msg.getId(), ar.cause().getMessage());
+                future.completeExceptionally(ar.cause());
+            }
+        });
         return future;
     }
 
@@ -48,7 +47,18 @@ public class MessageExchange {
     }
 
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
-        throw new NotImplementedException("request not implemented");
+        CompletableFuture<ResponseMessage> future = new CompletableFuture<>();
+        String apiPath = getPath(routeName, apiName, RouteMethod.REQUEST);
+        vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
+            if (ar.succeeded()) {
+                log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
+                future.complete(JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class));
+            } else {
+                log.error("request({}, {}) failure: {}.", apiPath, msg.getId(), ar.cause().getMessage());
+                future.completeExceptionally(ar.cause());
+            }
+        });
+        return future;
     }
 
     private String getPath(String routeName, String apiName, RouteMethod method) {
