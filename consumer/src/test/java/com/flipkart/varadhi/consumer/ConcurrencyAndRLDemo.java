@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
-import com.codahale.metrics.*;
 import com.codahale.metrics.Timer;
+import com.codahale.metrics.*;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.concurrent.CustomThread;
 import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
@@ -103,9 +103,16 @@ public class ConcurrencyAndRLDemo {
                 Meter loadGenMeter =
                         registry.register("load.gen.rate", new Meter());
                 Meter errorExpMeter = registry.register("task.error.experienced.rate", new Meter());
-                Timer completionLatency = registry.register("task.completion.latency", new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS)));
-                Timer throttlerAcquireLatency = registry.register("throttler.acquire.latency", new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS)));
-                Gauge<Float> errorThresholdGuage = registry.registerGauge("error.threshold.value", dynamicThreshold::getThreshold);
+                Timer completionLatency = registry.register(
+                        "task.completion.latency",
+                        new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
+                );
+                Timer throttlerAcquireLatency = registry.register(
+                        "throttler.acquire.latency",
+                        new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
+                );
+                Gauge<Float> errorThresholdGuage =
+                        registry.registerGauge("error.threshold.value", dynamicThreshold::getThreshold);
                 if (metricListener != null) {
                     websocketScheduler.scheduleAtFixedRate(() -> {
                         Map<String, Double> datapoints = new HashMap<>();
@@ -113,7 +120,7 @@ public class ConcurrencyAndRLDemo {
                         datapoints.put("task.completion.rate", completionLatency.getOneMinuteRate());
                         datapoints.put("error.threshold.value", (double) errorThresholdGuage.getValue());
                         metricListener.accept(datapoints);
-                    }, 1_000,2_000, TimeUnit.MILLISECONDS);
+                    }, 1_000, 2_000, TimeUnit.MILLISECONDS);
                 }
                 reporter.start(2, TimeUnit.SECONDS);
                 AtomicInteger throttlePending = new AtomicInteger(0);
