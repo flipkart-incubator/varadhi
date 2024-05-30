@@ -26,9 +26,16 @@ public class AssignmentStoreImpl implements AssignmentStore {
 
     @Override
     public void createAssignments(List<Assignment> assignments) {
-        List<ZNode> zNodes = new ArrayList<>();
-        assignments.forEach(a -> zNodes.add(ZNode.OfAssignment(getAssignmentMapping(a))));
-        zkMetaStore.executeInTransaction(zNodes, new ArrayList<>());
+        List<ZNode> nodesToCreate = new ArrayList<>();
+        assignments.forEach(a -> nodesToCreate.add(ZNode.OfAssignment(getAssignmentMapping(a))));
+        zkMetaStore.executeInTransaction(nodesToCreate, new ArrayList<>());
+    }
+
+    @Override
+    public void deleteAssignments(List<Assignment> assignments) {
+        List<ZNode> nodesToDelete = new ArrayList<>();
+        assignments.forEach(a -> nodesToDelete.add(ZNode.OfAssignment(getAssignmentMapping(a))));
+        zkMetaStore.executeInTransaction( new ArrayList<>(), nodesToDelete);
     }
 
     @Override
@@ -43,6 +50,7 @@ public class AssignmentStoreImpl implements AssignmentStore {
 
 
     private List<Assignment> getAssignments(Pattern pattern) {
+        List<String> as = zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT));
         return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT)).stream()
                 .filter(m -> pattern.matcher(m).matches()).map(this::getAssignment).collect(Collectors.toList());
     }

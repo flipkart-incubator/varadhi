@@ -2,8 +2,10 @@ package com.flipkart.varadhi.cluster;
 
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 
-public interface MembershipListener {
-    void joined(MemberInfo memberInfo);
+import java.util.concurrent.CompletableFuture;
 
-    void left(String id);
+public interface MembershipListener {
+    CompletableFuture<Void> joined(MemberInfo memberInfo);
+
+    CompletableFuture<Void> left(String id);
 }

@@ -56,7 +56,8 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
         getNodes().forEach(
                 nodeId -> allFutures.add(Failsafe.with(NodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
-                        .thenApply(nodeInfo -> JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(),
+                        .thenApply(nodeInfo -> JsonMapper.jsonDeserialize(
+                                nodeInfo.metadata().toString(),
                                 MemberInfo.class
                         ))
                         .whenComplete((nodeInfo, throwable) -> {
@@ -65,7 +66,6 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                             }
                         })
                 ));
-
         return Future.fromCompletionStage(CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> allFutures.stream().map(CompletableFuture::join).collect(Collectors.toList())));
     }
@@ -75,15 +75,25 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
         nodeListener(new NodeListener() {
             @Override
             public void nodeAdded(String nodeId) {
+                log.debug("Node {} joined.", nodeId);
                 Failsafe.with(NodeInfoRetryPolicy).getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
                                 // ignore the failure for now. Listener will not be notified of the change.
                                 log.error("Failed to get nodeInfo for member: {}.", nodeId, throwable);
                             } else {
-                                log.debug("Member {} joined from {}:{}.", nodeId, nodeInfo.host(), nodeInfo.port());
-                                MemberInfo memberInfo = nodeInfo.metadata().mapTo(MemberInfo.class);
-                                listener.joined(memberInfo);
+                                try {
+                                    log.debug("Member {} joined from {}:{}.", nodeId, nodeInfo.host(), nodeInfo.port());
+                                    MemberInfo memberInfo = nodeInfo.metadata().mapTo(MemberInfo.class);
+                                    listener.joined(memberInfo)
+                                            .exceptionally(t -> {
+                                                log.error("MembershipListener.joined({}) failed, {}.", nodeId, t.getMessage());
+                                                return null;
+                                            });
+                                } catch (Exception e) {
+                                    log.error("MembershipListener.joined({}) failed, {}.", nodeId, e.getMessage());
+                                    throw e;
+                                }
                             }
                         });
             }
@@ -91,7 +101,15 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
             @Override
             public void nodeLeft(String nodeId) {
                 log.debug("Node {} left.", nodeId);
-                listener.left(nodeId);
+                try {
+                    listener.left(nodeId).exceptionally(t -> {
+                        log.error("MembershipListener.left({}) failed, {}.", nodeId, t.getMessage());
+                        return null;
+                    });
+                }catch (Exception e) {
+                    log.error("MembershipListener.left({}) failed, {}.", nodeId, e.getMessage());
+                    throw e;
+                }
             }
         });
     }

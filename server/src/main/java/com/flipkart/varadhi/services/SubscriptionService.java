@@ -2,27 +2,27 @@ package com.flipkart.varadhi.services;
 
 
 import com.flipkart.varadhi.core.cluster.ControllerApi;
-import com.flipkart.varadhi.core.cluster.OperationMgr;
-import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
+@Slf4j
 public class SubscriptionService {
     private final MetaStore metaStore;
     private final ControllerApi controllerApi;
-    private final OperationMgr operationMgr;
 
-    public SubscriptionService(ControllerApi controllerApi, OperationMgr operationMgr, MetaStore metaStore) {
+    public SubscriptionService(ControllerApi controllerApi, MetaStore metaStore) {
         this.metaStore = metaStore;
         this.controllerApi = controllerApi;
-        this.operationMgr = operationMgr;
     }
 
     public List<String> getSubscriptionList(String projectName) {
@@ -40,14 +40,12 @@ public class SubscriptionService {
         return subscription;
     }
 
-    public void start(String subscriptionName, String requestedBy) {
-        SubscriptionOperation op = operationMgr.requestSubStart(subscriptionName, requestedBy);
-        controllerApi.startSubscription((SubscriptionOperation.StartData) op.getData());
+    public CompletableFuture<SubscriptionOperation> start(String subscriptionName, String requestedBy) {
+        return controllerApi.startSubscription(subscriptionName, requestedBy);
     }
 
-    public void stop(String subscriptionName, String requestedBy) {
-        SubscriptionOperation op = operationMgr.requestSubStop(subscriptionName, requestedBy);
-        controllerApi.stopSubscription((SubscriptionOperation.StopData) op.getData());
+    public CompletableFuture<SubscriptionOperation> stop(String subscriptionName, String requestedBy) {
+        return controllerApi.stopSubscription(subscriptionName, requestedBy);
     }
 
     private void validateCreation(VaradhiSubscription subscription) {

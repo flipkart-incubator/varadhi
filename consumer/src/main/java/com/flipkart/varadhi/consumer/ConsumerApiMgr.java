@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardState;
@@ -33,7 +34,22 @@ public class ConsumerApiMgr implements ConsumerApi {
     }
 
     @Override
-    public CompletableFuture<ShardStatus> getStatus(String subscriptionId, int shardId) {
+    public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
+        VaradhiSubscription subscription = operation.getSubscription();
+        return consumersManager.stopSubscription(
+                subscription.getName(),
+                ""
+        );
+    }
+
+    @Override
+    public CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId) {
         return CompletableFuture.completedFuture(new ShardStatus(ShardState.UNKNOWN, "Not a owner of shard"));
+    }
+
+    @Override
+    public CompletableFuture<ConsumerInfo> getConsumerInfo() {
+        //TODO::Return assignments as well.
+        return CompletableFuture.completedFuture(consumersManager.getInfo());
     }
 }

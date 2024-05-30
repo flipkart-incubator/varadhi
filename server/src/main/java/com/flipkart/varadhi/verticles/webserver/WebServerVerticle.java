@@ -1,11 +1,8 @@
 package com.flipkart.varadhi.verticles.webserver;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.WebServerApiManager;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
-import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.cluster.OperationMgr;
 import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
@@ -38,7 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
-import static com.flipkart.varadhi.core.cluster.WebServerApi.ROUTE_WEBSERVER;
 
 @Slf4j
 @ExtensionMethod({Extensions.RoutingContextExtension.class})
@@ -50,7 +46,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
-    private final OperationMgr operationMgr;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private OrgService orgService;
@@ -68,7 +63,6 @@ public class WebServerVerticle extends AbstractVerticle {
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
-        this.operationMgr = new OperationMgr(services.getMetaStoreProvider().getOpStore());
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
     }
@@ -97,7 +91,6 @@ public class WebServerVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         setupEntityServices();
-        setupClusterApiRoutes();
         performValidations();
         startHttpServer(startPromise);
     }
@@ -118,7 +111,7 @@ public class WebServerVerticle extends AbstractVerticle {
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
         ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
-        subscriptionService = new SubscriptionService(controllerApiProxy, operationMgr, metaStore);
+        subscriptionService = new SubscriptionService(controllerApiProxy, metaStore);
     }
 
     private void performValidations() {
@@ -127,12 +120,6 @@ public class WebServerVerticle extends AbstractVerticle {
             LeanDeploymentValidator validator = new LeanDeploymentValidator(orgService, teamService, projectService);
             validator.validate(configuration.getRestOptions());
         }
-    }
-
-    private void setupClusterApiRoutes() {
-        MessageRouter messageRouter = clusterManager.getRouter(vertx);
-        WebServerApiHandler handler = new WebServerApiHandler(new WebServerApiManager(operationMgr));
-        messageRouter.sendHandler(ROUTE_WEBSERVER, "update", handler::update);
     }
 
     private void startHttpServer(Promise<Void> startPromise) {

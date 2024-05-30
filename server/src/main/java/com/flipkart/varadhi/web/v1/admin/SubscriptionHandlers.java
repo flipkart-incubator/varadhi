@@ -136,11 +136,29 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void start(RoutingContext ctx) {
-        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
+        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault())
+                .whenComplete(
+                        (sd, error) -> {
+                            if (error != null) {
+                                ctx.endRequestWithException(error);
+                            } else {
+                                ctx.endApiWithResponse(sd);
+                            }
+                        }
+                );
     }
 
     public void stop(RoutingContext ctx) {
-        subscriptionService.stop(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault());
+        subscriptionService.stop(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault())
+                .whenComplete(
+                        (sd, error) -> {
+                            if (error != null) {
+                                ctx.endRequestWithException(error);
+                            } else {
+                                ctx.endApiWithResponse(sd);
+                            }
+                        }
+                );
     }
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {

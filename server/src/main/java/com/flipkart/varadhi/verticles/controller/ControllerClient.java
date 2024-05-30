@@ -4,6 +4,7 @@ import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 
 import java.util.concurrent.CompletableFuture;
@@ -16,15 +17,17 @@ public class ControllerClient implements ControllerApi {
     }
 
     @Override
-    public CompletableFuture<Void> startSubscription(SubscriptionOperation.StartData operation) {
-        ClusterMessage message = ClusterMessage.of(operation);
-        return exchange.send(ROUTE_CONTROLLER, "start", message);
+    public CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy) {
+        SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
+        ClusterMessage message = ClusterMessage.of(opRequest);
+        return exchange.request(ROUTE_CONTROLLER, "start", message).thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override
-    public CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation) {
-        ClusterMessage message = ClusterMessage.of(operation);
-        return exchange.send(ROUTE_CONTROLLER, "stop", message);
+    public CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy) {
+        SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
+        ClusterMessage message = ClusterMessage.of(opRequest);
+        return exchange.request(ROUTE_CONTROLLER, "stop", message).thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override

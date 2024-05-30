@@ -63,6 +63,6 @@ public class MessageRouterImplTest {
     }
 
     ClusterMessage getClusterMessage(String data) {
-        return new ClusterMessage(data);
+        return ClusterMessage.of(data);
     }
 }

@@ -31,4 +31,9 @@ public class Assignment extends MetaStoreEntity {
     private static String getShardName(String subscriptionId, int shardId) {
         return String.format("%s%s%d", subscriptionId, NAME_SEPARATOR, shardId);
     }
+
+    @Override
+    public String toString() {
+        return String.format("{ConsumerId:%s Subscription:%s Shard:%d}", consumerId, subscriptionId, shardId);
+    }
 }

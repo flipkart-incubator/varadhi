@@ -14,9 +14,9 @@ import java.util.concurrent.CompletableFuture;
 public interface ControllerApi {
     String ROUTE_CONTROLLER = "controller";
 
-    CompletableFuture<Void> startSubscription(SubscriptionOperation.StartData operation);
+    CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy);
 
-    CompletableFuture<Void> stopSubscription(SubscriptionOperation.StopData operation);
+    CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy);
 
     CompletableFuture<Void> update(ShardOperation.OpData operation);
 }

@@ -15,8 +15,7 @@ import lombok.extern.slf4j.Slf4j;
  * routeName -- name for a message route (e.g. controller, webserver, consumer-node-1).
  * apiName -- name of the method e.g. start/stop/update etc.
  * method -- either send, publish or request
- * Address at which api handler is registered would be <routeName>.<apiNamme>.<method> e.g. controller.start.send
- *
+ * Address at which api handler is registered would be <routeName>.<apiName>.<method> e.g. controller.start.send
  * publish methods are fire & forget.
  * send methods don't have any response, but their delivery can be tracked using the future.
  * request methods are for traditional request-response pattern.
@@ -39,8 +38,17 @@ public class MessageRouter {
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
             log.debug("Received msg via - send({}, {})", apiPath, msg.getId());
-            handler.handle(msg); // this is async invocation.
-            message.reply("received ok", deliveryOptions);
+            try {
+                // this is async invocation.
+                handler.handle(msg);
+            } catch (Exception e) {
+                log.error("send handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+            } finally {
+                // Send ensures only delivery and not execution.
+                // Client will not be aware of any kind of failure either in invocation or in execution of the
+                // message's send handler
+                message.reply("received ok", deliveryOptions);
+            }
         });
     }
 
@@ -51,9 +59,21 @@ public class MessageRouter {
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
             log.debug("Received msg via - request({}, {})", apiPath, msg.getId());
-            handler.handle(msg).thenAccept(response -> message.reply(JsonMapper.jsonSerialize(response),
-                    deliveryOptions
-            )); // this is async invocation.
+            try {
+                handler.handle(msg).thenAccept(response -> message.reply(
+                        JsonMapper.jsonSerialize(response),
+                        deliveryOptions
+                )).exceptionally(t -> {
+                    log.error("request handler completed exceptionally: {}", t.getMessage());
+                    ResponseMessage response = msg.getResponseMessage(t);
+                    message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
+                    return null;
+                });
+            } catch (Exception e) {
+                log.error("request handler Unhandled exception: {}", e.getMessage());
+                ResponseMessage response = msg.getResponseMessage(e);
+                message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
+            }
         });
     }
 

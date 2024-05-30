@@ -12,7 +12,7 @@ public class ClusterMessage {
     private final long timeStamp;
     private final String payload;
 
-    public ClusterMessage(String payload) {
+    ClusterMessage(String payload) {
         this.id = java.util.UUID.randomUUID().toString();
         this.timeStamp = System.currentTimeMillis();
         this.payload = payload;
@@ -39,6 +39,14 @@ public class ClusterMessage {
         return new ClusterMessage(JsonMapper.jsonSerialize(request));
     }
 
+    public static <T> ClusterMessage of (T payload) {
+        return new ClusterMessage(JsonMapper.jsonSerialize(payload));
+    }
+
+    public static ClusterMessage of() {
+        return new ClusterMessage(null);
+    }
+
     public <T> T getData(Class<T> clazz) {
         return JsonMapper.jsonDeserialize(payload, clazz);
     }
@@ -49,6 +57,10 @@ public class ClusterMessage {
     }
 
     public ResponseMessage getResponseMessage(Object payload) {
-        return ResponseMessage.of(payload, id);
+        return ResponseMessage.fromPayload(payload, id);
+    }
+
+    public ResponseMessage getResponseMessage(Exception exception) {
+        return ResponseMessage.fromException(exception, id);
     }
 }
