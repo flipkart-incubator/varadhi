@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.flipkart.varadhi.consumer.InternalQueueType;
+import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.flipkart.varadhi.consumer.Throttler;
 import com.google.common.base.Ticker;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,8 @@ import java.util.function.Supplier;
  * @param <T>
  */
 @Slf4j
-public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
+public class SlidingWindowThrottler<T>
+        implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
 
     /*
         Approach:
@@ -172,7 +173,6 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
         if (newWindowBeginTick == windowBeginTick) {
             return false;
         }
-
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
             int beginIdx = (int) (i % totalTicks);
             int endIdx = (int) ((i + ticksInWindow) % totalTicks);

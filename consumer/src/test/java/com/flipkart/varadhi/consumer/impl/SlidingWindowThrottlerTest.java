@@ -79,10 +79,14 @@ class SlidingWindowThrottlerTest {
             expectedCompleted += (qps / 2);
             assertions.accept(expectedCompleted);
 
+            // there is a gotcha here. advancing 5 more ms, will lead to tick change. so new tasks's permits will get
+            // assigned to new tick bucket.
             ticker.advance(5, TimeUnit.MILLISECONDS);
             expectedCompleted += (qps / 2);
             assertions.accept(expectedCompleted);
 
+            // now after 1 sec exact, the previous 5 tasks's permits will start getting released.
+            // so if we wait another 10 ms, all permits should be freed up.
             ticker.advance(1010, TimeUnit.MILLISECONDS);
             expectedCompleted += qps;
             assertions.accept(expectedCompleted);

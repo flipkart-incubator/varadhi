@@ -3,13 +3,13 @@ package com.flipkart.varadhi.consumer;
 import com.flipkart.varadhi.spi.services.DummyConsumer;
 import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 class UnGroupedMessageSrcTest {
@@ -152,9 +152,15 @@ class UnGroupedMessageSrcTest {
         DummyConsumer.SlowConsumer consumer = new DummyConsumer.SlowConsumer(messages, 3);
         UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(consumer);
         var f1 = messageSrc.nextMessages(messageTrackers);
-        var f2 = messageSrc.nextMessages(messageTrackers);
 
-        assertEquals(0, f2.join());
+        try {
+            assertFalse(f1.isDone());
+            var f2 = messageSrc.nextMessages(messageTrackers);
+            Assertions.fail("concurrent invocation is not expected.");
+        } catch (IllegalStateException e) {
+            // expected.
+        }
+
         assertEquals(messageTrackers.length, f1.join());
 
         // since f1 is completed now, next invocation should return remaining messages
