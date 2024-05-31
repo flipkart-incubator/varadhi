@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
@@ -18,7 +17,7 @@ public class PolledMessageTracker<O extends Offset> implements MessageTracker {
     }
 
     @Override
-    public Message getMessage() {
+    public PolledMessage<O> getMessage() {
         return message;
     }
 

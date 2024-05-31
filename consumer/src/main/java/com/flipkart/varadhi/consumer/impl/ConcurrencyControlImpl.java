@@ -7,7 +7,10 @@ import com.flipkart.varadhi.consumer.concurrent.Context;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -126,6 +129,8 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
      * Otherwise, pending tasks may sit idle forever.
      * 3. If there is no task running at the moment to schedule any pending task, then we should schedule it regardless.
      *
+     * This method can run on any arbitrary thread.
+     *
      * @param result
      * @param ex
      */
@@ -141,7 +146,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
 
         if (scheduleRequired) {
-            context.getExecutor().execute(() -> {
+            context.executeOnContext(() -> {
                 executePendingTasks();
                 schedulePendingTaskCounter.decrementAndGet();
             });

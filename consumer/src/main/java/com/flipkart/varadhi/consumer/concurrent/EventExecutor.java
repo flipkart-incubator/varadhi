@@ -30,22 +30,28 @@ public class EventExecutor implements Executor {
         return parent;
     }
 
+    CustomThread getThread() {
+        return thread;
+    }
+
     @Override
     public void execute(Runnable command) {
         // TODO: review all cases here. As of now, here we are assuming that all tasks are running from custom threads,
         //  which is most likely false.
 
-        if (command instanceof Context.Task) {
-            EventExecutor boundExecutor = ((Context.Task) command).getContext().getExecutor();
+        if (command instanceof Context.Task task) {
+
+            // TODO: maybe move this check to context.execute()
+            EventExecutor boundExecutor = task.getContext().getExecutor();
             if (boundExecutor != null && boundExecutor != this) {
                 throw new IllegalStateException(
                         "task is tied to an executor:" + boundExecutor + ", but is being executed on:" + this);
             }
-            taskQueue.add((Context.Task) command);
+            taskQueue.add(task);
             return;
         }
 
-        taskQueue.add(new WrappedTask(Context.getCurrentTheadContext(), command));
+        taskQueue.add(new WrappedTask(Context.getCurrentThreadContext(), command));
     }
 
     public void stop() {

@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.consumer.ordering;
 
+import com.flipkart.varadhi.consumer.InternalQueueType;
 import com.flipkart.varadhi.consumer.MessageTracker;
 import jakarta.annotation.Nullable;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface SubscriptionGroupsState {
     @Nullable
-    QueueGroupPointer getPointer(String groupId);
+    GroupPointer getPointer(String groupId);
 
     /**
      * fetch the pointers for the given messages and populate the pointers array accordingly.
@@ -14,5 +17,16 @@ public interface SubscriptionGroupsState {
      * @param pointers
      * @param count
      */
-    void populatePointers(MessageTracker[] messages, QueueGroupPointer[] pointers, int count);
+    void populatePointers(MessageTracker[] messages, GroupPointer[] pointers, int count);
+
+    CompletableFuture<Void> messageTransitioned(
+            String groupId,
+            InternalQueueType consumedQueue, MessagePointer consumedFrom,
+            InternalQueueType producedQueue, MessagePointer producedTo
+    );
+
+    CompletableFuture<Void> messageConsumed(
+            String groupId,
+            InternalQueueType consumedQueue, MessagePointer consumedFrom
+    );
 }

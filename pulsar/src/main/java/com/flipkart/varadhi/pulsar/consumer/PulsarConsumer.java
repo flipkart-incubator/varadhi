@@ -7,6 +7,7 @@ import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.RequiredArgsConstructor;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() throws IOException {
         pulsarConsumer.close();
     }
 }

@@ -3,14 +3,29 @@ package com.flipkart.varadhi.consumer.ordering;
 import com.flipkart.varadhi.entities.Offset;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @AllArgsConstructor
-@NoArgsConstructor
 @Data
-public class MessagePointer {
+public class MessagePointer implements Comparable<MessagePointer> {
     int mainTopicIdx;
     Offset mainTopicOffset;
-    int internalTopicIdx;
-    Offset internalTopicOffset;
+    final int internalTopicIdx;
+    final Offset internalTopicOffset;
+
+    public MessagePointer(int internalTopicIdx, Offset internalTopicOffset) {
+        this.internalTopicIdx = internalTopicIdx;
+        this.internalTopicOffset = internalTopicOffset;
+    }
+
+    @Override
+    public int compareTo(MessagePointer o) {
+        if (o == null) {
+            return 1;
+        }
+
+        if (internalTopicIdx != o.internalTopicIdx) {
+            return internalTopicIdx - o.internalTopicIdx;
+        }
+        return internalTopicOffset.compareTo(o.internalTopicOffset);
+    }
 }

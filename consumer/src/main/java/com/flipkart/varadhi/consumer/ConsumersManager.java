@@ -15,7 +15,7 @@ public interface ConsumersManager {
      * details.
      * `shardName` identifies the different shards within the subscription.
      *
-     * @return
+     * @return Future that will be completed when the consumer is started & ready to consume messages.
      */
     CompletableFuture<Void> startSubscription(
             String project,
