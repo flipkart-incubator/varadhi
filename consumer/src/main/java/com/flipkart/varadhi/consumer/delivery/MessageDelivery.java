@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer.delivery;
 
-import com.flipkart.varadhi.consumer.MessageTracker;
 import com.flipkart.varadhi.entities.Endpoint;
+import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.google.common.collect.Multimap;
 
@@ -20,8 +20,8 @@ public interface MessageDelivery {
         };
     }
 
-    CompletableFuture<DeliveryResponse> deliver(MessageTracker messageTracker)
-            throws Exception; // or should be PolledMessage?
+    CompletableFuture<DeliveryResponse> deliver(Message message)
+            throws Exception;
 
     class HttpMessageDelivery implements MessageDelivery {
         private final Endpoint.HttpEndpoint endpoint;
@@ -34,23 +34,21 @@ public interface MessageDelivery {
                     .connectTimeout(Duration.ofMillis(this.endpoint.getConnectTimeoutMs()))
                     .followRedirects(HttpClient.Redirect.NORMAL)
                     .build();
-            // TODO(aayush): SSL/TLS support? Auth support?
         }
 
         @Override
-        public CompletableFuture<DeliveryResponse> deliver(MessageTracker messageTracker) throws Exception {
-            // TODO(aayush): PolledMessage getPayload, getHeaders support required
+        public CompletableFuture<DeliveryResponse> deliver(Message message) throws Exception {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(endpoint.getUrl().toURI())
                     .timeout(Duration.ofMillis(endpoint.getRequestTimeoutMs()))
                     .header("Content-Type", endpoint.getContentType())
                     .method(
                             endpoint.getMethod(),
-                            HttpRequest.BodyPublishers.ofByteArray(messageTracker.getMessage().getPayload())
+                            HttpRequest.BodyPublishers.ofByteArray(message.getPayload())
                     );
 
             // apply request headers from message
-            Multimap<String, String> requestHeaders = messageTracker.getMessage().getRequestHeaders();
+            Multimap<String, String> requestHeaders = message.getRequestHeaders();
             if (requestHeaders != null) {
                 requestHeaders.entries().forEach(entry -> requestBuilder.header(entry.getKey(), entry.getValue()));
             }
@@ -58,7 +56,7 @@ public interface MessageDelivery {
             HttpRequest request = requestBuilder.build();
 
             return httpClient.sendAsync(
-                            request, HttpResponse.BodyHandlers.ofByteArray()) // TODO(aayush): response as string or byte array?
+                            request, HttpResponse.BodyHandlers.ofByteArray())
                     .thenApply(response -> new DeliveryResponse(response.statusCode(), endpoint.getProtocol(),
                             response.body()
                     ))
