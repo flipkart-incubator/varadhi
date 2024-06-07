@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
@@ -16,7 +17,8 @@ import java.net.URL;
 })
 public abstract sealed class Endpoint {
 
-    abstract Protocol getProtocol();
+    @JsonIgnore
+    public abstract Protocol getProtocol();
 
     public enum Protocol {
         HTTP1_1,
@@ -35,7 +37,7 @@ public abstract sealed class Endpoint {
         private final boolean http2Supported;
 
         @Override
-        Protocol getProtocol() {
+        public Protocol getProtocol() {
             return http2Supported ? Protocol.HTTP2 : Protocol.HTTP1_1;
         }
     }
