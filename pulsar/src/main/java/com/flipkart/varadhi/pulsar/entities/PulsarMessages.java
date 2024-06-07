@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
+import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.Messages;
@@ -19,6 +20,7 @@ public class PulsarMessages implements PolledMessages<PulsarOffset> {
     }
 
     @Override
+    @Nonnull
     public Iterator<PolledMessage<PulsarOffset>> iterator() {
         Iterator<Message<byte[]>> it = msgs.iterator();
         return new Iterator<>() {

@@ -1,18 +1,31 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.entities.StandardHeaders;
+import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.PolledMessage;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import lombok.RequiredArgsConstructor;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.impl.MessageIdImpl;
 
 import java.util.List;
+import java.util.Map;
 
-@RequiredArgsConstructor
 public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     private final Message<byte[]> msg;
+    private final ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
+
+    public PulsarMessage(Message<byte[]> msg) {
+        this.msg = msg;
+        populateRequestHeaders();
+    }
+
+    private void populateRequestHeaders() {
+        for (Map.Entry<String, String> entry : msg.getProperties().entrySet()) {
+            requestHeaders.putAll(entry.getKey(), PropertyHelper.decodePropertyValues(entry.getValue()));
+        }
+    }
 
     @Override
     public String getTopicName() {
@@ -31,27 +44,27 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public String getMessageId() {
-        throw new NotImplementedException("fetching message Id from pulsar message");
+        return getHeader(StandardHeaders.MESSAGE_ID);
     }
 
     @Override
     public String getGroupId() {
-        throw new NotImplementedException("fetching group id from pulsar message");
+        return getHeader(StandardHeaders.GROUP_ID);
     }
 
     @Override
     public boolean hasHeader(String key) {
-        throw new NotImplementedException("checking header from pulsar message");
+        return requestHeaders.containsKey(key);
     }
 
     @Override
     public String getHeader(String key) {
-        throw new NotImplementedException("fetching header from pulsar message");
+        return requestHeaders.get(key).get(0);
     }
 
     @Override
     public List<String> getHeaders(String key) {
-        throw new NotImplementedException("fetching headers from pulsar message");
+        return requestHeaders.get(key);
     }
 
     @Override
@@ -61,7 +74,7 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public Multimap<String, String> getRequestHeaders() {
-        throw new NotImplementedException("get all headers from pulsar message");
+        return requestHeaders;
     }
 
     @Override
