@@ -14,17 +14,25 @@ import java.util.Map;
 public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     private final Message<byte[]> msg;
-    private final ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
+    private ArrayListMultimap<String, String> requestHeaders = null;
 
     public PulsarMessage(Message<byte[]> msg) {
         this.msg = msg;
-        populateRequestHeaders();
     }
 
-    private void populateRequestHeaders() {
-        for (Map.Entry<String, String> entry : msg.getProperties().entrySet()) {
-            requestHeaders.putAll(entry.getKey(), PropertyHelper.decodePropertyValues(entry.getValue()));
+    private ArrayListMultimap<String, String> requestHeaders() {
+        if (requestHeaders == null) {
+            requestHeaders = computeRequestHeaders();
         }
+        return requestHeaders;
+    }
+
+    private ArrayListMultimap<String, String> computeRequestHeaders() {
+        ArrayListMultimap<String, String> headers = ArrayListMultimap.create();
+        for (Map.Entry<String, String> entry : msg.getProperties().entrySet()) {
+            headers.putAll(entry.getKey(), PropertyHelper.decodePropertyValues(entry.getValue()));
+        }
+        return headers;
     }
 
     @Override
@@ -54,17 +62,17 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public boolean hasHeader(String key) {
-        return requestHeaders.containsKey(key);
+        return requestHeaders().containsKey(key);
     }
 
     @Override
     public String getHeader(String key) {
-        return requestHeaders.get(key).get(0);
+        return requestHeaders().get(key).get(0);
     }
 
     @Override
     public List<String> getHeaders(String key) {
-        return requestHeaders.get(key);
+        return requestHeaders().get(key);
     }
 
     @Override
@@ -74,7 +82,7 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public Multimap<String, String> getRequestHeaders() {
-        return requestHeaders;
+        return requestHeaders();
     }
 
     @Override
