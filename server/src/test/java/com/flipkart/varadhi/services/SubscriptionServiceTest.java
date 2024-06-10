@@ -48,7 +48,6 @@ class SubscriptionServiceTest {
                 zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
-        OperationMgr operationMgr = new OperationMgr(new OpStoreImpl(zkCurator));
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
@@ -70,7 +69,7 @@ class SubscriptionServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
 
-        subscriptionService = new SubscriptionService(null, operationMgr, varadhiMetaStore);
+        subscriptionService = new SubscriptionService(null, varadhiMetaStore);
     }
 
     @Test

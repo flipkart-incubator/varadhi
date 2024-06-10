@@ -1,45 +1,38 @@
 package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.core.cluster.WebServerApi;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class ControllerApiHandler {
     private final ControllerApi controllerMgr;
-    private final WebServerApi webServerApiProxy;
 
-    public ControllerApiHandler(ControllerApi controllerMgr, WebServerApi webServerApiProxy) {
+    public ControllerApiHandler(ControllerApi controllerMgr) {
         this.controllerMgr = controllerMgr;
-        this.webServerApiProxy = webServerApiProxy;
     }
 
-    public CompletableFuture<Void> start(ClusterMessage message) {
-        SubscriptionOperation.StartData operation = message.getData(SubscriptionOperation.StartData.class);
-        return controllerMgr.startSubscription(operation).exceptionally(throwable -> {
-            //TODO:: is this exceptionally block correct, or should it be try/catch ?
-            operation.markFail(throwable.getMessage());
-            webServerApiProxy.update(operation);
-            return null;
-        });
+    public CompletableFuture<ResponseMessage> start(ClusterMessage message) {
+        SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
+        return controllerMgr.startSubscription(request.getSubscriptionId(), request.getRequestedBy())
+                .thenApply(message::getResponseMessage);
     }
 
-    public CompletableFuture<Void> stop(ClusterMessage message) {
-        SubscriptionOperation.StopData operation = message.getData(SubscriptionOperation.StopData.class);
-        return controllerMgr.stopSubscription(operation).exceptionally(throwable -> {
-            operation.markFail(throwable.getMessage());
-            webServerApiProxy.update(operation);
-            return null;
-        });
+    public CompletableFuture<ResponseMessage> stop(ClusterMessage message) {
+        SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
+        return controllerMgr.stopSubscription(request.getSubscriptionId(), request.getRequestedBy())
+                .thenApply(message::getResponseMessage);
     }
 
-    public CompletableFuture<Void> update(ClusterMessage message) {
+    public void update(ClusterMessage message) {
         ShardOperation.OpData operation = message.getData(ShardOperation.OpData.class);
-        return controllerMgr.update(operation).exceptionally(throwable -> {
-            //TODO::handle failure to update.
+        controllerMgr.update(operation).exceptionally(throwable -> {
+            log.error("Shard update ({}) failed.", operation);
             return null;
         });
     }

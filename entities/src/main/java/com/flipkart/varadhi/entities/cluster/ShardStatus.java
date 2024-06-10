@@ -13,6 +13,6 @@ public class ShardStatus {
 
     @JsonIgnore
     public boolean isAssigned() {
-        return state != ShardState.STOPPED && state != ShardState.UNKNOWN;
+        return state == ShardState.STARTED || state == ShardState.STARTING || state == ShardState.ERRORED;
     }
 }

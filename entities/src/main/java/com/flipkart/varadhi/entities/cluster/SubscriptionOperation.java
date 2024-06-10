@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -13,7 +14,7 @@ import java.util.UUID;
 public class SubscriptionOperation extends MetaStoreEntity {
     private final String requestedBy;
     private final long startTime;
-    private final long endTime;
+    private long endTime;
     private final OpData data;
 
     @JsonCreator
@@ -45,19 +46,56 @@ public class SubscriptionOperation extends MetaStoreEntity {
         return new SubscriptionOperation(data, requestedBy);
     }
 
-    public void update(OpData updated) {
-        if (!data.operationId.equals(updated.operationId)) {
+    public void markFail(String reason) {
+        data.state = State.ERRORED;
+        data.errorMsg = reason;
+        endTime = System.currentTimeMillis();
+    }
+
+    public void markCompleted() {
+        data.state = State.COMPLETED;
+        endTime = System.currentTimeMillis();
+    }
+
+    public void update(SubscriptionOperation updated) {
+        if (!data.operationId.equals(updated.data.operationId)) {
             throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
         }
-        data.errorMsg = updated.errorMsg;
-        data.state = updated.state;
+        data.errorMsg = updated.data.errorMsg;
+        data.state = updated.data.state;
+        endTime = updated.endTime;
+    }
 
+    public void update(List<ShardOperation> shardOps) {
+        StringBuilder sb = new StringBuilder();
+        int completedCount = 0;
+        for(ShardOperation shardOp : shardOps) {
+            ShardOperation.OpData opData = shardOp.getOpData();
+            if (shardOp.hasFailed()) {
+                sb.append(String.format("Shard:%d failed:%s", opData.getShardId(), opData.getErrorMsg()));
+            }
+            if (shardOp.hasCompleted()) {
+                completedCount++;
+            }
+        }
+        if (completedCount == shardOps.size()) {
+            if (sb.isEmpty()) {
+                markCompleted();
+            } else {
+                markFail(sb.toString());
+            }
+        }
+    }
+
+
+    public boolean completed() {
+        return data.state == State.COMPLETED || data.state == State.ERRORED;
     }
 
     @Override
     public String toString() {
         return String.format(
-                "SubscriptionOperation{data=%s requestedBy='%s', startTime=%d, endTime=%d}", data, requestedBy,
+                "{data=%s requestedBy='%s', startTime=%d, endTime=%d}", data, requestedBy,
                 startTime, endTime
         );
     }
@@ -79,24 +117,6 @@ public class SubscriptionOperation extends MetaStoreEntity {
         private String subscriptionId;
         private State state;
         private String errorMsg;
-
-        public void markFail(String reason) {
-            state = State.ERRORED;
-            errorMsg = reason;
-        }
-
-        public void markInProgress() {
-            state = State.IN_PROGRESS;
-        }
-
-        public void markSuccess() {
-            state = State.COMPLETED;
-        }
-
-        public boolean completed() {
-            return state == State.COMPLETED || state == State.ERRORED;
-        }
-
         @Override
         public String toString() {
             return String.format(
@@ -111,12 +131,12 @@ public class SubscriptionOperation extends MetaStoreEntity {
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends OpData {
         StartData(String subscriptionId) {
-            super(UUID.randomUUID().toString(), subscriptionId, State.SCHEDULED, null);
+            super(UUID.randomUUID().toString(), subscriptionId, State.IN_PROGRESS, null);
         }
 
         @Override
         public String toString() {
-            return String.format("Start:%s", super.toString());
+            return String.format("Start.%s", super.toString());
         }
     }
 
@@ -130,7 +150,7 @@ public class SubscriptionOperation extends MetaStoreEntity {
 
         @Override
         public String toString() {
-            return String.format("Stop:%s", super.toString());
+            return String.format("Stop.%s", super.toString());
         }
     }
 }

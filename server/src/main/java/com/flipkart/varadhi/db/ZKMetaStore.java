@@ -179,7 +179,7 @@ class ZKMetaStore {
             });
             throw  new MetaStoreException(String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
         } catch (Exception e) {
-            throw new MetaStoreException("Failed to execute batch operation.", e);
+            throw new MetaStoreException(String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
         }
     }
 

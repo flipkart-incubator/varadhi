@@ -22,7 +22,6 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
             List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<ConsumerNode> consumerNodes
     ) {
         if (consumerNodes.isEmpty()) {
-            log.error("Shard Assignment Failure: No active consumer nodes.");
             throw new CapacityException("No active consumer node for Subscription assignment.");
         }
         List<Assignment> assignments = new ArrayList<>();
@@ -44,7 +43,7 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
                     }
                     Assignment assignment =
                             new Assignment(subscription.getName(), shard.getShardId(), consumerNode.getMemberInfo().hostname());
-                    consumerNode.allocate(shard.getCapacityRequest());
+                    consumerNode.allocate(assignment, shard.getCapacityRequest());
                     assignments.add(assignment);
                     consumers.add(consumerNode);
                 }

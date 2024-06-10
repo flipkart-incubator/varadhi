@@ -10,12 +10,12 @@ import lombok.*;
 
 import java.util.UUID;
 
-@Value
+@Getter
 @EqualsAndHashCode(callSuper = true)
 public class ShardOperation extends MetaStoreEntity {
-    long startTime;
-    long endTime;
-    OpData opData;
+    private final long startTime;
+    private long endTime;
+    private final OpData opData;
 
     @JsonCreator
     ShardOperation(String operationId, long startTime, long endTime, ShardOperation.OpData opData, int version) {
@@ -32,13 +32,17 @@ public class ShardOperation extends MetaStoreEntity {
         this.opData = opData;
     }
 
-    public static ShardOperation startOp(SubscriptionUnitShard shard, VaradhiSubscription subscription) {
-        ShardOperation.OpData data = new ShardOperation.StartData(shard, subscription);
+    public static ShardOperation startOp(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
+        ShardOperation.OpData data = new ShardOperation.StartData(subOpId, shard, subscription);
+        return new ShardOperation(data);
+    }
+
+    public static ShardOperation stopOp(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
+        ShardOperation.OpData data = new ShardOperation.StopData(subOpId, shard, subscription);
         return new ShardOperation(data);
     }
 
     public void update(ShardOperation.OpData updated) {
-        //TODO::check & fix setters
         if (!opData.operationId.equals(updated.operationId)) {
             throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
         }
@@ -46,9 +50,22 @@ public class ShardOperation extends MetaStoreEntity {
         opData.state = updated.state;
     }
 
+    public void markFail(String reason) {
+        opData.markFail(reason);
+        endTime = System.currentTimeMillis();
+    }
+
+    public boolean hasFailed() {
+        return opData.state == State.ERRORED;
+    }
+
+    public boolean hasCompleted() {
+        return opData.state == State.ERRORED || opData.state == State.COMPLETED;
+    }
+
     @Override
     public String toString() {
-        return String.format("ShardOperation{data=%s, startTime=%d, endTime=%d}", opData, startTime, endTime);
+        return String.format("{data=%s, startTime=%d, endTime=%d}", opData, startTime, endTime);
     }
 
     public enum State {
@@ -60,8 +77,12 @@ public class ShardOperation extends MetaStoreEntity {
     @AllArgsConstructor
     @NoArgsConstructor
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@opDataType")
-    @JsonSubTypes({@JsonSubTypes.Type(value = ShardOperation.StartData.class, name = "startShardData"),})
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = ShardOperation.StartData.class, name = "startShardData"),
+            @JsonSubTypes.Type(value = ShardOperation.StopData.class, name = "stopShardData"),
+    })
     public static class OpData {
+        private String parentOpId;
         private String operationId;
         private int shardId;
         private SubscriptionUnitShard shard;
@@ -74,15 +95,11 @@ public class ShardOperation extends MetaStoreEntity {
             errorMsg = reason;
         }
 
-        public void markInProgress() {
-            state = ShardOperation.State.IN_PROGRESS;
-        }
-
         @Override
         public String toString() {
             return String.format(
-                    "OpData{Id='%s', shardId=%d, subscriptionId='%s', state=%s, errorMsg='%s'}",
-                    operationId, shard.getShardId(), subscription.getName(), state, errorMsg
+                    "OpData{ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d, state=%s, errorMsg='%s'}",
+                    parentOpId, operationId, subscription.getName(), shard.getShardId(), state, errorMsg
             );
         }
     }
@@ -91,13 +108,26 @@ public class ShardOperation extends MetaStoreEntity {
     @AllArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends ShardOperation.OpData {
-        StartData(SubscriptionUnitShard shard, VaradhiSubscription subscription) {
-            super(UUID.randomUUID().toString(), shard.getShardId(), shard, subscription, State.SCHEDULED, null);
+        StartData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
+            super(subOpId, UUID.randomUUID().toString(), shard.getShardId(), shard, subscription, State.SCHEDULED, null);
         }
 
         @Override
         public String toString() {
-            return String.format("Start:%s", super.toString());
+            return String.format("Start.%s", super.toString());
+        }
+    }
+
+    @AllArgsConstructor
+    @EqualsAndHashCode(callSuper = true)
+    public static class StopData extends ShardOperation.OpData {
+        StopData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
+            super(subOpId, UUID.randomUUID().toString(), shard.getShardId(), shard, subscription, State.SCHEDULED, null);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Stop.%s", super.toString());
         }
     }
 }
