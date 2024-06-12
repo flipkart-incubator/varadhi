@@ -1,0 +1,20 @@
+deployment:
+  replicas: 1
+
+container:
+  name: locust-container
+  image: varadhi-locust-image:latest
+  imagePullPolicy: IfNotPresent
+
+ports:
+  containerPort: 8089
+
+configMapRefName: produce-config
+
+configMap:
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: locust-deployment
+    meta.helm.sh/release-namespace: default
+
