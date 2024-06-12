@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.google.common.collect.Multimap;
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -44,7 +45,8 @@ public interface MessageDelivery {
                     .header("Content-Type", endpoint.getContentType())
                     .method(
                             endpoint.getMethod(),
-                            HttpRequest.BodyPublishers.ofByteArray(message.getPayload())
+                            ArrayUtils.isEmpty(message.getPayload()) ? HttpRequest.BodyPublishers.noBody() :
+                                    HttpRequest.BodyPublishers.ofByteArray(message.getPayload())
                     );
 
             // apply request headers from message
