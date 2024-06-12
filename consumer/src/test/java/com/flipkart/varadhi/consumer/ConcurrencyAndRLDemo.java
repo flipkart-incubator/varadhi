@@ -8,6 +8,7 @@ import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
 import com.flipkart.varadhi.consumer.impl.ConcurrencyControlImpl;
 import com.flipkart.varadhi.consumer.impl.SlidingWindowThresholdProvider;
 import com.flipkart.varadhi.consumer.impl.SlidingWindowThrottler;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.google.common.base.Supplier;
 import com.google.common.base.Ticker;
 import com.google.common.util.concurrent.RateLimiter;

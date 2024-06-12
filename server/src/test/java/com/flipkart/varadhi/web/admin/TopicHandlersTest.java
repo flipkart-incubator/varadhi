@@ -1,16 +1,8 @@
 package com.flipkart.varadhi.web.admin;
 
-/**
- * @author kaur.prabhpreet
- * On 22/12/23
- */
-
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.entities.CapacityPolicy;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicResource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
@@ -42,12 +34,10 @@ public class TopicHandlersTest extends WebTestBase {
     RequestTelemetryConfigurator requestTelemetryConfigurator;
     SpanProvider spanProvider;
     Span span;
-    private final String deployedRegion = "region1";
-    private final String serviceHost = "localhost";
     private final String topicName = "topic1";
     private final String team1 = "team1";
     private final String org1 = "org1";
-    private Project project = new Project("project1", 0, "", team1, org1);
+    private final Project project = new Project("project1", 0, "", team1, org1);
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
@@ -127,7 +117,6 @@ public class TopicHandlersTest extends WebTestBase {
     @Test
     public void testTopicDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getTopicUrl(topicName, project));
-        TopicResource topicResource = getTopicResource(topicName, project);
         doNothing().when(varadhiTopicService).delete(any());
 
         sendRequestWithoutBody(request, null);
@@ -140,7 +129,7 @@ public class TopicHandlersTest extends WebTestBase {
                 1,
                 project.getName(),
                 true,
-                CapacityPolicy.getDefault()
+                TopicCapacityPolicy.getDefault()
         );
     }
 

@@ -3,10 +3,13 @@ package com.flipkart.varadhi.cluster;
 
 import com.flipkart.varadhi.cluster.messages.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.ExecutionException;
 
 /**
  * API handler registration for message exchange between nodes. This is a subset of similar methods from
@@ -65,7 +68,15 @@ public class MessageRouter {
                         deliveryOptions
                 )).exceptionally(t -> {
                     log.error("request handler completed exceptionally: {}", t.getMessage());
-                    ResponseMessage response = msg.getResponseMessage(t);
+                    Exception failure;
+                    if (t instanceof ExecutionException) {
+                        failure = (ExecutionException) t.getCause();
+                    } else if (t instanceof Exception) {
+                        failure = (Exception) t;
+                    } else {
+                        failure = new VaradhiException(t);
+                    }
+                    ResponseMessage response = msg.getResponseMessage(failure);
                     message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
                     return null;
                 });

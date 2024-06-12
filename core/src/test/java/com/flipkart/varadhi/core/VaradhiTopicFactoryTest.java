@@ -11,12 +11,12 @@ import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicFactoryTest {
+    private final String region = "local";
+    private final String topicName = "testTopic";
     private VaradhiTopicFactory varadhiTopicFactory;
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
     private Project project;
-    private String region = "local";
     private String vTopicName;
-    private String topicName = "testTopic";
 
     @BeforeEach
     public void setUp() {
@@ -26,14 +26,15 @@ public class VaradhiTopicFactoryTest {
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
-        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
-        doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
+        TopicCapacityPolicy capacityPolicy = TopicCapacityPolicy.getDefault();
+        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, 1, capacityPolicy);
+        doReturn(pTopic).when(storageTopicFactory)
+                .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
     public void getTopic() {
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        TopicCapacityPolicy capacityPolicy = TopicCapacityPolicy.getDefault();
         TopicResource topicResource = new TopicResource(
                 topicName,
                 1,
@@ -48,12 +49,12 @@ public class VaradhiTopicFactoryTest {
         Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
         Assertions.assertEquals(it.getTopicRegion(), region);
         Assertions.assertNotNull(st);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
     public void getTopicWithDefaultCapacity() {
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        TopicCapacityPolicy capacityPolicy = TopicCapacityPolicy.getDefault();
         TopicResource topicResource = new TopicResource(
                 topicName,
                 1,
@@ -64,7 +65,7 @@ public class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
         PulsarStorageTopic pt = (PulsarStorageTopic) it.getStorageTopic();
-        Assertions.assertEquals(capacityPolicy.getMaxThroughputKBps(), pt.getMaxThroughputKBps());
-        Assertions.assertEquals(capacityPolicy.getMaxQPS(), pt.getMaxQPS());
+        Assertions.assertEquals(capacityPolicy.getThroughputKBps(), pt.getCapacity().getThroughputKBps());
+        Assertions.assertEquals(capacityPolicy.getQps(), pt.getCapacity().getQps());
     }
 }

@@ -39,6 +39,17 @@ public class ControllerApiMgr implements ControllerApi {
                 .thenAccept(v -> shardAssigner.addConsumerNodes(clusterConsumers));
     }
 
+    @Override
+    public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
+        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
+        return getSubscriptionStatus(subscription).exceptionally(t -> {
+            throw new IllegalStateException(
+                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                            t.getMessage()
+                    ));
+        });
+    }
+
     private CompletableFuture<SubscriptionStatus> getSubscriptionStatus(VaradhiSubscription subscription) {
         String subId = subscription.getName();
         List<Assignment> assignments = shardAssigner.getSubscriptionAssignment(subId);
@@ -62,6 +73,7 @@ public class ControllerApiMgr implements ControllerApi {
         return new SubscriptionStatus(subscription.getName(), state);
     }
 
+
     /**
      * Start the subscription
      * TODO::It makes single attempt to start the Subscription, on failure Operation is marked as failed and no
@@ -75,7 +87,10 @@ public class ControllerApiMgr implements ControllerApi {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             // If not temporary, then alternate needs to be provided to allow recovery from this.
-            throw new IllegalStateException("Unable to determine subscription status, try again after sometime.");
+            throw new IllegalStateException(
+                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                            t.getMessage()
+                    ));
         }).thenApply(ss -> {
             if (ss.getState() == SubscriptionState.RUNNING || ss.getState() == SubscriptionState.STARTING) {
                 throw new InvalidOperationForResourceException("Subscription is already running or starting.");
@@ -150,7 +165,10 @@ public class ControllerApiMgr implements ControllerApi {
     ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
-            throw new IllegalStateException("Unable to determine subscription status, try again after sometime.");
+            throw new IllegalStateException(
+                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                            t.getMessage()
+                    ));
         }).thenApply(ss -> {
             if (ss.getState() == SubscriptionState.STOPPED) {
                 throw new InvalidOperationForResourceException("Subscription is already stopped.");

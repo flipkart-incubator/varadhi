@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.TopicService;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
-import com.flipkart.varadhi.utils.SubscriptionHelper;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -14,10 +14,12 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.*;
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
@@ -27,15 +29,23 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private final SubscriptionService subscriptionService;
     private final ProjectService projectService;
-    private final TopicService<VaradhiTopic> topicService;
+    private final VaradhiTopicService topicService;
+    private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
 
     public SubscriptionHandlers(
             SubscriptionService subscriptionService, ProjectService projectService,
-            TopicService<VaradhiTopic> topicService
+            VaradhiTopicService topicService, VaradhiSubscriptionFactory subscriptionFactory
     ) {
         this.subscriptionService = subscriptionService;
         this.projectService = projectService;
         this.topicService = topicService;
+        this.varadhiSubscriptionFactory = subscriptionFactory;
+    }
+
+    public static String getSubscriptionName(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
+        return SubscriptionResource.buildInternalName(projectName, subscriptionName);
     }
 
     @Override
@@ -59,19 +69,23 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition
                                 .put("UpdateSubscription", "/:subscription")
+                                .nonBlocking()
                                 .hasBody()
                                 .bodyParser(this::setSubscription)
                                 .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::update),
                         RouteDefinition
                                 .delete("DeleteSubscription", "/:subscription")
+                                .nonBlocking()
                                 .authorize(SUBSCRIPTION_DELETE)
                                 .build(this::getHierarchy, this::delete),
                         RouteDefinition
                                 .post("StartSubscription", "/:subscription/start")
+                                .nonBlocking()
                                 .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::start),
                         RouteDefinition.post("StopSubscription", "/:subscription/stop")
+                                .nonBlocking()
                                 .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchy, this::stop)
                 )
@@ -106,59 +120,45 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String internalSubscriptionName = SubscriptionHelper.buildSubscriptionName(ctx);
+        String internalSubscriptionName = getSubscriptionName(ctx);
         SubscriptionResource subscription =
-                SubscriptionHelper.toResource(subscriptionService.getSubscription(internalSubscriptionName));
+                SubscriptionResource.from(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
     }
 
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
+        Project subProject = projectService.getCachedProject(subscription.getProject());
         VaradhiSubscription varadhiSubscription =
-                SubscriptionHelper.fromResource(subscription, subscribedTopic, INITIAL_VERSION);
-        VaradhiSubscription createdSubscription = subscriptionService.createSubscription(varadhiSubscription);
-        ctx.endApiWithResponse(SubscriptionHelper.toResource(createdSubscription));
+                varadhiSubscriptionFactory.get(subscription, subProject, subscribedTopic);
+        VaradhiSubscription createdSubscription =
+                subscriptionService.createSubscription(subscribedTopic, varadhiSubscription, subProject);
+        ctx.endApiWithResponse(SubscriptionResource.from(createdSubscription));
     }
 
     public void update(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
-        VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
-        VaradhiSubscription varadhiSubscription =
-                SubscriptionHelper.fromResource(subscription, subscribedTopic, subscription.getVersion());
-        VaradhiSubscription updatedSubscription = subscriptionService.updateSubscription(varadhiSubscription);
-        ctx.endApiWithResponse(SubscriptionHelper.toResource(updatedSubscription));
+        //TODO::Evaluate separating these into individual update APIs.
+        executeAsyncRequest(
+                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(), subscription.getVersion(),
+                        subscription.getDescription(), subscription.isGrouped(), subscription.getEndpoint(),
+                        subscription.getRetryPolicy(), subscription.getConsumptionPolicy(), ctx.getIdentityOrDefault()
+                ).thenApply(SubscriptionResource::from));
     }
 
     public void delete(RoutingContext ctx) {
-        subscriptionService.deleteSubscription(SubscriptionHelper.buildSubscriptionName(ctx));
-        ctx.endApi();
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        Project subProject = projectService.getCachedProject(projectName);
+        executeAsyncRequest(ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject, ctx.getIdentityOrDefault()));
     }
 
     public void start(RoutingContext ctx) {
-        subscriptionService.start(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault())
-                .whenComplete(
-                        (sd, error) -> {
-                            if (error != null) {
-                                ctx.endRequestWithException(error);
-                            } else {
-                                ctx.endApiWithResponse(sd);
-                            }
-                        }
-                );
+        executeAsyncRequest(ctx, () -> subscriptionService.start(getSubscriptionName(ctx), ctx.getIdentityOrDefault()));
     }
 
     public void stop(RoutingContext ctx) {
-        subscriptionService.stop(SubscriptionHelper.buildSubscriptionName(ctx), ctx.getIdentityOrDefault())
-                .whenComplete(
-                        (sd, error) -> {
-                            if (error != null) {
-                                ctx.endRequestWithException(error);
-                            } else {
-                                ctx.endApiWithResponse(sd);
-                            }
-                        }
-                );
+        executeAsyncRequest(ctx, () -> subscriptionService.stop(getSubscriptionName(ctx), ctx.getIdentityOrDefault()));
     }
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
@@ -177,5 +177,31 @@ public class SubscriptionHandlers implements RouteProvider {
         String topicResourceName = subscription.getTopic();
         String topicName = String.join(NAME_SEPARATOR, projectName, topicResourceName);
         return topicService.get(topicName);
+    }
+
+    private <T> void executeAsyncRequest(RoutingContext ctx, Callable<CompletableFuture<T>> callable) {
+        try {
+            callable.call().whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
+                if (error != null) {
+                    ctx.endRequestWithException(unwrapExecutionException(error));
+                } else {
+                    if (null == t) {
+                        ctx.endRequest();
+                    } else {
+                        ctx.endRequestWithResponse(t);
+                    }
+                }
+            }));
+        } catch (Exception e) {
+            ctx.endRequestWithException(e);
+        }
+    }
+
+    private Throwable unwrapExecutionException(Throwable t) {
+        if (t instanceof ExecutionException) {
+            return t.getCause();
+        } else {
+            return t;
+        }
     }
 }

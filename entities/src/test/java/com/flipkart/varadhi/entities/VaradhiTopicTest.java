@@ -35,7 +35,7 @@ class VaradhiTopicTest {
     @Test
     void getTopicResource() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(
-                new TopicResource(topicName, INITIAL_VERSION, projectName, false, CapacityPolicy.getDefault()));
+                new TopicResource(topicName, INITIAL_VERSION, projectName, false, TopicCapacityPolicy.getDefault()));
 
         TopicResource topicResource = TopicResource.of(varadhiTopic);
 
@@ -48,7 +48,7 @@ class VaradhiTopicTest {
     @EqualsAndHashCode(callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
-            super(name, version);
+            super(name, version, TopicCapacityPolicy.getDefault());
         }
     }
 }

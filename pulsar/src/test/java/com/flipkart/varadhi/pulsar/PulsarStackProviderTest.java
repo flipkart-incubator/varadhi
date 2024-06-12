@@ -2,13 +2,18 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.CapacityPolicy;
+import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
+import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
+import com.flipkart.varadhi.utils.YamlLoader;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +34,7 @@ public class PulsarStackProviderTest {
     private MessagingStackOptions messagingStackOptions;
     private ObjectMapper objectMapper;
     private Project project;
+    private TopicPlanner planner;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -36,6 +42,7 @@ public class PulsarStackProviderTest {
                 "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
+        PulsarConfig pulsarConfig = YamlLoader.loadConfig(configFile.toString(), PulsarConfig.class);
 
         messagingStackOptions = new MessagingStackOptions();
         messagingStackOptions.setConfigFile(configFile.toString());
@@ -45,15 +52,18 @@ public class PulsarStackProviderTest {
         // Below is working as Pulsar clients doesn't seem to either create connections to actual hosts
         // or ignore failure (and retry later) during creation of client objects.
         pulsarStackProvider = spy(new PulsarStackProvider());
+        planner = new TopicPlanner(pulsarConfig);
         doNothing().when(objectMapper).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
     }
 
     @Test
     public void testInit() {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
-        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
+        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
+        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
-        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
+        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
+        verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
     }
 
     @Test
@@ -64,17 +74,20 @@ public class PulsarStackProviderTest {
     @Test
     public void testGetStorageTopicFactory_Initialized() {
         String topicName = "foobar";
+
+        TopicCapacityPolicy capacity = TopicCapacityPolicy.getDefault();
+        InternalQueueCategory topicCategory = InternalQueueCategory.MAIN;
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, CapacityPolicy.getDefault());
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, capacity, topicCategory);
         Assertions.assertEquals(
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
                 topic.getName()
         );
-        Assertions.assertEquals(1, topic.getPartitionCount());
+        Assertions.assertEquals(planner.getPartitionCount(capacity, topicCategory), topic.getPartitionCount());
     }
 
     @Test

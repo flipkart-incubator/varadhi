@@ -2,7 +2,7 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.CircularQueue;
 import com.flipkart.varadhi.consumer.ConcurrencyControl;
-import com.flipkart.varadhi.consumer.InternalQueueType;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -52,10 +52,11 @@ public class MessageExchange {
         vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
             if (ar.succeeded()) {
                 log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
-                ResponseMessage response = JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
+                ResponseMessage response =
+                        JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
                 if (response.getException() != null) {
                     future.completeExceptionally(response.getException());
-                }else {
+                } else {
                     future.complete(response);
                 }
             } else {

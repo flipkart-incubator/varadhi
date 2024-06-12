@@ -3,6 +3,8 @@ package com.flipkart.varadhi.verticles.webserver;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.VaradhiTopicFactory;
@@ -111,7 +113,11 @@ public class WebServerVerticle extends AbstractVerticle {
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
         ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
-        subscriptionService = new SubscriptionService(controllerApiProxy, metaStore);
+        ShardProvisioner shardProvisioner = new ShardProvisioner(
+                messagingStackProvider.getStorageSubscriptionService(),
+                messagingStackProvider.getStorageTopicService()
+        );
+        subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
     }
 
     private void performValidations() {
@@ -138,10 +144,10 @@ public class WebServerVerticle extends AbstractVerticle {
     private Router createApiRouter() {
         Router router = Router.router(vertx);
         List<RouteDefinition> routeDefinitions = new ArrayList<>();
+        setupRouteConfigurators();
         routeDefinitions.addAll(getIamPolicyRoutes());
         routeDefinitions.addAll(getAdminApiRoutes());
         routeDefinitions.addAll(getProduceApiRoutes());
-        setupRouteConfigurators();
         configureApiRoutes(router, routeDefinitions);
         return router;
     }
@@ -180,9 +186,16 @@ public class WebServerVerticle extends AbstractVerticle {
         List<RouteDefinition> routes = new ArrayList<>();
         VaradhiTopicFactory varadhiTopicFactory =
                 new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
+        VaradhiSubscriptionFactory subscriptionFactory =
+                new VaradhiSubscriptionFactory(messagingStackProvider.getStorageTopicService(),
+                        messagingStackProvider.getSubscriptionFactory(),
+                        messagingStackProvider.getStorageTopicFactory(), deployedRegion
+                );
         routes.addAll(getManagementEntitiesApiRoutes());
         routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
-        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService).get());
+        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService,
+                subscriptionFactory
+        ).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
     }

@@ -125,7 +125,7 @@ public class SubscriptionTests extends E2EBase {
 
         assertEquals(update.getName(), updated.getName());
         assertEquals(update.getDescription(), updated.getDescription());
-        assertEquals(1, updated.getVersion());
+        assertEquals(2, updated.getVersion());
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
     }
 

@@ -6,18 +6,21 @@ import lombok.Getter;
 public class SubscriptionUnitShard extends SubscriptionShards {
 
     private final int shardId;
-    private final RetryTopic retryTopic;
-    private final InternalCompositeTopic deadLetterTopic;
-    private final CapacityPolicy capacityRequest;
+    private final TopicCapacityPolicy capacityRequest;
+    private final InternalCompositeSubscription mainSubscription;
+    private final RetrySubscription retrySubscription;
+    private final InternalCompositeSubscription deadLetterSubscription;
 
     public SubscriptionUnitShard(
-            int shardId, CapacityPolicy capacityRequest, RetryTopic retryTopic, InternalCompositeTopic deadLetterTopic
+            int shardId, TopicCapacityPolicy capacityRequest, InternalCompositeSubscription mainSubscription,
+            RetrySubscription retrySubscription, InternalCompositeSubscription deadLetterSubscription
     ) {
         super(1);
         this.shardId = shardId;
-        this.retryTopic = retryTopic;
-        this.deadLetterTopic = deadLetterTopic;
+        this.retrySubscription = retrySubscription;
+        this.deadLetterSubscription = deadLetterSubscription;
         this.capacityRequest = capacityRequest;
+        this.mainSubscription = mainSubscription;
     }
 
     @Override

@@ -1,11 +1,9 @@
-package com.flipkart.varadhi.spi.services;
+package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.StorageTopic;
 import lombok.Getter;
 
 @Getter
 public class TopicPartitions<T extends StorageTopic> {
-
     private final T topic;
     private final int[] partitions;
 
@@ -14,12 +12,8 @@ public class TopicPartitions<T extends StorageTopic> {
         this.partitions = partitions;
     }
 
-    public boolean hasSpecificPartitions() {
-        return partitions != null;
-    }
-
     public static <T extends StorageTopic> TopicPartitions<T> byPartitions(T topic, int[] partitions) {
-        if(partitions == null || partitions.length == 0) {
+        if (partitions == null || partitions.length == 0) {
             throw new IllegalArgumentException("partitions array is null / empty");
         }
         return new TopicPartitions<>(topic, partitions);
@@ -27,5 +21,9 @@ public class TopicPartitions<T extends StorageTopic> {
 
     public static <T extends StorageTopic> TopicPartitions<T> byTopic(T topic) {
         return new TopicPartitions<>(topic, null);
+    }
+
+    public boolean hasSpecificPartitions() {
+        return partitions != null;
     }
 }

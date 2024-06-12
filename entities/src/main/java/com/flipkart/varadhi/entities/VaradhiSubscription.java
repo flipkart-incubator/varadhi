@@ -1,19 +1,23 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.EqualsAndHashCode;
-import lombok.Value;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 
-@Value
+@Getter
+@Setter
 @EqualsAndHashCode(callSuper = true)
 public class VaradhiSubscription extends MetaStoreEntity {
-    String project;
-    String topic;
-    String description;
-    boolean grouped;
-    Endpoint endpoint;
-    RetryPolicy retryPolicy;
-    ConsumptionPolicy consumptionPolicy;
-    SubscriptionShards shards;
+    private final String project;
+    private final String topic;
+    private String description;
+    private boolean grouped;
+    private Endpoint endpoint;
+    private RetryPolicy retryPolicy;
+    private ConsumptionPolicy consumptionPolicy;
+    private SubscriptionShards shards;
+    private Status status;
+
 
     public VaradhiSubscription(
             String name,
@@ -25,7 +29,8 @@ public class VaradhiSubscription extends MetaStoreEntity {
             Endpoint endpoint,
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards
+            SubscriptionShards shards,
+            Status status
     ) {
         super(name, version);
         this.project = project;
@@ -39,5 +44,64 @@ public class VaradhiSubscription extends MetaStoreEntity {
             throw new IllegalArgumentException("shards cannot be null or empty");
         }
         this.shards = shards;
+        this.status = status;
+    }
+
+    public static VaradhiSubscription of(
+            String name,
+            String project,
+            String topic,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            SubscriptionShards shards
+    ) {
+        return new VaradhiSubscription(
+                name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
+                shards, new Status(State.Creating)
+        );
+    }
+
+    @JsonIgnore
+    public boolean isWellProvisioned() {
+        return status.state == State.Created;
+    }
+
+    public void markCreateFailed(String message) {
+        status.message = message;
+        status.state = State.CreateFailed;
+    }
+
+    public void markCreated() {
+        status.state = State.Created;
+    }
+
+    public void markDeleteFailed(String message) {
+        status.message = message;
+        status.state = State.DeleteFailed;
+    }
+
+    public void markDeleting() {
+        status.state = State.Deleting;
+    }
+
+    public enum State {
+        Creating,
+        CreateFailed,
+        Created,
+        Deleting,
+        DeleteFailed
+    }
+
+    @Data
+    @AllArgsConstructor(onConstructor = @__(@JsonCreator))
+    public static class Status {
+        String message;
+        State state;
+        public Status(State state) {
+            this.state = state;
+        }
     }
 }

@@ -24,10 +24,10 @@ public class VaradhiTopicFactory {
         return vt;
     }
 
-
     private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
         StorageTopic storageTopic =
-                topicFactory.getTopic(varadhiTopic.getName(), project, varadhiTopic.getCapacityPolicy());
+                topicFactory.getTopic(
+                        varadhiTopic.getName(), project, varadhiTopic.getCapacity(), InternalQueueCategory.MAIN);
         InternalCompositeTopic internalTopic = new InternalCompositeTopic(
                 deploymentRegion,
                 TopicState.Producing,

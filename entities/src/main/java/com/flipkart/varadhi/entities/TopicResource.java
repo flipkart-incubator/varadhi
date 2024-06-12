@@ -11,19 +11,19 @@ public class TopicResource extends VersionedEntity implements Validatable {
 
     String project;
     boolean grouped;
-    CapacityPolicy capacityPolicy;
+    TopicCapacityPolicy capacity;
 
     public TopicResource(
             String name,
             int version,
             String project,
             boolean grouped,
-            CapacityPolicy capacityPolicy
+            TopicCapacityPolicy capacity
     ) {
         super(name, version);
         this.project = project;
         this.grouped = grouped;
-        this.capacityPolicy = capacityPolicy;
+        this.capacity = capacity;
     }
 
     public static TopicResource of(VaradhiTopic varadhiTopic) {
@@ -33,7 +33,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
                 varadhiTopic.getVersion(),
                 topicResourceInfo[0],
                 varadhiTopic.isGrouped(),
-                varadhiTopic.getCapacityPolicy()
+                varadhiTopic.getCapacity()
         );
     }
 }
