@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.*;
@@ -119,7 +120,7 @@ class SubscriptionServiceTest {
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
-        TopicCapacityPolicy capacity = TopicCapacityPolicy.getDefault();
+        TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
 
         String region = "default";
         TopicPlanner planner = new TopicPlanner(new PulsarConfig());
@@ -131,12 +132,7 @@ class SubscriptionServiceTest {
         VaradhiTopic vt = VaradhiTopic.of(tr);
 
         StorageTopic storageTopic = ptf.getTopic(vt.getName(), o1t1p2, capacity, InternalQueueCategory.MAIN);
-        InternalCompositeTopic internalTopic = new InternalCompositeTopic(
-                region,
-                TopicState.Producing,
-                storageTopic
-        );
-        vt.addInternalTopic(internalTopic);
+        vt.addInternalTopic(region, InternalCompositeTopic.of(storageTopic));
 
         SubscriptionResource subRes = new SubscriptionResource(
                 "sub12",

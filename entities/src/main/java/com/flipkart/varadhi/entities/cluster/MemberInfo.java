@@ -5,7 +5,7 @@ public record MemberInfo(
         String hostname,
         int port,
         ComponentKind[] roles,
-        MemberResources capacity
+        NodeCapacity provisionedCapacity
 ) {
     public boolean hasRole(ComponentKind role) {
         for (ComponentKind r : roles) {

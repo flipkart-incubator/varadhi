@@ -1,17 +1,19 @@
 package com.flipkart.varadhi.entities;
 
 import lombok.EqualsAndHashCode;
-import lombok.Value;
+import lombok.Getter;
+import lombok.Setter;
 
-@Value
+@Getter
 @EqualsAndHashCode(callSuper = true)
 @ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
 public class TopicResource extends VersionedEntity implements Validatable {
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
 
-    String project;
-    boolean grouped;
-    TopicCapacityPolicy capacity;
+    private final String project;
+    private final boolean grouped;
+    @Setter
+    private TopicCapacityPolicy capacity;
 
     public TopicResource(
             String name,
@@ -26,7 +28,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
         this.capacity = capacity;
     }
 
-    public static TopicResource of(VaradhiTopic varadhiTopic) {
+    public static TopicResource from(VaradhiTopic varadhiTopic) {
         String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
         return new TopicResource(
                 topicResourceInfo[1],

@@ -5,6 +5,8 @@ import com.flipkart.varadhi.spi.services.StorageSubscriptionService;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 @Slf4j
 public class ShardProvisioner {
     StorageTopicService<StorageTopic> storageTopicService;
@@ -33,35 +35,27 @@ public class ShardProvisioner {
         }
         log.info("deProvisioned the Subscription: {}", varadhiSub.getName());
     }
-
     private void provisionShard(String subscriptionName, SubscriptionUnitShard shard, Project project) {
         // provision main sub for shard.
-        provisionStorageSubscription(shard.getMainSubscription().getStorageSubscription(), project);
-
+        provisionCompositeSubscription(shard.getMainSubscription(), project, false);
         RetrySubscription retrySub = shard.getRetrySubscription();
         for (int rqIndex = 0; rqIndex < retrySub.getMaxRetryCount(); rqIndex++) {
-            int retryAttempt = rqIndex + 1;
-            StorageSubscription<StorageTopic> retryStorageSub = retrySub.getStorageSubscriptionForRetry(retryAttempt);
-            StorageTopic retryStorageTopic = retryStorageSub.getStorageTopic();
-            provisionStorageTopic(retryStorageTopic, project);
-            provisionStorageSubscription(retryStorageSub, project);
+            provisionCompositeSubscription(retrySub.getSubscriptionForRetry(rqIndex + 1), project, true);
         }
-        InternalCompositeSubscription dltSub = shard.getDeadLetterSubscription();
-        StorageSubscription<StorageTopic> dltStorageSub = dltSub.getStorageSubscription();
-        StorageTopic dltStorageTopic = dltStorageSub.getStorageTopic();
-        provisionStorageTopic(dltStorageTopic, project);
-
-        provisionStorageSubscription(dltStorageSub, project);
+        provisionCompositeSubscription(shard.getDeadLetterSubscription(), project, true);
         log.info("Provisioned the Subscription: {}, Shard:{}", subscriptionName, shard.getShardId());
     }
 
-    private void provisionStorageTopic(StorageTopic storageTopic, Project project) {
-        if (storageTopicService.exists(storageTopic.getName())) {
-            log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
-        } else {
-            storageTopicService.create(storageTopic, project);
-            log.info("storageTopic:{} provisioned.", storageTopic.getName());
-        }
+    private void provisionCompositeSubscription(
+            InternalCompositeSubscription compositeSubscription, Project project, boolean provisionTopics
+    ) {
+        List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
+        storageSubs.forEach(storageSub -> {
+            if (provisionTopics) {
+                provisionStorageTopic(storageSub.getStorageTopic(), project);
+            }
+            provisionStorageSubscription(storageSub, project);
+        });
     }
 
     private void provisionStorageSubscription(StorageSubscription<StorageTopic> storageSub, Project project) {
@@ -74,23 +68,36 @@ public class ShardProvisioner {
         }
     }
 
-    private void deProvisionShard(String subscriptionName, SubscriptionUnitShard shard, Project project) {
-        InternalCompositeSubscription dltSub = shard.getDeadLetterSubscription();
-        StorageSubscription<StorageTopic> dltStorageSub = dltSub.getStorageSubscription();
-        StorageTopic dltStorageTopic = dltStorageSub.getTopicPartitions().getTopic();
-        deProvisionStorageSubscription(dltStorageSub, project);
-        deProvisionStorageTopic(dltStorageTopic, project);
+    private void provisionStorageTopic(StorageTopic storageTopic, Project project) {
+        if (storageTopicService.exists(storageTopic.getName())) {
+            log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
+        } else {
+            storageTopicService.create(storageTopic, project);
+            log.info("storageTopic:{} provisioned.", storageTopic.getName());
+        }
+    }
 
+    private void deProvisionShard(String subscriptionName, SubscriptionUnitShard shard, Project project) {
+        deProvisionCompositeSubscription(shard.getDeadLetterSubscription(), project, true);
         RetrySubscription retrySub = shard.getRetrySubscription();
         for (int rqIndex = 0; rqIndex < retrySub.getMaxRetryCount(); rqIndex++) {
             int rqAttempt = rqIndex + 1;
-            StorageSubscription<StorageTopic> retryStorageSub = retrySub.getStorageSubscriptionForRetry(rqAttempt);
-            StorageTopic retryStorageTopic = retryStorageSub.getTopicPartitions().getTopic();
-            deProvisionStorageSubscription(retryStorageSub, project);
-            deProvisionStorageTopic(retryStorageTopic, project);
+            deProvisionCompositeSubscription(retrySub.getSubscriptionForRetry(rqAttempt), project, true);
         }
-        deProvisionStorageSubscription(shard.getMainSubscription().getStorageSubscription(), project);
+        deProvisionCompositeSubscription(shard.getMainSubscription(), project, false);
         log.info("deProvisioned the Subscription: {}, Shard:{}", subscriptionName, shard.getShardId());
+    }
+
+    private void deProvisionCompositeSubscription(
+            InternalCompositeSubscription compositeSubscription, Project project, boolean deProvisionTopics
+    ) {
+        List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
+        storageSubs.forEach(storageSub -> {
+            deProvisionStorageSubscription(storageSub, project);
+            if (deProvisionTopics) {
+                deProvisionStorageTopic(storageSub.getStorageTopic(), project);
+            }
+        });
     }
 
     private void deProvisionStorageTopic(StorageTopic storageTopic, Project project) {

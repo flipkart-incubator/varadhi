@@ -96,6 +96,10 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
             clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, false, false);
             log.debug("Deleted the pulsar topic:{}", topicName);
         } catch (PulsarAdminException e) {
+            if (e instanceof PulsarAdminException.NotFoundException) {
+                log.warn("Pulsar topic {} not found, skipping delete.", topicName);
+                return;
+            }
             throw new MessagingException(e);
         }
     }

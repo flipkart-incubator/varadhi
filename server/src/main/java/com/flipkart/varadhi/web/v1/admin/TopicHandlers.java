@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.VaradhiTopicFactory;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.ProjectService;
@@ -87,7 +87,7 @@ public class TopicHandlers implements RouteProvider {
     public void get(RoutingContext ctx) {
         String varadhiTopicName = getVaradhiTopicName(ctx);
         VaradhiTopic varadhiTopic = varadhiTopicService.get(varadhiTopicName);
-        TopicResource topicResource = TopicResource.of(varadhiTopic);
+        TopicResource topicResource = TopicResource.from(varadhiTopic);
         ctx.endApiWithResponse(topicResource);
     }
 
@@ -110,7 +110,7 @@ public class TopicHandlers implements RouteProvider {
         }
         VaradhiTopic vt = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(vt, project);
-        ctx.endApiWithResponse(topicResource);
+        ctx.endApiWithResponse(TopicResource.from(vt));
     }
 
     public void delete(RoutingContext ctx) {

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;

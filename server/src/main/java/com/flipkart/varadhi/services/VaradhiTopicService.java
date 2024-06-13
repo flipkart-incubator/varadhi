@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core;
+package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -28,12 +28,11 @@ public class VaradhiTopicService {
 
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
-        varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
+        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
                 {
-                    StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    // StorageTopicService.create() to ensure if pre-existing topi can be re-used.
+                    // StorageTopicService.create() to ensure if pre-existing topic can be re-used.
                     // i.e. topic creation at storage level need to be idempotent.
-                    topicService.create(storageTopic, project);
+                    internalTopic.getActiveTopics().forEach(storageTopic -> topicService.create(storageTopic, project));
                 }
         );
         metaStore.createTopic(varadhiTopic);
@@ -51,16 +50,8 @@ public class VaradhiTopicService {
         String projectName = varadhiTopic.getProjectName();
         Project project = metaStore.getProject(projectName);
         validateDelete(varadhiTopicName);
-        varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
-                {
-                    StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.exists(storageTopic.getName())) {
-                        topicService.delete(storageTopic.getName(), project);
-                    } else {
-                        log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
-                    }
-                }
-        );
+        varadhiTopic.getInternalTopics().forEach((region, internalTopic) -> internalTopic.getActiveTopics()
+                .forEach(storageTopic -> topicService.delete(storageTopic.getName(), project)));
         metaStore.deleteTopic(varadhiTopic.getName());
     }
 

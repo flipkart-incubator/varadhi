@@ -15,10 +15,6 @@ public class TopicCapacityPolicy implements Comparable<NodeCapacity> {
         this.readFanOut = readFanOut;
     }
 
-    public static TopicCapacityPolicy getDefault() {
-        return new TopicCapacityPolicy(100, 400, 2);
-    }
-
     public TopicCapacityPolicy from(double factor, int readFanOut) {
         int qps = (int)Math.ceil((double) this.qps * factor);
         int kbps = (int)Math.ceil((double) throughputKBps * factor);

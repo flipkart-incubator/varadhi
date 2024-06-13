@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.entities;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -48,7 +49,7 @@ public class PulsarProducerTest {
         messageBuilder = spy(new TypedMessageBuilderImpl(producer, Schema.BYTES));
         doReturn(messageBuilder).when(producer).newMessage();
 
-        policy = TopicCapacityPolicy.getDefault();
+        policy = Constants.DefaultTopicCapacity;
         topic = PulsarStorageTopic.from("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 

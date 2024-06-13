@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.entities.StorageSubscription;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -21,15 +24,22 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<Void> start(ShardOperation.StartData operation) {
         VaradhiSubscription subscription = operation.getSubscription();
+        SubscriptionUnitShard shard = operation.getShard();
+        StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionToConsume();
+        ConsumptionFailurePolicy failurePolicy =
+                new ConsumptionFailurePolicy(subscription.getRetryPolicy(), shard.getRetrySubscription(),
+                        shard.getDeadLetterSubscription()
+                );
+
         return consumersManager.startSubscription(
-                null,
+                subscription.getProject(),
                 subscription.getName(),
-                "",
-                null,
+                operation.getShardId(),
+                mainSub,
                 subscription.isGrouped(),
                 subscription.getEndpoint(),
                 subscription.getConsumptionPolicy(),
-                null
+                failurePolicy
         );
     }
 
@@ -38,7 +48,7 @@ public class ConsumerApiMgr implements ConsumerApi {
         VaradhiSubscription subscription = operation.getSubscription();
         return consumersManager.stopSubscription(
                 subscription.getName(),
-                ""
+                operation.getShardId()
         );
     }
 

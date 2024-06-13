@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class MemberConfig {
     private ComponentKind[] roles;
-    private int cpuCount;
+    private int clusterPort;
+    private int maxQps;
     private int networkMBps;
 }

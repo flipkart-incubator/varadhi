@@ -16,8 +16,8 @@ public class RetrySubscription {
      */
 
     @JsonIgnore
-    public StorageSubscription<StorageTopic> getStorageSubscriptionForRetry(int retryCount) {
-        return retrySubscriptions[retryCount - 1].getStorageSubscription();
+    public InternalCompositeSubscription getSubscriptionForRetry(int retryCount) {
+        return retrySubscriptions[retryCount - 1];
     }
 
     @JsonIgnore

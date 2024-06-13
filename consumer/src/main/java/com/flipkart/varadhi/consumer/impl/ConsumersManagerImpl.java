@@ -18,7 +18,7 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public CompletableFuture<Void> startSubscription(
-            Project project, String subscription, String shardName, TopicPartitions<StorageTopic> topic,
+            String project, String subscription, int shardId, StorageSubscription<StorageTopic> storageSubscription,
             boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
             ConsumptionFailurePolicy failurePolicy
     ) {
@@ -26,22 +26,22 @@ public class ConsumersManagerImpl implements ConsumersManager {
     }
 
     @Override
-    public CompletableFuture<Void> stopSubscription(String subscription, String shardName) {
+    public CompletableFuture<Void> stopSubscription(String subscription, int shardId) {
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public void pauseSubscription(String subscription, String shardName) {
+    public void pauseSubscription(String subscription, int shardId) {
 
     }
 
     @Override
-    public void resumeSubscription(String subscription, String shardName) {
+    public void resumeSubscription(String subscription, int shardId) {
 
     }
 
     @Override
-    public ConsumerState getConsumerState(String subscription, String shardName) {
+    public ConsumerState getConsumerState(String subscription, int shardId) {
         return null;
     }
 

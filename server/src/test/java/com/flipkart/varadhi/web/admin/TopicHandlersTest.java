@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.core.VaradhiTopicFactory;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
@@ -81,7 +82,8 @@ public class TopicHandlersTest extends WebTestBase {
     public void testTopicCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicsUrl(project));
         TopicResource topicResource = getTopicResource(topicName, project);
-
+        VaradhiTopic vt = VaradhiTopic.of(topicResource);
+        doReturn(vt).when(varadhiTopicFactory).get(project, topicResource);
         TopicResource t1Created = sendRequestWithBody(request, topicResource, TopicResource.class);
         Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
@@ -129,7 +131,7 @@ public class TopicHandlersTest extends WebTestBase {
                 1,
                 project.getName(),
                 true,
-                TopicCapacityPolicy.getDefault()
+                Constants.DefaultTopicCapacity
         );
     }
 

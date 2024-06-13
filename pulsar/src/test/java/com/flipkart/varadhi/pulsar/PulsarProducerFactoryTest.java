@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -32,7 +33,7 @@ public class PulsarProducerFactoryTest {
                 "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
-        topic = PulsarStorageTopic.from("testTopic", 1, TopicCapacityPolicy.getDefault());
+        topic = PulsarStorageTopic.from("testTopic", 1, Constants.DefaultTopicCapacity);
         pClient = mock(PulsarClient.class);
         builder = mock(ProducerBuilder.class);
         org.apache.pulsar.client.api.Producer producer = mock(org.apache.pulsar.client.api.Producer.class);

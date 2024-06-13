@@ -1,6 +1,6 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.cluster.MemberResources;
+import com.flipkart.varadhi.entities.cluster.NodeCapacity;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
@@ -32,6 +32,7 @@ import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
@@ -39,21 +40,17 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class VaradhiApplication {
-    private static MemberInfo memberInfo;
-
     public static void main(String[] args) {
 
         try {
-            String host = HostUtils.getHostName();
-            int port = 0;
-            log.info("VaradhiApplication Starting on {}.", host);
+            log.info("Starting VaradhiApplication");
             AppConfiguration configuration = readConfiguration(args);
-            MemberConfig mConfig = configuration.getMember();
-            memberInfo = new MemberInfo(host, port, mConfig.getRoles(), getMemberResources(mConfig));
+            MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration);
-            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, host);
-            Map<ComponentKind, Verticle> verticles = getComponentVerticles(configuration, services, clusterManager);
-            createClusteredVertx(configuration, clusterManager, services, host).compose(vertx ->
+            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
+            Map<ComponentKind, Verticle> verticles =
+                    getComponentVerticles(configuration, services, clusterManager, memberInfo);
+            createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
                                         if (ar.succeeded()) {
@@ -63,9 +60,9 @@ public class VaradhiApplication {
                                         }
                                     })).collect(Collectors.toList()))
                     )
-                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", host))
+                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", memberInfo.hostname()))
                     .onFailure(t -> {
-                        log.error("VaradhiApplication on host {} failed to start. {} ", host, t);
+                        log.error("VaradhiApplication on host {} failed to start. {} ", memberInfo.hostname(), t);
                         log.error("Closing the application.");
                         System.exit(-1);
                     });
@@ -77,9 +74,10 @@ public class VaradhiApplication {
         // TODO: check need for shutdown hook
     }
 
-    private static MemberResources getMemberResources(MemberConfig memberConfig) {
-        //TODO:: need to get auto detect, and provide override via config .
-        return new MemberResources(memberConfig.getCpuCount(), memberConfig.getNetworkMBps());
+    private static MemberInfo getMemberInfo(MemberConfig memberConfig) throws UnknownHostException {
+        String host = HostUtils.getHostName();
+        NodeCapacity provisionedCapacity =  new NodeCapacity(memberConfig.getMaxQps(), memberConfig.getNetworkMBps());
+        return new MemberInfo(host, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);
     }
 
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
@@ -91,12 +89,12 @@ public class VaradhiApplication {
     }
 
     private static Future<Vertx> createClusteredVertx(
-            AppConfiguration config, ClusterManager clusterManager, CoreServices services, String host
+            AppConfiguration config, ClusterManager clusterManager, CoreServices services, MemberInfo memberInfo
     ) {
         int port = 0;
         JsonObject memberInfoJson = new JsonObject(JsonMapper.jsonSerialize(memberInfo));
         EventBusOptions eventBusOptions = new EventBusOptions()
-                .setHost(host)
+                .setHost(memberInfo.hostname())
                 .setPort(port)
                 .setClusterNodeMetadata(memberInfoJson);
 
@@ -147,9 +145,10 @@ public class VaradhiApplication {
     }
 
     private static Map<ComponentKind, Verticle> getComponentVerticles(
-            AppConfiguration config, CoreServices coreServices, VaradhiClusterManager clusterManager
+            AppConfiguration config, CoreServices coreServices, VaradhiClusterManager clusterManager,
+            MemberInfo memberInfo
     ) {
-        return Arrays.stream(config.getMember().getRoles()).distinct()
+        return Arrays.stream(memberInfo.roles()).distinct()
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
                     case Server -> new WebServerVerticle(config, coreServices, clusterManager);
                     case Controller -> new ControllerVerticle(coreServices, clusterManager);
