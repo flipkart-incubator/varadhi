@@ -44,19 +44,15 @@ public class ProducerServiceTests {
     Project project = new Project("project1", 0, "", "team1", "org1");
     String region = "region1";
 
-    public static class TopicProvider {
-        public VaradhiTopic get(String topicName) {
-            return null;
-        }
-    }
-
     @BeforeEach
     public void preTest() {
         producerFactory = mock(ProducerFactory.class);
         topicProvider = mock(TopicProvider.class);
         meterRegistry = new OtlpMeterRegistry();
 
-        service = new ProducerService(region, new ProducerOptions(), producerFactory::newProducer, topicProvider::get, meterRegistry);
+        service = new ProducerService(region, new ProducerOptions(), producerFactory::newProducer, topicProvider::get,
+                meterRegistry
+        );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
 
@@ -232,7 +228,6 @@ public class ProducerServiceTests {
         verify(producerFactory, times(1)).newProducer(any());
     }
 
-
     @Test
     public void testMetricEmitFailureNotIgnored() throws InterruptedException {
         ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
@@ -309,6 +304,12 @@ public class ProducerServiceTests {
         });
         latch.await();
         return rc;
+    }
+
+    public static class TopicProvider {
+        public VaradhiTopic get(String topicName) {
+            return null;
+        }
     }
 
     static class ResultCapture {

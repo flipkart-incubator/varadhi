@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities.cluster;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

@@ -141,7 +141,8 @@ public class SubscriptionHandlers implements RouteProvider {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         //TODO::Evaluate separating these into individual update APIs.
         executeAsyncRequest(
-                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(), subscription.getVersion(),
+                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(),
+                        subscription.getVersion(),
                         subscription.getDescription(), subscription.isGrouped(), subscription.getEndpoint(),
                         subscription.getRetryPolicy(), subscription.getConsumptionPolicy(), ctx.getIdentityOrDefault()
                 ).thenApply(SubscriptionResource::from));
@@ -150,7 +151,10 @@ public class SubscriptionHandlers implements RouteProvider {
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         Project subProject = projectService.getCachedProject(projectName);
-        executeAsyncRequest(ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject, ctx.getIdentityOrDefault()));
+        executeAsyncRequest(
+                ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject,
+                        ctx.getIdentityOrDefault()
+                ));
     }
 
     public void start(RoutingContext ctx) {

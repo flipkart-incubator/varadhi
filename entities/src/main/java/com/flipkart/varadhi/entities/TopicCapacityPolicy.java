@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.flipkart.varadhi.entities.cluster.NodeCapacity;
 import lombok.Data;
 
@@ -14,7 +15,6 @@ public class TopicCapacityPolicy implements Comparable<NodeCapacity> {
         this.throughputKBps = throughputKBps;
         this.readFanOut = readFanOut;
     }
-
     public TopicCapacityPolicy from(double factor, int readFanOut) {
         int qps = (int)Math.ceil((double) this.qps * factor);
         int kbps = (int)Math.ceil((double) throughputKBps * factor);

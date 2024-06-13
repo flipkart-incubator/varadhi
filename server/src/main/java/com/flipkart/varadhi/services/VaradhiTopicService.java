@@ -28,13 +28,10 @@ public class VaradhiTopicService {
 
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                {
-                    // StorageTopicService.create() to ensure if pre-existing topic can be re-used.
-                    // i.e. topic creation at storage level need to be idempotent.
-                    internalTopic.getActiveTopics().forEach(storageTopic -> topicService.create(storageTopic, project));
-                }
-        );
+        // StorageTopicService.create() to ensure if pre-existing topic can be re-used.
+        // i.e. topic creation at storage level need to be idempotent.
+        varadhiTopic.getInternalTopics().forEach((region, internalTopic) -> internalTopic.getActiveTopics()
+                .forEach(storageTopic -> topicService.create(storageTopic, project)));
         metaStore.createTopic(varadhiTopic);
     }
 

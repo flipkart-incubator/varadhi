@@ -28,6 +28,10 @@ import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN
 import static org.mockito.Mockito.*;
 
 public class TopicHandlersTest extends WebTestBase {
+    private final String topicName = "topic1";
+    private final String team1 = "team1";
+    private final String org1 = "org1";
+    private final Project project = new Project("project1", 0, "", team1, org1);
     TopicHandlers topicHandlers;
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
@@ -35,10 +39,6 @@ public class TopicHandlersTest extends WebTestBase {
     RequestTelemetryConfigurator requestTelemetryConfigurator;
     SpanProvider spanProvider;
     Span span;
-    private final String topicName = "topic1";
-    private final String team1 = "team1";
-    private final String org1 = "org1";
-    private final Project project = new Project("project1", 0, "", team1, org1);
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
@@ -67,9 +67,11 @@ public class TopicHandlersTest extends WebTestBase {
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
         setupFailureHandler(routeGet);
-        Route routeListAll = router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
+        Route routeListAll = router.get("/projects/:project/topics").handler(bodyHandler)
+                .handler(wrapBlocking(topicHandlers::listTopics));
         setupFailureHandler(routeListAll);
-        Route routeDelete = router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
+        Route routeDelete =
+                router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
         setupFailureHandler(routeDelete);
     }
 

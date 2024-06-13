@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;

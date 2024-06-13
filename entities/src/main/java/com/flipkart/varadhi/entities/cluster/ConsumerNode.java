@@ -15,8 +15,8 @@ public class ConsumerNode {
     public static Comparator<ConsumerNode> NodeComparator = comparing(o -> o.available);
     private final String consumerId;
     private final NodeCapacity available;
-    private boolean markedForDeletion;
     private final Map<String, Assignment> assignments;
+    private boolean markedForDeletion;
 
     public ConsumerNode(MemberInfo memberInfo) {
         this.consumerId = memberInfo.hostname();
@@ -38,8 +38,9 @@ public class ConsumerNode {
             available.setMaxThroughputKBps(available.getMaxThroughputKBps() - requests.getThroughputKBps());
         }
     }
+
     public synchronized void free(Assignment a, TopicCapacityPolicy requests) {
-        if (null != assignments.remove(a.getName())){
+        if (null != assignments.remove(a.getName())) {
             available.setMaxThroughputKBps(available.getMaxThroughputKBps() + requests.getThroughputKBps());
         }
     }

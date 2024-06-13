@@ -15,7 +15,6 @@ public class RestOptions {
     @NotNull
     private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
     private TopicCapacityPolicy defaultTopicCapacity = Constants.DefaultTopicCapacity;
-
     private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;

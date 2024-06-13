@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
@@ -70,7 +69,6 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
 
         PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, Constants.DefaultTopicCapacity);
         topicService.create(pt, projectNew);
-
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);

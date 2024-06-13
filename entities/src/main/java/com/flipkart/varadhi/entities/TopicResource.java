@@ -9,7 +9,6 @@ import lombok.Setter;
 @ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
 public class TopicResource extends VersionedEntity implements Validatable {
     private static final String RESOURCE_TYPE_NAME = "TopicResource";
-
     private final String project;
     private final boolean grouped;
     @Setter

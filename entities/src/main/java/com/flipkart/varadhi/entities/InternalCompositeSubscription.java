@@ -40,5 +40,4 @@ public class InternalCompositeSubscription {
     public List<StorageSubscription<StorageTopic>> getActiveSubscriptions() {
         return new ArrayList<>(Arrays.asList(storageSubscriptions));
     }
-
 }

@@ -32,9 +32,7 @@ class VaradhiTopicTest {
     void getTopicResource() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(
                 new TopicResource(topicName, INITIAL_VERSION, projectName, false, topicCapacity));
-
         TopicResource topicResource = TopicResource.from(varadhiTopic);
-
         assertEquals(topicName, topicResource.getName());
         assertEquals(INITIAL_VERSION, topicResource.getVersion());
         assertEquals(projectName, topicResource.getProject());
@@ -45,6 +43,7 @@ class VaradhiTopicTest {
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
             super(name, version, topicCapacity);
+
         }
     }
 }

@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar.services;
 
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
@@ -68,7 +67,6 @@ public class PulsarTopicServiceTest {
     @Test
     public void testCreate_ConflictException() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.from(TEST_TOPIC, 1, Constants.DefaultTopicCapacity);
-
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
                 topics).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));

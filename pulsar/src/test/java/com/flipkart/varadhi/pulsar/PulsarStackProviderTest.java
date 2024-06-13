@@ -75,7 +75,6 @@ public class PulsarStackProviderTest {
     @Test
     public void testGetStorageTopicFactory_Initialized() {
         String topicName = "foobar";
-
         TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
         InternalQueueCategory topicCategory = InternalQueueCategory.MAIN;
         pulsarStackProvider.init(messagingStackOptions, objectMapper);

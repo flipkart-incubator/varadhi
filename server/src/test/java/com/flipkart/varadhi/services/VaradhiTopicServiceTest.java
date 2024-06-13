@@ -114,9 +114,7 @@ public class VaradhiTopicServiceTest {
         when(storageTopicService.exists(st.getName())).thenReturn(false);
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         when(metaStore.getProject(project.getName())).thenReturn(project);
-
         varadhiTopicService.delete(varadhiTopic.getName());
-
         verify(storageTopicService, times(1)).delete(st.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
     }

@@ -22,6 +22,7 @@ public class VaradhiTopicFactory {
         this.defaultTopicCapacityPolicy = defaultTopicCapacityPolicy;
         this.deploymentRegion = deploymentRegion;
     }
+
     public VaradhiTopic get(Project project, TopicResource topicResource) {
         if (null == topicResource.getCapacity()) {
             topicResource.setCapacity(defaultTopicCapacityPolicy);

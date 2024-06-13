@@ -336,17 +336,19 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(name, SubscriptionState.STOPPED));
         doReturn(status).when(controllerApi).getSubscriptionStatus(name, requestedBy);
-        Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy)).onComplete(ctx.succeeding(
-                v -> {
-                    Exception exception = assertThrows(ResourceNotFoundException.class,
-                            () -> subscriptionService.getSubscription(name)
-                    );
-                    String expectedMessage = "Subscription(%s) not found.".formatted(name);
-                    String actualMessage = exception.getMessage();
-                    assertEquals(expectedMessage, actualMessage);
-                    checkpoint.flag();
-                }
-        ));
+        Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy))
+                .onComplete(ctx.succeeding(
+                        v -> {
+                            Exception exception = assertThrows(
+                                    ResourceNotFoundException.class,
+                                    () -> subscriptionService.getSubscription(name)
+                            );
+                            String expectedMessage = "Subscription(%s) not found.".formatted(name);
+                            String actualMessage = exception.getMessage();
+                            assertEquals(expectedMessage, actualMessage);
+                            checkpoint.flag();
+                        }
+                ));
     }
 
     private CompletableFuture<VaradhiSubscription> updateSubscription(VaradhiSubscription to) {
