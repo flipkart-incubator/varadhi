@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -51,5 +52,37 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
+    }
+
+    @JsonIgnore
+    public String getSubscriptionInternalName() {
+        return buildInternalName(project, getName());
+    }
+
+    public static String buildInternalName(String project, String subsResourceName) {
+        return String.join(NAME_SEPARATOR, project, subsResourceName);
+    }
+
+    public static SubscriptionResource from(VaradhiSubscription subscription) {
+        String[] subscriptionNameSegments = subscription.getName().split(NAME_SEPARATOR_REGEX);
+        String subscriptionProject = subscriptionNameSegments[0];
+        String subscriptionName = subscriptionNameSegments[1];
+
+        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
+        String topicProject = topicNameSegments[0];
+        String topicName = topicNameSegments[1];
+
+        return new SubscriptionResource(
+                subscriptionName,
+                subscription.getVersion(),
+                subscriptionProject,
+                topicName,
+                topicProject,
+                subscription.getDescription(),
+                subscription.isGrouped(),
+                subscription.getEndpoint(),
+                subscription.getRetryPolicy(),
+                subscription.getConsumptionPolicy()
+        );
     }
 }

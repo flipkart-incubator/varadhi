@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
-import com.flipkart.varadhi.spi.services.TopicPartitions;
+import com.flipkart.varadhi.entities.TopicPartitions;
 
 import java.util.concurrent.CompletableFuture;
 

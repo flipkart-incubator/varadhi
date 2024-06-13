@@ -9,9 +9,11 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@storageType")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@storageType")
 public abstract class StorageTopic extends AbstractTopic {
-    public StorageTopic(String name, int version) {
+    private final TopicCapacityPolicy capacity;
+    public StorageTopic(String name, int version, TopicCapacityPolicy capacity) {
         super(name, version);
+        this.capacity = capacity;
     }
 }

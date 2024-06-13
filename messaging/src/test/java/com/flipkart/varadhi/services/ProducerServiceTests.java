@@ -309,7 +309,7 @@ public class ProducerServiceTests {
 
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
-            super(name, version);
+            super(name, version, TopicCapacityPolicy.getDefault());
         }
     }
 }

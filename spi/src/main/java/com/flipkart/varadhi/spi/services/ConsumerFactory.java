@@ -2,6 +2,7 @@ package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.TopicPartitions;
 
 import java.util.Collection;
 import java.util.Map;

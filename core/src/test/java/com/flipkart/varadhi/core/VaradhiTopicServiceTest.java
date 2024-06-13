@@ -11,21 +11,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicServiceTest {
 
+    private final String region = "local";
+    private final String topicName = "testTopic";
     StorageTopicFactory<StorageTopic> storageTopicFactory;
     private VaradhiTopicFactory varadhiTopicFactory;
     private StorageTopicService<StorageTopic> storageTopicService;
     private MetaStore metaStore;
     private VaradhiTopicService varadhiTopicService;
     private Project project;
-    private final String region = "local";
-    private final String topicName = "testTopic";
     private String vTopicName;
-    private CapacityPolicy capacityPolicy;
+    private TopicCapacityPolicy capacityPolicy;
 
 
     @BeforeEach
@@ -39,9 +40,10 @@ public class VaradhiTopicServiceTest {
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
-        capacityPolicy = CapacityPolicy.getDefault();
-        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
-        Mockito.doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
+        capacityPolicy = TopicCapacityPolicy.getDefault();
+        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, 1, capacityPolicy);
+        Mockito.doReturn(pTopic).when(storageTopicFactory)
+                .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
@@ -52,7 +54,7 @@ public class VaradhiTopicServiceTest {
         verify(metaStore, times(1)).createTopic(varadhiTopic);
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         verify(storageTopicService, times(1)).create(st, project);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
@@ -94,10 +96,11 @@ public class VaradhiTopicServiceTest {
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         when(storageTopicService.exists(st.getName())).thenReturn(true);
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.getProject(project.getName())).thenReturn(project);
 
         varadhiTopicService.delete(varadhiTopic.getName());
 
-        verify(storageTopicService, times(1)).delete(st.getName());
+        verify(storageTopicService, times(1)).delete(st.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
     }
 
@@ -108,10 +111,11 @@ public class VaradhiTopicServiceTest {
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         when(storageTopicService.exists(st.getName())).thenReturn(false);
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.getProject(project.getName())).thenReturn(project);
 
         varadhiTopicService.delete(varadhiTopic.getName());
 
-        verify(storageTopicService, times(0)).delete(st.getName());
+        verify(storageTopicService, times(0)).delete(st.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
     }
 
@@ -122,6 +126,7 @@ public class VaradhiTopicServiceTest {
         StorageTopic st = varadhiTopic.getProduceTopicForRegion(region).getStorageTopic();
         when(storageTopicService.exists(st.getName())).thenReturn(true);
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.getProject(project.getName())).thenReturn(project);
         doThrow(new VaradhiException("Some error")).when(metaStore).deleteTopic(varadhiTopic.getName());
 
         Exception exception = Assertions.assertThrows(
@@ -129,7 +134,7 @@ public class VaradhiTopicServiceTest {
                 () -> varadhiTopicService.delete(varadhiTopic.getName())
         );
 
-        verify(storageTopicService, times(1)).delete(st.getName());
+        verify(storageTopicService, times(1)).delete(st.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
         Assertions.assertEquals(exception.getClass(), VaradhiException.class);
     }

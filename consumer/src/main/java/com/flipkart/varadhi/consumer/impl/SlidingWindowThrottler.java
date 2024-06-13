@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.InternalQueueType;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.ThresholdProvider;
 import com.flipkart.varadhi.consumer.Throttler;
 import com.google.common.base.Ticker;

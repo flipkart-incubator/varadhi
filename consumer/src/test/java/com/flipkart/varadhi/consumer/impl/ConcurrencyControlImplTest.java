@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.InternalQueueType;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.concurrent.CustomThread;
 import com.flipkart.varadhi.consumer.concurrent.EventExecutor;

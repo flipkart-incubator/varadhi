@@ -9,4 +9,8 @@ import lombok.Data;
 public class SubscriptionStatus {
     private String subscriptionId;
     private SubscriptionState state;
+
+    public boolean canDelete() {
+        return state == SubscriptionState.STOPPED;
+    }
 }

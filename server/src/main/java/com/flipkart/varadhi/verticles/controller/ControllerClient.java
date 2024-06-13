@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionStatus;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -14,6 +15,13 @@ public class ControllerClient implements ControllerApi {
 
     public ControllerClient(MessageExchange exchange) {
         this.exchange = exchange;
+    }
+
+    @Override
+    public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
+        SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
+        ClusterMessage message = ClusterMessage.of(opRequest);
+        return exchange.request(ROUTE_CONTROLLER, "status", message).thenApply(rm -> rm.getResponse(SubscriptionStatus.class));
     }
 
     @Override

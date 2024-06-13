@@ -1,19 +1,18 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Getter
 public class SubscriptionMultiShard extends SubscriptionShards {
     private final Map<Integer, SubscriptionUnitShard> shards;
 
-    public SubscriptionMultiShard(List<SubscriptionUnitShard> shards) {
+    @JsonCreator
+    public SubscriptionMultiShard(Map<Integer, SubscriptionUnitShard> shards) {
         super(shards.size());
-        this.shards = new HashMap<>();
-        shards.forEach(shard -> this.shards.put(shard.getShardId(), shard));
+        this.shards = shards;
     }
 
     @Override

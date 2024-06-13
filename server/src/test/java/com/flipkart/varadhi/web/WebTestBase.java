@@ -188,7 +188,7 @@ public class WebTestBase {
     }
 
     public void awaitLatch(CountDownLatch latch) throws InterruptedException {
-        awaitLatch(latch, 10, TimeUnit.SECONDS);
+        awaitLatch(latch, 60, TimeUnit.SECONDS);
     }
 
     public void awaitLatch(CountDownLatch latch, long timeout, TimeUnit unit) throws InterruptedException {

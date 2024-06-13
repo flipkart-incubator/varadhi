@@ -38,6 +38,29 @@ public class PulsarProducer implements Producer {
         this.pulsarProducer = getProducer(pulsarClient, storageTopic, producerOptions, hostName);
     }
 
+    public static String getProducerName(String topicName, String hostName) {
+        return String.format("%s.%s", topicName, hostName);
+    }
+
+    public static int getMaxPendingMessages(int topicMaxQps) {
+        // Assumption:
+        // 1. Don't allow queue to build more than 1 second worth of messages.
+        // with bound [min, max]
+        // 2. It also assumes worst case in terms of distribution i.e. all messages are landing to the same producer.
+        // TODO::
+        // 1. This impacts memory so Discuss and close it.
+        // 2. This needs further tuning based on benchmarking and further understanding of the behavior.
+        return Math.min(MAX_PENDING_MESSAGES, Math.max(MIN_PENDING_MESSAGES, topicMaxQps));
+    }
+
+    public static int getBatchMaxMessages(int topicMaxQps, int maxPublishDelayMs) {
+        return Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, ((topicMaxQps * maxPublishDelayMs) / 1000)));
+    }
+
+    public static int getBatchingMaxBytes(int batchingMaxMessages, PulsarStorageTopic topic) {
+        return batchingMaxMessages * (topic.getCapacity().getThroughputKBps() * 1000 / topic.getCapacity().getQps());
+    }
+
     @Override
     public CompletableFuture<Offset> produceAsync(Message message) {
 
@@ -61,7 +84,6 @@ public class PulsarProducer implements Producer {
         }
         return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }
-
 
     private org.apache.pulsar.client.api.Producer<byte[]> getProducer(
             PulsarClient pulsarClient, PulsarStorageTopic topic, ProducerOptions options, String hostname
@@ -98,7 +120,7 @@ public class PulsarProducer implements Producer {
         producerConfig.put("producerName", getProducerName(topic.getName(), hostName));
         producerConfig.put("accessMode", ProducerAccessMode.Shared);
 
-        int topicMaxQps = topic.getMaxQPS();
+        int topicMaxQps = topic.getCapacity().getQps();
         int maxPendingMessages = getMaxPendingMessages(topicMaxQps);
         int batchingMaxMessages = getBatchMaxMessages(topicMaxQps, options.getBatchingMaxPublishDelayMs());
         producerConfig.put("maxPendingMessages", maxPendingMessages);
@@ -107,29 +129,6 @@ public class PulsarProducer implements Producer {
         producerConfig.put("batchingMaxMessages", batchingMaxMessages);
         producerConfig.put("batchingMaxBytes", getBatchingMaxBytes(batchingMaxMessages, topic));
         return producerConfig;
-    }
-
-    public static String getProducerName(String topicName, String hostName) {
-        return String.format("%s.%s", topicName, hostName);
-    }
-
-    public static int getMaxPendingMessages(int topicMaxQps) {
-        // Assumption:
-        // 1. Don't allow queue to build more than 1 second worth of messages.
-        // with bound [min, max]
-        // 2. It also assumes worst case in terms of distribution i.e. all messages are landing to the same producer.
-        // TODO::
-        // 1. This impacts memory so Discuss and close it.
-        // 2. This needs further tuning based on benchmarking and further understanding of the behavior.
-        return Math.min(MAX_PENDING_MESSAGES, Math.max(MIN_PENDING_MESSAGES, topicMaxQps));
-    }
-
-    public static int getBatchMaxMessages(int topicMaxQps, int maxPublishDelayMs) {
-        return Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, ((topicMaxQps * maxPublishDelayMs) / 1000)));
-    }
-
-    public static int getBatchingMaxBytes(int batchingMaxMessages, PulsarStorageTopic topic) {
-        return batchingMaxMessages * (topic.getMaxThroughputKBps() * 1000 / topic.getMaxQPS());
     }
 
 }

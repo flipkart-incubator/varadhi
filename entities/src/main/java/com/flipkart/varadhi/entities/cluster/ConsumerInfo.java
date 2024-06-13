@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.entities.cluster;
 
 
-import com.flipkart.varadhi.entities.CapacityPolicy;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -9,10 +8,10 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ConsumerInfo {
     private String consumerId;
-    private CapacityPolicy available;
+    private NodeCapacity available;
 
     public static ConsumerInfo from(MemberInfo memberInfo) {
         return new ConsumerInfo(
-                memberInfo.hostname(), new CapacityPolicy(1000, memberInfo.capacity().getNetworkMBps()));
+                memberInfo.hostname(), new NodeCapacity(1000, memberInfo.capacity().getNetworkMBps()));
     }
 }

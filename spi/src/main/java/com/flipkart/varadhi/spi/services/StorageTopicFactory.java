@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.spi.services;
 
-import com.flipkart.varadhi.entities.CapacityPolicy;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.*;
 
 public interface StorageTopicFactory<T extends StorageTopic> {
 
@@ -10,5 +8,5 @@ public interface StorageTopicFactory<T extends StorageTopic> {
 
     // topicName is globally unique. Messaging stack can take a dependency on this to create either
     // global or regional topic names as required.
-    T getTopic(String topicName, Project project, CapacityPolicy capacityPolicy);
+    T getTopic(String topicName, Project project, TopicCapacityPolicy capacity, InternalQueueCategory queueCategory);
 }

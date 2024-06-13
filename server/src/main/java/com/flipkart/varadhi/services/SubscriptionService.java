@@ -1,16 +1,14 @@
 package com.flipkart.varadhi.services;
 
-
 import com.flipkart.varadhi.core.cluster.ControllerApi;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.utils.ShardProvisioner;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
@@ -19,8 +17,10 @@ import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 public class SubscriptionService {
     private final MetaStore metaStore;
     private final ControllerApi controllerApi;
+    private final ShardProvisioner shardProvisioner;
 
-    public SubscriptionService(ControllerApi controllerApi, MetaStore metaStore) {
+    public SubscriptionService(ShardProvisioner shardProvisioner, ControllerApi controllerApi, MetaStore metaStore) {
+        this.shardProvisioner = shardProvisioner;
         this.metaStore = metaStore;
         this.controllerApi = controllerApi;
     }
@@ -33,24 +33,47 @@ public class SubscriptionService {
         return metaStore.getSubscription(subscriptionName);
     }
 
-    public VaradhiSubscription createSubscription(VaradhiSubscription subscription) {
-        validateCreation(subscription);
+    public VaradhiSubscription createSubscription(
+            VaradhiTopic subscribedTopic, VaradhiSubscription subscription, Project subProject
+    ) {
+        validateCreation(subscribedTopic, subscription);
         subscription.setVersion(INITIAL_VERSION);
         metaStore.createSubscription(subscription);
+        try {
+            shardProvisioner.provision(subscription, subProject);
+            subscription.markCreated();
+        } catch (Exception e) {
+            log.error("create subscription failed", e);
+            subscription.markCreateFailed(e.getMessage());
+            throw e;
+        } finally {
+            int updated = metaStore.updateSubscription(subscription);
+            subscription.setVersion(updated);
+        }
         return subscription;
     }
 
     public CompletableFuture<SubscriptionOperation> start(String subscriptionName, String requestedBy) {
-        return controllerApi.startSubscription(subscriptionName, requestedBy);
+        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        if (subscription.isWellProvisioned()) {
+            return controllerApi.startSubscription(subscriptionName, requestedBy);
+        }
+        throw new InvalidOperationForResourceException(
+                "Subscription is in state %s. It can't be started/stopped.".formatted(
+                        subscription.getStatus().getState()));
     }
 
     public CompletableFuture<SubscriptionOperation> stop(String subscriptionName, String requestedBy) {
-        return controllerApi.stopSubscription(subscriptionName, requestedBy);
+        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        if (subscription.isWellProvisioned()) {
+            return controllerApi.stopSubscription(subscriptionName, requestedBy);
+        }
+        throw new InvalidOperationForResourceException(
+                "Subscription is in state %s. It can't be started/stopped.".formatted(
+                        subscription.getStatus().getState()));
     }
 
-    private void validateCreation(VaradhiSubscription subscription) {
-        metaStore.getProject(subscription.getProject());
-        VaradhiTopic topic = metaStore.getTopic(subscription.getTopic());
+    private void validateCreation(VaradhiTopic topic, VaradhiSubscription subscription) {
         if (subscription.isGrouped() && !topic.isGrouped()) {
             throw new IllegalArgumentException(
                     "Cannot create grouped Subscription as it's Topic(%s) is not grouped".formatted(
@@ -58,50 +81,63 @@ public class SubscriptionService {
         }
     }
 
-    public VaradhiSubscription updateSubscription(VaradhiSubscription subscription) {
-        VaradhiSubscription existingSubscription = metaStore.getSubscription(subscription.getName());
-        validateUpdate(existingSubscription, subscription);
-        VaradhiSubscription updatedSubscription = new VaradhiSubscription(
-                existingSubscription.getName(),
-                existingSubscription.getVersion(),
-                existingSubscription.getProject(),
-                existingSubscription.getTopic(),
-                subscription.getDescription(),
-                subscription.isGrouped(),
-                subscription.getEndpoint(),
-                subscription.getRetryPolicy(),
-                subscription.getConsumptionPolicy(),
-                existingSubscription.getShards()
-        );
+    public CompletableFuture<VaradhiSubscription> updateSubscription(
+            String subscriptionName, int fromVersion, String description, boolean grouped, Endpoint endpoint,
+            RetryPolicy retryPolicy, ConsumptionPolicy consumptionPolicy, String requestedBy
+    ) {
+        VaradhiSubscription existingSubscription = metaStore.getSubscription(subscriptionName);
+        validateForConflictingUpdate(fromVersion, existingSubscription.getVersion());
+        VaradhiTopic subscribedTopic = metaStore.getTopic(existingSubscription.getTopic());
+        validateForSubscribedTopic(subscribedTopic, grouped);
+        return controllerApi.getSubscriptionStatus(subscriptionName, requestedBy).thenApply(ss -> {
+            existingSubscription.setGrouped(grouped);
+            existingSubscription.setDescription(description);
+            existingSubscription.setEndpoint(endpoint);
+            existingSubscription.setRetryPolicy(retryPolicy);
+            existingSubscription.setConsumptionPolicy(consumptionPolicy);
 
-        int updatedVersion = metaStore.updateSubscription(updatedSubscription);
-        updatedSubscription.setVersion(updatedVersion);
+            int updatedVersion = metaStore.updateSubscription(existingSubscription);
+            existingSubscription.setVersion(updatedVersion);
+            return existingSubscription;
+        });
 
-        return updatedSubscription;
+
     }
 
-    private void validateUpdate(VaradhiSubscription existing, VaradhiSubscription update) {
-        if (update.getVersion() != existing.getVersion()) {
-            throw new InvalidOperationForResourceException(String.format(
-                    "Conflicting update, Subscription(%s) has been modified. Fetch latest and try again.",
-                    existing.getName()
-            ));
-        }
-
-        if (!Objects.equals(update.getTopic(), existing.getTopic())) {
-            throw new IllegalArgumentException(
-                    "Cannot update Topic of Subscription(%s)".formatted(update.getName()));
-        }
-
-        VaradhiTopic topic = metaStore.getTopic(update.getTopic());
-        if (update.isGrouped() && !topic.isGrouped()) {
-            throw new IllegalArgumentException(
-                    "Cannot update Subscription(%s) to grouped as it's Topic(%s) is not grouped".formatted(
-                            update.getName(), topic.getName()));
+    private void validateForConflictingUpdate(int fromVersion, int latestVersion) {
+        if (fromVersion != latestVersion) {
+            throw new InvalidOperationForResourceException(
+                    "Conflicting update, Subscription has been modified. Fetch latest and try again.");
         }
     }
 
-    public void deleteSubscription(String subscriptionName) {
-        metaStore.deleteSubscription(subscriptionName);
+    private void validateForSubscribedTopic(VaradhiTopic subscribedTopic, boolean groupedUpdated) {
+        if (groupedUpdated && !subscribedTopic.isGrouped()) {
+            throw new IllegalArgumentException(
+                    "Cannot update Subscription to grouped as it's Topic(%s) is not grouped".formatted(
+                            subscribedTopic.getName()));
+        }
+    }
+
+    public CompletableFuture<Void> deleteSubscription(String subscriptionName, Project subProject, String requestedBy) {
+        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        return controllerApi.getSubscriptionStatus(subscriptionName, requestedBy).thenAccept(ss -> {
+            if (!ss.canDelete()) {
+                throw new IllegalArgumentException(
+                        String.format("Subscription deletion not allowed in state: %s.", ss.getState()));
+            }
+            subscription.markDeleting();
+            int updated = metaStore.updateSubscription(subscription);
+            subscription.setVersion(updated);
+            try {
+                shardProvisioner.deProvision(subscription, subProject);
+                metaStore.deleteSubscription(subscriptionName);
+            } catch (Exception e) {
+                log.error("Delete failed.", e);
+                subscription.markDeleteFailed(e.getMessage());
+                metaStore.updateSubscription(subscription);
+                throw e;
+            }
+        });
     }
 }
