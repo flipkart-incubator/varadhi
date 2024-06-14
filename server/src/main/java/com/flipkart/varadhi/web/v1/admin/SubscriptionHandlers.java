@@ -140,6 +140,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public void update(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         //TODO::Evaluate separating these into individual update APIs.
+        //Fix:: Update is allowed, though no change in the subscription, this can be avoided.
         executeAsyncRequest(
                 ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(),
                         subscription.getVersion(),

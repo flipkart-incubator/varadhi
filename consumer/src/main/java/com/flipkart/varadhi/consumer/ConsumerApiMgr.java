@@ -23,6 +23,7 @@ public class ConsumerApiMgr implements ConsumerApi {
 
     @Override
     public CompletableFuture<Void> start(ShardOperation.StartData operation) {
+        log.info("Consumer: Starting shard {}", operation);
         VaradhiSubscription subscription = operation.getSubscription();
         SubscriptionUnitShard shard = operation.getShard();
         StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionToConsume();

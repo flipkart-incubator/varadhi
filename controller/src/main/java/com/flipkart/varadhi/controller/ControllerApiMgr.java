@@ -84,6 +84,7 @@ public class ControllerApiMgr implements ControllerApi {
     public CompletableFuture<SubscriptionOperation> startSubscription(
             String subscriptionId, String requestedBy
     ) {
+        //TODO:: Fix it -assignment failure is not failing the start op. Task failure in the operation mgr queue.
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             // If not temporary, then alternate needs to be provided to allow recovery from this.
@@ -111,7 +112,7 @@ public class ControllerApiMgr implements ControllerApi {
             return shardAssigner.assignShard(unAssigned, subscription);
         } else {
             log.info(
-                    "{} Shards for Subscription {} are already assigned", assignedShards.size(),
+                    "{} Shards for Subscription {} are already assigned.", assignedShards.size(),
                     subscription.getName()
             );
             return CompletableFuture.completedFuture(assignedShards);
@@ -250,7 +251,7 @@ public class ControllerApiMgr implements ControllerApi {
 
     @Override
     public CompletableFuture<Void> update(ShardOperation.OpData opData) {
-        log.debug("Received update on shard operation: {}", opData);
+        log.info("Received update on shard operation: {}", opData);
         try {
             // Update is getting executed inline on dispatcher thread.
             operationMgr.updateShardOp(opData);
