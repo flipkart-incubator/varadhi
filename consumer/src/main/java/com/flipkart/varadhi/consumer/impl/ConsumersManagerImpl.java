@@ -5,7 +5,6 @@ import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.ConsumptionFailurePolicy;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
-import com.flipkart.varadhi.entities.TopicPartitions;
 
 import java.util.concurrent.CompletableFuture;
 

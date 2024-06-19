@@ -11,6 +11,7 @@ public class Constants {
     public static final String USER_ID_HEADER = "x_user_id";
 
     public static final TopicCapacityPolicy DefaultTopicCapacity = new TopicCapacityPolicy(100, 400, 2);
+    public static String SYSTEM_IDENTITY = "System";
 
     public static class PathParams {
         public static final String PATH_PARAM_ORG = "org";

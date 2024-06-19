@@ -26,10 +26,11 @@ public class ConsumerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        //TODO:: decide who manages consumerInfo -- ConsumersManagerImpl or ConsumerApiMgr, mostly later.
         ConsumersManager consumersManager = new ConsumersManagerImpl(consumerInfo);
 
         ControllerClient controllerClient = new ControllerClient(messageExchange);
-        ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager);
+        ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, consumerInfo);
         ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
         setupApiHandlers(messageRouter, handler);
         startPromise.complete();

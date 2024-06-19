@@ -17,7 +17,7 @@ verticleDeploymentOptions:
 
 # Refer Vertx DeliveryOptions for details, used for inter node communication.
 deliveryOptions:
-  timeoutMs: 1000
+  timeoutMs: 10000
   tracingPolicy: "PROPAGATE"
 
 httpServerOptions:
