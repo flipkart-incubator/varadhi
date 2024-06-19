@@ -10,10 +10,11 @@ import java.net.URL;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
-        property = "@endpointType"
+        property = "protocol"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(Endpoint.HttpEndpoint.class),
+        @JsonSubTypes.Type(value = Endpoint.HttpEndpoint.class, name = "HTTP1_1"),
+        @JsonSubTypes.Type(value = Endpoint.HttpEndpoint.class, name = "HTTP2"),
 })
 public abstract sealed class Endpoint {
 
