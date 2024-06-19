@@ -76,7 +76,6 @@ public class VaradhiApplication {
 
     private static MemberInfo getMemberInfo(MemberConfig memberConfig) throws UnknownHostException {
         String host = HostUtils.getHostName();
-        host = "BLRETV-C02Z14N0-tmp.local";
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
         NodeCapacity provisionedCapacity =  new NodeCapacity(memberConfig.getMaxQps(), networkKBps);
         return new MemberInfo(host, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);

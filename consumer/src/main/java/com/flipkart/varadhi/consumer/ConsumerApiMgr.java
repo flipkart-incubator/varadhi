@@ -1,8 +1,14 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.entities.StorageSubscription;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
+import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.ShardState;
+import com.flipkart.varadhi.entities.cluster.ShardStatus;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
