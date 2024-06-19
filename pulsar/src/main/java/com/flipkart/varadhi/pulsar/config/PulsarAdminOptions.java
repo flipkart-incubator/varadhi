@@ -7,6 +7,6 @@ import lombok.Data;
 public class PulsarAdminOptions {
     private String serviceHttpUrl;
     private int connectionTimeoutMs = 2000;
-    private int readTimeoutMs = 2000;
-    private int requestTimeoutMs = 2000;
+    private int readTimeoutMs = 30000;
+    private int requestTimeoutMs = 30000;
 }

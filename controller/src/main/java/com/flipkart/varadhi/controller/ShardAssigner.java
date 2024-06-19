@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
@@ -38,7 +37,7 @@ public class ShardAssigner {
     public void addConsumerNodes(List<ConsumerNode> clusterConsumers) {
         clusterConsumers.forEach(c -> {
             addConsumerNode(c);
-            log.info("Added consumer node {}", c.getMemberInfo().hostname());
+            log.info("Added consumer node {}", c.getConsumerId());
         });
     }
 
@@ -103,7 +102,7 @@ public class ShardAssigner {
     public void consumerNodeJoined(ConsumerNode consumerNode) {
         boolean added = addConsumerNode(consumerNode);
         if (added) {
-            log.info("ConsumerNode {} joined.", consumerNode.getMemberInfo().hostname());
+            log.info("ConsumerNode {} joined.", consumerNode.getConsumerId());
         }
     }
 
@@ -123,7 +122,7 @@ public class ShardAssigner {
     }
 
     private boolean addConsumerNode(ConsumerNode consumerNode) {
-        String consumerNodeId = consumerNode.getMemberInfo().hostname();
+        String consumerNodeId = consumerNode.getConsumerId();
         MutableBoolean added = new MutableBoolean(false);
         consumerNodes.computeIfAbsent(consumerNodeId, k -> {
             added.setTrue();

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.MockTicker;
-import com.flipkart.varadhi.consumer.InternalQueueType;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.google.common.base.Ticker;
 import io.vertx.core.impl.ConcurrentHashSet;
 import lombok.extern.slf4j.Slf4j;

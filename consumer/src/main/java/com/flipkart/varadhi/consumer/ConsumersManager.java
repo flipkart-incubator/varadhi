@@ -1,11 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.Endpoint;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
-import com.flipkart.varadhi.spi.services.TopicPartitions;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -22,23 +18,23 @@ public interface ConsumersManager {
      * @return
      */
     CompletableFuture<Void> startSubscription(
-            Project project,
+            String project,
             String subscription,
-            String shardName,
-            TopicPartitions<StorageTopic> topic,
+            int shardId,
+            StorageSubscription<StorageTopic> mainSubscription,
             boolean grouped,
             Endpoint endpoint,
             ConsumptionPolicy consumptionPolicy,
             ConsumptionFailurePolicy failurePolicy
     );
 
-    CompletableFuture<Void> stopSubscription(String subscription, String shardName);
+    CompletableFuture<Void> stopSubscription(String subscription, int shardId);
 
-    void pauseSubscription(String subscription, String shardName);
+    void pauseSubscription(String subscription, int shardId);
 
-    void resumeSubscription(String subscription, String shardName);
+    void resumeSubscription(String subscription, int shardId);
 
-    ConsumerState getConsumerState(String subscription, String shardName);
+    ConsumerState getConsumerState(String subscription, int shardId);
 
     // TODO likely need status on the starting / stopping as well; as the above status is for a running consumer..
 

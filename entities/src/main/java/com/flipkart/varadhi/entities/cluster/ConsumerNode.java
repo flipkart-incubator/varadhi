@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.entities.cluster;
 
-import com.flipkart.varadhi.entities.CapacityPolicy;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import lombok.Getter;
 
 import java.util.Comparator;
@@ -11,16 +11,17 @@ import static java.util.Comparator.comparing;
 
 @Getter
 public class ConsumerNode {
+    // Consumer Node info as viewed by Controller
     public static Comparator<ConsumerNode> NodeComparator = comparing(o -> o.available);
-    private final MemberInfo memberInfo;
-    private final CapacityPolicy available;
-    private boolean markedForDeletion;
+    private final String consumerId;
+    private final NodeCapacity available;
     private final Map<String, Assignment> assignments;
+    private boolean markedForDeletion;
 
     public ConsumerNode(MemberInfo memberInfo) {
-        this.memberInfo = memberInfo;
+        this.consumerId = memberInfo.hostname();
         this.markedForDeletion = false;
-        this.available = new CapacityPolicy(1000, memberInfo.capacity().getNetworkMBps() * 1000);
+        this.available = memberInfo.provisionedCapacity().clone();
         this.assignments = new HashMap<>();
     }
 
@@ -32,18 +33,15 @@ public class ConsumerNode {
         available.setMaxThroughputKBps(consumerInfo.getAvailable().getMaxThroughputKBps());
     }
 
-    public String getConsumerId() {
-        return memberInfo.hostname();
-    }
-
-    public synchronized void allocate(Assignment a, CapacityPolicy requests) {
+    public synchronized void allocate(Assignment a, TopicCapacityPolicy requests) {
         if (null == assignments.putIfAbsent(a.getName(), a)) {
-            available.setMaxThroughputKBps(available.getMaxThroughputKBps() - requests.getMaxThroughputKBps());
+            available.setMaxThroughputKBps(available.getMaxThroughputKBps() - requests.getThroughputKBps());
         }
     }
-    public synchronized void free(Assignment a, CapacityPolicy requests) {
-        if (null != assignments.remove(a.getName())){
-            available.setMaxThroughputKBps(available.getMaxThroughputKBps() + requests.getMaxThroughputKBps());
+
+    public synchronized void free(Assignment a, TopicCapacityPolicy requests) {
+        if (null != assignments.remove(a.getName())) {
+            available.setMaxThroughputKBps(available.getMaxThroughputKBps() + requests.getThroughputKBps());
         }
     }
 }

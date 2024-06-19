@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.core.TopicService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
-import com.flipkart.varadhi.utils.SubscriptionHelper;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
@@ -22,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,8 +36,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
             1, 1, 1, 1
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-    private static final CapacityPolicy capacityPolicy = new CapacityPolicy(1, 10);
-    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null);
+    private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
+    private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
 
     static {
         try {
@@ -51,31 +52,20 @@ public class SubscriptionHandlersTest extends WebTestBase {
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
     ProjectService projectService;
-    TopicService<VaradhiTopic> topicService;
+    VaradhiTopicService topicService;
+    VaradhiSubscriptionFactory subscriptionFactory;
 
     public static VaradhiSubscription getVaradhiSubscription(
-            String subscriptionName, Project project, VaradhiTopic topic
+            String subscriptionName, Project project, VaradhiTopic topic, int version
     ) {
-        return new VaradhiSubscription(
-                SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
-                VersionedEntity.INITIAL_VERSION,
-                project.getName(),
-                topic.getName(),
-                UUID.randomUUID().toString(),
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                shards
-        );
+        return getVaradhiSubscription(subscriptionName, false, project, topic, version);
     }
 
     public static VaradhiSubscription getVaradhiSubscription(
-            String subscriptionName, boolean grouped, Project project, VaradhiTopic topic
+            String subscriptionName, boolean grouped, Project project, VaradhiTopic topic, int version
     ) {
-        return new VaradhiSubscription(
-                SubscriptionHelper.buildSubscriptionName(project.getName(), subscriptionName),
-                VersionedEntity.INITIAL_VERSION,
+        VaradhiSubscription subscription = VaradhiSubscription.of(
+                SubscriptionResource.buildInternalName(project.getName(), subscriptionName),
                 project.getName(),
                 topic.getName(),
                 UUID.randomUUID().toString(),
@@ -85,6 +75,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 consumptionPolicy,
                 shards
         );
+        subscription.setVersion(version);
+        return subscription;
     }
 
     @BeforeEach
@@ -93,7 +85,9 @@ public class SubscriptionHandlersTest extends WebTestBase {
         subscriptionService = mock(SubscriptionService.class);
         projectService = mock(ProjectService.class);
         topicService = mock(VaradhiTopicService.class);
-        subscriptionHandlers = new SubscriptionHandlers(subscriptionService, projectService, topicService);
+        subscriptionFactory = mock(VaradhiSubscriptionFactory.class);
+        subscriptionHandlers =
+                new SubscriptionHandlers(subscriptionService, projectService, topicService, subscriptionFactory);
 
         Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
                     subscriptionHandlers.setSubscription(ctx);
@@ -135,13 +129,43 @@ public class SubscriptionHandlersTest extends WebTestBase {
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic);
-        when(subscriptionService.createSubscription(any())).thenReturn(subscription);
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+        when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
         SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
-        assertEquals(
-                subscription.getName(),
-                SubscriptionHelper.buildSubscriptionName(created.getProject(), created.getName())
-        );
+        assertEquals(subscription.getName(), created.getSubscriptionInternalName());
+    }
+
+    @Test
+    void testCreateSubscriptionWithNonExistentProject() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+
+        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
+        doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
+        String errMsg = "Project not found.";
+        doThrow(new ResourceNotFoundException(errMsg)).when(projectService).getCachedProject(project.getName());
+
+        ErrorResponse resp = sendRequestWithBody(request, resource, 404, errMsg, ErrorResponse.class);
+        assertEquals(errMsg, resp.reason());
+    }
+
+    @Test
+    void testCreateSubscriptionWithNonExistentTopic() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
+        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+
+        doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
+        doReturn(project).when(projectService).getCachedProject(project.getName());
+        String errMsg = "Topic not found.";
+        doThrow(new ResourceNotFoundException(errMsg)).when(topicService)
+                .get(topicResource.getProject() + "." + topicResource.getName());
+
+        ErrorResponse resp = sendRequestWithBody(request, resource, 404, errMsg, ErrorResponse.class);
+        assertEquals(errMsg, resp.reason());
     }
 
     @Test
@@ -160,14 +184,13 @@ public class SubscriptionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub12", project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource), 0);
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         when(subscriptionService.getSubscription(captor.capture())).thenReturn(subscription);
 
         SubscriptionResource got = sendRequestWithoutBody(request, SubscriptionResource.class);
         assertEquals(got.getName(), resource.getName());
-        assertEquals(
-                captor.getValue(), SubscriptionHelper.buildSubscriptionName(project.getName(), resource.getName()));
+        assertEquals(captor.getValue(), resource.getSubscriptionInternalName());
     }
 
     @Test
@@ -192,32 +215,40 @@ public class SubscriptionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        doNothing().when(subscriptionService).deleteSubscription(captor.capture());
+        doReturn(project).when(projectService).getCachedProject(project.getName());
+        ArgumentCaptor<String> captorSubName = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Project> captorProject = ArgumentCaptor.forClass(Project.class);
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+                .deleteSubscription(captorSubName.capture(), captorProject.capture(), any());
 
         sendRequestWithoutBody(request, null);
-        assertEquals(
-                captor.getValue(), SubscriptionHelper.buildSubscriptionName(project.getName(), resource.getName()));
-        verify(subscriptionService, times(1)).deleteSubscription(any());
+        assertEquals(captorSubName.getValue(), resource.getSubscriptionInternalName());
+        assertEquals(captorProject.getValue().getName(), project.getName());
+        verify(subscriptionService, times(1)).deleteSubscription(any(), any(), any());
     }
 
     @Test
     void testSubscriptionUpdate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, vTopic);
-        ArgumentCaptor<VaradhiSubscription> captor = ArgumentCaptor.forClass(VaradhiSubscription.class);
-        when(subscriptionService.updateSubscription(captor.capture())).thenReturn(subscription);
+        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, vTopic, 2);
+        doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
+        ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Integer> versionCaptor = ArgumentCaptor.forClass(Integer.class);
+        when(subscriptionService.updateSubscription(
+                nameCaptor.capture(), versionCaptor.capture(), anyString(), anyBoolean(), any(), any(), any(),
+                any()
+        )).thenReturn(
+                CompletableFuture.completedFuture(subscription));
 
         SubscriptionResource updated = sendRequestWithBody(request, resource, SubscriptionResource.class);
-        assertEquals(updated.getName(), resource.getName());
-        assertEquals(
-                captor.getValue().getName(),
-                SubscriptionHelper.buildSubscriptionName(project.getName(), resource.getName())
-        );
+        assertEquals(resource.getName(), updated.getName());
+        assertEquals(resource.getSubscriptionInternalName(), nameCaptor.getValue());
+        assertEquals(1, versionCaptor.getValue());
     }
 
     private String getSubscriptionsUrl(Project project) {

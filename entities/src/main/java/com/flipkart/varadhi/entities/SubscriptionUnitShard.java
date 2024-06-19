@@ -4,20 +4,24 @@ import lombok.Getter;
 
 @Getter
 public class SubscriptionUnitShard extends SubscriptionShards {
-
+    //TODO::Add a notion of regions to either Shard or VaradhiSubscription
+    // and bring operation down to regional level e.g. start/stop/assignment.
     private final int shardId;
-    private final RetryTopic retryTopic;
-    private final InternalCompositeTopic deadLetterTopic;
-    private final CapacityPolicy capacityRequest;
+    private final TopicCapacityPolicy capacityRequest;
+    private final InternalCompositeSubscription mainSubscription;
+    private final RetrySubscription retrySubscription;
+    private final InternalCompositeSubscription deadLetterSubscription;
 
     public SubscriptionUnitShard(
-            int shardId, CapacityPolicy capacityRequest, RetryTopic retryTopic, InternalCompositeTopic deadLetterTopic
+            int shardId, TopicCapacityPolicy capacityRequest, InternalCompositeSubscription mainSubscription,
+            RetrySubscription retrySubscription, InternalCompositeSubscription deadLetterSubscription
     ) {
         super(1);
         this.shardId = shardId;
-        this.retryTopic = retryTopic;
-        this.deadLetterTopic = deadLetterTopic;
+        this.retrySubscription = retrySubscription;
+        this.deadLetterSubscription = deadLetterSubscription;
         this.capacityRequest = capacityRequest;
+        this.mainSubscription = mainSubscription;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+
 public class Constants {
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
     public static final String CONTEXT_KEY_BODY = "varadhi.body";
@@ -7,6 +9,8 @@ public class Constants {
 
     // TODO: this header is only for testing and x_ convention may cause it to be sent to the destination during consume
     public static final String USER_ID_HEADER = "x_user_id";
+
+    public static final TopicCapacityPolicy DefaultTopicCapacity = new TopicCapacityPolicy(100, 400, 2);
 
     public static class PathParams {
         public static final String PATH_PARAM_ORG = "org";

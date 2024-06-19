@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.core;
+package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -11,60 +11,44 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
-
+// TODO::This need to move to server.services
 @Slf4j
-public class VaradhiTopicService implements TopicService<VaradhiTopic> {
+public class VaradhiTopicService {
 
-    private final StorageTopicService topicService;
+    private final StorageTopicService<StorageTopic> topicService;
     private final MetaStore metaStore;
 
     public VaradhiTopicService(
-            StorageTopicService serviceFactory,
+            StorageTopicService<StorageTopic> storageTopicService,
             MetaStore metaStore
     ) {
-        this.topicService = serviceFactory;
+        this.topicService = storageTopicService;
         this.metaStore = metaStore;
     }
 
-    @Override
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic {}", varadhiTopic.getName());
-        varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
-                {
-                    StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.exists(storageTopic.getName())) {
-                        log.warn("Specified StorageTopic({}:{}) already exists.", project.getName(), storageTopic.getName());
-                    } else {
-                        topicService.create(storageTopic, project);
-                    }
-                }
-        );
+        // StorageTopicService.create() to ensure if pre-existing topic can be re-used.
+        // i.e. topic creation at storage level need to be idempotent.
+        varadhiTopic.getInternalTopics().forEach((region, internalTopic) -> internalTopic.getActiveTopics()
+                .forEach(storageTopic -> topicService.create(storageTopic, project)));
         metaStore.createTopic(varadhiTopic);
     }
 
-    @Override
     public VaradhiTopic get(String topicName) {
         return metaStore.getTopic(topicName);
     }
 
-    @Override
     public void delete(String varadhiTopicName) {
         log.info("Deleting Varadhi topic {}", varadhiTopicName);
-        /*TODO : delete namespace, tenant also if the only Topic in the namespace+tenant is deleted / cleanup independent of delete
-         * check for existing subscriptions before deleting the topic
+        /* TODO : delete namespace, tenant also if the only Topic in the namespace+tenant is deleted / cleanup independent of delete
          */
         VaradhiTopic varadhiTopic = metaStore.getTopic(varadhiTopicName);
+        String projectName = varadhiTopic.getProjectName();
+        Project project = metaStore.getProject(projectName);
         validateDelete(varadhiTopicName);
-        varadhiTopic.getInternalTopics().forEach((kind, internalTopic) ->
-                {
-                    StorageTopic storageTopic = internalTopic.getStorageTopic();
-                    if (topicService.exists(storageTopic.getName())) {
-                        topicService.delete(storageTopic.getName());
-                    } else {
-                        log.warn("Specified StorageTopic({}) does not exist.", storageTopic.getName());
-                    }
-                }
-        );
+        varadhiTopic.getInternalTopics().forEach((region, internalTopic) -> internalTopic.getActiveTopics()
+                .forEach(storageTopic -> topicService.delete(storageTopic.getName(), project)));
         metaStore.deleteTopic(varadhiTopic.getName());
     }
 
@@ -80,7 +64,6 @@ public class VaradhiTopicService implements TopicService<VaradhiTopic> {
         });
     }
 
-    @Override
     public boolean exists(String topicName) {
         return metaStore.checkTopicExists(topicName);
     }

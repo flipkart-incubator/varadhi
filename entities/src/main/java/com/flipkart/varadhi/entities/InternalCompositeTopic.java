@@ -1,22 +1,39 @@
 package com.flipkart.varadhi.entities;
 
 
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A wrapper on the storage topic. In future this class will handle the adding additional storage topics for the purpose
  * of increasing partition count without affecting ordering.
  * This concept is internal and is never exposed to the user.
  */
-@Data
+@Getter
+@AllArgsConstructor
 public class InternalCompositeTopic {
+    private StorageTopic[] storageTopics;
+    private int produceIndex;
+    @Setter
+    private TopicState topicState;
 
-    private final String topicRegion;
+    public static InternalCompositeTopic of(StorageTopic storageTopic) {
+        return new InternalCompositeTopic(new StorageTopic[]{storageTopic}, 0, TopicState.Producing);
+    }
 
-    private final TopicState topicState;
+    @JsonIgnore
+    public StorageTopic getTopicToProduce() {
+        return storageTopics[produceIndex];
+    }
 
-    /**
-     * As of now only 1 is supported, but in future this can be an array where we can add more storage topics.
-     */
-    private final StorageTopic storageTopic;
+    @JsonIgnore
+    public List<StorageTopic> getActiveTopics() {
+        return new ArrayList<>(Arrays.asList(storageTopics));
+    }
 }

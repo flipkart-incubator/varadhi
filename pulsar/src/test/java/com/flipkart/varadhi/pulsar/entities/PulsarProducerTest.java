@@ -1,9 +1,8 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.entities.CapacityPolicy;
+import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducer;
 import com.google.common.collect.ArrayListMultimap;
@@ -34,7 +33,7 @@ public class PulsarProducerTest {
     ProducerOptions options;
     PulsarStorageTopic topic;
 
-    CapacityPolicy policy;
+    TopicCapacityPolicy policy;
     String hostname;
 
     @BeforeEach
@@ -50,8 +49,8 @@ public class PulsarProducerTest {
         messageBuilder = spy(new TypedMessageBuilderImpl(producer, Schema.BYTES));
         doReturn(messageBuilder).when(producer).newMessage();
 
-        policy = CapacityPolicy.getDefault();
-        topic = PulsarStorageTopic.from("one.two.three.four", policy);
+        policy = Constants.DefaultTopicCapacity;
+        topic = PulsarStorageTopic.from("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 
         options = new ProducerOptions();
@@ -78,8 +77,8 @@ public class PulsarProducerTest {
         options.setCompressionType(CompressionType.LZ4);
         options.setSendTimeoutMs(2000);
         options.setBatchingMaxPublishDelayMs(25);
-        policy = new CapacityPolicy(1000, 2000);
-        topic = PulsarStorageTopic.from("one.two.three.four", policy);
+        policy = new TopicCapacityPolicy(1000, 2000, 1);
+        topic = PulsarStorageTopic.from("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
@@ -102,13 +101,14 @@ public class PulsarProducerTest {
                 options.getBatchingMaxPublishDelayMs() * 1000, pConfig.get("batchingMaxPublishDelayMicros"));
 
         Assertions.assertEquals(
-                PulsarProducer.getMaxPendingMessages(topic.getMaxQPS()), pConfig.get("maxPendingMessages"));
+                PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()), pConfig.get("maxPendingMessages"));
         Assertions.assertEquals(
-                PulsarProducer.getMaxPendingMessages(topic.getMaxQPS()),
+                PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
                 pConfig.get("maxPendingMessagesAcrossPartitions")
         );
         int batchMaxMessages =
-                PulsarProducer.getBatchMaxMessages(topic.getMaxQPS(), options.getBatchingMaxPublishDelayMs());
+                PulsarProducer.getBatchMaxMessages(
+                        topic.getCapacity().getQps(), options.getBatchingMaxPublishDelayMs());
         Assertions.assertEquals(batchMaxMessages, pConfig.get("batchingMaxMessages"));
         Assertions.assertEquals(
                 PulsarProducer.getBatchingMaxBytes(batchMaxMessages, topic), pConfig.get("batchingMaxBytes"));

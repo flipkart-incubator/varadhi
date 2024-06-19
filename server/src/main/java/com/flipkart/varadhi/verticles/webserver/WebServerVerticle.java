@@ -1,12 +1,19 @@
 package com.flipkart.varadhi.verticles.webserver;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.VaradhiTopicFactory;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -34,13 +41,12 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.function.Function;
 
 
 @Slf4j
 @ExtensionMethod({Extensions.RoutingContextExtension.class})
 public class WebServerVerticle extends AbstractVerticle {
-
-    private final String deployedRegion;
     private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
     private final AppConfiguration configuration;
     private final VaradhiClusterManager clusterManager;
@@ -58,7 +64,6 @@ public class WebServerVerticle extends AbstractVerticle {
     public WebServerVerticle(
             AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
     ) {
-        this.deployedRegion = configuration.getRestOptions().getDeployedRegion();
         this.configuration = configuration;
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
@@ -111,7 +116,11 @@ public class WebServerVerticle extends AbstractVerticle {
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
         ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
-        subscriptionService = new SubscriptionService(controllerApiProxy, metaStore);
+        ShardProvisioner shardProvisioner = new ShardProvisioner(
+                messagingStackProvider.getStorageSubscriptionService(),
+                messagingStackProvider.getStorageTopicService()
+        );
+        subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
     }
 
     private void performValidations() {
@@ -138,10 +147,10 @@ public class WebServerVerticle extends AbstractVerticle {
     private Router createApiRouter() {
         Router router = Router.router(vertx);
         List<RouteDefinition> routeDefinitions = new ArrayList<>();
+        setupRouteConfigurators();
         routeDefinitions.addAll(getIamPolicyRoutes());
         routeDefinitions.addAll(getAdminApiRoutes());
         routeDefinitions.addAll(getProduceApiRoutes());
-        setupRouteConfigurators();
         configureApiRoutes(router, routeDefinitions);
         return router;
     }
@@ -178,11 +187,21 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
+        TopicCapacityPolicy defaultTopicCapacity = configuration.getRestOptions().getDefaultTopicCapacity();
+        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         VaradhiTopicFactory varadhiTopicFactory =
-                new VaradhiTopicFactory(messagingStackProvider.getStorageTopicFactory(), deployedRegion);
+                new VaradhiTopicFactory(
+                        messagingStackProvider.getStorageTopicFactory(), deployedRegion, defaultTopicCapacity);
+        VaradhiSubscriptionFactory subscriptionFactory =
+                new VaradhiSubscriptionFactory(messagingStackProvider.getStorageTopicService(),
+                        messagingStackProvider.getSubscriptionFactory(),
+                        messagingStackProvider.getStorageTopicFactory(), deployedRegion
+                );
         routes.addAll(getManagementEntitiesApiRoutes());
         routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
-        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService).get());
+        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService,
+                subscriptionFactory
+        ).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
     }
@@ -198,9 +217,13 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     private List<RouteDefinition> getProduceApiRoutes() {
+        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getRestOptions());
+        Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
+        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
+
         ProducerService producerService = new ProducerService(deployedRegion, configuration.getProducerOptions(),
-                messagingStackProvider.getProducerFactory(), varadhiTopicService, meterRegistry
+                producerProvider, topicProvider, meterRegistry
         );
         ProducerMetricHandler producerMetricsHandler =
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);

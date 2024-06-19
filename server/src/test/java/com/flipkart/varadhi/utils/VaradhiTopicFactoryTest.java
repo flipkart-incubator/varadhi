@@ -1,5 +1,6 @@
-package com.flipkart.varadhi.core;
+package com.flipkart.varadhi.utils;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
@@ -11,29 +12,30 @@ import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicFactoryTest {
+    private final String region = "local";
+    private final String topicName = "testTopic";
     private VaradhiTopicFactory varadhiTopicFactory;
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
     private Project project;
-    private String region = "local";
     private String vTopicName;
-    private String topicName = "testTopic";
 
     @BeforeEach
     public void setUp() {
         storageTopicFactory = mock(StorageTopicFactory.class);
-        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region);
+        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region, Constants.DefaultTopicCapacity);
         project = new Project("default", INITIAL_VERSION, "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
-        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, capacityPolicy);
-        doReturn(pTopic).when(storageTopicFactory).getTopic(vTopicName, project, capacityPolicy);
+        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
+        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, 1, capacityPolicy);
+        doReturn(pTopic).when(storageTopicFactory)
+                .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
     public void getTopic() {
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
         TopicResource topicResource = new TopicResource(
                 topicName,
                 1,
@@ -44,16 +46,15 @@ public class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         Assertions.assertNotNull(varadhiTopic);
         InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
-        StorageTopic st = it.getStorageTopic();
+        StorageTopic st = it.getTopicToProduce();
         Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
-        Assertions.assertEquals(it.getTopicRegion(), region);
         Assertions.assertNotNull(st);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy);
+        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
 
     @Test
     public void getTopicWithDefaultCapacity() {
-        CapacityPolicy capacityPolicy = CapacityPolicy.getDefault();
+        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
         TopicResource topicResource = new TopicResource(
                 topicName,
                 1,
@@ -63,8 +64,8 @@ public class VaradhiTopicFactoryTest {
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
-        PulsarStorageTopic pt = (PulsarStorageTopic) it.getStorageTopic();
-        Assertions.assertEquals(capacityPolicy.getMaxThroughputKBps(), pt.getMaxThroughputKBps());
-        Assertions.assertEquals(capacityPolicy.getMaxQPS(), pt.getMaxQPS());
+        PulsarStorageTopic pt = (PulsarStorageTopic) it.getTopicToProduce();
+        Assertions.assertEquals(capacityPolicy.getThroughputKBps(), pt.getCapacity().getThroughputKBps());
+        Assertions.assertEquals(capacityPolicy.getQps(), pt.getCapacity().getQps());
     }
 }

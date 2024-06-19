@@ -15,18 +15,18 @@ import io.vertx.core.Promise;
 
 public class ConsumerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
-    private final MemberInfo memberInfo;
+    private final ConsumerInfo consumerInfo;
 
     public ConsumerVerticle(MemberInfo memberInfo, VaradhiClusterManager clusterManager) {
         this.clusterManager = clusterManager;
-        this.memberInfo = memberInfo;
+        this.consumerInfo = ConsumerInfo.from(memberInfo);
     }
 
     @Override
     public void start(Promise<Void> startPromise) {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        ConsumersManager consumersManager = new ConsumersManagerImpl(ConsumerInfo.from(memberInfo));
+        ConsumersManager consumersManager = new ConsumersManagerImpl(consumerInfo);
 
         ControllerClient controllerClient = new ControllerClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager);
@@ -41,7 +41,7 @@ public class ConsumerVerticle extends AbstractVerticle {
     }
 
     private void setupApiHandlers(MessageRouter messageRouter, ConsumerApiHandler handler) {
-        String consumerId = memberInfo.hostname();
+        String consumerId = consumerInfo.getConsumerId();
         messageRouter.sendHandler(consumerId, "start", handler::start);
         messageRouter.sendHandler(consumerId, "stop", handler::stop);
         messageRouter.requestHandler(consumerId, "status", handler::status);

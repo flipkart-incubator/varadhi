@@ -5,15 +5,24 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
+import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
+import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.*;
+import com.flipkart.varadhi.utils.HostUtils;
 import com.flipkart.varadhi.utils.YamlLoader;
+import lombok.extern.slf4j.Slf4j;
 
+import java.net.UnknownHostException;
 
-public class PulsarStackProvider implements MessagingStackProvider<PulsarStorageTopic, PulsarOffset> {
-    private PulsarTopicService pulsarTopicService;
-    private PulsarTopicFactory pulsarTopicFactory;
-    private PulsarProducerFactory pulsarProducerFactory;
+@Slf4j
+public class PulsarStackProvider
+        implements MessagingStackProvider<PulsarStorageTopic, PulsarOffset, PulsarSubscription> {
+    private PulsarTopicService topicService;
+    private PulsarTopicFactory topicFactory;
+    private PulsarProducerFactory producerFactory;
+    private PulsarSubscriptionFactory subscriptionFactory;
+    private PulsarSubscriptionService subscriptionService;
     private volatile boolean initialised = false;
 
     @Override
@@ -25,33 +34,53 @@ public class PulsarStackProvider implements MessagingStackProvider<PulsarStorage
         if (initialised) {
             return;
         }
-
+        String hostName = getHostName();
         PulsarConfig pulsarConfig = getPulsarConfig(messagingStackOptions.getConfigFile());
-        pulsarTopicFactory = new PulsarTopicFactory();
+        TopicPlanner planner = new TopicPlanner(pulsarConfig);
+        topicFactory = new PulsarTopicFactory(planner);
         ClientProvider clientProvider = new ClientProvider(pulsarConfig);
-        pulsarTopicService = new PulsarTopicService(clientProvider);
-        //TODO:: Fix hostname. Get it using hostutils.
-        String hostName = "Undefined.TobeFixed";
-        pulsarProducerFactory =
+        topicService = new PulsarTopicService(clientProvider, planner);
+        producerFactory =
                 new PulsarProducerFactory(
                         clientProvider.getPulsarClient(), pulsarConfig.getProducerOptions(), hostName);
+        subscriptionFactory = new PulsarSubscriptionFactory();
+        subscriptionService = new PulsarSubscriptionService(clientProvider);
         registerSubtypes(mapper);
         initialised = true;
     }
 
+    private String getHostName() {
+        try {
+            return HostUtils.getHostName();
+        } catch (UnknownHostException e) {
+            log.error("Failed to obtain the hostname. {}", e.getMessage());
+            throw new MessagingException(e);
+        }
+    }
+
     public StorageTopicFactory<PulsarStorageTopic> getStorageTopicFactory() {
         ensureInitialized();
-        return this.pulsarTopicFactory;
+        return topicFactory;
+    }
+
+    public StorageSubscriptionFactory<PulsarSubscription, PulsarStorageTopic> getSubscriptionFactory() {
+        ensureInitialized();
+        return subscriptionFactory;
     }
 
     public StorageTopicService<PulsarStorageTopic> getStorageTopicService() {
         ensureInitialized();
-        return this.pulsarTopicService;
+        return topicService;
+    }
+
+    public StorageSubscriptionService<PulsarSubscription> getStorageSubscriptionService() {
+        ensureInitialized();
+        return subscriptionService;
     }
 
     public ProducerFactory<PulsarStorageTopic> getProducerFactory() {
         ensureInitialized();
-        return this.pulsarProducerFactory;
+        return producerFactory;
     }
 
     @Override
@@ -60,7 +89,8 @@ public class PulsarStackProvider implements MessagingStackProvider<PulsarStorage
     }
 
     private void registerSubtypes(ObjectMapper mapper) {
-        mapper.registerSubtypes(new NamedType(PulsarStorageTopic.class, "Pulsar"));
+        mapper.registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
+        mapper.registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
     }
 
     private PulsarConfig getPulsarConfig(String file) {

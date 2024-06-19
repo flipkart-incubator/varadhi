@@ -84,7 +84,6 @@ public class OperationMgr {
         SubscriptionOperation.OpData updated = operation.getData();
         subOps.compute(operation.getData().getSubscriptionId(), (subId, scheduledTasks) -> {
             if (null != scheduledTasks && !scheduledTasks.isEmpty()) {
-
                 // process the update using provided handler.
                 // Update processing can take time, this will affect a subscription.
                 if (null != updateHandler) {
@@ -102,14 +101,17 @@ public class OperationMgr {
                 // Remove completed operation from the pending list and schedule next operation if available.
                 if (operation.completed()) {
                     scheduledTasks.removeFirst();
-                    log.info("Completed SubOp({}) removed from the queue.", updated);
+                    log.info("Completed SubOp({}) removed from the queue.", operation.getData());
                     if (scheduledTasks.isEmpty()) {
+                        log.info("No more pending operation for {}.", subId);
                         return null;
                     } else {
                         OpTask waiting = scheduledTasks.peekFirst();
-                        log.info("Pending SubOp({}) scheduled for execution.", waiting.operation.getData());
+                        log.info("Next pending SubOp({}) scheduled for execution.", waiting.operation.getData());
                         executor.submit(waiting);
                     }
+                }else{
+                    log.info("Pending SubOp({}) still in progress", operation.getData());
                 }
                 return scheduledTasks;
             } else {

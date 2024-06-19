@@ -42,7 +42,7 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
                         throw new CapacityException("Not enough Resources for Subscription assignment.");
                     }
                     Assignment assignment =
-                            new Assignment(subscription.getName(), shard.getShardId(), consumerNode.getMemberInfo().hostname());
+                            new Assignment(subscription.getName(), shard.getShardId(), consumerNode.getConsumerId());
                     consumerNode.allocate(assignment, shard.getCapacityRequest());
                     assignments.add(assignment);
                     consumers.add(consumerNode);

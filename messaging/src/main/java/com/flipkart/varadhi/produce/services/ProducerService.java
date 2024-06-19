@@ -2,7 +2,6 @@ package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.VaradhiCache;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -11,7 +10,6 @@ import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,14 +26,14 @@ public class ProducerService {
     public ProducerService(
             String produceRegion,
             ProducerOptions producerOptions,
-            ProducerFactory<StorageTopic> producerFactory,
-            VaradhiTopicService varadhiTopicService,
+            Function<StorageTopic, Producer> producerProvider,
+            Function<String, VaradhiTopic> topicProvider,
             MeterRegistry meterRegistry
     ) {
         this.internalTopicCache =
-                setupTopicCache(producerOptions.getTopicCacheBuilderSpec(), varadhiTopicService::get, meterRegistry);
+                setupTopicCache(producerOptions.getTopicCacheBuilderSpec(), topicProvider, meterRegistry);
         this.producerCache =
-                setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerFactory::newProducer,
+                setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerProvider,
                         meterRegistry
                 );
         this.produceRegion = produceRegion;
@@ -89,9 +87,9 @@ public class ProducerService {
                 return CompletableFuture.completedFuture(
                         ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState()));
             }
-            Producer producer = producerCache.get(internalTopic.getStorageTopic());
+            Producer producer = producerCache.get(internalTopic.getTopicToProduce());
             return produceToStorageProducer(
-                    producer, metricsEmitter, internalTopic.getStorageTopic().getName(), message).thenApply(result ->
+                    producer, metricsEmitter, internalTopic.getTopicToProduce().getName(), message).thenApply(result ->
                     ProduceResult.of(message.getMessageId(), result));
         } catch (VaradhiException e) {
             throw e;
