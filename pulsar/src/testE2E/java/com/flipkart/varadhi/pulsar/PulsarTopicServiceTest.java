@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.pulsar;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
@@ -36,7 +36,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, TopicCapacityPolicy.getDefault());
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, Constants.DefaultTopicCapacity);
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
     }
@@ -44,7 +44,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithSameConfigAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, TopicCapacityPolicy.getDefault());
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, Constants.DefaultTopicCapacity);
         topicService.create(pt, project);
         topicService.create(pt, project);
     }
@@ -52,8 +52,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithDifferentConfigNotAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt1 = PulsarStorageTopic.from(topicFQDN, 2, TopicCapacityPolicy.getDefault());
-        PulsarStorageTopic pt2 = PulsarStorageTopic.from(topicFQDN, 1, TopicCapacityPolicy.getDefault());
+        PulsarStorageTopic pt1 = PulsarStorageTopic.from(topicFQDN, 2, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt2 = PulsarStorageTopic.from(topicFQDN, 1, Constants.DefaultTopicCapacity);
         topicService.create(pt1, project);
         MessagingException m =
                 Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt2, project));
@@ -67,9 +67,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         String topicFQDN = getRandomTopicFQDN();
 
-        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, TopicCapacityPolicy.getDefault());
+        PulsarStorageTopic pt = PulsarStorageTopic.from(topicFQDN, 1, Constants.DefaultTopicCapacity);
         topicService.create(pt, projectNew);
-
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);

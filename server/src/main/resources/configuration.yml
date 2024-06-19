@@ -1,8 +1,8 @@
 
 member:
   roles : ["Server", "Controller", "Consumer"]
-  cpuCount: 1
-  networkMBps: 100
+  maxQps: 5000
+  networkMBps: 30
 
 vertxOptions:
   eventLoopPoolSize: 1
@@ -28,6 +28,10 @@ httpServerOptions:
   tracingPolicy: "ALWAYS"
 
 restOptions:
+  defaultTopicCapacity:
+    throughputKBps: 400
+    qps: 100
+    readFanOut: 2
   deployedRegion: "default"
   defaultOrg: "default"
   defaultTeam: "public"

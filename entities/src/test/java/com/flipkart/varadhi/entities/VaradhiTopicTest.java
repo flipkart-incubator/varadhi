@@ -11,6 +11,7 @@ class VaradhiTopicTest {
 
     private static final String projectName = "project1";
     private static final String topicName = "topic1";
+    private static final TopicCapacityPolicy topicCapacity = new TopicCapacityPolicy(100, 400, 2);
 
     @Test
     void buildTopicName() {
@@ -23,22 +24,15 @@ class VaradhiTopicTest {
     void addAndGetInternalTopic() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, 1, projectName, false, null));
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
-        InternalCompositeTopic internalTopic = new InternalCompositeTopic("region1", TopicState.Producing, st);
-
-        varadhiTopic.addInternalTopic(internalTopic);
-        assertEquals(
-                internalTopic.getTopicRegion(),
-                varadhiTopic.getProduceTopicForRegion(internalTopic.getTopicRegion()).getTopicRegion()
-        );
+        varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(st));
+        assertEquals(st.getName(), varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName());
     }
 
     @Test
     void getTopicResource() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(
-                new TopicResource(topicName, INITIAL_VERSION, projectName, false, TopicCapacityPolicy.getDefault()));
-
-        TopicResource topicResource = TopicResource.of(varadhiTopic);
-
+                new TopicResource(topicName, INITIAL_VERSION, projectName, false, topicCapacity));
+        TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertEquals(topicName, topicResource.getName());
         assertEquals(INITIAL_VERSION, topicResource.getVersion());
         assertEquals(projectName, topicResource.getProject());
@@ -48,7 +42,8 @@ class VaradhiTopicTest {
     @EqualsAndHashCode(callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
-            super(name, version, TopicCapacityPolicy.getDefault());
+            super(name, version, topicCapacity);
+
         }
     }
 }

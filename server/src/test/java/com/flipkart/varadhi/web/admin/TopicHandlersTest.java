@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.core.VaradhiTopicFactory;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
@@ -27,6 +28,10 @@ import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN
 import static org.mockito.Mockito.*;
 
 public class TopicHandlersTest extends WebTestBase {
+    private final String topicName = "topic1";
+    private final String team1 = "team1";
+    private final String org1 = "org1";
+    private final Project project = new Project("project1", 0, "", team1, org1);
     TopicHandlers topicHandlers;
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
@@ -34,10 +39,6 @@ public class TopicHandlersTest extends WebTestBase {
     RequestTelemetryConfigurator requestTelemetryConfigurator;
     SpanProvider spanProvider;
     Span span;
-    private final String topicName = "topic1";
-    private final String team1 = "team1";
-    private final String org1 = "org1";
-    private final Project project = new Project("project1", 0, "", team1, org1);
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
@@ -66,9 +67,11 @@ public class TopicHandlersTest extends WebTestBase {
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
         setupFailureHandler(routeGet);
-        Route routeListAll = router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
+        Route routeListAll = router.get("/projects/:project/topics").handler(bodyHandler)
+                .handler(wrapBlocking(topicHandlers::listTopics));
         setupFailureHandler(routeListAll);
-        Route routeDelete = router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
+        Route routeDelete =
+                router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
         setupFailureHandler(routeDelete);
     }
 
@@ -81,7 +84,8 @@ public class TopicHandlersTest extends WebTestBase {
     public void testTopicCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicsUrl(project));
         TopicResource topicResource = getTopicResource(topicName, project);
-
+        VaradhiTopic vt = VaradhiTopic.of(topicResource);
+        doReturn(vt).when(varadhiTopicFactory).get(project, topicResource);
         TopicResource t1Created = sendRequestWithBody(request, topicResource, TopicResource.class);
         Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
@@ -129,7 +133,7 @@ public class TopicHandlersTest extends WebTestBase {
                 1,
                 project.getName(),
                 true,
-                TopicCapacityPolicy.getDefault()
+                Constants.DefaultTopicCapacity
         );
     }
 

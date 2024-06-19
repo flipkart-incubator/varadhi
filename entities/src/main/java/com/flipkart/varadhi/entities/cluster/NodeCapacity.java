@@ -4,20 +4,16 @@ import lombok.Data;
 
 @Data
 public class NodeCapacity implements Comparable<NodeCapacity> {
+    private int maxQps;
     private int maxThroughputKBps;
-    private int maxQPS;
 
-    public NodeCapacity(int maxQPS, int maxThroughputKBps) {
-        this.maxQPS = maxQPS;
+    public NodeCapacity(int maxQps, int maxThroughputKBps) {
+        this.maxQps = maxQps;
         this.maxThroughputKBps = maxThroughputKBps;
     }
 
-    public static NodeCapacity getDefault() {
-        return new NodeCapacity(100, 100);
-    }
-
-    public NodeCapacity from(double factor) {
-        return new NodeCapacity((int)((double)maxQPS * factor), (int)((double)maxThroughputKBps * factor));
+    public NodeCapacity clone() {
+        return new NodeCapacity(maxQps, maxThroughputKBps);
     }
 
     @Override
@@ -27,6 +23,6 @@ public class NodeCapacity implements Comparable<NodeCapacity> {
 
     @Override
     public String toString() {
-        return String.format("%d KBps %d qps", maxThroughputKBps, maxQPS);
+        return String.format("%d KBps %d qps", maxThroughputKBps, maxQps);
     }
 }

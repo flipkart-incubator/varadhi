@@ -1,6 +1,5 @@
 member:
   roles : ["Server"]
-  cpuCount: 1
   networkMBps: 100
 
 deliveryOptions:

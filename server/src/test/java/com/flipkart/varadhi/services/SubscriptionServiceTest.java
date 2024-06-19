@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.*;
@@ -119,7 +120,7 @@ class SubscriptionServiceTest {
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
-        TopicCapacityPolicy capacity = TopicCapacityPolicy.getDefault();
+        TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
 
         String region = "default";
         TopicPlanner planner = new TopicPlanner(new PulsarConfig());
@@ -131,12 +132,7 @@ class SubscriptionServiceTest {
         VaradhiTopic vt = VaradhiTopic.of(tr);
 
         StorageTopic storageTopic = ptf.getTopic(vt.getName(), o1t1p2, capacity, InternalQueueCategory.MAIN);
-        InternalCompositeTopic internalTopic = new InternalCompositeTopic(
-                region,
-                TopicState.Producing,
-                storageTopic
-        );
-        vt.addInternalTopic(internalTopic);
+        vt.addInternalTopic(region, InternalCompositeTopic.of(storageTopic));
 
         SubscriptionResource subRes = new SubscriptionResource(
                 "sub12",
@@ -340,17 +336,19 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(name, SubscriptionState.STOPPED));
         doReturn(status).when(controllerApi).getSubscriptionStatus(name, requestedBy);
-        Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy)).onComplete(ctx.succeeding(
-                v -> {
-                    Exception exception = assertThrows(ResourceNotFoundException.class,
-                            () -> subscriptionService.getSubscription(name)
-                    );
-                    String expectedMessage = "Subscription(%s) not found.".formatted(name);
-                    String actualMessage = exception.getMessage();
-                    assertEquals(expectedMessage, actualMessage);
-                    checkpoint.flag();
-                }
-        ));
+        Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy))
+                .onComplete(ctx.succeeding(
+                        v -> {
+                            Exception exception = assertThrows(
+                                    ResourceNotFoundException.class,
+                                    () -> subscriptionService.getSubscription(name)
+                            );
+                            String expectedMessage = "Subscription(%s) not found.".formatted(name);
+                            String actualMessage = exception.getMessage();
+                            assertEquals(expectedMessage, actualMessage);
+                            checkpoint.flag();
+                        }
+                ));
     }
 
     private CompletableFuture<VaradhiSubscription> updateSubscription(VaradhiSubscription to) {

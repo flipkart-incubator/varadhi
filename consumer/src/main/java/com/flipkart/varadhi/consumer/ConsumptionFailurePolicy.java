@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -11,7 +10,7 @@ public class ConsumptionFailurePolicy {
 
     private final RetryPolicy retryPolicy;
 
-    private final StorageRetryTopic retryTopic;
+    private final RetrySubscription retrySubscription;
 
-    private final StorageTopic deadLetterTopic;
+    private final InternalCompositeSubscription deadLetterSubscription;
 }

@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -74,8 +75,7 @@ public class PulsarStackProviderTest {
     @Test
     public void testGetStorageTopicFactory_Initialized() {
         String topicName = "foobar";
-
-        TopicCapacityPolicy capacity = TopicCapacityPolicy.getDefault();
+        TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
         InternalQueueCategory topicCategory = InternalQueueCategory.MAIN;
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();

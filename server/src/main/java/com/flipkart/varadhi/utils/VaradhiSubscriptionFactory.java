@@ -18,6 +18,7 @@ public final class VaradhiSubscriptionFactory {
     private static final String SUB_QUALIFIER = "is";
     private static final String TOPIC_QUALIFIER = "it";
     private static final String SHARD_QUALIFIER = "shard";
+    private static final int READ_FAN_OUT_FOR_INTERNAL_QUEUE = 1;
     private static final int MAX_RETRY_COUNT = 3;
     private final String deployedRegion;
     private final StorageSubscriptionFactory<StorageSubscription<StorageTopic>, StorageTopic> subscriptionFactory;
@@ -56,7 +57,7 @@ public final class VaradhiSubscriptionFactory {
     private SubscriptionShards getSubscriptionShards(
             String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy
     ) {
-        StorageTopic subscribedStorageTopic = topic.getProduceTopicForRegion(deployedRegion).getStorageTopic();
+        StorageTopic subscribedStorageTopic = topic.getProduceTopicForRegion(deployedRegion).getTopicToProduce();
         List<TopicPartitions<StorageTopic>> topicPartitions =
                 topicService.shardTopic(subscribedStorageTopic, InternalQueueCategory.MAIN);
         int numShards = topicPartitions.size();
@@ -67,9 +68,10 @@ public final class VaradhiSubscriptionFactory {
         } else {
             Map<Integer, SubscriptionUnitShard> subShards = new HashMap<>();
             for (int shardId = 0; shardId < numShards; shardId++) {
-                subShards.put(shardId, getShard(subName, shardId, topicPartitions.get(shardId), shardCapacity, subProject,
-                        consumptionPolicy
-                ));
+                subShards.put(
+                        shardId, getShard(subName, shardId, topicPartitions.get(shardId), shardCapacity, subProject,
+                                consumptionPolicy
+                        ));
             }
             return new SubscriptionMultiShard(subShards);
         }
@@ -83,6 +85,8 @@ public final class VaradhiSubscriptionFactory {
             String subName, int shardId, TopicPartitions<StorageTopic> shardTopicPartition,
             TopicCapacityPolicy capacity, Project subProject, ConsumptionPolicy consumptionPolicy
     ) {
+        //TODO::Take care of region.
+        //TODO::Storage Topic/Subscription names needs to be indexed with in Composite topic/subscription.
         InternalCompositeSubscription shardMainSub = getShardMainSub(subName, shardId, shardTopicPartition, subProject);
         RetrySubscription retrySub =
                 getRetrySub(subName, shardId, subProject, capacity, consumptionPolicy);
@@ -96,7 +100,7 @@ public final class VaradhiSubscriptionFactory {
     ) {
         String shardSubName = getShardMainSubName(subscriptionName, shardId);
         StorageSubscription<StorageTopic> ss = subscriptionFactory.get(shardSubName, shardTopicPartition, project);
-        return new InternalCompositeSubscription(deployedRegion, new InternalQueueType.Main(), ss);
+        return InternalCompositeSubscription.of(ss, new InternalQueueType.Main());
     }
 
     private String getShardMainSubName(String subscriptionName, int shardId) {
@@ -141,21 +145,18 @@ public final class VaradhiSubscriptionFactory {
     }
 
     private InternalCompositeSubscription getInternalSub(
-            String subscriptionName,
-            int shardId,
-            InternalQueueType queueType,
-            int queueIndex,
-            Project project, TopicCapacityPolicy capacity, ConsumptionPolicy consumptionPolicy
+            String subscriptionName, int shardId, InternalQueueType queueType, int queueIndex, Project project,
+            TopicCapacityPolicy capacity, ConsumptionPolicy consumptionPolicy
     ) {
-        //TODO::handle cases where retry and dlt topic might be on different projects.
+        // TODO::handle cases where retry and dlt topic might be on different projects.
         String itSubName = getInternalSubName(subscriptionName, shardId, queueType.getCategory(), queueIndex);
         String itTopicName = getInternalTopicName(subscriptionName, shardId, queueType.getCategory(), queueIndex);
-        TopicCapacityPolicy errCapacity = capacity.from(consumptionPolicy.getMaxErrorThreshold(), 1);
+        TopicCapacityPolicy errCapacity =
+                capacity.from(consumptionPolicy.getMaxErrorThreshold(), READ_FAN_OUT_FOR_INTERNAL_QUEUE);
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
         TopicPartitions<StorageTopic> tp = TopicPartitions.byTopic(st);
         StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, tp, project);
-
-        return new InternalCompositeSubscription(deployedRegion, queueType, ss);
+        return InternalCompositeSubscription.of(ss, queueType);
     }
 
     private String getInternalSubName(

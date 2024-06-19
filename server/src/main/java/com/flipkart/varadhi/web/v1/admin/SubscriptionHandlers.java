@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -140,8 +140,10 @@ public class SubscriptionHandlers implements RouteProvider {
     public void update(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         //TODO::Evaluate separating these into individual update APIs.
+        //Fix:: Update is allowed, though no change in the subscription, this can be avoided.
         executeAsyncRequest(
-                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(), subscription.getVersion(),
+                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(),
+                        subscription.getVersion(),
                         subscription.getDescription(), subscription.isGrouped(), subscription.getEndpoint(),
                         subscription.getRetryPolicy(), subscription.getConsumptionPolicy(), ctx.getIdentityOrDefault()
                 ).thenApply(SubscriptionResource::from));
@@ -150,7 +152,10 @@ public class SubscriptionHandlers implements RouteProvider {
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         Project subProject = projectService.getCachedProject(projectName);
-        executeAsyncRequest(ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject, ctx.getIdentityOrDefault()));
+        executeAsyncRequest(
+                ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject,
+                        ctx.getIdentityOrDefault()
+                ));
     }
 
     public void start(RoutingContext ctx) {
