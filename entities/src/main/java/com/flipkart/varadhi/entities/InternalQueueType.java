@@ -22,6 +22,8 @@ public abstract sealed class InternalQueueType {
     @NoArgsConstructor(onConstructor_ = {@JsonCreator})
     final public static class Main extends InternalQueueType {
 
+        public static final Main MAIN = new Main();
+
         @Override
         public InternalQueueCategory getCategory() {
             return InternalQueueCategory.MAIN;
@@ -76,6 +78,8 @@ public abstract sealed class InternalQueueType {
 
     @NoArgsConstructor(onConstructor_ = {@JsonCreator})
     final public static class DeadLetter extends InternalQueueType {
+
+        public static final DeadLetter DEADLETTER = new DeadLetter();
 
         @Override
         public InternalQueueCategory getCategory() {

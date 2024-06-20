@@ -9,7 +9,10 @@ import com.flipkart.varadhi.consumer.push.PushClient;
 import com.flipkart.varadhi.consumer.push.PushResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
-import com.flipkart.varadhi.spi.services.*;
+import com.flipkart.varadhi.spi.services.Consumer;
+import com.flipkart.varadhi.spi.services.ConsumerFactory;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.base.Ticker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,9 +73,10 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     private AtomicInteger inFlightMessages = new AtomicInteger(0);
 
     InternalQueueType[] getPriority() {
-        InternalQueueType[] priority = new InternalQueueType[1 + failurePolicy.getRetryTopic().getMaxRetryCount()];
+        int maxRetryAttempts = failurePolicy.getRetryPolicy().getRetryAttempts();
+        InternalQueueType[] priority = new InternalQueueType[1 + maxRetryAttempts];
         priority[0] = InternalQueueType.mainType();
-        for (int r = 1; r <= failurePolicy.getRetryTopic().getMaxRetryCount(); ++r) {
+        for (int r = 1; r <= maxRetryAttempts; ++r) {
             priority[r] = InternalQueueType.retryType(r);
         }
 
@@ -102,19 +106,25 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         }
 
         internalConsumers.computeIfAbsent(InternalQueueType.mainType(), type -> createConsumer(topic, "main"));
-        for (int r = 1; r <= failurePolicy.getRetryTopic().getMaxRetryCount(); ++r) {
+        for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             String role = "retry-" + r;
-            TopicPartitions<StorageTopic> retryTopic =
-                    TopicPartitions.byTopic(failurePolicy.getRetryTopic().getTopicForRetry(r));
+            TopicPartitions<StorageTopic> retryTopic = failurePolicy.getRetrySubscription()
+                    .getSubscriptionForRetry(r).getSubscriptionForConsume()
+                    .getTopicPartitions();
             internalConsumers.computeIfAbsent(
                     InternalQueueType.retryType(r), type -> createConsumer(retryTopic, role));
         }
 
-        for (int r = 1; r <= failurePolicy.getRetryTopic().getMaxRetryCount(); ++r) {
+        for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             internalProducers.put(
-                    InternalQueueType.retryType(r), createProducer(failurePolicy.getRetryTopic().getTopicForRetry(r)));
+                    InternalQueueType.retryType(r),
+                    createProducer(failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce())
+            );
         }
-        internalProducers.put(InternalQueueType.deadLetterType(), createProducer(failurePolicy.getDeadLetterTopic()));
+        internalProducers.put(
+                InternalQueueType.deadLetterType(),
+                createProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
+        );
 
         concurrencyControl =
                 new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), getPriority());
@@ -323,7 +333,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             if (type instanceof InternalQueueType.Main) {
                 return InternalQueueType.retryType(1);
             } else if (type instanceof InternalQueueType.Retry retryType) {
-                if (retryType.getRetryCount() < failurePolicy.getRetryTopic().getMaxRetryCount()) {
+                if (retryType.getRetryCount() < failurePolicy.getRetryPolicy().getRetryAttempts()) {
                     return InternalQueueType.retryType(retryType.getRetryCount() + 1);
                 } else {
                     return InternalQueueType.deadLetterType();

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer.ordering;
 
-import com.flipkart.varadhi.consumer.InternalQueueType;
 import com.flipkart.varadhi.consumer.MessageTracker;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import jakarta.annotation.Nullable;
 
 import java.util.concurrent.CompletableFuture;

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.consumer.ordering;
 
-import com.flipkart.varadhi.consumer.InternalQueueType;
+
+import com.flipkart.varadhi.entities.InternalQueueType;
 
 public class GroupPointer {
     QueueGroupPointer main;
