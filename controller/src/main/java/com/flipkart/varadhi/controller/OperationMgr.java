@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 
@@ -31,39 +32,40 @@ public class OperationMgr {
     }
 
     /**
-     * Task Execution
+     * Operation Execution
      * - Task may embed a Subscription|ConsumerNode|Shard operation to be executed
      * - Task are keyed by groupId -- which is unique for the given entity (derived from its unique id). An entity can
-     *  have multiple tasks waiting be executed. However only one will be executing at any given instance.
+     * have multiple tasks waiting be executed. However only one will be executing at any given instance.
      * - Tasks for different entities can be executed in parallel. Parallelism is controlled via number of threads
      * in the executor service.
      * - Task at the head of the Task queue will be in progress and rest will be waiting.
      * queueTask -- adds the operation to the queue. If it is only task, it will be immediately scheduled for execution.
-     * handleTaskUpdate -- Removes the tasks from the queue, if finished. If current task is finished, schedule next task
+     * handleOpUpdate -- Removes the tasks from the queue, if finished. If current task is finished, schedule next task
      * for execution if available.
      * TODO:: Implementation can be enhanced for below
      * - Remove redundant operations from the queue.
      * - Implement retry logic for failed operation to support auto recovery from temporary failure.
      */
-    private  void queueTask(GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> opHandler) {
-        OpTask pendingTask = OpTask.of(operation, opHandler);
+    private void enqueueOperation(GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> opExecutor) {
+        OpTask pendingTask = OpTask.of(operation, opExecutor);
         subOps.compute(operation.getGroupId(), (opGroupId, scheduledTasks) -> {
             if (null == scheduledTasks) {
                 Deque<OpTask> taskQueue = new ArrayDeque<>();
                 taskQueue.addLast(pendingTask);
-                executor.submit(pendingTask);
-                log.info("Scheduled the Task({}) for execution.", operation);
+                executeOperation(pendingTask);
                 return taskQueue;
             } else {
                 // it means already some operations are scheduled, add this to queue.
                 int waitingTasks = scheduledTasks.size();
-                log.info("OpGroup {} has {} waiting operations, queued Task({}).", operation.getGroupId(), waitingTasks, operation);
+                log.info(
+                        "OpGroup {} has {} waiting operations, Operation({}) queued.", operation.getGroupId(), waitingTasks,
+                        operation
+                );
                 // duplicate shouldn't happen unless it is called multiple times e.g. as part of retry.
                 boolean alreadyScheduled = false;
-                //TODO::Use hashCode for equality and contains.
                 for (OpTask task : scheduledTasks) {
                     if (task.operation.getId().equals(pendingTask.operation.getId())) {
-                        log.warn("Task({}) is already scheduled. Ignoring duplicate.", task);
+                        log.warn("Operation({}) is already scheduled. Ignoring duplicate.", operation);
                         alreadyScheduled = true;
                     }
                 }
@@ -75,48 +77,67 @@ public class OperationMgr {
         });
     }
 
+    private void executeOperation(OpTask task) {
+        log.info("Scheduled the Operation({}) for execution.", task.operation);
+        CompletableFuture.supplyAsync(() -> task, executor).exceptionally(t -> {
+            log.error("Unexpected failure({}) during execution of operation ({}).", t.getMessage(), task.operation);
+            task.operation.markFail(t.getMessage());
+            handleOpUpdate(task.operation, op -> failWithUnhandledException(op, t));
+            return task;
+        });
+    }
+
+
     // This will execute the update on a Task in a sequential order. Sequential execution is needed, to ensure
     // parallel updates to tasks do not override each other.
-    private  void handleTaskUpdate(GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> updateHandler) {
+    //TODO:: check how handleOpUpdate will be executed, which thread. Can blocking execution cause an issue ?
+    private void handleOpUpdate(GroupOperation operation, Consumer<GroupOperation> updateHandler) {
         subOps.compute(operation.getGroupId(), (opGroupId, scheduledTasks) -> {
             if (null != scheduledTasks && !scheduledTasks.isEmpty()) {
                 // process the update using provided handler.
                 // Update processing can take time, this will affect a subscription.
-                if (null != updateHandler) {
-                    //TODO::apply failure.
-                    updateHandler.apply(operation);
-                }
+                updateOperation(operation, updateHandler);
 
                 GroupOperation inProgress = scheduledTasks.peekFirst().operation;
                 if (!operation.getId().equals(inProgress.getId())) {
-                    // This shouldn't happen as only task at the head of group is scheduled for execution.
-                    log.error("Obtained update for waiting Task, Updated({}), InProgress({}).", operation, inProgress);
+                    // This shouldn't happen as only operation at the head of group is scheduled for execution.
+                    log.error("Obtained update for waiting Operation, Updated({}), InProgress({}).", operation, inProgress);
                     return scheduledTasks;
                 }
 
                 // Remove completed operation from the pending list and schedule next operation if available.
                 if (operation.isDone()) {
                     scheduledTasks.removeFirst();
-                    log.info("Completed Task({}) removed from the TaskGroup.", operation);
+                    log.info("Completed Operation({}) removed from the OpGroup.", operation);
                     if (scheduledTasks.isEmpty()) {
-                        log.info("No more pending operation for TaskGroup{}.", opGroupId);
+                        log.info("No more pending operation for OpGroup{}.", opGroupId);
                         return null;
                     } else {
                         OpTask waiting = scheduledTasks.peekFirst();
-                        log.info("Next pending Task({}) scheduled for execution.", waiting.operation);
-                        executor.submit(waiting);
+                        log.info("Next pending Operation({}) scheduled for execution.", waiting.operation);
+                        executeOperation(waiting);
                     }
                 } else {
-                    log.info("Pending Task({}) still in progress", operation);
+                    log.info("Pending Operation({}) still in progress", operation);
                 }
                 return scheduledTasks;
             } else {
-                log.error("Task {} not found for update.", operation);
+                log.error("Operation {} not found for update.", operation);
                 return null;
             }
         });
     }
 
+    private void updateOperation(GroupOperation operation, Consumer<GroupOperation> updateHandler) {
+        if (null != updateHandler) {
+            try {
+                updateHandler.accept(operation);
+            } catch (Exception e) {
+                log.error("Unhandled failure in Operation({}) update:{}, marking it failed.", operation, e);
+                failWithUnhandledException(operation, e);
+            }
+        }
+    }
 
     public SubscriptionOperation requestSubStart(
             String subscriptionId, String requestedBy,
@@ -124,7 +145,7 @@ public class OperationMgr {
     ) {
         SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
         opStore.createSubOp(operation);
-        queueTask(operation, provider);
+        enqueueOperation(operation, provider);
         return operation;
     }
 
@@ -134,7 +155,7 @@ public class OperationMgr {
     ) {
         SubscriptionOperation operation = SubscriptionOperation.stopOp(subscriptionId, requestedBy);
         opStore.createSubOp(operation);
-        queueTask(operation, provider);
+        enqueueOperation(operation, provider);
         return operation;
     }
 
@@ -143,17 +164,16 @@ public class OperationMgr {
     ) {
         SubscriptionOperation operation = SubscriptionOperation.reAssignShardOp(assignment, requestedBy);
         opStore.createSubOp(operation);
-        queueTask(operation, provider);
+        enqueueOperation(operation, provider);
         return operation;
     }
 
     public void updateSubOp(SubscriptionOperation subscriptionOp) {
-        handleTaskUpdate(subscriptionOp, subOp -> {
+        handleOpUpdate(subscriptionOp, subOp -> {
             // updating DB status in handler, to avoid version conflict.
             SubscriptionOperation subOpLatest = opStore.getSubOp(subscriptionOp.getData().getOperationId());
             subOpLatest.update(subscriptionOp);
             opStore.updateSubOp(subOpLatest);
-            return CompletableFuture.completedFuture(null);
         });
     }
 
@@ -176,10 +196,10 @@ public class OperationMgr {
     public void updateShardOp(ShardOperation.OpData opData) {
         // updating DB status in handler for both Shard and Subscription op, to avoid version conflict.
         SubscriptionOperation subscriptionOp = opStore.getSubOp(opData.getParentOpId());
-        handleTaskUpdate(subscriptionOp, subOp -> doShardOpAndSubscriptionOpUpdate((SubscriptionOperation)subOp, opData));
+        handleOpUpdate(subscriptionOp, subOp -> updateShardAndSubOp((SubscriptionOperation) subOp, opData));
     }
 
-    private CompletableFuture<Void> doShardOpAndSubscriptionOpUpdate(
+    private void updateShardAndSubOp(
             SubscriptionOperation subOp, ShardOperation.OpData opData
     ) {
 
@@ -196,22 +216,40 @@ public class OperationMgr {
         }
         subOp.update(shardOps);
         opStore.updateSubOp(subOp);
-        return CompletableFuture.completedFuture(null);
+    }
+
+    private void failWithUnhandledException(GroupOperation operation, Throwable t){
+        //TODO:: better alternative is needed.
+        operation.markFail(t.getMessage());
+        try {
+            if (operation instanceof SubscriptionOperation) {
+                opStore.updateSubOp((SubscriptionOperation) operation);
+            } else if (operation instanceof ShardOperation) {
+                opStore.updateShardOp((ShardOperation) operation);
+            }
+        } catch (Exception e) {
+            // Any exception thrown here will prevent operation from being removed from the operations queue
+            // and thus any subsequent operation will keep waiting.
+            log.error("Error while persisting operation: {}", operation, e);
+        }
     }
 
     @AllArgsConstructor
-    static class OpTask implements Callable<Void> {
+    static class OpTask implements Callable<CompletableFuture<Void>> {
         private GroupOperation operation;
-        Function<GroupOperation, CompletableFuture<Void>> opHandler;
+        private Function<GroupOperation, CompletableFuture<Void>> opHandler;
 
         public static OpTask of(GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> handler) {
             return new OpTask(operation, handler);
         }
+
         @Override
-        public Void call() {
-            //TODO::Fix what happens when opExecutor.apply fails.
-            opHandler.apply(operation);
-            return null;
+        public CompletableFuture<Void> call() {
+            try {
+                return opHandler.apply(operation);
+            } catch (Exception e) {
+                return CompletableFuture.failedFuture(e);
+            }
         }
     }
 }

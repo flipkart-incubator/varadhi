@@ -71,7 +71,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements GroupOpera
     }
 
 
-
+    @Override
     public void markFail(String reason) {
         data.state = State.ERRORED;
         data.errorMsg = reason;

@@ -51,13 +51,19 @@ public class ShardOperation extends MetaStoreEntity implements  GroupOperation {
     @JsonIgnore
     @Override
     public String getGroupId() {
-        return "Shard_" +  opData.getSubscription().getName() + "_" + String.valueOf(opData.shardId);
+        return "Shard_" +  opData.getSubscription().getName() + "_" + opData.shardId;
     }
 
     @JsonIgnore
     @Override
     public boolean isDone() {
         return opData.state == State.ERRORED || opData.state == State.COMPLETED;
+    }
+
+    @Override
+    public void markFail(String reason) {
+        opData.markFail(reason);
+        endTime = System.currentTimeMillis();
     }
 
     public void update(ShardOperation.OpData updated) {
@@ -68,10 +74,6 @@ public class ShardOperation extends MetaStoreEntity implements  GroupOperation {
         opData.state = updated.state;
     }
 
-    public void markFail(String reason) {
-        opData.markFail(reason);
-        endTime = System.currentTimeMillis();
-    }
 
     public boolean hasFailed() {
         return opData.state == State.ERRORED;

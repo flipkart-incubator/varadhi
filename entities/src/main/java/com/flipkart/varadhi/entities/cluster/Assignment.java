@@ -2,7 +2,6 @@ package com.flipkart.varadhi.entities.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 import java.util.Objects;

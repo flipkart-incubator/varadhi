@@ -16,23 +16,21 @@ public class ConsumerNode {
     private final String consumerId;
     private NodeCapacity available;
     private final Map<String, Assignment> assignments;
-    private boolean markedForDeletion;
 
     public ConsumerNode(MemberInfo memberInfo) {
         this.consumerId = memberInfo.hostname();
-        this.markedForDeletion = false;
         this.available = memberInfo.provisionedCapacity().clone();
         this.assignments = new HashMap<>();
-    }
-
-    public void markForDeletion() {
-        this.markedForDeletion = true;
     }
 
     public void initFromConsumerInfo(ConsumerInfo consumerInfo) {
         available = consumerInfo.getAvailable().clone();
         assignments.clear();
         assignments.putAll(consumerInfo.getAssignments());
+    }
+
+    public boolean canAllocate(TopicCapacityPolicy requests) {
+        return available.canAllocate(requests);
     }
 
     // allocate & free -- assumes single threaded caller.

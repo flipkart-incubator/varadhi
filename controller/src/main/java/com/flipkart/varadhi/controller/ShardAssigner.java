@@ -33,22 +33,20 @@ public class ShardAssigner {
                 Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("assigner-%d").build());
     }
 
-    public void addConsumerNodes(List<ConsumerNode> clusterConsumers) {
-        clusterConsumers.forEach(c -> {
+    public CompletableFuture<Void> addConsumerNodes(List<ConsumerNode> clusterConsumers) {
+        return CompletableFuture.runAsync(() -> clusterConsumers.forEach(c -> {
             addConsumerNode(c);
             log.info("Added consumer node {}", c.getConsumerId());
-        });
+        }), executor);
     }
 
     // idempotency -- does not re-assign if shard is already assigned, however they are returned.
     public CompletableFuture<List<Assignment>> assignShard(
             List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, Set<String> nodesToExclude
     ) {
-        //TODO:: do not assign the > 1 shard of same sub to same consumer node.
         return CompletableFuture.supplyAsync(() -> {
             List<ConsumerNode> activeConsumers =
-                    consumerNodes.values().stream()
-                            .filter(c -> !c.isMarkedForDeletion() && !nodesToExclude.contains(c.getConsumerId()))
+                    consumerNodes.values().stream().filter(c -> !nodesToExclude.contains(c.getConsumerId()))
                             .collect(Collectors.toList());
             log.info(
                     "AssignShards found consumer nodes active:{} of total:{}", activeConsumers.size(),
@@ -160,7 +158,7 @@ public class ShardAssigner {
         String consumerId = assignment.getConsumerId();
         ConsumerNode consumerNode = consumerNodes.getOrDefault(consumerId, null);
         if (null == consumerNode) {
-            log.error("Consumer node not found, for assignment {}. Ignoring unAssignShard", assignment);
+            log.warn("Consumer node not found, for assignment {}. Ignoring free capacity for it.", assignment);
         } else {
             consumerNode.free(assignment, shard.getCapacityRequest());
         }
@@ -174,26 +172,23 @@ public class ShardAssigner {
         return assignmentStore.getConsumerNodeAssignments(consumerNodeId);
     }
 
-    public void consumerNodeJoined(ConsumerNode consumerNode) {
-        boolean added = addConsumerNode(consumerNode);
-        if (added) {
-            log.info("ConsumerNode {} joined.", consumerNode.getConsumerId());
-        }
+    public CompletableFuture<Void> consumerNodeJoined(ConsumerNode consumerNode) {
+        return CompletableFuture.runAsync(() -> {
+            boolean added = addConsumerNode(consumerNode);
+            if (added) {
+                log.info("ConsumerNode {} joined.", consumerNode.getConsumerId());
+            }
+        }, executor);
     }
 
-    public void consumerNodeLeft(String consumerNodeId) {
-        //TODO:: re-assign the shards (should this be trigger from here or from the controller) ?
-        MutableBoolean marked = new MutableBoolean(false);
-        consumerNodes.computeIfPresent(consumerNodeId, (k, v) -> {
-            v.markForDeletion();
-            marked.setTrue();
-            return v;
-        });
-        if (marked.booleanValue()) {
-            log.info("ConsumerNode {} marked for deletion.", consumerNodeId);
-        } else {
-            log.warn("ConsumerNode {} not found.", consumerNodeId);
-        }
+    public CompletableFuture<Void> consumerNodeLeft(String consumerNodeId) {
+        return CompletableFuture.runAsync(() -> {
+            if (null != consumerNodes.remove(consumerNodeId)) {
+                log.info("ConsumerNode {} removed.", consumerNodeId);
+            }else{
+                log.warn("ConsumerNode {} not found.", consumerNodeId);
+            }
+        }, executor);
     }
 
     private boolean addConsumerNode(ConsumerNode consumerNode) {

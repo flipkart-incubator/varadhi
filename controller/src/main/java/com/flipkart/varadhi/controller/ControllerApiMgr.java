@@ -39,7 +39,7 @@ public class ControllerApiMgr implements ControllerApi {
         return CompletableFuture.allOf(clusterConsumers.stream()
                         .map(cc -> getConsumerInfo(cc.getConsumerId()).thenAccept(
                                 cc::initFromConsumerInfo)).toArray(CompletableFuture[]::new))
-                .thenAccept(v -> shardAssigner.addConsumerNodes(clusterConsumers));
+                .thenCompose(v -> shardAssigner.addConsumerNodes(clusterConsumers));
     }
 
     @Override
@@ -88,7 +88,6 @@ public class ControllerApiMgr implements ControllerApi {
     public CompletableFuture<SubscriptionOperation> startSubscription(
             String subscriptionId, String requestedBy
     ) {
-        //TODO:: Fix it -assignment failure is not failing the start op. Task failure in the operation mgr queue.
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             // If not temporary, then alternate needs to be provided to allow recovery from this.
@@ -103,10 +102,9 @@ public class ControllerApiMgr implements ControllerApi {
             }
             log.info("Starting the Subscription: {}", subscriptionId);
             // operationMgr is not expected to create a subOp and throw, so failure is not handled here.
-            // TODO:: fix this w.r.to failure in getOrCreateShardAssignment or its chain
             return operationMgr.requestSubStart(
                     subscriptionId, requestedBy, subOp -> getOrCreateShardAssignment(subscription).thenCompose(
-                            assignments -> startShards((SubscriptionOperation)subOp, subscription, assignments)));
+                            assignments -> startShards((SubscriptionOperation) subOp, subscription, assignments)));
         });
     }
 
@@ -182,8 +180,8 @@ public class ControllerApiMgr implements ControllerApi {
             }
             log.info("Stopping the Subscription: {}", subscriptionId);
             // operationMgr is not expected to create a subOp and throw, so failure is not handled here.
-            // TODO:: fix this w.r.to failure in stopShards
-            return operationMgr.requestSubStop(subscriptionId, requestedBy, subOp -> stopShards((SubscriptionOperation)subOp, subscription));
+            return operationMgr.requestSubStop(
+                    subscriptionId, requestedBy, subOp -> stopShards((SubscriptionOperation) subOp, subscription));
         });
     }
 
@@ -268,15 +266,15 @@ public class ControllerApiMgr implements ControllerApi {
     }
 
     public CompletableFuture<Void> consumerNodeLeft(String consumerNodeId) {
-        log.info("Consumer Node {} left the cluster", consumerNodeId);
-        shardAssigner.consumerNodeLeft(consumerNodeId);
-        List<Assignment> assignments = shardAssigner.getConsumerNodeAssignment(consumerNodeId);
-        assignments.forEach(assignment -> {
-            log.info("Assignment {} needs to be re-assigned", assignment);
-           operationMgr.requestShardReassign(assignment, SYSTEM_IDENTITY,  subOp -> reAssignShard((SubscriptionOperation)subOp));
+        log.info("ConsumerNode {} left the cluster.", consumerNodeId);
+        return shardAssigner.consumerNodeLeft(consumerNodeId).thenAccept((v) -> {
+            List<Assignment> assignments = shardAssigner.getConsumerNodeAssignment(consumerNodeId);
+            assignments.forEach(assignment -> {
+                log.info("Assignment {} needs to be re-assigned", assignment);
+                operationMgr.requestShardReassign(
+                        assignment, SYSTEM_IDENTITY, subOp -> reAssignShard((SubscriptionOperation) subOp));
+            });
         });
-        //TODO::consumer node needs to be deleted.
-        return CompletableFuture.completedFuture(null);
     }
 
     private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
@@ -290,9 +288,9 @@ public class ControllerApiMgr implements ControllerApi {
     }
 
     public CompletableFuture<Void> consumerNodeJoined(ConsumerNode consumerNode) {
-        return getConsumerInfo(consumerNode.getConsumerId()).thenAccept(ci -> {
+        return getConsumerInfo(consumerNode.getConsumerId()).thenCompose(ci -> {
             consumerNode.initFromConsumerInfo(ci);
-            shardAssigner.consumerNodeJoined(consumerNode);
+            return shardAssigner.consumerNodeJoined(consumerNode);
         });
     }
 

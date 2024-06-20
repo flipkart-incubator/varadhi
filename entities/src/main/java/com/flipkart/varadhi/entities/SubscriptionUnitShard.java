@@ -2,10 +2,15 @@ package com.flipkart.varadhi.entities;
 
 import lombok.Getter;
 
+import java.util.Comparator;
+
+import static java.util.Comparator.comparing;
+
 @Getter
 public class SubscriptionUnitShard extends SubscriptionShards {
     //TODO::Add a notion of regions to either Shard or VaradhiSubscription
     // and bring operation down to regional level e.g. start/stop/assignment.
+    public static Comparator<SubscriptionUnitShard> ShardCapacityComparator = comparing(o -> o.capacityRequest);
     private final int shardId;
     private final TopicCapacityPolicy capacityRequest;
     private final InternalCompositeSubscription mainSubscription;

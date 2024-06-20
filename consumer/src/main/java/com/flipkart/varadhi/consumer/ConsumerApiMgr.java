@@ -66,7 +66,6 @@ public class ConsumerApiMgr implements ConsumerApi {
 
     @Override
     public CompletableFuture<ConsumerInfo> getConsumerInfo() {
-        //TODO::Return assignments as well.
         return CompletableFuture.completedFuture(consumerInfo);
     }
 }
