@@ -2,6 +2,7 @@ package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.*;
+import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.entities.cluster.ConsumerNode;
 import com.flipkart.varadhi.entities.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
@@ -26,8 +27,10 @@ public class ControllerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
+    private final ControllerConfig controllerConfig;
 
-    public ControllerVerticle(CoreServices coreServices, VaradhiClusterManager clusterManager) {
+    public ControllerVerticle(ControllerConfig config, CoreServices coreServices, VaradhiClusterManager clusterManager) {
+        this.controllerConfig = config;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
@@ -40,7 +43,7 @@ public class ControllerVerticle extends AbstractVerticle {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
 
         ControllerApiMgr controllerApiMgr =
-                new ControllerApiMgr(consumerClientFactory, metaStoreProvider, meterRegistry);
+                new ControllerApiMgr(controllerConfig, consumerClientFactory, metaStoreProvider, meterRegistry);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.

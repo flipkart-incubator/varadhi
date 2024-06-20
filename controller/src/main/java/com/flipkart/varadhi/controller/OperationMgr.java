@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.controller;
 
+import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -23,12 +24,13 @@ public class OperationMgr {
     private final ExecutorService executor;
     private final Map<String, Deque<OpTask>> subOps;
 
-    public OperationMgr(OpStore opStore) {
+    public OperationMgr(ControllerConfig config, OpStore opStore) {
         this.opStore = opStore;
         this.subOps = new ConcurrentHashMap<>();
-        //TODO::Add config for number of threads.
         //TODO::ExecutorService should emit the metrics.
-        this.executor = Executors.newFixedThreadPool(2, new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build());
+        this.executor = Executors.newFixedThreadPool(config.getOperationExecutionThreads(),
+                new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
+        );
     }
 
     /**
@@ -46,7 +48,9 @@ public class OperationMgr {
      * - Remove redundant operations from the queue.
      * - Implement retry logic for failed operation to support auto recovery from temporary failure.
      */
-    private void enqueueOperation(GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> opExecutor) {
+    private void enqueueOperation(
+            GroupOperation operation, Function<GroupOperation, CompletableFuture<Void>> opExecutor
+    ) {
         OpTask pendingTask = OpTask.of(operation, opExecutor);
         subOps.compute(operation.getGroupId(), (opGroupId, scheduledTasks) -> {
             if (null == scheduledTasks) {
@@ -58,7 +62,8 @@ public class OperationMgr {
                 // it means already some operations are scheduled, add this to queue.
                 int waitingTasks = scheduledTasks.size();
                 log.info(
-                        "OpGroup {} has {} waiting operations, Operation({}) queued.", operation.getGroupId(), waitingTasks,
+                        "OpGroup {} has {} waiting operations, Operation({}) queued.", operation.getGroupId(),
+                        waitingTasks,
                         operation
                 );
                 // duplicate shouldn't happen unless it is called multiple times e.g. as part of retry.
@@ -101,7 +106,10 @@ public class OperationMgr {
                 GroupOperation inProgress = scheduledTasks.peekFirst().operation;
                 if (!operation.getId().equals(inProgress.getId())) {
                     // This shouldn't happen as only operation at the head of group is scheduled for execution.
-                    log.error("Obtained update for waiting Operation, Updated({}), InProgress({}).", operation, inProgress);
+                    log.error(
+                            "Obtained update for waiting Operation, Updated({}), InProgress({}).", operation,
+                            inProgress
+                    );
                     return scheduledTasks;
                 }
 
@@ -218,7 +226,7 @@ public class OperationMgr {
         opStore.updateSubOp(subOp);
     }
 
-    private void failWithUnhandledException(GroupOperation operation, Throwable t){
+    private void failWithUnhandledException(GroupOperation operation, Throwable t) {
         //TODO:: better alternative is needed.
         operation.markFail(t.getMessage());
         try {

@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.*;
 import com.flipkart.varadhi.entities.SubscriptionShards;
@@ -26,13 +27,13 @@ public class ControllerApiMgr implements ControllerApi {
     private final OperationMgr operationMgr;
 
     public ControllerApiMgr(
-            ConsumerClientFactory consumerClientFactory, MetaStoreProvider metaStoreProvider,
+            ControllerConfig config, ConsumerClientFactory consumerClientFactory, MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.shardAssigner = new ShardAssigner(metaStoreProvider.getAssignmentStore(), meterRegistry);
         this.metaStore = metaStoreProvider.getMetaStore();
-        this.operationMgr = new OperationMgr(metaStoreProvider.getOpStore());
+        this.operationMgr = new OperationMgr(config, metaStoreProvider.getOpStore());
     }
 
     public CompletableFuture<Void> addConsumerNodes(List<ConsumerNode> clusterConsumers) {

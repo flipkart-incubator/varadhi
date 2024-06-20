@@ -65,7 +65,6 @@ metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: "src/main/resources/metastore.yml"
 
-
 featureFlags:
   leanDeployment: false
 
@@ -73,3 +72,6 @@ zookeeperOptions:
   connectUrl: "127.0.0.1:2181"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
+
+controller:
+  operationExecutionThreads: 2
