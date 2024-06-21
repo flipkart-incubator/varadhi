@@ -2,8 +2,8 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.CircularQueue;
 import com.flipkart.varadhi.consumer.ConcurrencyControl;
-import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.concurrent.Context;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -146,7 +146,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
 
         if (scheduleRequired) {
-            context.executeOnContext(() -> {
+            context.runOnContext(() -> {
                 executePendingTasks();
                 schedulePendingTaskCounter.decrementAndGet();
             });

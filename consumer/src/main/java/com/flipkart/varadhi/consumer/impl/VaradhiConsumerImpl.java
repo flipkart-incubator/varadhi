@@ -203,7 +203,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     void initiateConsumptionLoop() {
         internalConsumers.forEach((type, consumerHolder) -> {
             ConsumptionLoop loop = new ConsumptionLoop(type, consumerHolder.messageSrc, 64);
-            context.execute(loop);
+            context.run(loop);
         });
     }
 
@@ -231,7 +231,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
         public void runLoopIfRequired() {
             if (inFlightMessages.get() < maxInFlightMessages && messageFetchInProgress.compareAndSet(false, true)) {
-                context.execute(this);
+                context.run(this);
             }
         }
 
@@ -241,7 +241,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             fetchedFut.whenComplete((fetched, err) -> {
                 inFlightMessages.addAndGet(fetched);
                 // need to go back to the context. otherwise we might end up using unintended thread.
-                context.executeOnContext(() -> onMessagesFetched(fetched));
+                context.runOnContext(() -> onMessagesFetched(fetched));
                 messageFetchInProgress.set(false);
                 runLoopIfRequired();
             });

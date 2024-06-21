@@ -4,6 +4,9 @@ import io.netty.util.concurrent.FastThreadLocal;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+
 @RequiredArgsConstructor
 public class Context {
 
@@ -61,7 +64,7 @@ public class Context {
      *
      * @param runnable
      */
-    public void executeOnContext(Runnable runnable) {
+    public void runOnContext(Runnable runnable) {
         if (isInContext()) {
             runnable.run();
         } else {
@@ -69,7 +72,23 @@ public class Context {
         }
     }
 
-    public void execute(Task task) {
+    public <T> CompletableFuture<T> executeOnContext(Callable<T> callable) throws Exception {
+        if (isInContext()) {
+            return CompletableFuture.completedFuture(callable.call());
+        } else {
+            CompletableFuture<T> promise = new CompletableFuture<>();
+            executor.execute(wrap(() -> {
+                try {
+                    promise.complete(callable.call());
+                } catch (Exception e) {
+                    promise.completeExceptionally(e);
+                }
+            }));
+            return promise;
+        }
+    }
+
+    public void run(Task task) {
         executor.execute(task);
     }
 }

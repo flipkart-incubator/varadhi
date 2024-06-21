@@ -70,6 +70,11 @@ public class DummyConsumer implements Consumer<DummyOffset> {
                         String message = iter.next();
                         return new PolledMessage<>() {
                             @Override
+                            public long getProducedTimestampMs() {
+                                return 0;
+                            }
+
+                            @Override
                             public String getTopicName() {
                                 return null;
                             }
@@ -154,7 +159,7 @@ public class DummyConsumer implements Consumer<DummyOffset> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         // no op
     }
 

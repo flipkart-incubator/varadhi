@@ -196,7 +196,7 @@ public class ConcurrencyAndRLDemo {
                     loadGenMeter.mark(batchSz);
                     inFlightTasks.addAndGet(batchSz);
                     CompletableFuture<Void> taskCreationDone = new CompletableFuture<>();
-                    ctx.executeOnContext(() -> {
+                    ctx.runOnContext(() -> {
                         for (CompletableFuture<Boolean> task : cc.enqueueTasks(
                                 mainQ, repeat(SS::new, batchSz))) {
                             // when http call is done.
