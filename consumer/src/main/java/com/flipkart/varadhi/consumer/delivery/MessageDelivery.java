@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 public interface MessageDelivery {
     static MessageDelivery of(Endpoint endpoint) {
         return switch (endpoint.getProtocol()) {
-            case HTTP1_1 -> new HttpMessageDelivery(endpoint);
+            case HTTP1_1 -> new HttpMessageDelivery((Endpoint.HttpEndpoint) endpoint);
             case HTTP2 -> throw new NotImplementedException("HTTP2 is not supported yet");
             default -> throw new IllegalArgumentException("Unsupported protocol: " + endpoint.getProtocol());
         };
@@ -28,8 +28,8 @@ public interface MessageDelivery {
         private final Endpoint.HttpEndpoint endpoint;
         private final HttpClient httpClient;
 
-        public HttpMessageDelivery(Endpoint endpoint) {
-            this.endpoint = (Endpoint.HttpEndpoint) endpoint;
+        public HttpMessageDelivery(Endpoint.HttpEndpoint endpoint) {
+            this.endpoint = endpoint;
             this.httpClient = HttpClient.newBuilder()
                     .version(this.endpoint.isHttp2Supported() ? HttpClient.Version.HTTP_2 : HttpClient.Version.HTTP_1_1)
                     .connectTimeout(Duration.ofMillis(this.endpoint.getConnectTimeoutMs()))
@@ -61,11 +61,7 @@ public interface MessageDelivery {
                             request, HttpResponse.BodyHandlers.ofByteArray())
                     .thenApply(response -> new DeliveryResponse(response.statusCode(), endpoint.getProtocol(),
                             response.body()
-                    ))
-                    .exceptionally(e -> {
-                        // log error
-                        return new DeliveryResponse(500, endpoint.getProtocol(), e.getMessage().getBytes());
-                    });
+                    ));
         }
     }
 }
