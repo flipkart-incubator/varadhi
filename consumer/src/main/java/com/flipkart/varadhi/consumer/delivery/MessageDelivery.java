@@ -35,7 +35,7 @@ public interface MessageDelivery {
         @Override
         public CompletableFuture<DeliveryResponse> deliver(Message message) throws Exception {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(endpoint.getUrl().toURI())
+                    .uri(endpoint.getUri())
                     .timeout(Duration.ofMillis(endpoint.getRequestTimeoutMs()))
                     .header("Content-Type", endpoint.getContentType())
                     .method(

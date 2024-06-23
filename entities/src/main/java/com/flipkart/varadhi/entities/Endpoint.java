@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.net.URL;
+import java.net.URI;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -29,7 +29,7 @@ public abstract sealed class Endpoint {
     @EqualsAndHashCode(callSuper = true)
     @Data
     public static final class HttpEndpoint extends Endpoint {
-        private final URL url;
+        private final URI uri;
         private final String method;
         private final String contentType;
         private final long connectTimeoutMs;
