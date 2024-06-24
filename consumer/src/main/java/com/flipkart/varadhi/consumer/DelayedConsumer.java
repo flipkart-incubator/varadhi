@@ -8,7 +8,6 @@ import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,17 +25,22 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <O>
  */
-@RequiredArgsConstructor
 @ExtensionMethod({FutureExtensions.class})
 public class DelayedConsumer<O extends Offset> implements Consumer<O> {
 
-    private final Batch<O> polledMessages = Batch.emtpyBatch();
     private final Consumer<O> delegate;
     private final Context context;
-    private final ScheduledExecutorService scheduler;
-
     @Getter
     private long delayMs;
+
+    private final Batch<O> polledMessages = Batch.emtpyBatch();
+
+    public DelayedConsumer(Consumer<O> delegate, Context context, long delayMs) {
+        this.delegate = delegate;
+        this.context = context;
+        this.delayMs = delayMs;
+    }
+
 
     public void setDelayMsAsync(long delayMs) {
         context.runOnContext(() -> {
@@ -107,9 +110,11 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         if (timeLeft == 0) {
             delayedMsgs.complete(polledMessages.getConsumableMsgs(delayMs));
         } else {
-            scheduler.schedule(() -> {
-                context.runOnContext(() -> delayedMsgs.complete(polledMessages.getConsumableMsgs(delayMs)));
-            }, timeLeft, TimeUnit.MILLISECONDS);
+            context.scheduleOnContext(
+                    () -> delayedMsgs.complete(polledMessages.getConsumableMsgs(delayMs)),
+                    timeLeft,
+                    TimeUnit.MILLISECONDS
+            );
         }
         return delayedMsgs;
     }

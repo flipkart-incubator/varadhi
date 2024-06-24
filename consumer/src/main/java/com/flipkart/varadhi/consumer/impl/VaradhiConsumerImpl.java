@@ -11,7 +11,6 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
-import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.base.Ticker;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +35,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     private final ProducerFactory<StorageTopic> producerFactory;
     private final Project project;
     private final String subscriptionName;
-    private final String shardName;
+    private final String shardId;
     private final TopicPartitions<StorageTopic> topic;
     private final boolean grouped;
     private final Endpoint endpoint;
@@ -63,7 +62,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     /**
      * producer objects for required storage topics
      */
-    private final Map<InternalQueueType, Producer> internalProducers = new HashMap<>();
+    private final Map<InternalQueueType, FailedMsgProducer> internalProducers = new HashMap<>();
 
     private volatile boolean connected = false;
     private volatile boolean started = false;
@@ -90,8 +89,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     @Override
-    public String getShardName() {
-        return shardName;
+    public String getShardId() {
+        return shardId;
     }
 
     @Override
@@ -112,18 +111,21 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
                     .getSubscriptionForRetry(r).getSubscriptionForConsume()
                     .getTopicPartitions();
             internalConsumers.computeIfAbsent(
-                    InternalQueueType.retryType(r), type -> createConsumer(retryTopic, role));
+                    InternalQueueType.retryType(r),
+                    type -> delayConsumer(createConsumer(retryTopic, role), 5000)
+            );
         }
 
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             internalProducers.put(
                     InternalQueueType.retryType(r),
-                    createProducer(failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce())
+                    createFailedMsgProducer(
+                            failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce())
             );
         }
         internalProducers.put(
                 InternalQueueType.deadLetterType(),
-                createProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
+                createFailedMsgProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
         );
 
         concurrencyControl =
@@ -189,15 +191,19 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     ConsumerHolder createConsumer(TopicPartitions<StorageTopic> partitions, String role) {
         // todo: create proper consumer name
-        String consumerName = String.format("%s/%s/%s", project.getName(), subscriptionName, shardName);
+        String consumerName = String.format("%s/%s/%s", project.getName(), subscriptionName, shardId);
         Consumer<Offset> consumer =
                 consumerFactory.newConsumer(List.of(partitions), subscriptionName, consumerName, Map.of());
         MessageSrc messageSrc = grouped ? new GroupedMessageSrc<>(consumer, 1000) : new UnGroupedMessageSrc<>(consumer);
         return new ConsumerHolder(consumer, messageSrc);
     }
 
-    Producer createProducer(StorageTopic topic) {
-        return producerFactory.newProducer(topic);
+    ConsumerHolder delayConsumer(ConsumerHolder holder, long delayMs) {
+        return new ConsumerHolder(new DelayedConsumer<>(holder.consumer, context, delayMs), holder.messageSrc);
+    }
+
+    FailedMsgProducer createFailedMsgProducer(StorageTopic topic) {
+        return new FailedMsgProducer(producerFactory.newProducer(topic));
     }
 
     void initiateConsumptionLoop() {

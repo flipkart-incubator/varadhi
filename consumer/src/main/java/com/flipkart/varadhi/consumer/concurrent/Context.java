@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class Context {
@@ -86,6 +88,10 @@ public class Context {
             }));
             return promise;
         }
+    }
+
+    public ScheduledFuture<?> scheduleOnContext(Runnable command, long delay, TimeUnit unit) {
+        return executor.schedule(wrap(command), delay, unit);
     }
 
     public void run(Task task) {

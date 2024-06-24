@@ -1,95 +1,38 @@
 package com.flipkart.varadhi.consumer.concurrent;
 
-import java.util.Collection;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
 
-public class EventExecutorGroup implements ScheduledExecutorService {
 
-    @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return null;
-    }
+/**
+ * TODO: consider using vertx class
+ *
+ * Idea is:
+ * Vertx : provides multithreaded runtime.
+ * Event Executor : vertx's event loop
+ * Subscription : Deployment
+ *
+ * Deployment -> choose Event loop (should be customizable). validate if possible in vertx.
+ */
+@RequiredArgsConstructor
+public class EventExecutorGroup {
 
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return null;
-    }
+    final ScheduledExecutorService scheduler;
+    private final ThreadFactory threadFactory;
+    private final Supplier<BlockingQueue<Context.Task>> taskQueue;
 
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return null;
-    }
+    private final List<EventExecutor> executors = new CopyOnWriteArrayList<>();
 
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return null;
-    }
-
-    @Override
-    public void shutdown() {
-
-    }
-
-    @Override
-    public List<Runnable> shutdownNow() {
-        return null;
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return false;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        return false;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        return false;
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        return null;
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        return null;
-    }
-
-    @Override
-    public Future<?> submit(Runnable task) {
-        return null;
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
-        return null;
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        return null;
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-        return null;
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        return null;
-    }
-
-    @Override
-    public void execute(Runnable command) {
-
+    public EventExecutor newExecutor() {
+        BlockingQueue<Context.Task> queue = taskQueue.get();
+        EventExecutor executor = new EventExecutor(scheduler, threadFactory, queue);
+        executors.add(executor);
+        return executor;
     }
 }
