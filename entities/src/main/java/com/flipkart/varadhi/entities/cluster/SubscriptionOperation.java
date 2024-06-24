@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class SubscriptionOperation extends MetaStoreEntity implements GroupOperation {
+public class SubscriptionOperation extends MetaStoreEntity implements OrderedOperation {
     private final String requestedBy;
     private final long startTime;
     private long endTime;
@@ -60,7 +60,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements GroupOpera
 
     @JsonIgnore
     @Override
-    public String getGroupId() {
+    public String getOrderingKey() {
         return "Sub_" +  data.getSubscriptionId();
     }
 
@@ -99,6 +99,9 @@ public class SubscriptionOperation extends MetaStoreEntity implements GroupOpera
         for(ShardOperation shardOp : shardOps) {
             ShardOperation.OpData opData = shardOp.getOpData();
             if (shardOp.hasFailed()) {
+                if (!sb.isEmpty()) {
+                    sb.append(", ");
+                }
                 sb.append(String.format("Shard:%d failed:%s", opData.getShardId(), opData.getErrorMsg()));
             }
             if (shardOp.isDone()) {

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class ShardOperation extends MetaStoreEntity implements  GroupOperation {
+public class ShardOperation extends MetaStoreEntity implements Operation {
     private final long startTime;
     private long endTime;
     private final OpData opData;
@@ -47,11 +47,6 @@ public class ShardOperation extends MetaStoreEntity implements  GroupOperation {
     @Override
     public String getId() {
         return opData.getOperationId();
-    }
-    @JsonIgnore
-    @Override
-    public String getGroupId() {
-        return "Shard_" +  opData.getSubscription().getName() + "_" + opData.shardId;
     }
 
     @JsonIgnore

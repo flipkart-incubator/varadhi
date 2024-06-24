@@ -148,10 +148,12 @@ public class ShardAssigner {
         if (null != assignedNode) {
             nodeToExclude.add(assignedNode.getConsumerId());
         }
-        unAssignShard(List.of(assignment), subscription, freeAssignedCapacity);
         List<SubscriptionUnitShard> shardToReAssign =
                 List.of(subscription.getShards().getShard(assignment.getShardId()));
-        return assignShard(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0));
+
+        return unAssignShard(List.of(assignment), subscription, freeAssignedCapacity).thenCompose(v ->
+                assignShard(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0))
+        );
     }
 
     private void freeCapacityFromNode(Assignment assignment, SubscriptionUnitShard shard) {
@@ -185,7 +187,7 @@ public class ShardAssigner {
         return CompletableFuture.runAsync(() -> {
             if (null != consumerNodes.remove(consumerNodeId)) {
                 log.info("ConsumerNode {} removed.", consumerNodeId);
-            }else{
+            } else {
                 log.warn("ConsumerNode {} not found.", consumerNodeId);
             }
         }, executor);
