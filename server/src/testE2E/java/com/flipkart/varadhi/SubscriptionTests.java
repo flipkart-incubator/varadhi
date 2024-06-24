@@ -5,8 +5,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
@@ -14,20 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
 
-    private static final Endpoint endpoint;
+    private static final Endpoint endpoint =
+            new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
     private static TopicResource p1t1;
     private static TopicResource p1t2;
-
-    static {
-        try {
-            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", 500, 500, false);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},

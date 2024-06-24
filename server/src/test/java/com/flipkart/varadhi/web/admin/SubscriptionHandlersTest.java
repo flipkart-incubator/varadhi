@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -18,8 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +28,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class SubscriptionHandlersTest extends WebTestBase {
-    private static final Endpoint endpoint;
+    private static final Endpoint endpoint =
+            new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
     private static final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
             RetryPolicy.BackoffType.LINEAR,
@@ -38,14 +38,6 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
     private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
-
-    static {
-        try {
-            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", 500, 500, false);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private final Project project = new Project("project1", 0, "", "team1", "org1");
     private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
