@@ -9,6 +9,8 @@ public interface AssignmentStore {
 
     void deleteAssignments(List<Assignment> assignments);
 
+    boolean exists(Assignment assignment);
+
     List<Assignment> getSubscriptionAssignments(String subscriptionName);
 
     List<Assignment> getConsumerNodeAssignments(String consumerNodeId);

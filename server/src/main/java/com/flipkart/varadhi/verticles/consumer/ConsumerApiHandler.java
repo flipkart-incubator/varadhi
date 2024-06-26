@@ -42,7 +42,6 @@ public class ConsumerApiHandler {
     }
 
     public CompletableFuture<ResponseMessage> info(ClusterMessage message) {
-        log.info("Consumer info called");
         return consumerApiMgr.getConsumerInfo().thenApply(message::getResponseMessage);
     }
 

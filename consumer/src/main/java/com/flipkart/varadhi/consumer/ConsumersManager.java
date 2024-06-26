@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -37,6 +36,4 @@ public interface ConsumersManager {
     ConsumerState getConsumerState(String subscription, int shardId);
 
     // TODO likely need status on the starting / stopping as well; as the above status is for a running consumer..
-
-    ConsumerInfo getInfo();
 }

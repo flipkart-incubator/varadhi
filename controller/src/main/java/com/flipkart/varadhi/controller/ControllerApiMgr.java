@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.controller;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.*;
 import com.flipkart.varadhi.entities.SubscriptionShards;
@@ -15,6 +17,8 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.Constants.SYSTEM_IDENTITY;
+
 @Slf4j
 public class ControllerApiMgr implements ControllerApi {
     private final ShardAssigner shardAssigner;
@@ -23,20 +27,20 @@ public class ControllerApiMgr implements ControllerApi {
     private final OperationMgr operationMgr;
 
     public ControllerApiMgr(
-            ConsumerClientFactory consumerClientFactory, MetaStoreProvider metaStoreProvider,
+            ControllerConfig config, ConsumerClientFactory consumerClientFactory, MetaStoreProvider metaStoreProvider,
             MeterRegistry meterRegistry
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.shardAssigner = new ShardAssigner(metaStoreProvider.getAssignmentStore(), meterRegistry);
         this.metaStore = metaStoreProvider.getMetaStore();
-        this.operationMgr = new OperationMgr(metaStoreProvider.getOpStore());
+        this.operationMgr = new OperationMgr(config, metaStoreProvider.getOpStore());
     }
 
     public CompletableFuture<Void> addConsumerNodes(List<ConsumerNode> clusterConsumers) {
         return CompletableFuture.allOf(clusterConsumers.stream()
                         .map(cc -> getConsumerInfo(cc.getConsumerId()).thenAccept(
-                                cc::updateWithConsumerInfo)).toArray(CompletableFuture[]::new))
-                .thenAccept(v -> shardAssigner.addConsumerNodes(clusterConsumers));
+                                cc::initFromConsumerInfo)).toArray(CompletableFuture[]::new))
+                .thenCompose(v -> shardAssigner.addConsumerNodes(clusterConsumers));
     }
 
     @Override
@@ -44,7 +48,8 @@ public class ControllerApiMgr implements ControllerApi {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             throw new IllegalStateException(
-                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                    String.format(
+                            "Failure in getting subscription status, try again after sometime. %s",
                             t.getMessage()
                     ));
         });
@@ -84,12 +89,12 @@ public class ControllerApiMgr implements ControllerApi {
     public CompletableFuture<SubscriptionOperation> startSubscription(
             String subscriptionId, String requestedBy
     ) {
-        //TODO:: Fix it -assignment failure is not failing the start op. Task failure in the operation mgr queue.
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             // If not temporary, then alternate needs to be provided to allow recovery from this.
             throw new IllegalStateException(
-                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                    String.format(
+                            "Failure in getting subscription status, try again after sometime. %s",
                             t.getMessage()
                     ));
         }).thenApply(ss -> {
@@ -97,11 +102,10 @@ public class ControllerApiMgr implements ControllerApi {
                 throw new InvalidOperationForResourceException("Subscription is already running or starting.");
             }
             log.info("Starting the Subscription: {}", subscriptionId);
-            // operationMgr is not expected to create a subOp and throw, so failure is not handled here.
-            // TODO:: fix this w.r.to failure in getOrCreateShardAssignment or its chain
-            return operationMgr.requestSubStart(
-                    subscriptionId, requestedBy, subOp -> getOrCreateShardAssignment(subscription).thenCompose(
-                            assignments -> startShards(subOp, subscription, assignments)));
+            SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
+            operationMgr.createAndEnqueue(operation, subOp -> getOrCreateShardAssignment(subscription).thenCompose(
+                    assignments -> startShards((SubscriptionOperation) subOp, subscription, assignments)));
+            return operation;
         });
     }
 
@@ -109,7 +113,7 @@ public class ControllerApiMgr implements ControllerApi {
         List<Assignment> assignedShards = shardAssigner.getSubscriptionAssignment(subscription.getName());
         if (assignedShards.isEmpty()) {
             List<SubscriptionUnitShard> unAssigned = getSubscriptionShards(subscription.getShards());
-            return shardAssigner.assignShard(unAssigned, subscription);
+            return shardAssigner.assignShard(unAssigned, subscription, new HashSet<>());
         } else {
             log.info(
                     "{} Shards for Subscription {} are already assigned.", assignedShards.size(),
@@ -145,13 +149,16 @@ public class ControllerApiMgr implements ControllerApi {
             // IsAssigned is started|starting|errored.
             // Stopping isn't considered as assigned, as start/stop shouldn't be running in parallel.
             if (!shardStatus.isAssigned()) {
-                ShardOperation shardOp = operationMgr.requestShardStart(subOpId, shard, subscription);
-                return consumer.start((ShardOperation.StartData) shardOp.getOpData()).whenComplete((v, t) -> {
-                    if (t != null) {
-                        markShardOpFailed(shardOp, t);
-                    } else {
-                        log.info("Scheduled shard start({}).", shardOp);
-                    }
+                ShardOperation startOp = ShardOperation.startOp(subOpId, shard, subscription);
+                return operationMgr.createAndExecute(startOp, op -> {
+                    ShardOperation shardOp = (ShardOperation) op;
+                    return consumer.start((ShardOperation.StartData) shardOp.getOpData()).whenComplete((v, t) -> {
+                        if (t != null) {
+                            markShardOpFailed(shardOp, t);
+                        } else {
+                            log.info("Scheduled shard start({}).", shardOp);
+                        }
+                    });
                 });
             } else {
                 log.info("Subscription:{} Shard:{} is already started. Skipping.", subId, shardId);
@@ -167,7 +174,8 @@ public class ControllerApiMgr implements ControllerApi {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
         return getSubscriptionStatus(subscription).exceptionally(t -> {
             throw new IllegalStateException(
-                    String.format("Failure in getting subscription status, try again after sometime. %s",
+                    String.format(
+                            "Failure in getting subscription status, try again after sometime. %s",
                             t.getMessage()
                     ));
         }).thenApply(ss -> {
@@ -175,9 +183,9 @@ public class ControllerApiMgr implements ControllerApi {
                 throw new InvalidOperationForResourceException("Subscription is already stopped.");
             }
             log.info("Stopping the Subscription: {}", subscriptionId);
-            // operationMgr is not expected to create a subOp and throw, so failure is not handled here.
-            // TODO:: fix this w.r.to failure in stopShards
-            return operationMgr.requestSubStop(subscriptionId, requestedBy, subOp -> stopShards(subOp, subscription));
+            SubscriptionOperation operation = SubscriptionOperation.stopOp(subscriptionId, requestedBy);
+            operationMgr.createAndEnqueue(operation, subOp -> stopShards((SubscriptionOperation) subOp, subscription));
+            return operation;
         });
     }
 
@@ -187,7 +195,7 @@ public class ControllerApiMgr implements ControllerApi {
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = shardAssigner.getSubscriptionAssignment(subId);
         log.info(
-                "Found {} assigned Shards for the Subscription:{} with Shards:{}.", assignments.size(),
+                "Found {} assigned Shards for the Subscription:{} with total {} Shards.", assignments.size(),
                 subId, shards.getShardCount()
         );
         CompletableFuture<Void> future = CompletableFuture.allOf(assignments.stream()
@@ -196,7 +204,7 @@ public class ControllerApiMgr implements ControllerApi {
                 )).toArray(CompletableFuture[]::new)).exceptionally(t -> {
             markSubOpFailed(subOp, t);
             return null;
-        }).thenCompose(v -> shardAssigner.unAssignShard(assignments, subscription));
+        }).thenCompose(v -> shardAssigner.unAssignShard(assignments, subscription, true));
         log.info("Scheduled Stop on {} shards for SubOp({}).", shards.getShardCount(), subOp.getData());
         return future;
     }
@@ -209,13 +217,16 @@ public class ControllerApiMgr implements ControllerApi {
         ConsumerApi consumer = getAssignedConsumer(assignment);
         return consumer.getShardStatus(subId, shardId).thenCompose(shardStatus -> {
             if (!shardStatus.isAssigned()) {
-                ShardOperation shardOp = operationMgr.requestShardStop(subOpId, shard, subscription);
-                return consumer.stop((ShardOperation.StopData) shardOp.getOpData()).whenComplete((v, t) -> {
-                    if (t != null) {
-                        markShardOpFailed(shardOp, t);
-                    } else {
-                        log.info("Scheduled shard stop({}).", shardOp);
-                    }
+                ShardOperation stopOp = ShardOperation.stopOp(subOpId, shard, subscription);
+                return operationMgr.createAndExecute(stopOp, op -> {
+                    ShardOperation shardOp = (ShardOperation) op;
+                    return consumer.stop((ShardOperation.StopData) shardOp.getOpData()).whenComplete((v, t) -> {
+                        if (t != null) {
+                            markShardOpFailed(shardOp, t);
+                        } else {
+                            log.info("Scheduled shard stop({}).", shardOp);
+                        }
+                    });
                 });
             } else {
                 log.info("Subscription:{} Shard:{} is already Stopped. Skipping.", subId, shardId);
@@ -262,14 +273,31 @@ public class ControllerApiMgr implements ControllerApi {
     }
 
     public CompletableFuture<Void> consumerNodeLeft(String consumerNodeId) {
-        shardAssigner.consumerNodeLeft(consumerNodeId);
-        return CompletableFuture.completedFuture(null);
+        log.info("ConsumerNode {} left the cluster.", consumerNodeId);
+        return shardAssigner.consumerNodeLeft(consumerNodeId).thenAccept((v) -> {
+            List<Assignment> assignments = shardAssigner.getConsumerNodeAssignment(consumerNodeId);
+            assignments.forEach(assignment -> {
+                log.info("Assignment {} needs to be re-assigned", assignment);
+                SubscriptionOperation operation = SubscriptionOperation.reAssignShardOp(assignment, SYSTEM_IDENTITY);
+                operationMgr.createAndEnqueue(operation, subOp -> reAssignShard((SubscriptionOperation) subOp));
+            });
+        });
+    }
+
+    private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
+        //TODO:: failure recovery of re-assign needs to be taken care of.
+        SubscriptionOperation.ReassignShardData data = (SubscriptionOperation.ReassignShardData) subOp.getData();
+        Assignment currentAssignment = data.getAssignment();
+        VaradhiSubscription subscription = metaStore.getSubscription(currentAssignment.getSubscriptionId());
+        SubscriptionUnitShard shard = subscription.getShards().getShard(currentAssignment.getShardId());
+        return shardAssigner.reAssignShard(currentAssignment, subscription, false).thenCompose(a ->
+                startShard(subOp.getId(), a, shard, subscription));
     }
 
     public CompletableFuture<Void> consumerNodeJoined(ConsumerNode consumerNode) {
-        return getConsumerInfo(consumerNode.getConsumerId()).thenAccept(ci -> {
-            consumerNode.updateWithConsumerInfo(ci);
-            shardAssigner.consumerNodeJoined(consumerNode);
+        return getConsumerInfo(consumerNode.getConsumerId()).thenCompose(ci -> {
+            consumerNode.initFromConsumerInfo(ci);
+            return shardAssigner.consumerNodeJoined(consumerNode);
         });
     }
 

@@ -15,6 +15,6 @@ import lombok.Data;
  */
 @Data
 public class DeliveryConfig {
-    private int timeoutMs = 1000;
+    private int timeoutMs = 10000;
     private TracingPolicy tracingPolicy = TracingPolicy.PROPAGATE;
 }

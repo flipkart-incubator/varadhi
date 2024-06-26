@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class ShardOperation extends MetaStoreEntity {
+public class ShardOperation extends MetaStoreEntity implements Operation {
     private final long startTime;
     private long endTime;
     private final OpData opData;
@@ -42,6 +43,24 @@ public class ShardOperation extends MetaStoreEntity {
         return new ShardOperation(data);
     }
 
+    @JsonIgnore
+    @Override
+    public String getId() {
+        return opData.getOperationId();
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isDone() {
+        return opData.state == State.ERRORED || opData.state == State.COMPLETED;
+    }
+
+    @Override
+    public void markFail(String reason) {
+        opData.markFail(reason);
+        endTime = System.currentTimeMillis();
+    }
+
     public void update(ShardOperation.OpData updated) {
         if (!opData.operationId.equals(updated.operationId)) {
             throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
@@ -50,17 +69,9 @@ public class ShardOperation extends MetaStoreEntity {
         opData.state = updated.state;
     }
 
-    public void markFail(String reason) {
-        opData.markFail(reason);
-        endTime = System.currentTimeMillis();
-    }
 
     public boolean hasFailed() {
         return opData.state == State.ERRORED;
-    }
-
-    public boolean hasCompleted() {
-        return opData.state == State.ERRORED || opData.state == State.COMPLETED;
     }
 
     @Override
