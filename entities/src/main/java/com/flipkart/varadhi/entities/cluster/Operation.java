@@ -4,4 +4,5 @@ public interface Operation {
     String getId();
     boolean isDone();
     void markFail(String error);
+    void markCompleted();
 }

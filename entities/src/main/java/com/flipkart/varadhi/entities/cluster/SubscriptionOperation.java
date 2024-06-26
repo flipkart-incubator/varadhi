@@ -73,23 +73,21 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
     @Override
     public void markFail(String reason) {
-        data.state = State.ERRORED;
-        data.errorMsg = reason;
+        data.markFail(reason);
         endTime = System.currentTimeMillis();
     }
 
+    @Override
     public void markCompleted() {
-        data.state = State.COMPLETED;
+        data.markCompleted();
         endTime = System.currentTimeMillis();
     }
 
     public void update(SubscriptionOperation updated) {
-        if (!data.operationId.equals(updated.data.operationId)) {
-            throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
+        data.update(updated.data);
+        if (data.isDone()) {
+            endTime = System.currentTimeMillis();
         }
-        data.errorMsg = updated.data.errorMsg;
-        data.state = updated.data.state;
-        endTime = updated.endTime;
     }
 
     public void update(List<ShardOperation> shardOps) {
@@ -108,6 +106,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
                 completedCount++;
             }
         }
+
         if (completedCount == shardOps.size()) {
             if (sb.isEmpty()) {
                 markCompleted();
@@ -126,7 +125,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     }
 
     public enum State {
-        SCHEDULED, ERRORED, COMPLETED, IN_PROGRESS
+        ERRORED, COMPLETED, IN_PROGRESS
     }
 
     @Data
@@ -143,6 +142,29 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         private String subscriptionId;
         private State state;
         private String errorMsg;
+
+        public void markFail(String reason) {
+            state = State.ERRORED;
+            errorMsg = reason;
+        }
+
+        public void markCompleted() {
+            state = State.COMPLETED;
+        }
+
+        @JsonIgnore
+        public boolean isDone() {
+            return state == State.ERRORED || state == State.COMPLETED;
+        }
+
+        public void update(OpData updated) {
+            if (!operationId.equals(updated.operationId)) {
+                throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
+            }
+            errorMsg = updated.errorMsg;
+            state = updated.state;
+        }
+
         @Override
         public String toString() {
             return String.format(
@@ -171,7 +193,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @EqualsAndHashCode(callSuper = true)
     public static class StopData extends OpData {
         StopData(String subscriptionId) {
-            super(UUID.randomUUID().toString(), subscriptionId, State.SCHEDULED, null);
+            super(UUID.randomUUID().toString(), subscriptionId, State.IN_PROGRESS, null);
         }
 
         @Override
@@ -186,7 +208,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     public static class ReassignShardData extends OpData {
         private Assignment assignment;
         ReassignShardData(Assignment assignment) {
-            super(UUID.randomUUID().toString(), assignment.getSubscriptionId(), State.SCHEDULED, null);
+            super(UUID.randomUUID().toString(), assignment.getSubscriptionId(), State.IN_PROGRESS, null);
             this.assignment = assignment;
         }
 

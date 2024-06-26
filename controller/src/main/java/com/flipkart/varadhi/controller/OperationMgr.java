@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -57,7 +58,10 @@ public class OperationMgr {
             } else {
                 // it means already some operations are scheduled, add this to queue.
                 int waitingTasks = scheduledTasks.size();
-                log.info("{} waiting operations for key {}, Operation({}) queued.", waitingTasks, operation.getOrderingKey(), operation);
+                log.info(
+                        "{} waiting operations for key {}, Operation({}) queued.", waitingTasks,
+                        operation.getOrderingKey(), operation
+                );
                 // duplicate shouldn't happen unless it is called multiple times e.g. as part of retry.
                 boolean alreadyScheduled = false;
                 for (OpTask task : scheduledTasks) {
@@ -79,13 +83,15 @@ public class OperationMgr {
         CompletableFuture.runAsync(() -> {
             try {
                 task.call().exceptionally(t -> {
-                    log.error("Operation ({}) had a failure ({}).", task.operation, t.getMessage());
-                    failWithException(task.operation, t);
+                    handleOpUpdate(task.operation, op -> {
+                        log.error("Operation ({}) had a failure {}.", task.operation, t.getMessage());
+                        failWithException(task.operation, t);
+                    });
                     return null;
                 });
             } catch (Exception e) {
                 handleOpUpdate(task.operation, op -> {
-                    log.error("Operation ({}) had an unexpected failure ({}).", op, e.getMessage());
+                    log.error("Operation ({}) had an unexpected failure {}.", op, e.getMessage());
                     failWithException(op, e);
                 });
             }
@@ -147,19 +153,28 @@ public class OperationMgr {
         }
     }
 
-    public void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
-        opStore.createSubOp(subOp);
+    public void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         enqueueOperation(subOp, opExecutor);
     }
-    public CompletableFuture<Void> createAndExecute(ShardOperation shardOp, OpExecutor<Operation> opExecutor) {
-        opStore.createShardOp(shardOp);
+
+    public void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
+        opStore.createSubOp(subOp);
+        enqueue(subOp, opExecutor);
+    }
+
+    public CompletableFuture<Void> createIfNeededAndExecute(ShardOperation shardOp, OpExecutor<Operation> opExecutor) {
+        if (!opStore.shardOpExists(shardOp.getId())) {
+            opStore.createShardOp(shardOp);
+        }
         return opExecutor.execute(shardOp);
     }
-    public void updateSubOp(SubscriptionOperation subscriptionOp) {
-        handleOpUpdate(subscriptionOp, subOp -> {
+
+    public void updateSubOp(SubscriptionOperation operation) {
+        handleOpUpdate(operation, op -> {
             // updating DB status in handler, to avoid version conflict.
-            SubscriptionOperation subOpLatest = opStore.getSubOp(subscriptionOp.getData().getOperationId());
-            subOpLatest.update(subscriptionOp);
+            SubscriptionOperation subOp = (SubscriptionOperation) op;
+            SubscriptionOperation subOpLatest = opStore.getSubOp(subOp.getData().getOperationId());
+            subOpLatest.update(subOp);
             opStore.updateSubOp(subOpLatest);
         });
     }
@@ -170,22 +185,22 @@ public class OperationMgr {
         handleOpUpdate(subscriptionOp, subOp -> updateShardAndSubOp((SubscriptionOperation) subOp, opData));
     }
 
+    public List<SubscriptionOperation> getPendingSubOps() {
+        return opStore.getPendingSubOps();
+    }
+
+
+    public Map<Integer, ShardOperation> getShardOps(String subOpId) {
+        return opStore.getShardOps(subOpId).stream().collect(Collectors.toMap(o -> o.getOpData().getShardId(), o -> o));
+    }
+
     private void updateShardAndSubOp(
             SubscriptionOperation subOp, ShardOperation.OpData opData
     ) {
-
         ShardOperation shardOpLatest = opStore.getShardOp(opData.getOperationId());
         shardOpLatest.update(opData);
         opStore.updateShardOp(shardOpLatest);
-
-        List<ShardOperation> shardOps = new ArrayList<>();
-        // db fetch can be avoided if it is a single sharded subscription i.e. SubscriptionUnitShard strategy.
-        if (1 == shardOpLatest.getOpData().getSubscription().getShards().getShardCount()) {
-            shardOps.add(shardOpLatest);
-        } else {
-            shardOps.addAll(opStore.getShardOps(shardOpLatest.getOpData().getParentOpId()));
-        }
-        subOp.update(shardOps);
+        subOp.update(opStore.getShardOps(shardOpLatest.getOpData().getParentOpId()));
         opStore.updateSubOp(subOp);
     }
 
@@ -209,6 +224,7 @@ public class OperationMgr {
     static class OpTask implements Callable<CompletableFuture<Void>> {
         private OrderedOperation operation;
         private OpExecutor<OrderedOperation> opExecutor;
+
 
         public static OpTask of(OrderedOperation operation, OpExecutor<OrderedOperation> opExecutor) {
             return new OpTask(operation, opExecutor);

@@ -11,11 +11,15 @@ public interface OpStore {
 
     SubscriptionOperation getSubOp(String operationId);
 
+    List<SubscriptionOperation> getPendingSubOps();
+
     void updateSubOp(SubscriptionOperation operation);
 
     void createShardOp(ShardOperation operation);
 
-    List<ShardOperation> getShardOps(String operationId);
+    boolean shardOpExists(String shardOpId);
+
+    List<ShardOperation> getShardOps(String subOpId);
 
     ShardOperation getShardOp(String operationId);
 

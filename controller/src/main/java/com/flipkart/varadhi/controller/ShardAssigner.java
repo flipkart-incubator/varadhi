@@ -33,15 +33,9 @@ public class ShardAssigner {
                 Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("assigner-%d").build());
     }
 
-    public CompletableFuture<Void> addConsumerNodes(List<ConsumerNode> clusterConsumers) {
-        return CompletableFuture.runAsync(() -> clusterConsumers.forEach(c -> {
-            addConsumerNode(c);
-            log.info("Added consumer node {}", c.getConsumerId());
-        }), executor);
-    }
 
     // idempotency -- does not re-assign if shard is already assigned, however they are returned.
-    public CompletableFuture<List<Assignment>> assignShard(
+    public CompletableFuture<List<Assignment>> assignShards(
             List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, Set<String> nodesToExclude
     ) {
         return CompletableFuture.supplyAsync(() -> {
@@ -60,8 +54,8 @@ public class ShardAssigner {
                 List<Assignment> alreadyAssigned = new ArrayList<>();
 
                 Map<Integer, Assignment> existingAssignments =
-                        assignmentStore.getSubscriptionAssignments(subscription.getName()).stream().collect(
-                                Collectors.toMap(Assignment::getShardId, a -> a));
+                        assignmentStore.getSubAssignments(subscription.getName()).stream()
+                                .collect(Collectors.toMap(Assignment::getShardId, a -> a));
 
                 // create new assignments only for shards which are still un-assigned.
                 shards.forEach(s -> {
@@ -98,7 +92,7 @@ public class ShardAssigner {
 
 
     // idempotency -- should not fail, if already un-assigned.
-    public CompletableFuture<Void> unAssignShard(
+    public CompletableFuture<Void> unAssignShards(
             List<Assignment> assignments, VaradhiSubscription subscription, boolean freeAssignedCapacity
     ) {
         return CompletableFuture.supplyAsync(() -> {
@@ -107,7 +101,7 @@ public class ShardAssigner {
                 List<Assignment> alreadyDeleted = new ArrayList<>();
 
                 Set<Assignment> existingAssignments =
-                        new HashSet<>(assignmentStore.getSubscriptionAssignments(subscription.getName()));
+                        new HashSet<>(assignmentStore.getSubAssignments(subscription.getName()));
 
                 // delete  assignments only for shards which are still assigned.
                 assignments.forEach(a -> {
@@ -151,8 +145,8 @@ public class ShardAssigner {
         List<SubscriptionUnitShard> shardToReAssign =
                 List.of(subscription.getShards().getShard(assignment.getShardId()));
 
-        return unAssignShard(List.of(assignment), subscription, freeAssignedCapacity).thenCompose(v ->
-                assignShard(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0))
+        return unAssignShards(List.of(assignment), subscription, freeAssignedCapacity).thenCompose(v ->
+                assignShards(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0))
         );
     }
 
@@ -167,11 +161,15 @@ public class ShardAssigner {
     }
 
     public List<Assignment> getSubscriptionAssignment(String subscriptionName) {
-        return assignmentStore.getSubscriptionAssignments(subscriptionName);
+        return assignmentStore.getSubAssignments(subscriptionName);
     }
 
     public List<Assignment> getConsumerNodeAssignment(String consumerNodeId) {
         return assignmentStore.getConsumerNodeAssignments(consumerNodeId);
+    }
+
+    public List<Assignment> getAllAssignments() {
+        return assignmentStore.getAllAssignments();
     }
 
     public CompletableFuture<Void> consumerNodeJoined(ConsumerNode consumerNode) {
@@ -193,7 +191,7 @@ public class ShardAssigner {
         }, executor);
     }
 
-    private boolean addConsumerNode(ConsumerNode consumerNode) {
+    public boolean addConsumerNode(ConsumerNode consumerNode) {
         String consumerNodeId = consumerNode.getConsumerId();
         MutableBoolean added = new MutableBoolean(false);
         consumerNodes.computeIfAbsent(consumerNodeId, k -> {

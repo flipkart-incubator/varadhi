@@ -7,27 +7,33 @@ import lombok.Getter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ *  Consumer Info as maintained by the consumer node itself for tracking all assignments (and hence shards)
+ *  currently owned by it.
+ */
 @Getter
 @AllArgsConstructor
 public class ConsumerInfo {
-    // Consumer Info as maintained by the consumer node itself.
+    private final Map<String, Assignment> assignments;
     private String consumerId;
     private NodeCapacity available;
-    private final Map<String, Assignment> assignments;
 
     public static ConsumerInfo from(MemberInfo memberInfo) {
-        return new ConsumerInfo(memberInfo.hostname(), memberInfo.provisionedCapacity().clone(), new ConcurrentHashMap<>());
+        return new ConsumerInfo(
+                new ConcurrentHashMap<>(), memberInfo.hostname(), memberInfo.provisionedCapacity().clone());
     }
 
-    public void recordShardAssignment(String subscriptionName, int shardId, TopicCapacityPolicy capacity) {
+    public void addShardCapacity(String subscriptionName, int shardId, TopicCapacityPolicy capacity) {
         Assignment assignment = new Assignment(subscriptionName, shardId, consumerId);
-        assignments.put(assignment.getName(), assignment);
-        available.allocate(capacity);
+        if (null == assignments.putIfAbsent(assignment.getName(), assignment)) {
+            available.allocate(capacity);
+        }
     }
 
-    public void purgeShardAssignment(String subscriptionName, int shardId, TopicCapacityPolicy capacity) {
+    public void freeShardCapacity(String subscriptionName, int shardId, TopicCapacityPolicy capacity) {
         Assignment assignment = new Assignment(subscriptionName, shardId, consumerId);
-        assignments.remove(assignment.getName());
-        available.free(capacity);
+        if (null != assignments.remove(assignment.getName())) {
+            available.free(capacity);
+        }
     }
 }

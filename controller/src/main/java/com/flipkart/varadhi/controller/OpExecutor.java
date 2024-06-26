@@ -6,4 +6,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface OpExecutor<T extends Operation> {
     CompletableFuture<Void> execute(T operation);
+
 }
