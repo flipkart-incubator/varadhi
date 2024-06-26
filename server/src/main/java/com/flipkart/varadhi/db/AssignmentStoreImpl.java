@@ -35,7 +35,7 @@ public class AssignmentStoreImpl implements AssignmentStore {
     public void deleteAssignments(List<Assignment> assignments) {
         List<ZNode> nodesToDelete = new ArrayList<>();
         assignments.forEach(a -> nodesToDelete.add(ZNode.OfAssignment(getAssignmentMapping(a))));
-        zkMetaStore.executeInTransaction( new ArrayList<>(), nodesToDelete);
+        zkMetaStore.executeInTransaction(new ArrayList<>(), nodesToDelete);
     }
 
     @Override
@@ -45,20 +45,25 @@ public class AssignmentStoreImpl implements AssignmentStore {
     }
 
     @Override
-    public List<Assignment> getSubscriptionAssignments(String subscriptionName) {
-        return getAssignments(Pattern.compile(String.format("^%s%s.*%s.*$", subscriptionName, separator, separator)));
+    public List<Assignment> getSubAssignments(String subscriptionName) {
+        return getAssignments(subscriptionName, ".*");
     }
 
     @Override
     public List<Assignment> getConsumerNodeAssignments(String consumerNodeId) {
-        return getAssignments(Pattern.compile(String.format("^.*%s.*%s%s$", separator, separator, consumerNodeId)));
+        return getAssignments(".*", consumerNodeId);
     }
 
+    @Override
+    public List<Assignment> getAllAssignments() {
+        return getAssignments(".*", ".*");
+    }
 
-    private List<Assignment> getAssignments(Pattern pattern) {
-        List<String> as = zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT));
+    private List<Assignment> getAssignments(String subscriptionName, String consumerNodeId) {
+        Pattern filter =
+                Pattern.compile(String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId));
         return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT)).stream()
-                .filter(m -> pattern.matcher(m).matches()).map(this::getAssignment).collect(Collectors.toList());
+                .filter(m -> filter.matcher(m).matches()).map(this::getAssignment).collect(Collectors.toList());
     }
 
     private String getAssignmentMapping(Assignment assignment) {

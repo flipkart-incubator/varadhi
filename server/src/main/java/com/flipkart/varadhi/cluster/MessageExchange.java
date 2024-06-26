@@ -30,16 +30,22 @@ public class MessageExchange {
     public CompletableFuture<Void> send(String routeName, String apiName, ClusterMessage msg) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         String apiPath = getPath(routeName, apiName, RouteMethod.SEND);
-        vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
-            if (ar.succeeded()) {
-                log.debug("send({}, {}) delivered successfully.", apiPath, msg.getId());
-                future.complete(null);
-            } else {
-                log.error("send({}, {}) failed: {}.", apiPath, msg.getId(), ar.cause().getMessage());
-                future.completeExceptionally(ar.cause());
-            }
-        });
-        return future;
+        try {
+            vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
+                if (ar.succeeded()) {
+                    log.debug("send({}, {}) delivered successfully.", apiPath, msg.getId());
+                    future.complete(null);
+                } else {
+                    log.error("send({}, {}) failed: {}.", apiPath, msg.getId(), ar.cause().getMessage());
+                    future.completeExceptionally(ar.cause());
+                }
+            });
+            return future;
+        }catch (Exception e) {
+            log.error("send({}, {}) Unexpected failure:{}", apiPath, msg.getId(), e.getMessage());
+            return CompletableFuture.failedFuture(e);
+        }
+
     }
 
     public void publish(String routeName, String apiName, ClusterMessage msg) {
@@ -49,22 +55,27 @@ public class MessageExchange {
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
         CompletableFuture<ResponseMessage> future = new CompletableFuture<>();
         String apiPath = getPath(routeName, apiName, RouteMethod.REQUEST);
-        vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
-            if (ar.succeeded()) {
-                log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
-                ResponseMessage response =
-                        JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
-                if (response.getException() != null) {
-                    future.completeExceptionally(response.getException());
+        try {
+            vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
+                if (ar.succeeded()) {
+                    log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
+                    ResponseMessage response =
+                            JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
+                    if (response.getException() != null) {
+                        future.completeExceptionally(response.getException());
+                    } else {
+                        future.complete(response);
+                    }
                 } else {
-                    future.complete(response);
+                    log.error("request({}, {}) failure: {}.", apiPath, msg.getId(), ar.cause().getMessage());
+                    future.completeExceptionally(ar.cause());
                 }
-            } else {
-                log.error("request({}, {}) failure: {}.", apiPath, msg.getId(), ar.cause().getMessage());
-                future.completeExceptionally(ar.cause());
-            }
-        });
-        return future;
+            });
+            return future;
+        } catch (Exception e) {
+            log.error("request({}, {}) Unexpected failure:{}", apiPath, msg.getId(), e.getMessage());
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     private String getPath(String routeName, String apiName, RouteMethod method) {

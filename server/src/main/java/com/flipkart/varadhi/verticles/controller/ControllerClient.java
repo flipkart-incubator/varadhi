@@ -21,21 +21,24 @@ public class ControllerClient implements ControllerApi {
     public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
-        return exchange.request(ROUTE_CONTROLLER, "status", message).thenApply(rm -> rm.getResponse(SubscriptionStatus.class));
+        return exchange.request(ROUTE_CONTROLLER, "status", message)
+                .thenApply(rm -> rm.getResponse(SubscriptionStatus.class));
     }
 
     @Override
     public CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy) {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
-        return exchange.request(ROUTE_CONTROLLER, "start", message).thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
+        return exchange.request(ROUTE_CONTROLLER, "start", message)
+                .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override
     public CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy) {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
-        return exchange.request(ROUTE_CONTROLLER, "stop", message).thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
+        return exchange.request(ROUTE_CONTROLLER, "stop", message)
+                .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override

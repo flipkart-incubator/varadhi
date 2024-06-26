@@ -156,30 +156,37 @@ class ZKMetaStore {
     }
 
     public void executeInTransaction(List<ZNode> toAdd, List<ZNode> toDelete) {
-        List<CuratorOp> ops = new ArrayList<>();
-        toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
-        toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
-        try {
-            List<CuratorTransactionResult> results = zkCurator.transaction().forOperations(ops);
-            //TODO::understand the partial failure scenario (if possible) ?
-            results.forEach(r -> {
-                if (r.getError() != 0) {
-                    log.error(
-                            "Operation({}, {}) failed: code-{},{}", r.getType(), r.getForPath(), r.getError(),
-                            r.getResultPath()
-                    );
-                }
-            });
-        } catch (KeeperException e) {
-            e.getResults().forEach(r -> {
-                Op op = ops.get(e.getResults().indexOf(r)).get();
-                if (r instanceof OpResult.ErrorResult er) {
-                    log.error("Operation({}, {}, {}) failed: {}.", op.getKind(), op.getType(), op.getPath(), er.getErr());
-                }
-            });
-            throw  new MetaStoreException(String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
-        } catch (Exception e) {
-            throw new MetaStoreException(String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+        if (!toAdd.isEmpty() || !toDelete.isEmpty()) {
+            List<CuratorOp> ops = new ArrayList<>();
+            toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
+            toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
+            try {
+                List<CuratorTransactionResult> results = zkCurator.transaction().forOperations(ops);
+                //TODO::understand the partial failure scenario (if possible) ?
+                results.forEach(r -> {
+                    if (r.getError() != 0) {
+                        log.error(
+                                "Operation({}, {}) failed: code-{},{}", r.getType(), r.getForPath(), r.getError(),
+                                r.getResultPath()
+                        );
+                    }
+                });
+            } catch (KeeperException e) {
+                e.getResults().forEach(r -> {
+                    Op op = ops.get(e.getResults().indexOf(r)).get();
+                    if (r instanceof OpResult.ErrorResult er) {
+                        log.error(
+                                "Operation({}, {}, {}) failed: {}.", op.getKind(), op.getType(), op.getPath(),
+                                er.getErr()
+                        );
+                    }
+                });
+                throw new MetaStoreException(
+                        String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+            } catch (Exception e) {
+                throw new MetaStoreException(
+                        String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+            }
         }
     }
 

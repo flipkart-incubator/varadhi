@@ -11,7 +11,9 @@ public interface AssignmentStore {
 
     boolean exists(Assignment assignment);
 
-    List<Assignment> getSubscriptionAssignments(String subscriptionName);
+    List<Assignment> getSubAssignments(String subscriptionName);
 
     List<Assignment> getConsumerNodeAssignments(String consumerNodeId);
+
+    List<Assignment> getAllAssignments();
 }
