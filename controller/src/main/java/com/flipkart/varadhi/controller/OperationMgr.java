@@ -225,7 +225,6 @@ public class OperationMgr {
         private OrderedOperation operation;
         private OpExecutor<OrderedOperation> opExecutor;
 
-
         public static OpTask of(OrderedOperation operation, OpExecutor<OrderedOperation> opExecutor) {
             return new OpTask(operation, opExecutor);
         }

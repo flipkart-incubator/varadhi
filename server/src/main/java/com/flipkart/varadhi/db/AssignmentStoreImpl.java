@@ -58,6 +58,7 @@ public class AssignmentStoreImpl implements AssignmentStore {
     public List<Assignment> getAllAssignments() {
         return getAssignments(".*", ".*");
     }
+
     private List<Assignment> getAssignments(String subscriptionName, String consumerNodeId) {
         Pattern filter =
                 Pattern.compile(String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId));

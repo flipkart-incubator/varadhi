@@ -1,8 +1,5 @@
-
 member:
-#  roles : ["Server", "Consumer"]
-#  roles : ["Controller"]
-  roles : ["Server", "Controller", "Consumer"]
+  roles: [ "Server", "Controller", "Consumer" ]
   maxQps: 5000
   networkMBps: 30
 

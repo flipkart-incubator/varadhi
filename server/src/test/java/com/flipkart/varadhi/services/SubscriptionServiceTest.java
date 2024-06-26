@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -115,11 +115,7 @@ class SubscriptionServiceTest {
                 1, 1, 1, 1
         );
         ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
-        try {
-            endpoint = new Endpoint.HttpEndpoint(new URL("http", "localhost", "hello"), "GET", "", 500, 500, false);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
+        endpoint = new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
         TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
 
         String region = "default";

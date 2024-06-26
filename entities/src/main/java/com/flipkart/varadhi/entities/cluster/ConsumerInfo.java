@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *  Consumer Info as maintained by the consumer node itself for tracking all assignments (and hence shards)
- *  currently owned by it.
+ * Consumer Info as maintained by the consumer node itself for tracking all assignments (and hence shards)
+ * currently owned by it.
  */
 @Getter
 @AllArgsConstructor

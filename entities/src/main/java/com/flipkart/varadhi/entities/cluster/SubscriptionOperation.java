@@ -15,8 +15,8 @@ import java.util.UUID;
 public class SubscriptionOperation extends MetaStoreEntity implements OrderedOperation {
     private final String requestedBy;
     private final long startTime;
-    private long endTime;
     private final OpData data;
+    private long endTime;
 
     @JsonCreator
     SubscriptionOperation(
@@ -61,7 +61,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @JsonIgnore
     @Override
     public String getOrderingKey() {
-        return "Sub_" +  data.getSubscriptionId();
+        return "Sub_" + data.getSubscriptionId();
     }
 
     @JsonIgnore
@@ -94,7 +94,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         // This assumes that caller passes the complete list of shardOps for the respective SubOp.
         StringBuilder sb = new StringBuilder();
         int completedCount = 0;
-        for(ShardOperation shardOp : shardOps) {
+        for (ShardOperation shardOp : shardOps) {
             ShardOperation.OpData opData = shardOp.getOpData();
             if (shardOp.hasFailed()) {
                 if (!sb.isEmpty()) {
@@ -207,6 +207,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @EqualsAndHashCode(callSuper = true)
     public static class ReassignShardData extends OpData {
         private Assignment assignment;
+
         ReassignShardData(Assignment assignment) {
             super(UUID.randomUUID().toString(), assignment.getSubscriptionId(), State.IN_PROGRESS, null);
             this.assignment = assignment;

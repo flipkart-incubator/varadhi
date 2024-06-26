@@ -304,7 +304,9 @@ public class ControllerApiMgr implements ControllerApi {
      * Re-Assign = UnAssign -> Assign.
      * If there is a failure during Assign, Subscription shard remains un-assigned.
      * -- Retry (Auto or manual) of failed Re-Assign operation or start of the subscription should fix this.
+     *
      * @param subOp
+     *
      * @return
      */
     private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
@@ -316,7 +318,7 @@ public class ControllerApiMgr implements ControllerApi {
 
         return shardAssigner.reAssignShard(currentAssignment, subscription, false).thenCompose(a -> {
             ConsumerApi consumer = getAssignedConsumer(a);
-            SubscriptionUnitShard shard =  subscription.getShards().getShard(currentAssignment.getShardId());
+            SubscriptionUnitShard shard = subscription.getShards().getShard(currentAssignment.getShardId());
             ShardOperation shardOp = shardOps.computeIfAbsent(
                     a.getShardId(),
                     shardId -> ShardOperation.startOp(subOp.getId(), shard, subscription)
