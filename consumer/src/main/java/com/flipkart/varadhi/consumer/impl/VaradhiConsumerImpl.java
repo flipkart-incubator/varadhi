@@ -104,6 +104,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             throw new IllegalStateException();
         }
 
+        InternalQueueType[] iqPriority = getPriority();
+
         internalConsumers.computeIfAbsent(InternalQueueType.mainType(), type -> createConsumer(topic, "main"));
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             String role = "retry-" + r;
@@ -115,6 +117,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
                     type -> delayConsumer(createConsumer(retryTopic, role), 5000)
             );
         }
+
 
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             internalProducers.put(
@@ -129,7 +132,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         );
 
         concurrencyControl =
-                new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), getPriority());
+                new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), iqPriority);
 
         dynamicThreshold = new SlidingWindowThresholdProvider(scheduler, Ticker.systemTicker(), 2_000, 1_000,
                 consumptionPolicy.getMaxErrorThreshold()
@@ -149,7 +152,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     @Override
     public synchronized void start() {
         if (!connected || started) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("connected: " + connected + ", started: " + started);
         }
 
         initiateConsumptionLoop();
@@ -189,6 +192,14 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         }
     }
 
+    MessageSrcSelector createMessageSrcSelector(int batchSize) {
+        LinkedHashMap<InternalQueueType, MessageSrc> messageSrcs = new LinkedHashMap<>();
+        for (InternalQueueType type : getPriority()) {
+            messageSrcs.put(type, internalConsumers.get(type).messageSrc);
+        }
+        return new MessageSrcSelector(context, messageSrcs, batchSize);
+    }
+
     ConsumerHolder createConsumer(TopicPartitions<StorageTopic> partitions, String role) {
         // todo: create proper consumer name
         String consumerName = String.format("%s/%s/%s", project.getName(), subscriptionName, shardId);
@@ -207,26 +218,18 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     void initiateConsumptionLoop() {
-        internalConsumers.forEach((type, consumerHolder) -> {
-            ConsumptionLoop loop = new ConsumptionLoop(type, consumerHolder.messageSrc, 64);
-            context.run(loop);
-        });
+        ConsumptionLoop loop = new ConsumptionLoop(64);
+        context.run(loop);
     }
 
     class ConsumptionLoop implements Context.Task {
 
-        private final InternalQueueType type;
-        private final MessageSrc messageSrc;
-        private final MessageTracker[] messages;
+        private final MessageSrcSelector msgSrcSelector;
         private final GroupPointer[] groupPointers;
-        private final AtomicBoolean messageFetchInProgress = new AtomicBoolean(false);
+        private final AtomicBoolean iterationInProgress = new AtomicBoolean(false);
 
-        public ConsumptionLoop(
-                InternalQueueType type, MessageSrc messageSrc, int maxProcessingBatchSize
-        ) {
-            this.type = type;
-            this.messageSrc = messageSrc;
-            this.messages = new MessageTracker[maxProcessingBatchSize];
+        public ConsumptionLoop(int maxProcessingBatchSize) {
+            this.msgSrcSelector = createMessageSrcSelector(maxProcessingBatchSize);
             this.groupPointers = new GroupPointer[maxProcessingBatchSize];
         }
 
@@ -236,24 +239,36 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         }
 
         public void runLoopIfRequired() {
-            if (inFlightMessages.get() < maxInFlightMessages && messageFetchInProgress.compareAndSet(false, true)) {
+            if (inFlightMessages.get() < maxInFlightMessages && iterationInProgress.compareAndSet(false, true)) {
                 context.run(this);
             }
         }
 
+        /**
+         * One iteration of the consumption loop
+         */
         @Override
         public void run() {
-            CompletableFuture<Integer> fetchedFut = messageSrc.nextMessages(messages);
-            fetchedFut.whenComplete((fetched, err) -> {
-                inFlightMessages.addAndGet(fetched);
+            CompletableFuture<MessageSrcSelector.PolledMessageTrackers> fetchedFut = msgSrcSelector.nextMessages();
+            fetchedFut.whenComplete((polled, err) -> {
+                if (err != null) {
+                    log.error("unexpected error in fetching messages from msgSelector", err);
+                }
+                assert err == null;
+
                 // need to go back to the context. otherwise we might end up using unintended thread.
-                context.runOnContext(() -> onMessagesFetched(fetched));
-                messageFetchInProgress.set(false);
-                runLoopIfRequired();
+                context.runOnContext(() -> {
+                    inFlightMessages.addAndGet(polled.getSize());
+                    onMessagesFetched(polled);
+                    // polled variable is now free to be released.
+                    polled.release();
+                    iterationInProgress.set(false);
+                    runLoopIfRequired();
+                });
             });
         }
 
-        CompletableFuture<PushResponse> pushMessage(MessageTracker msg) {
+        CompletableFuture<PushResponse> pushMessage(InternalQueueType type, MessageTracker msg) {
             return pushClient.push(msg).thenCompose(response -> {
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);
@@ -266,39 +281,41 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             });
         }
 
-        // to run on the context
-        void onMessagesFetched(int fetched) {
-            subscriptionGroupsState.populatePointers(messages, groupPointers, fetched);
+        void onMessagesFetched(MessageSrcSelector.PolledMessageTrackers polled) {
+            assert context.isInContext();
+
+            subscriptionGroupsState.populatePointers(polled.getMessages(), groupPointers, polled.getSize());
             List<Supplier<CompletableFuture<PushResponse>>> forPush = new ArrayList<>();
 
-            for (int i = 0; i < fetched; ++i) {
-                MessageTracker message = messages[i];
+            for (int i = 0; i < polled.getSize(); ++i) {
+                MessageTracker message = polled.getMessages()[i];
                 GroupPointer groupPointer = groupPointers[i];
                 InternalQueueType failedMsgInQueue = groupPointer == null ? null : groupPointer.isFailed();
                 if (failedMsgInQueue == null) {
                     // group has not failed
-                    forPush.add(() -> pushMessage(message));
+                    forPush.add(() -> pushMessage(polled.getInternalQueueType(), message));
                 } else {
-                    onGroupFailure(failedMsgInQueue, message);
+                    onGroupFailure(polled.getInternalQueueType(), failedMsgInQueue, message);
                 }
             }
 
             if (!forPush.isEmpty()) {
                 Collection<CompletableFuture<PushResponse>> asyncResponses =
-                        concurrencyControl.enqueueTasks(type, forPush);
+                        concurrencyControl.enqueueTasks(polled.getInternalQueueType(), forPush);
                 // Some of the push will have succeeded, for which we can begin the post processing.
                 // For others we start the failure management.
                 asyncResponses.forEach(fut -> fut.whenComplete((response, ex) -> {
                     if (response.success()) {
-                        onSuccess(response.msg());
+                        onSuccess(polled.getInternalQueueType(), response.msg());
                     } else {
-                        onPushFailure(response.msg());
+                        onPushFailure(polled.getInternalQueueType(), response.msg());
                     }
                 }));
             }
         }
 
-        void onSuccess(MessageTracker message) {
+        void onSuccess(InternalQueueType type, MessageTracker message) {
+            // TODO: fix the internal topic idx
             MessagePointer consumedFrom = new MessagePointer(1, message.getMessage().getOffset());
             subscriptionGroupsState.messageConsumed(message.getGroupId(), type, consumedFrom).whenComplete((r, e) -> {
                 message.onConsumed(MessageConsumptionStatus.SENT);
@@ -307,13 +324,16 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             });
         }
 
-        void onFailure(InternalQueueType failedMsgInQueue, MessageTracker message, MessageConsumptionStatus status) {
+        void onFailure(
+                InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message,
+                MessageConsumptionStatus status
+        ) {
             // failed msgs are present in failedMsgInQueue, so produce this msg there
             CompletableFuture<Offset> asyncProduce =
                     internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
 
             asyncProduce.thenCompose(offset -> {
-                // TODO: add all other info.
+                // TODO: add all other info. fix the internal topic idx
                 MessagePointer consumedFrom = new MessagePointer(1, message.getMessage().getOffset());
                 MessagePointer producedTo = new MessagePointer(1, offset);
 
@@ -326,16 +346,16 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             });
         }
 
-        void onPushFailure(MessageTracker message) {
-            InternalQueueType nextQueue = nextInternalQueue();
-            onFailure(nextQueue, message, MessageConsumptionStatus.FAILED);
+        void onPushFailure(InternalQueueType type, MessageTracker message) {
+            InternalQueueType nextQueue = nextInternalQueue(type);
+            onFailure(type, nextQueue, message, MessageConsumptionStatus.FAILED);
         }
 
-        void onGroupFailure(InternalQueueType failedMsgInQueue, MessageTracker message) {
-            onFailure(failedMsgInQueue, message, MessageConsumptionStatus.GROUP_FAILED);
+        void onGroupFailure(InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message) {
+            onFailure(type, failedMsgInQueue, message, MessageConsumptionStatus.GROUP_FAILED);
         }
 
-        InternalQueueType nextInternalQueue() {
+        InternalQueueType nextInternalQueue(InternalQueueType type) {
             if (type instanceof InternalQueueType.Main) {
                 return InternalQueueType.retryType(1);
             } else if (type instanceof InternalQueueType.Retry retryType) {
