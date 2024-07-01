@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class TopicCapacityPolicy implements Comparable<NodeCapacity> {
+public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
     private int qps;
     private int throughputKBps;
     private int readFanOut;
@@ -23,8 +23,8 @@ public class TopicCapacityPolicy implements Comparable<NodeCapacity> {
     }
 
     @Override
-    public int compareTo(NodeCapacity o) {
-        return throughputKBps - o.getMaxThroughputKBps();
+    public int compareTo(TopicCapacityPolicy o) {
+        return throughputKBps - o.throughputKBps;
     }
 
     @Override

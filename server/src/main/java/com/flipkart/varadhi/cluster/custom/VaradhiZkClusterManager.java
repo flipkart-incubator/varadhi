@@ -127,6 +127,12 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
     private Future<NodeInfo> fetchNodeInfo(String nodeId) {
         Promise<NodeInfo> promise = Promise.promise();
         getNodeInfo(nodeId, promise);
-        return promise.future();
+        return promise.future().onComplete(ar -> {
+            if (ar.failed()) {
+                log.error("Failed to get nodeinfo", ar.cause());
+            }else{
+                log.info("Obtained nodinfo {}", ar.result());
+            }
+        });
     }
 }

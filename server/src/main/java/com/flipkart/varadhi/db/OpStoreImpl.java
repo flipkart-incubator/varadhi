@@ -42,7 +42,6 @@ public class OpStoreImpl implements OpStore {
         zkMetaStore.updateZNodeWithData(znode, operation);
     }
 
-
     @Override
     public void createShardOp(ShardOperation operation) {
         ZNode znode = ZNode.OfShardOperation(operation.getName());

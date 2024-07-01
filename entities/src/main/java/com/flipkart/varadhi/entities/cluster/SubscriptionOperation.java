@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
@@ -11,7 +12,7 @@ import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class SubscriptionOperation extends MetaStoreEntity {
+public class SubscriptionOperation extends MetaStoreEntity implements OrderedOperation {
     private final String requestedBy;
     private final long startTime;
     private long endTime;
@@ -46,6 +47,31 @@ public class SubscriptionOperation extends MetaStoreEntity {
         return new SubscriptionOperation(data, requestedBy);
     }
 
+    public static SubscriptionOperation reAssignShardOp(Assignment assignment, String requestedBy) {
+        OpData data = new ReassignShardData(assignment);
+        return new SubscriptionOperation(data, requestedBy);
+    }
+
+    @JsonIgnore
+    @Override
+    public String getId() {
+        return data.getOperationId();
+    }
+
+    @JsonIgnore
+    @Override
+    public String getOrderingKey() {
+        return "Sub_" +  data.getSubscriptionId();
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isDone() {
+        return data.state == State.COMPLETED || data.state == State.ERRORED;
+    }
+
+
+    @Override
     public void markFail(String reason) {
         data.state = State.ERRORED;
         data.errorMsg = reason;
@@ -67,14 +93,18 @@ public class SubscriptionOperation extends MetaStoreEntity {
     }
 
     public void update(List<ShardOperation> shardOps) {
+        // This assumes that caller passes the complete list of shardOps for the respective SubOp.
         StringBuilder sb = new StringBuilder();
         int completedCount = 0;
         for(ShardOperation shardOp : shardOps) {
             ShardOperation.OpData opData = shardOp.getOpData();
             if (shardOp.hasFailed()) {
+                if (!sb.isEmpty()) {
+                    sb.append(", ");
+                }
                 sb.append(String.format("Shard:%d failed:%s", opData.getShardId(), opData.getErrorMsg()));
             }
-            if (shardOp.hasCompleted()) {
+            if (shardOp.isDone()) {
                 completedCount++;
             }
         }
@@ -85,11 +115,6 @@ public class SubscriptionOperation extends MetaStoreEntity {
                 markFail(sb.toString());
             }
         }
-    }
-
-
-    public boolean completed() {
-        return data.state == State.COMPLETED || data.state == State.ERRORED;
     }
 
     @Override
@@ -111,6 +136,7 @@ public class SubscriptionOperation extends MetaStoreEntity {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = StartData.class, name = "startSubData"),
             @JsonSubTypes.Type(value = StopData.class, name = "stopSubData"),
+            @JsonSubTypes.Type(value = ReassignShardData.class, name = "reassignShardData"),
     })
     public static class OpData {
         private String operationId;
@@ -127,7 +153,7 @@ public class SubscriptionOperation extends MetaStoreEntity {
     }
 
     @Data
-    @AllArgsConstructor
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends OpData {
         StartData(String subscriptionId) {
@@ -141,7 +167,7 @@ public class SubscriptionOperation extends MetaStoreEntity {
     }
 
     @Data
-    @AllArgsConstructor
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StopData extends OpData {
         StopData(String subscriptionId) {
@@ -151,6 +177,23 @@ public class SubscriptionOperation extends MetaStoreEntity {
         @Override
         public String toString() {
             return String.format("Stop.%s", super.toString());
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @EqualsAndHashCode(callSuper = true)
+    public static class ReassignShardData extends OpData {
+        private Assignment assignment;
+        ReassignShardData(Assignment assignment) {
+            super(UUID.randomUUID().toString(), assignment.getSubscriptionId(), State.SCHEDULED, null);
+            this.assignment = assignment;
+        }
+
+        //TODO::Format of toString needs to be fixed, currently it is ReassignShard:{opData} {assignment}
+        @Override
+        public String toString() {
+            return String.format("ReassignShard.%s %s", super.toString(), assignment);
         }
     }
 }

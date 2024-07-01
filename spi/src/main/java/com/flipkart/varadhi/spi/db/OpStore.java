@@ -11,9 +11,7 @@ public interface OpStore {
 
     SubscriptionOperation getSubOp(String operationId);
 
-
     void updateSubOp(SubscriptionOperation operation);
-
 
     void createShardOp(ShardOperation operation);
 

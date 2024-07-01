@@ -16,9 +16,12 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class ConsumerApiMgr implements ConsumerApi {
     private final ConsumersManager consumersManager;
+    private final ConsumerInfo consumerInfo;
 
-    public ConsumerApiMgr(ConsumersManager consumersManager) {
+
+    public ConsumerApiMgr(ConsumersManager consumersManager, ConsumerInfo consumerInfo) {
         this.consumersManager = consumersManager;
+        this.consumerInfo = consumerInfo;
     }
 
     @Override
@@ -26,7 +29,10 @@ public class ConsumerApiMgr implements ConsumerApi {
         log.info("Consumer: Starting shard {}", operation);
         VaradhiSubscription subscription = operation.getSubscription();
         SubscriptionUnitShard shard = operation.getShard();
+
+        consumerInfo.recordShardAssignment(subscription.getName(), shard.getShardId(), shard.getCapacityRequest());
         StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
+
         ConsumptionFailurePolicy failurePolicy =
                 new ConsumptionFailurePolicy(subscription.getRetryPolicy(), shard.getRetrySubscription(),
                         shard.getDeadLetterSubscription()
@@ -47,6 +53,8 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
         VaradhiSubscription subscription = operation.getSubscription();
+        SubscriptionUnitShard shard = operation.getShard();
+        consumerInfo.purgeShardAssignment(subscription.getName(), shard.getShardId(), shard.getCapacityRequest());
         return consumersManager.stopSubscription(
                 subscription.getName(),
                 operation.getShardId()
@@ -60,7 +68,6 @@ public class ConsumerApiMgr implements ConsumerApi {
 
     @Override
     public CompletableFuture<ConsumerInfo> getConsumerInfo() {
-        //TODO::Return assignments as well.
-        return CompletableFuture.completedFuture(consumersManager.getInfo());
+        return CompletableFuture.completedFuture(consumerInfo);
     }
 }

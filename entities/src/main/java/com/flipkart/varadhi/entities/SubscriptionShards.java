@@ -15,6 +15,5 @@ import lombok.RequiredArgsConstructor;
 })
 public abstract class SubscriptionShards {
     private final int shardCount;
-
     public abstract SubscriptionUnitShard getShard(int shardId);
 }

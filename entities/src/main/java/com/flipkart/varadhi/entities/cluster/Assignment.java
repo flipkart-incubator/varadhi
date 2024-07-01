@@ -2,11 +2,11 @@ package com.flipkart.varadhi.entities.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import lombok.EqualsAndHashCode;
 import lombok.Value;
 
+import java.util.Objects;
+
 @Value
-@EqualsAndHashCode(callSuper = true)
 public class Assignment extends MetaStoreEntity {
     private static final String NAME_SEPARATOR = ":";
     String subscriptionId;
@@ -30,6 +30,27 @@ public class Assignment extends MetaStoreEntity {
 
     private static String getShardName(String subscriptionId, int shardId) {
         return String.format("%s%s%d", subscriptionId, NAME_SEPARATOR, shardId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        Assignment that = (Assignment) o;
+        return shardId == that.shardId &&
+                Objects.equals(subscriptionId, that.subscriptionId) &&
+                Objects.equals(consumerId, that.consumerId);
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = super.hashCode();
+        result = prime * result + ((consumerId == null) ? 0 : consumerId.hashCode());
+        result = prime * result + shardId;
+        result = prime * result + ((subscriptionId == null) ? 0 : subscriptionId.hashCode());
+        return result;
     }
 
     @Override

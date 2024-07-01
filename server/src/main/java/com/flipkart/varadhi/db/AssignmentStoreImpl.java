@@ -39,6 +39,12 @@ public class AssignmentStoreImpl implements AssignmentStore {
     }
 
     @Override
+    public boolean exists(Assignment assignment) {
+        ZNode nodeToVerify = ZNode.OfAssignment(getAssignmentMapping(assignment));
+        return zkMetaStore.zkPathExist(nodeToVerify);
+    }
+
+    @Override
     public List<Assignment> getSubscriptionAssignments(String subscriptionName) {
         return getAssignments(Pattern.compile(String.format("^%s%s.*%s.*$", subscriptionName, separator, separator)));
     }

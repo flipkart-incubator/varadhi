@@ -8,18 +8,16 @@ import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConsumersManagerImpl implements ConsumersManager {
-    private final ConsumerInfo consumerInfo;
+
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
-    public ConsumersManagerImpl(ConsumerInfo consumerInfo) {
-        this.consumerInfo = consumerInfo;
+    public ConsumersManagerImpl() {
     }
 
     @Override
@@ -57,11 +55,6 @@ public class ConsumersManagerImpl implements ConsumersManager {
     @Override
     public ConsumerState getConsumerState(String subscription, int shardId) {
         return null;
-    }
-
-    @Override
-    public ConsumerInfo getInfo() {
-        return consumerInfo;
     }
 
     record ShardId(String subscription, int shardId) {

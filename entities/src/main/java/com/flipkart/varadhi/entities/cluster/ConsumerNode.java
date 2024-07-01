@@ -14,34 +14,37 @@ public class ConsumerNode {
     // Consumer Node info as viewed by Controller
     public static Comparator<ConsumerNode> NodeComparator = comparing(o -> o.available);
     private final String consumerId;
-    private final NodeCapacity available;
+    private NodeCapacity available;
     private final Map<String, Assignment> assignments;
-    private boolean markedForDeletion;
 
     public ConsumerNode(MemberInfo memberInfo) {
         this.consumerId = memberInfo.hostname();
-        this.markedForDeletion = false;
         this.available = memberInfo.provisionedCapacity().clone();
         this.assignments = new HashMap<>();
     }
 
-    public void markForDeletion() {
-        this.markedForDeletion = true;
+    public void initFromConsumerInfo(ConsumerInfo consumerInfo) {
+        available = consumerInfo.getAvailable().clone();
+        assignments.clear();
+        assignments.putAll(consumerInfo.getAssignments());
     }
 
-    public void updateWithConsumerInfo(ConsumerInfo consumerInfo) {
-        available.setMaxThroughputKBps(consumerInfo.getAvailable().getMaxThroughputKBps());
+    public boolean canAllocate(TopicCapacityPolicy requests) {
+        return available.canAllocate(requests);
     }
 
-    public synchronized void allocate(Assignment a, TopicCapacityPolicy requests) {
+    // allocate & free -- assumes single threaded caller.
+    // They are being called from ShardAssigner.assignShard() and ShardAssigner.unAssignShard()
+    // ShardAssigner is a single threaded executor.
+    public void allocate(Assignment a, TopicCapacityPolicy requests) {
         if (null == assignments.putIfAbsent(a.getName(), a)) {
-            available.setMaxThroughputKBps(available.getMaxThroughputKBps() - requests.getThroughputKBps());
+            available.allocate(requests);
         }
     }
 
-    public synchronized void free(Assignment a, TopicCapacityPolicy requests) {
+    public void free(Assignment a, TopicCapacityPolicy requests) {
         if (null != assignments.remove(a.getName())) {
-            available.setMaxThroughputKBps(available.getMaxThroughputKBps() + requests.getThroughputKBps());
+            available.free(requests);
         }
     }
 }

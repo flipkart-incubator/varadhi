@@ -63,4 +63,9 @@ public class ClusterMessage {
     public ResponseMessage getResponseMessage(Exception exception) {
         return ResponseMessage.fromException(exception, id);
     }
+
+    @Override
+    public String toString() {
+        return "ClusterMessage{id=%s}".formatted(id);
+    }
 }
