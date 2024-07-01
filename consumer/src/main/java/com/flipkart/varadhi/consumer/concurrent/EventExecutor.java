@@ -3,15 +3,13 @@ package com.flipkart.varadhi.consumer.concurrent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class EventExecutor implements Executor {
 
-    private final EventExecutorGroup parent;
+    private final ScheduledExecutorService scheduler;
 
     private final CustomThread thread;
 
@@ -19,15 +17,17 @@ public class EventExecutor implements Executor {
 
     private final AtomicBoolean running = new AtomicBoolean(true);
 
-    public EventExecutor(EventExecutorGroup group, ThreadFactory threadFactory, BlockingQueue<Context.Task> taskQueue) {
-        this.parent = group;
+    public EventExecutor(
+            ScheduledExecutorService scheduler, ThreadFactory threadFactory, BlockingQueue<Context.Task> taskQueue
+    ) {
+        this.scheduler = scheduler;
         this.taskQueue = taskQueue;
         this.thread = (CustomThread) threadFactory.newThread(this::run);
         this.thread.start();
     }
 
-    EventExecutorGroup getParent() {
-        return parent;
+    CustomThread getThread() {
+        return thread;
     }
 
     @Override
@@ -35,22 +35,27 @@ public class EventExecutor implements Executor {
         // TODO: review all cases here. As of now, here we are assuming that all tasks are running from custom threads,
         //  which is most likely false.
 
-        if (command instanceof Context.Task) {
-            EventExecutor boundExecutor = ((Context.Task) command).getContext().getExecutor();
+        if (command instanceof Context.Task task) {
+
+            // TODO: maybe move this check to context.execute()
+            EventExecutor boundExecutor = task.getContext().getExecutor();
             if (boundExecutor != null && boundExecutor != this) {
                 throw new IllegalStateException(
                         "task is tied to an executor:" + boundExecutor + ", but is being executed on:" + this);
             }
-            taskQueue.add((Context.Task) command);
+            taskQueue.add(task);
             return;
         }
 
-        taskQueue.add(new WrappedTask(Context.getCurrentTheadContext(), command));
+        taskQueue.add(new WrappedTask(Context.getCurrentThreadContext(), command));
     }
 
     public void stop() {
-        //TODO: is plain set/get fine?
-        running.setPlain(false);
+        running.set(false);
+    }
+
+    public ScheduledFuture<?> schedule(Context.Task command, long delay, TimeUnit unit) {
+        return scheduler.schedule(() -> execute(command), delay, unit);
     }
 
     void run() {

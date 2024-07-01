@@ -19,4 +19,14 @@ public interface Message {
     byte[] getPayload();
 
     Multimap<String, String> getRequestHeaders();
+
+    default Message withHeader(String key, String value) {
+        getRequestHeaders().put(key, value);
+        return this;
+    }
+
+    default Message withoutHeader(String key) {
+        getRequestHeaders().removeAll(key);
+        return this;
+    }
 }

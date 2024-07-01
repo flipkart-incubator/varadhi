@@ -24,7 +24,7 @@ public class InternalCompositeSubscription {
     }
 
     @JsonIgnore
-    public StorageTopic getTopicToProduce() {
+    public StorageTopic getTopicForProduce() {
         if (queueType.getCategory() == InternalQueueCategory.MAIN) {
             throw new IllegalArgumentException("Main Subscription does not have a topic to produce");
         }
@@ -32,7 +32,7 @@ public class InternalCompositeSubscription {
     }
 
     @JsonIgnore
-    public StorageSubscription<StorageTopic> getSubscriptionToConsume() {
+    public StorageSubscription<StorageTopic> getSubscriptionForConsume() {
         return storageSubscriptions[consumeIndex];
     }
 

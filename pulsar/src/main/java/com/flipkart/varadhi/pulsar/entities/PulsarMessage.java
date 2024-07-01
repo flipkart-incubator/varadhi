@@ -36,6 +36,11 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     }
 
     @Override
+    public long getProducedTimestampMs() {
+        return msg.getPublishTime();
+    }
+
+    @Override
     public String getTopicName() {
         return msg.getTopicName();
     }

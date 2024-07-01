@@ -3,11 +3,22 @@ package com.flipkart.varadhi.consumer.impl;
 import com.flipkart.varadhi.consumer.ConsumerState;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.ConsumptionFailurePolicy;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.consumer.VaradhiConsumer;
+import com.flipkart.varadhi.entities.ConsumptionPolicy;
+import com.flipkart.varadhi.entities.Endpoint;
+import com.flipkart.varadhi.entities.StorageSubscription;
+import com.flipkart.varadhi.entities.StorageTopic;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConsumersManagerImpl implements ConsumersManager {
+
+    private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
+
+    public ConsumersManagerImpl() {
+    }
 
     @Override
     public CompletableFuture<Void> startSubscription(
@@ -15,7 +26,15 @@ public class ConsumersManagerImpl implements ConsumersManager {
             boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
             ConsumptionFailurePolicy failurePolicy
     ) {
-        return CompletableFuture.completedFuture(null);
+        ShardId id = new ShardId(subscription, shardId);
+        ConsumerHolder prev = consumers.putIfAbsent(id, new ConsumerHolder());
+        if (prev != null) {
+            throw new IllegalArgumentException("Consumer already exists for " + id);
+        }
+        ConsumerHolder newConsumer = consumers.get(id);
+        newConsumer.consumer = null;
+
+        return null;
     }
 
     @Override
@@ -36,5 +55,12 @@ public class ConsumersManagerImpl implements ConsumersManager {
     @Override
     public ConsumerState getConsumerState(String subscription, int shardId) {
         return null;
+    }
+
+    record ShardId(String subscription, int shardId) {
+    }
+
+    static class ConsumerHolder {
+        private VaradhiConsumer consumer;
     }
 }

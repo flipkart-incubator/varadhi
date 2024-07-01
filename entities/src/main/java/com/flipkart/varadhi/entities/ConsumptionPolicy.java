@@ -10,7 +10,7 @@ public class ConsumptionPolicy {
     /**
      * Proportion of the parallelism that is allocated for delivery of failed messages.
      */
-    private final double maxRecoveryAllocation;
+    private final float maxRecoveryAllocation;
 
     /**
      * true if recovering dlt is preferred over retryable errors.
@@ -20,7 +20,7 @@ public class ConsumptionPolicy {
     /**
      * In terms of proportion of consumption rate over some time window. Between 0 and 1.
      */
-    private final double maxErrorThreshold;
-    
+    private final float maxErrorThreshold;
+
     private final ThrottlePolicy throttlePolicy;
 }

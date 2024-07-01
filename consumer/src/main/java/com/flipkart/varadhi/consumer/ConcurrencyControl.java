@@ -8,7 +8,10 @@ import java.util.function.Supplier;
 
 public interface ConcurrencyControl<T> {
 
-    Collection<CompletableFuture<T>> enqueueTasks(InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks);
+    // TODO: maybe evaluate per task enqueue for CC as well.
+    Collection<CompletableFuture<T>> enqueueTasks(
+            InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks
+    );
 
     void executePendingTasks();
 }
