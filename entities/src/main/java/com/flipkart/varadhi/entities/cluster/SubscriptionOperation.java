@@ -168,7 +168,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         @Override
         public String toString() {
             return String.format(
-                    "OpData{Id=%s, subscriptionId='%s', state=%s, errorMsg='%s'}", operationId, subscriptionId, state,
+                    "Id=%s, subscriptionId='%s', state=%s, errorMsg='%s'", operationId, subscriptionId, state,
                     errorMsg
             );
         }
@@ -184,7 +184,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
         @Override
         public String toString() {
-            return String.format("Start.%s", super.toString());
+            return String.format("Start.OpData{%s}", super.toString());
         }
     }
 
@@ -198,7 +198,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
         @Override
         public String toString() {
-            return String.format("Stop.%s", super.toString());
+            return String.format("Stop.OpData{%s}", super.toString());
         }
     }
 
@@ -213,10 +213,9 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
             this.assignment = assignment;
         }
 
-        //TODO::Format of toString needs to be fixed, currently it is ReassignShard:{opData} {assignment}
         @Override
         public String toString() {
-            return String.format("ReassignShard.%s %s", super.toString(), assignment);
+            return String.format("ReassignShard.OpData{%s %s}", super.toString(), assignment);
         }
     }
 }

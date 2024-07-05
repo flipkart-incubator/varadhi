@@ -23,7 +23,6 @@ public class NodeCapacity implements Comparable<NodeCapacity> {
         return maxQps >= requests.getQps() && maxThroughputKBps >= requests.getThroughputKBps();
     }
 
-
     public synchronized void allocate(TopicCapacityPolicy requests) {
         maxQps -= requests.getQps();
         maxThroughputKBps -= requests.getThroughputKBps();
@@ -41,6 +40,6 @@ public class NodeCapacity implements Comparable<NodeCapacity> {
 
     @Override
     public String toString() {
-        return String.format("%d KBps %d qps", maxThroughputKBps, maxQps);
+        return String.format("%d qps, %d KBps", maxQps, maxThroughputKBps);
     }
 }

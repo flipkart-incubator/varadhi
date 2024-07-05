@@ -2,7 +2,10 @@ package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.*;
+import com.flipkart.varadhi.controller.OperationMgr;
+import com.flipkart.varadhi.controller.ShardAssigner;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
+import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
@@ -44,10 +47,7 @@ public class ControllerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-
-        ControllerApiMgr controllerApiMgr =
-                new ControllerApiMgr(controllerConfig, consumerClientFactory, metaStoreProvider, meterRegistry);
+        ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
@@ -58,6 +58,16 @@ public class ControllerVerticle extends AbstractVerticle {
                 startPromise.complete();
             }
         });
+    }
+
+    private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
+        ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
+        OperationMgr operationMgr = new OperationMgr(controllerConfig, metaStoreProvider.getOpStore());
+        ShardAssigner assigner =
+                new ShardAssigner(new LeastAssignedStrategy(), metaStoreProvider.getAssignmentStore(), meterRegistry);
+        ControllerApiMgr controllerApiMgr =
+                new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
+        return controllerApiMgr;
     }
 
     private Future<Void> onLeaderElected(

@@ -3,7 +3,6 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.SubscriptionShards;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.ConsumerNode;
-import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
@@ -24,8 +23,8 @@ public class ShardAssigner {
     private final AssignmentStore assignmentStore;
     private final ExecutorService executor;
 
-    public ShardAssigner(AssignmentStore assignmentStore, MeterRegistry meterRegistry) {
-        this.strategy = new LeastAssignedStrategy();
+    public ShardAssigner(AssignmentStrategy strategy, AssignmentStore assignmentStore, MeterRegistry meterRegistry) {
+        this.strategy = strategy;
         this.consumerNodes = new ConcurrentHashMap<>();
         this.assignmentStore = assignmentStore;
         //TODO::ExecutorService should emit the metrics.
@@ -36,11 +35,12 @@ public class ShardAssigner {
 
     // idempotency -- does not re-assign if shard is already assigned, however they are returned.
     public CompletableFuture<List<Assignment>> assignShards(
-            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, Set<String> nodesToExclude
+            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<String> nodesToExclude
     ) {
+        Set<String> exclusionSet = new HashSet<>(nodesToExclude);
         return CompletableFuture.supplyAsync(() -> {
             List<ConsumerNode> activeConsumers =
-                    consumerNodes.values().stream().filter(c -> !nodesToExclude.contains(c.getConsumerId()))
+                    consumerNodes.values().stream().filter(c -> !exclusionSet.contains(c.getConsumerId()))
                             .collect(Collectors.toList());
             log.info(
                     "AssignShards found consumer nodes active:{} of total:{}", activeConsumers.size(),
@@ -78,8 +78,9 @@ public class ShardAssigner {
                 );
                 assignmentStore.createAssignments(assignments);
                 // assignments which are already done are returned as well.
-                assignments.addAll(alreadyAssigned);
-                return assignments;
+                alreadyAssigned.addAll(assignments);
+
+                return alreadyAssigned;
             } catch (Exception e) {
                 log.error("Failed while creating assignment, freeing up any allocation done. {}.", e.getMessage());
                 SubscriptionShards subShards = subscription.getShards();
@@ -137,7 +138,7 @@ public class ShardAssigner {
     public CompletableFuture<Assignment> reAssignShard(
             Assignment assignment, VaradhiSubscription subscription, boolean freeAssignedCapacity
     ) {
-        Set<String> nodeToExclude = new HashSet<>();
+        List<String> nodeToExclude = new ArrayList<>();
         ConsumerNode assignedNode = consumerNodes.getOrDefault(assignment.getConsumerId(), null);
         if (null != assignedNode) {
             nodeToExclude.add(assignedNode.getConsumerId());
@@ -160,11 +161,11 @@ public class ShardAssigner {
         }
     }
 
-    public List<Assignment> getSubscriptionAssignment(String subscriptionName) {
+    public List<Assignment> getSubAssignments(String subscriptionName) {
         return assignmentStore.getSubAssignments(subscriptionName);
     }
 
-    public List<Assignment> getConsumerNodeAssignment(String consumerNodeId) {
+    public List<Assignment> getConsumerNodeAssignments(String consumerNodeId) {
         return assignmentStore.getConsumerNodeAssignments(consumerNodeId);
     }
 
@@ -191,6 +192,7 @@ public class ShardAssigner {
         }, executor);
     }
 
+    //TODO::Fix it.. ensure this is used during init only ??
     public boolean addConsumerNode(ConsumerNode consumerNode) {
         String consumerNodeId = consumerNode.getConsumerId();
         MutableBoolean added = new MutableBoolean(false);

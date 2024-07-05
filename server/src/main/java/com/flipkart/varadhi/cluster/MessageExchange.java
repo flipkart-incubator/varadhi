@@ -41,7 +41,7 @@ public class MessageExchange {
                 }
             });
             return future;
-        }catch (Exception e) {
+        } catch (Exception e) {
             log.error("send({}, {}) Unexpected failure:{}", apiPath, msg.getId(), e.getMessage());
             return CompletableFuture.failedFuture(e);
         }

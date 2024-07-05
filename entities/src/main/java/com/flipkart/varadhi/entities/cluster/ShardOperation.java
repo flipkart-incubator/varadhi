@@ -138,7 +138,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         @Override
         public String toString() {
             return String.format(
-                    "OpData{ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d, state=%s, errorMsg='%s'}",
+                    "ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d, state=%s, errorMsg='%s'",
                     parentOpId, operationId, subscriptionId, shardId, state, errorMsg
             );
         }
@@ -158,7 +158,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
 
         @Override
         public String toString() {
-            return String.format("Start.%s", super.toString());
+            return String.format("Start.OpData{%s}", super.toString());
         }
     }
 
@@ -175,7 +175,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
 
         @Override
         public String toString() {
-            return String.format("Stop.%s", super.toString());
+            return String.format("Stop.OpData{%s}", super.toString());
         }
     }
 }

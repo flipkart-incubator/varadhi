@@ -73,4 +73,4 @@ zookeeperOptions:
   connectTimeoutMs: 2000
 
 controller:
-  operationExecutionThreads: 2
+  maxConcurrentOps: 2
