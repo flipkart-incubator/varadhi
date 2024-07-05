@@ -45,11 +45,11 @@ public class TeamServiceTest {
         teamService = new TeamService(varadhiMetaStore);
         projectService =
                 new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
-        org1 = new Org("TestOrg1", 0);
-        org2 = new Org("TestOrg2", 0);
-        org1Team1 = new Team("TestTeam1", 0, org1.getName());
-        org2Team1 = new Team("TestTeam1", 0, org2.getName());
-        teamDummy = new Team("TeamDummy", 0, "DummyOrg");
+        org1 = Org.of("TestOrg1");
+        org2 = Org.of("TestOrg2");
+        org1Team1 = Team.of("TestTeam1", org1.getName());
+        org2Team1 = Team.of("TestTeam1", org2.getName());
+        teamDummy = Team.of("TeamDummy", "DummyOrg");
         orgService.createOrg(org1);
     }
 
@@ -104,7 +104,7 @@ public class TeamServiceTest {
 
         orgService.createOrg(org2);
         teamService.createTeam(org2Team1);
-        Project p1 = new Project("Project1", 0, "", org2Team1.getName(), org2Team1.getOrg());
+        Project p1 = Project.of("Project1", "", org2Team1.getName(), org2Team1.getOrg());
         projectService.createProject(p1);
         InvalidOperationForResourceException eOp = Assertions.assertThrows(
                 InvalidOperationForResourceException.class,
@@ -118,7 +118,7 @@ public class TeamServiceTest {
 
     @Test
     public void testGetProjects() {
-        Project p1 = new Project("Project1", 0, "", org1Team1.getName(), org1Team1.getOrg());
+        Project p1 = Project.of("Project1", "", org1Team1.getName(), org1Team1.getOrg());
         teamService.createTeam(org1Team1);
         projectService.createProject(p1);
 

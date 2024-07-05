@@ -31,7 +31,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     @NotNull
     ConsumptionPolicy consumptionPolicy;
 
-    public SubscriptionResource(
+    private SubscriptionResource(
             String name,
             int version,
             String project,
@@ -54,9 +54,21 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.consumptionPolicy = consumptionPolicy;
     }
 
-    @JsonIgnore
-    public String getSubscriptionInternalName() {
-        return buildInternalName(project, getName());
+    public static SubscriptionResource of(
+            String name,
+            String project,
+            String topic,
+            String topicProject,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy
+    ) {
+        return new SubscriptionResource(
+                name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
+                consumptionPolicy
+        );
     }
 
     public static String buildInternalName(String project, String subsResourceName) {
@@ -72,9 +84,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         String topicProject = topicNameSegments[0];
         String topicName = topicNameSegments[1];
 
-        return new SubscriptionResource(
+        SubscriptionResource subResource = of(
                 subscriptionName,
-                subscription.getVersion(),
                 subscriptionProject,
                 topicName,
                 topicProject,
@@ -84,5 +95,12 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy()
         );
+        subResource.setVersion(subscription.getVersion());
+        return subResource;
+    }
+
+    @JsonIgnore
+    public String getSubscriptionInternalName() {
+        return buildInternalName(project, getName());
     }
 }

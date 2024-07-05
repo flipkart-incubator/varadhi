@@ -101,14 +101,13 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testEntitiesPresentWithDefaultName_Success() {
-        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
+        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
-        Project project = new Project(
+        Project project = Project.of(
                 appConfiguration.getRestOptions().getDefaultProject(),
 
-                0,
                 "",
                 team.getName(),
                 org.getName()
@@ -128,7 +127,7 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testDifferentOrgPresent_Failure() {
-        Org org = new Org(TEST_ORG, 0);
+        Org org = Org.of(TEST_ORG);
         orgService.createOrg(org);
         validateDeployment(String.format(
                 "Lean deployment can not be enabled as org with %s name is present.",
@@ -138,8 +137,8 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testMultipleOrgPresent_Failure() {
-        Org org1 = new Org(TEST_ORG, 0);
-        Org org2 = new Org(TEST_ORG + "2", 0);
+        Org org1 = Org.of(TEST_ORG);
+        Org org2 = Org.of(TEST_ORG + "2");
         orgService.createOrg(org1);
         orgService.createOrg(org2);
         validateDeployment("Lean deployment can not be enabled as there are more than one orgs.");
@@ -147,9 +146,9 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testDifferentTeamPresent_Failure() {
-        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
+        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = new Team(TEST_TEAM, 0, org.getName());
+        Team team = Team.of(TEST_TEAM, org.getName());
         teamService.createTeam(team);
         validateDeployment(String.format(
                 "Lean deployment can not be enabled as team with %s name is present.",
@@ -159,10 +158,10 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testMultipleTeamsPresent_Failure() {
-        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
+        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
         orgService.createOrg(org);
-        Team team1 = new Team(TEST_TEAM, 0, org.getName());
-        Team team2 = new Team(TEST_TEAM + "2", 0, org.getName());
+        Team team1 = Team.of(TEST_TEAM, org.getName());
+        Team team2 = Team.of(TEST_TEAM + "2", org.getName());
         teamService.createTeam(team1);
         teamService.createTeam(team2);
         validateDeployment("Lean deployment can not be enabled as there are more than one teams.");
@@ -170,11 +169,11 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testDifferentProjectPresent_Failure() {
-        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
+        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
-        Project project = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
+        Project project = Project.of(TEST_PROJECT, "", team.getName(), org.getName());
         projectService.createProject(project);
         validateDeployment(
                 String.format("Lean deployment can not be enabled as project with %s name is present.", TEST_PROJECT));
@@ -182,19 +181,20 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testMultipleProjectsPresent_Failure() {
-        Org org = new Org(appConfiguration.getRestOptions().getDefaultOrg(), 0);
+        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = new Team(appConfiguration.getRestOptions().getDefaultTeam(), 0, org.getName());
+        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
-        Project project1 = new Project(TEST_PROJECT, 0, "", team.getName(), org.getName());
-        Project project2 = new Project(TEST_PROJECT + "2", 0, "", team.getName(), org.getName());
+        Project project1 = Project.of(TEST_PROJECT, "", team.getName(), org.getName());
+        Project project2 = Project.of(TEST_PROJECT + "2", "", team.getName(), org.getName());
         projectService.createProject(project1);
         projectService.createProject(project2);
         validateDeployment("Lean deployment can not be enabled as there are more than one projects.");
     }
 
     private void validateDeployment(String failureMsg) {
-        InvalidConfigException ie = assertThrows(InvalidConfigException.class,
+        InvalidConfigException ie = assertThrows(
+                InvalidConfigException.class,
                 () -> deploymentValidator.validate(appConfiguration.getRestOptions())
         );
         assertEquals(failureMsg, ie.getMessage());

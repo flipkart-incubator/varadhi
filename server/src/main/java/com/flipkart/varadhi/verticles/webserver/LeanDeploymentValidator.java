@@ -54,7 +54,7 @@ public class LeanDeploymentValidator {
 
         if (orgs.isEmpty()) {
             log.debug("Creating default org no org is present.");
-            orgService.createOrg(new Org(defaultOrg, 0));
+            orgService.createOrg(Org.of(defaultOrg));
             log.debug("Created default org, team and project as no org is present.");
         }
     }
@@ -74,7 +74,7 @@ public class LeanDeploymentValidator {
         if (teams.isEmpty()) {
             log.debug("Creating default team no team is present.");
 
-            teamService.createTeam(new Team(defaultTeam, 0, defaultOrg));
+            teamService.createTeam(Team.of(defaultTeam, defaultOrg));
 
             log.debug("Created default team as no team is present.");
         }
@@ -100,7 +100,7 @@ public class LeanDeploymentValidator {
         }
         if (projects.isEmpty()) {
             log.debug("Creating default project as no team is present.");
-            projectService.createProject(new Project(defaultProject, 0, "", defaultTeam, defaultOrg));
+            projectService.createProject(Project.of(defaultProject, "", defaultTeam, defaultOrg));
             log.debug("Created default project as no team is present.");
         }
     }

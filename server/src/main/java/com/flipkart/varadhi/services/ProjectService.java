@@ -65,8 +65,7 @@ public class ProjectService {
                     "Conflicting update, Project(%s) has been modified. Fetch latest and try again.", project.getName()
             ));
         }
-        int updatedVersion = metaStore.updateProject(project);
-        project.setVersion(updatedVersion);
+        metaStore.updateProject(project);
         return project;
     }
 

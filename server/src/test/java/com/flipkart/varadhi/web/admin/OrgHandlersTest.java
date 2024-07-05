@@ -62,7 +62,7 @@ public class OrgHandlersTest extends WebTestBase {
     public void testOrgCreation() throws InterruptedException {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
-        Org org1 = new Org("name1", 0);
+        Org org1 = Org.of("name1");
         doReturn(org1).when(orgService).createOrg(eq(org1));
         Org org1Created = sendRequestWithBody(request, org1, Org.class);
         Assertions.assertEquals(org1, org1Created);
@@ -94,14 +94,14 @@ public class OrgHandlersTest extends WebTestBase {
     private void sendInvalidName(String name) throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         String orgNameErr = "Invalid Org name. Check naming constraints.";
-        Org org = new Org(name, 0);
+        Org org = Org.of(name);
         ErrorResponse response = sendRequestWithBody(request, org, 400, orgNameErr, ErrorResponse.class);
         Assertions.assertEquals(orgNameErr, response.reason());
     }
 
     @Test
     public void testOrgGet() throws InterruptedException {
-        Org org1 = new Org("name1", 2);
+        Org org1 = Org.of("name1");
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getOrgUrl(org1.getName()));
         doReturn(org1).when(orgService).getOrg(org1.getName());
@@ -118,7 +118,7 @@ public class OrgHandlersTest extends WebTestBase {
 
     @Test
     public void testOrgList() throws Exception {
-        List<Org> orgList = List.of(new Org("org_1", 0), new Org("org_2", 0));
+        List<Org> orgList = List.of(Org.of("org_1"), Org.of("org_2"));
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, orgsPath);
         doReturn(orgList).when(orgService).getOrgs();
 
@@ -135,7 +135,7 @@ public class OrgHandlersTest extends WebTestBase {
 
     @Test
     public void testOrgDelete() throws InterruptedException {
-        Org org1 = new Org("name1", 2);
+        Org org1 = Org.of("name1");
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getOrgUrl(org1.getName()));
         doNothing().when(orgService).deleteOrg(org1.getName());

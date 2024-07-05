@@ -58,7 +58,7 @@ public class ProduceTestBase extends WebTestBase {
         msgCapture = ArgumentCaptor.forClass(Message.class);
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
-        Project project = new Project("project1", 0, "description", "team1", "org1");
+        Project project = Project.of("project1", "description", "team1", "org1");
         doReturn(project).when(projectService).getCachedProject("project1");
     }
 }
