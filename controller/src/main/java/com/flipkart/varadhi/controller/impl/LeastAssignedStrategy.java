@@ -27,15 +27,17 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
             throw new CapacityException("No active consumer node for Subscription assignment.");
         }
         List<Assignment> assignments = new ArrayList<>();
-        TreeSet<ConsumerNode> consumers = new TreeSet<>(ConsumerNode.NodeComparator);
+        PriorityQueue<ConsumerNode> consumers =
+                new PriorityQueue<>(Collections.reverseOrder(ConsumerNode.NodeComparator));
         consumers.addAll(consumerNodes);
         List<ConsumerNode> usedNodes = new ArrayList<>();
         ArrayList<SubscriptionUnitShard> shardsToAssign = new ArrayList<>(shards);
         // Subscription's shards will be equal, so below sorting is no-op for now.
         shardsToAssign.sort(SubscriptionUnitShard.ShardCapacityComparator);
+
         int nextShardIndex = 1;
-        for(SubscriptionUnitShard shard : shardsToAssign) {
-            ConsumerNode consumerNode = consumers.pollLast();
+        for (SubscriptionUnitShard shard : shardsToAssign) {
+            ConsumerNode consumerNode = consumers.remove();
             Objects.requireNonNull(consumerNode);
             //TODO::handle for creating required capacity via re-assigning the shards.
             if (!consumerNode.canAllocate(shard.getCapacityRequest())) {
@@ -61,7 +63,7 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
                     usedNodes.clear();
                     consumers.add(consumerNode);
                 } else {
-                    ConsumerNode nextHighestAvailable = consumers.floor(consumerNode);
+                    ConsumerNode nextHighestAvailable = consumers.peek();
                     TopicCapacityPolicy nextCapacityNeeded = shards.get(nextShardIndex).getCapacityRequest();
                     if (nextHighestAvailable.canAllocate(nextCapacityNeeded)) {
                         usedNodes.add(consumerNode);

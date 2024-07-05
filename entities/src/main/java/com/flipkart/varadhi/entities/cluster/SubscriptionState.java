@@ -35,21 +35,21 @@ public enum SubscriptionState {
         }
 
         Map<ShardState, Integer> stateCounts = new HashMap<>();
-        shardStatuses.forEach(ss -> stateCounts.compute(ss.getState(), (k,v) -> v == null ? 1 : v+1));
+        shardStatuses.forEach(ss -> stateCounts.compute(ss.getState(), (k, v) -> v == null ? 1 : v + 1));
         SubscriptionState subState;
         int totalShards = shardStatuses.size();
         int runningShards = stateCounts.getOrDefault(ShardState.STARTED, 0);
-        int startingShards = stateCounts.getOrDefault(ShardState.STARTED, 0);
-        int stoppingShards = stateCounts.getOrDefault(ShardState.STARTED, 0);
+        int startingShards = stateCounts.getOrDefault(ShardState.STARTING, 0);
+        int stoppingShards = stateCounts.getOrDefault(ShardState.STOPPING, 0);
         if (totalShards == runningShards) {
             subState = RUNNING;
-        }else if (startingShards > 0 && stoppingShards > 0) {
+        } else if (startingShards > 0 && stoppingShards > 0) {
             subState = ERRORED;
-        }else if (startingShards > 0) {
+        } else if (startingShards > 0) {
             subState = STARTING;
-        }else if (stoppingShards > 0) {
+        } else if (stoppingShards > 0) {
             subState = STOPPING;
-        }else{
+        } else {
             //TODO:: Other conditions are ignored for now and being folded into ERRORED.
             subState = ERRORED;
         }

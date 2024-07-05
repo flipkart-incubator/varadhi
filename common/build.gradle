@@ -15,6 +15,7 @@ dependencies {
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
 
     testFixturesApi("com.google.guava:guava:$guava_version")
-
+    testFixturesApi("org.junit.jupiter:junit-jupiter:$junit_version")
+    testFixturesApi("org.awaitility:awaitility:4.2.1")
     testImplementation("io.micrometer:micrometer-registry-jmx")
 }

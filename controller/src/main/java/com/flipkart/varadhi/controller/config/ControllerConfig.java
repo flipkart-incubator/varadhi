@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class ControllerConfig {
-    private int operationExecutionThreads = 2;
+    private int maxConcurrentOps = 2;
 }

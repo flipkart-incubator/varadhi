@@ -12,7 +12,13 @@ public class ShardStatus {
     private String failureReason;
 
     @JsonIgnore
-    public boolean isAssigned() {
-        return state == ShardState.STARTED || state == ShardState.STARTING || state == ShardState.ERRORED;
+    public boolean canStop() {
+        return state == ShardState.STARTED || state == ShardState.ERRORED || state == ShardState.STARTING;
+    }
+
+    @JsonIgnore
+    public boolean canStart() {
+        return state == ShardState.STOPPED || state == ShardState.ERRORED || state == ShardState.UNKNOWN ||
+                state == ShardState.STOPPING;
     }
 }
