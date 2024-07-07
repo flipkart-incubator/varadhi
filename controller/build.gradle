@@ -10,4 +10,7 @@ dependencies {
     implementation("io.vertx:vertx-micrometer-metrics")
     implementation('com.fasterxml.jackson.core:jackson-databind')
     implementation("org.apache.commons:commons-lang3")
+    testImplementation(testFixtures(project(":entities")))
+    testImplementation(testFixtures(project(":common")))
+    testImplementation("org.awaitility:awaitility:4.2.1")
 }

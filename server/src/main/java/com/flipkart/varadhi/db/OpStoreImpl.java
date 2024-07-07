@@ -49,19 +49,43 @@ public class OpStoreImpl implements OpStore {
     }
 
     @Override
-    public List<ShardOperation> getShardOps(String operationId) {
+    public boolean shardOpExists(String shardOpId) {
+        ZNode znode = ZNode.OfShardOperation(shardOpId);
+        return zkMetaStore.zkPathExist(znode);
+    }
+
+    @Override
+    public List<ShardOperation> getShardOps(String subOpId) {
         //TODO::implement this.
         //TODO::This needs to improvise i.e shouldn't need to deserialize all.
         List<String> shardOpIds = zkMetaStore.listChildren(ZNode.OfEntityType(SHARD_OP));
         List<ShardOperation> shardOps = new ArrayList<>();
         shardOpIds.forEach(id -> {
             ShardOperation shardOp = zkMetaStore.getZNodeDataAsPojo(ZNode.OfShardOperation(id), ShardOperation.class);
-            if (operationId.equals(shardOp.getOpData().getParentOpId())) {
+            if (subOpId.equals(shardOp.getOpData().getParentOpId())) {
                 shardOps.add(shardOp);
             }
         });
         return shardOps;
     }
+
+    @Override
+    public List<SubscriptionOperation> getPendingSubOps() {
+        //TODO::implement this.
+        //TODO::This needs to improvise i.e shouldn't need to deserialize all.
+        List<String> subOpIds = zkMetaStore.listChildren(ZNode.OfEntityType(SUB_OP));
+        List<SubscriptionOperation> subOps = new ArrayList<>();
+        subOpIds.forEach(id -> {
+            SubscriptionOperation subOp =
+                    zkMetaStore.getZNodeDataAsPojo(ZNode.OfSubOperation(id), SubscriptionOperation.class);
+            if (!subOp.isDone()) {
+                subOps.add(subOp);
+            }
+        });
+        return subOps;
+    }
+
+
     @Override
     public ShardOperation getShardOp(String operationId) {
         ZNode znode = ZNode.OfShardOperation(operationId);

@@ -4,7 +4,6 @@ import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.ShardState;
@@ -27,36 +26,32 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<Void> start(ShardOperation.StartData operation) {
         log.info("Consumer: Starting shard {}", operation);
-        VaradhiSubscription subscription = operation.getSubscription();
         SubscriptionUnitShard shard = operation.getShard();
-
-        consumerInfo.recordShardAssignment(subscription.getName(), shard.getShardId(), shard.getCapacityRequest());
+        consumerInfo.addShardCapacity(operation.getSubscriptionId(), shard.getShardId(), shard.getCapacityRequest());
         StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
-
         ConsumptionFailurePolicy failurePolicy =
-                new ConsumptionFailurePolicy(subscription.getRetryPolicy(), shard.getRetrySubscription(),
+                new ConsumptionFailurePolicy(operation.getRetryPolicy(), shard.getRetrySubscription(),
                         shard.getDeadLetterSubscription()
                 );
 
         return consumersManager.startSubscription(
-                subscription.getProject(),
-                subscription.getName(),
+                operation.getProject(),
+                operation.getSubscriptionId(),
                 operation.getShardId(),
                 mainSub,
-                subscription.isGrouped(),
-                subscription.getEndpoint(),
-                subscription.getConsumptionPolicy(),
+                operation.isGrouped(),
+                operation.getEndpoint(),
+                operation.getConsumptionPolicy(),
                 failurePolicy
         );
     }
 
     @Override
     public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
-        VaradhiSubscription subscription = operation.getSubscription();
         SubscriptionUnitShard shard = operation.getShard();
-        consumerInfo.purgeShardAssignment(subscription.getName(), shard.getShardId(), shard.getCapacityRequest());
+        consumerInfo.freeShardCapacity(operation.getSubscriptionId(), shard.getShardId(), shard.getCapacityRequest());
         return consumersManager.stopSubscription(
-                subscription.getName(),
+                operation.getSubscriptionId(),
                 operation.getShardId()
         );
     }
