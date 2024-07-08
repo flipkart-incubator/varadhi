@@ -1,24 +1,33 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.consumer.ConsumerState;
-import com.flipkart.varadhi.consumer.ConsumersManager;
-import com.flipkart.varadhi.consumer.ConsumptionFailurePolicy;
-import com.flipkart.varadhi.consumer.VaradhiConsumer;
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.Endpoint;
-import com.flipkart.varadhi.entities.StorageSubscription;
-import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.consumer.*;
+import com.flipkart.varadhi.consumer.concurrent.Context;
+import com.flipkart.varadhi.consumer.concurrent.CustomThread;
+import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.spi.services.ConsumerFactory;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 
+import java.net.http.HttpClient;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class ConsumersManagerImpl implements ConsumersManager {
 
+    private final ConsumerEnvironment env;
+    private final ScheduledExecutorService scheduler;
+    private final EventExecutor executor;
+
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
-    public ConsumersManagerImpl() {
+    public ConsumersManagerImpl(
+            ProducerFactory<StorageTopic> producerFactory, ConsumerFactory<StorageTopic, Offset> consumerFactory
+    ) {
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        this.executor = new EventExecutor(this.scheduler, CustomThread::new, new LinkedBlockingQueue<>());
+        this.env = new ConsumerEnvironment(producerFactory, consumerFactory, HttpClient.newHttpClient());
     }
+
 
     @Override
     public CompletableFuture<Void> startSubscription(
@@ -32,9 +41,15 @@ public class ConsumersManagerImpl implements ConsumersManager {
             throw new IllegalArgumentException("Consumer already exists for " + id);
         }
         ConsumerHolder newConsumer = consumers.get(id);
-        newConsumer.consumer = null;
+        newConsumer.consumer =
+                new VaradhiConsumerImpl(buildEnv(), project, subscription, shardId, storageSubscription, grouped,
+                        endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler
+                );
 
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            newConsumer.consumer.start();
+            return null;
+        });
     }
 
     @Override
@@ -62,5 +77,13 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     static class ConsumerHolder {
         private VaradhiConsumer consumer;
+    }
+
+    ConsumerEnvironment buildEnv() {
+        return new ConsumerEnvironment(
+                producerFactory,
+                consumerFactory,
+                httpClient
+        );
     }
 }

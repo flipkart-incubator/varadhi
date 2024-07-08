@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class ConsumptionPolicy {
 
+    private final int maxInFlightMessages;
+
     private final int maxParallelism;
 
     /**

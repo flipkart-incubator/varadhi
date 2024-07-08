@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.verticles.consumer;
 
+import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
@@ -14,10 +15,13 @@ import io.vertx.core.Promise;
 
 
 public class ConsumerVerticle extends AbstractVerticle {
+
+    private final CoreServices coreServices;
     private final VaradhiClusterManager clusterManager;
     private final ConsumerInfo consumerInfo;
 
-    public ConsumerVerticle(MemberInfo memberInfo, VaradhiClusterManager clusterManager) {
+    public ConsumerVerticle(CoreServices coreServices, MemberInfo memberInfo, VaradhiClusterManager clusterManager) {
+        this.coreServices = coreServices;
         this.clusterManager = clusterManager;
         this.consumerInfo = ConsumerInfo.from(memberInfo);
     }
@@ -27,7 +31,10 @@ public class ConsumerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         //TODO:: decide who manages consumerInfo -- ConsumersManagerImpl or ConsumerApiMgr, mostly later.
-        ConsumersManager consumersManager = new ConsumersManagerImpl();
+        ConsumersManager consumersManager = new ConsumersManagerImpl(
+                coreServices.getMessagingStackProvider().getProducerFactory(),
+                coreServices.getMessagingStackProvider().getConsumerFactory()
+        );
         ControllerClient controllerClient = new ControllerClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, consumerInfo);
         ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);

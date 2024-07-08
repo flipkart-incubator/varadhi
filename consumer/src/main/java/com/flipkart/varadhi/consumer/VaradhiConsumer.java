@@ -8,7 +8,7 @@ public interface VaradhiConsumer {
 
     String getSubscriptionName();
 
-    String getShardId();
+    int getShardId();
 
     ConsumerState getState();
 

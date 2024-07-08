@@ -14,9 +14,9 @@ import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class ConsumerApiMgr implements ConsumerApi {
+
     private final ConsumersManager consumersManager;
     private final ConsumerInfo consumerInfo;
-
 
     public ConsumerApiMgr(ConsumersManager consumersManager, ConsumerInfo consumerInfo) {
         this.consumersManager = consumersManager;

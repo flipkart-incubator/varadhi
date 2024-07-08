@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Producer;

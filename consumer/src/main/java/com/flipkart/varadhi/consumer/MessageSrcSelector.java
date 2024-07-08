@@ -31,6 +31,10 @@ public class MessageSrcSelector {
         }
     }
 
+    public int getBatchSize() {
+        return messageSrcs[0].messages.length;
+    }
+
     public CompletableFuture<PolledMessageTrackers> nextMessages() {
         assert context.isInContext();
         CompletableFuture<PolledMessageTrackers> promise = new CompletableFuture<>();

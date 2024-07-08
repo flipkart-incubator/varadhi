@@ -2,17 +2,15 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.consumer.*;
 import com.flipkart.varadhi.consumer.concurrent.Context;
-import com.flipkart.varadhi.consumer.ordering.GroupPointer;
-import com.flipkart.varadhi.consumer.ordering.MessagePointer;
-import com.flipkart.varadhi.consumer.ordering.SubscriptionGroupsState;
-import com.flipkart.varadhi.consumer.push.PushClient;
-import com.flipkart.varadhi.consumer.push.PushResponse;
+import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
+import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
+import com.flipkart.varadhi.consumer.processing.ProcessingLoop;
+import com.flipkart.varadhi.consumer.processing.UngroupedProcessingLoop;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.spi.services.Consumer;
-import com.flipkart.varadhi.spi.services.ConsumerFactory;
-import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.base.Ticker;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
@@ -20,36 +18,32 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
 public class VaradhiConsumerImpl implements VaradhiConsumer {
 
-    private final ConsumerFactory<StorageTopic, Offset> consumerFactory;
-    private final ProducerFactory<StorageTopic> producerFactory;
-    private final Project project;
+    private final ConsumerEnvironment env;
+    private final String project;
     private final String subscriptionName;
-    private final String shardId;
-    private final TopicPartitions<StorageTopic> topic;
+    private final int shardId;
+    private final StorageSubscription<StorageTopic> storageSubscription;
     private final boolean grouped;
     private final Endpoint endpoint;
     private final ConsumptionPolicy consumptionPolicy;
     private final ConsumptionFailurePolicy failurePolicy;
-    private final int maxInFlightMessages;
 
+    @Getter
     private final Context context;
     private final ScheduledExecutorService scheduler;
-    private final SubscriptionGroupsState subscriptionGroupsState;
-    private PushClient pushClient;
-    private ConcurrencyControl<PushResponse> concurrencyControl;
+
+    private MessageDelivery deliveryClient;
+    private ConcurrencyControl<ProcessingLoop.DeliveryResult> concurrencyControl;
     private SlidingWindowThresholdProvider dynamicThreshold;
-    private SlidingWindowThrottler<PushResponse> throttler;
+    private SlidingWindowThrottler<DeliveryResponse> throttler;
+    private ProcessingLoop processingLoop;
 
 
     //todo: any app config
@@ -67,9 +61,6 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     private volatile boolean connected = false;
     private volatile boolean started = false;
     private volatile boolean stopRequested = false;
-
-    // TODO: evaluate var handle atomic operations
-    private AtomicInteger inFlightMessages = new AtomicInteger(0);
 
     InternalQueueType[] getPriority() {
         int maxRetryAttempts = failurePolicy.getRetryPolicy().getRetryAttempts();
@@ -89,7 +80,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     @Override
-    public String getShardId() {
+    public int getShardId() {
         return shardId;
     }
 
@@ -106,24 +97,24 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
         InternalQueueType[] iqPriority = getPriority();
 
-        internalConsumers.computeIfAbsent(InternalQueueType.mainType(), type -> createConsumer(topic, "main"));
+        internalConsumers.computeIfAbsent(
+                InternalQueueType.mainType(), type -> createConsumer(storageSubscription, "main"));
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             String role = "retry-" + r;
-            TopicPartitions<StorageTopic> retryTopic = failurePolicy.getRetrySubscription()
-                    .getSubscriptionForRetry(r).getSubscriptionForConsume()
-                    .getTopicPartitions();
+            StorageSubscription<StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
+                    .getSubscriptionForRetry(r).getSubscriptionForConsume();
             internalConsumers.computeIfAbsent(
                     InternalQueueType.retryType(r),
-                    type -> delayConsumer(createConsumer(retryTopic, role), 5000)
+                    type -> delayConsumer(createConsumer(retrySubscription, role), 5000)
             );
         }
-
 
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             internalProducers.put(
                     InternalQueueType.retryType(r),
                     createFailedMsgProducer(
-                            failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce())
+                            failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce()
+                    )
             );
         }
         internalProducers.put(
@@ -143,8 +134,18 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             throttler.onThresholdChange(Math.max(newThreshold, 1));
         });
 
-        // 1% failure
-        pushClient = new PushClient.Flaky(0.01);
+        // todo: http client 1% failure
+
+        deliveryClient = MessageDelivery.of(endpoint, env::getHttpClient);
+
+        if (grouped) {
+            throw new IllegalStateException("not implemented");
+        } else {
+            processingLoop =
+                    new UngroupedProcessingLoop(context, createMessageSrcSelector(64), concurrencyControl, throttler,
+                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages()
+                    );
+        }
 
         connected = true;
     }
@@ -155,7 +156,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             throw new IllegalStateException("connected: " + connected + ", started: " + started);
         }
 
-        initiateConsumptionLoop();
+        startLoop();
     }
 
     @Override
@@ -171,7 +172,6 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     @Override
     public synchronized void close() {
         // todo stop consumption loop
-
         Stream.concat(internalConsumers.values().stream(), internalProducers.values().stream())
                 .forEach(closeable -> {
                     try {
@@ -200,11 +200,16 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         return new MessageSrcSelector(context, messageSrcs, batchSize);
     }
 
-    ConsumerHolder createConsumer(TopicPartitions<StorageTopic> partitions, String role) {
+    ConsumerHolder createConsumer(StorageSubscription<StorageTopic> storageSubscription, String role) {
         // todo: create proper consumer name
-        String consumerName = String.format("%s/%s/%s", project.getName(), subscriptionName, shardId);
+        String consumerName = String.format("%s/%s/%s/%s", project, subscriptionName, shardId, role);
         Consumer<Offset> consumer =
-                consumerFactory.newConsumer(List.of(partitions), subscriptionName, consumerName, Map.of());
+                env.getConsumerFactory()
+                        .newConsumer(List.of(storageSubscription.getTopicPartitions()), storageSubscription.getName(),
+                                consumerName, Map.of()
+                        );
+
+        // TODO: configurable unacked messages.
         MessageSrc messageSrc = grouped ? new GroupedMessageSrc<>(consumer, 1000) : new UnGroupedMessageSrc<>(consumer);
         return new ConsumerHolder(consumer, messageSrc);
     }
@@ -214,159 +219,10 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     FailedMsgProducer createFailedMsgProducer(StorageTopic topic) {
-        return new FailedMsgProducer(producerFactory.newProducer(topic));
+        return new FailedMsgProducer(env.getProducerFactory().newProducer(topic));
     }
 
-    void initiateConsumptionLoop() {
-        ConsumptionLoop loop = new ConsumptionLoop(64);
-        context.run(loop);
-    }
-
-    class ConsumptionLoop implements Context.Task {
-
-        private final MessageSrcSelector msgSrcSelector;
-        private final GroupPointer[] groupPointers;
-        private final AtomicBoolean iterationInProgress = new AtomicBoolean(false);
-
-        public ConsumptionLoop(int maxProcessingBatchSize) {
-            this.msgSrcSelector = createMessageSrcSelector(maxProcessingBatchSize);
-            this.groupPointers = new GroupPointer[maxProcessingBatchSize];
-        }
-
-        @Override
-        public Context getContext() {
-            return context;
-        }
-
-        public void runLoopIfRequired() {
-            if (inFlightMessages.get() < maxInFlightMessages && iterationInProgress.compareAndSet(false, true)) {
-                context.run(this);
-            }
-        }
-
-        /**
-         * One iteration of the consumption loop
-         */
-        @Override
-        public void run() {
-            CompletableFuture<MessageSrcSelector.PolledMessageTrackers> fetchedFut = msgSrcSelector.nextMessages();
-            fetchedFut.whenComplete((polled, err) -> {
-                if (err != null) {
-                    log.error("unexpected error in fetching messages from msgSelector", err);
-                }
-                assert err == null;
-
-                // need to go back to the context. otherwise we might end up using unintended thread.
-                context.runOnContext(() -> {
-                    inFlightMessages.addAndGet(polled.getSize());
-                    onMessagesFetched(polled);
-                    // polled variable is now free to be released.
-                    polled.release();
-                    iterationInProgress.set(false);
-                    runLoopIfRequired();
-                });
-            });
-        }
-
-        CompletableFuture<PushResponse> pushMessage(InternalQueueType type, MessageTracker msg) {
-            return pushClient.push(msg).thenCompose(response -> {
-                if (response.success()) {
-                    return CompletableFuture.completedFuture(response);
-                } else {
-                    return throttler.acquire(type, () -> {
-                        // acquired the error throttler. now complete the push task
-                        return CompletableFuture.completedFuture(response);
-                    }, 1);
-                }
-            });
-        }
-
-        void onMessagesFetched(MessageSrcSelector.PolledMessageTrackers polled) {
-            assert context.isInContext();
-
-            subscriptionGroupsState.populatePointers(polled.getMessages(), groupPointers, polled.getSize());
-            List<Supplier<CompletableFuture<PushResponse>>> forPush = new ArrayList<>();
-
-            for (int i = 0; i < polled.getSize(); ++i) {
-                MessageTracker message = polled.getMessages()[i];
-                GroupPointer groupPointer = groupPointers[i];
-                InternalQueueType failedMsgInQueue = groupPointer == null ? null : groupPointer.isFailed();
-                if (failedMsgInQueue == null) {
-                    // group has not failed
-                    forPush.add(() -> pushMessage(polled.getInternalQueueType(), message));
-                } else {
-                    onGroupFailure(polled.getInternalQueueType(), failedMsgInQueue, message);
-                }
-            }
-
-            if (!forPush.isEmpty()) {
-                Collection<CompletableFuture<PushResponse>> asyncResponses =
-                        concurrencyControl.enqueueTasks(polled.getInternalQueueType(), forPush);
-                // Some of the push will have succeeded, for which we can begin the post processing.
-                // For others we start the failure management.
-                asyncResponses.forEach(fut -> fut.whenComplete((response, ex) -> {
-                    if (response.success()) {
-                        onSuccess(polled.getInternalQueueType(), response.msg());
-                    } else {
-                        onPushFailure(polled.getInternalQueueType(), response.msg());
-                    }
-                }));
-            }
-        }
-
-        void onSuccess(InternalQueueType type, MessageTracker message) {
-            // TODO: fix the internal topic idx
-            MessagePointer consumedFrom = new MessagePointer(1, message.getMessage().getOffset());
-            subscriptionGroupsState.messageConsumed(message.getGroupId(), type, consumedFrom).whenComplete((r, e) -> {
-                message.onConsumed(MessageConsumptionStatus.SENT);
-                inFlightMessages.decrementAndGet();
-                runLoopIfRequired();
-            });
-        }
-
-        void onFailure(
-                InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message,
-                MessageConsumptionStatus status
-        ) {
-            // failed msgs are present in failedMsgInQueue, so produce this msg there
-            CompletableFuture<Offset> asyncProduce =
-                    internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
-
-            asyncProduce.thenCompose(offset -> {
-                // TODO: add all other info. fix the internal topic idx
-                MessagePointer consumedFrom = new MessagePointer(1, message.getMessage().getOffset());
-                MessagePointer producedTo = new MessagePointer(1, offset);
-
-                return subscriptionGroupsState.messageTransitioned(
-                        message.getGroupId(), type, consumedFrom, failedMsgInQueue, producedTo);
-            }).whenComplete((r, e) -> {
-                message.onConsumed(status);
-                inFlightMessages.decrementAndGet();
-                runLoopIfRequired();
-            });
-        }
-
-        void onPushFailure(InternalQueueType type, MessageTracker message) {
-            InternalQueueType nextQueue = nextInternalQueue(type);
-            onFailure(type, nextQueue, message, MessageConsumptionStatus.FAILED);
-        }
-
-        void onGroupFailure(InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message) {
-            onFailure(type, failedMsgInQueue, message, MessageConsumptionStatus.GROUP_FAILED);
-        }
-
-        InternalQueueType nextInternalQueue(InternalQueueType type) {
-            if (type instanceof InternalQueueType.Main) {
-                return InternalQueueType.retryType(1);
-            } else if (type instanceof InternalQueueType.Retry retryType) {
-                if (retryType.getRetryCount() < failurePolicy.getRetryPolicy().getRetryAttempts()) {
-                    return InternalQueueType.retryType(retryType.getRetryCount() + 1);
-                } else {
-                    return InternalQueueType.deadLetterType();
-                }
-            } else {
-                throw new IllegalStateException("Invalid type: " + type);
-            }
-        }
+    void startLoop() {
+        context.run(processingLoop);
     }
 }
