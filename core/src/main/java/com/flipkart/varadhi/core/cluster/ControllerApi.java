@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionStatus;
@@ -22,5 +21,5 @@ public interface ControllerApi {
 
     CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy);
 
-    CompletableFuture<Void> update(ShardOperation.OpData operation);
+    CompletableFuture<Void> update(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg);
 }

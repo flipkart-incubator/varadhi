@@ -16,20 +16,27 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
+//TODO::implement closable.
 @Slf4j
 public class OperationMgr {
     private final OpStore opStore;
     private final ExecutorService executor;
+    private final ScheduledExecutorService delayedScheduler;
+    private final Map<String, RetryOpTask> retriableOps;
     private final Map<String, Deque<OpTask>> subOps;
+    private final RetryPolicy retryPolicy;
 
     public OperationMgr(ControllerConfig config, OpStore opStore) {
         this.opStore = opStore;
         this.subOps = new ConcurrentHashMap<>();
+        this.retriableOps = new ConcurrentHashMap<>();
+        this.retryPolicy = new RetryPolicy();
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
                 config.getMaxConcurrentOps(),
                 new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
         );
+        this.delayedScheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
     /**
@@ -47,8 +54,13 @@ public class OperationMgr {
      * - Remove redundant operations from the queue.
      * - Implement retry logic for failed operation to support auto recovery from temporary failure.
      */
+
     private void enqueueOpTask(OpTask pendingTask) {
         subOps.compute(pendingTask.getOrderingKey(), (orderingKey, scheduledTasks) -> {
+            // clear retry tasks which are waiting, as previous failed operation would
+            // become invalid with more recent operation being queued.
+            pendingTask.clearPendingRetry();
+
             if (null == scheduledTasks) {
                 Deque<OpTask> taskQueue = new ArrayDeque<>();
                 taskQueue.addLast(pendingTask);
@@ -61,6 +73,17 @@ public class OperationMgr {
                         "{} waiting operations for key {}, Task({}) queued.", waitingCount,
                         pendingTask.getOrderingKey(), pendingTask
                 );
+
+                // if retry and new operation are competing together, ignore retry as it is invalid now.
+                // retry shouldn't wait when they are ready for execution.
+                if (pendingTask.operation.getRetryAttempt() > 0) {
+                    log.info(
+                            "Ignoring Retry {} enqueue when a another operation {} is in execution, as retry is invalid now.",
+                            pendingTask, scheduledTasks.peekFirst()
+                    );
+                    return scheduledTasks;
+                }
+
                 // duplicate shouldn't happen unless it is called multiple times e.g. as part of retry.
                 boolean alreadyScheduled = false;
                 for (OpTask task : scheduledTasks) {
@@ -99,7 +122,7 @@ public class OperationMgr {
                 // Update processing can take time, this will affect a subscription.
                 processOpUpdate(opTask, updateHandler);
 
-                if (opTask.isRunning()) {
+                if (!opTask.operation.isDone()) {
                     log.info("Pending Task({}) still in progress", opTask);
                     return scheduledTasks;
                 }
@@ -116,16 +139,25 @@ public class OperationMgr {
     private Deque<OpTask> handleCompletedTask(OpTask completed, Deque<OpTask> taskQueue) {
         taskQueue.remove(completed);
         log.info("Completed Task({}) removed from the queue.", completed);
-        if (taskQueue.isEmpty()) {
-            log.info("No more pending operation for key {}.", completed.getOrderingKey());
-            return null;
-        }
-        OpTask waiting = taskQueue.peekFirst();
-        log.info("Next pending Task({}) scheduled for execution.", waiting);
-        waiting.execute();
-        return taskQueue;
-    }
 
+        // only latest operation should be retried.
+        // if this subscription already has operations pending for execution, it will make retry of this operation
+        // invalid. Do not schedule retry for such cases.
+        OpTask waiting = taskQueue.peekFirst();
+        if (null == waiting) {
+            log.info("No more pending operation for key {}.", completed.getOrderingKey());
+            // retry if this operation failed.
+            completed.queueRetryIfFailed();
+            return null;
+        } else {
+            if (completed.operation.hasFailed()) {
+                log.info("{} has pending operation {}. Retry will be invalid, skipping retry.", completed, waiting);
+            }
+            log.info("Next pending Task({}) scheduled for execution.", waiting);
+            waiting.execute();
+            return taskQueue;
+        }
+    }
 
     // primarily for testing purpose.
     List<OrderedOperation> getPendingOperations(String orderingKey) {
@@ -150,17 +182,17 @@ public class OperationMgr {
         }
     }
 
-    public void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
+    void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         OpTask opTask = new OpTask(subOp, opExecutor, op -> opStore.updateSubOp((SubscriptionOperation) op));
         enqueueOpTask(opTask);
     }
 
-    public void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
+    void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         opStore.createSubOp(subOp);
         enqueue(subOp, opExecutor);
     }
 
-    public CompletableFuture<Void> createAndExecute(ShardOperation shardOp, OpExecutor<Operation> opExecutor) {
+    CompletableFuture<Void> createAndExecute(ShardOperation shardOp, OpExecutor<Operation> opExecutor) {
         // shard operation might have been already created during previous execution.
         // create only if needed.
         if (!opStore.shardOpExists(shardOp.getId())) {
@@ -169,40 +201,86 @@ public class OperationMgr {
         return opExecutor.execute(shardOp);
     }
 
-    public void updateSubOp(SubscriptionOperation operation) {
+    // used in testing
+    void updateSubOp(SubscriptionOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
             // updating DB status in handler, to avoid version conflict.
             SubscriptionOperation subOp = (SubscriptionOperation) op;
             SubscriptionOperation subOpLatest = opStore.getSubOp(subOp.getData().getOperationId());
-            subOpLatest.update(subOp);
+            subOpLatest.update(subOp.getState(), subOp.getErrorMsg());
             opStore.updateSubOp(subOpLatest);
         });
     }
 
-    public void updateShardOp(ShardOperation.OpData opData) {
-        SubscriptionOperation subscriptionOp = opStore.getSubOp(opData.getParentOpId());
+    void updateShardOp(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg) {
+        SubscriptionOperation subscriptionOp = opStore.getSubOp(subOpId);
         // updating DB status in handler for both Shard and Subscription op, to avoid version conflict.
-        processOpTaskForOpUpdate(subscriptionOp, subOp -> updateShardAndSubOp((SubscriptionOperation) subOp, opData));
+        processOpTaskForOpUpdate(
+                subscriptionOp,
+                subOp -> updateShardAndSubOp((SubscriptionOperation) subOp, shardOpId, state, errorMsg)
+        );
     }
 
-    public List<SubscriptionOperation> getPendingSubOps() {
+    List<SubscriptionOperation> getPendingSubOps() {
         return opStore.getPendingSubOps();
     }
 
 
-    public Map<Integer, ShardOperation> getShardOps(String subOpId) {
+    Map<Integer, ShardOperation> getShardOps(String subOpId) {
         return opStore.getShardOps(subOpId).stream().collect(Collectors.toMap(o -> o.getOpData().getShardId(), o -> o));
     }
 
     private void updateShardAndSubOp(
-            SubscriptionOperation subOp, ShardOperation.OpData opData
+            SubscriptionOperation subOp, String shardOpId, ShardOperation.State state, String errorMsg
     ) {
-        ShardOperation shardOpLatest = opStore.getShardOp(opData.getOperationId());
-        shardOpLatest.update(opData);
+        ShardOperation shardOpLatest = opStore.getShardOp(shardOpId);
+        shardOpLatest.update(state, errorMsg);
         opStore.updateShardOp(shardOpLatest);
-        subOp.update(opStore.getShardOps(shardOpLatest.getOpData().getParentOpId()));
+        subOp.update(opStore.getShardOps(subOp.getId()));
         opStore.updateSubOp(subOp);
     }
+
+    @RequiredArgsConstructor
+    class RetryOpTask {
+        private final OpTask opTask;
+        private ScheduledFuture<Void> scheduledFuture;
+
+        void schedule() {
+            int backOffSeconds = retryPolicy.getRetryBackoffSeconds(opTask.operation);
+            scheduledFuture = delayedScheduler.schedule(() -> {
+                // task is getting scheduled for execution, remove it from retry pending.
+                retriableOps.remove(opTask.getOrderingKey());
+                enqueueOpTask(opTask);
+                return null;
+            }, backOffSeconds, TimeUnit.SECONDS);
+
+            retriableOps.compute(opTask.getOrderingKey(), (orderingKey, pendingRetry) -> {
+                if (null != pendingRetry) {
+                    log.error(
+                            "Retry task {} already scheduled for key {}. Cancelling previous task", pendingRetry.opTask,
+                            orderingKey
+                    );
+                    pendingRetry.cancel();
+                }
+                return this;
+            });
+            log.info("Scheduled retry task for operation {} in {} seconds.", opTask, backOffSeconds);
+        }
+
+        void cancel() {
+            // don't interrupt if already  running.
+            boolean cancelled = scheduledFuture.cancel(false);
+            if (cancelled) {
+                log.info("Retry task cancelled for operation {}", opTask);
+            } else {
+                log.info(
+                        "Retry task failed to cancel. Completed={} Cancelled={} completed for operation {}",
+                        scheduledFuture.isDone(), scheduledFuture.isCancelled(), opTask
+                );
+            }
+        }
+    }
+
 
     @RequiredArgsConstructor
     class OpTask {
@@ -226,7 +304,31 @@ public class OperationMgr {
             }, executor);
         }
 
+        void queueRetryIfFailed() {
+            if (retryPolicy.canRetry(operation)) {
+                // not persisting the operation updated for retry.
+                // it will get persisted during update on completion. Might result in one extra retry
+                // if controller switches, that should be ok.
+                OrderedOperation retryOp = operation.nextRetry();
+                RetryOpTask task = new RetryOpTask(new OpTask(retryOp, opExecutor, dbUpdateHandler));
+                task.schedule();
+                log.info("Retry the operation {}.", retryOp);
+            }
+        }
+
+        private void clearPendingRetry() {
+            RetryOpTask retryOps = retriableOps.remove(getOrderingKey());
+            if (null != retryOps) {
+                log.info("Retry task {} cancelled and removed.", retryOps.opTask);
+                retryOps.cancel();
+            }
+        }
+
+
         private void fail(Throwable t) {
+            //TODO::Fix in case of DB failure, saveFailure will be called twice
+            //1 - as part of fail() processing, 2 - as part of processOpTaskForOpUpdate.opUpdate() failure processing
+            // fix this.
             processOpTaskForOpUpdate(operation, op -> saveFailure(t));
         }
 
@@ -249,16 +351,12 @@ public class OperationMgr {
             return operation.toString();
         }
 
-        public String getId() {
+        String getId() {
             return operation.getId();
         }
 
-        public String getOrderingKey() {
+        String getOrderingKey() {
             return operation.getOrderingKey();
-        }
-
-        public boolean isRunning() {
-            return !operation.isDone();
         }
     }
 }

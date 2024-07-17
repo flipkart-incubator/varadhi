@@ -15,6 +15,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.flipkart.varadhi.Constants.SYSTEM_IDENTITY;
+import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 
 @Slf4j
 public class ControllerApiMgr implements ControllerApi {
@@ -105,6 +106,9 @@ public class ControllerApiMgr implements ControllerApi {
             return operation;
         });
     }
+
+    //TODO:: if no shard operations are scheduled for both start/stop, sub operation remains in-progress.
+    //In both cases, it needs to marked has completed.
 
     private CompletableFuture<Void> startShards(SubscriptionOperation subOp, VaradhiSubscription subscription) {
         SubscriptionShards shards = subscription.getShards();
@@ -201,7 +205,7 @@ public class ControllerApiMgr implements ControllerApi {
             });
         }).toArray(CompletableFuture[]::new)).thenCompose(v -> {
             // unAssignShards shouldn't be called for shards which failed to stop.
-            stopFailed.forEach(assignment -> assignments.remove(assignment));
+            stopFailed.forEach(assignments::remove);
             return shardAssigner.unAssignShards(assignments, subscription, true);
         });
         log.info("Scheduled Stop on {} shards for SubOp({}).", shards.getShardCount(), subOp.getData());
@@ -232,8 +236,7 @@ public class ControllerApiMgr implements ControllerApi {
 
     private void markShardOpFailed(ShardOperation shardOp, Throwable t) {
         log.error("shard operation ({}) failed: {}.", shardOp, t.getMessage());
-        shardOp.markFail(t.getMessage());
-        operationMgr.updateShardOp(shardOp.getOpData());
+        operationMgr.updateShardOp(shardOp.getOpData().getParentOpId(), shardOp.getId(), ERRORED, t.getMessage());
     }
 
     private ConsumerApi getAssignedConsumer(Assignment assignment) {
@@ -249,12 +252,18 @@ public class ControllerApiMgr implements ControllerApi {
         return unitShards;
     }
 
+
     @Override
-    public CompletableFuture<Void> update(ShardOperation.OpData opData) {
-        log.info("Received update on shard operation: {}", opData);
+    public CompletableFuture<Void> update(
+            String subOpId, String shardOpId, ShardOperation.State state, String errorMsg
+    ) {
+        log.info(
+                "Received update on shard operation: SubOpId={} ShardOpId={}, State={}, Error={}", subOpId, shardOpId,
+                state, errorMsg
+        );
         try {
             // Update is getting executed inline on dispatcher thread.
-            operationMgr.updateShardOp(opData);
+            operationMgr.updateShardOp(subOpId, shardOpId, state, errorMsg);
             return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);

@@ -9,16 +9,25 @@ import lombok.*;
 
 import java.util.UUID;
 
+import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
+
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class ShardOperation extends MetaStoreEntity implements Operation {
     private final long startTime;
     private final OpData opData;
     private long endTime;
+    private State state;
+    private String errorMsg;
 
     @JsonCreator
-    ShardOperation(String operationId, long startTime, long endTime, ShardOperation.OpData opData, int version) {
+    ShardOperation(
+            String operationId, int version, long startTime, long endTime, State state, String errorMsg,
+            ShardOperation.OpData opData
+    ) {
         super(operationId, version);
+        this.state = state;
+        this.errorMsg = errorMsg;
         this.startTime = startTime;
         this.endTime = endTime;
         this.opData = opData;
@@ -26,6 +35,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
 
     ShardOperation(ShardOperation.OpData opData) {
         super(opData.getOperationId(), 0);
+        this.state = IN_PROGRESS;
         this.startTime = System.currentTimeMillis();
         this.endTime = 0;
         this.opData = opData;
@@ -34,13 +44,11 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     public static ShardOperation startOp(
             String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription
     ) {
-        ShardOperation.OpData data = new ShardOperation.StartData(subOpId, shard, subscription);
-        return new ShardOperation(data);
+        return new ShardOperation(new ShardOperation.StartData(subOpId, shard, subscription));
     }
 
     public static ShardOperation stopOp(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
-        ShardOperation.OpData data = new ShardOperation.StopData(subOpId, shard, subscription);
-        return new ShardOperation(data);
+        return new ShardOperation(new ShardOperation.StopData(subOpId, shard, subscription));
     }
 
     @JsonIgnore
@@ -52,40 +60,38 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @JsonIgnore
     @Override
     public boolean isDone() {
-        return opData.isDone();
+        return state == ERRORED || state == COMPLETED;
     }
 
     @Override
     public void markFail(String reason) {
-        opData.markFail(reason);
+        state = ERRORED;
+        errorMsg = reason;
         endTime = System.currentTimeMillis();
     }
 
     @Override
     public void markCompleted() {
-        opData.markCompleted();
+        state = COMPLETED;
         endTime = System.currentTimeMillis();
     }
 
-    public void update(ShardOperation.OpData updated) {
-        opData.update(updated);
-        if (opData.isDone()) {
+    @Override
+    public boolean hasFailed() {
+        return state == ERRORED;
+    }
+
+    public void update(ShardOperation.State opState, String OpError) {
+        state = opState;
+        errorMsg = OpError;
+        if (isDone()) {
             endTime = System.currentTimeMillis();
         }
     }
 
-
-    public boolean hasFailed() {
-        return opData.state == State.ERRORED;
-    }
-
     @Override
     public String toString() {
-        return String.format("{data=%s, startTime=%d, endTime=%d}", opData, startTime, endTime);
-    }
-
-    public enum State {
-        ERRORED, COMPLETED, IN_PROGRESS
+        return String.format("{data=%s, state=%s, startTime=%d, endTime=%d}", opData, state, startTime, endTime);
     }
 
     @Getter
@@ -110,36 +116,11 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         private RetryPolicy retryPolicy;
         private SubscriptionUnitShard shard;
 
-        private ShardOperation.State state;
-        private String errorMsg;
-
-        public void markFail(String reason) {
-            state = State.ERRORED;
-            errorMsg = reason;
-        }
-
-        public void markCompleted() {
-            state = State.COMPLETED;
-        }
-
-        @JsonIgnore
-        public boolean isDone() {
-            return state == State.ERRORED || state == State.COMPLETED;
-        }
-
-        public void update(OpData updated) {
-            if (!operationId.equals(updated.operationId)) {
-                throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
-            }
-            errorMsg = updated.errorMsg;
-            state = updated.state;
-        }
-
         @Override
         public String toString() {
             return String.format(
-                    "ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d, state=%s, errorMsg='%s'",
-                    parentOpId, operationId, subscriptionId, shardId, state, errorMsg
+                    "ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d", parentOpId, operationId, subscriptionId,
+                    shardId
             );
         }
     }
@@ -152,7 +133,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
                     subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard, State.IN_PROGRESS, null
+                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
             );
         }
 
@@ -169,7 +150,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
                     subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard, State.IN_PROGRESS, null
+                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
             );
         }
 

@@ -7,8 +7,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -16,17 +19,23 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     private final String requestedBy;
     private final long startTime;
     private final OpData data;
+    private final int retryAttempt;
+    private final List<OpResult> results;
     private long endTime;
+
 
     @JsonCreator
     SubscriptionOperation(
-            String operationId, String requestedBy, long startTime, long endTime, OpData data, int version
+            String operationId, int version, String requestedBy, long startTime, long endTime, OpData data,
+            int retryAttempt, List<OpResult> results
     ) {
         super(operationId, version);
         this.requestedBy = requestedBy;
         this.startTime = startTime;
         this.endTime = endTime;
         this.data = data;
+        this.retryAttempt = retryAttempt;
+        this.results = results;
     }
 
     SubscriptionOperation(OpData data, String requestedBy) {
@@ -34,28 +43,49 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         this.requestedBy = requestedBy;
         this.startTime = System.currentTimeMillis();
         this.endTime = 0;
+        this.retryAttempt = 0;
         this.data = data;
+        this.results = new ArrayList<>();
+        this.results.add(OpResult.of(0));
     }
 
     public static SubscriptionOperation startOp(String subscriptionId, String requestedBy) {
-        OpData data = new StartData(subscriptionId);
-        return new SubscriptionOperation(data, requestedBy);
+        return new SubscriptionOperation(new StartData(subscriptionId), requestedBy);
     }
 
     public static SubscriptionOperation stopOp(String subscriptionId, String requestedBy) {
-        OpData data = new StopData(subscriptionId);
-        return new SubscriptionOperation(data, requestedBy);
+        return new SubscriptionOperation(new StopData(subscriptionId), requestedBy);
     }
 
     public static SubscriptionOperation reAssignShardOp(Assignment assignment, String requestedBy) {
-        OpData data = new ReassignShardData(assignment);
-        return new SubscriptionOperation(data, requestedBy);
+        return new SubscriptionOperation(new ReassignShardData(assignment), requestedBy);
+    }
+
+    @Override
+    public SubscriptionOperation nextRetry() {
+        int attempt = retryAttempt + 1;
+        results.add(0, OpResult.of(attempt));
+        return new SubscriptionOperation(
+                getId(), getVersion(), requestedBy, startTime, endTime, data, attempt, results
+        );
     }
 
     @JsonIgnore
     @Override
     public String getId() {
         return data.getOperationId();
+    }
+
+    @JsonIgnore
+    @Override
+    public State getState() {
+        return results.get(0).state;
+    }
+
+    @JsonIgnore
+    @Override
+    public String getErrorMsg() {
+        return results.get(0).errorMsg;
     }
 
     @JsonIgnore
@@ -67,25 +97,31 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @JsonIgnore
     @Override
     public boolean isDone() {
-        return data.state == State.COMPLETED || data.state == State.ERRORED;
+        return results.get(0).isDone();
     }
 
 
     @Override
     public void markFail(String reason) {
-        data.markFail(reason);
+        results.get(0).markFail(reason);
         endTime = System.currentTimeMillis();
     }
 
     @Override
     public void markCompleted() {
-        data.markCompleted();
+        results.get(0).markCompleted();
         endTime = System.currentTimeMillis();
     }
 
-    public void update(SubscriptionOperation updated) {
-        data.update(updated.data);
-        if (data.isDone()) {
+    @Override
+    public boolean hasFailed() {
+        return results.get(0).hasFailed();
+    }
+
+
+    public void update(State opState, String opError) {
+        results.get(0).update(opState, opError);
+        if (isDone()) {
             endTime = System.currentTimeMillis();
         }
     }
@@ -100,7 +136,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
                 if (!sb.isEmpty()) {
                     sb.append(", ");
                 }
-                sb.append(String.format("Shard:%d failed:%s", opData.getShardId(), opData.getErrorMsg()));
+                sb.append(String.format("Shard:%d failed:%s", opData.getShardId(), shardOp.getErrorMsg()));
             }
             if (shardOp.isDone()) {
                 completedCount++;
@@ -119,13 +155,58 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @Override
     public String toString() {
         return String.format(
-                "{data=%s requestedBy='%s', startTime=%d, endTime=%d}", data, requestedBy,
+                "{data=%s retryAttempt=%d, requestedBy=%s, startTime=%d, endTime=%d}", data, retryAttempt, requestedBy,
                 startTime, endTime
         );
     }
 
-    public enum State {
-        ERRORED, COMPLETED, IN_PROGRESS
+    @Getter
+    static class OpResult {
+        private final long startTime;
+        private final int retryAttempt;
+        private State state;
+        private String errorMsg;
+        private long endTime;
+
+        OpResult(long startTime, int retryAttempt, State state, String errorMsg, long endTime) {
+            this.startTime = startTime;
+            this.retryAttempt = retryAttempt;
+            this.state = state;
+            this.errorMsg = errorMsg;
+            this.endTime = endTime;
+        }
+
+        static OpResult of(int retryCount) {
+            return new OpResult(System.currentTimeMillis(), retryCount, IN_PROGRESS, null, 0);
+        }
+
+        @JsonIgnore
+        public boolean isDone() {
+            return state == COMPLETED || state == ERRORED;
+        }
+
+        public void markFail(String reason) {
+            state = ERRORED;
+            errorMsg = reason;
+            endTime = System.currentTimeMillis();
+        }
+
+        public void markCompleted() {
+            state = COMPLETED;
+            endTime = System.currentTimeMillis();
+        }
+
+        public boolean hasFailed() {
+            return state == ERRORED;
+        }
+
+        public void update(State opState, String opError) {
+            state = opState;
+            errorMsg = opError;
+            if (isDone()) {
+                endTime = System.currentTimeMillis();
+            }
+        }
     }
 
     @Data
@@ -140,36 +221,11 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     public static class OpData {
         private String operationId;
         private String subscriptionId;
-        private State state;
-        private String errorMsg;
-
-        public void markFail(String reason) {
-            state = State.ERRORED;
-            errorMsg = reason;
-        }
-
-        public void markCompleted() {
-            state = State.COMPLETED;
-        }
-
-        @JsonIgnore
-        public boolean isDone() {
-            return state == State.ERRORED || state == State.COMPLETED;
-        }
-
-        public void update(OpData updated) {
-            if (!operationId.equals(updated.operationId)) {
-                throw new IllegalArgumentException("Update failed. Operation Id mismatch.");
-            }
-            errorMsg = updated.errorMsg;
-            state = updated.state;
-        }
 
         @Override
         public String toString() {
             return String.format(
-                    "Id=%s, subscriptionId='%s', state=%s, errorMsg='%s'", operationId, subscriptionId, state,
-                    errorMsg
+                    "Id=%s, subscriptionId=%s", operationId, subscriptionId
             );
         }
     }
@@ -179,7 +235,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends OpData {
         StartData(String subscriptionId) {
-            super(UUID.randomUUID().toString(), subscriptionId, State.IN_PROGRESS, null);
+            super(UUID.randomUUID().toString(), subscriptionId);
         }
 
         @Override
@@ -193,7 +249,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @EqualsAndHashCode(callSuper = true)
     public static class StopData extends OpData {
         StopData(String subscriptionId) {
-            super(UUID.randomUUID().toString(), subscriptionId, State.IN_PROGRESS, null);
+            super(UUID.randomUUID().toString(), subscriptionId);
         }
 
         @Override
@@ -209,7 +265,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         private Assignment assignment;
 
         ReassignShardData(Assignment assignment) {
-            super(UUID.randomUUID().toString(), assignment.getSubscriptionId(), State.IN_PROGRESS, null);
+            super(UUID.randomUUID().toString(), assignment.getSubscriptionId());
             this.assignment = assignment;
         }
 

@@ -18,6 +18,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.List;
 import java.util.concurrent.*;
 
+import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -313,9 +314,7 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(() -> updateLatch.getCount() == 0);
 
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        assertEquals(startOp.getId(), opCaptor.getValue().getId());
-        assertEquals(SubscriptionOperation.State.ERRORED, opCaptor.getValue().getData().getState());
-        assertEquals("Failed to allocate.", opCaptor.getValue().getData().getErrorMsg());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
     }
 
     @Test
@@ -343,9 +342,7 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(() -> updateLatch.getCount() == 0);
 
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        assertEquals(startOp.getId(), opCaptor.getValue().getId());
-        assertEquals(SubscriptionOperation.State.ERRORED, opCaptor.getValue().getData().getState());
-        assertEquals("Failed to allocate.", opCaptor.getValue().getData().getErrorMsg());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
     }
 
     @Test
@@ -374,9 +371,7 @@ public class OperationMgrTest {
 
         await().atMost(100, TimeUnit.SECONDS)
                 .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
-        assertEquals(startOp.getId(), opCaptor.getValue().getId());
-        assertEquals(SubscriptionOperation.State.ERRORED, opCaptor.getValue().getData().getState());
-        assertEquals("Failed to update in handler", opCaptor.getValue().getData().getErrorMsg());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to update in handler");
     }
 
 
@@ -402,9 +397,7 @@ public class OperationMgrTest {
         executionLatch.countDown();
         await().atMost(100, TimeUnit.SECONDS)
                 .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
-        assertEquals(startOp.getId(), opCaptor.getValue().getId());
-        assertEquals(SubscriptionOperation.State.ERRORED, opCaptor.getValue().getData().getState());
-        assertEquals("Failed to allocate.", opCaptor.getValue().getData().getErrorMsg());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
     }
 
     @Test
@@ -425,9 +418,7 @@ public class OperationMgrTest {
 
         await().atMost(100, TimeUnit.SECONDS)
                 .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
-        assertEquals(startOp.getId(), opCaptor.getValue().getId());
-        assertEquals(SubscriptionOperation.State.ERRORED, opCaptor.getValue().getData().getState());
-        assertEquals("Failed to update in handler", opCaptor.getValue().getData().getErrorMsg());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to update in handler");
     }
 
     @Test
@@ -515,10 +506,16 @@ public class OperationMgrTest {
         CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             shardOp.markCompleted();
-            operationMgr.updateShardOp(shardOp.getOpData());
+            operationMgr.updateShardOp(shardOp.getOpData().getParentOpId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
             latch.countDown();
         }, executor);
         return latch;
+    }
+
+    private void validateOp(SubscriptionOperation op, String opId, SubscriptionOperation.State state, String errorMsg) {
+        assertEquals(opId, op.getId());
+        assertEquals(state, op.getState());
+        assertEquals(errorMsg, op.getErrorMsg());
     }
 
     public static SubscriptionOperation getStartOp(VaradhiSubscription subscription) {

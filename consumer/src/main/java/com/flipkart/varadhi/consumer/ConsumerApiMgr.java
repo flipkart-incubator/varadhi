@@ -48,6 +48,7 @@ public class ConsumerApiMgr implements ConsumerApi {
 
     @Override
     public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
+        log.info("Consumer: Stopping shard {}", operation);
         SubscriptionUnitShard shard = operation.getShard();
         consumerInfo.freeShardCapacity(operation.getSubscriptionId(), shard.getShardId(), shard.getCapacityRequest());
         return consumersManager.stopSubscription(
