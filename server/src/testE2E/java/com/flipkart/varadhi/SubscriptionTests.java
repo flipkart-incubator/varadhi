@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubscriptionTests extends E2EBase {
@@ -30,11 +29,11 @@ public class SubscriptionTests extends E2EBase {
 
     @BeforeAll
     public static void setup() {
-        o1 = new Org("public", 0);
-        o1t1 = new Team("team1", 0, o1.getName());
-        o1t1p1 = new Project("default", 0, "", o1t1.getName(), o1t1.getOrg());
-        p1t1 = new TopicResource("topic1", 0, o1t1p1.getName(), false, null);
-        p1t2 = new TopicResource("topic2", 0, o1t1p1.getName(), true, null);
+        o1 = Org.of("public");
+        o1t1 = Team.of("team1", o1.getName());
+        o1t1p1 = Project.of("default", "", o1t1.getName(), o1t1.getOrg());
+        p1t1 = TopicResource.unGrouped("topic1", o1t1p1.getName(), null);
+        p1t2 = TopicResource.grouped("topic2", o1t1p1.getName(), null);
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
@@ -58,9 +57,8 @@ public class SubscriptionTests extends E2EBase {
     @Test
     void createSubscription() {
         String subName = "sub1";
-        SubscriptionResource sub = new SubscriptionResource(
+        SubscriptionResource sub = SubscriptionResource.of(
                 subName,
-                INITIAL_VERSION,
                 o1t1p1.getName(),
                 p1t1.getName(),
                 p1t1.getProject(),
@@ -85,9 +83,8 @@ public class SubscriptionTests extends E2EBase {
     @Test
     void updateSubscription() {
         String subName = "sub2";
-        SubscriptionResource sub = new SubscriptionResource(
+        SubscriptionResource sub = SubscriptionResource.of(
                 subName,
-                INITIAL_VERSION,
                 o1t1p1.getName(),
                 p1t1.getName(),
                 p1t1.getProject(),
@@ -100,9 +97,8 @@ public class SubscriptionTests extends E2EBase {
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created =
                 makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
-        SubscriptionResource update = new SubscriptionResource(
+        SubscriptionResource update = SubscriptionResource.of(
                 created.getName(),
-                created.getVersion(),
                 created.getProject(),
                 created.getTopic(),
                 created.getTopicProject(),
@@ -112,6 +108,8 @@ public class SubscriptionTests extends E2EBase {
                 created.getRetryPolicy(),
                 created.getConsumptionPolicy()
         );
+        //create subscription executes update internally.
+        update.setVersion(1);
 
         SubscriptionResource updated = makeUpdateRequest(getSubscriptionsUri(o1t1p1, subName), update, 200);
 
@@ -123,9 +121,8 @@ public class SubscriptionTests extends E2EBase {
 
     @Test
     void createSubscriptionWithValidationFailure() {
-        SubscriptionResource shortName = new SubscriptionResource(
+        SubscriptionResource shortName = SubscriptionResource.of(
                 "ab",
-                INITIAL_VERSION,
                 o1t1p1.getName(),
                 p1t1.getName(),
                 p1t1.getProject(),
@@ -140,9 +137,8 @@ public class SubscriptionTests extends E2EBase {
                 true
         );
 
-        SubscriptionResource projectNotExist = new SubscriptionResource(
+        SubscriptionResource projectNotExist = SubscriptionResource.of(
                 "sub12",
-                INITIAL_VERSION,
                 "some_proj",
                 p1t1.getName(),
                 p1t1.getProject(),
@@ -153,13 +149,12 @@ public class SubscriptionTests extends E2EBase {
                 consumptionPolicy
         );
         makeCreateRequest(
-                getSubscriptionsUri(new Project("some_proj", 0, "desc", "someteam", "org")), projectNotExist, 404,
+                getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")), projectNotExist, 404,
                 "Project(some_proj) not found.", true
         );
 
-        SubscriptionResource topicNotExist = new SubscriptionResource(
+        SubscriptionResource topicNotExist = SubscriptionResource.of(
                 "sub12",
-                INITIAL_VERSION,
                 o1t1p1.getName(),
                 "some_topic",
                 p1t1.getProject(),
@@ -174,9 +169,8 @@ public class SubscriptionTests extends E2EBase {
                 "Topic(default.some_topic) not found.", true
         );
 
-        SubscriptionResource groupedOnUnGroupTopic = new SubscriptionResource(
+        SubscriptionResource groupedOnUnGroupTopic = SubscriptionResource.of(
                 "sub12",
-                INITIAL_VERSION,
                 o1t1p1.getName(),
                 p1t1.getName(),
                 p1t1.getProject(),

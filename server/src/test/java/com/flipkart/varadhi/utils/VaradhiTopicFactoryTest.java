@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicFactoryTest {
@@ -23,12 +22,12 @@ public class VaradhiTopicFactoryTest {
     public void setUp() {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region, Constants.DefaultTopicCapacity);
-        project = new Project("default", INITIAL_VERSION, "", "public", "public");
+        project = Project.of("default", "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s", project.getOrg(), vTopicName);
         TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, 1, capacityPolicy);
+        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, capacityPolicy);
         doReturn(pTopic).when(storageTopicFactory)
                 .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
@@ -36,13 +35,7 @@ public class VaradhiTopicFactoryTest {
     @Test
     public void getTopic() {
         TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        TopicResource topicResource = new TopicResource(
-                topicName,
-                1,
-                project.getName(),
-                true,
-                capacityPolicy
-        );
+        TopicResource topicResource = TopicResource.grouped(topicName, project.getName(), capacityPolicy);
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         Assertions.assertNotNull(varadhiTopic);
         InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
@@ -55,13 +48,7 @@ public class VaradhiTopicFactoryTest {
     @Test
     public void getTopicWithDefaultCapacity() {
         TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        TopicResource topicResource = new TopicResource(
-                topicName,
-                1,
-                project.getName(),
-                true,
-                null
-        );
+        TopicResource topicResource = TopicResource.grouped(topicName, project.getName(), null);
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
         PulsarStorageTopic pt = (PulsarStorageTopic) it.getTopicToProduce();

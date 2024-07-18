@@ -18,20 +18,20 @@ public class ProjectTests extends E2EBase {
 
     @BeforeEach
     public void testSetup() {
-        org1 = new Org("org1", 0);
-        org2 = new Org("org2", 0);
-        org3 = new Org("org3", 0);
-        org1Team1 = new Team("team1", 0, org1.getName());
-        org1Team2 = new Team("team2", 0, org1.getName());
-        org2Team1 = new Team("team1", 0, org2.getName());
-        org3Team1 = new Team("team1", 0, org3.getName());
-        o1t1Project1 = new Project("project1", 0, "description1", org1Team1.getName(), org1Team1.getOrg());
-        o1t1Project2 = new Project("project2", 0, "description1", org1Team1.getName(), org1Team1.getOrg());
-        o1t2Project3 = new Project("project3", 0, "description1", org1Team2.getName(), org1Team2.getOrg());
-        o1t2Project1 = new Project("project1", 0, "description1", org1Team2.getName(), org1Team2.getOrg());
-        o2t1Project1 = new Project("project1", 0, "description1", org2Team1.getName(), org2Team1.getOrg());
-        o2t1Project4 = new Project("project4", 0, "description1", org2Team1.getName(), org2Team1.getOrg());
-        o3t1Project5 = new Project("project5", 0, "description1", org3Team1.getName(), org3Team1.getOrg());
+        org1 = Org.of("org1");
+        org2 = Org.of("org2");
+        org3 = Org.of("org3");
+        org1Team1 = Team.of("team1", org1.getName());
+        org1Team2 = Team.of("team2", org1.getName());
+        org2Team1 = Team.of("team1", org2.getName());
+        org3Team1 = Team.of("team1", org3.getName());
+        o1t1Project1 = Project.of("project1", "description1", org1Team1.getName(), org1Team1.getOrg());
+        o1t1Project2 = Project.of("project2", "description1", org1Team1.getName(), org1Team1.getOrg());
+        o1t2Project3 = Project.of("project3", "description1", org1Team2.getName(), org1Team2.getOrg());
+        o1t2Project1 = Project.of("project1", "description1", org1Team2.getName(), org1Team2.getOrg());
+        o2t1Project1 = Project.of("project1", "description1", org2Team1.getName(), org2Team1.getOrg());
+        o2t1Project4 = Project.of("project4", "description1", org2Team1.getName(), org2Team1.getOrg());
+        o3t1Project5 = Project.of("project5", "description1", org3Team1.getName(), org3Team1.getOrg());
 
         makeCreateRequest(getOrgsUri(), org1, 200);
         makeCreateRequest(getOrgsUri(), org2, 200);
@@ -100,7 +100,7 @@ public class ProjectTests extends E2EBase {
 
         // org update -- fail
         Project t1_o1t1Project1 =
-                new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
+                Project.of(o1t1Project1.getName(), o1t1Project1.getDescription(),
                         org2Team1.getName(),
                         org2Team1.getOrg()
                 );
@@ -111,7 +111,7 @@ public class ProjectTests extends E2EBase {
 
         // no update -- fail
         Project t2_o1t1Project1 =
-                new Project(o1t1Project1.getName(), o1t1Project1.getVersion(), o1t1Project1.getDescription(),
+                Project.of(o1t1Project1.getName(), o1t1Project1.getDescription(),
                         o1t1Project1.getTeam(),
                         o1t1Project1.getOrg()
                 );
@@ -125,14 +125,15 @@ public class ProjectTests extends E2EBase {
 
         // version mismatch -- fail
         Project t3_o1t1Project1 =
-                new Project(o1t1Project1.getName(), o1t1Project1.getVersion() + 1, o1t1Project1.getDescription(),
+                Project.of(o1t1Project1.getName(), o1t1Project1.getDescription(),
                         org1Team2.getName(),
                         o1t1Project1.getOrg()
                 );
+        t3_o1t1Project1.setVersion(o1t1Project1.getVersion() + 1);
         makeUpdateRequest(getProjectCreateUri(), t3_o1t1Project1, 409, null, true);
 
         // name update  -- fail
-        Project t4_o1t1Project1 = new Project(o1t1Project1.getName() + "mismatch", o1t1Project1.getVersion(),
+        Project t4_o1t1Project1 = Project.of(o1t1Project1.getName() + "mismatch",
                 o1t1Project1.getDescription(),
                 o1t1Project1.getTeam(),
                 o1t1Project1.getOrg()
@@ -164,11 +165,11 @@ public class ProjectTests extends E2EBase {
     @Test
     public void testProjectInvalidOps() {
         Project pCreated = makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
-        Project p1 = new Project("prj1", 0, "", "team_1", "org_1");
+        Project p1 = Project.of("prj1", "", "team_1", "org_1");
         makeGetRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
         makeDeleteRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
 
-        p1 = new Project("prj1", 0, "", pCreated.getTeam(), "org_1");
+        p1 = Project.of("prj1", "", pCreated.getTeam(), "org_1");
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(
@@ -177,7 +178,7 @@ public class ProjectTests extends E2EBase {
                 ), true
         );
 
-        p1 = new Project("prj1", 0, "", "team_1", pCreated.getOrg());
+        p1 = Project.of("prj1", "", "team_1", pCreated.getOrg());
         makeCreateRequest(
                 getProjectCreateUri(), p1, 404,
                 String.format(

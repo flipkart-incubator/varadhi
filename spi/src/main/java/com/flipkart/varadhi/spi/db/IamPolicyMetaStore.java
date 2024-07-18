@@ -10,7 +10,7 @@ public interface IamPolicyMetaStore {
 
     boolean isIamPolicyRecordPresent(String authResourceId);
 
-    int updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
+    void updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
 
     void deleteIamPolicyRecord(String authResourceId);
 }

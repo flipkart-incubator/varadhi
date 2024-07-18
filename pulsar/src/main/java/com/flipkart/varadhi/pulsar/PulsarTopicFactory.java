@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
-import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -30,6 +29,6 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
     ) {
         String pulsarTopicName = getPulsarTopicName(topicName, project);
         int partitionCount = partitioner.getPartitionCount(capacity, queueCategory);
-        return PulsarStorageTopic.from(pulsarTopicName, partitionCount, capacity);
+        return PulsarStorageTopic.of(pulsarTopicName, partitionCount, capacity);
     }
 }

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -48,7 +47,7 @@ public class PulsarStackProviderTest {
         messagingStackOptions = new MessagingStackOptions();
         messagingStackOptions.setConfigFile(configFile.toString());
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
-        project = new Project("default", INITIAL_VERSION, "", "public", "public");
+        project = Project.of("default", "", "public", "public");
         objectMapper = mock(ObjectMapper.class);
         // Below is working as Pulsar clients doesn't seem to either create connections to actual hosts
         // or ignore failure (and retry later) during creation of client objects.

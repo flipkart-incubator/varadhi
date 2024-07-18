@@ -17,7 +17,7 @@ public class PulsarStorageTopic extends StorageTopic {
         this.partitionCount = partitionCount;
     }
 
-    public static PulsarStorageTopic from(String name, int partitionCount, TopicCapacityPolicy capacity) {
+    public static PulsarStorageTopic of(String name, int partitionCount, TopicCapacityPolicy capacity) {
         return new PulsarStorageTopic(name, INITIAL_VERSION, partitionCount, capacity);
     }
 }

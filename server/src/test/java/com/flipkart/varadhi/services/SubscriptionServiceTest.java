@@ -22,6 +22,7 @@ import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.web.admin.SubscriptionHandlersTest;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -45,7 +46,8 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
-import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getVaradhiSubscription;
+import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getGroupedSubscription;
+import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -85,15 +87,15 @@ class SubscriptionServiceTest {
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
 
-        o1 = new Org("TestOrg1", 0);
-        o1t1 = new Team("TestTeam1", 0, o1.getName());
-        o1t1p1 = new Project("o1t1p1", 0, "", o1t1.getName(), o1t1.getOrg());
-        o1t1p2 = new Project("o1t1p2", 0, "", o1t1.getName(), o1t1.getOrg());
-        unGroupedTopic = VaradhiTopic.of(new TopicResource("topic1", 0, o1t1p1.getName(), false, null));
-        groupedTopic = VaradhiTopic.of(new TopicResource("topic2", 0, o1t1p2.getName(), true, null));
+        o1 = Org.of("TestOrg1");
+        o1t1 = Team.of("TestTeam1", o1.getName());
+        o1t1p1 = Project.of("o1t1p1", "", o1t1.getName(), o1t1.getOrg());
+        o1t1p2 = Project.of("o1t1p2", "", o1t1.getName(), o1t1.getOrg());
+        unGroupedTopic = VaradhiTopic.of(TopicResource.unGrouped("topic1", o1t1p1.getName(), null));
+        groupedTopic = VaradhiTopic.of(TopicResource.grouped("topic2", o1t1p2.getName(), null));
 
-        sub1 = getVaradhiSubscription("sub1", o1t1p1, unGroupedTopic, 0);
-        sub2 = getVaradhiSubscription("sub2", o1t1p1, unGroupedTopic, 0);
+        sub1 = SubscriptionHandlersTest.getUngroupedSubscription("sub1", o1t1p1, unGroupedTopic);
+        sub2 = SubscriptionHandlersTest.getUngroupedSubscription("sub2", o1t1p1, unGroupedTopic);
 
         orgService.createOrg(o1);
         teamService.createTeam(o1t1);
@@ -124,15 +126,14 @@ class SubscriptionServiceTest {
         StorageTopicFactory ptf = new PulsarTopicFactory(planner);
         StorageTopicService pts = new PulsarTopicService(null, planner);
 
-        TopicResource tr = new TopicResource("topic2", 0, o1t1p2.getName(), true, capacity);
+        TopicResource tr = TopicResource.grouped("topic2", o1t1p2.getName(), capacity);
         VaradhiTopic vt = VaradhiTopic.of(tr);
 
         StorageTopic storageTopic = ptf.getTopic(vt.getName(), o1t1p2, capacity, InternalQueueCategory.MAIN);
         vt.addInternalTopic(region, InternalCompositeTopic.of(storageTopic));
 
-        SubscriptionResource subRes = new SubscriptionResource(
+        SubscriptionResource subRes = SubscriptionResource.of(
                 "sub12",
-                0,
                 o1t1p2.getName(),
                 "topic2",
                 o1t1p2.getName(),
@@ -170,7 +171,7 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         subscriptionService.createSubscription(unGroupedTopic, sub2, o1t1p1);
         subscriptionService.createSubscription(
-                unGroupedTopic, getVaradhiSubscription("sub3", o1t1p2, unGroupedTopic, 0), o1t1p2);
+                unGroupedTopic, SubscriptionHandlersTest.getUngroupedSubscription("sub3", o1t1p2, unGroupedTopic), o1t1p2);
 
         List<String> actualSubscriptions = subscriptionService.getSubscriptionList(o1t1p1.getName());
 
@@ -225,7 +226,7 @@ class SubscriptionServiceTest {
     @Test
     void testCreateSubscriptionWithNonGroupedTopic() {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", true, o1t1p1, unGroupedTopic, 0);
+        VaradhiSubscription subscription = getGroupedSubscription("sub1", o1t1p1, unGroupedTopic);
 
         Exception exception = assertThrows(
                 IllegalArgumentException.class,
@@ -244,8 +245,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         doReturn(groupedTopic).when(varadhiMetaStore).getTopic(groupedTopic.getName());
 
-        VaradhiSubscription unGroupedSub = getVaradhiSubscription("sub1", false, o1t1p1, groupedTopic, 0);
-        VaradhiSubscription groupedSub = getVaradhiSubscription("sub2", true, o1t1p1, groupedTopic, 0);
+        VaradhiSubscription unGroupedSub = getUngroupedSubscription("sub1", o1t1p1, groupedTopic);
+        VaradhiSubscription groupedSub = getGroupedSubscription("sub2", o1t1p1, groupedTopic);
 
         assertDoesNotThrow(() -> {
             subscriptionService.createSubscription(groupedTopic, unGroupedSub, o1t1p1);
@@ -262,7 +263,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic, 1);
+                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+        update.setVersion(1);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
         doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);
@@ -282,7 +284,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic, 2);
+                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+        update.setVersion(2);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
         doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);
@@ -303,7 +306,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                getVaradhiSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], true, o1t1p1, unGroupedTopic, 1);
+                getGroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+        update.setVersion(1);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
         doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);

@@ -50,7 +50,7 @@ public class PulsarProducerTest {
         doReturn(messageBuilder).when(producer).newMessage();
 
         policy = Constants.DefaultTopicCapacity;
-        topic = PulsarStorageTopic.from("one.two.three.four", 1, policy);
+        topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 
         options = new ProducerOptions();
@@ -78,7 +78,7 @@ public class PulsarProducerTest {
         options.setSendTimeoutMs(2000);
         options.setBatchingMaxPublishDelayMs(25);
         policy = new TopicCapacityPolicy(1000, 2000, 1);
-        topic = PulsarStorageTopic.from("one.two.three.four", 1, policy);
+        topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);

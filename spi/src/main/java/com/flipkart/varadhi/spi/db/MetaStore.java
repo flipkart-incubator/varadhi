@@ -37,7 +37,7 @@ public interface MetaStore {
 
     void deleteProject(String project);
 
-    int updateProject(Project project);
+    void updateProject(Project project);
 
     List<String> getTopicNames(String projectName);
 
@@ -57,7 +57,7 @@ public interface MetaStore {
 
     VaradhiSubscription getSubscription(String subscriptionName);
 
-    int updateSubscription(VaradhiSubscription subscription);
+    void updateSubscription(VaradhiSubscription subscription);
 
     boolean checkSubscriptionExists(String subscriptionName);
 

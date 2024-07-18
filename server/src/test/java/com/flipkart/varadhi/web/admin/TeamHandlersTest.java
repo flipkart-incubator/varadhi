@@ -31,7 +31,7 @@ public class TeamHandlersTest extends WebTestBase {
     TeamHandlers teamHandlers;
     TeamService teamService;
 
-    Org o1 = new Org("OrgOne", 0);
+    Org o1 = Org.of("OrgOne");
 
 
     @BeforeEach
@@ -79,7 +79,7 @@ public class TeamHandlersTest extends WebTestBase {
     public void testTeamCreate() throws InterruptedException {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTeamsUrl(o1.getName()));
-        Team team1 = new Team("team1", 0, o1.getName());
+        Team team1 = Team.of("team1", o1.getName());
 
         doReturn(team1).when(teamService).createTeam(eq(team1));
         Team team1Created = sendRequestWithBody(request, team1, Team.class);
@@ -106,7 +106,7 @@ public class TeamHandlersTest extends WebTestBase {
 
     @Test
     public void testTeamGet() throws InterruptedException {
-        Team team1 = new Team("team1", 0, o1.getName());
+        Team team1 = Team.of("team1", o1.getName());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamUrl(team1));
         doReturn(team1).when(teamService).getTeam(team1.getName(), team1.getOrg());
@@ -125,7 +125,7 @@ public class TeamHandlersTest extends WebTestBase {
 
     @Test
     public void testTeamList() throws Exception {
-        List<Team> teamList = List.of(new Team("team1", 0, o1.getName()), new Team("team2", 0, o1.getName()));
+        List<Team> teamList = List.of(Team.of("team1", o1.getName()), Team.of("team2", o1.getName()));
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamsUrl(o1.getName()));
         doReturn(teamList).when(teamService).getTeams(o1.getName());
 
@@ -142,7 +142,7 @@ public class TeamHandlersTest extends WebTestBase {
 
     @Test
     public void testProjectList() throws Exception {
-        Team team1 = new Team("team1", 0, o1.getName());
+        Team team1 = Team.of("team1", o1.getName());
         List<Project> projectList1 = List.of();
         List<Project> projectList2 = List.of(getProject("project1", team1), getProject("project2", team1));
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getProjectsUrl(team1));
@@ -162,13 +162,13 @@ public class TeamHandlersTest extends WebTestBase {
     }
 
     private Project getProject(String name, Team team) {
-        return new Project(name, 0, "Some random value", team.getName(), team.getOrg());
+        return Project.of(name, "Some random value", team.getName(), team.getOrg());
     }
 
 
     @Test
     public void testTeamDelete() throws InterruptedException {
-        Team team1 = new Team("team1", 0, o1.getName());
+        Team team1 = Team.of("team1", o1.getName());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getTeamUrl(team1));
         doNothing().when(teamService).deleteTeam(team1.getName(), team1.getOrg());

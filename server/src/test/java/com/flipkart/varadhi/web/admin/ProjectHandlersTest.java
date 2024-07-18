@@ -28,8 +28,8 @@ public class ProjectHandlersTest extends WebTestBase {
     ProjectHandlers projectHandlers;
     ProjectService projectService;
 
-    Org o1 = new Org("org_one", 0);
-    Team t1 = new Team("team_one", 0, o1.getName());
+    Org o1 = Org.of("org_one");
+    Team t1 = Team.of("team_one", o1.getName());
 
 
     @BeforeEach
@@ -69,7 +69,7 @@ public class ProjectHandlersTest extends WebTestBase {
     }
 
     private Project getProject(String name) {
-        return new Project(name, 0, "Some random value", t1.getName(), t1.getOrg());
+        return Project.of(name, "Some random value", t1.getName(), t1.getOrg());
     }
 
 

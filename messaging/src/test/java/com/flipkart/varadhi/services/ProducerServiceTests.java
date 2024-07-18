@@ -41,7 +41,7 @@ public class ProducerServiceTests {
     Producer producer;
     Random random;
     String topic = "topic1";
-    Project project = new Project("project1", 0, "", "team1", "org1");
+    Project project = Project.of("project1", "", "team1", "org1");
     String region = "region1";
 
     @BeforeEach
@@ -252,7 +252,7 @@ public class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(new TopicResource(name, 0, project.getName(), false, null));
+        VaradhiTopic topic = VaradhiTopic.of(TopicResource.unGrouped(name, project.getName(), null));
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);

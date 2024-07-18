@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static org.mockito.Mockito.*;
 
 public class VaradhiTopicServiceTest {
@@ -38,12 +37,12 @@ public class VaradhiTopicServiceTest {
         storageTopicFactory = mock(StorageTopicFactory.class);
         varadhiTopicFactory = spy(new VaradhiTopicFactory(storageTopicFactory, region, Constants.DefaultTopicCapacity));
         varadhiTopicService = new VaradhiTopicService(storageTopicService, metaStore);
-        project = new Project("default", INITIAL_VERSION, "", "public", "public");
+        project = Project.of("default", "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), topicName);
         String pTopicName =
                 String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
         capacityPolicy = Constants.DefaultTopicCapacity;
-        PulsarStorageTopic pTopic = PulsarStorageTopic.from(pTopicName, 1, capacityPolicy);
+        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, capacityPolicy);
         Mockito.doReturn(pTopic).when(storageTopicFactory)
                 .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
     }
@@ -164,13 +163,7 @@ public class VaradhiTopicServiceTest {
     }
 
     private TopicResource getTopicResource(String topicName, Project project) {
-        return new TopicResource(
-                topicName,
-                1,
-                project.getName(),
-                true,
-                capacityPolicy
-        );
+        return TopicResource.grouped(topicName, project.getName(), capacityPolicy);
     }
 }
 

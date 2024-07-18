@@ -41,7 +41,7 @@ public class OrgServiceTest {
 
     @Test
     public void testCreateOrg() {
-        Org org = new Org("name1", 0);
+        Org org = Org.of("name1");
         Org orgCreated = orgService.createOrg(org);
         Org orgGet = orgService.getOrg(org.getName());
         Assertions.assertEquals(org, orgCreated);
@@ -54,7 +54,7 @@ public class OrgServiceTest {
 
     @Test
     public void testCreateOrgNodeExists() throws Exception {
-        Org org = new Org("name1", 0);
+        Org org = Org.of("name1");
         CreateBuilder builder = spy(zkCurator.create());
         doReturn(builder).when(zkCurator).create();
         doThrow(new KeeperException.NodeExistsException()).when(builder).forPath(any(), any());
@@ -66,7 +66,7 @@ public class OrgServiceTest {
 
     @Test
     public void testCreateOrgCuratorThrows() throws Exception {
-        Org org = new Org("name1", 0);
+        Org org = Org.of("name1");
         CreateBuilder builder = spy(zkCurator.create());
         doReturn(builder).when(zkCurator).create();
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any(), any());
@@ -76,7 +76,7 @@ public class OrgServiceTest {
 
     @Test
     public void testDeleteOrg() {
-        Org org = new Org("name1", 0);
+        Org org = Org.of("name1");
         orgService.createOrg(org);
         orgService.deleteOrg(org.getName());
         ResourceNotFoundException e =
@@ -86,10 +86,10 @@ public class OrgServiceTest {
 
     @Test
     public void testDeleteOrgHasTeams() {
-        Org org1 = new Org("Org_1", 0);
-        Org org2 = new Org("Org_2", 0);
-        Team team1 = new Team("team1", 0, org1.getName());
-        Team team2 = new Team("team2", 0, org1.getName());
+        Org org1 = Org.of("Org_1");
+        Org org2 = Org.of("Org_2");
+        Team team1 = Team.of("team1", org1.getName());
+        Team team2 = Team.of("team2", org1.getName());
         orgService.createOrg(org1);
         orgService.createOrg(org2);
         teamService.createTeam(team1);
@@ -106,7 +106,7 @@ public class OrgServiceTest {
 
     @Test
     public void testListOrgs() {
-        Org org = new Org("name1", 0);
+        Org org = Org.of("name1");
         List<Org> orgListOriginal = orgService.getOrgs();
         orgService.createOrg(org);
         List<Org> orgListNew = orgService.getOrgs();

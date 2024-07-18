@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 
 @ExtendWith(VertxExtension.class)
 public class AuthZProviderTests extends E2EBase {
@@ -49,11 +48,11 @@ public class AuthZProviderTests extends E2EBase {
     public static void setup(VertxTestContext testContext) throws IOException, InterruptedException {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        oPublic = new Org("public", 0);
-        fkTeamRocket = new Team("team_rocket", 0, oPublic.getName());
-        fkTeamAsh = new Team("team_ash", 0, oPublic.getName());
-        fkDefault = new Project("default", 0, "", fkTeamRocket.getName(), oPublic.getName());
-        fkTopic001 = new TopicResource("topic001", INITIAL_VERSION, fkDefault.getName(), false, null);
+        oPublic = Org.of("public");
+        fkTeamRocket = Team.of("team_rocket",  oPublic.getName());
+        fkTeamAsh = Team.of("team_ash", oPublic.getName());
+        fkDefault = Project.of("default", "", fkTeamRocket.getName(), oPublic.getName());
+        fkTopic001 = TopicResource.unGrouped("topic001",fkDefault.getName(), null);
         makeCreateRequest(getOrgsUri(), oPublic, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamAsh, 200);
