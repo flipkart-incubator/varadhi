@@ -29,21 +29,21 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class ShardAssignerTest {
+public class AssignmentManagerTest {
     @Mock
     private AssignmentStore assignmentStore;
 
     private AssignmentStrategy strategy;
     @Mock
     private MeterRegistry meterRegistry;
-    private ShardAssigner shardAssigner;
+    private AssignmentManager assignmentManager;
 
 
     @BeforeEach
     public void setup() {
         MockitoAnnotations.openMocks(this);
         strategy = spy(new LeastAssignedStrategy());
-        shardAssigner = spy(new ShardAssigner(strategy, assignmentStore, meterRegistry));
+        assignmentManager = spy(new AssignmentManager(strategy, assignmentStore, meterRegistry));
     }
 
     @Test
@@ -61,7 +61,7 @@ public class ShardAssignerTest {
         List<String> idsToExclude = List.of(consumerIdToExclude);
 
         doReturn(new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         List<Assignment> assignments = aFuture.get();
         assertEquals(shards.size(), assignments.size());
@@ -74,7 +74,7 @@ public class ShardAssignerTest {
         NodeCapacity c2 = nodes.get(2).getAvailable().clone();
         doReturn(assignments).when(assignmentStore).getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).createAssignments(assignmentCapture.capture());
-        CompletableFuture<List<Assignment>> aFutureNext = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFutureNext = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFutureNext::isDone);
         assertListEquals(assignments, aFutureNext.get());
         validateCapacity(c0, c1, c2, nodes);
@@ -96,7 +96,7 @@ public class ShardAssignerTest {
 
         doThrow(new MetaStoreException("failed to get assignments.")).when(assignmentStore)
                 .getSubAssignments(sub1.getName());
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         assertException(aFuture, MetaStoreException.class, "failed to get assignments.");
         verify(assignmentStore, times(0)).createAssignments(anyList());
@@ -106,7 +106,7 @@ public class ShardAssignerTest {
         doReturn(new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to create assignments.")).when(assignmentStore)
                 .createAssignments(anyList());
-        aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         assertException(aFuture, MetaStoreException.class, "failed to create assignments.");
         validateCapacity(c0, c1, c2, nodes);
@@ -114,7 +114,7 @@ public class ShardAssignerTest {
         doReturn(new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new CapacityException("Not enough capacity.")).when(strategy).assign(anyList(), any(), anyList());
         doNothing().when(assignmentStore).createAssignments(anyList());
-        aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         assertException(aFuture, CapacityException.class, "Not enough capacity.");
         validateCapacity(c0, c1, c2, nodes);
@@ -132,14 +132,14 @@ public class ShardAssignerTest {
         NodeCapacity c2 = nodes.get(2).getAvailable().clone();
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
 
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         List<Assignment> assignments = aFuture.get();
         verify(assignmentStore, times(1)).getSubAssignments(sub1.getName());
         ArgumentCaptor<List<Assignment>> assignmentCapture = ArgumentCaptor.forClass(List.class);
         doReturn(assignments).when(assignmentStore).getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).deleteAssignments(assignmentCapture.capture());
-        CompletableFuture<Void> vFuture = shardAssigner.unAssignShards(assignments, sub1, true);
+        CompletableFuture<Void> vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         verify(assignmentStore, times(2)).getSubAssignments(sub1.getName());
         verify(assignmentStore, times(1)).deleteAssignments(anyList());
@@ -148,12 +148,12 @@ public class ShardAssignerTest {
 
         // should not delete already deleted, may free the capacity though.
         doReturn(new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
-        aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
 
         doReturn(List.of(assignments.get(0))).when(assignmentStore).getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).deleteAssignments(assignmentCapture.capture());
-        vFuture = shardAssigner.unAssignShards(assignments, sub1, true);
+        vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         verify(assignmentStore, times(4)).getSubAssignments(sub1.getName());
         verify(assignmentStore, times(2)).deleteAssignments(anyList());
@@ -163,7 +163,7 @@ public class ShardAssignerTest {
         // if nothing to delete, nothing should be deleted. no capacity change as well.
         doReturn(List.of()).when(assignmentStore).getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).deleteAssignments(assignmentCapture.capture());
-        vFuture = shardAssigner.unAssignShards(assignments, sub1, true);
+        vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         assertTrue(assignmentCapture.getAllValues().get(2).isEmpty());
         verify(assignmentStore, times(3)).deleteAssignments(anyList());
@@ -172,7 +172,7 @@ public class ShardAssignerTest {
         //unAssign should be no-op when there is nothing to unAssign.
         doReturn(assignments).when(assignmentStore).getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).deleteAssignments(assignmentCapture.capture());
-        vFuture = shardAssigner.unAssignShards(new ArrayList<>(), sub1, true);
+        vFuture = assignmentManager.unAssignShards(new ArrayList<>(), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         assertTrue(assignmentCapture.getAllValues().get(2).isEmpty());
         verify(assignmentStore, times(4)).deleteAssignments(anyList());
@@ -189,7 +189,7 @@ public class ShardAssignerTest {
         nodes.forEach(this::addConsumerNode);
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
 
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         List<Assignment> assignments = aFuture.get();
         NodeCapacity c0 = nodes.get(0).getAvailable().clone();
@@ -202,7 +202,7 @@ public class ShardAssignerTest {
 
         //validate capacity is not freed in case of exception and delete is not called
         //if getSubAssignment throws.
-        CompletableFuture<Void> vFuture = shardAssigner.unAssignShards(assignments, sub1, true);
+        CompletableFuture<Void> vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         assertException(vFuture, MetaStoreException.class, "failed to get assignments.");
         verify(assignmentStore, never()).deleteAssignments(anyList());
@@ -212,7 +212,7 @@ public class ShardAssignerTest {
         doReturn(assignments).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to delete assignments.")).when(assignmentStore)
                 .deleteAssignments(anyList());
-        vFuture = shardAssigner.unAssignShards(assignments, sub1, true);
+        vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         validateCapacity(c0, c1, c2, nodes);
     }
@@ -226,11 +226,11 @@ public class ShardAssignerTest {
         nodes.forEach(this::addConsumerNode);
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
 
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         List<Assignment> assignments = aFuture.get();
 
-        CompletableFuture<Assignment> rFuture = shardAssigner.reAssignShard(assignments.get(0), sub1, true);
+        CompletableFuture<Assignment> rFuture = assignmentManager.reAssignShard(assignments.get(0), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(rFuture::isDone);
         Assignment ra = rFuture.get();
         assertEquals(assignments.get(0).getShardId(), ra.getShardId());
@@ -249,7 +249,7 @@ public class ShardAssignerTest {
         NodeCapacity c1 = nodes.get(1).getAvailable().clone();
         NodeCapacity c2 = nodes.get(2).getAvailable().clone();
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
-        CompletableFuture<List<Assignment>> aFuture = shardAssigner.assignShards(shards, sub1, idsToExclude);
+        CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         List<Assignment> assignments = aFuture.get();
         c0.allocate(shards.get(0).getCapacityRequest());
@@ -257,7 +257,7 @@ public class ShardAssignerTest {
 
         doThrow(new MetaStoreException("failed to get subscription assignments.")).when(assignmentStore)
                 .getSubAssignments(sub1.getName());
-        CompletableFuture<Assignment> rFuture = shardAssigner.reAssignShard(assignments.get(0), sub1, true);
+        CompletableFuture<Assignment> rFuture = assignmentManager.reAssignShard(assignments.get(0), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(rFuture::isDone);
         assertException(rFuture, MetaStoreException.class, "failed to get subscription assignments.");
         verify(assignmentStore, never()).deleteAssignments(anyList());
@@ -266,7 +266,7 @@ public class ShardAssignerTest {
         doReturn(assignments, new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to create assignments.")).when(assignmentStore)
                 .createAssignments(anyList());
-        rFuture = shardAssigner.reAssignShard(assignments.get(0), sub1, true);
+        rFuture = assignmentManager.reAssignShard(assignments.get(0), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(rFuture::isDone);
         assertException(rFuture, MetaStoreException.class, "failed to create assignments.");
         c0.free(shards.get(0).getCapacityRequest()); //unAssign happened, assigned failed.
@@ -286,9 +286,9 @@ public class ShardAssignerTest {
         doReturn(allAssignments).when(assignmentStore).getAllAssignments();
         doReturn(nodeAssignments).when(assignmentStore).getConsumerNodeAssignments("node3");
         doReturn(subAssignments).when(assignmentStore).getSubAssignments("project1.sub1");
-        assertListEquals(allAssignments, shardAssigner.getAllAssignments());
-        assertListEquals(nodeAssignments, shardAssigner.getConsumerNodeAssignments("node3"));
-        assertListEquals(subAssignments, shardAssigner.getSubAssignments("project1.sub1"));
+        assertListEquals(allAssignments, assignmentManager.getAllAssignments());
+        assertListEquals(nodeAssignments, assignmentManager.getConsumerNodeAssignments("node3"));
+        assertListEquals(subAssignments, assignmentManager.getSubAssignments("project1.sub1"));
     }
 
     @Test
@@ -299,8 +299,8 @@ public class ShardAssignerTest {
         addConsumerNode(consumerNode1);
         addConsumerNode(consumerNode2);
         addConsumerNode(consumerNode1);
-        assertFalse(shardAssigner.addConsumerNode(consumerNode1));
-        assertTrue(shardAssigner.addConsumerNode(consumerNode3));
+        assertFalse(assignmentManager.addConsumerNode(consumerNode1));
+        assertTrue(assignmentManager.addConsumerNode(consumerNode3));
     }
 
     @Test
@@ -315,13 +315,13 @@ public class ShardAssignerTest {
     }
 
     private void removeConsumerNode(String consumerId) {
-        CompletableFuture<Void> nFuture = shardAssigner.consumerNodeLeft(consumerId);
+        CompletableFuture<Void> nFuture = assignmentManager.consumerNodeLeft(consumerId);
         await().atMost(1, TimeUnit.SECONDS).until(nFuture::isDone);
         assertFalse(nFuture.isCompletedExceptionally());
     }
 
     private void addConsumerNode(ConsumerNode node) {
-        CompletableFuture<Void> nFuture = shardAssigner.consumerNodeJoined(node);
+        CompletableFuture<Void> nFuture = assignmentManager.consumerNodeJoined(node);
         await().atMost(1, TimeUnit.SECONDS).until(nFuture::isDone);
         assertFalse(nFuture.isCompletedExceptionally());
     }

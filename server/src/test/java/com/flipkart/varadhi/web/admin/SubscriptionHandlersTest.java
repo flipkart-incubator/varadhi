@@ -33,7 +33,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private static final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
             RetryPolicy.BackoffType.LINEAR,
-            1, 1, 1, 1
+            1, 1, 1, 3
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);

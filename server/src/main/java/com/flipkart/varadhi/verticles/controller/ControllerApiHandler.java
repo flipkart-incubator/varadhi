@@ -3,7 +3,7 @@ package com.flipkart.varadhi.verticles.controller;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
-import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.ShardOpResponse;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,10 +36,12 @@ public class ControllerApiHandler {
     }
 
     public void update(ClusterMessage message) {
-        ShardOperation.OpData operation = message.getData(ShardOperation.OpData.class);
-        controllerMgr.update(operation).exceptionally(throwable -> {
-            log.error("Shard update ({}) failed.", operation);
-            return null;
-        });
+        ShardOpResponse opResponse = message.getData(ShardOpResponse.class);
+        controllerMgr.update(
+                        opResponse.getSubOpId(), opResponse.getShardOpId(), opResponse.getState(), opResponse.getErrorMsg())
+                .exceptionally(throwable -> {
+                    log.error("Shard update ({}) failed {}.", opResponse, throwable.getMessage());
+                    return null;
+                });
     }
 }

@@ -3,7 +3,8 @@ package com.flipkart.varadhi.verticles.controller;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.*;
 import com.flipkart.varadhi.controller.OperationMgr;
-import com.flipkart.varadhi.controller.ShardAssigner;
+import com.flipkart.varadhi.controller.AssignmentManager;
+import com.flipkart.varadhi.controller.RetryPolicy;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.cluster.*;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -62,12 +64,21 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-        OperationMgr operationMgr = new OperationMgr(controllerConfig, metaStoreProvider.getOpStore());
-        ShardAssigner assigner =
-                new ShardAssigner(new LeastAssignedStrategy(), metaStoreProvider.getAssignmentStore(), meterRegistry);
-        ControllerApiMgr controllerApiMgr =
-                new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
-        return controllerApiMgr;
+        OperationMgr operationMgr =
+                new OperationMgr(controllerConfig.getMaxConcurrentOps(), metaStoreProvider.getOpStore(),
+                        getRetryPolicy()
+                );
+        AssignmentManager assigner =
+                new AssignmentManager(
+                        new LeastAssignedStrategy(), metaStoreProvider.getAssignmentStore(), meterRegistry);
+        return new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
+    }
+
+    private RetryPolicy getRetryPolicy() {
+        return new RetryPolicy(
+                controllerConfig.getMaxRetryAllowed(), controllerConfig.getRetryIntervalInSeconds(),
+                controllerConfig.getRetryMinBackoffInSeconds(), controllerConfig.getRetryMaxBackOffInSeconds()
+        );
     }
 
     private Future<Void> onLeaderElected(
@@ -143,6 +154,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private void requeueInProgressOperation(ControllerApiMgr controllerApiMgr) {
         List<SubscriptionOperation> pendingSubOps = getPendingSubOps(controllerApiMgr);
+        pendingSubOps.sort(Comparator.comparing(SubscriptionOperation::getStartTime));
         log.info("Found {} inProgress operations.", pendingSubOps.size());
         pendingSubOps.forEach(subOp -> {
             controllerApiMgr.retryOperation(subOp);

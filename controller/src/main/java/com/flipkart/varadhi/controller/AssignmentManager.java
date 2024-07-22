@@ -16,14 +16,16 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class ShardAssigner {
-    private final String metricPrefix = "controller.assigner";
+public class AssignmentManager {
+    private final String metricPrefix = "controller.assignmentMgr";
     private final AssignmentStrategy strategy;
     private final Map<String, ConsumerNode> consumerNodes;
     private final AssignmentStore assignmentStore;
     private final ExecutorService executor;
 
-    public ShardAssigner(AssignmentStrategy strategy, AssignmentStore assignmentStore, MeterRegistry meterRegistry) {
+    public AssignmentManager(
+            AssignmentStrategy strategy, AssignmentStore assignmentStore, MeterRegistry meterRegistry
+    ) {
         this.strategy = strategy;
         this.consumerNodes = new ConcurrentHashMap<>();
         this.assignmentStore = assignmentStore;
@@ -37,58 +39,59 @@ public class ShardAssigner {
     public CompletableFuture<List<Assignment>> assignShards(
             List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<String> nodesToExclude
     ) {
-        Set<String> exclusionSet = new HashSet<>(nodesToExclude);
         return CompletableFuture.supplyAsync(() -> {
-            List<ConsumerNode> activeConsumers =
-                    consumerNodes.values().stream().filter(c -> !exclusionSet.contains(c.getConsumerId()))
-                            .collect(Collectors.toList());
-            log.info(
-                    "AssignShards found consumer nodes active:{} of total:{}", activeConsumers.size(),
-                    consumerNodes.size()
-            );
-
-            List<Assignment> assignments = new ArrayList<>();
+            List<Assignment> newAssignments = new ArrayList<>();
             try {
+                Map<Integer, Assignment> alreadyAssigned = getExistingAssignments(shards, subscription);
+                log.info("Found {} assignments for {}.", alreadyAssigned.size(), subscription.getName());
 
-                List<SubscriptionUnitShard> unAssignedShards = new ArrayList<>();
-                List<Assignment> alreadyAssigned = new ArrayList<>();
-
-                Map<Integer, Assignment> existingAssignments =
-                        assignmentStore.getSubAssignments(subscription.getName()).stream()
-                                .collect(Collectors.toMap(Assignment::getShardId, a -> a));
-
+                List<SubscriptionUnitShard> unAssignedShards =
+                        shards.stream().filter(s -> !alreadyAssigned.containsKey(s.getShardId()))
+                                .collect(Collectors.toList());
                 // create new assignments only for shards which are still un-assigned.
-                shards.forEach(s -> {
-                    if (existingAssignments.containsKey(s.getShardId())) {
-                        alreadyAssigned.add(existingAssignments.get(s.getShardId()));
-                    } else {
-                        unAssignedShards.add(s);
-                    }
-                });
+                newAssignments.addAll(doAssignments(unAssignedShards, subscription, nodesToExclude));
+                assignmentStore.createAssignments(newAssignments);
+                log.info("Created {} new Assignments for {}.", newAssignments.size(), subscription.getName());
 
-                alreadyAssigned.forEach(
-                        a -> log.info("Assignment {} already exists for shard {}, skipping assignment.", a,
-                                a.getName()
-                        ));
-
-                assignments.addAll(strategy.assign(unAssignedShards, subscription, activeConsumers));
-                log.info(
-                        "Assign Requested:{}, Already Assigned:{}, Newly Assigned:{}.", shards.size(),
-                        alreadyAssigned.size(), assignments.size()
-                );
-                assignmentStore.createAssignments(assignments);
-                // assignments which are already done are returned as well.
-                alreadyAssigned.addAll(assignments);
-
-                return alreadyAssigned;
+                // assignments which were already assigned are returned as well.
+                List<Assignment> allAssignments = new ArrayList<>(alreadyAssigned.values());
+                allAssignments.addAll(newAssignments);
+                return allAssignments;
             } catch (Exception e) {
                 log.error("Failed while creating assignment, freeing up any allocation done. {}.", e.getMessage());
                 SubscriptionShards subShards = subscription.getShards();
-                assignments.forEach(
+                newAssignments.forEach(
                         assignment -> freeCapacityFromNode(assignment, subShards.getShard(assignment.getShardId())));
                 throw e;
             }
         }, executor);
+    }
+
+    private Map<Integer, Assignment> getExistingAssignments(
+            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription
+    ) {
+        Map<Integer, Assignment> assigned =
+                assignmentStore.getSubAssignments(subscription.getName()).stream()
+                        .collect(Collectors.toMap(Assignment::getShardId, a -> a));
+
+        return shards.stream().filter(s -> assigned.containsKey(s.getShardId()))
+                .collect(Collectors.toMap(SubscriptionUnitShard::getShardId, s -> assigned.get(s.getShardId())));
+    }
+
+    private List<Assignment> doAssignments(
+            List<SubscriptionUnitShard> unAssignedShards, VaradhiSubscription subscription, List<String> nodesToExclude
+    ) {
+        List<ConsumerNode> activeConsumers = getActiveConsumers(nodesToExclude);
+        return strategy.assign(unAssignedShards, subscription, activeConsumers);
+    }
+
+    private List<ConsumerNode> getActiveConsumers(List<String> nodesToExclude) {
+        Set<String> exclusions = new HashSet<>(nodesToExclude);
+        List<ConsumerNode> activeConsumers =
+                consumerNodes.values().stream().filter(c -> !exclusions.contains(c.getConsumerId()))
+                        .collect(Collectors.toList());
+        log.info("Found {} active consumer nodes of total {}.", activeConsumers.size(), consumerNodes.size());
+        return activeConsumers;
     }
 
 

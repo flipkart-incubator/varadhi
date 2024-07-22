@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+
 import lombok.Data;
 
 @Data

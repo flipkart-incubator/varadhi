@@ -19,7 +19,6 @@ public final class VaradhiSubscriptionFactory {
     private static final String TOPIC_QUALIFIER = "it";
     private static final String SHARD_QUALIFIER = "shard";
     private static final int READ_FAN_OUT_FOR_INTERNAL_QUEUE = 1;
-    private static final int MAX_RETRY_COUNT = 3;
     private final String deployedRegion;
     private final StorageSubscriptionFactory<StorageSubscription<StorageTopic>, StorageTopic> subscriptionFactory;
     private final StorageTopicFactory<StorageTopic> topicFactory;
@@ -39,7 +38,10 @@ public final class VaradhiSubscriptionFactory {
     public VaradhiSubscription get(SubscriptionResource subscriptionResource, Project subProject, VaradhiTopic topic) {
         String subName = subscriptionResource.getSubscriptionInternalName();
         SubscriptionShards shards =
-                getSubscriptionShards(subName, topic, subProject, subscriptionResource.getConsumptionPolicy());
+                getSubscriptionShards(
+                        subName, topic, subProject, subscriptionResource.getConsumptionPolicy(),
+                        subscriptionResource.getRetryPolicy()
+                );
         return VaradhiSubscription.of(
                 subName,
                 subscriptionResource.getProject(),
@@ -55,7 +57,8 @@ public final class VaradhiSubscriptionFactory {
 
 
     private SubscriptionShards getSubscriptionShards(
-            String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy
+            String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy,
+            RetryPolicy retryPolicy
     ) {
         StorageTopic subscribedStorageTopic = topic.getProduceTopicForRegion(deployedRegion).getTopicToProduce();
         List<TopicPartitions<StorageTopic>> topicPartitions =
@@ -64,13 +67,14 @@ public final class VaradhiSubscriptionFactory {
         log.info("Planning {} shards for subscription {}.", topicPartitions.size(), subName);
         TopicCapacityPolicy shardCapacity = getShardCapacity(topic.getCapacity(), numShards);
         if (numShards == 1) {
-            return getShard(subName, 0, topicPartitions.get(0), shardCapacity, subProject, consumptionPolicy);
+            return getShard(
+                    subName, 0, topicPartitions.get(0), shardCapacity, subProject, consumptionPolicy, retryPolicy);
         } else {
             Map<Integer, SubscriptionUnitShard> subShards = new HashMap<>();
             for (int shardId = 0; shardId < numShards; shardId++) {
                 subShards.put(
                         shardId, getShard(subName, shardId, topicPartitions.get(shardId), shardCapacity, subProject,
-                                consumptionPolicy
+                                consumptionPolicy, retryPolicy
                         ));
             }
             return new SubscriptionMultiShard(subShards);
@@ -83,13 +87,14 @@ public final class VaradhiSubscriptionFactory {
 
     private SubscriptionUnitShard getShard(
             String subName, int shardId, TopicPartitions<StorageTopic> shardTopicPartition,
-            TopicCapacityPolicy capacity, Project subProject, ConsumptionPolicy consumptionPolicy
+            TopicCapacityPolicy capacity, Project subProject, ConsumptionPolicy consumptionPolicy,
+            RetryPolicy retryPolicy
     ) {
         //TODO::Take care of region.
         //TODO::Storage Topic/Subscription names needs to be indexed with in Composite topic/subscription.
         InternalCompositeSubscription shardMainSub = getShardMainSub(subName, shardId, shardTopicPartition, subProject);
         RetrySubscription retrySub =
-                getRetrySub(subName, shardId, subProject, capacity, consumptionPolicy);
+                getRetrySub(subName, shardId, subProject, capacity, consumptionPolicy, retryPolicy);
         InternalCompositeSubscription dltSub =
                 getDltSub(subName, shardId, subProject, capacity, consumptionPolicy);
         return new SubscriptionUnitShard(shardId, capacity, shardMainSub, retrySub, dltSub);
@@ -112,10 +117,10 @@ public final class VaradhiSubscriptionFactory {
 
     private RetrySubscription getRetrySub(
             String subscriptionName, int shardId, Project project, TopicCapacityPolicy capacity,
-            ConsumptionPolicy consumptionPolicy
+            ConsumptionPolicy consumptionPolicy, RetryPolicy retryPolicy
     ) {
-        InternalCompositeSubscription[] retrySubs = new InternalCompositeSubscription[MAX_RETRY_COUNT];
-        for (int retryIndex = 0; retryIndex < MAX_RETRY_COUNT; retryIndex++) {
+        InternalCompositeSubscription[] retrySubs = new InternalCompositeSubscription[retryPolicy.getRetryAttempts()];
+        for (int retryIndex = 0; retryIndex < retryPolicy.getRetryAttempts(); retryIndex++) {
             retrySubs[retryIndex] = getInternalSub(
                     subscriptionName,
                     shardId,

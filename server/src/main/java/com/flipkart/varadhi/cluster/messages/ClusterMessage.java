@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.cluster.messages;
 
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.entities.cluster.ShardRequest;
+import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.Getter;
@@ -34,12 +34,12 @@ public class ClusterMessage {
         return new ClusterMessage(JsonMapper.jsonSerialize(operation));
     }
 
-    public static ClusterMessage of(ShardRequest request) {
+    public static ClusterMessage of(ShardStatusRequest request) {
         // This will result in double serialization of the operation object, below and during eventbus call.
         return new ClusterMessage(JsonMapper.jsonSerialize(request));
     }
 
-    public static <T> ClusterMessage of (T payload) {
+    public static <T> ClusterMessage of(T payload) {
         return new ClusterMessage(JsonMapper.jsonSerialize(payload));
     }
 

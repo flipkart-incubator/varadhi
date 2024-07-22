@@ -68,6 +68,7 @@ public class MessageRouter {
                         deliveryOptions
                 )).exceptionally(t -> {
                     log.error("request handler completed exceptionally: {}", t.getMessage());
+                    //TODO::exception exchange is not working always. ser(de) is failing for some exception.
                     Exception failure;
                     if (t instanceof ExecutionException) {
                         failure = (ExecutionException) t.getCause();
