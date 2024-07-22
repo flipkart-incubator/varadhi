@@ -36,7 +36,7 @@ public class OperationMgrTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         doReturn(MAX_CONCURRENT_OPS).when(config).getMaxConcurrentOps();
-        operationMgr = new OperationMgr(config, opStore);
+        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20));
         executor = Executors.newCachedThreadPool();
     }
 
@@ -384,7 +384,7 @@ public class OperationMgrTest {
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
         doAnswer(invocation -> {
             throw new MetaStoreException("Failed to update");
-        }).when(opStore).updateSubOp(opCaptor.capture());
+        }).when(opStore).updateSubOp(any());
 
         operationMgr.enqueue(startOp, operation -> {
             executionCalled.complete(null);
@@ -397,6 +397,7 @@ public class OperationMgrTest {
         executionLatch.countDown();
         await().atMost(100, TimeUnit.SECONDS)
                 .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
+        verify(opStore).updateSubOp(opCaptor.capture());
         validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
     }
 
@@ -470,9 +471,9 @@ public class OperationMgrTest {
         doReturn(false).when(opStore).shardOpExists(shard1Op.getId());
         doReturn(true).when(opStore).shardOpExists(shard2Op.getId());
 
-        operationMgr.createAndExecute(shard1Op, operation -> CompletableFuture.completedFuture(null));
+        operationMgr.createOrResetShardOp(shard1Op, false);
         verify(opStore, times(1)).createShardOp(shard1Op);
-        operationMgr.createAndExecute(shard2Op, operation -> CompletableFuture.completedFuture(null));
+        operationMgr.createOrResetShardOp(shard2Op, false);
         verify(opStore, never()).createShardOp(shard2Op);
     }
 

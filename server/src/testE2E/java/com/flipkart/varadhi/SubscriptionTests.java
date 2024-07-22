@@ -23,7 +23,7 @@ public class SubscriptionTests extends E2EBase {
     private final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
             RetryPolicy.BackoffType.LINEAR,
-            1, 1, 1, 1
+            1, 1, 1, 3
     );
     private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
 

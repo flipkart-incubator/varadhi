@@ -45,7 +45,6 @@ public class MessageExchange {
             log.error("send({}, {}) Unexpected failure:{}", apiPath, msg.getId(), e.getMessage());
             return CompletableFuture.failedFuture(e);
         }
-
     }
 
     public void publish(String routeName, String apiName, ClusterMessage msg) {

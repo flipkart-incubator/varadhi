@@ -1,11 +1,15 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
+import lombok.AllArgsConstructor;
 
+@AllArgsConstructor
 public class RetryPolicy {
-    private final int maxRetryAllowed = 2;
-    private final int minBackoffSeconds = 1;
-    private final int maxBackoffSeconds = 10;
+    private final int maxRetryAllowed;
+    private final int retryIntervalInSeconds;
+    private final int minBackoffSeconds;
+    private final int maxBackoffSeconds;
+
 
     public boolean canRetry(OrderedOperation operation) {
         // TODO::This needs better implementation, retry decision can also be impacted by kind of failure.
@@ -13,6 +17,7 @@ public class RetryPolicy {
     }
 
     public int getRetryBackoffSeconds(OrderedOperation operation) {
-        return maxBackoffSeconds;
+        int retryAfter = operation.getRetryAttempt()*retryIntervalInSeconds;
+        return Math.min(Math.max(minBackoffSeconds, retryAfter), maxBackoffSeconds);
     }
 }

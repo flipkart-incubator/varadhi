@@ -21,4 +21,15 @@ public class ShardStatus {
         return state == ShardState.STOPPED || state == ShardState.ERRORED || state == ShardState.UNKNOWN ||
                 state == ShardState.STOPPING;
     }
+
+    @JsonIgnore
+    public boolean isStarted() {
+        return state == ShardState.STARTED ||  state == ShardState.STARTING;
+    }
+
+    @JsonIgnore
+    public boolean isStopped() {
+        return state == ShardState.STOPPED ||  state == ShardState.UNKNOWN ||
+                state == ShardState.STOPPING;
+    }
 }

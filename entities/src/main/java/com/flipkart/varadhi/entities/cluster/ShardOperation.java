@@ -14,8 +14,8 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class ShardOperation extends MetaStoreEntity implements Operation {
-    private final long startTime;
     private final OpData opData;
+    private long startTime;
     private long endTime;
     private State state;
     private String errorMsg;
@@ -79,6 +79,13 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @Override
     public boolean hasFailed() {
         return state == ERRORED;
+    }
+
+    public void reset() {
+        state = IN_PROGRESS;
+        errorMsg = null;
+        startTime = System.currentTimeMillis();
+        endTime = 0;
     }
 
     public void update(ShardOperation.State opState, String OpError) {

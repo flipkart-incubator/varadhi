@@ -118,6 +118,10 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         return results.get(0).hasFailed();
     }
 
+    @JsonIgnore
+    public boolean isInRetry() {
+        return retryAttempt > 0;
+    }
 
     public void update(State opState, String opError) {
         results.get(0).update(opState, opError);
