@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filter.FilterExpression;
+import com.flipkart.varadhi.entities.filter.FilterOperation;
+import com.flipkart.varadhi.entities.filter.FilterPolicy;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -38,6 +41,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
     private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
+    private static final FilterPolicy filterPolicy =
+            new FilterPolicy(new FilterExpression(FilterOperation.BooleanOps.AND, List.of()));
 
     private final Project project = Project.of("project1", "", "team1", "org1");
     private final TopicResource topicResource = TopicResource.unGrouped("topic1", "project2", null);
@@ -71,7 +76,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 endpoint,
                 retryPolicy,
                 consumptionPolicy,
-                shards
+                shards,
+                null
         );
     }
 
@@ -268,7 +274,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                null
         );
     }
 

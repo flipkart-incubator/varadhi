@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.flipkart.varadhi.entities.filter.FilterPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -31,6 +32,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     @NotNull
     ConsumptionPolicy consumptionPolicy;
 
+    FilterPolicy filterPolicy;
+
     private SubscriptionResource(
             String name,
             int version,
@@ -41,7 +44,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             boolean grouped,
             Endpoint endpoint,
             RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy
+            ConsumptionPolicy consumptionPolicy,
+            FilterPolicy filterPolicy
     ) {
         super(name, version);
         this.project = project;
@@ -52,6 +56,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
+        this.filterPolicy = filterPolicy;
     }
 
     public static SubscriptionResource of(
@@ -63,11 +68,12 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             boolean grouped,
             Endpoint endpoint,
             RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy
+            ConsumptionPolicy consumptionPolicy,
+            FilterPolicy filterPolicy
     ) {
         return new SubscriptionResource(
                 name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
-                consumptionPolicy
+                consumptionPolicy, filterPolicy
         );
     }
 
@@ -93,7 +99,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
                 subscription.isGrouped(),
                 subscription.getEndpoint(),
                 subscription.getRetryPolicy(),
-                subscription.getConsumptionPolicy()
+                subscription.getConsumptionPolicy(),
+                subscription.getFilterPolicy()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;

@@ -39,7 +39,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -141,7 +140,8 @@ class SubscriptionServiceTest {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                null
         );
 
         VaradhiSubscriptionFactory factory = new VaradhiSubscriptionFactory(pts, psf, ptf, region);
@@ -171,7 +171,9 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         subscriptionService.createSubscription(unGroupedTopic, sub2, o1t1p1);
         subscriptionService.createSubscription(
-                unGroupedTopic, SubscriptionHandlersTest.getUngroupedSubscription("sub3", o1t1p2, unGroupedTopic), o1t1p2);
+                unGroupedTopic, SubscriptionHandlersTest.getUngroupedSubscription("sub3", o1t1p2, unGroupedTopic),
+                o1t1p2
+        );
 
         List<String> actualSubscriptions = subscriptionService.getSubscriptionList(o1t1p1.getName());
 
@@ -263,7 +265,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+                SubscriptionHandlersTest.getUngroupedSubscription(
+                        sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
         update.setVersion(1);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
@@ -284,7 +287,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+                SubscriptionHandlersTest.getUngroupedSubscription(
+                        sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
         update.setVersion(2);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));

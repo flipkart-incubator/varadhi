@@ -125,7 +125,8 @@ public class SubProvider {
                     endpoint == null ? getHttpEndpoint() : endpoint,
                     retryPolicy == null ? getRetryPolicy() : retryPolicy,
                     consumptionPolicy == null ? getConsumptionPolicy() : consumptionPolicy,
-                    shards
+                    shards,
+                    null //TODO(aayush): provide actual filter policy
             );
         }
     }

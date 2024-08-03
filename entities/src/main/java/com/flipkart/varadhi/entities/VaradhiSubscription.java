@@ -2,6 +2,7 @@ package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.flipkart.varadhi.entities.filter.FilterPolicy;
 import lombok.*;
 
 @Getter
@@ -17,6 +18,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     private ConsumptionPolicy consumptionPolicy;
     private SubscriptionShards shards;
     private Status status;
+    private FilterPolicy filterPolicy;
 
 
     private VaradhiSubscription(
@@ -30,7 +32,8 @@ public class VaradhiSubscription extends MetaStoreEntity {
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             SubscriptionShards shards,
-            Status status
+            Status status,
+            FilterPolicy filterPolicy
     ) {
         super(name, version);
         this.project = project;
@@ -45,6 +48,9 @@ public class VaradhiSubscription extends MetaStoreEntity {
         }
         this.shards = shards;
         this.status = status;
+
+        // TODO(aayush): parse and validate filter policy
+        this.filterPolicy = filterPolicy;
     }
 
     public static VaradhiSubscription of(
@@ -56,11 +62,12 @@ public class VaradhiSubscription extends MetaStoreEntity {
             Endpoint endpoint,
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards
+            SubscriptionShards shards,
+            FilterPolicy filterPolicy
     ) {
         return new VaradhiSubscription(
                 name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, new Status(State.Creating)
+                shards, new Status(State.Creating), filterPolicy
         );
     }
 
@@ -100,6 +107,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     public static class Status {
         String message;
         State state;
+
         public Status(State state) {
             this.state = state;
         }
