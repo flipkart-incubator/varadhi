@@ -2,14 +2,18 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.CircularQueue;
 import com.flipkart.varadhi.consumer.ConcurrencyControl;
-import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.concurrent.Context;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -28,7 +32,11 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
 
     private final TaskQueue<T>[] queues;
 
+    private final AtomicInteger pendingTasks = new AtomicInteger(0);
+
     private final AtomicInteger schedulePendingTaskCounter = new AtomicInteger(0);
+
+    private final AtomicReference<Context.Task> onFreeTask = new AtomicReference<>(null);
 
     /**
      * @param maxConcurrency
@@ -44,8 +52,9 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
     }
 
+    @Override
     public Collection<CompletableFuture<T>> enqueueTasks(
-            InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks
+            InternalQueueType type, Iterable<Supplier<CompletableFuture<T>>> tasks
     ) {
         int currentConcurrency = executePendingTasksInternal();
 
@@ -94,8 +103,14 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         for (TaskQueue<T> queue : queues) {
             while (currentConcurrency < maxConcurrency && !queue.tasks.isEmpty()) {
                 Holder<T> taskHolder = queue.tasks.poll();
-                taskHolder.execute();
                 currentConcurrency = concurrency.incrementAndGet();
+
+                int pending = pendingTasks.decrementAndGet();
+                if (pending == 0) {
+                    tryExecuteOnFreeTask();
+                }
+
+                taskHolder.execute();
             }
         }
         return currentConcurrency;
@@ -111,11 +126,33 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
     }
 
     public int getPendingCount() {
-        int count = 0;
-        for (TaskQueue<T> queue : queues) {
-            count += queue.tasks.size();
+        return pendingTasks.get();
+    }
+
+    @Override
+    public boolean isFree() {
+        var currentPending = pendingTasks.get();
+        var currentConcurrency = concurrency.get();
+        return currentPending + currentConcurrency <= maxConcurrency;
+    }
+
+    @Override
+    public void onFree(Context.Task task) {
+        if (!onFreeTask.compareAndSet(null, task)) {
+            throw new IllegalStateException("Only 1 task can be registered for onFree");
+        } else {
+            if (isFree()) {
+                tryExecuteOnFreeTask();
+            }
         }
-        return count;
+        context.run(task);
+    }
+
+    private void tryExecuteOnFreeTask() {
+        Context.Task task = onFreeTask.getAndSet(null);
+        if (task != null) {
+            context.run(task);
+        }
     }
 
     /**
@@ -125,6 +162,8 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
      * 2. If this was the "last" concurrency slot, then we should enqueue a task to schedule any pending tasks.
      * Otherwise, pending tasks may sit idle forever.
      * 3. If there is no task running at the moment to schedule any pending task, then we should schedule it regardless.
+     *
+     * This method can run on any arbitrary thread.
      *
      * @param result
      * @param ex
@@ -141,7 +180,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
 
         if (scheduleRequired) {
-            context.getExecutor().execute(() -> {
+            context.runOnContext(() -> {
                 executePendingTasks();
                 schedulePendingTaskCounter.decrementAndGet();
             });

@@ -2,12 +2,13 @@ package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.entities.Offset;
 
+import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Consumer interface to receive messages from a topic.
  */
-public interface Consumer<O extends Offset> extends AutoCloseable {
+public interface Consumer<O extends Offset> extends Closeable {
 
     /**
      * Receive a batch of messages from the subscribed topics.
