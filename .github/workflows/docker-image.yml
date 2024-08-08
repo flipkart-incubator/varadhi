@@ -13,6 +13,9 @@ on:
         type: string
         default: $(date +%s)
         required: true
+    secrets:
+      dockerHubToken:
+        required: false
 
 jobs:
 
@@ -39,6 +42,6 @@ jobs:
       if: ${{ inputs.pushToDockerHub }} == true
     - name: Push to DockerHub
       run: |
-        docker login -u varadhi -p ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+        docker login -u varadhi -p ${{ secrets.dockerHubToken }}
         docker push varadhi/varadhi:${{ inputs.releaseVersion }}
       
