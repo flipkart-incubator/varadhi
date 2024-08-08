@@ -10,10 +10,9 @@ on:
 
 jobs:
   call-workflow-docker-build:
-    uses: flipkart-incubator/varadhi/.github/workflows/docker-image.yml@master
+    uses: flipkart-incubator/varadhi/.github/workflows/docker.yml@master
     with:
       pushToDockerHub: true
       releaseVersion: ${{ inputs.releaseVersion }}
-    secrets: 
+    secrets:
       dockerHubToken: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-    
