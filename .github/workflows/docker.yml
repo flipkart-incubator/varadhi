@@ -6,12 +6,10 @@ on:
       pushToDockerHub:
         description: 'Whether to push image to dockerhub'
         required: true
-        default: false
         type: boolean
       releaseVersion:
         description: 'Docker image tag'
         type: string
-        default: $(date +%s)
         required: true
     secrets:
       dockerHubToken:
@@ -44,4 +42,3 @@ jobs:
       run: |
         docker login -u varadhi -p ${{ secrets.dockerHubToken }}
         docker push varadhi/varadhi:${{ inputs.releaseVersion }}
-      

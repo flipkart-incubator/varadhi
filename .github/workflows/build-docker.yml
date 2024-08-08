@@ -8,6 +8,7 @@ on:
 
 jobs:
   call-workflow-docker-build:
-    uses: flipkart-incubator/varadhi/.github/workflows/docker-image.yml@master
+    uses: flipkart-incubator/varadhi/.github/workflows/docker.yml@master
     with:
       pushToDockerHub: false
+      releaseVersion: $(date +%s)
