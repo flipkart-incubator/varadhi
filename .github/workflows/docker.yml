@@ -38,7 +38,7 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file setup/docker/Dockerfile --tag varadhi/varadhi:${{ inputs.releaseVersion }}
     - name: Push to DockerHub
-      if: ${{ inputs.pushToDockerHub }} == true
+      if: ${{ inputs.pushToDockerHub }}
       run: |
         docker login -u varadhi -p ${{ secrets.dockerHubToken }}
         docker push varadhi/varadhi:${{ inputs.releaseVersion }}
