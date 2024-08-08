@@ -9,7 +9,7 @@ on:
         required: true
 
 jobs:
-  call-workflow-docker-build:
+  call-workflow-docker-deploy:
     uses: flipkart-incubator/varadhi/.github/workflows/docker.yml@master
     with:
       pushToDockerHub: true

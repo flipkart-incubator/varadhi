@@ -37,8 +37,8 @@ jobs:
       run: ./gradlew clean build copyDependencies :server:copyJacocoAgent -x test
     - name: Build the Docker image
       run: docker build . --file setup/docker/Dockerfile --tag varadhi/varadhi:${{ inputs.releaseVersion }}
-      if: ${{ inputs.pushToDockerHub }} == true
     - name: Push to DockerHub
+      if: ${{ inputs.pushToDockerHub }} == true
       run: |
         docker login -u varadhi -p ${{ secrets.dockerHubToken }}
         docker push varadhi/varadhi:${{ inputs.releaseVersion }}
