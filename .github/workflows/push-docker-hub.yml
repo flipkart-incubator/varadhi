@@ -1,0 +1,19 @@
+name: Release and Push to Docker Hub
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: 'Docker image tag'
+        type: string
+        required: true
+
+jobs:
+  call-workflow-docker-build:
+    uses: flipkart-incubator/varadhi/.github/workflows/docker-image.yml@master
+    with:
+      pushToDockerHub: true
+      releaseVersion: ${{ inputs.releaseVersion }}
+    secrets: 
+      dockerHubToken: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+    
