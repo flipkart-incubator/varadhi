@@ -14,7 +14,7 @@
           <option value="--args=&quot;src/main/resources/configuration.yml&quot;" />
         </list>
       </option>
-      <option name="vmOptions" />
+      <option name="vmOptions" value="-Dvertx.disableDnsResolver=true -Dlog4j2.configurationFile=src/main/resources/log4j2.xml" />
     </ExternalSystemSettings>
     <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
     <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
