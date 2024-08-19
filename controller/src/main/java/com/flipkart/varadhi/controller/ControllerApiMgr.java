@@ -147,7 +147,11 @@ public class ControllerApiMgr implements ControllerApi {
                 log.info("Subscription:{} Shard:{} is already started. Skipping.", subId, shardId);
                 return CompletableFuture.completedFuture(false);
             }
-            operationMgr.createOrResetShardOp(startOp, isRetry);
+            if (isRetry) {
+                operationMgr.retryShardOp(startOp);
+            } else {
+                operationMgr.createShardOp(startOp);
+            }
             CompletableFuture<Boolean> startFuture =
                     consumer.start((ShardOperation.StartData) startOp.getOpData()).thenApply(v -> true);
             log.info("Scheduled shard start({}).", startOp);
@@ -242,7 +246,11 @@ public class ControllerApiMgr implements ControllerApi {
                 log.info("Subscription:{} Shard:{} is already Stopped. Skipping.", subId, shardId);
                 return CompletableFuture.completedFuture(false);
             }
-            operationMgr.createOrResetShardOp(stopOp, isRetry);
+            if (isRetry) {
+                operationMgr.retryShardOp(stopOp);
+            } else {
+                operationMgr.createShardOp(stopOp);
+            }
             CompletableFuture<Void> stopFuture = consumer.stop((ShardOperation.StopData) stopOp.getOpData());
             log.info("Scheduled shard stop({}).", stopOp);
             return stopFuture.thenApply(v -> true);

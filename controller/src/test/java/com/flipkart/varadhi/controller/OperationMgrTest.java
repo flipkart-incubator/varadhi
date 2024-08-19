@@ -194,7 +194,7 @@ public class OperationMgrTest {
         CountDownLatch completed2 = completeOperation(startOp2);
         waiting3.countDown();
         CountDownLatch completed3 = completeOperation(startOp3);
-        await().atMost(3, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
+        await().atMost(1, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
         assertEquals(0, operationMgr.getPendingOperations(orderingKey2).size());
         assertEquals(0, operationMgr.getPendingOperations(orderingKey3).size());
     }
@@ -249,7 +249,7 @@ public class OperationMgrTest {
         executionLatch.countDown();
         assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
 
-        CountDownLatch completed = updateOperation(startOp, false);
+        CountDownLatch completed = updateOperation(startOp);
         await().atMost(100, TimeUnit.SECONDS).until(() -> completed.getCount() == 0);
         assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
 
@@ -374,7 +374,6 @@ public class OperationMgrTest {
         validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to update in handler");
     }
 
-
     @Test
     public void saveFailureInExecutionRemovesPendingTask() {
         CountDownLatch executionLatch = new CountDownLatch(1);
@@ -452,7 +451,6 @@ public class OperationMgrTest {
         verify(opStore, times(1)).updateShardOp(shard2Op);
     }
 
-
     @Test
     public void testCreateAndEnqueue() {
         VaradhiSubscription sub1 = SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
@@ -471,10 +469,77 @@ public class OperationMgrTest {
         doReturn(false).when(opStore).shardOpExists(shard1Op.getId());
         doReturn(true).when(opStore).shardOpExists(shard2Op.getId());
 
-        operationMgr.createOrResetShardOp(shard1Op, false);
+        operationMgr.createShardOp(shard1Op);
         verify(opStore, times(1)).createShardOp(shard1Op);
-        operationMgr.createOrResetShardOp(shard2Op, false);
+        operationMgr.createShardOp(shard2Op);
         verify(opStore, never()).createShardOp(shard2Op);
+    }
+
+    @Test
+    public void failedOperationShouldBeRetried() {
+        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
+        VaradhiSubscription sub1 = SubProvider.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        SubscriptionOperation startOp = getStartOp(sub1);
+
+        operationMgr.enqueue(startOp, operation -> CompletableFuture.completedFuture(null));
+
+        CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
+        await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
+        assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        assertNotNull(retryOpTask);
+        assertEquals(1, retryOpTask.opTask.operation.getRetryAttempt());
+
+        // retry should happen in a second.
+        await().atMost(2, TimeUnit.SECONDS).until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).size() == 1);
+        CountDownLatch completed2 = completeOperation(startOp);
+        await().atMost(100, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0);
+        retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        // successful operation shouldn't be retried.
+        assertNull(retryOpTask);
+    }
+
+    @Test
+    public void failedOperationIsNotRetriedIfSubAlreadyHasPendingOp() {
+        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
+        VaradhiSubscription sub1 = SubProvider.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        SubscriptionOperation startOp = getStartOp(sub1);
+        SubscriptionOperation stopOp = getStopOp(sub1);
+
+        operationMgr.enqueue(startOp, operation -> CompletableFuture.completedFuture(null));
+        operationMgr.enqueue(stopOp, operation -> CompletableFuture.completedFuture(null));
+
+        assertEquals(2, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
+        await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
+        assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        assertNull(retryOpTask);
+    }
+
+    @Test
+    public void subsequentOperationShouldClearPendingRetriesIfAny() {
+        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
+        VaradhiSubscription sub1 = SubProvider.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        SubscriptionOperation startOp = getStartOp(sub1);
+        SubscriptionOperation stopOp = getStopOp(sub1);
+
+        operationMgr.enqueue(startOp, operation -> CompletableFuture.completedFuture(null));
+
+        CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
+        await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
+        assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
+        assertNotNull(retryOpTask);
+        operationMgr.enqueue(stopOp, operation -> CompletableFuture.completedFuture(null));
+        retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        assertNull(retryOpTask);
+        assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
     }
 
 
@@ -487,15 +552,18 @@ public class OperationMgrTest {
     }
 
     private CountDownLatch completeOperation(SubscriptionOperation operation) {
-        return updateOperation(operation, true);
+        operation.markCompleted();
+        return updateOperation(operation);
     }
 
-    private CountDownLatch updateOperation(SubscriptionOperation operation, boolean markCompleted) {
+    private CountDownLatch failOperation(SubscriptionOperation operation, Exception e) {
+        operation.markFail(e.getMessage());
+        return updateOperation(operation);
+    }
+
+    private CountDownLatch updateOperation(SubscriptionOperation operation) {
         CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
-            if (markCompleted) {
-                operation.markCompleted();
-            }
             doReturn(operation).when(opStore).getSubOp(operation.getId());
             operationMgr.updateSubOp(operation);
             latch.countDown();

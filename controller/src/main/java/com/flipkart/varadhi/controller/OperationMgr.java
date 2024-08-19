@@ -3,6 +3,7 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.AllArgsConstructor;
@@ -71,10 +72,11 @@ public class OperationMgr {
                         pendingTask.getOrderingKey(), pendingTask
                 );
 
-                // if retry and new operation are competing together, ignore retry as it is invalid now.
-                // retry shouldn't wait when they are ready for execution.
+                // When retry and new operation are competing together -- retry scheduled execution and new operation
+                // both execute "enqueue" at same time.
+                // Ignore retry, as it is invalid now. Retry shouldn't wait when they are ready for execution.
                 if (pendingTask.operation.getRetryAttempt() > 0) {
-                    pendingTask.abortRetry("Retry aborted, as more recent operation makes it invalid.");
+                    pendingTask.markPreempted("Retry aborted, as more recent operation makes it invalid.");
                     log.info(
                             "Ignoring Retry {} enqueue when a another operation {} is in execution, as retry is invalid now.",
                             pendingTask, scheduledTasks.peekFirst()
@@ -99,8 +101,9 @@ public class OperationMgr {
     }
 
 
-    // This will execute the update on a Task in a sequential order. Sequential execution is needed, to ensure
-    // parallel updates to tasks do not override each other.
+    // This will execute the update on a Task in a sequential order.
+    // Sequential execution is needed, to ensure parallel updates to tasks do not override each other.
+    // Synchronous execution in updateHandler is assumed.
     private void processOpTaskForOpUpdate(
             OrderedOperation operation, Function<OrderedOperation, OrderedOperation> updateHandler
     ) {
@@ -158,7 +161,7 @@ public class OperationMgr {
         }
     }
 
-    // primarily for testing purpose.
+    // for testing purpose.
     List<OrderedOperation> getPendingOperations(String orderingKey) {
         List<OrderedOperation> pendOps = new ArrayList<>();
         if (opTasks.containsKey(orderingKey)) {
@@ -166,6 +169,12 @@ public class OperationMgr {
         }
         return pendOps;
     }
+
+    // for testing purpose.
+    RetryOpTask getRetryOperations(String orderingKey) {
+        return retryOpTasks.get(orderingKey);
+    }
+
 
     private void processOpUpdate(OpTask opTask, Function<OrderedOperation, OrderedOperation> updateHandler) {
         if (null != updateHandler) {
@@ -176,7 +185,7 @@ public class OperationMgr {
                         "Operation ({}) had an unexpected failure ({}) during update.", opTask.operation,
                         e.getMessage()
                 );
-                opTask.saveFailure(e);
+                opTask.saveFailure(e.getMessage());
             }
         }
     }
@@ -191,13 +200,15 @@ public class OperationMgr {
         enqueue(subOp, opExecutor);
     }
 
-    void createOrResetShardOp(ShardOperation shardOp, boolean isRetry) {
-        if (isRetry) {
-            shardOp.reset();
-            opStore.updateShardOp(shardOp);
-        } else if (!opStore.shardOpExists(shardOp.getId())) {
+    void createShardOp(ShardOperation shardOp) {
+        if (!opStore.shardOpExists(shardOp.getId())) {
             opStore.createShardOp(shardOp);
         }
+    }
+
+    void retryShardOp(ShardOperation shardOp) {
+        shardOp.reset();
+        opStore.updateShardOp(shardOp);
     }
 
     void updateSubOp(SubscriptionOperation operation) {
@@ -242,11 +253,10 @@ public class OperationMgr {
         return subOpLatest;
     }
 
-
     @RequiredArgsConstructor
     class RetryOpTask {
-        private final OpTask opTask;
-        private ScheduledFuture<Void> scheduledFuture;
+        final OpTask opTask;
+        ScheduledFuture<Void> scheduledFuture;
 
         void schedule() {
             int backOffSeconds = retryPolicy.getRetryBackoffSeconds(opTask.operation);
@@ -259,6 +269,9 @@ public class OperationMgr {
 
             retryOpTasks.compute(opTask.getOrderingKey(), (orderingKey, pendingRetry) -> {
                 if (null != pendingRetry) {
+                    // This is not expected to happen as pending task is not removed till it's retry is queued.
+                    //  Any subsequent operation enqueue should remove pending retries if any.
+                    // For unknown case, log the error and cancel previous retry.
                     log.error(
                             "Retry task {} already scheduled for key {}. Cancelling previous task", pendingRetry.opTask,
                             orderingKey
@@ -275,7 +288,7 @@ public class OperationMgr {
             boolean cancelled = scheduledFuture.cancel(false);
             if (cancelled) {
                 log.info("Retry {} cancelled, as more recent operation makes it invalid.", opTask);
-                opTask.abortRetry("Retry cancelled, as more recent operation makes it invalid.");
+                opTask.markPreempted("Retry cancelled, as more recent operation makes it invalid.");
             } else {
                 log.info(
                         "Retry task failed to cancel. Completed={} Cancelled={} completed for operation {}",
@@ -285,12 +298,11 @@ public class OperationMgr {
         }
     }
 
-
     @AllArgsConstructor
     class OpTask {
-        private final OpExecutor<OrderedOperation> opExecutor;
-        private final Consumer<OrderedOperation> dbUpdateHandler;
-        private OrderedOperation operation;
+        final OpExecutor<OrderedOperation> opExecutor;
+        final Consumer<OrderedOperation> dbUpdateHandler;
+        OrderedOperation operation;
 
         void execute() {
             CompletableFuture.runAsync(() -> {
@@ -314,9 +326,11 @@ public class OperationMgr {
                     dbUpdateHandler.accept(retryOp);
                     RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp));
                     task.schedule();
-                } catch (Exception e) {
+                } catch (MetaStoreException e) {
                     log.error("Retry ERROR -- {} will not be retried, due to failure {}", operation, e.getMessage());
-                    throw e;
+                    // failure will be primarily due to DB failure. Task is already removed from the operation queue.
+                    // In this case ignore the failure and continue, as a result retry will not be attempted for
+                    // this operation, but that's ok.
                 }
             }
         }
@@ -329,26 +343,27 @@ public class OperationMgr {
             }
         }
 
-        private void abortRetry(String reason) {
-            operation.markFail(reason);
-            dbUpdateHandler.accept(operation);
+        private void markPreempted(String reason) {
+            // Used when retry tasks are super seeded by more recent operation.
+            // Caller should have already  removed it from respective queue.
+            // This just marks the task as failed in DB.
+            saveFailure(reason);
         }
 
 
         private void fail(Throwable t) {
-            processOpTaskForOpUpdate(operation, op -> saveFailure(t));
+            processOpTaskForOpUpdate(operation, op -> saveFailure(t.getMessage()));
         }
 
-        OrderedOperation saveFailure(Throwable t) {
-            operation.markFail(t.getMessage());
+        OrderedOperation saveFailure(String reason) {
+            operation.markFail(reason);
             try {
                 // persist the operation failure in database.
                 dbUpdateHandler.accept(operation);
             } catch (Exception e) {
                 // Any exception thrown here will prevent operation from being removed from the operations queue
                 // and thus any subsequent operation for same ordering key will keep waiting.
-                log.error(
-                        "Error {} on persisting operation {} failure {}: ", e.getMessage(), operation, t.getMessage());
+                log.error("Error {} on persisting operation {} failure {}: ", e.getMessage(), operation, reason);
             }
             return operation;
         }
