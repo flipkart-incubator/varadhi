@@ -74,3 +74,7 @@ zookeeperOptions:
 
 controller:
   maxConcurrentOps: 2
+  maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60

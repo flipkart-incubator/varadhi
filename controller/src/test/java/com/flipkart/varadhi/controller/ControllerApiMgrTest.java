@@ -36,7 +36,7 @@ public class ControllerApiMgrTest {
 
     ControllerApiMgr controllerApiMgr;
     ConsumerApi consumerApi;
-    ShardAssigner shardAssigner;
+    AssignmentManager assignmentManager;
     OperationMgr operationMgr;
     MetaStore metaStore;
     OpStore opStore;
@@ -50,11 +50,11 @@ public class ControllerApiMgrTest {
         consumerClientFactory = mock(ConsumerClientFactory.class);
         metaStore = mock(MetaStore.class);
         consumerApi = mock(ConsumerApi.class);
-        shardAssigner = mock(ShardAssigner.class);
+        assignmentManager = mock(AssignmentManager.class);
         opStore = mock(OpStore.class);
-        operationMgr = spy(new OperationMgr(config, opStore));
+        operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20)));
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
-        controllerApiMgr = spy(new ControllerApiMgr(operationMgr, shardAssigner, metaStore, consumerClientFactory));
+        controllerApiMgr = spy(new ControllerApiMgr(operationMgr, assignmentManager, metaStore, consumerClientFactory));
     }
 
     @Test
@@ -67,7 +67,7 @@ public class ControllerApiMgrTest {
 
         CompletableFuture<String> result = controllerApiMgr.addConsumerNode(consumerNode);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);
-        verify(shardAssigner, times(1)).addConsumerNode(consumerNode);
+        verify(assignmentManager, times(1)).addConsumerNode(consumerNode);
         assertValue(consumerNode.getConsumerId(), result);
     }
 
@@ -82,7 +82,7 @@ public class ControllerApiMgrTest {
 
         CompletableFuture<String> result = controllerApiMgr.addConsumerNode(consumerNode);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);
-        verify(shardAssigner, times(0)).addConsumerNode(consumerNode);
+        verify(assignmentManager, times(0)).addConsumerNode(consumerNode);
         assertException(result, ReplyException.class, "Host not available.");
     }
 
@@ -108,7 +108,7 @@ public class ControllerApiMgrTest {
         assignments.add(getAssignment(sub1, consumerNodes.get(1), shards.get(1)));
         assignments.add(getAssignment(sub1, consumerNodes.get(2), shards.get(2)));
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
-        doReturn(assignments).when(shardAssigner).getSubAssignments(sub1.getName());
+        doReturn(assignments).when(assignmentManager).getSubAssignments(sub1.getName());
         setupShardStatus(sub1.getName(), 0, ShardState.STARTED, null);
         setupShardStatus(sub1.getName(), 1, ShardState.STARTED, null);
         setupShardStatus(sub1.getName(), 2, ShardState.STARTED, null);
@@ -147,14 +147,14 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
-        doReturn(new ArrayList<>()).when(shardAssigner).getSubAssignments(sub1.getName());
-        doReturn(CompletableFuture.completedFuture(assignments)).when(shardAssigner)
+        doReturn(new ArrayList<>()).when(assignmentManager).getSubAssignments(sub1.getName());
+        doReturn(CompletableFuture.completedFuture(assignments)).when(assignmentManager)
                 .assignShards(shards, sub1, List.of());
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(shardAssigner, times(1)).assignShards(shards, sub1, List.of());
+        validateOpQueued(op);
+        verify(assignmentManager, times(1)).assignShards(shards, sub1, List.of());
         verify(consumerApi, times(3)).start(any());
     }
 
@@ -228,9 +228,33 @@ public class ControllerApiMgrTest {
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
+        validateOpQueued(op);
         assertEquals(2, sCapture.getAllValues().size());
         assertEquals(0, sCapture.getAllValues().stream().filter(sd -> sd.getShardId() == 0).count());
+    }
+
+    @Test
+    public void testStartSubscriptionAllShardsAlreadyStarted() {
+        VaradhiSubscription sub1 =
+                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+        List<ConsumerNode> consumerNodes = getConsumerNodes(3);
+        List<Assignment> assignments = new ArrayList<>();
+        setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
+
+        setupShardStatus(sub1.getName(), 0, ShardState.STARTED, null);
+        setupShardStatus(sub1.getName(), 1, ShardState.STARTED, null);
+        setupShardStatus(sub1.getName(), 2, ShardState.STARTED, null);
+        ArgumentCaptor<ShardOperation.StartData> shardCapture = ArgumentCaptor.forClass(ShardOperation.StartData.class);
+        ArgumentCaptor<SubscriptionOperation> subCapture = ArgumentCaptor.forClass(SubscriptionOperation.class);
+        doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).start(shardCapture.capture());
+        doNothing().when(operationMgr).updateSubOp(subCapture.capture());
+        CompletableFuture<SubscriptionOperation> result =
+                controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
+        SubscriptionOperation op = awaitAsyncAndGetValue(result);
+        assertEquals(SubscriptionOperation.State.COMPLETED, op.getState());
+        assertEquals(0, shardCapture.getAllValues().size());
+        assertTrue(subCapture.getValue().isDone());
     }
 
     @Test
@@ -241,23 +265,29 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
-        ArgumentCaptor<ShardOperation.StartData> sCapture = ArgumentCaptor.forClass(ShardOperation.StartData.class);
+        ArgumentCaptor<String> subOpIdCapture = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> shardOpIdCapture = ArgumentCaptor.forClass(String.class);
+        List<String> shardOpIds = new ArrayList<>();
         doAnswer(invocationOnMock -> {
             ShardOperation.StartData sd = invocationOnMock.getArgument(0);
             if (sd.getShardId() == 0) {
+                shardOpIds.add(sd.getOperationId());
                 return CompletableFuture.failedFuture(new ReplyException(ReplyFailure.NO_HANDLERS, "Host not found."));
             }
             return CompletableFuture.completedFuture(null);
         }).when(consumerApi).start(any());
 
-        doNothing().when(operationMgr).updateShardOp(any());
+        doNothing().when(operationMgr)
+                .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(operationMgr, times(1)).updateShardOp(any());
-        verify(operationMgr).updateShardOp(sCapture.capture());
-        assertEquals(0, sCapture.getValue().getShardId());
+        validateOpQueued(op);
+        verify(operationMgr, times(1)).updateShardOp(
+                anyString(), anyString(), any(ShardOperation.State.class), anyString());
+        verify(operationMgr).updateShardOp(subOpIdCapture.capture(), shardOpIdCapture.capture(), any(), anyString());
+        assertEquals(op.getId(), subOpIdCapture.getValue());
+        assertEquals(shardOpIds.get(0), shardOpIdCapture.getValue());
     }
 
     @Test
@@ -275,15 +305,15 @@ public class ControllerApiMgrTest {
             }
             return CompletableFuture.completedFuture(null);
         }).when(consumerApi).start(any());
-        doNothing().when(operationMgr).updateSubOp(any());
-        doNothing().when(operationMgr).updateShardOp(any());
+        doNothing().when(operationMgr)
+                .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
 
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(operationMgr, never()).updateSubOp(any());
-        verify(operationMgr, times(1)).updateShardOp(any());
+        validateOpQueued(op);
+        verify(operationMgr, times(1)).updateShardOp(
+                anyString(), anyString(), any(ShardOperation.State.class), anyString());
     }
 
     @Test
@@ -295,18 +325,20 @@ public class ControllerApiMgrTest {
         List<Assignment> assignments = new ArrayList<>();
 
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner).unAssignShards(assignments, sub1, true);
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
+                .unAssignShards(assignments, sub1, true);
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
+        validateOpQueued(op);
         verify(consumerApi, times(3)).stop(any());
-        verify(shardAssigner, times(1)).unAssignShards(assignments, sub1, true);
+        verify(assignmentManager, times(1)).unAssignShards(assignments, sub1, true);
     }
 
     @Test
     public void testStopSubscriptionAssignmentDoesNotExists() {
-        //ideally shouldn't happen as Status would return appropriate state, but to ensure code path doesn't fail for this case
+        //ideally shouldn't happen as Status would return appropriate state, but to ensure
+        // code path doesn't fail for this case
         VaradhiSubscription sub1 =
                 SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
@@ -314,17 +346,16 @@ public class ControllerApiMgrTest {
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.ERRORED);
 
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner)
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
                 .unAssignShards(new ArrayList<>(), sub1, true);
 
-        doReturn(new ArrayList<>()).when(shardAssigner).getSubAssignments(sub1.getName());
-        doReturn(CompletableFuture.completedFuture(assignments)).when(shardAssigner)
-                .assignShards(shards, sub1, List.of());
+        doReturn(new ArrayList<>()).when(assignmentManager).getSubAssignments(sub1.getName());
+        doNothing().when(operationMgr).updateSubOp(any(SubscriptionOperation.class));
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(shardAssigner, times(1)).unAssignShards(new ArrayList<>(), sub1, true);
+        assertEquals(SubscriptionOperation.State.COMPLETED, op.getState());
+        verify(assignmentManager, times(1)).unAssignShards(new ArrayList<>(), sub1, true);
         verify(consumerApi, times(0)).stop(any());
     }
 
@@ -395,14 +426,15 @@ public class ControllerApiMgrTest {
         setupShardStatus(sub1.getName(), 0, ShardState.UNKNOWN, null);
         ArgumentCaptor<ShardOperation.StopData> sCapture = ArgumentCaptor.forClass(ShardOperation.StopData.class);
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).stop(sCapture.capture());
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner).unAssignShards(assignments, sub1, true);
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
+                .unAssignShards(assignments, sub1, true);
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
+        validateOpQueued(op);
         assertEquals(2, sCapture.getAllValues().size());
         assertEquals(0, sCapture.getAllValues().stream().filter(sd -> sd.getShardId() == 0).count());
-        verify(shardAssigner, times(1)).unAssignShards(assignments, sub1, true);
+        verify(assignmentManager, times(1)).unAssignShards(assignments, sub1, true);
     }
 
     @Test
@@ -413,7 +445,6 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
-        ArgumentCaptor<ShardOperation.StopData> sCapture = ArgumentCaptor.forClass(ShardOperation.StopData.class);
         doAnswer(invocationOnMock -> {
             ShardOperation.StopData sd = invocationOnMock.getArgument(0);
             if (sd.getShardId() == 0) {
@@ -421,17 +452,18 @@ public class ControllerApiMgrTest {
             }
             return CompletableFuture.completedFuture(null);
         }).when(consumerApi).stop(any());
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner).unAssignShards(assignments, sub1, true);
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
+                .unAssignShards(assignments, sub1, true);
 
-        doNothing().when(operationMgr).updateShardOp(any());
+        doNothing().when(operationMgr)
+                .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(operationMgr, times(1)).updateShardOp(any());
-        verify(operationMgr).updateShardOp(sCapture.capture());
-        assertEquals(0, sCapture.getValue().getShardId());
-        verify(shardAssigner, times(1)).unAssignShards(assignments, sub1, true);
+        validateOpQueued(op);
+        verify(operationMgr, times(1)).updateShardOp(
+                anyString(), anyString(), any(ShardOperation.State.class), anyString());
+        verify(assignmentManager, times(1)).unAssignShards(assignments, sub1, true);
     }
 
     @Test
@@ -449,17 +481,18 @@ public class ControllerApiMgrTest {
             }
             return CompletableFuture.completedFuture(null);
         }).when(consumerApi).stop(any());
-        doNothing().when(operationMgr).updateSubOp(any());
-        doNothing().when(operationMgr).updateShardOp(any());
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner).unAssignShards(assignments, sub1, true);
+        doNothing().when(operationMgr)
+                .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
+                .unAssignShards(assignments, sub1, true);
 
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         SubscriptionOperation op = awaitAsyncAndGetValue(result);
-        assertEquals(SubscriptionOperation.State.IN_PROGRESS, op.getData().getState());
-        verify(operationMgr, never()).updateSubOp(any());
-        verify(operationMgr, times(1)).updateShardOp(any());
-        verify(shardAssigner, times(1)).unAssignShards(assignments, sub1, true);
+        validateOpQueued(op);
+        verify(operationMgr, times(1)).updateShardOp(
+                anyString(), anyString(), any(ShardOperation.State.class), anyString());
+        verify(assignmentManager, times(1)).unAssignShards(assignments, sub1, true);
     }
 
     @Test
@@ -470,18 +503,33 @@ public class ControllerApiMgrTest {
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         ShardOperation shardOp = OperationMgrTest.getShardStartOp(subOp.getId(), shards.get(0), sub1);
         doNothing().when(opStore).updateShardOp(any());
-        controllerApiMgr.update(shardOp.getOpData());
-        ArgumentCaptor<ShardOperation.OpData> dCapture = ArgumentCaptor.forClass(ShardOperation.OpData.class);
-        verify(operationMgr, times(1)).updateShardOp(dCapture.capture());
-        assertEquals(shardOp.getOpData().getOperationId(), dCapture.getValue().getOperationId());
+        controllerApiMgr.update(subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+        verify(operationMgr, times(1)).updateShardOp(
+                subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+    }
+
+
+    @Test
+    public void testUpdateWhenUpdateShardOpThrows() {
+        VaradhiSubscription sub1 =
+                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+        SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
+        ShardOperation shardOp = OperationMgrTest.getShardStartOp(subOp.getId(), shards.get(0), sub1);
+        doThrow(new MetaStoreException("DB update error.")).when(operationMgr)
+                .updateShardOp(subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+        CompletableFuture<Void> future =
+                controllerApiMgr.update(subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+        await().atMost(100, TimeUnit.SECONDS).until(future::isDone);
+        assertException(future, MetaStoreException.class, "DB update error.");
     }
 
     @Test
     public void testGetAllAssignments() {
         List<Assignment> expectedAssignments = new ArrayList<>();
-        when(shardAssigner.getAllAssignments()).thenReturn(expectedAssignments);
+        when(assignmentManager.getAllAssignments()).thenReturn(expectedAssignments);
         List<Assignment> result = controllerApiMgr.getAllAssignments();
-        verify(shardAssigner, times(1)).getAllAssignments();
+        verify(assignmentManager, times(1)).getAllAssignments();
         assertListEquals(expectedAssignments, result);
     }
 
@@ -495,13 +543,13 @@ public class ControllerApiMgrTest {
     public void testRetryOperation() {
         VaradhiSubscription sub1 =
                 SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
         doNothing().when(operationMgr).enqueue(any(), any());
         controllerApiMgr.retryOperation(subOp);
         verify(operationMgr, times(1)).enqueue(eq(subOp), any());
     }
+
 
     @Test
     public void testConsumerNodeJoined() {
@@ -511,11 +559,11 @@ public class ControllerApiMgrTest {
         ConsumerNode node = NodeProvider.getConsumerNodes(1).get(0);
         doReturn(CompletableFuture.completedFuture(NodeProvider.getConsumerInfo(node, sub1, shards))).when(consumerApi)
                 .getConsumerInfo();
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner).consumerNodeJoined(node);
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager).consumerNodeJoined(node);
         CompletableFuture<Void> result = controllerApiMgr.consumerNodeJoined(node);
         awaitAsyncAndGetValue(result);
         verify(consumerApi, times(1)).getConsumerInfo();
-        verify(shardAssigner, times(1)).consumerNodeJoined(node);
+        verify(assignmentManager, times(1)).consumerNodeJoined(node);
     }
 
     @Test
@@ -533,20 +581,28 @@ public class ControllerApiMgrTest {
         consumer0Assignments.add(getAssignment(sub2, nodes.get(0), shards2.get(0)));
         doAnswer(invocationOnMock -> new HashMap<>()).when(operationMgr).getShardOps(any());
 
-        doReturn(CompletableFuture.completedFuture(getAssignment(sub1, nodes.get(1), shards1.get(0)))).when(shardAssigner)
+        doReturn(CompletableFuture.completedFuture(getAssignment(sub1, nodes.get(1), shards1.get(0)))).when(
+                        assignmentManager)
                 .reAssignShard(consumer0Assignments.get(0), sub1, false);
-        doReturn(CompletableFuture.completedFuture(getAssignment(sub2, nodes.get(1), shards2.get(0)))).when(shardAssigner)
+        doReturn(CompletableFuture.completedFuture(getAssignment(sub2, nodes.get(1), shards2.get(0)))).when(
+                        assignmentManager)
                 .reAssignShard(consumer0Assignments.get(1), sub2, false);
 
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
         doReturn(sub2).when(metaStore).getSubscription(sub2.getName());
-        doReturn(consumer0Assignments).when(shardAssigner).getConsumerNodeAssignments(nodes.get(0).getConsumerId());
+        doReturn(consumer0Assignments).when(assignmentManager).getConsumerNodeAssignments(nodes.get(0).getConsumerId());
 
-        doReturn(CompletableFuture.completedFuture(null)).when(shardAssigner)
+        doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
                 .consumerNodeLeft(nodes.get(0).getConsumerId());
 
-        setupSubscriptionForOp(sub1, List.of(shards1.get(0)), List.of(nodes.get(1)), new ArrayList<>(), ShardState.UNKNOWN, SubscriptionState.RUNNING);
-        setupSubscriptionForOp(sub2, List.of(shards2.get(0)), List.of(nodes.get(1)), new ArrayList<>(), ShardState.UNKNOWN, SubscriptionState.RUNNING);
+        setupSubscriptionForOp(
+                sub1, List.of(shards1.get(0)), List.of(nodes.get(1)), new ArrayList<>(), ShardState.UNKNOWN,
+                SubscriptionState.RUNNING
+        );
+        setupSubscriptionForOp(
+                sub2, List.of(shards2.get(0)), List.of(nodes.get(1)), new ArrayList<>(), ShardState.UNKNOWN,
+                SubscriptionState.RUNNING
+        );
 
         CountDownLatch shardStartLatch = new CountDownLatch(2);
         doAnswer(invocationOnMock -> {
@@ -558,7 +614,7 @@ public class ControllerApiMgrTest {
         awaitAsyncAndGetValue(result);
         await().atMost(20, TimeUnit.SECONDS).until(() -> shardStartLatch.getCount() == 0);
 
-        verify(shardAssigner, times(1)).consumerNodeLeft(nodes.get(0).getConsumerId());
+        verify(assignmentManager, times(1)).consumerNodeLeft(nodes.get(0).getConsumerId());
         verify(operationMgr, times(2)).createAndEnqueue(any(), any());
         verify(consumerApi, times(2)).start(any());
     }
@@ -583,13 +639,13 @@ public class ControllerApiMgrTest {
             VaradhiSubscription sub1, List<SubscriptionUnitShard> shards, List<ConsumerNode> consumerNodes,
             List<Assignment> assignments, ShardState shardState, SubscriptionState state
     ) {
-        for(int i = 0; i < shards.size(); i++) {
+        for (int i = 0; i < shards.size(); i++) {
             assignments.add(getAssignment(sub1, consumerNodes.get(i), shards.get(i)));
             setupShardStatus(sub1.getName(), shards.get(i).getShardId(), shardState, null);
         }
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
-        doReturn(assignments).when(shardAssigner).getSubAssignments(sub1.getName());
-        doReturn(CompletableFuture.completedFuture(assignments)).when(shardAssigner)
+        doReturn(assignments).when(assignmentManager).getSubAssignments(sub1.getName());
+        doReturn(CompletableFuture.completedFuture(assignments)).when(assignmentManager)
                 .assignShards(shards, sub1, List.of());
         doReturn(true).when(opStore).shardOpExists(anyString());
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).stop(any());
@@ -602,6 +658,10 @@ public class ControllerApiMgrTest {
     private void setupShardStatus(String subscriptionId, int shardId, ShardState state, String failureReason) {
         ShardStatus status = new ShardStatus(state, failureReason);
         doReturn(CompletableFuture.completedFuture(status)).when(consumerApi).getShardStatus(subscriptionId, shardId);
+    }
+
+    private void validateOpQueued(SubscriptionOperation subOp) {
+        assertEquals(SubscriptionOperation.State.IN_PROGRESS, subOp.getState());
     }
 
 

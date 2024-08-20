@@ -3,7 +3,7 @@ package com.flipkart.varadhi.verticles.consumer;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
-import com.flipkart.varadhi.entities.cluster.ShardRequest;
+import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.ShardStatus;
@@ -37,7 +37,8 @@ public class ConsumerClient implements ConsumerApi {
 
     @Override
     public CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId) {
-        return exchange.request(consumerId, "status", ClusterMessage.of(new ShardRequest(subscriptionId, shardId)))
+        return exchange.request(
+                        consumerId, "status", ClusterMessage.of(new ShardStatusRequest(subscriptionId, shardId)))
                 .thenApply(rm -> rm.getResponse(ShardStatus.class));
     }
 
