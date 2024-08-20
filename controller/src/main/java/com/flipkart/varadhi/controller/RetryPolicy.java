@@ -17,7 +17,7 @@ public class RetryPolicy {
     }
 
     public int getRetryBackoffSeconds(OrderedOperation operation) {
-        int retryAfter = operation.getRetryAttempt()*retryIntervalInSeconds;
+        int retryAfter = operation.getRetryAttempt() * retryIntervalInSeconds;
         return Math.min(Math.max(minBackoffSeconds, retryAfter), maxBackoffSeconds);
     }
 }

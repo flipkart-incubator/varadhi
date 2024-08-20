@@ -2,14 +2,14 @@ package com.flipkart.varadhi.entities.cluster;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ShardStatus {
-    private ShardState state;
-    private String failureReason;
+    private final ShardState state;
+    private final String failureReason;
 
     @JsonIgnore
     public boolean canStop() {
