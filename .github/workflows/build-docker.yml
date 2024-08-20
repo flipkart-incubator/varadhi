@@ -1,0 +1,14 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  call-workflow-docker-build:
+    uses: flipkart-incubator/varadhi/.github/workflows/docker.yml@master
+    with:
+      pushToDockerHub: false
+      releaseVersion: $(date +%s)
