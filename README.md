@@ -31,13 +31,19 @@ spec and other detailed information.
 To provide the required functionality Varadhi takes a dependencies on various tech stack.
 Current development environment supports below option for these.
 
+Run the following to start the below dependencies.
+
+```docker compose -f setup/docker/compose.yml -p docker --profile dev up -d```
+
+OR
+
+Start [Dev, start pulsar and zk](.run%2FDev%2C%20start%20pulsar%20and%20zk.run.xml) IntelliJ run profile.
+
 #### Message Broker
 
 Varadhi needs a message broker for message persistence and delivery. [Apache Pulsar](https://pulsar.apache.org/) is used
 as underlying message broker. For the development environment users can use containerised Pulsar in a standalone mode.
 Details can be found [here](https://pulsar.apache.org/docs/3.0.x/standalone-docker/).
-
-```docker run -it -p 6650:6650 -p 8081:8080 --mount source=pulsardata,target=/pulsar/data --mount source=pulsarconf,target=/pulsar/conf apachepulsar/pulsar:3.0.0 bin/pulsar standalone```
 
 #### Persistent Store
 
@@ -46,13 +52,15 @@ is used as global datastore to persist json formatted entities. For the developm
 can be
 used in a standalone mode. Details can be found [here](https://hub.docker.com/_/zookeeper).
 
-```docker run --name some-zookeeper --restart always -d -p  2181:2181 -p 2888:2888 -p 3888:3888 -p 8082:8080 zookeeper```
-
 ### Varadhi Server
 
 To run the Varadhi server execute below from repo root.
 
-```./gradlew run --args="src/main/resources/configuration.yml"```
+```./gradlew run --args="src/main/resources/configuration.yml```
+
+OR
+
+Start [varadhi local \[run\]](.run%2Fvaradhi%20local%20%5Brun%5D.run.xml) IntelliJ run profile.
 
 ## Modules
 
