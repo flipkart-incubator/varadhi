@@ -8,6 +8,8 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
+import com.flipkart.varadhi.verticles.webserver.SuppressorHandler;
+import com.flipkart.varadhi.verticles.webserver.TrafficAggregator;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -45,16 +47,21 @@ public class ProduceHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
+    private final TrafficAggregator trafficAggregator;
+    private final SuppressorHandler suppressorHandler; // todo(rl): get RL data from suppressor handler to RL everything
 
     public ProduceHandlers(
             String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
-            ProjectService projectService, ProducerMetricHandler metricHandler
+            ProjectService projectService, ProducerMetricHandler metricHandler, TrafficAggregator trafficAggregator,
+            SuppressorHandler suppressorHandler
     ) {
         this.produceRegion = produceRegion;
         this.producerService = producerService;
         this.headerValidationHandler = headerValidationHandler;
         this.projectService = projectService;
         this.metricHandler = metricHandler;
+        this.trafficAggregator = trafficAggregator;
+        this.suppressorHandler = suppressorHandler;
     }
 
     @Override
@@ -95,12 +102,16 @@ public class ProduceHandlers implements RouteProvider {
         ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
 
         String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
+        // TODO(rl): handle for batch qps? Is it required
+        trafficAggregator.addTopicUsage(varadhiTopicName, ctx.body().length(), 1);
 
         // TODO:: Below is making extra copy, this needs to be avoided.
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
+        // TODO(rl): use suppressorHandler to get the rate limit data and allow or reject the request.
+        float suppressionFactor = suppressorHandler.getSuppressionFactor(varadhiTopicName);
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->

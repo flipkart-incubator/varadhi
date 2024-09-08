@@ -1,0 +1,75 @@
+package com.flipkart.varadhi.verticles.webserver;
+
+import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.entities.ratelimit.LoadInfo;
+import com.flipkart.varadhi.entities.ratelimit.TrafficData;
+
+import java.util.UUID;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
+
+/**
+ * This class will capture incoming traffic usage by providing a method to add topic usage by producers.
+ * This class will accumualte everything and send to the controller for further processing for rate limit.
+ * Post that, reset the usage for the topic.
+ */
+@Slf4j
+public class TrafficAggregator {
+
+    private final LoadInfo loadInfo;
+    private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+    private final MessageExchange exchange;
+
+    public TrafficAggregator(MessageExchange exchange) {
+        this.exchange = exchange;
+        loadInfo = new LoadInfo(UUID.randomUUID(), System.currentTimeMillis(), System.currentTimeMillis(), new ConcurrentHashMap<>());
+        sendUsageToController();
+    }
+
+    public void addTopicUsage(String topic, long throughput, long qps) {
+        loadInfo.getTopicUsageMap().compute(topic, (k, v) -> {
+            if (v == null) {
+                return TrafficData.builder().throughputIn(throughput).rateIn(qps).build();
+            } else {
+                // because we are updating the values, uuid shows data has changed
+                loadInfo.setUuid(UUID.randomUUID());
+                v.setRateIn(v.getRateIn() + qps);
+                v.setThroughputIn(v.getThroughputIn() + throughput);
+                return v;
+            }
+        });
+    }
+
+    public void clear() {
+        loadInfo.setFrom(System.currentTimeMillis());
+        loadInfo.getTopicUsageMap().replaceAll((k, v) -> TrafficData.builder().throughputIn(0L).rateIn(0L).build());
+        loadInfo.getTopicUsageMap().forEach((k, v) -> {
+            v.setRateIn(0L);
+            v.setThroughputIn(0L);
+        });
+    }
+
+    public void sendUsageToController() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            log.info("Sending usage to controller");
+            sendTrafficUsage();
+            clear();
+        }, 0, 1, TimeUnit.SECONDS);
+
+    }
+
+    private void sendTrafficUsage() {
+        loadInfo.setTo(System.currentTimeMillis());
+        ClusterMessage msg = ClusterMessage.of(loadInfo);
+        exchange.send(ROUTE_CONTROLLER, "collect", msg);
+    }
+
+}

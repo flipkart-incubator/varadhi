@@ -10,7 +10,11 @@ import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.qos.RateLimiter;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.utils.weights.ExponentialWeightFunction;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -35,6 +39,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
+    private final VaradhiTopicService varadhiTopicService;
 
     public ControllerVerticle(
             ControllerConfig config, CoreServices coreServices, VaradhiClusterManager clusterManager
@@ -43,6 +48,8 @@ public class ControllerVerticle extends AbstractVerticle {
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
+        MessagingStackProvider messagingStackProvider = coreServices.getMessagingStackProvider();
+        this.varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), coreServices.getMetaStoreProvider().getMetaStore());
     }
 
     @Override
@@ -51,9 +58,11 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
+        RateLimiter rateLimiter = new RateLimiter(varadhiTopicService, 5, new ExponentialWeightFunction(6));   //TODO(rl): config driven
+        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(messageExchange, rateLimiter); // TODO(rl): pass rl manager
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
-        onLeaderElected(controllerApiMgr, handler, messageRouter).onComplete(ar -> {
+        onLeaderElected(controllerApiMgr, handler, trafficDataHandler, messageRouter).onComplete(ar -> {
             if (ar.failed()) {
                 startPromise.fail(ar.cause());
             } else {
@@ -82,7 +91,8 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     private Future<Void> onLeaderElected(
-            ControllerApiMgr controllerApiMgr, ControllerApiHandler handler, MessageRouter messageRouter
+            ControllerApiMgr controllerApiMgr, ControllerApiHandler handler, TrafficDataHandler trafficDataHandle,
+            MessageRouter messageRouter
     ) {
         // any failures should give up the leadership.
         //TODO:: check what happens when membership changes post listener setup but prior to bootstrap completion.
@@ -106,7 +116,7 @@ public class ControllerVerticle extends AbstractVerticle {
                             log.error("ConsumerNode:{} failed to join the cluster {}.", "", ce.getCause().getMessage());
                         }
                     })).thenAccept(v -> {
-                        setupApiHandlers(messageRouter, handler);
+                        setupApiHandlers(messageRouter, handler, trafficDataHandle);
                         restoreController(controllerApiMgr, addedConsumers);
                     });
             return Future.fromCompletionStage(future);
@@ -176,11 +186,14 @@ public class ControllerVerticle extends AbstractVerticle {
         stopPromise.complete();
     }
 
-    private void setupApiHandlers(MessageRouter messageRouter, ControllerApiHandler handler) {
+    private void setupApiHandlers(
+            MessageRouter messageRouter, ControllerApiHandler handler, TrafficDataHandler trafficDataHandler
+    ) {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "start", handler::start);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "stop", handler::stop);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "status", handler::status);
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
+        messageRouter.sendHandler(ROUTE_CONTROLLER, "collect", trafficDataHandler::handle);
     }
 
     private void setupMembershipListener(ControllerApiMgr controllerApiMgr) {

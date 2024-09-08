@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -59,6 +59,8 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
+    private TrafficAggregator trafficAggregator;
+    private SuppressorHandler suppressorHandler;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -121,6 +123,31 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
+        trafficAggregator = new TrafficAggregator(clusterManager.getExchange(vertx));
+        MessageRouter messageRouter = clusterManager.getRouter(vertx);
+        suppressorHandler = new SuppressorHandler();
+        messageRouter.sendHandler("web", "rate-limit", suppressorHandler::handle);
+        generateLoad();
+    }
+
+    private void generateLoad() {
+        // async infinite loop to send metrics to controller.
+        Random random = new Random();
+        // build a logic to generate load of x topics at random intervals.
+        int x = 2;
+        new Thread(() -> {
+            while (true) {
+                try {
+                    for (int i = 0; i < x; i++) {
+//                        trafficAggregator.addTopicUsage("test-topic" + i, random.nextLong(1000), random.nextLong(100));
+                        trafficAggregator.addTopicUsage("project1.test-topic1", random.nextLong(1000), random.nextLong(1000));
+                    }
+                    Thread.sleep(random.nextInt(10)*100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
     }
 
     private void performValidations() {
@@ -229,7 +256,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
                 new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
+                        producerMetricsHandler, trafficAggregator, suppressorHandler
                 ).get());
     }
 
