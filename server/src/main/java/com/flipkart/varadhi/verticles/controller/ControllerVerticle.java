@@ -59,7 +59,7 @@ public class ControllerVerticle extends AbstractVerticle {
         ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
         RateLimiter rateLimiter = new RateLimiter(varadhiTopicService, 5, new ExponentialWeightFunction(6));   //TODO(rl): config driven
-        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(messageExchange, rateLimiter); // TODO(rl): pass rl manager
+        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(messageExchange, rateLimiter);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
         onLeaderElected(controllerApiMgr, handler, trafficDataHandler, messageRouter).onComplete(ar -> {

@@ -48,12 +48,12 @@ public class ProduceHandlers implements RouteProvider {
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
     private final TrafficAggregator trafficAggregator;
-    private final SuppressorHandler suppressorHandler; // todo(rl): get RL data from suppressor handler to RL everything
+    private final SuppressorHandler<Float> suppressorHandler;
 
     public ProduceHandlers(
             String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
             ProjectService projectService, ProducerMetricHandler metricHandler, TrafficAggregator trafficAggregator,
-            SuppressorHandler suppressorHandler
+            SuppressorHandler<Float> suppressorHandler
     ) {
         this.produceRegion = produceRegion;
         this.producerService = producerService;
@@ -110,8 +110,13 @@ public class ProduceHandlers implements RouteProvider {
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
-        // TODO(rl): use suppressorHandler to get the rate limit data and allow or reject the request.
-        float suppressionFactor = suppressorHandler.getSuppressionFactor(varadhiTopicName);
+
+        Float suppressionFactor = suppressorHandler.getSuppressionFactor(varadhiTopicName);
+        if (!trafficAggregator.allowProduce(varadhiTopicName, suppressionFactor)) {
+            ctx.endRequestWithStatusAndErrorMsg(HTTP_RATE_LIMITED, "Rate limited");
+            return;
+        }
+
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->

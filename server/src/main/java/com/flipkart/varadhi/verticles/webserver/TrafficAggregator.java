@@ -7,6 +7,7 @@ import com.flipkart.varadhi.entities.ratelimit.TrafficData;
 
 import java.util.UUID;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,13 +25,20 @@ import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
 @Slf4j
 public class TrafficAggregator {
 
+    @Getter
+    private LoadInfo previousLoad;
+    private final int frequency;
     private final LoadInfo loadInfo;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     private final MessageExchange exchange;
 
-    public TrafficAggregator(MessageExchange exchange) {
+    public TrafficAggregator(MessageExchange exchange, int frequency) {
         this.exchange = exchange;
-        loadInfo = new LoadInfo(UUID.randomUUID(), System.currentTimeMillis(), System.currentTimeMillis(), new ConcurrentHashMap<>());
+        this.frequency = frequency;
+        loadInfo = new LoadInfo(UUID.randomUUID(), System.currentTimeMillis(), System.currentTimeMillis(),
+                new ConcurrentHashMap<>()
+        );
+        previousLoad = loadInfo;
         sendUsageToController();
     }
 
@@ -60,16 +68,34 @@ public class TrafficAggregator {
     public void sendUsageToController() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             log.info("Sending usage to controller");
+            updateLocalHistory();
             sendTrafficUsage();
             clear();
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, frequency, TimeUnit.SECONDS);
 
+    }
+
+    private void updateLocalHistory() {
+        previousLoad = loadInfo;
     }
 
     private void sendTrafficUsage() {
         loadInfo.setTo(System.currentTimeMillis());
         ClusterMessage msg = ClusterMessage.of(loadInfo);
         exchange.send(ROUTE_CONTROLLER, "collect", msg);
+    }
+
+    public boolean allowProduce(String topic, float suppressionFactor) {
+        if (suppressionFactor == 0) {
+            return true;
+        }
+        if (previousLoad == null) {
+            return true;
+        }
+        TrafficData prevData = previousLoad.getTopicUsageMap().get(topic);
+        TrafficData currentData = loadInfo.getTopicUsageMap().get(topic);
+        return !(prevData.getThroughputIn() * suppressionFactor < currentData.getThroughputIn() ||
+                prevData.getRateIn() * suppressionFactor < currentData.getRateIn());
     }
 
 }

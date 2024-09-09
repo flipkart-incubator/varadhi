@@ -123,7 +123,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
-        trafficAggregator = new TrafficAggregator(clusterManager.getExchange(vertx));
+        trafficAggregator = new TrafficAggregator(clusterManager.getExchange(vertx), 2);
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         suppressorHandler = new SuppressorHandler();
         messageRouter.sendHandler("web", "rate-limit", suppressorHandler::handle);

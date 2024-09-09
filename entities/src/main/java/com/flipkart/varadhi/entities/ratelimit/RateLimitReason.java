@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities.ratelimit;
 
-// TODO(rl): is it needed, if so add it in impl
 public enum RateLimitReason {
     NONE("Not rate limited"),
     THROUGHPUT_EXCEEDED("Throughput exceeded"),
