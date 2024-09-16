@@ -34,7 +34,7 @@ public class TrafficDataHandler implements RLObserver {
     private void sendSuppressionFactor(SuppressionData suppressionData) {
         log.info("Sending factor to producers");
         ClusterMessage msg = ClusterMessage.of(suppressionData);
-        exchange.send("web", "rate-limit", msg);
+        exchange.publish("web", "rate-limit", msg);
     }
 
     @Override

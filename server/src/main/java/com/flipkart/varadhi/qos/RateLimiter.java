@@ -38,7 +38,7 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 
 @Slf4j
-public class RateLimiter {
+public class RateLimiter { // TODO(rl): impl publisher, for observer
 
     private final int windowSize;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -63,12 +63,17 @@ public class RateLimiter {
         log.debug("current loadHistory: " + loadHistory);
     }
 
+    // TODO(rl): add try block in all scheduledServices
     public void sendSuppressionFactorToWeb() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            log.debug("Update suppression factor");
-            var trafficHistoryMap = generateDS();
-            log.debug("generated trafficHistoryMap: " + trafficHistoryMap);
-            sendSuppressionFactor(trafficHistoryMap);
+            try {
+                log.debug("Update suppression factor");
+                var trafficHistoryMap = generateDS();
+                log.debug("generated trafficHistoryMap: " + trafficHistoryMap);
+                sendSuppressionFactor(trafficHistoryMap);
+            } catch (Exception e) {
+                log.error("Exception occurred while sending suppression factor", e);
+            }
         }, 0, windowSize, TimeUnit.SECONDS);
     }
 
@@ -174,7 +179,6 @@ public class RateLimiter {
                 throughput_aggregated += trafficData.getThroughputIn();
             }
 
-            // TODO(rl): divide by time difference
             float sf_qps = Math.max(0f, (1.0f - ((float) qps / qps_aggregated)));
             float sf_throughput = Math.max(0f, (1.0f - ((float) throughput_bps / throughput_aggregated)));
             log.info("--------------------");
@@ -217,6 +221,7 @@ public class RateLimiter {
         observers.add(observer);
     }
 
+    // TODO(rl): add remove observer
     public void update(RLObserver observer) {
         observer.update(suppressionData);
     }

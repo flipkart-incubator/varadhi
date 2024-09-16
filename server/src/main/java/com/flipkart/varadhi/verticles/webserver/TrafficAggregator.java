@@ -4,12 +4,10 @@ import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.ratelimit.LoadInfo;
 import com.flipkart.varadhi.entities.ratelimit.TrafficData;
-
-import java.util.UUID;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -89,11 +87,15 @@ public class TrafficAggregator {
         if (suppressionFactor == 0) {
             return true;
         }
-        if (previousLoad == null) {
+        if (previousLoad == null || loadInfo == null) {
             return true;
         }
         TrafficData prevData = previousLoad.getTopicUsageMap().get(topic);
         TrafficData currentData = loadInfo.getTopicUsageMap().get(topic);
+        if(prevData == null || currentData == null) {
+            // no information about load for current topic, cant rate limit using suppression factor
+            return true;
+        }
         return !(prevData.getThroughputIn() * suppressionFactor < currentData.getThroughputIn() ||
                 prevData.getRateIn() * suppressionFactor < currentData.getRateIn());
     }

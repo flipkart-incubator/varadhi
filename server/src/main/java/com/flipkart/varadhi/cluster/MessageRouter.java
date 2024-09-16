@@ -90,7 +90,18 @@ public class MessageRouter {
     }
 
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new NotImplementedException("handlePublish not implemented");
+        // TODO(rl): not sure if publishHandler should do anything different as compared to sendHandler except sending reply
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
+        vertxEventBus.consumer(apiPath, message -> {
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            log.debug("Received msg via - publish({}, {})", apiPath, msg.getId());
+            try {
+                // this is async invocation.
+                handler.handle(msg);
+            } catch (Exception e) {
+                log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+            }
+        });
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {
