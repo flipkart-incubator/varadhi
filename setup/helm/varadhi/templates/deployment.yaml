@@ -57,6 +57,13 @@ spec:
           {{- end }}
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
+          {{- if .Values.varadhi.app.debug }}
+          ports:
+            - containerPort: 5005 # jvm remote Debug port
+              name: jvm-debug
+          {{- end }}
+            - containerPort: 9990 # jmx remote port
+              name: jmx
           volumeMounts:
             - mountPath: /etc/varadhi
               name: configs

@@ -62,6 +62,11 @@ OR
 
 Start [varadhi local \[run\]](.run%2Fvaradhi%20local%20%5Brun%5D.run.xml) IntelliJ run profile.
 
+## k8s Deployment
+
+```helm install varadhi setup/helm/varadhi -f setup/helm/varadhi/fcp.values.yaml```
+```helm install varadhi-controller setup/helm/varadhi -f setup/helm/varadhi/values/controller_values.yaml```
+
 ## Modules
 
 - entities: It has all the entities used by the spi module and varadhi apis.

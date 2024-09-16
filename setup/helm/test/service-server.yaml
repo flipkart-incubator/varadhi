@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: varadhi-server-headless
+  namespace: default
+  labels:
+    app: varadhi
+    component: server
+    release: varadhi-server
+spec:
+  ports:
+    - port: 18488
+      targetPort: 8888
+      protocol: TCP
+      name: server-http
+    - port: 5005
+      targetPort: 5005
+      protocol: TCP
+      name: jvm-debug
+  selector:
+    app: varadhi
+    component: server
+    release: varadhi-server
+  clusterIP: None
+  publishNotReadyAddresses: true

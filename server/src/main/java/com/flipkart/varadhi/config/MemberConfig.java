@@ -9,4 +9,6 @@ public class MemberConfig {
     private int clusterPort;
     private int maxQps;
     private int networkMBps;
+    private int cpuCount;
+    private int nicMBps;
 }

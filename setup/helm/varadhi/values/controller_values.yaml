@@ -5,7 +5,7 @@
 clusterDomain: cluster.local
 
 deployment:
-  name: server
+  name: controller
   replicaCount: 1
   autoscaling:
     enabled: false
@@ -86,9 +86,9 @@ zkDeployment:
     ## If left undefined no storage class will be defined along with PVC
     ##
     storageClass:
-      # type: pd-ssd
-      # fsType: xfs
-      # provisioner: kubernetes.io/gce-pd
+    # type: pd-ssd
+    # fsType: xfs
+    # provisioner: kubernetes.io/gce-pd
     selector: { }
     data:
       name: data
@@ -120,9 +120,9 @@ zkDeployment:
 images:
   pullPolicy: IfNotPresent
   appImage:
-    registry: varadhi.docker.registry
-    repository: varadhi
-    tag: latest
+    registry: jfrog.fkinternal.com
+    repository: varadhi-oss/varadhi
+    tag: local-c1-remote-ip
   zookeeper:
     registry: docker.io
     repository: zookeeper
@@ -138,9 +138,8 @@ images:
 ####################################################
 varadhi:
   app:
-    name: server
-    configMapName: server
-    debug: true
+    name: controller
+    configMapName: controller
     restOptions:
       deployedRegion: "default"
       defaultOrg: "default"
@@ -183,14 +182,8 @@ varadhi:
       providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
     featureFlags:
       leanDeployment: false
-    controller:
-      maxConcurrentOps: 2
-      maxRetryAllowed: 3
-      retryIntervalInSeconds: 10
-      retryMinBackoffInSeconds: 10
-      retryMaxBackOffInSeconds: 60
     member:
-      roles: [ "Server", "Controller" ]
+      roles: [ "Controller" ]
       cpuCount: 1
       nicMBps: 100
 

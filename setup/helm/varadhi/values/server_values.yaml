@@ -6,7 +6,7 @@ clusterDomain: cluster.local
 
 deployment:
   name: server
-  replicaCount: 1
+  replicaCount: 3
   autoscaling:
     enabled: false
     minReplicas: 1
@@ -35,7 +35,7 @@ deployment:
     frontendPort: 8888
 
 zkDeployment:
-  enabled: true
+  enabled: false
   name: zookeeper
   replicaCount: 1
   updateStrategy:
@@ -86,9 +86,9 @@ zkDeployment:
     ## If left undefined no storage class will be defined along with PVC
     ##
     storageClass:
-      # type: pd-ssd
-      # fsType: xfs
-      # provisioner: kubernetes.io/gce-pd
+    # type: pd-ssd
+    # fsType: xfs
+    # provisioner: kubernetes.io/gce-pd
     selector: { }
     data:
       name: data
@@ -120,9 +120,9 @@ zkDeployment:
 images:
   pullPolicy: IfNotPresent
   appImage:
-    registry: varadhi.docker.registry
-    repository: varadhi
-    tag: latest
+    registry: jfrog.fkinternal.com
+    repository: varadhi-oss/varadhi
+    tag: local-c1-remote-ip
   zookeeper:
     registry: docker.io
     repository: zookeeper
@@ -140,7 +140,6 @@ varadhi:
   app:
     name: server
     configMapName: server
-    debug: true
     restOptions:
       deployedRegion: "default"
       defaultOrg: "default"
@@ -183,14 +182,8 @@ varadhi:
       providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
     featureFlags:
       leanDeployment: false
-    controller:
-      maxConcurrentOps: 2
-      maxRetryAllowed: 3
-      retryIntervalInSeconds: 10
-      retryMinBackoffInSeconds: 10
-      retryMaxBackOffInSeconds: 60
     member:
-      roles: [ "Server", "Controller" ]
+      roles: [ "Server" ]
       cpuCount: 1
       nicMBps: 100
 
@@ -207,7 +200,7 @@ logging:
 metastore:
   configMapName: metastore
   zookeeper:
-    connectUrl: "127.0.0.1:2181"
+    connectUrl: "varadhi-zookeeper-0.varadhi-zookeeper.default.svc.cluster.local"
     sessionTimeoutMs: 60000
     connectTimeoutMs: 2000
 
