@@ -103,7 +103,7 @@ public class PulsarProducer implements Producer {
         // batchingMaxPublishDelay
 
         // Fixed::
-        // name = topic + hostname
+        // name = topic + host
         // topic = topic name
         // access mode -- shared.
         //

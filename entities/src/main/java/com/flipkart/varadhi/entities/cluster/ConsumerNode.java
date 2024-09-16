@@ -18,7 +18,7 @@ public class ConsumerNode {
     private final Map<String, Assignment> assignments;
 
     public ConsumerNode(MemberInfo memberInfo) {
-        this.consumerId = memberInfo.hostname();
+        this.consumerId = memberInfo.host();
         this.available = memberInfo.provisionedCapacity().clone();
         this.assignments = new HashMap<>();
     }

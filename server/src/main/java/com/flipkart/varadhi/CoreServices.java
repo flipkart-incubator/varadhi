@@ -43,7 +43,7 @@ public class CoreServices {
 
     public CoreServices(AppConfiguration configuration) {
         this.observabilityStack = setupObservabilityStack(configuration);
-        this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
+        this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions(), configuration.isUseHostname());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
     }
 
@@ -72,9 +72,9 @@ public class CoreServices {
         return provider;
     }
 
-    private MessagingStackProvider setupMessagingStackProvider(MessagingStackOptions messagingStackOptions) {
+    private MessagingStackProvider setupMessagingStackProvider(MessagingStackOptions messagingStackOptions, boolean requireHostName) {
         MessagingStackProvider provider = loadClass(messagingStackOptions.getProviderClassName());
-        provider.init(messagingStackOptions, JsonMapper.getMapper());
+        provider.init(messagingStackOptions, JsonMapper.getMapper(), requireHostName);
         return provider;
     }
 
