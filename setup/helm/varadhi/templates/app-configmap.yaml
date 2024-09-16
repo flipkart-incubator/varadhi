@@ -12,6 +12,6 @@ metadata:
     component: {{ .Values.deployment.name }}
 data:
   configuration.yml: |
-    {{- if eq .Values.deployment.name "server" }}
+    {{- if or (eq .Values.deployment.name "server") (eq .Values.deployment.name "controller") (eq .Values.deployment.name "consumer") }}
     {{ include "configMap.varadhi.server" . | nindent 4 }}
     {{- end }}
