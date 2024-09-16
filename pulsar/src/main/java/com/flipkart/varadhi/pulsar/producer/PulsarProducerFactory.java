@@ -13,20 +13,20 @@ import org.apache.pulsar.client.api.PulsarClientException;
 @Slf4j
 public class PulsarProducerFactory implements ProducerFactory<PulsarStorageTopic> {
     private final PulsarClient pulsarClient;
-    private final String hostName;
+    private final String host;
     private final ProducerOptions producerOptions;
 
 
-    public PulsarProducerFactory(PulsarClient pulsarClient, ProducerOptions producerOptions, String hostName) {
+    public PulsarProducerFactory(PulsarClient pulsarClient, ProducerOptions producerOptions, String host) {
         this.pulsarClient = pulsarClient;
-        this.hostName = hostName;
+        this.host = host;
         this.producerOptions = null == producerOptions ? new ProducerOptions() : producerOptions;
     }
 
     @Override
     public Producer newProducer(PulsarStorageTopic storageTopic) {
         try {
-            return new PulsarProducer(pulsarClient, storageTopic, producerOptions, hostName);
+            return new PulsarProducer(pulsarClient, storageTopic, producerOptions, host);
         } catch (PulsarClientException e) {
             throw new ProduceException(
                     String.format(

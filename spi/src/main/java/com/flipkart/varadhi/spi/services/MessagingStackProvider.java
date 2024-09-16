@@ -9,7 +9,7 @@ public interface MessagingStackProvider<T extends StorageTopic, O extends Offset
     //TODO::This is likely a candidate for flattening, instead of these many factories.
     String getName();
 
-    void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper);
+    void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper, boolean requireHostName);
 
     StorageTopicFactory<T> getStorageTopicFactory();
 

@@ -37,6 +37,8 @@ public class AppConfiguration {
 
     private AuthorizationOptions authorization;
 
+    private boolean useHostname;
+
     @NotNull
     private RestOptions restOptions;
 

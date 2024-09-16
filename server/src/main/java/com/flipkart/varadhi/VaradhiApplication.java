@@ -45,9 +45,9 @@ public class VaradhiApplication {
         try {
             log.info("Starting VaradhiApplication");
             AppConfiguration configuration = readConfiguration(args);
-            MemberInfo memberInfo = getMemberInfo(configuration.getMember());
+            MemberInfo memberInfo = getMemberInfo(configuration.getMember(), configuration.isUseHostname());
             CoreServices services = new CoreServices(configuration);
-            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
+            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.host());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
@@ -60,9 +60,9 @@ public class VaradhiApplication {
                                         }
                                     })).collect(Collectors.toList()))
                     )
-                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", memberInfo.hostname()))
+                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", memberInfo.host()))
                     .onFailure(t -> {
-                        log.error("VaradhiApplication on host {} failed to start. {} ", memberInfo.hostname(), t);
+                        log.error("VaradhiApplication on host {} failed to start. {} ", memberInfo.host(), t);
                         log.error("Closing the application.");
                         System.exit(-1);
                     });
@@ -74,8 +74,8 @@ public class VaradhiApplication {
         // TODO: check need for shutdown hook
     }
 
-    private static MemberInfo getMemberInfo(MemberConfig memberConfig) throws UnknownHostException {
-        String host = HostUtils.getHostName();
+    private static MemberInfo getMemberInfo(MemberConfig memberConfig, boolean useHostName) throws UnknownHostException {
+        String host = HostUtils.getHostNameOrAddress(useHostName);
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
         NodeCapacity provisionedCapacity = new NodeCapacity(memberConfig.getMaxQps(), networkKBps);
         return new MemberInfo(host, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);
@@ -95,7 +95,7 @@ public class VaradhiApplication {
         int port = 0;
         JsonObject memberInfoJson = new JsonObject(JsonMapper.jsonSerialize(memberInfo));
         EventBusOptions eventBusOptions = new EventBusOptions()
-                .setHost(memberInfo.hostname())
+                .setHost(memberInfo.host())
                 .setPort(port)
                 .setClusterNodeMetadata(memberInfoJson);
 

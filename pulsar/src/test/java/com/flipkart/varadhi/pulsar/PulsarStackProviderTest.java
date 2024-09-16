@@ -32,6 +32,7 @@ public class PulsarStackProviderTest {
     Path tempDir;
     private PulsarStackProvider pulsarStackProvider;
     private MessagingStackOptions messagingStackOptions;
+    private final boolean useHostName = false;
     private ObjectMapper objectMapper;
     private Project project;
     private TopicPlanner planner;
@@ -58,10 +59,10 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testInit() {
-        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        pulsarStackProvider.init(messagingStackOptions, objectMapper, useHostName);
         verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
         verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
-        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        pulsarStackProvider.init(messagingStackOptions, objectMapper, useHostName);
         verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
         verify(objectMapper, times(1)).registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
     }
@@ -76,7 +77,7 @@ public class PulsarStackProviderTest {
         String topicName = "foobar";
         TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
         InternalQueueCategory topicCategory = InternalQueueCategory.MAIN;
-        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        pulsarStackProvider.init(messagingStackOptions, objectMapper, useHostName);
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
                 pulsarStackProvider.getStorageTopicFactory();
@@ -96,7 +97,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetStorageTopicService_Initialized() {
-        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        pulsarStackProvider.init(messagingStackOptions, objectMapper, useHostName);
         StorageTopicService<PulsarStorageTopic> storageTopicService = pulsarStackProvider.getStorageTopicService();
         StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond =
                 pulsarStackProvider.getStorageTopicService();
@@ -110,7 +111,7 @@ public class PulsarStackProviderTest {
 
     @Test
     public void testGetProducerFactory_Initialized() {
-        pulsarStackProvider.init(messagingStackOptions, objectMapper);
+        pulsarStackProvider.init(messagingStackOptions, objectMapper, useHostName);
         ProducerFactory<PulsarStorageTopic> producerFactory1 = pulsarStackProvider.getProducerFactory();
         ProducerFactory<PulsarStorageTopic> producerFactory2 = pulsarStackProvider.getProducerFactory();
         Assertions.assertEquals(producerFactory1, producerFactory2);
