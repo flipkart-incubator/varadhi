@@ -53,7 +53,7 @@ public class RateLimiter { // TODO(rl): impl publisher, for observer
         this.windowSize = windowSize;
         this.weightFunction = weightFunction;
         this.loadHistory = TreeMultiset.create();
-        this.suppressionData = new SuppressionData();
+        this.suppressionData = new SuppressionData<>();
         sendSuppressionFactorToWeb();
     }
 

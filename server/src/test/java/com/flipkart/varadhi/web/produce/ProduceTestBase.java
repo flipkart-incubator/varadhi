@@ -33,7 +33,7 @@ public class ProduceTestBase extends WebTestBase {
     String deployedRegion = "region1";
     String serviceHost = "localhost";
     TrafficAggregator trafficAggregator;
-    SuppressorHandler suppressorHandler;
+    SuppressorHandler<Float> suppressorHandler;
     ArgumentCaptor<Message> msgCapture;
     String topicPath = "/projects/project1/topics/topic1/produce";
     String topicFullName = "project1.topic1";
