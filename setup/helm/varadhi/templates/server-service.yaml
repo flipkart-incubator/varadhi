@@ -22,10 +22,12 @@ spec:
       targetPort: {{ .Values.varadhi.app.httpServerOptions.port }}
       protocol: TCP
       name: server-http
+    {{- if .Values.varadhi.app.debug }}
     - port: 5005
       targetPort: 5005
       protocol: TCP
       name: jvm-debug
+      {{- end }}
   selector:
     {{- include "varadhi.commonLabels" . | nindent 4 }}
     component: {{ .Values.deployment.name }}

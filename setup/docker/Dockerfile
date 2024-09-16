@@ -2,13 +2,12 @@
 # Ubuntu 22.04.2 LTS
 FROM eclipse-temurin:17.0.7_7-jdk
 ARG SKIP_CERT_CHECK=false
-ARG REMOTE_DEBUG=false
+ARG DEBUG=false
 ARG VARADHI_HOME=.
 
 ENV PORT=18488
 ENV PULSAR_URL=
 ENV ZK_URL=
-ENV APP_DEBUG=$DEBUG
 
 # Varadhi Server
 EXPOSE $PORT
@@ -75,7 +74,8 @@ RUN sed -i 's|src/main/resources/|/etc/varadhi/|' /etc/varadhi/configuration.yml
 USER varadhi
 WORKDIR /usr/share/varadhi
 
-RUN env
+# setting ENVs here so cahce is used for dependency download
+ENV APP_DEBUG=$DEBUG
 
 # Start Varadhi server
 CMD /usr/share/varadhi/scripts/entrypoint.sh
