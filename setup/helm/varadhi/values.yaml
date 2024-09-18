@@ -138,9 +138,11 @@ images:
 ####################################################
 varadhi:
   app:
+    configs:
+      javaExtraOpts: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=9990"
     name: server
     configMapName: server
-    debug: true
+    debug: false
     restOptions:
       deployedRegion: "default"
       defaultOrg: "default"

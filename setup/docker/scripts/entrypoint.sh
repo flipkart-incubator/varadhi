@@ -23,4 +23,4 @@ if [[ ! -z "$APP_DEBUG" ]]; then
     fi
 fi
 
-exec java -cp ./*:dependencies/* $JAVA_OPTS com.flipkart.varadhi.VaradhiApplication /etc/varadhi/configuration.yml
+exec java -cp ./*:dependencies/* $JAVA_OPTS $JAVA_EXTRA_OPTS com.flipkart.varadhi.VaradhiApplication /etc/varadhi/configuration.yml

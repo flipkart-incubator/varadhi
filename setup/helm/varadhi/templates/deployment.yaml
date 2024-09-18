@@ -57,6 +57,11 @@ spec:
           {{- end }}
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
+          env:
+            - name: APP_DEBUG
+              value: "{{ .Values.varadhi.app.debug }}"
+            - name: JAVA_EXTRA_OPTS
+              value: "{{ .Values.varadhi.app.configs.javaExtraOpts }}"
           ports:
             - containerPort: 9990 # jmx remote port
               name: jmx
