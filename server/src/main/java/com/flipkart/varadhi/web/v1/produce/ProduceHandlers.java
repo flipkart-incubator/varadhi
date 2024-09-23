@@ -8,7 +8,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
-import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
+import com.flipkart.varadhi.qos.client.RateLimiterService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

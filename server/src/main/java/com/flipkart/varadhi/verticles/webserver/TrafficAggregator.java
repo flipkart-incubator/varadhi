@@ -2,6 +2,7 @@ package com.flipkart.varadhi.verticles.webserver;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.qos.client.RateLimiterService;
 import com.flipkart.varadhi.qos.entity.LoadInfo;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.qos.entity.SuppressionFactor;

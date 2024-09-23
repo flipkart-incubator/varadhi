@@ -1,10 +1,11 @@
-package com.flipkart.varadhi.verticles.webserver;
+package com.flipkart.varadhi.qos.client;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.qos.RateLimiter;
 import com.flipkart.varadhi.qos.TopicRateLimiter;
 import com.flipkart.varadhi.utils.HostUtils;
 
+import com.flipkart.varadhi.verticles.webserver.TrafficAggregator;
 import java.net.UnknownHostException;
 
 import lombok.extern.slf4j.Slf4j;

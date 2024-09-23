@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.utils.weights;
+package com.flipkart.varadhi.qos.weights;
 
 public class LinearWeightFunction implements WeightFunction {
     @Override
