@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.entities.ratelimit;
+package com.flipkart.varadhi.qos.entity;
 
 
 import jakarta.validation.constraints.NotNull;
@@ -7,14 +7,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Map;
-import java.util.UUID;
 
 @Getter
 @Setter
 @AllArgsConstructor
 public class LoadInfo implements Comparable<LoadInfo> {
     // current millis
-    private UUID uuid;
+    private String clientId;
     private long from;
     private long to;
     private Map<String, TrafficData> topicUsageMap; // topic to incoming traffic map
@@ -22,6 +21,7 @@ public class LoadInfo implements Comparable<LoadInfo> {
     @Override
     public String toString() {
         return "\nLoadInfo{" +
+                "clientId=" + clientId +
                 "from=" + from +
                 ", to=" + to +
                 ", topicUsageMap=" + topicUsageMap +
@@ -35,7 +35,7 @@ public class LoadInfo implements Comparable<LoadInfo> {
 
     public static int compare(@NotNull LoadInfo x, @NotNull LoadInfo y) {
 
-        if(x.uuid != null && y.uuid != null && x.uuid.compareTo(y.uuid) == 0) {
+        if(x.clientId != null && y.clientId != null && x.clientId.compareTo(y.clientId) == 0) {
             return 0;
         }
 

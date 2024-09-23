@@ -8,8 +8,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
-import com.flipkart.varadhi.verticles.webserver.SuppressorHandler;
-import com.flipkart.varadhi.verticles.webserver.TrafficAggregator;
+import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -47,21 +46,18 @@ public class ProduceHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
-    private final TrafficAggregator trafficAggregator;
-    private final SuppressorHandler<Float> suppressorHandler;
+    private final RateLimiterService rateLimiterService;
 
     public ProduceHandlers(
             String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
-            ProjectService projectService, ProducerMetricHandler metricHandler, TrafficAggregator trafficAggregator,
-            SuppressorHandler<Float> suppressorHandler
+            ProjectService projectService, ProducerMetricHandler metricHandler, RateLimiterService rateLimiterService
     ) {
         this.produceRegion = produceRegion;
         this.producerService = producerService;
         this.headerValidationHandler = headerValidationHandler;
         this.projectService = projectService;
         this.metricHandler = metricHandler;
-        this.trafficAggregator = trafficAggregator;
-        this.suppressorHandler = suppressorHandler;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @Override
@@ -103,7 +99,10 @@ public class ProduceHandlers implements RouteProvider {
 
         String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
         // TODO(rl): handle for batch qps? Is it required
-        trafficAggregator.addTopicUsage(varadhiTopicName, ctx.body().length(), 1);
+        if(!rateLimiterService.isAllowed(varadhiTopicName, (double) ctx.body().length())) {
+            ctx.endRequestWithStatusAndErrorMsg(HTTP_RATE_LIMITED, "Rate limited");
+            return;
+        }
 
         // TODO:: Below is making extra copy, this needs to be avoided.
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
@@ -111,11 +110,6 @@ public class ProduceHandlers implements RouteProvider {
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
 
-        Float suppressionFactor = suppressorHandler.getSuppressionFactor(varadhiTopicName);
-        if (!trafficAggregator.allowProduce(varadhiTopicName, suppressionFactor)) {
-            ctx.endRequestWithStatusAndErrorMsg(HTTP_RATE_LIMITED, "Rate limited");
-            return;
-        }
 
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);

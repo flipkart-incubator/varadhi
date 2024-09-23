@@ -62,7 +62,7 @@ public class MessageExchange {
         try {
             vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
                 if (ar.succeeded()) {
-                    log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
+                    log.info("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
                     ResponseMessage response =
                             JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
                     if (response.getException() != null) {

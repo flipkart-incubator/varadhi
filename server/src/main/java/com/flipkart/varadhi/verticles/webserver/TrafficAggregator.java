@@ -2,16 +2,16 @@ package com.flipkart.varadhi.verticles.webserver;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.entities.ratelimit.LoadInfo;
-import com.flipkart.varadhi.entities.ratelimit.TrafficData;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.UUID;
+import com.flipkart.varadhi.qos.entity.LoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
+import com.flipkart.varadhi.qos.entity.SuppressionFactor;
+import com.flipkart.varadhi.qos.entity.TrafficData;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
 
@@ -23,20 +23,19 @@ import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
 @Slf4j
 public class TrafficAggregator {
 
-    @Getter
-    private LoadInfo previousLoad;
+    private LoadInfo loadInfo;
     private final int frequency;
-    private final LoadInfo loadInfo;
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     private final MessageExchange exchange;
+    private final RateLimiterService rateLimiterService;
 
-    public TrafficAggregator(MessageExchange exchange, int frequency) {
+    public TrafficAggregator(MessageExchange exchange, String clientId, int frequency, RateLimiterService rateLimiterService) {
         this.exchange = exchange;
         this.frequency = frequency;
-        loadInfo = new LoadInfo(UUID.randomUUID(), System.currentTimeMillis(), System.currentTimeMillis(),
+        this.rateLimiterService = rateLimiterService;
+        loadInfo = new LoadInfo(clientId, System.currentTimeMillis(), System.currentTimeMillis(),
                 new ConcurrentHashMap<>()
         );
-        previousLoad = loadInfo;
         sendUsageToController();
     }
 
@@ -45,8 +44,6 @@ public class TrafficAggregator {
             if (v == null) {
                 return TrafficData.builder().throughputIn(throughput).rateIn(qps).build();
             } else {
-                // because we are updating the values, uuid shows data has changed
-                loadInfo.setUuid(UUID.randomUUID());
                 v.setRateIn(v.getRateIn() + qps);
                 v.setThroughputIn(v.getThroughputIn() + throughput);
                 return v;
@@ -65,39 +62,36 @@ public class TrafficAggregator {
 
     public void sendUsageToController() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            log.info("Sending usage to controller");
-            updateLocalHistory();
-            sendTrafficUsage();
-            clear();
-        }, 0, frequency, TimeUnit.SECONDS);
+            try {
+                log.info("Sending usage to controller");
+                sendTrafficUsage();
+                clear();
+            } catch (Exception e) {
+                log.error("Error while sending usage to controller", e);
+            }
+        }, frequency, frequency, TimeUnit.SECONDS);
 
-    }
-
-    private void updateLocalHistory() {
-        previousLoad = loadInfo;
     }
 
     private void sendTrafficUsage() {
         loadInfo.setTo(System.currentTimeMillis());
         ClusterMessage msg = ClusterMessage.of(loadInfo);
-        exchange.send(ROUTE_CONTROLLER, "collect", msg);
-    }
-
-    public boolean allowProduce(String topic, float suppressionFactor) {
-        if (suppressionFactor == 0) {
-            return true;
-        }
-        if (previousLoad == null || loadInfo == null) {
-            return true;
-        }
-        TrafficData prevData = previousLoad.getTopicUsageMap().get(topic);
-        TrafficData currentData = loadInfo.getTopicUsageMap().get(topic);
-        if(prevData == null || currentData == null) {
-            // no information about load for current topic, cant rate limit using suppression factor
-            return true;
-        }
-        return !(prevData.getThroughputIn() * suppressionFactor < currentData.getThroughputIn() ||
-                prevData.getRateIn() * suppressionFactor < currentData.getRateIn());
+        log.info("Sending message to controller: {}", loadInfo);
+        CompletableFuture<SuppressionData<SuppressionFactor>> response =
+                exchange.request(ROUTE_CONTROLLER, "collect", msg).thenApply(rm -> rm.getResponse(
+                        SuppressionData.class));
+        response.whenComplete((suppressionData, throwable) -> {
+            if (throwable != null) {
+                log.error("Error while receiving suppression data from controller", throwable);
+            } else {
+                log.info("Received suppression data from controller: {}", suppressionData);
+                suppressionData.getSuppressionFactor().forEach((topic, suppressionFactor) -> {
+                    log.info("Updating suppression factor for topic: {} to {}", topic, suppressionFactor);
+                    rateLimiterService.updateSuppressionFactor(topic, "throughput_check", suppressionFactor.getThroughputFactor());
+                    rateLimiterService.updateSuppressionFactor(topic, "qps_check", suppressionFactor.getQpsFactor());
+                });
+            }
+        });
     }
 
 }

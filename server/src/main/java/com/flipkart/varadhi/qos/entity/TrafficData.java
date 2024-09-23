@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.entities.ratelimit;
+package com.flipkart.varadhi.qos.entity;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;

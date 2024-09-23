@@ -4,23 +4,22 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.verticles.controller.ControllerClient;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -40,6 +39,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -59,8 +59,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
-    private TrafficAggregator trafficAggregator;
-    private SuppressorHandler suppressorHandler;
+    private RateLimiterService rateLimiterService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -123,11 +122,12 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
-        trafficAggregator = new TrafficAggregator(clusterManager.getExchange(vertx), 2);
-        MessageRouter messageRouter = clusterManager.getRouter(vertx);
-        suppressorHandler = new SuppressorHandler<Float>();
-        messageRouter.publishHandler("web", "rate-limit", suppressorHandler::handle);
-        generateLoad();
+        try {
+            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), 1, true); // TODO(rl): convert to config
+            generateLoad();
+        } catch (UnknownHostException e) {
+            log.error("Error creating RateLimiterService", e);
+        }
     }
 
     private void generateLoad() {
@@ -147,16 +147,19 @@ public class WebServerVerticle extends AbstractVerticle {
                     int range = random.nextInt(0, 10);
                     long qps = random.nextLong(1000);
                     long thrpt = random.nextLong(1000);
-                    log.info("generating load in batch of {} with qps: {} and thrpt: {}", range, qps, thrpt);
-                    for(int i = 0; i < range; ++i) {
-                        trafficAggregator.addTopicUsage(
-                                "project1.test-topic1",
-                                thrpt/range,
-                                qps/range
-                        );
-                        log.info("[{}]: adding qps: {} and thrpt: {}", i, qps/range, thrpt/range);
-                        Thread.sleep(1000/range);
+                    // simulate qps
+                    log.info("generating load of qps: {}", qps);
+                    log.info("start time: {}", System.currentTimeMillis());
+                    for (int i = 0; i < qps; i++) {
+                        rateLimiterService.isAllowed("project1.test-topic1", 1.0);
+                        Thread.sleep(Math.floorDiv(1000, qps));
                     }
+                    log.info("end time: {}", System.currentTimeMillis());
+//                    for(int i = 0; i < range; ++i) {
+//                        rateLimiterService.isAllowed("project1.test-topic1", (double) thrpt/range);
+////                        log.info("[{}]: adding qps: {} and thrpt: {}", i, qps/range, thrpt/range);
+//                        Thread.sleep(1000/range);
+//                    }
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -270,7 +273,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
                 new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler, trafficAggregator, suppressorHandler
+                        producerMetricsHandler, rateLimiterService
                 ).get());
     }
 

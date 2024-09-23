@@ -1,45 +1,41 @@
 package com.flipkart.varadhi.verticles.controller;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.entities.ratelimit.LoadInfo;
-import com.flipkart.varadhi.entities.ratelimit.SuppressionData;
-import com.flipkart.varadhi.qos.RLObserver;
-import com.flipkart.varadhi.qos.RateLimiter;
+import com.flipkart.varadhi.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.qos.entity.LoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
+
+import com.flipkart.varadhi.qos.entity.SuppressionFactor;
+import com.flipkart.varadhi.qos.server.SuppressionManager;
+
+import java.util.concurrent.CompletableFuture;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TrafficDataHandler implements RLObserver {
+public class TrafficDataHandler {
+    private final SuppressionManager suppressionManager;
 
-    private final MessageExchange exchange;
-    private final RateLimiter rateLimiter;
-
-    public TrafficDataHandler(MessageExchange exchange, RateLimiter rateLimiter) {
-        this.exchange = exchange;
-        this.rateLimiter = rateLimiter;
-        rateLimiter.registerObserver(this);
+    public TrafficDataHandler(SuppressionManager suppressionManager) {
+        this.suppressionManager = suppressionManager;
     }
 
-    public void handle(ClusterMessage message) {
-//        System.out.println("msg: " + message);
+    public CompletableFuture<ResponseMessage> handle(ClusterMessage message) {
         LoadInfo info = message.getData(LoadInfo.class);
-//        System.out.println(info.getTopicUsageMap());
-//        System.out.println(new Date(info.getFrom()));
-//        System.out.println(new Date(info.getTo()));
-        System.out.println("Delta: " + (System.currentTimeMillis() - info.getTo()) + "ms");
-        rateLimiter.addTrafficData(info);
+        SuppressionData<SuppressionFactor> suppressionData = new SuppressionData<>();
+        long delta = System.currentTimeMillis() - info.getTo();
+        log.info("Delta: {}ms", delta);
 
-    }
-
-    private void sendSuppressionFactor(SuppressionData suppressionData) {
-        log.info("Sending factor to producers");
-        ClusterMessage msg = ClusterMessage.of(suppressionData);
-        exchange.publish("web", "rate-limit", msg);
-    }
-
-    @Override
-    public void update(SuppressionData suppressionData) {
-        sendSuppressionFactor(suppressionData);
+        info.getTopicUsageMap().forEach((topic, trafficData) -> {
+            Float throughputFactor = suppressionManager.addThroughput(info.getClientId(), topic, trafficData.getThroughputIn());
+            Float qpsFactor = suppressionManager.addQPS(info.getClientId(), topic, trafficData.getRateIn());
+            suppressionData.getSuppressionFactor().put(topic, new SuppressionFactor(throughputFactor, qpsFactor));
+        });
+        log.info("Suppression data: {}", suppressionData);
+        CompletableFuture<ResponseMessage> responseMessageCompletableFuture =
+                CompletableFuture.completedFuture(message.getResponseMessage(suppressionData));
+        log.info("Response message: {}", responseMessageCompletableFuture);
+        return responseMessageCompletableFuture;
     }
 
 }

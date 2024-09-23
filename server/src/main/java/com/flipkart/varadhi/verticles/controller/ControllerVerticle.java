@@ -1,22 +1,24 @@
 package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.cluster.*;
-import com.flipkart.varadhi.controller.OperationMgr;
+import com.flipkart.varadhi.cluster.MembershipListener;
+import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.MessageRouter;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
+import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
+import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
-import com.flipkart.varadhi.qos.RateLimiter;
+import com.flipkart.varadhi.qos.server.SuppressionManager;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.utils.weights.ExponentialWeightFunction;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.controller.ControllerApiMgr;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -58,8 +60,8 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
-        RateLimiter rateLimiter = new RateLimiter(varadhiTopicService, 5, new ExponentialWeightFunction(6));   //TODO(rl): config driven
-        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(messageExchange, rateLimiter);
+        SuppressionManager suppressionManager = new SuppressionManager(5, varadhiTopicService); //TODO(rl): config driven
+        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(suppressionManager);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
         onLeaderElected(controllerApiMgr, handler, trafficDataHandler, messageRouter).onComplete(ar -> {
@@ -193,7 +195,7 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "stop", handler::stop);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "status", handler::status);
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
-        messageRouter.sendHandler(ROUTE_CONTROLLER, "collect", trafficDataHandler::handle);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "collect", trafficDataHandler::handle);
     }
 
     private void setupMembershipListener(ControllerApiMgr controllerApiMgr) {

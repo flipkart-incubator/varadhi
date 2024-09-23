@@ -7,5 +7,4 @@ module com.flipkart.varadhi.entities {
     exports com.flipkart.varadhi.entities;
     exports com.flipkart.varadhi.entities.cluster;
     exports com.flipkart.varadhi.entities.auth;
-    exports com.flipkart.varadhi.entities.ratelimit;
 }
