@@ -1,20 +1,22 @@
 package com.flipkart.varadhi.qos.server;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class ClientLoad<T> {
     Map<String, Queue<T>> clientLoad; // clientId to load info (list to keep history data)
     Map<String, T> lastDataCache; // client's last known throughput
     private final int slots;
 
     public ClientLoad(int historySlots) {
-        this.clientLoad = new HashMap<>();
-        this.lastDataCache = new HashMap<>();
+        this.clientLoad = new ConcurrentHashMap<>();
+        this.lastDataCache = new ConcurrentHashMap<>();
         this.slots = historySlots;
     }
 
@@ -30,7 +32,7 @@ public class ClientLoad<T> {
         // first time for client, create a new history queue
         if(!clientLoad.containsKey(clientId)) {
             addClient(clientId);
-            // other option to throw exception and handle client addition somewhere else
+//            // other option to throw exception and handle client addition somewhere else
 //            throw new IllegalArgumentException("Client not found");
         }
 

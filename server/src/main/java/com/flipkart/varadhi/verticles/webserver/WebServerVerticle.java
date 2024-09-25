@@ -123,7 +123,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
         try {
-            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), 1, true); // TODO(rl): convert to config
+            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), 1, configuration.isUseHostname()); // TODO(rl): convert to config
             generateLoad();
         } catch (UnknownHostException e) {
             log.error("Error creating RateLimiterService", e);
@@ -131,35 +131,23 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     private void generateLoad() {
-        // async infinite loop to send metrics to controller.
+        // async infinite loop to generate NFR load.
         Random random = new Random();
-        // build a logic to generate load of x topics at random intervals.
-        int x = 2;
         // TODO(rl): generate scenarios
         new Thread(() -> {
             while (true) {
                 try {
-//                    for (int i = 0; i < x; i++) {
-////                        trafficAggregator.addTopicUsage("test-topic" + i, random.nextLong(1000), random.nextLong(100));
-//                        trafficAggregator.addTopicUsage("project1.test-topic1", random.nextLong(1000), random.nextLong(1000));
-//                    }
-//                    Thread.sleep(random.nextInt(10)*100);
-                    int range = random.nextInt(0, 10);
                     long qps = random.nextLong(1000);
-                    long thrpt = random.nextLong(1000);
                     // simulate qps
                     log.info("generating load of qps: {}", qps);
-                    log.info("start time: {}", System.currentTimeMillis());
+                    Long t1 = System.currentTimeMillis();
+                    log.info("start time: {}", new Date(t1));
                     for (int i = 0; i < qps; i++) {
                         rateLimiterService.isAllowed("project1.test-topic1", 1.0);
                         Thread.sleep(Math.floorDiv(1000, qps));
                     }
-                    log.info("end time: {}", System.currentTimeMillis());
-//                    for(int i = 0; i < range; ++i) {
-//                        rateLimiterService.isAllowed("project1.test-topic1", (double) thrpt/range);
-////                        log.info("[{}]: adding qps: {} and thrpt: {}", i, qps/range, thrpt/range);
-//                        Thread.sleep(1000/range);
-//                    }
+                    Long t2 = System.currentTimeMillis();
+                    log.info("end time: {}", new Date(t2));
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }

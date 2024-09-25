@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class SuppressionFactor {
-    Float throughputFactor;
-    Float qpsFactor;
+    Double throughputFactor;
+    Double qpsFactor;
 }

@@ -43,12 +43,12 @@ public class RateLimiterService {
         return topicRateLimiters.get(topic);
     }
 
-    public void updateSuppressionFactor(String topic, String type, Float suppressionFactor) {
-        log.info("Updating suppression factor for topic: {}, suppression factor: {}", topic, suppressionFactor);
+    public void updateSuppressionFactor(String topic, String type, Double suppressionFactor) {
+        log.info("Updating suppression factor for topic: {}", topic);
         getRateLimiter(topic).forEach(rl -> {
             if(rl instanceof TopicRateLimiter trl) {
                 if(trl.getTopic().equals(topic) && trl.getName().equals(type)) {
-                    log.info("Setting suppression factor for topic: {}, suppression factor: {}", topic, suppressionFactor);
+                    log.info("Setting SF for topic: {}, factor: {}, rl: {}", topic, suppressionFactor, trl.getName());
                     trl.setSuppressionFactor(suppressionFactor);
                 }
             }

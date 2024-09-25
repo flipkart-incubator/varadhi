@@ -11,14 +11,14 @@ public class TopicRateLimiter implements RateLimiter {
     private final String topic;
     @Getter
     private final String name;
-    private volatile float suppressionFactor;
+    private volatile double suppressionFactor;
     private AtomicDouble lastObserved;
     private AtomicDouble currentObserved;
 
     public TopicRateLimiter(String topic, String name) {
         this.topic = topic;
         this.name = name;
-        this.suppressionFactor = 0f;
+        this.suppressionFactor = 0;
         lastObserved = new AtomicDouble(0.0);
         currentObserved = new AtomicDouble(0.0);
     }
@@ -29,23 +29,13 @@ public class TopicRateLimiter implements RateLimiter {
         if(suppressionFactor == 0) {
             return true;
         }
-        log.info("Current observed: {}, Last observed: {}", currentObserved, lastObserved);
-        log.info("Suppression factor: {}", suppressionFactor);
-        log.info("Allowed: {}", currentObserved.get() <= lastObserved.get()*(1-suppressionFactor));
         return currentObserved.get() <= lastObserved.get()*(1-suppressionFactor);
     }
 
-    public void setSuppressionFactor(float suppressionFactor) {
-        log.info("BEFORE SETTING SUPPRESSION FACTOR");
-        log.info("current observed: {}", currentObserved);
-        log.info("last observed: {}", lastObserved);
+    public void setSuppressionFactor(double suppressionFactor) {
         lastObserved.set(currentObserved.get());
         // reset current observed
         currentObserved.set(0.0);
         this.suppressionFactor = suppressionFactor;
-        log.info("AFTER SETTING SUPPRESSION FACTOR");
-        log.info("current observed: {}", currentObserved);
-        log.info("last observed: {}", lastObserved);
-
     }
 }
