@@ -6,6 +6,7 @@ build
 
 # IntelliJ
 .idea/*
+.run/*
 !.idea/vcs.xml
 *.iml
 *.iws
