@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
 
-public interface MessagingStackProvider<T extends StorageTopic, O extends Offset, S extends StorageSubscription> {
+public interface MessagingStackProvider<T extends StorageTopic, O extends Offset, S extends StorageSubscription<T>> {
     //TODO::This is likely a candidate for flattening, instead of these many factories.
     String getName();
 
@@ -16,6 +16,7 @@ public interface MessagingStackProvider<T extends StorageTopic, O extends Offset
     StorageSubscriptionFactory<S, T> getSubscriptionFactory();
 
     StorageTopicService<T> getStorageTopicService();
+
     StorageSubscriptionService<S> getStorageSubscriptionService();
 
     ProducerFactory<T> getProducerFactory();

@@ -14,9 +14,9 @@ import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class ConsumerApiMgr implements ConsumerApi {
+
     private final ConsumersManager consumersManager;
     private final ConsumerInfo consumerInfo;
-
 
     public ConsumerApiMgr(ConsumersManager consumersManager, ConsumerInfo consumerInfo) {
         this.consumersManager = consumersManager;
@@ -28,7 +28,7 @@ public class ConsumerApiMgr implements ConsumerApi {
         log.info("Consumer: Starting shard {}", operation);
         SubscriptionUnitShard shard = operation.getShard();
         consumerInfo.addShardCapacity(operation.getSubscriptionId(), shard.getShardId(), shard.getCapacityRequest());
-        StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionToConsume();
+        StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
         ConsumptionFailurePolicy failurePolicy =
                 new ConsumptionFailurePolicy(operation.getRetryPolicy(), shard.getRetrySubscription(),
                         shard.getDeadLetterSubscription()

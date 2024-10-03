@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
@@ -22,8 +21,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Message source that maintains ordering among messages of the same groupId.
  */
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
 
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
@@ -91,6 +90,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     private void tryCompletePendingRequest() {
         NextMsgsRequest request;
         if ((request = pendingRequest.getAndSet(null)) != null) {
+            // TODO: does it need to be done on the context?
             request.result.complete(nextMessagesInternal(request.messages));
         }
     }
@@ -196,7 +196,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
         private final MessageTracker messageTracker;
 
         @Override
-        public Message getMessage() {
+        public PolledMessage<? extends Offset> getMessage() {
             return messageTracker.getMessage();
         }
 
