@@ -16,4 +16,11 @@ JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
 JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
 JAVA_OPTS="$JAVA_OPTS -Dlog4j2.configurationFile=/etc/varadhi/log4j2.xml"
 
-exec java -cp ./*:dependencies/* $JAVA_OPTS com.flipkart.varadhi.VaradhiApplication /etc/varadhi/configuration.yml
+# If debug flag is set(1 or true) then enable remote debugging
+if [[ ! -z "$APP_DEBUG" ]]; then
+    if [[ "$APP_DEBUG" == "1" || "$APP_DEBUG" == "true" ]]; then
+        JAVA_OPTS="$JAVA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"
+    fi
+fi
+
+exec java -cp ./*:dependencies/* $JAVA_OPTS $JAVA_EXTRA_OPTS com.flipkart.varadhi.VaradhiApplication /etc/varadhi/configuration.yml
