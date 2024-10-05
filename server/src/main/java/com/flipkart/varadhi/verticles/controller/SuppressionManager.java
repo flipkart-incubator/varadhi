@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
+// TODO(rl): try to move business logic to RL module
 @Slf4j
 public class SuppressionManager {
     Map<String, ClientHistory<TopicLoadInfo>> topicTrafficDataMap; // topic to client load info
@@ -38,8 +39,7 @@ public class SuppressionManager {
             topicTrafficDataMap.put(topic, new ClientHistory<>(windowSize));
         }
 
-        // todo(rl): how to use from and to while adding in the history
-        topicTrafficDataMap.get(topic).add(clientId, topicLoadInfo);//.getBytesIn() / windowSizeInSeconds);
+        topicTrafficDataMap.get(topic).add(clientId, topicLoadInfo);
 
         Double actualThroughout =
                 clientIdList.stream().map(client -> getThroughput(client, topic)).reduce(0.0, Double::sum);

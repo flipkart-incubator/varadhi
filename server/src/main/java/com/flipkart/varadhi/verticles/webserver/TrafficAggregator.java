@@ -93,13 +93,12 @@ public class TrafficAggregator {
         topicTrafficMap.forEach((topic, data) -> {
             loadInfo.getTopicUsageList().add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build());
         });
-        // TODO(rl): use load info
         ClusterMessage msg = ClusterMessage.of(loadInfo);
         log.info("Sending traffic data to controller: {}", loadInfo);
         exchange.request(ROUTE_CONTROLLER, "collect", msg)
                 .thenApply(rm -> rm.getResponse(SuppressionData.class))
                 .whenComplete(this::handleSuppressionDataResponse);// TODO(rl); simulate add delay for degradation
-        resetData(currentTime);// TODO(rl): same time as to in from
+        resetData(currentTime);
     }
 
     private void handleSuppressionDataResponse(

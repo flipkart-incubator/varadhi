@@ -10,10 +10,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-// TODO(rl): not in RL module, in entity module
+// TODO(rl): not in RL module, move to entity module
 public class TrafficData {
     private String topic;
-    // TODO(rl): make them adders
     private long bytesIn;
     private long rateIn;
 
