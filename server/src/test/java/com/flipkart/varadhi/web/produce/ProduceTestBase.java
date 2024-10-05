@@ -7,8 +7,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.verticles.webserver.SuppressorHandler;
-import com.flipkart.varadhi.verticles.webserver.TrafficAggregator;
+import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -19,10 +18,8 @@ import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -32,8 +29,7 @@ public class ProduceTestBase extends WebTestBase {
     ProjectService projectService;
     String deployedRegion = "region1";
     String serviceHost = "localhost";
-    TrafficAggregator trafficAggregator;
-    SuppressorHandler<Float> suppressorHandler;
+    RateLimiterService rateLimiterService;
     ArgumentCaptor<Message> msgCapture;
     String topicPath = "/projects/project1/topics/topic1/produce";
     String topicFullName = "project1.topic1";
@@ -57,15 +53,11 @@ public class ProduceTestBase extends WebTestBase {
         HeaderValidationHandler headerHandler = new HeaderValidationHandler(options);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
-        // TODO(rl): what to do here....
-        trafficAggregator = mock(TrafficAggregator.class);
-        suppressorHandler = mock(SuppressorHandler.class);
-        doNothing().when(trafficAggregator).addTopicUsage(any(), anyLong(), anyLong());
+        rateLimiterService = mock(RateLimiterService.class);
         // no rate limit in tests
-        doReturn(true).when(trafficAggregator).allowProduce(any(), anyFloat());
-        doReturn(0.0f).when(suppressorHandler).getSuppressionFactor(any());
+        doReturn(true).when(rateLimiterService).isAllowed(any(), anyLong());
         produceHandlers = new ProduceHandlers(deployedRegion, headerHandler::validate, producerService, projectService,
-                metricHandler, trafficAggregator, suppressorHandler
+                metricHandler, rateLimiterService
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

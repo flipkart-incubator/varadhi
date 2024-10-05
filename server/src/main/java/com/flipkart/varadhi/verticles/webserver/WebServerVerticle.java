@@ -10,7 +10,6 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.qos.client.RateLimiterService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -123,7 +122,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
         try {
-            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), 1, configuration.isUseHostname()); // TODO(rl): convert to config
+            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), meterRegistry, 1, configuration.isUseHostname()); // TODO(rl): convert to config
             generateLoad();
         } catch (UnknownHostException e) {
             log.error("Error creating RateLimiterService", e);
@@ -143,7 +142,7 @@ public class WebServerVerticle extends AbstractVerticle {
                     Long t1 = System.currentTimeMillis();
                     log.info("start time: {}", new Date(t1));
                     for (int i = 0; i < qps; i++) {
-                        rateLimiterService.isAllowed("project1.test-topic1", 1.0);
+                        rateLimiterService.isAllowed("project1.test-topic1", 1024);
                         Thread.sleep(Math.floorDiv(1000, qps));
                     }
                     Long t2 = System.currentTimeMillis();

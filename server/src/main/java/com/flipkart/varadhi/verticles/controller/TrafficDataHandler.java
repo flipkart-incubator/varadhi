@@ -2,10 +2,10 @@ package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.qos.entity.LoadInfo;
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.qos.entity.SuppressionFactor;
-import com.flipkart.varadhi.qos.server.SuppressionManager;
+import com.flipkart.varadhi.qos.entity.TopicLoadInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,25 +19,18 @@ public class TrafficDataHandler {
     }
 
     public CompletableFuture<ResponseMessage> handle(ClusterMessage message) {
-        LoadInfo info = message.getData(LoadInfo.class);
-        SuppressionData<SuppressionFactor> suppressionData = new SuppressionData<>();
+        ClientLoadInfo info = message.getData(ClientLoadInfo.class);
+        SuppressionData suppressionData = new SuppressionData();
         long delta = System.currentTimeMillis() - info.getTo();
         log.info("Delta: {}ms", delta);
-        double windowSizeInSeconds = (double) (info.getTo() - info.getFrom()) / 1000;
 
-        info.getTopicUsageMap().forEach((topic, trafficData) -> {
-            Double throughputFactor = suppressionManager.addThroughput(
+        info.getTopicUsageList().forEach((trafficData) -> {
+            SuppressionFactor suppressionFactor = suppressionManager.addTrafficData(
                     info.getClientId(),
-                    topic,
-                    trafficData.getThroughputIn() / windowSizeInSeconds
+                    new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
             );
-            Double qpsFactor = suppressionManager.addQPS(
-                    info.getClientId(),
-                    topic,
-                    trafficData.getRateIn() / windowSizeInSeconds
-            );
-            log.info("Topic: {}, Throughput factor: {}, QPS factor: {}", topic, throughputFactor, qpsFactor);
-            suppressionData.getSuppressionFactor().put(topic, new SuppressionFactor(throughputFactor, qpsFactor));
+            log.info("Topic: {}, Suppression Factor: {}", trafficData.getTopic(), suppressionFactor);
+            suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
         });
         return CompletableFuture.completedFuture(message.getResponseMessage(suppressionData));
     }

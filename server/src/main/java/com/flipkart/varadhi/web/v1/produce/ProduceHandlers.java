@@ -8,7 +8,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
-import com.flipkart.varadhi.qos.client.RateLimiterService;
+import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -98,8 +98,7 @@ public class ProduceHandlers implements RouteProvider {
         ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
 
         String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
-        // TODO(rl): handle for batch qps? Is it required
-        if(!rateLimiterService.isAllowed(varadhiTopicName, (double) ctx.body().length())) {
+        if(!rateLimiterService.isAllowed(varadhiTopicName, ctx.body().length())) {
             ctx.endRequestWithStatusAndErrorMsg(HTTP_RATE_LIMITED, "Rate limited");
             return;
         }
