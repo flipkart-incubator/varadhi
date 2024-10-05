@@ -1,26 +1,24 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.verticles.controller.ControllerClient;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -40,6 +38,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -59,6 +58,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
+    private RateLimiterService rateLimiterService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -121,6 +121,37 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
+        try {
+            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), meterRegistry, 1, configuration.isUseHostname()); // TODO(rl): convert to config
+            generateLoad();
+        } catch (UnknownHostException e) {
+            log.error("Error creating RateLimiterService", e);
+        }
+    }
+
+    private void generateLoad() {
+        // async infinite loop to generate NFR load.
+        Random random = new Random();
+        // TODO(rl): generate scenarios
+        new Thread(() -> {
+            while (true) {
+                try {
+                    long qps = random.nextLong(1000);
+                    // simulate qps
+                    log.info("generating load of qps: {}", qps);
+                    Long t1 = System.currentTimeMillis();
+                    log.info("start time: {}", new Date(t1));
+                    for (int i = 0; i < qps; i++) {
+                        rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                        Thread.sleep(Math.floorDiv(1000, qps));
+                    }
+                    Long t2 = System.currentTimeMillis();
+                    log.info("end time: {}", new Date(t2));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
     }
 
     private void performValidations() {
@@ -229,7 +260,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
                 new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
+                        producerMetricsHandler, rateLimiterService
                 ).get());
     }
 
