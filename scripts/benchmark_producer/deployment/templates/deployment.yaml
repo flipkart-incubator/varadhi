@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-deployment
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: varadhi-locust
+  template:
+    metadata:
+      name: produce-config
+      namespace: default
+      labels:
+        app: varadhi-locust
+        app.kubernetes.io/managed-by: Helm
+      annotations:
+        meta.helm.sh/release-name: locust-deployment
+        meta.helm.sh/release-namespace: default
+    spec:
+      containers:
+        - name: {{ .Values.container.name }}
+          image: {{ .Values.container.image }}
+          imagePullPolicy: {{ .Values.container.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ports.containerPort }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configMapRefName }}
+
+
