@@ -33,11 +33,11 @@ public class PulsarStackProvider
         return "pulsar";
     }
 
-    public synchronized void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper, boolean requireHostName) {
+    public synchronized void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper) {
         if (initialised) {
             return;
         }
-        String host = getHostInfo(requireHostName);
+        String hostName = getHostName();
         PulsarConfig pulsarConfig = getPulsarConfig(messagingStackOptions.getConfigFile());
         TopicPlanner planner = new TopicPlanner(pulsarConfig);
         topicFactory = new PulsarTopicFactory(planner);
@@ -45,7 +45,7 @@ public class PulsarStackProvider
         topicService = new PulsarTopicService(clientProvider, planner);
         producerFactory =
                 new PulsarProducerFactory(
-                        clientProvider.getPulsarClient(), pulsarConfig.getProducerOptions(), host);
+                        clientProvider.getPulsarClient(), pulsarConfig.getProducerOptions(), hostName);
         consumerFactory = new PulsarConsumerFactory(clientProvider.getPulsarClient(), new HashMap<>());
         subscriptionFactory = new PulsarSubscriptionFactory();
         subscriptionService = new PulsarSubscriptionService(clientProvider);
@@ -53,11 +53,11 @@ public class PulsarStackProvider
         initialised = true;
     }
 
-    private String getHostInfo(boolean requireHostName) {
+    private String getHostName() {
         try {
-            return HostUtils.getHostNameOrAddress(requireHostName);
+            return HostUtils.getHostName();
         } catch (UnknownHostException e) {
-            log.error("Failed to obtain the host. {}", e.getMessage());
+            log.error("Failed to obtain the hostname. {}", e.getMessage());
             throw new MessagingException(e);
         }
     }

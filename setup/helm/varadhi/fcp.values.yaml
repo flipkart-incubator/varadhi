@@ -190,7 +190,6 @@ varadhi:
       alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
       decompressionSupported: false
       useAlpn: true
-    useHostname: false
     authenticationEnabled: false
     authentication:
       jwt:

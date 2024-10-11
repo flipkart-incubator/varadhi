@@ -72,5 +72,3 @@ controller:
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
-
-useHostname: true

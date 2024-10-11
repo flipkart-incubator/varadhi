@@ -2,7 +2,7 @@ package com.flipkart.varadhi.entities.cluster;
 
 
 public record MemberInfo(
-        String host,
+        String hostname,
         int port,
         ComponentKind[] roles,
         NodeCapacity provisionedCapacity

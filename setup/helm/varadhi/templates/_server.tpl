@@ -28,8 +28,6 @@ httpServerOptions:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
-useHostname: {{ .Values.varadhi.app.useHostname }}
-
 {{ with .Values.varadhi.app.restOptions }}
 restOptions:
   {{- toYaml . | nindent 2 }}

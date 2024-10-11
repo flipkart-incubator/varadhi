@@ -20,7 +20,7 @@ public class ConsumerInfo {
 
     public static ConsumerInfo from(MemberInfo memberInfo) {
         return new ConsumerInfo(
-                new ConcurrentHashMap<>(), memberInfo.host(), memberInfo.provisionedCapacity().clone());
+                new ConcurrentHashMap<>(), memberInfo.hostname(), memberInfo.provisionedCapacity().clone());
     }
 
     public void addShardCapacity(String subscriptionName, int shardId, TopicCapacityPolicy capacity) {
