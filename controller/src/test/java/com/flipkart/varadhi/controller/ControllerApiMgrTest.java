@@ -60,7 +60,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testAddConsumerNode() {
         MemberInfo memberInfo =
-                new MemberInfo("Consumer.01", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
+                new MemberInfo("Consumer.01", "", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
         ConsumerInfo consumerInfo = ConsumerInfo.from(memberInfo);
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doReturn(CompletableFuture.completedFuture(consumerInfo)).when(consumerApi).getConsumerInfo();
@@ -74,7 +74,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testAddConsumerNodeWhenGetConsumerInfoFailsExceptionally() {
         MemberInfo memberInfo =
-                new MemberInfo("Consumer.01", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
+                new MemberInfo("Consumer.01", "", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doReturn(CompletableFuture.failedFuture(
                 new ReplyException(ReplyFailure.NO_HANDLERS, "Host not available."))).when(consumerApi)
@@ -89,7 +89,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testAddConsumerNodeWhenGetConsumerInfoThrows() {
         MemberInfo memberInfo =
-                new MemberInfo("Consumer.01", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
+                new MemberInfo("Consumer.01", "", 0, new ComponentKind[]{ComponentKind.Consumer}, new NodeCapacity());
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doThrow(new RuntimeException("Some unknown failure.")).when(consumerApi).getConsumerInfo();
         RuntimeException re =

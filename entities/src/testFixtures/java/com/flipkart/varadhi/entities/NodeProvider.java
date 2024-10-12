@@ -14,13 +14,13 @@ public class NodeProvider {
     public static List<ConsumerNode> getConsumerNodes(int numNodes, NodeCapacity capacity) {
         List<ConsumerNode> nodes = new ArrayList<>();
         for (int i = 0; i < numNodes; i++) {
-            nodes.add(new ConsumerNode(new MemberInfo("test.consumer-node." + i, 0, new ComponentKind[]{ComponentKind.Consumer}, capacity)));
+            nodes.add(new ConsumerNode(new MemberInfo("test.consumer-node." + i, "", 0, new ComponentKind[]{ComponentKind.Consumer}, capacity)));
         }
         return nodes;
     }
 
     public static ConsumerNode getConsumerNode(String nodeName, NodeCapacity capacity) {
-        return new ConsumerNode(new MemberInfo(nodeName, 0, new ComponentKind[]{ComponentKind.Consumer}, capacity));
+        return new ConsumerNode(new MemberInfo(nodeName, "", 0, new ComponentKind[]{ComponentKind.Consumer}, capacity));
     }
 
     public static NodeCapacity getNodeCapacity(int qps, int throughputKbps) {

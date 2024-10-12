@@ -15,4 +15,13 @@ public class HostUtilsTest {
         Assertions.assertNotNull(host);
         Assertions.assertEquals(InetAddress.getLocalHost().getHostName(), host);
     }
+
+    @Test
+    public void TestGetHostAddress() throws UnknownHostException {
+        // dummy test.. no validations here.
+        String address = HostUtils.getHostAddress();
+        Assertions.assertNotNull(address);
+        Assertions.assertEquals(InetAddress.getLocalHost().getHostAddress(), address);
+    }
+
 }
