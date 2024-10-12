@@ -247,3 +247,12 @@ messaging:
 authzProvider:
   configMapName: authorization
 
+#############################################
+# OTEL config
+#############################################
+otlpConfig:
+  otlp.url: "http://host.docker.internal:4318/v1/metrics"
+  otlp.step: "20s"
+  otlp.aggregationTemporality: "CUMULATIVE"
+  otlp.resourceAttributes:
+  otlp.headers:

@@ -70,4 +70,9 @@ controller:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
+{{ with .Values.otlpConfig }}
+otlpConfig:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+
 {{- end }}

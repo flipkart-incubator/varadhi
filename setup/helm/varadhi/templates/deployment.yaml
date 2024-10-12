@@ -62,6 +62,10 @@ spec:
               value: "{{ .Values.varadhi.app.debug }}"
             - name: JAVA_EXTRA_OPTS
               value: "{{ .Values.varadhi.app.configs.javaExtraOpts }}"
+            - name: OTEL_SERVICE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
             - containerPort: 9990 # jmx remote port
               name: jmx
