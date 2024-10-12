@@ -1,0 +1,29 @@
+version: "3"
+
+volumes:
+  prometheus_data:
+
+networks:
+  hostnet:
+    ipam:
+      driver: default
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    networks:
+      hostnet:
+    ports:
+      - 9090:9090
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.2.1
+    container_name: grafana
+    networks:
+      hostnet:
+    ports:
+      - 3000:3000

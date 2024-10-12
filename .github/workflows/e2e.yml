@@ -55,7 +55,7 @@ jobs:
           images: 'varadhi.docker.registry/varadhi,apachepulsar/pulsar,zookeeper'
 
       - name: Restart the server process to force the code coverage dump
-        run: docker exec docker-web-1 pkill java
+        run: docker exec server pkill java
       - name: Generate Code Coverage report
         run: ./gradlew jacocoTestReport
       - name: Publish code coverage (uses CodeCov.io)
