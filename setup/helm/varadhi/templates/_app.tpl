@@ -1,7 +1,7 @@
 {{/*
 Varadhi Server configuration.
 */}}
-{{- define "configMap.varadhi.server" -}}
+{{- define "configMap.varadhi.app" -}}
 
 {{ with .Values.varadhi.app.member }}
 member:
@@ -64,5 +64,15 @@ featureFlags:
 {{- end }}
 
 {{ template "configMap.metastore.zookeeper" . }}
+
+{{ with .Values.varadhi.app.controller }}
+controller:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+
+{{ with .Values.otlpConfig }}
+otlpConfig:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 
 {{- end }}

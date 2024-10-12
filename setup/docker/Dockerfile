@@ -1,6 +1,7 @@
 # base image for this should be jre based on instead of jdk.
-# Ubuntu 22.04.2 LTS 
+# Ubuntu 22.04.2 LTS
 FROM eclipse-temurin:17.0.7_7-jdk
+ARG SKIP_CERT_CHECK=false
 ARG VARADHI_HOME=.
 
 ENV PORT=18488
@@ -19,14 +20,20 @@ RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/ngrep
 # Install Zookeeper client.
 RUN mkdir -p /tools/zk
 WORKDIR /tools/zk
-RUN wget https://archive.apache.org/dist/zookeeper/zookeeper-3.6.0/apache-zookeeper-3.6.0-bin.tar.gz
+RUN if "$SKIP_CERT_CHECK";  \
+    then wget https://archive.apache.org/dist/zookeeper/zookeeper-3.6.0/apache-zookeeper-3.6.0-bin.tar.gz --no-check-certificate ;  \
+    else wget https://archive.apache.org/dist/zookeeper/zookeeper-3.6.0/apache-zookeeper-3.6.0-bin.tar.gz ;  \
+    fi
 RUN tar -xf apache-zookeeper-3.6.0-bin.tar.gz
 RUN rm apache-zookeeper-3.6.0-bin.tar.gz
 
 # Install Pulsar Client.
 RUN mkdir -p /tools/pulsar
 WORKDIR /tools/pulsar
-RUN wget https://archive.apache.org/dist/pulsar/pulsar-3.0.0/apache-pulsar-shell-3.0.0-bin.tar.gz
+RUN if "$SKIP_CERT_CHECK";  \
+    then wget https://archive.apache.org/dist/pulsar/pulsar-3.0.0/apache-pulsar-shell-3.0.0-bin.tar.gz --no-check-certificate ;  \
+    else wget https://archive.apache.org/dist/pulsar/pulsar-3.0.0/apache-pulsar-shell-3.0.0-bin.tar.gz ;  \
+    fi
 RUN tar -xf apache-pulsar-shell-3.0.0-bin.tar.gz
 RUN rm apache-pulsar-shell-3.0.0-bin.tar.gz
 
