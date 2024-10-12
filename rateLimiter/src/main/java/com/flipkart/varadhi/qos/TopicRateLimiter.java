@@ -30,13 +30,14 @@ public class TopicRateLimiter implements RateLimiter {
     @Override
     public boolean isAllowed(long value) {
         this.currentObserved.add(value);
+        // todo(rl): allows spikes, need to consider a better way to handle spikes
         if (this.suppressionFactor == 0) {
             return true;
         }
         return this.currentObserved.longValue() <= this.lastObserved * (1 - this.suppressionFactor);
     }
 
-    public void setSuppressionFactor(double suppressionFactor) {
+    public void updateSuppressionFactor(double suppressionFactor) {
         this.lastObserved = this.currentObserved.longValue();
         // remove last recorded value
         this.currentObserved.add(-lastObserved);

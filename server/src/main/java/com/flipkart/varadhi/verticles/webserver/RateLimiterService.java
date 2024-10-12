@@ -17,29 +17,35 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 @Slf4j
-public class RateLimiterService {
+public class RateLimiterService {// todo(rl): should be an interface for update sf
 
     /**
      * Map of topic to rate limiters (different rate limiters for QPS, Throughput etc)
      */
     private final Map<String, List<RateLimiter>> topicRateLimiters;
     private final TrafficAggregator trafficAggregator;
-    private final Counter.Builder rateLimitCounter;
+    private final Counter.Builder acceptedThrptCounter;
+    private final Counter.Builder rejectedThrptCounter;
+    private final Counter.Builder acceptedQPSCounter;
+    private final Counter.Builder rejectedQPSCounter;
     private final MeterRegistry meterRegistry;
 
 
-    public RateLimiterService(MessageExchange exchange, MeterRegistry meterRegistry, int frequency, boolean requireHostName)
+    public RateLimiterService(MessageExchange exchange, MeterRegistry meterRegistry, int frequency, String clientId)
             throws UnknownHostException {
         topicRateLimiters = new HashMap<>();
         trafficAggregator = new TrafficAggregator(
-                HostUtils.getHostNameOrAddress(requireHostName),
+                clientId,
                 frequency,
                 exchange,
                 this,
                 Executors.newScheduledThreadPool(1)
         );
         this.meterRegistry = meterRegistry;
-        this.rateLimitCounter = Counter.builder("varadhi.producer.qos.rateLimitCounter");
+        this.acceptedThrptCounter = Counter.builder("varadhi.producer.qos.allowedBytes");
+        this.rejectedThrptCounter = Counter.builder("varadhi.producer.qos.rateLimitedBytes");
+        this.acceptedQPSCounter = Counter.builder("varadhi.producer.qos.allowedQueries");
+        this.rejectedQPSCounter = Counter.builder("varadhi.producer.qos.rateLimitedQueries");
     }
 
     public List<RateLimiter> getRateLimiter(String topic) {
@@ -58,7 +64,7 @@ public class RateLimiterService {
             if (rl instanceof TopicRateLimiter trl) {
                 if (trl.getTopic().equals(topic) && trl.getType().equals(type)) {
                     log.info("Setting SF for topic: {}, factor: {}, rl: {}", topic, suppressionFactor, trl.getType());
-                    trl.setSuppressionFactor(suppressionFactor);
+                    trl.updateSuppressionFactor(suppressionFactor);
                     // TODO(rl): gauge on suppressionFactor
                     registerGauges();
                 }
@@ -71,9 +77,12 @@ public class RateLimiterService {
         // get all the rate limiters for given topic and check if all of them allow the request
         return getRateLimiter(topic).stream().allMatch(rl -> {
             boolean allowed = rl.isAllowed(dataSize);
-            rateLimitCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry);
-            if(!allowed) {
-                rateLimitCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry).increment();
+            if (allowed) {
+                acceptedThrptCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry).increment(dataSize);
+                acceptedQPSCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry).increment();
+            } else {
+                rejectedThrptCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry).increment(dataSize);
+                rejectedQPSCounter.tag("topic", topic).tag("limiter", rl.getType().name()).register(meterRegistry).increment();
             }
             return allowed;
         });

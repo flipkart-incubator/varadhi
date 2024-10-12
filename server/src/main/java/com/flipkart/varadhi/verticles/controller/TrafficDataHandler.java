@@ -29,7 +29,7 @@ public class TrafficDataHandler {
                     info.getClientId(),
                     new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
             );
-            log.info("Topic: {}, Suppression Factor: {}", trafficData.getTopic(), suppressionFactor);
+            log.info("Topic: {}, SF thr-pt: {}", trafficData.getTopic(), suppressionFactor.getThroughputFactor());
             suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
         });
         return CompletableFuture.completedFuture(message.getResponseMessage(suppressionData));

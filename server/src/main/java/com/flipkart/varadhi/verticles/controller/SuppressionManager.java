@@ -44,6 +44,7 @@ public class SuppressionManager {
         Double actualThroughout =
                 clientIdList.stream().map(client -> getThroughput(client, topic)).reduce(0.0, Double::sum);
         int throughputBPS = varadhiTopicService.get(topic).getCapacity().getThroughputKBps()*1024;
+        log.info("Actual throughput: {}, Limit: {}", actualThroughout, throughputBPS);
         return new SuppressionFactor(calculateSuppressionFactor(throughputBPS, actualThroughout));
     }
 
@@ -51,6 +52,7 @@ public class SuppressionManager {
         if (!clientIdList.contains(clientId)) {
             clientIdList.add(clientId);
         }
+        log.info("Client Id list: {}", clientIdList);
     }
 
     // TODO(rl): remove client from here
