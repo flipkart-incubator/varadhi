@@ -23,8 +23,8 @@ spec:
       protocol: TCP
       name: server-http
     {{- if .Values.varadhi.app.debug }}
-    - port: 5005
-      targetPort: 5005
+    - port: {{ .Values.varadhi.app.ports.jvmDebug }}
+      targetPort: {{ .Values.varadhi.app.ports.jvmDebug }}
       protocol: TCP
       name: jvm-debug
       {{- end }}

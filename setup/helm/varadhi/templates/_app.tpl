@@ -1,7 +1,7 @@
 {{/*
 Varadhi Server configuration.
 */}}
-{{- define "configMap.varadhi.server" -}}
+{{- define "configMap.varadhi.app" -}}
 
 {{ with .Values.varadhi.app.member }}
 member:

@@ -67,10 +67,10 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
           ports:
-            - containerPort: 9990 # jmx remote port
+            - containerPort: {{ .Values.varadhi.app.ports.jmx }} # jmx remote port
               name: jmx
           {{- if .Values.varadhi.app.debug }}
-            - containerPort: 5005 # jvm remote Debug port
+            - containerPort: {{ .Values.varadhi.app.ports.jvmDebug }} # jvm remote Debug port
               name: jvm-debug
           {{- end }}
           volumeMounts:

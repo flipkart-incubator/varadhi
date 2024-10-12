@@ -64,7 +64,7 @@ Start [varadhi local \[run\]](.run%2Fvaradhi%20local%20%5Brun%5D.run.xml) Intell
 
 ## k8s Deployment
 
-```helm install varadhi setup/helm/varadhi -f setup/helm/varadhi/fcp.values.yaml```
+```helm install varadhi-server setup/helm/varadhi -f setup/helm/varadhi/values/server_values.yaml```
 ```helm install varadhi-controller setup/helm/varadhi -f setup/helm/varadhi/values/controller_values.yaml```
 
 ## Modules
