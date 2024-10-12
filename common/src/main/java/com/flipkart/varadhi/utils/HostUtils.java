@@ -15,4 +15,12 @@ public class HostUtils {
         log.debug("getHostName: completed");
         return host;
     }
+
+    public static String getHostAddress() throws UnknownHostException {
+        // debug to see how much time it takes, in case DNS resolution is taking time.
+        log.debug("getHostAddress: started");
+        String host = InetAddress.getLocalHost().getHostAddress();
+        log.debug("getHostAddress: completed");
+        return host;
+    }
 }
