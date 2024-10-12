@@ -1,26 +1,25 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.verticles.controller.ControllerClient;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -37,9 +36,15 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -49,6 +54,7 @@ import java.util.function.Function;
 public class WebServerVerticle extends AbstractVerticle {
     private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
     private final AppConfiguration configuration;
+    private final MemberInfo memberInfo;
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
@@ -59,12 +65,14 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
+    private RateLimiterService rateLimiterService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
-            AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
+            AppConfiguration configuration, MemberInfo memberInfo, CoreServices services, VaradhiClusterManager clusterManager
     ) {
         this.configuration = configuration;
+        this.memberInfo = memberInfo;
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
@@ -98,6 +106,7 @@ public class WebServerVerticle extends AbstractVerticle {
         setupEntityServices();
         performValidations();
         startHttpServer(startPromise);
+        scheduleLoadScenarios();
     }
 
     @Override
@@ -121,6 +130,132 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
+        try {
+            // use host address as clientId for now.
+            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), meterRegistry, 1,
+                    memberInfo.hostname()); // TODO(rl): convert to config
+        } catch (UnknownHostException e) {
+            log.error("Error creating RateLimiterService", e);
+        }
+    }
+
+    private void scheduleLoadScenarios() {
+        Runnable[] loadScenarios = new Runnable[]{
+                this::generateRandomScenario,
+                this::generateMoreThanQuotaScenario,
+                this::generateLessThanQuotaScenario,
+                this::generateSpikeFromUnderLimitScenario,
+                this::generateSpikeFromOverLimitScenario
+        };
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        for (int i = 0; i < loadScenarios.length; i++) {
+            int delay = i * 7; // 5 minutes run + 3 minutes gap
+            log.info("Scheduling load scenario {} with delay {} minutes", i, delay);
+            scheduler.schedule(loadScenarios[i], delay, TimeUnit.MINUTES);
+        }
+    }
+
+    private void generateRandomScenario() {
+        Random random = new Random();
+        new Thread(() -> {
+            long endTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    long kb = random.nextLong(1000);
+                    // simulate qps
+                    log.info("generating load of throughput: {}", kb);
+                    Long t1 = System.currentTimeMillis();
+                    log.info("start time: {}", new Date(t1));
+                    for (int i = 0; i < kb; i++) {
+                        rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                        Thread.sleep(Math.floorDiv(1000, kb));
+                    }
+                    Long t2 = System.currentTimeMillis();
+                    log.info("end time: {}", new Date(t2));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
+    private void generateMoreThanQuotaScenario() {
+        new Thread(() -> {
+            long endTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
+    private void generateLessThanQuotaScenario() {
+        new Thread(() -> {
+            long endTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    rateLimiterService.isAllowed("project1.test-topic1", 256);
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
+    private void generateSpikeFromUnderLimitScenario() {
+        new Thread(() -> {
+            long endTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+            try {
+                for(int i = 0; i < 10000; i++) {
+                    rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                    if(i > 8000)
+                        Thread.sleep(1);
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            while (System.currentTimeMillis() < endTime) {
+                // generate spike workload, for spike duration and peak throughput
+                try {
+                    rateLimiterService.isAllowed("project1.test-topic1", 256);
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
+    private void generateSpikeFromOverLimitScenario() {
+        new Thread(() -> {
+            long endTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            // generate spike workload, for spike duration and peak throughput
+            try {
+                for(int i = 0; i < 10000; i++) {
+                    rateLimiterService.isAllowed("project1.test-topic1", 1024);
+                    if(i > 8000)
+                        Thread.sleep(1);
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+        }).start();
     }
 
     private void performValidations() {
@@ -229,7 +364,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
                 new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
+                        producerMetricsHandler, rateLimiterService
                 ).get());
     }
 
