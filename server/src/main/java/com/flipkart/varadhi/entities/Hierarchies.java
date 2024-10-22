@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.entities.auth.ResourceType;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,7 +11,16 @@ public class Hierarchies {
     public record RootHierarchy() implements ResourceHierarchy {
         @Override
         public String getResourcePath() {
-            return "/";
+            return getResourcePath(ResourceType.ROOT);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.ROOT)) {
+                return "/";
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Root path.".formatted(type));
+            }
         }
 
         @Override
@@ -19,9 +30,19 @@ public class Hierarchies {
     }
 
     public record OrgHierarchy(String org) implements ResourceHierarchy {
+
         @Override
         public String getResourcePath() {
-            return "/" + org;
+            return getResourcePath(ResourceType.ORG);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.ORG)) {
+                return "/" + org;
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Org path.".formatted(type));
+            }
         }
 
         @Override
@@ -33,9 +54,19 @@ public class Hierarchies {
     }
 
     public record TeamHierarchy(String org, String team) implements ResourceHierarchy {
+
         @Override
         public String getResourcePath() {
-            return String.format("/%s/%s", org, team);
+            return getResourcePath(ResourceType.TEAM);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.TEAM)) {
+                return String.format("/%s/%s", org, team);
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Team path.".formatted(type));
+            }
         }
 
         @Override
@@ -48,9 +79,19 @@ public class Hierarchies {
     }
 
     public record ProjectHierarchy(String org, String team, String project) implements ResourceHierarchy {
+
         @Override
         public String getResourcePath() {
-            return String.format("/%s/%s/%s", org, team, project);
+            return getResourcePath(ResourceType.PROJECT);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.PROJECT)) {
+                return String.format("/%s/%s/%s", org, team, project);
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Project path.".formatted(type));
+            }
         }
 
         @Override
@@ -64,9 +105,19 @@ public class Hierarchies {
     }
 
     public record TopicHierarchy(String org, String team, String project, String topic) implements ResourceHierarchy {
+
         @Override
         public String getResourcePath() {
-            return String.format("/%s/%s/%s/%s", org, team, project, topic);
+            return getResourcePath(ResourceType.TOPIC);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.TOPIC)) {
+                return String.format("/%s/%s/%s/%s", org, team, project, topic);
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Topic path.".formatted(type));
+            }
         }
 
         @Override
@@ -80,10 +131,23 @@ public class Hierarchies {
         }
     }
 
-    public record SubscriptionHierarchy(String org, String team, String project, String subscription) implements ResourceHierarchy {
+    public record SubscriptionHierarchy(String org, String team, String project, String subscription,
+                                        TopicHierarchy topicHierarchy) implements ResourceHierarchy {
+
         @Override
         public String getResourcePath() {
-            return String.format("/%s/%s/%s/%s", org, team, project, subscription);
+            return getResourcePath(ResourceType.SUBSCRIPTION);
+        }
+
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.SUBSCRIPTION)) {
+                return String.format("/%s/%s/%s/%s", org, team, project, subscription);
+            } else if (type.equals(ResourceType.TOPIC)) {
+                return topicHierarchy.getResourcePath(ResourceType.TOPIC);
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for Subscription path.".formatted(type));
+            }
         }
 
         @Override
@@ -91,8 +155,9 @@ public class Hierarchies {
             Map<String, String> attributes = new HashMap<>();
             attributes.put(TAG_ORG, org);
             attributes.put(TAG_TEAM, team);
+            attributes.put(TAG_TOPIC, topicHierarchy.topic);
             attributes.put(TAG_PROJECT, project);
-            attributes.put(TAG_TOPIC, subscription);
+            attributes.put(TAG_SUBSCRIPTION, subscription);
             return attributes;
         }
     }
@@ -100,7 +165,15 @@ public class Hierarchies {
     public record IamPolicyHierarchy(String resourceType, String resourceName) implements ResourceHierarchy {
         @Override
         public String getResourcePath() {
-            return String.format("/%s/%s", resourceType, resourceName);
+            return getResourcePath(ResourceType.IAM_POLICY);
+        }
+        @Override
+        public String getResourcePath(ResourceType type) {
+            if (type.equals(ResourceType.IAM_POLICY)) {
+                return String.format("/%s/%s", resourceType, resourceName);
+            } else {
+                throw new IllegalArgumentException("Invalid Resource type %s for IAM Policy path.".formatted(type));
+            }
         }
 
         @Override

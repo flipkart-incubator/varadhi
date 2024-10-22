@@ -99,7 +99,7 @@ public class CoreServices {
                 .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "otlp";
+        String meterExporter = "jmx";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);

@@ -10,8 +10,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 
@@ -30,7 +29,7 @@ public class RouteDefinition {
     private final LinkedHashSet<Handler<RoutingContext>> preHandlers;
     private final Handler<RoutingContext> endReqHandler;
     private final boolean blockingEndHandler;
-    private final ResourceAction authorizationOnAction;
+    private final List<ResourceAction> authorizeOnActions;
     private final Consumer<RoutingContext> bodyParser;
     private final HierarchyFunction hierarchyFunction;
     private final TelemetryType telemetryType;
@@ -39,7 +38,7 @@ public class RouteDefinition {
                     LinkedHashSet<Handler<RoutingContext>> preHandlers,
                     Handler<RoutingContext> endReqHandler,
                     boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
-                    HierarchyFunction function, ResourceAction authorizationOnAction,
+                    HierarchyFunction function, List<ResourceAction> authorizeOnActions,
                     TelemetryType telemetryType) {
         this.name = name;
         this.method = method;
@@ -50,7 +49,7 @@ public class RouteDefinition {
         this.blockingEndHandler = blockingEndHandler;
         this.bodyParser = bodyParser;
         this.hierarchyFunction = function;
-        this.authorizationOnAction = authorizationOnAction;
+        this.authorizeOnActions = authorizeOnActions;
         this.telemetryType = telemetryType;
     }
     public static Builder get(String name, String path) {
@@ -83,7 +82,7 @@ public class RouteDefinition {
         private final LinkedHashSet<Handler<RoutingContext>> preHandlers = new LinkedHashSet<>();
         private Consumer<RoutingContext> bodyParser;
 
-        private ResourceAction authorizationOnAction;
+        private LinkedList<ResourceAction> authorizeOnActions = new LinkedList<>();
 
         public Builder unAuthenticated() {
             this.unAuthenticated = true;
@@ -122,7 +121,7 @@ public class RouteDefinition {
         }
 
         public Builder authorize(ResourceAction action) {
-            this.authorizationOnAction = action;
+            this.authorizeOnActions.addLast(action);
             return this;
         }
         public Builder preHandler(Handler<RoutingContext> preHandler) {
@@ -148,7 +147,7 @@ public class RouteDefinition {
             if (metricsEnabled || !logsDisabled || !tracingDisabled) {
                 behaviours.add(RouteBehaviour.telemetry);
             }
-            if (null != authorizationOnAction) {
+            if (null != authorizeOnActions) {
                 behaviours.add(RouteBehaviour.authorized);
             }
 
@@ -162,7 +161,7 @@ public class RouteDefinition {
                     !nonBlocking,
                     bodyParser,
                     function,
-                    authorizationOnAction,
+                    authorizeOnActions,
                     new TelemetryType(metricsEnabled, !logsDisabled, !tracingDisabled)
             );
         }

@@ -5,6 +5,7 @@ import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.cluster.ShardOpResponse;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
+import com.flipkart.varadhi.entities.cluster.UnsidelineOpRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +34,17 @@ public class ControllerApiHandler {
         SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
         return controllerMgr.getSubscriptionStatus(request.getSubscriptionId(), request.getRequestedBy())
                 .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> unsideline(ClusterMessage message) {
+        UnsidelineOpRequest request = message.getRequest(UnsidelineOpRequest.class);
+        return controllerMgr.unsideline(request.getSubscriptionId(), request.getRequest(), request.getRequestedBy())
+                .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> getShards(ClusterMessage message) {
+        String subscriptionId  = message.getRequest(String.class);
+        return controllerMgr.getShardAssignments(subscriptionId).thenApply(message::getResponseMessage);
     }
 
     public void update(ClusterMessage message) {

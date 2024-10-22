@@ -469,9 +469,9 @@ public class OperationMgrTest {
         doReturn(false).when(opStore).shardOpExists(shard1Op.getId());
         doReturn(true).when(opStore).shardOpExists(shard2Op.getId());
 
-        operationMgr.createShardOp(shard1Op);
+        operationMgr.submitShardOp(shard1Op, false);
         verify(opStore, times(1)).createShardOp(shard1Op);
-        operationMgr.createShardOp(shard2Op);
+        operationMgr.submitShardOp(shard2Op, false);
         verify(opStore, never()).createShardOp(shard2Op);
     }
 

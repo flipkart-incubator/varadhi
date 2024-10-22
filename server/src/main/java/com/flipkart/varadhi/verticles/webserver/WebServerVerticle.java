@@ -3,13 +3,16 @@ package com.flipkart.varadhi.verticles.webserver;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerClient;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
@@ -59,6 +62,10 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
+    private DlqService dlqService;
+    private AuthnHandler authnHandler;
+    private AuthzHandler authzHandler;
+
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -95,6 +102,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
+        setupAuthnAuthzHandlers();
         setupEntityServices();
         performValidations();
         startHttpServer(startPromise);
@@ -109,18 +117,26 @@ public class WebServerVerticle extends AbstractVerticle {
         });
     }
 
+    private void setupAuthnAuthzHandlers() {
+        authnHandler = new AuthnHandler(vertx, configuration);
+        authzHandler = new AuthzHandler(configuration);
+    }
+
     private void setupEntityServices() {
         String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
         orgService = new OrgService(metaStore);
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
-        ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        ControllerApi controllerApiProxy = new ControllerClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
                 messagingStackProvider.getStorageSubscriptionService(),
                 messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
+        dlqService = new DlqService(controllerApiProxy, new ConsumerClientFactoryImpl(messageExchange));
+
     }
 
     private void performValidations() {
@@ -171,6 +187,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 routes.addAll(
                         new IamPolicyHandlers(
                                 projectService,
+                                subscriptionService,
                                 new IamPolicyService(metaStore, (IamPolicyMetaStore) metaStore)
                         ).get());
             } else {
@@ -202,6 +219,7 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService,
                 subscriptionFactory
         ).get());
+        routes.addAll(new DlqHandlers(dlqService, subscriptionService, projectService).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
     }
@@ -234,8 +252,6 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     private void setupRouteConfigurators() {
-        AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
-        AuthzHandler authzHandler = new AuthzHandler(configuration);
         RequestTelemetryConfigurator requestTelemetryConfigurator =
                 new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.

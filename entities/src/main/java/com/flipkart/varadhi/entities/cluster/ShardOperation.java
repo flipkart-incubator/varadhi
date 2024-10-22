@@ -51,6 +51,12 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         return new ShardOperation(new ShardOperation.StopData(subOpId, shard, subscription));
     }
 
+    public static ShardOperation unsidelineOp(
+            String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+    ) {
+        return new ShardOperation(new ShardOperation.UnsidelineData(subOpId, shard, subscription, request));
+    }
+
     @JsonIgnore
     @Override
     public String getId() {
@@ -109,6 +115,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = ShardOperation.StartData.class, name = "startShardData"),
             @JsonSubTypes.Type(value = ShardOperation.StopData.class, name = "stopShardData"),
+            @JsonSubTypes.Type(value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),
     })
     public static class OpData {
         private String operationId;
@@ -164,6 +171,29 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         @Override
         public String toString() {
             return String.format("Stop.OpData{%s}", super.toString());
+        }
+    }
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @EqualsAndHashCode(callSuper = true)
+    public static class UnsidelineData extends ShardOperation.OpData {
+        UnsidelineRequest request;
+
+        UnsidelineData(
+                String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+        ) {
+            super(
+                    UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
+                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
+                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+            );
+            this.request = request;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Unsideline.OpData{%s}", super.toString());
         }
     }
 }

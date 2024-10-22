@@ -149,7 +149,7 @@ public class OperationMgr {
         if (null == waiting) {
             log.info("No more pending operation for key {}.", completed.getOrderingKey());
             // retry if this operation has failed.
-            completed.queueRetryIfFailed();
+            completed.enqueueRetryIfFailed();
             return null;
         } else {
             if (completed.operation.hasFailed()) {
@@ -200,25 +200,30 @@ public class OperationMgr {
         enqueue(subOp, opExecutor);
     }
 
-    void createShardOp(ShardOperation shardOp) {
-        if (!opStore.shardOpExists(shardOp.getId())) {
+    public void submitShardOp(ShardOperation shardOp, boolean isRetry) {
+        if (isRetry) {
+            shardOp.reset();
+            opStore.updateShardOp(shardOp);
+        } else if (!opStore.shardOpExists(shardOp.getId())) {
             opStore.createShardOp(shardOp);
         }
     }
 
-    void retryShardOp(ShardOperation shardOp) {
-        shardOp.reset();
-        opStore.updateShardOp(shardOp);
-    }
-
-    void updateSubOp(SubscriptionOperation operation) {
+    public void updateSubOp(SubscriptionOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
             // updating DB status in handler, to avoid version conflict.
             return saveSubOpUpdateToStore((SubscriptionOperation) op);
         });
     }
 
-    void updateShardOp(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg) {
+    public void updateShardOp(ShardOperation operation) {
+        updateShardOp(
+                operation.getOpData().getParentOpId(), operation.getId(), operation.getState(),
+                operation.getErrorMsg()
+        );
+    }
+
+    public void updateShardOp(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg) {
         SubscriptionOperation subscriptionOp = opStore.getSubOp(subOpId);
         // updating DB status in handler for both Shard and Subscription op, to avoid version conflict.
         processOpTaskForOpUpdate(
@@ -232,7 +237,7 @@ public class OperationMgr {
     }
 
 
-    Map<Integer, ShardOperation> getShardOps(String subOpId) {
+    public Map<Integer, ShardOperation> getShardOps(String subOpId) {
         return opStore.getShardOps(subOpId).stream().collect(Collectors.toMap(o -> o.getOpData().getShardId(), o -> o));
     }
 
@@ -319,7 +324,11 @@ public class OperationMgr {
             }, executor);
         }
 
-        void queueRetryIfFailed() {
+        void enqueueRetryIfFailed() {
+            if (!operation.hasFailed()) {
+                log.info("Operation {} is success,  retry not required.", operation);
+                return;
+            }
             if (retryPolicy.canRetry(operation)) {
                 try {
                     OrderedOperation retryOp = operation.nextRetry();
@@ -327,11 +336,13 @@ public class OperationMgr {
                     RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp));
                     task.schedule();
                 } catch (MetaStoreException e) {
-                    log.error("Retry ERROR -- {} will not be retried, due to failure {}", operation, e.getMessage());
+                    log.error("Retry ERROR -- {} not retried due to failure {}", operation, e.getMessage());
                     // failure will be primarily due to DB failure. Task is already removed from the operation queue.
                     // In this case ignore the failure and continue, as a result retry will not be attempted for
                     // this operation, but that's ok.
                 }
+            } else {
+                log.error("Operation {} has failed but further retry is not allowed.", operation);
             }
         }
 

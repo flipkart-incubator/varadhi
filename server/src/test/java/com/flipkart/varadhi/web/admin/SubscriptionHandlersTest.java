@@ -72,7 +72,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 endpoint,
                 retryPolicy,
                 consumptionPolicy,
-                shards
+                shards,
+                new HashMap<>()
         );
     }
 

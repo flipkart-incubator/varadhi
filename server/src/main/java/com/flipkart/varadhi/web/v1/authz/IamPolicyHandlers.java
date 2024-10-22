@@ -3,12 +3,14 @@ package com.flipkart.varadhi.web.v1.authz;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -22,9 +24,11 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
+import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
@@ -36,15 +40,21 @@ public class IamPolicyHandlers implements RouteProvider {
     private static final String TOPIC_POLICY_PATH = "projects/:project/topics/:topic/policy";
     private static final String SUBSCRIPTION_POLICY_PATH = "projects/:project/subscriptions/:subscription/policy";
     private final ProjectService projectService;
+    private final SubscriptionService subscriptionService;
     private final IamPolicyService iamPolicyService;
 
-    public IamPolicyHandlers(ProjectService projectService, IamPolicyService iamPolicyService) {
-        this.iamPolicyService = iamPolicyService;
+    public IamPolicyHandlers(
+            ProjectService projectService, SubscriptionService subscriptionService, IamPolicyService iamPolicyService
+    ) {
         this.projectService = projectService;
+        this.subscriptionService = subscriptionService;
+        this.iamPolicyService = iamPolicyService;
     }
 
     private static String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
         return switch (resourceType) {
+            case ROOT -> throw new IllegalArgumentException(
+                    "ROOT is implicit resource type. No Iam policies supported on it.");
             case ORG -> ctx.pathParam(PATH_PARAM_ORG);
             case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_ORG),
                     ctx.pathParam(PATH_PARAM_TEAM)
@@ -104,7 +114,17 @@ public class IamPolicyHandlers implements RouteProvider {
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         if (subscriptionName != null) {
             Project project = projectService.getProject(projectName);
-            return new Hierarchies.SubscriptionHierarchy(project.getOrg(), project.getTeam(), project.getName(), subscriptionName);
+            VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+            String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
+            Project topicProject = projectService.getProject(topicNameSegments[0]);
+            topicName = topicNameSegments[1];
+            Hierarchies.TopicHierarchy topicHierarchy =
+                    new Hierarchies.TopicHierarchy(topicProject.getOrg(), topicProject.getTeam(),
+                            topicProject.getName(), topicName
+                    );
+
+            return new Hierarchies.SubscriptionHierarchy(
+                    project.getOrg(), project.getTeam(), project.getName(), subscriptionName, topicHierarchy);
         }
         if (topicName != null) {
             Project project = projectService.getProject(projectName);

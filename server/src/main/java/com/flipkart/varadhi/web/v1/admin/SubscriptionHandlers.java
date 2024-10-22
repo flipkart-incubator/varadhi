@@ -14,13 +14,11 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.*;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
@@ -42,7 +40,7 @@ public class SubscriptionHandlers implements RouteProvider {
         this.varadhiSubscriptionFactory = subscriptionFactory;
     }
 
-    public static String getSubscriptionName(RoutingContext ctx) {
+    public static String getSubscriptionFqn(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String subscriptionName = ctx.pathParam(PATH_PARAM_SUBSCRIPTION);
         return SubscriptionResource.buildInternalName(projectName, subscriptionName);
@@ -66,6 +64,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .hasBody()
                                 .bodyParser(this::setSubscription)
                                 .authorize(SUBSCRIPTION_CREATE)
+                                .authorize(TOPIC_CONSUME)
                                 .build(this::getHierarchy, this::create),
                         RouteDefinition
                                 .put("UpdateSubscription", "/:subscription")
@@ -73,6 +72,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .hasBody()
                                 .bodyParser(this::setSubscription)
                                 .authorize(SUBSCRIPTION_UPDATE)
+                                .authorize(TOPIC_CONSUME)
                                 .build(this::getHierarchy, this::update),
                         RouteDefinition
                                 .delete("DeleteSubscription", "/:subscription")
@@ -102,15 +102,31 @@ public class SubscriptionHandlers implements RouteProvider {
         Project project = projectService.getCachedProject(projectName);
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(CONTEXT_KEY_BODY);
+            Project topicProject = projectService.getProject(subscriptionResource.getTopicProject());
+            Hierarchies.TopicHierarchy topicHierarchy =
+                    new Hierarchies.TopicHierarchy(topicProject.getOrg(), topicProject.getTeam(),
+                            topicProject.getName(), subscriptionResource.getTopic()
+                    );
             return new Hierarchies.SubscriptionHierarchy(
-                    project.getOrg(), project.getTeam(), project.getName(), subscriptionResource.getName());
+                    project.getOrg(), project.getTeam(), project.getName(), subscriptionResource.getName(),
+                    topicHierarchy
+            );
         }
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         if (null == subscriptionName) {
             return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
         }
+
+        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
+        Project topicProject = projectService.getProject(topicNameSegments[0]);
+        String topicName = topicNameSegments[1];
+        Hierarchies.TopicHierarchy topicHierarchy =
+                new Hierarchies.TopicHierarchy(topicProject.getOrg(), topicProject.getTeam(),
+                        topicProject.getName(), topicName
+                );
         return new Hierarchies.SubscriptionHierarchy(
-                project.getOrg(), project.getTeam(), project.getName(), subscriptionName);
+                project.getOrg(), project.getTeam(), project.getName(), subscriptionName, topicHierarchy);
     }
 
     public void list(RoutingContext ctx) {
@@ -120,7 +136,7 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     public void get(RoutingContext ctx) {
-        String internalSubscriptionName = getSubscriptionName(ctx);
+        String internalSubscriptionName = getSubscriptionFqn(ctx);
         SubscriptionResource subscription =
                 SubscriptionResource.from(subscriptionService.getSubscription(internalSubscriptionName));
         ctx.endApiWithResponse(subscription);
@@ -141,8 +157,8 @@ public class SubscriptionHandlers implements RouteProvider {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         //TODO::Evaluate separating these into individual update APIs.
         //Fix:: Update is allowed, though no change in the subscription, this can be avoided.
-        executeAsyncRequest(
-                ctx, () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(),
+        ctx.executeAsyncRequest(
+                () -> subscriptionService.updateSubscription(subscription.getSubscriptionInternalName(),
                         subscription.getVersion(),
                         subscription.getDescription(), subscription.isGrouped(), subscription.getEndpoint(),
                         subscription.getRetryPolicy(), subscription.getConsumptionPolicy(), ctx.getIdentityOrDefault()
@@ -152,18 +168,19 @@ public class SubscriptionHandlers implements RouteProvider {
     public void delete(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         Project subProject = projectService.getCachedProject(projectName);
-        executeAsyncRequest(
-                ctx, () -> subscriptionService.deleteSubscription(getSubscriptionName(ctx), subProject,
+        ctx.executeAsyncRequest(
+                () -> subscriptionService.deleteSubscription(
+                        getSubscriptionFqn(ctx), subProject,
                         ctx.getIdentityOrDefault()
                 ));
     }
 
     public void start(RoutingContext ctx) {
-        executeAsyncRequest(ctx, () -> subscriptionService.start(getSubscriptionName(ctx), ctx.getIdentityOrDefault()));
+        ctx.executeAsyncRequest(() -> subscriptionService.start(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
     }
 
     public void stop(RoutingContext ctx) {
-        executeAsyncRequest(ctx, () -> subscriptionService.stop(getSubscriptionName(ctx), ctx.getIdentityOrDefault()));
+        ctx.executeAsyncRequest(() -> subscriptionService.stop(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
     }
 
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
@@ -179,9 +196,10 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     private void validateRetryPolicy(RetryPolicy retryPolicy) {
-       if (retryPolicy.getRetryAttempts() != NUMBER_OF_RETRIES_ALLOWED) {
-           throw new IllegalArgumentException(String.format("Only %d retries are supported.", NUMBER_OF_RETRIES_ALLOWED));
-       }
+        if (retryPolicy.getRetryAttempts() != NUMBER_OF_RETRIES_ALLOWED) {
+            throw new IllegalArgumentException(
+                    String.format("Only %d retries are supported.", NUMBER_OF_RETRIES_ALLOWED));
+        }
     }
 
 
@@ -190,31 +208,5 @@ public class SubscriptionHandlers implements RouteProvider {
         String topicResourceName = subscription.getTopic();
         String topicName = String.join(NAME_SEPARATOR, projectName, topicResourceName);
         return topicService.get(topicName);
-    }
-
-    private <T> void executeAsyncRequest(RoutingContext ctx, Callable<CompletableFuture<T>> callable) {
-        try {
-            callable.call().whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
-                if (error != null) {
-                    ctx.endRequestWithException(unwrapExecutionException(error));
-                } else {
-                    if (null == t) {
-                        ctx.endRequest();
-                    } else {
-                        ctx.endRequestWithResponse(t);
-                    }
-                }
-            }));
-        } catch (Exception e) {
-            ctx.endRequestWithException(e);
-        }
-    }
-
-    private Throwable unwrapExecutionException(Throwable t) {
-        if (t instanceof ExecutionException) {
-            return t.getCause();
-        } else {
-            return t;
-        }
     }
 }

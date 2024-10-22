@@ -14,13 +14,13 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class SubscriptionService {
     private final MetaStore metaStore;
-    private final ControllerApi controllerApi;
+    private final ControllerApi controllerClient;
     private final ShardProvisioner shardProvisioner;
 
-    public SubscriptionService(ShardProvisioner shardProvisioner, ControllerApi controllerApi, MetaStore metaStore) {
+    public SubscriptionService(ShardProvisioner shardProvisioner, ControllerApi controllerClient, MetaStore metaStore) {
         this.shardProvisioner = shardProvisioner;
         this.metaStore = metaStore;
-        this.controllerApi = controllerApi;
+        this.controllerClient = controllerClient;
     }
 
     public List<String> getSubscriptionList(String projectName) {
@@ -52,7 +52,7 @@ public class SubscriptionService {
     public CompletableFuture<SubscriptionOperation> start(String subscriptionName, String requestedBy) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
         if (subscription.isWellProvisioned()) {
-            return controllerApi.startSubscription(subscriptionName, requestedBy);
+            return controllerClient.startSubscription(subscriptionName, requestedBy);
         }
         throw new InvalidOperationForResourceException(
                 "Subscription is in state %s. It can't be started/stopped.".formatted(
@@ -62,7 +62,7 @@ public class SubscriptionService {
     public CompletableFuture<SubscriptionOperation> stop(String subscriptionName, String requestedBy) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
         if (subscription.isWellProvisioned()) {
-            return controllerApi.stopSubscription(subscriptionName, requestedBy);
+            return controllerClient.stopSubscription(subscriptionName, requestedBy);
         }
         throw new InvalidOperationForResourceException(
                 "Subscription is in state %s. It can't be started/stopped.".formatted(
@@ -85,7 +85,7 @@ public class SubscriptionService {
         validateForConflictingUpdate(fromVersion, existingSubscription.getVersion());
         VaradhiTopic subscribedTopic = metaStore.getTopic(existingSubscription.getTopic());
         validateForSubscribedTopic(subscribedTopic, grouped);
-        return controllerApi.getSubscriptionStatus(subscriptionName, requestedBy).thenApply(ss -> {
+        return controllerClient.getSubscriptionStatus(subscriptionName, requestedBy).thenApply(ss -> {
             existingSubscription.setGrouped(grouped);
             existingSubscription.setDescription(description);
             existingSubscription.setEndpoint(endpoint);
@@ -116,7 +116,7 @@ public class SubscriptionService {
 
     public CompletableFuture<Void> deleteSubscription(String subscriptionName, Project subProject, String requestedBy) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
-        return controllerApi.getSubscriptionStatus(subscriptionName, requestedBy).thenAccept(ss -> {
+        return controllerClient.getSubscriptionStatus(subscriptionName, requestedBy).thenAccept(ss -> {
             if (!ss.canDelete()) {
                 throw new IllegalArgumentException(
                         String.format("Subscription deletion not allowed in state: %s.", ss.getState()));

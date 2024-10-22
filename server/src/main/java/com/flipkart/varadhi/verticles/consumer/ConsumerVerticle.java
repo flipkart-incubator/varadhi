@@ -44,7 +44,9 @@ public class ConsumerVerticle extends AbstractVerticle {
         String consumerId = consumerInfo.getConsumerId();
         messageRouter.sendHandler(consumerId, "start", handler::start);
         messageRouter.sendHandler(consumerId, "stop", handler::stop);
+        messageRouter.sendHandler(consumerId, "unsideline", handler::unsideline);
         messageRouter.requestHandler(consumerId, "status", handler::status);
         messageRouter.requestHandler(consumerId, "info", handler::info);
+        messageRouter.requestHandler(consumerId, "getMessages", handler::getMessages);
     }
 }

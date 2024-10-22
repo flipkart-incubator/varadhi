@@ -36,7 +36,10 @@ public class AuthorizationHandlerTests {
 
         authzHandlerBuilder
                 .build(ResourceAction.SUBSCRIPTION_DELETE)
-                .authorize(testUser("a", true), new Hierarchies.SubscriptionHierarchy("org1", "team1", "p1", "s1"))
+                .authorize(
+                        testUser("a", true), new Hierarchies.SubscriptionHierarchy("org1", "team1", "p1", "s1",
+                                new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1")
+                        ))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(401, ((HttpException) t).getStatusCode());
                     checks.flag();
