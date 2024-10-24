@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.UnsidelineRequest;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -59,6 +60,12 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
     public static SubscriptionOperation reAssignShardOp(Assignment assignment, String requestedBy) {
         return new SubscriptionOperation(new ReassignShardData(assignment), requestedBy);
+    }
+
+    public static SubscriptionOperation unsidelineOp(
+            String subscriptionId, UnsidelineRequest request, String requestedBy
+    ) {
+        return new SubscriptionOperation(new UnsidelineData(subscriptionId, request), requestedBy);
     }
 
     @Override
@@ -221,6 +228,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
             @JsonSubTypes.Type(value = StartData.class, name = "startSubData"),
             @JsonSubTypes.Type(value = StopData.class, name = "stopSubData"),
             @JsonSubTypes.Type(value = ReassignShardData.class, name = "reassignShardData"),
+            @JsonSubTypes.Type(value = UnsidelineData.class, name = "unsidelineData"),
     })
     public static class OpData {
         private String operationId;
@@ -276,6 +284,24 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         @Override
         public String toString() {
             return String.format("ReassignShard.OpData{%s %s}", super.toString(), assignment);
+        }
+    }
+
+
+    @Data
+    @NoArgsConstructor
+    @EqualsAndHashCode(callSuper = true)
+    public static class UnsidelineData extends OpData {
+        private UnsidelineRequest request;
+
+        UnsidelineData(String subscriptionId, UnsidelineRequest request) {
+            super(UUID.randomUUID().toString(), subscriptionId);
+            this.request = request;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Unsideline.OpData{%s}", super.toString());
         }
     }
 }

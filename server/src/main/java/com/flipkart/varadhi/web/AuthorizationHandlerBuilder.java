@@ -38,7 +38,7 @@ public class AuthorizationHandlerBuilder {
     }
 
     @AllArgsConstructor
-    class AuthorizationHandler implements Handler<RoutingContext> {
+    public class AuthorizationHandler implements Handler<RoutingContext> {
 
         private final ResourceAction authorizationOnAction;
 
@@ -49,7 +49,7 @@ public class AuthorizationHandlerBuilder {
             authorize(user, resourceHierarchy).onFailure(ctx::fail).onSuccess(result -> ctx.next());
         }
 
-        Future<Void> authorize(
+        public Future<Void> authorize(
                 UserContext userContext, ResourceHierarchy resourceHierarchy
         ) {
 
@@ -68,24 +68,26 @@ public class AuthorizationHandlerBuilder {
             if (superUsers.contains(userContext.getSubject())) {
                 return Future.succeededFuture();
             }
-
-            ResourceAction action = authorizationOnAction;
-            String resource = resourceHierarchy.getResourcePath();
-            return provider.isAuthorized(userContext, action, resource)
-                    .compose(authorized -> {
-                        if (Boolean.FALSE.equals(authorized)) {
-                            return Future.failedFuture(new HttpException(
-                                    HTTP_FORBIDDEN,
-                                    "user is not authorized to perform action '" + action.toString() +
-                                            "' on resource '" +
-                                            resource + "'"
-                            ));
-                        } else {
-                            return Future.succeededFuture();
-                        }
-                    }, t -> Future.failedFuture(
-                            new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
+            String resourcePath = resourceHierarchy.getResourcePath(authorizationOnAction.getResourceType());
+            return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }
 
+    }
+
+    private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
+        return provider.isAuthorized(userContext, action, resourcePath)
+                .compose(authorized -> {
+                    if (Boolean.FALSE.equals(authorized)) {
+                        return Future.failedFuture(new HttpException(
+                                HTTP_FORBIDDEN,
+                                "user is not authorized to perform action '" + action.toString() +
+                                        "' on resource '" +
+                                        resourcePath + "'"
+                        ));
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                }, t -> Future.failedFuture(
+                        new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
     }
 }

@@ -69,6 +69,8 @@ public class IamPolicyService {
 
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
         return switch (resourceType) {
+            case ROOT -> throw new IllegalArgumentException(
+                    "ROOT is implicit resource type. No Iam policies supported on it.");
             case ORG -> metaStore.checkOrgExists(resourceId);
             case TEAM -> {
                 // org:team

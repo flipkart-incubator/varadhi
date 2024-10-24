@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Getter
 @ValidateResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
 public class SubscriptionResource extends VersionedEntity implements Validatable {
@@ -31,6 +34,9 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     @NotNull
     ConsumptionPolicy consumptionPolicy;
 
+    @NotNull
+    Map<String, String> properties;
+
     private SubscriptionResource(
             String name,
             int version,
@@ -41,7 +47,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             boolean grouped,
             Endpoint endpoint,
             RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy
+            ConsumptionPolicy consumptionPolicy,
+            Map<String, String> properties
     ) {
         super(name, version);
         this.project = project;
@@ -52,6 +59,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
+        this.properties = properties;
     }
 
     public static SubscriptionResource of(
@@ -67,7 +75,25 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     ) {
         return new SubscriptionResource(
                 name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
-                consumptionPolicy
+                consumptionPolicy, new HashMap<>()
+        );
+    }
+
+    public static SubscriptionResource of(
+            String name,
+            String project,
+            String topic,
+            String topicProject,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            Map<String, String> properties
+    ) {
+        return new SubscriptionResource(
+                name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
+                consumptionPolicy, properties
         );
     }
 
@@ -93,7 +119,8 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
                 subscription.isGrouped(),
                 subscription.getEndpoint(),
                 subscription.getRetryPolicy(),
-                subscription.getConsumptionPolicy()
+                subscription.getConsumptionPolicy(),
+                subscription.getProperties()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;

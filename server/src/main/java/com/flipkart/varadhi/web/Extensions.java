@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.utils.AsyncProducerReadStream;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -10,6 +11,13 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 
@@ -38,6 +46,59 @@ public class Extensions {
 
     @Slf4j
     public static class RoutingContextExtension {
+        public static <T> void executeAsyncRequest(RoutingContext ctx, Callable<CompletableFuture<T>> callable) {
+            try {
+                callable.call().whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
+                    if (error != null) {
+                        endRequestWithException(ctx, unwrapExecutionException(error));
+                    } else {
+                        if (null == t) {
+                            endRequest(ctx);
+                        } else {
+                            endRequestWithResponse(ctx, t);
+                        }
+                    }
+                }));
+            } catch (Exception e) {
+                endRequestWithException(ctx, e);
+            }
+        }
+
+
+        public static <T> void executeAsyncRequestWithChunkedResponses(
+                RoutingContext ctx, Function<Consumer<T>, CompletableFuture<Void>> executor
+        ) {
+            try {
+                AsyncProducerReadStream readStream = new AsyncProducerReadStream();
+                ctx.response().setChunked(true);
+                addResponseHeaders(ctx, true);
+                ctx.response().send(readStream);
+                executor.apply(m -> {
+                            String responseBody = JsonMapper.jsonSerialize(m);
+                            readStream.send(responseBody);
+                        })
+                        .whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
+                            if (error != null) {
+                                log.info("Completing chunked request response failure: {}", error.getMessage());
+                                readStream.end(error);
+                            } else {
+                                log.info("Completing chunked request response");
+                                readStream.end();
+                            }
+                        }));
+            } catch (Exception e) {
+                endRequestWithException(ctx, e);
+            }
+        }
+
+        private static Throwable unwrapExecutionException(Throwable t) {
+            if (t instanceof ExecutionException) {
+                return t.getCause();
+            } else {
+                return t;
+            }
+        }
+
 
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
             addResponseHeaders(ctx, true);
@@ -103,7 +164,7 @@ public class Extensions {
             throw new NotImplementedException("Not Implemented.");
         }
 
-        public static String  getIdentityOrDefault(RoutingContext ctx) {
+        public static String getIdentityOrDefault(RoutingContext ctx) {
             User user = ctx.user();
             return null != user ? user.subject() : ANONYMOUS_IDENTITY;
         }

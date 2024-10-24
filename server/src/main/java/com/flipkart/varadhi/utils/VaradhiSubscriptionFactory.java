@@ -51,7 +51,8 @@ public final class VaradhiSubscriptionFactory {
                 subscriptionResource.getEndpoint(),
                 subscriptionResource.getRetryPolicy(),
                 subscriptionResource.getConsumptionPolicy(),
-                shards
+                shards,
+                subscriptionResource.getProperties()
         );
     }
 

@@ -3,11 +3,14 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.ext.web.Route;
 import org.apache.commons.lang3.StringUtils;
+
+import java.util.Optional;
 
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
@@ -21,9 +24,16 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
-        if (authorizationHandlerBuilder != null && routeDef.getAuthorizationOnAction() != null) {
-            route.handler(authorizationHandlerBuilder.build(routeDef.getAuthorizationOnAction()));
+        if (authorizationHandlerBuilder != null && !routeDef.getAuthorizeOnActions().isEmpty()) {
+            routeDef.getAuthorizeOnActions().forEach(action -> route.handler(authorizationHandlerBuilder.build(action)));
         }
+    }
+
+    public Optional<AuthorizationHandlerBuilder.AuthorizationHandler> getHandlerForAction(ResourceAction action) {
+        if (authorizationHandlerBuilder != null && action != null) {
+            return Optional.of(authorizationHandlerBuilder.build(action));
+        }
+        return Optional.empty();
     }
 
     AuthorizationHandlerBuilder createAuthorizationHandler(AppConfiguration configuration) {

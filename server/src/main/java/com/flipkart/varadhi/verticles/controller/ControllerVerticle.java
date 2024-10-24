@@ -180,6 +180,8 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "start", handler::start);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "stop", handler::stop);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "status", handler::status);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
     }
 

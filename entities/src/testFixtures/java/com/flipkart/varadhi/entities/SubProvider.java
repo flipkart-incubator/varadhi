@@ -64,6 +64,7 @@ public class SubProvider {
         private RetryPolicy retryPolicy;
         private ConsumptionPolicy consumptionPolicy;
         private SubscriptionShards shards;
+        private Map<String, String> properties = new HashMap<>();
 
         public Builder setDescription(String description) {
             this.description = description;
@@ -104,6 +105,10 @@ public class SubProvider {
             this.numShards = numShards;
             return this;
         }
+        public Builder setProperty(String property, String value) {
+            this.properties.put(property, value);
+            return this;
+        }
 
         public VaradhiSubscription build(String name, String subProject, String subscribedTopic) {
             if (null == subCapacity) {
@@ -125,7 +130,8 @@ public class SubProvider {
                     endpoint == null ? getHttpEndpoint() : endpoint,
                     retryPolicy == null ? getRetryPolicy() : retryPolicy,
                     consumptionPolicy == null ? getConsumptionPolicy() : consumptionPolicy,
-                    shards
+                    shards,
+                    properties
             );
         }
     }
