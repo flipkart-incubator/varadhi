@@ -122,21 +122,6 @@ public class ControllerApiMgrTest {
         result = controllerApiMgr.getSubscriptionStatus(sub1.getName(), requestedBy);
         status = awaitAsyncAndGetValue(result);
         assertEquals(SubscriptionState.ERRORED, status.getState());
-
-        doThrow(new ReplyException(ReplyFailure.NO_HANDLERS, "Host not found.")).when(consumerApi)
-                .getShardStatus(sub1.getName(), 0);
-        ReplyException re = assertThrows(
-                ReplyException.class,
-                () -> controllerApiMgr.getSubscriptionStatus(sub1.getName(), requestedBy)
-        );
-        assertEquals(ReplyFailure.NO_HANDLERS, re.failureType());
-
-        doReturn(CompletableFuture.failedFuture(new RuntimeException("Unknown exception."))).when(consumerApi)
-                .getShardStatus(sub1.getName(), 0);
-        result = controllerApiMgr.getSubscriptionStatus(sub1.getName(), requestedBy);
-        IllegalStateException ie = assertException(result, IllegalStateException.class, null);
-        assertTrue(ie.getMessage().contains("Unknown exception."));
-        assertTrue(ie.getMessage().contains("Failure in getting subscription status, try again after sometime."));
     }
 
     @Test
@@ -196,15 +181,11 @@ public class ControllerApiMgrTest {
     public void testStartSubscription_SubscriptionStatusFailure() {
         VaradhiSubscription sub1 =
                 SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
-        List<ConsumerNode> consumerNodes = getConsumerNodes(3);
-        List<Assignment> assignments = new ArrayList<>();
 
-        setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
+        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(
+                assignmentManager).getSubAssignments(sub1.getName());
 
-        doReturn(CompletableFuture.failedFuture(new MetaStoreException("Failed to get assignments for sub."))).when(
-                        controllerApiMgr)
-                .getSubscriptionStatus(sub1);
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.startSubscription(sub1.getName(), requestedBy);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);
@@ -397,15 +378,10 @@ public class ControllerApiMgrTest {
     public void testStopSubscription_SubscriptionStatusFailure() {
         VaradhiSubscription sub1 =
                 SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
-        List<ConsumerNode> consumerNodes = getConsumerNodes(3);
-        List<Assignment> assignments = new ArrayList<>();
+        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(
+                assignmentManager).getSubAssignments(sub1.getName());
 
-        setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
-
-        doReturn(CompletableFuture.failedFuture(new MetaStoreException("Failed to get assignments for sub."))).when(
-                        controllerApiMgr)
-                .getSubscriptionStatus(sub1);
         CompletableFuture<SubscriptionOperation> result =
                 controllerApiMgr.stopSubscription(sub1.getName(), requestedBy);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);

@@ -34,31 +34,33 @@ public class ControllerApiMgr implements ControllerApi {
 
     @Override
     public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
-        return getSubscriptionStatus(subscription);
+        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+                .thenCompose(this::getSubscriptionStatus);
     }
 
     CompletableFuture<SubscriptionStatus> getSubscriptionStatus(VaradhiSubscription subscription) {
         String subId = subscription.getName();
-        List<Assignment> assignments = assignmentManager.getSubAssignments(subId);
 
-        List<CompletableFuture<ShardStatus>> shardFutures = assignments.stream().map(a -> {
-            ConsumerApi consumer = consumerClientFactory.getInstance(a.getConsumerId());
-            return consumer.getShardStatus(subId, a.getShardId());
-        }).toList();
+        return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
+                .thenCompose(assignments -> {
+                    List<CompletableFuture<ShardStatus>> shardFutures = assignments.stream().map(a -> {
+                        ConsumerApi consumer = consumerClientFactory.getInstance(a.getConsumerId());
+                        return consumer.getShardStatus(subId, a.getShardId());
+                    }).toList();
 
-        return CompletableFuture.allOf(shardFutures.toArray(CompletableFuture[]::new)).thenApply(v -> {
-            List<ShardStatus> shardStatuses = new ArrayList<>();
-            shardFutures.forEach(sf -> shardStatuses.add(sf.join()));
-            return getSubscriptionStatusFromShardStatus(subscription, assignments, shardStatuses);
-        }).exceptionally(t -> {
-            // If not temporary, then alternate needs to be provided to allow recovery from this.
-            throw new IllegalStateException(
-                    String.format(
-                            "Failure in getting subscription status, try again after sometime. %s",
-                            t.getMessage()
-                    ));
-        });
+                    return CompletableFuture.allOf(shardFutures.toArray(CompletableFuture[]::new)).thenApply(v -> {
+                        List<ShardStatus> shardStatuses = new ArrayList<>();
+                        shardFutures.forEach(sf -> shardStatuses.add(sf.join()));
+                        return getSubscriptionStatusFromShardStatus(subscription, assignments, shardStatuses);
+                    });
+                }).exceptionally(t -> {
+                    // If not temporary, then alternate needs to be provided to allow recovery from this.
+                    throw new IllegalStateException(
+                            String.format(
+                                    "Failure in getting subscription status, try again after sometime. %s",
+                                    t.getMessage()
+                            ));
+                });
     }
 
     private SubscriptionStatus getSubscriptionStatusFromShardStatus(
@@ -72,38 +74,43 @@ public class ControllerApiMgr implements ControllerApi {
     public CompletableFuture<SubscriptionOperation> startSubscription(
             String subscriptionId, String requestedBy
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
-        return getSubscriptionStatus(subscription).thenApply(ss -> {
-            if (ss.getState() == SubscriptionState.RUNNING || ss.getState() == SubscriptionState.STARTING) {
-                throw new InvalidOperationForResourceException("Subscription is either already running or starting.");
-            }
-            log.info("Starting the Subscription: {}", subscriptionId);
-            SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
-            operationMgr.createAndEnqueue(
-                    operation,
-                    new StartOpExecutor(subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore)
-            );
-            return operation;
-        });
+        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+                .thenCompose(subscription -> getSubscriptionStatus(subscription).thenApply(ss -> {
+                    if (ss.getState() == SubscriptionState.RUNNING || ss.getState() == SubscriptionState.STARTING) {
+                        throw new InvalidOperationForResourceException(
+                                "Subscription is either already running or starting.");
+                    }
+                    log.info("Starting the Subscription: {}", subscriptionId);
+                    SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
+                    operationMgr.createAndEnqueue(
+                            operation,
+                            new StartOpExecutor(
+                                    subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore)
+                    );
+                    return operation;
+                }));
     }
 
     @Override
     public CompletableFuture<SubscriptionOperation> stopSubscription(
             String subscriptionId, String requestedBy
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
-        return getSubscriptionStatus(subscription).thenApply(ss -> {
-            if (ss.getState() == SubscriptionState.STOPPED || ss.getState() == SubscriptionState.STOPPING) {
-                throw new InvalidOperationForResourceException("Subscription is either already stopped or stopping.");
-            }
-            log.info("Stopping the Subscription: {}", subscriptionId);
-            SubscriptionOperation operation = SubscriptionOperation.stopOp(subscriptionId, requestedBy);
-            operationMgr.createAndEnqueue(
-                    operation,
-                    new StopOpExecutor(subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore)
-            );
-            return operation;
-        });
+
+        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+                .thenCompose(subscription -> getSubscriptionStatus(subscription).thenApply(ss -> {
+                    if (ss.getState() == SubscriptionState.STOPPED || ss.getState() == SubscriptionState.STOPPING) {
+                        throw new InvalidOperationForResourceException(
+                                "Subscription is either already stopped or stopping.");
+                    }
+                    log.info("Stopping the Subscription: {}", subscriptionId);
+                    SubscriptionOperation operation = SubscriptionOperation.stopOp(subscriptionId, requestedBy);
+                    operationMgr.createAndEnqueue(
+                            operation,
+                            new StopOpExecutor(
+                                    subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore)
+                    );
+                    return operation;
+                }));
     }
 
     @Override
@@ -134,8 +141,8 @@ public class ControllerApiMgr implements ControllerApi {
     public CompletableFuture<SubscriptionOperation> unsideline(
             String subscriptionId, UnsidelineRequest request, String requestedBy
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionId);
-        return getSubscriptionStatus(subscription).thenApply(ss -> {
+        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId)).thenCompose(subscription ->
+        getSubscriptionStatus(subscription).thenApply(ss -> {
             if (ss.getState() == SubscriptionState.STOPPED || ss.getState() == SubscriptionState.STOPPING) {
                 throw new InvalidOperationForResourceException(
                         String.format("Unsideline not allowed in subscription state %s.", ss.getState()));
@@ -148,7 +155,7 @@ public class ControllerApiMgr implements ControllerApi {
                     )
             );
             return operation;
-        });
+        }));
     }
 
     @Override
