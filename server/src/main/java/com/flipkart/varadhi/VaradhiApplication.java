@@ -44,6 +44,7 @@ public class VaradhiApplication {
 
         try {
             log.info("Starting VaradhiApplication");
+            HostUtils.initHostUtils();
             AppConfiguration configuration = readConfiguration(args);
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration);
