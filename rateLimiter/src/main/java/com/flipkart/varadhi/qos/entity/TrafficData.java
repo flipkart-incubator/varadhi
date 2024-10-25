@@ -19,9 +19,10 @@ public class TrafficData {
     @Override
     public String toString() {
         return "\nTrafficData{" +
-                "throughputIn=" + bytesIn +
+                "topic='" + topic + '\'' +
+                ", bytesIn=" + bytesIn +
                 ", rateIn=" + rateIn +
-                "}";
+                "}\n";
     }
 
 }

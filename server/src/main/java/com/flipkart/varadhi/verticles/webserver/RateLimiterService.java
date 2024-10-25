@@ -1,10 +1,8 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.qos.RateLimiter;
 import com.flipkart.varadhi.qos.TopicRateLimiter;
 import com.flipkart.varadhi.qos.entity.RateLimiterType;
-import com.flipkart.varadhi.utils.HostUtils;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,13 +29,13 @@ public class RateLimiterService {// todo(rl): should be an interface for update 
     private final MeterRegistry meterRegistry;
 
 
-    public RateLimiterService(MessageExchange exchange, MeterRegistry meterRegistry, int frequency, String clientId)
+    public RateLimiterService(TrafficSender trafficSender, MeterRegistry meterRegistry, int frequency, String clientId)
             throws UnknownHostException {
         topicRateLimiters = new HashMap<>();
         trafficAggregator = new TrafficAggregator(
                 clientId,
                 frequency,
-                exchange,
+                trafficSender,
                 this,
                 Executors.newScheduledThreadPool(1)
         );
@@ -48,7 +46,7 @@ public class RateLimiterService {// todo(rl): should be an interface for update 
         this.rejectedQPSCounter = Counter.builder("varadhi.producer.qos.rateLimitedQueries");
     }
 
-    public List<RateLimiter> getRateLimiter(String topic) {
+    private List<RateLimiter> getRateLimiter(String topic) {
         if (!topicRateLimiters.containsKey(topic)) {
             topicRateLimiters.put(
                     topic,
@@ -89,7 +87,7 @@ public class RateLimiterService {// todo(rl): should be an interface for update 
     }
 
     // TODO(rl): validate if gauge can be registered again to replace the existing one
-    public void registerGauges() {
+    private void registerGauges() {
         topicRateLimiters.forEach((topic, rateLimiters) -> {
             for (RateLimiter rateLimiter : rateLimiters) {
                 if (rateLimiter instanceof TopicRateLimiter topicRateLimiter) {

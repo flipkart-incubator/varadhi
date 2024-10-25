@@ -1,21 +1,17 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.qos.entity.*;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-import java.util.concurrent.atomic.LongAdder;
-
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
+import com.flipkart.varadhi.qos.entity.RateLimiterType;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
+import com.flipkart.varadhi.qos.entity.TrafficData;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * This class will capture incoming traffic usage by providing a method to add topic usage by producers.
@@ -28,7 +24,7 @@ public class TrafficAggregator {
     private final ClientLoadInfo loadInfo;
     private final int frequency;
     private final ScheduledExecutorService scheduledExecutorService;
-    private final MessageExchange exchange;
+    private final TrafficSender trafficSender;
     private final RateLimiterService rateLimiterService;
     private final Map<String, ConcurrentTopicData> topicTrafficMap;
 
@@ -46,15 +42,15 @@ public class TrafficAggregator {
     }
 
     public TrafficAggregator(
-            String clientId, int frequency, MessageExchange exchange, RateLimiterService rateLimiterService,
+            String clientId, int frequency, TrafficSender trafficSender, RateLimiterService rateLimiterService,
             ScheduledExecutorService scheduledExecutorService
     ) {
         this.frequency = frequency;
         this.scheduledExecutorService = scheduledExecutorService;
-        this.exchange = exchange;
+        this.trafficSender = trafficSender;
         this.rateLimiterService = rateLimiterService;
         this.loadInfo = new ClientLoadInfo(clientId, 0,0, new ArrayList<>());
-        this.topicTrafficMap = new HashMap<>();
+        this.topicTrafficMap = new ConcurrentHashMap<>();
         sendUsageToController();
     }
 
@@ -93,11 +89,9 @@ public class TrafficAggregator {
         topicTrafficMap.forEach((topic, data) -> {
             loadInfo.getTopicUsageList().add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build());
         });
-        ClusterMessage msg = ClusterMessage.of(loadInfo);
         log.info("Sending traffic data to controller: {}", loadInfo);
-        exchange.request(ROUTE_CONTROLLER, "collect", msg)
-                .thenApply(rm -> rm.getResponse(SuppressionData.class))
-                .whenComplete(this::handleSuppressionDataResponse);// TODO(rl); simulate add delay for degradation
+        // TODO(rl); simulate add delay for degradation;
+        trafficSender.send(loadInfo).whenComplete(this::handleSuppressionDataResponse);
         resetData(currentTime);
     }
 

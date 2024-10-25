@@ -1,8 +1,12 @@
 package com.flipkart.varadhi.verticles.webserver;
 
+import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
+
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -11,6 +15,8 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -37,6 +43,7 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -132,8 +139,17 @@ public class WebServerVerticle extends AbstractVerticle {
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
         try {
             // use host address as clientId for now.
-            rateLimiterService = new RateLimiterService(clusterManager.getExchange(vertx), meterRegistry, 1,
-                    memberInfo.hostname()); // TODO(rl): convert to config
+            rateLimiterService = new RateLimiterService(new TrafficSender() {
+                final MessageExchange exchange = clusterManager.getExchange(vertx);
+                @Override
+                public CompletableFuture<SuppressionData> send(ClientLoadInfo loadInfo) {
+                    ClusterMessage msg = ClusterMessage.of(loadInfo);
+                    return exchange.request(ROUTE_CONTROLLER, "collect", msg)
+                            .thenApply(rm -> rm.getResponse(SuppressionData.class));
+                }
+            }, meterRegistry, 1,
+                    memberInfo.hostname()
+            ); // TODO(rl): convert to config
         } catch (UnknownHostException e) {
             log.error("Error creating RateLimiterService", e);
         }

@@ -1,11 +1,13 @@
 package com.flipkart.varadhi.qos.entity;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -24,6 +26,20 @@ public class ClientHistory<T> {
             return null;
         }
         return load.peekLast();
+    }
+
+    public List<T> getRecentRecordForAll() {
+        // for each client, get the most recent record and return it
+        List<T> recentRecordMap = new ArrayList<>();
+        clientHistoryMap.forEach((clientId, history) -> {
+            if(!history.isEmpty()) {
+                T t = history.peekLast();
+                if(t != null) {
+                    recentRecordMap.add(t);
+                }
+            }
+        });
+        return recentRecordMap;
     }
 
     public void add(String clientId, T load) {

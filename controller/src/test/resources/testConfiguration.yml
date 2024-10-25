@@ -1,0 +1,68 @@
+member:
+  roles : ["Server"]
+  networkMBps: 100
+
+deliveryOptions:
+  timeoutMs: 1200
+  tracingPolicy: "PROPAGATE"
+
+restOptions:
+  deployedRegion: "test"
+  defaultOrg: "test"
+  defaultTeam: "test"
+  defaultProject: "test"
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
+
+vertxOptions:
+  eventLoopPoolSize: 1
+  workerPoolSize: 1
+  internalBlockingPoolSize: 1
+
+verticleDeploymentOptions:
+  instances: 1
+  worker: false
+  workerPoolSize: 2
+
+authenticationEnabled: false
+
+authentication:
+  jwt:
+    jwksUrl: "http://localhost:9090/default/jwks"
+    options:
+      issuer: "http://localhost:9090/default"
+      ignoreExpiration: true
+
+authorizationEnabled: false
+
+httpServerOptions:
+  port: 8091
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+featureFlags:
+  leanDeployment: false
+
+zookeeperOptions:
+  connectUrl: "127.0.0.1:2181"
+  sessionTimeoutMs: 60000
+  connectTimeoutMs: 2000
+
+controller:
+  maxConcurrentOps: 2
+  maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60
+
+otlpConfig:
+  otlp.url: "http://localhost:4318/v1/metrics"
+  otlp.step: "100ms"
+  otlp.aggregationTemporality: "CUMULATIVE"
+  otlp.resourceAttributes:
+  otlp.headers:

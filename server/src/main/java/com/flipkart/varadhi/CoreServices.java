@@ -42,7 +42,7 @@ public class CoreServices {
     private final MetaStoreProvider metaStoreProvider;
 
     public CoreServices(AppConfiguration configuration) {
-        this.observabilityStack = setupObservabilityStack(configuration);
+        this.observabilityStack = new ObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
     }
@@ -78,43 +78,40 @@ public class CoreServices {
         return provider;
     }
 
-    private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
-
-        Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
-
-        // TODO: make tracing togglable and configurable.
-        float sampleRatio = 1.0f;
-
-        // exporting spans as logs, but can be replaced with otlp exporter.
-        SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
-                .setResource(resource)
-                .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
-                .build();
-
-        OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
-                .setTracerProvider(sdkTracerProvider)
-                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
-
-        // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "otlp";
-        MeterRegistry meterRegistry = switch (meterExporter) {
-            case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-            case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
-            default -> null;
-        };
-        return new ObservabilityStack(openTelemetry, meterRegistry);
-    }
-
-
     @Getter
-    @AllArgsConstructor
     public static class ObservabilityStack {
         private final OpenTelemetry openTelemetry;
         private final MeterRegistry meterRegistry;
+
+        public ObservabilityStack(AppConfiguration configuration) {
+
+            Resource resource = Resource.getDefault()
+                    .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
+
+            // TODO: make tracing togglable and configurable.
+            float sampleRatio = 1.0f;
+
+            // exporting spans as logs, but can be replaced with otlp exporter.
+            SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
+                    .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
+                    .setResource(resource)
+                    .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
+                    .build();
+
+            this.openTelemetry = OpenTelemetrySdk.builder()
+                    .setTracerProvider(sdkTracerProvider)
+                    .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+                    .buildAndRegisterGlobal();
+
+            // TODO: make meter registry config configurable. each registry comes with its own config.
+            String meterExporter = "otlp";
+            this.meterRegistry = switch (meterExporter) {
+                case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+                case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+                case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
+                default -> null;
+            };
+        }
     }
 
 

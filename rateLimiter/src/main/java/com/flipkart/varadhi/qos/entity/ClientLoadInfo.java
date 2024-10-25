@@ -23,7 +23,7 @@ public class ClientLoadInfo {
                 "clientId='" + clientId + '\'' +
                 ", from=" + from +
                 ", to=" + to +
-                ", topicUsageMap=" + topicUsageList +
+                ", topicUsageList=" + topicUsageList +
                 "}\n";
     }
 
