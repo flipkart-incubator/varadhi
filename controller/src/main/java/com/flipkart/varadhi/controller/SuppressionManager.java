@@ -20,10 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class SuppressionManager implements SuppressionService {
-    private Map<String, ClientHistory<TopicLoadInfo>> topicTrafficDataMap; // topic to client load info
-    private int windowSize;
-    private TopicLimitService topicLimitService;
-    private Ticker ticker;
+    private final Map<String, ClientHistory<TopicLoadInfo>> topicTrafficDataMap; // topic to client load info
+    private final int windowSize;
+    private final TopicLimitService topicLimitService;
+    private final Ticker ticker;
 
     public SuppressionManager(int windowSize, TopicLimitService topicLimitService, Ticker ticker) {
         this.topicTrafficDataMap = new ConcurrentHashMap<>();
@@ -89,19 +89,19 @@ public class SuppressionManager implements SuppressionService {
         SuppressionData suppressionData = new SuppressionData();
         List<CompletableFuture<SuppressionFactor>> suppressionFactorFuture = new ArrayList<>();
 
-        info.getTopicUsageList().forEach((trafficData) -> {
-            suppressionFactorFuture.add(this.addTrafficData(
-                    info.getClientId(),
-                    new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
-            ).whenComplete((suppressionFactor, throwable) -> {
-                if (throwable != null) {
-                    log.error("Error while calculating suppression factor", throwable);
-                    return;
-                }
-                log.info("Topic: {}, SF thr-pt: {}", trafficData.getTopic(), suppressionFactor.getThroughputFactor());
-                suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
-            }));
-        });
+        info.getTopicUsageList().forEach((trafficData) -> suppressionFactorFuture.add(
+                this.addTrafficData(info.getClientId(),
+                        new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
+                ).whenComplete((suppressionFactor, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Error while calculating suppression factor", throwable);
+                        return;
+                    }
+                    log.info("Topic: {}, SF thr-pt: {}", trafficData.getTopic(),
+                            suppressionFactor.getThroughputFactor()
+                    );
+                    suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
+                })));
 
         return FutureUtil.waitForAll(suppressionFactorFuture).thenApply(__ -> suppressionData);
     }

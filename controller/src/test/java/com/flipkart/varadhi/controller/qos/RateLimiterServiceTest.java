@@ -37,7 +37,6 @@ public class RateLimiterServiceTest {
 
     private static MeterRegistry meterRegistry;
     private SuppressionManager suppressionManager;
-    private MockTicker ticker;
     @Mock
     private TopicLimitService topicLimitService;
 
@@ -59,7 +58,7 @@ public class RateLimiterServiceTest {
         MockitoAnnotations.openMocks(this); // Initialize mocks
 
         //setup controller side of things
-        ticker = new MockTicker(System.currentTimeMillis());
+        MockTicker ticker = new MockTicker(System.currentTimeMillis());
         suppressionManager = new SuppressionManager(10, topicLimitService, ticker);
     }
 
@@ -171,9 +170,7 @@ public class RateLimiterServiceTest {
             // iterate through each client data assuming every client starts from the same point
             // consider duration and sum up the allowedBytes for each client and compare with the allowed throughput
             List<List<TestData>> clientDataList = new ArrayList<>();
-            clientLoadMap.forEach((client, testDataList) -> {
-                clientDataList.add(testDataList);
-            });
+            clientLoadMap.forEach((client, testDataList) -> clientDataList.add(testDataList));
             if (clientDataList.size() > 1) {
                 List<Double> errors = calculateNormalisedError(clientDataList, topicThroughputQuotaMap.get(topic));
                 log.info("topic: {} errors: {}", topic, errors);
@@ -206,14 +203,13 @@ public class RateLimiterServiceTest {
                 break;
             }
 
-            for (int i = 0, inputSize = clientDataList.size(); i < inputSize; i++) {
-                List<TestData> list = clientDataList.get(i);
-                if (!list.isEmpty()) {
-                    TestData dv = list.get(0);
+            for (List<TestData> clientTestData : clientDataList) {
+                if (!clientTestData.isEmpty()) {
+                    TestData dv = clientTestData.get(0);
                     sumAllowedBytes += (minDuration * dv.allowedBytes / dv.duration);
                     sumProducedBytes += (minDuration * dv.generatedBytes / dv.duration);
                     if (dv.duration == minDuration) {
-                        list.remove(0);
+                        clientTestData.remove(0);
                     } else {
                         dv.allowedBytes -= (minDuration * dv.allowedBytes / dv.duration);
                         dv.generatedBytes -= (minDuration * dv.generatedBytes / dv.duration);

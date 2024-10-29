@@ -87,9 +87,8 @@ public class TrafficAggregator {
         long currentTime = System.currentTimeMillis();
         loadInfo.setTo(currentTime);
         // convert ConcurrentTopicData to TrafficData.list
-        topicTrafficMap.forEach((topic, data) -> {
-            loadInfo.getTopicUsageList().add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build());
-        });
+        topicTrafficMap.forEach((topic, data) -> loadInfo.getTopicUsageList()
+                .add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build()));
         log.info("Sending traffic data to controller: {}", loadInfo);
         // TODO(rl); simulate add delay for degradation;
         suppressionService.addTrafficDataAsync(loadInfo).whenComplete(this::handleSuppressionDataResponse);
@@ -102,10 +101,10 @@ public class TrafficAggregator {
         if (throwable != null) {
             log.error("Error while receiving suppression data from controller", throwable);
         } else {
-            suppressionData.getSuppressionFactor().forEach((topic, suppressionFactor) -> {
-                rateLimiterService.updateSuppressionFactor(
-                        topic, RateLimiterType.THROUGHPUT_CHECK, suppressionFactor.getThroughputFactor());
-            });
+            suppressionData.getSuppressionFactor().forEach(
+                    (topic, suppressionFactor) -> rateLimiterService.updateSuppressionFactor(topic,
+                            RateLimiterType.THROUGHPUT_CHECK, suppressionFactor.getThroughputFactor()
+                    ));
         }
     }
 
