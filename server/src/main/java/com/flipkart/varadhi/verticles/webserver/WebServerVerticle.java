@@ -8,6 +8,7 @@ import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.controller.SuppressionService;
 import com.flipkart.varadhi.core.cluster.ControllerApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -139,10 +140,10 @@ public class WebServerVerticle extends AbstractVerticle {
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
         try {
             // use host address as clientId for now.
-            rateLimiterService = new RateLimiterService(new TrafficSender() {
+            rateLimiterService = new RateLimiterService(new SuppressionService() {
                 final MessageExchange exchange = clusterManager.getExchange(vertx);
                 @Override
-                public CompletableFuture<SuppressionData> send(ClientLoadInfo loadInfo) {
+                public CompletableFuture<SuppressionData> addTrafficDataAsync(ClientLoadInfo loadInfo) {
                     ClusterMessage msg = ClusterMessage.of(loadInfo);
                     return exchange.request(ROUTE_CONTROLLER, "collect", msg)
                             .thenApply(rm -> rm.getResponse(SuppressionData.class));

@@ -1,9 +1,15 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.qos.entity.ClientHistory;
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.qos.entity.SuppressionFactor;
 import com.flipkart.varadhi.qos.entity.TopicLoadInfo;
+import com.flipkart.varadhi.utils.FutureUtil;
 import com.google.common.base.Ticker;
+
+import java.util.ArrayList;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableDouble;
 
@@ -13,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
-public class SuppressionManager {
+public class SuppressionManager implements SuppressionService {
     private Map<String, ClientHistory<TopicLoadInfo>> topicTrafficDataMap; // topic to client load info
     private int windowSize;
     private TopicLimitService topicLimitService;
@@ -77,4 +83,26 @@ public class SuppressionManager {
         return (ticker.read() - windowSize * 1000L) > time;
     }
 
+    @Override
+    public CompletableFuture<SuppressionData> addTrafficDataAsync(ClientLoadInfo info) {
+
+        SuppressionData suppressionData = new SuppressionData();
+        List<CompletableFuture<SuppressionFactor>> suppressionFactorFuture = new ArrayList<>();
+
+        info.getTopicUsageList().forEach((trafficData) -> {
+            suppressionFactorFuture.add(this.addTrafficData(
+                    info.getClientId(),
+                    new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
+            ).whenComplete((suppressionFactor, throwable) -> {
+                if (throwable != null) {
+                    log.error("Error while calculating suppression factor", throwable);
+                    return;
+                }
+                log.info("Topic: {}, SF thr-pt: {}", trafficData.getTopic(), suppressionFactor.getThroughputFactor());
+                suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
+            }));
+        });
+
+        return FutureUtil.waitForAll(suppressionFactorFuture).thenApply(__ -> suppressionData);
+    }
 }

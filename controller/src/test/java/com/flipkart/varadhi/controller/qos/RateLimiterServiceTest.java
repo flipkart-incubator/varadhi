@@ -5,14 +5,8 @@ import com.flipkart.varadhi.MockTicker;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.controller.SuppressionManager;
 import com.flipkart.varadhi.controller.TopicLimitService;
-import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
-import com.flipkart.varadhi.qos.entity.SuppressionData;
-import com.flipkart.varadhi.qos.entity.SuppressionFactor;
-import com.flipkart.varadhi.qos.entity.TopicLoadInfo;
-import com.flipkart.varadhi.utils.FutureUtil;
 import com.flipkart.varadhi.utils.HostUtils;
 import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
-import com.flipkart.varadhi.verticles.webserver.TrafficSender;
 import com.google.common.util.concurrent.RateLimiter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.Getter;
@@ -30,7 +24,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,7 +35,6 @@ import static org.mockito.Mockito.when;
 @Slf4j
 public class RateLimiterServiceTest {
 
-    //    private RateLimiterService rateLimiterService;
     private static MeterRegistry meterRegistry;
     private SuppressionManager suppressionManager;
     private MockTicker ticker;
@@ -50,16 +42,20 @@ public class RateLimiterServiceTest {
     private TopicLimitService topicLimitService;
 
     @BeforeAll
+    public static void setup() throws UnknownHostException {
+        HostUtils.initHostUtils();
+        setupMetrics();
+    }
+
     public static void setupMetrics() {
         String[] args = {"src/test/resources/testConfiguration.yml"};
         AppConfiguration configuration = readConfiguration(args);
-//        CoreServices services = new CoreServices(configuration);
         CoreServices.ObservabilityStack observabilityStack = new CoreServices.ObservabilityStack(configuration);
         meterRegistry = observabilityStack.getMeterRegistry();
     }
 
     @BeforeEach
-    public void setUpController() throws UnknownHostException {
+    public void setUpController() {
         MockitoAnnotations.openMocks(this); // Initialize mocks
 
         //setup controller side of things
@@ -67,8 +63,17 @@ public class RateLimiterServiceTest {
         suppressionManager = new SuppressionManager(10, topicLimitService, ticker);
     }
 
-    private static Stream<Arguments> provideRateLimitTestCSVPaths() {
+    private static Stream<Arguments> provideRateLimitTestFilePaths() {
         return Stream.of(
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
+//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
                 Arguments.of("src/test/resources/simulation_profiles/test_load1.profile")
 //              todo(rl): fix these profiles
 //                Arguments.of("src/test/resources/simulation_profiles/test_load.profile")
@@ -78,7 +83,7 @@ public class RateLimiterServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("provideRateLimitTestCSVPaths")
+    @MethodSource("provideRateLimitTestFilePaths")
     public void clientLoadSimulation(String filePath) throws IOException, InterruptedException {
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
         String line;
@@ -97,22 +102,21 @@ public class RateLimiterServiceTest {
             String topic = parts[1];
             int throughputQuota = Integer.parseInt(topicLoads[0]);
             topicThroughputQuotaMap.put(topic, throughputQuota);
+            log.info("Setting throughput for topic: {}, throughput: {}", topic, throughputQuota);
             when(topicLimitService.getThroughput(topic)).thenReturn(throughputQuota);
 
             // check if ratelimiterservice exists for a topic
-            clientRateLimiterMap.putIfAbsent(client, createRateLimiterSvc());
+            clientRateLimiterMap.putIfAbsent(client, createRateLimiterSvc(client));
 
             Runnable clientLoadSimulator = () -> {
                 StringBuilder sb = new StringBuilder();
                 sb.append("Client: ").append(client).append(" topic: ").append(topic).append(": \n");
-//                long lastAllowedBytes = 0, lastRejectedBytes = 0;
 
                 for (int i = 1; i < topicLoads.length; i++) {
                     String[] loadParts = topicLoads[i].split(",");
                     long duration = Long.parseLong(loadParts[0]) * 1000; // Convert to milliseconds
                     long throughput = Long.parseLong(loadParts[1]);
                     long qps = Long.parseLong(loadParts[2]);
-//                        long allowedByClient = Long.parseLong(loadParts[3]);
                     long dataSize = throughput / qps;
                     long startTime = System.currentTimeMillis();
                     long allowedBytes = 0, rejectedBytes = 0;
@@ -135,8 +139,14 @@ public class RateLimiterServiceTest {
                             .append("\n");
 
                     // store result data for error rate calculation later on
-                    log.info("[] Client: {}, Topic: {}, Duration: {}, Allowed Bytes: {}, Rejected Bytes: {}", client, topic, duration, allowedBytes, rejectedBytes);
-                    storeResult(topicClientLoadMap, client, topic, duration/1000, allowedBytes, allowedBytes + rejectedBytes);
+                    log.info(
+                            "[] Client: {}, Topic: {}, Duration: {}, Allowed Bytes: {}, Rejected Bytes: {}", client,
+                            topic, duration, allowedBytes, rejectedBytes
+                    );
+                    storeResult(
+                            topicClientLoadMap, client, topic, duration / 1000, allowedBytes,
+                            allowedBytes + rejectedBytes
+                    );
                 }
                 log.info(sb.toString());
             };
@@ -164,8 +174,8 @@ public class RateLimiterServiceTest {
             clientLoadMap.forEach((client, testDataList) -> {
                 clientDataList.add(testDataList);
             });
-            if(clientDataList.size() > 1) {
-                List<Long> errors = calculateError(clientDataList, topicThroughputQuotaMap.get(topic));
+            if (clientDataList.size() > 1) {
+                List<Double> errors = calculateNormalisedError(clientDataList, topicThroughputQuotaMap.get(topic));
                 log.info("topic: {} errors: {}", topic, errors);
                 log.info("topic: {} absolute error: {}", topic, calculateAbsoluteError(errors));
                 log.info("Standard Deviation: {}", calculateStandardDeviation(errors));
@@ -173,7 +183,7 @@ public class RateLimiterServiceTest {
         });
     }
 
-    private static List<Long> calculateError(List<List<TestData>> clientDataList, long throguhput) {
+    private static List<Double> calculateNormalisedError(List<List<TestData>> clientDataList, long throguhput) {
         List<TestData> result = new ArrayList<>();
 
         while (true) {
@@ -208,7 +218,7 @@ public class RateLimiterServiceTest {
                         dv.allowedBytes -= (minDuration * dv.allowedBytes / dv.duration);
                         dv.generatedBytes -= (minDuration * dv.generatedBytes / dv.duration);
                         dv.duration -= minDuration;
-                        if(dv.allowedBytes <= 0) {
+                        if (dv.allowedBytes <= 0) {
                             throw new RuntimeException("Unexpected error");
                             // something failed here, find out why
                         }
@@ -219,23 +229,25 @@ public class RateLimiterServiceTest {
             result.add(new TestData(minDuration, sumAllowedBytes, sumProducedBytes));
         }
 
-        List<Long> errors = new ArrayList<>();
-// 10KBPs 15KBps 7KBps +3
+        List<Double> errors = new ArrayList<>();
         for (TestData dv : result) {
             long maxBytes = Math.min(throguhput * dv.duration, dv.generatedBytes);
             long allowedBytes = dv.allowedBytes;
-            errors.add(Math.abs(allowedBytes - maxBytes));
-            System.out.println("Duration: " + dv.duration + ", Allowed Bytes: " + dv.allowedBytes + ", Generated Bytes: " + dv.generatedBytes);
+            errors.add(((double) (Math.abs(allowedBytes - maxBytes)) / throguhput));
+            log.info(
+                    "Duration: {}, Allowed Bytes: {}, Generated Bytes: {}", dv.duration, dv.allowedBytes,
+                    dv.generatedBytes
+            );
         }
 
         return errors;
     }
 
-    private static double calculateAbsoluteError(List<Long> errors) {
-        return errors.stream().mapToLong(val -> val).sum();
+    private static double calculateAbsoluteError(List<Double> errors) {
+        return errors.stream().mapToDouble(val -> val).sum();
     }
 
-    private static double calculateStandardDeviation(List<Long> errors) {
+    private static double calculateStandardDeviation(List<Double> errors) {
         double mean = errors.stream().mapToDouble(val -> val).average().orElse(0.0);
         double variance = errors.stream().mapToDouble(val -> Math.pow(val - mean, 2)).average().orElse(0.0);
         return Math.sqrt(variance);
@@ -261,39 +273,8 @@ public class RateLimiterServiceTest {
         });
     }
 
-    private RateLimiterService createRateLimiterSvc() throws UnknownHostException {
-        return new RateLimiterService(
-                new TrafficSender() {
-                    @Override
-                    public CompletableFuture<SuppressionData> send(ClientLoadInfo info) {
-                        // receiver handler logic
-                        SuppressionData suppressionData = new SuppressionData();
-                        long delta = System.currentTimeMillis() - info.getTo();
-                        log.info("Delta: {}ms", delta);
-                        List<CompletableFuture<SuppressionFactor>> suppressionFactorFuture = new ArrayList<>();
-                        info.getTopicUsageList().forEach((trafficData) -> {
-                            suppressionFactorFuture.add(suppressionManager.addTrafficData(
-                                    info.getClientId(),
-                                    new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
-                            ).whenComplete((suppressionFactor, throwable) -> {
-                                if (throwable != null) {
-                                    log.error("Error while calculating suppression factor", throwable);
-                                    return;
-                                }
-                                log.info(
-                                        "Topic: {}, SF thr-pt: {}", trafficData.getTopic(),
-                                        suppressionFactor.getThroughputFactor()
-                                );
-                                suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
-                            }));
-                        });
-                        return FutureUtil.waitForAll(suppressionFactorFuture).thenApply(__ -> suppressionData);
-                    }
-                },
-                meterRegistry,
-                1,
-                HostUtils.getHostName()
-        );
+    private RateLimiterService createRateLimiterSvc(String clientId) throws UnknownHostException {
+        return new RateLimiterService(info -> suppressionManager.addTrafficDataAsync(info), meterRegistry, 1, clientId);
     }
 
     @Getter

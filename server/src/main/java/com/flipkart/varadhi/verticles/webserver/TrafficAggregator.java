@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.verticles.webserver;
 
+import com.flipkart.varadhi.controller.SuppressionService;
 import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
 import com.flipkart.varadhi.qos.entity.RateLimiterType;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
@@ -24,7 +25,7 @@ public class TrafficAggregator {
     private final ClientLoadInfo loadInfo;
     private final int frequency;
     private final ScheduledExecutorService scheduledExecutorService;
-    private final TrafficSender trafficSender;
+    private final SuppressionService suppressionService;
     private final RateLimiterService rateLimiterService;
     private final Map<String, ConcurrentTopicData> topicTrafficMap;
 
@@ -42,12 +43,12 @@ public class TrafficAggregator {
     }
 
     public TrafficAggregator(
-            String clientId, int frequency, TrafficSender trafficSender, RateLimiterService rateLimiterService,
+            String clientId, int frequency, SuppressionService suppressionService, RateLimiterService rateLimiterService,
             ScheduledExecutorService scheduledExecutorService
     ) {
         this.frequency = frequency;
         this.scheduledExecutorService = scheduledExecutorService;
-        this.trafficSender = trafficSender;
+        this.suppressionService = suppressionService;
         this.rateLimiterService = rateLimiterService;
         this.loadInfo = new ClientLoadInfo(clientId, 0,0, new ArrayList<>());
         this.topicTrafficMap = new ConcurrentHashMap<>();
@@ -91,7 +92,7 @@ public class TrafficAggregator {
         });
         log.info("Sending traffic data to controller: {}", loadInfo);
         // TODO(rl); simulate add delay for degradation;
-        trafficSender.send(loadInfo).whenComplete(this::handleSuppressionDataResponse);
+        suppressionService.addTrafficDataAsync(loadInfo).whenComplete(this::handleSuppressionDataResponse);
         resetData(currentTime);
     }
 

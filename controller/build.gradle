@@ -8,6 +8,7 @@ dependencies {
     api(project(":core"))
     api(project(':rateLimiter'))
 
+    implementation(project(":common"))
     implementation("io.vertx:vertx-micrometer-metrics")
     implementation('com.fasterxml.jackson.core:jackson-databind')
     implementation("org.apache.commons:commons-lang3")

@@ -25,28 +25,8 @@ public class TrafficDataHandler {
     }
 
     public CompletableFuture<ResponseMessage> handle(ClusterMessage message) {
-        ClientLoadInfo info = message.getData(ClientLoadInfo.class);
-        SuppressionData suppressionData = new SuppressionData();
-        long delta = System.currentTimeMillis() - info.getTo();
-        log.info("Delta: {}ms", delta);
-
-        List<CompletableFuture<SuppressionFactor>> suppressionFactorFuture = new ArrayList<>();
-
-        info.getTopicUsageList().forEach((trafficData) -> {
-            suppressionFactorFuture.add(suppressionManager.addTrafficData(
-                    info.getClientId(),
-                    new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
-            ).whenComplete((suppressionFactor, throwable) -> {
-                if (throwable != null) {
-                    log.error("Error while calculating suppression factor", throwable);
-                    return;
-                }
-                log.info("Topic: {}, SF thr-pt: {}", trafficData.getTopic(), suppressionFactor.getThroughputFactor());
-                suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
-            }));
-        });
-
-        return FutureUtil.waitForAll(suppressionFactorFuture).thenApply(__ -> message.getResponseMessage(suppressionData));
+        return suppressionManager.addTrafficDataAsync(message.getData(ClientLoadInfo.class))
+                .thenApply(message::getResponseMessage);
     }
 
 }

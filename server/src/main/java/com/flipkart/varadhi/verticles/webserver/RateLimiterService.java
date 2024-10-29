@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.verticles.webserver;
 
+import com.flipkart.varadhi.controller.SuppressionService;
 import com.flipkart.varadhi.qos.RateLimiter;
 import com.flipkart.varadhi.qos.TopicRateLimiter;
 import com.flipkart.varadhi.qos.entity.RateLimiterType;
@@ -29,13 +30,13 @@ public class RateLimiterService {// todo(rl): should be an interface for update 
     private final MeterRegistry meterRegistry;
 
 
-    public RateLimiterService(TrafficSender trafficSender, MeterRegistry meterRegistry, int frequency, String clientId)
+    public RateLimiterService(SuppressionService suppressionService, MeterRegistry meterRegistry, int frequency, String clientId)
             throws UnknownHostException {
         topicRateLimiters = new HashMap<>();
         trafficAggregator = new TrafficAggregator(
                 clientId,
                 frequency,
-                trafficSender,
+                suppressionService,
                 this,
                 Executors.newScheduledThreadPool(1)
         );
