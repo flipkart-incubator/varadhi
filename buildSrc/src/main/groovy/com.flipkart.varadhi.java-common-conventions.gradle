@@ -15,32 +15,33 @@ repositories {
 }
 
 ext {
-    lombok_version = "1.18.32"
-    slf4j_version = "2.0.13"
-    log4j2_version = "2.23.1"
-    vertx_version = "4.5.7"
+    lombok_version = "1.18.34"
+    slf4j_version = "2.0.16"
+    log4j2_version = "2.24.1"
+    vertx_version = "4.5.10"
 
-    otl_version = "1.37.0"
-    otl_semconv_version = "1.30.1-alpha"
-    micrometer_version = "1.12.5"
-    jersey_version = "3.1.6"
-    guava_version = "33.1.0-jre"
-    curator_version = "5.6.0"
-    jackson_version = "2.17.0"
-    jakarta_validation_version = "3.0.2"
-    jakarta_annotation_version = "2.1.1"
-    jakarta_ws_version = "3.1.0"
-    commons_lang_version = "3.14.0"
+    otl_version = "1.43.0"
+    otl_semconv_version = "1.28.0-alpha"
+    micrometer_version = "1.13.6"
+    jersey_version = "3.1.9"
+    guava_version = "33.3.1-jre"
+    curator_version = "5.7.1"
+    jackson_version = "2.18.1"
+    jakarta_validation_version = "3.1.0"
+    jakarta_annotation_version = "3.0.0"
+    jakarta_ws_version = "4.0.0"
+    commons_lang_version = "3.17.0"
     commons_collections_version = "4.4"
-    jctools_version = "4.0.3"
+    jctools_version = "4.0.5"
 
     hibernate_validator_version = "8.0.1.Final"
     failsafe_version="3.3.2"
 
-    junit_version = "5.10.2"
-    mockito_version = "5.11.0"
+    junit_version = "5.11.3"
+    mockito_version = "5.14.2"
     jmh_version = "1.37"
-    awaitility_version = "4.2.1"
+    awaitility_version = "4.2.2"
+    jacoco_version = "0.8.10"
 }
 
 sourceSets {
@@ -90,7 +91,7 @@ dependencies {
         implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
         implementation("io.opentelemetry:opentelemetry-exporter-prometheus:$otl_version-alpha")
-        implementation("io.opentelemetry:opentelemetry-semconv:$otl_semconv_version")
+        implementation("io.opentelemetry.semconv:opentelemetry-semconv:$otl_semconv_version")
 
         implementation("io.micrometer:micrometer-core:$micrometer_version")
         implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
@@ -137,8 +138,9 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
+    sourceCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.register('testE2E', Test) {
@@ -153,7 +155,7 @@ tasks.register('copyDependencies', Copy) {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release.set(17)
+    options.release.set(21)
 }
 
 tasks.withType(JavaCompile).configureEach {
