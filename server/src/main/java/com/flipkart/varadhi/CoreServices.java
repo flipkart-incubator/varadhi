@@ -24,7 +24,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -81,7 +81,7 @@ public class CoreServices {
     private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
 
         Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
+                .merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
         // TODO: make tracing togglable and configurable.
         float sampleRatio = 1.0f;
@@ -99,15 +99,16 @@ public class CoreServices {
                 .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "jmx";
+        String meterExporter = "otlp";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            case "otlp" -> new OtlpMeterRegistry();
+            case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
             default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);
     }
+
 
     @Getter
     @AllArgsConstructor
@@ -115,4 +116,6 @@ public class CoreServices {
         private final OpenTelemetry openTelemetry;
         private final MeterRegistry meterRegistry;
     }
+
+
 }

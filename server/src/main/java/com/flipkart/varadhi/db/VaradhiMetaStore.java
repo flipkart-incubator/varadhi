@@ -150,9 +150,9 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     @Override
-    public int updateProject(Project project) {
+    public void updateProject(Project project) {
         ZNode znode = ZNode.OfProject(project.getName());
-        return zkMetaStore.updateZNodeWithData(znode, project);
+        zkMetaStore.updateZNodeWithData(znode, project);
     }
 
 
@@ -221,9 +221,9 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     @Override
-    public int updateSubscription(VaradhiSubscription subscription) {
+    public void updateSubscription(VaradhiSubscription subscription) {
         ZNode znode = ZNode.ofSubscription(subscription.getName());
-        return zkMetaStore.updateZNodeWithData(znode, subscription);
+        zkMetaStore.updateZNodeWithData(znode, subscription);
     }
 
     @Override
@@ -257,9 +257,9 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     @Override
-    public int updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
+    public void updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
         ZNode znode = ZNode.OfIamPolicy(iamPolicyRecord.getName());
-        return zkMetaStore.updateZNodeWithData(znode, iamPolicyRecord);
+        zkMetaStore.updateZNodeWithData(znode, iamPolicyRecord);
     }
 
     @Override

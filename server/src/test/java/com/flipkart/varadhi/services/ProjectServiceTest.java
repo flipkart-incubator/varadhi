@@ -50,14 +50,14 @@ public class ProjectServiceTest {
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
-        org1 = new Org("TestOrg1", 0);
-        org2 = new Org("TestOrg2", 0);
-        o1t1 = new Team("TestTeam1", 0, org1.getName());
-        o1t2 = new Team("TestTeam2", 0, org1.getName());
-        o2t1 = new Team("TestTeam1", 0, org2.getName());
-        o1t1p1 = new Project("o1t1p1", 0, "", o1t1.getName(), o1t1.getOrg());
-        o1t1p2 = new Project("o1t1p2", 0, "", o1t1.getName(), o1t1.getOrg());
-        o2t1p1 = new Project("o2t1p1", 0, "", o2t1.getName(), o2t1.getOrg());
+        org1 = Org.of("TestOrg1");
+        org2 = Org.of("TestOrg2");
+        o1t1 = Team.of("TestTeam1", org1.getName());
+        o1t2 = Team.of("TestTeam2", org1.getName());
+        o2t1 = Team.of("TestTeam1", org2.getName());
+        o1t1p1 = Project.of("o1t1p1", "", o1t1.getName(), o1t1.getOrg());
+        o1t1p2 = Project.of("o1t1p2", "", o1t1.getName(), o1t1.getOrg());
+        o2t1p1 = Project.of("o2t1p1", "", o2t1.getName(), o2t1.getOrg());
         orgService.createOrg(org1);
         teamService.createTeam(o1t1);
     }
@@ -69,14 +69,14 @@ public class ProjectServiceTest {
         Assertions.assertEquals(o1t1p1, o1t1p1Created);
         Assertions.assertEquals(o1t1p1, o1t1p1Get);
 
-        Project dummyP1 = new Project("dummyP", 0, "", o1t1.getName(), "dummyOrg");
+        Project dummyP1 = Project.of("dummyP", "", o1t1.getName(), "dummyOrg");
         validateResourceNotFound(String.format(
                 "Org(%s) not found. For Project creation, associated Org and Team should exist.",
                 dummyP1.getOrg()
         ), () -> projectService.createProject(dummyP1));
 
 
-        Project dummyP2 = new Project("dummyP", 0, "", "dummyTeam", o1t1.getOrg());
+        Project dummyP2 = Project.of("dummyP", "", "dummyTeam", o1t1.getOrg());
         validateResourceNotFound(String.format(
                 "Team(%s) not found. For Project creation, associated Org and Team should exist.",
                 dummyP2.getTeam()
@@ -86,12 +86,12 @@ public class ProjectServiceTest {
         validateDuplicateProject(o1t1p1, () -> projectService.createProject(o1t1p1));
 
         teamService.createTeam(o1t2);
-        Project duplicateP1 = new Project(o1t1p1.getName(), 0, "", o1t2.getName(), o1t2.getOrg());
+        Project duplicateP1 = Project.of(o1t1p1.getName(), "", o1t2.getName(), o1t2.getOrg());
         validateDuplicateProject(duplicateP1, () -> projectService.createProject(duplicateP1));
 
         orgService.createOrg(org2);
         teamService.createTeam(o2t1);
-        Project duplicateP2 = new Project(o1t1p1.getName(), 0, "", o2t1.getName(), o2t1.getOrg());
+        Project duplicateP2 = Project.of(o1t1p1.getName(), "", o2t1.getName(), o2t1.getOrg());
         validateDuplicateProject(duplicateP2, () -> projectService.createProject(duplicateP2));
     }
 
@@ -113,7 +113,7 @@ public class ProjectServiceTest {
 
     @Test
     public void testGetProject() {
-        Project dummyP1 = new Project("dummyP", 0, "", o1t1.getName(), "dummyOrg");
+        Project dummyP1 = Project.of("dummyP", "", o1t1.getName(), "dummyOrg");
         validateResourceNotFound(
                 String.format("Project(%s) not found.", dummyP1.getName()),
                 () -> projectService.getProject(dummyP1.getName())
@@ -167,7 +167,7 @@ public class ProjectServiceTest {
 
         orgService.createOrg(org2);
         Project orgUpdate =
-                new Project(o1t1p1.getName(), o1t1p1.getVersion(), o1t1p1.getDescription(), o1t1p1.getTeam(),
+                Project.of(o1t1p1.getName(), o1t1p1.getDescription(), o1t1p1.getTeam(),
                         org2.getName()
                 );
 

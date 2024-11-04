@@ -16,14 +16,14 @@ public class TeamTests extends E2EBase {
 
     @BeforeEach
     public void setup() {
-        org1 = new Org("org1", 0);
-        org2 = new Org("org2", 0);
-        org3 = new Org("org3", 0);
-        org1Team1 = new Team("team1", 0, org1.getName());
-        org1Team2 = new Team("team2", 0, org1.getName());
-        org2Team1 = new Team("team2", 0, org2.getName());
-        org2Team2 = new Team("team3", 0, org2.getName());
-        org3Team1 = new Team("team1", 0, org3.getName());
+        org1 = Org.of("org1");
+        org2 = Org.of("org2");
+        org3 = Org.of("org3");
+        org1Team1 = Team.of("team1", org1.getName());
+        org1Team2 = Team.of("team2", org1.getName());
+        org2Team1 = Team.of("team2", org2.getName());
+        org2Team2 = Team.of("team3", org2.getName());
+        org3Team1 = Team.of("team1", org3.getName());
 
         makeCreateRequest(getOrgsUri(), org1, 200);
         makeCreateRequest(getOrgsUri(), org2, 200);

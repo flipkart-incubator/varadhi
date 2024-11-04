@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 public class TopicTests extends E2EBase {
@@ -28,12 +27,12 @@ public class TopicTests extends E2EBase {
 
     @BeforeAll
     public static void setup() {
-        org1 = new Org("public", 0);
-        org2 = new Org("public_org2", 0);
-        o1Team1 = new Team("team1", 0, org1.getName());
-        o2Team1 = new Team("team1", 0, org2.getName());
-        o1t1Project1 = new Project("default", 0, "", o1Team1.getName(), o1Team1.getOrg());
-        o2t1Project1 = new Project("default_o2t1", 0, "", o2Team1.getName(), o2Team1.getOrg());
+        org1 = Org.of("public");
+        org2 = Org.of("public_org2");
+        o1Team1 = Team.of("team1", org1.getName());
+        o2Team1 = Team.of("team1", org2.getName());
+        o1t1Project1 = Project.of("default", "", o1Team1.getName(), o1Team1.getOrg());
+        o2t1Project1 = Project.of("default_o2t1", "", o2Team1.getName(), o2Team1.getOrg());
         makeCreateRequest(getOrgsUri(), org1, 200);
         makeCreateRequest(getOrgsUri(), org2, 200);
         makeCreateRequest(getTeamsUri(o1Team1.getOrg()), o1Team1, 200);
@@ -51,8 +50,7 @@ public class TopicTests extends E2EBase {
     @Test
     public void createTopic() {
         String topicName = "test-topic-1";
-        TopicResource topic =
-                new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
+        TopicResource topic = TopicResource.unGrouped(topicName, o1t1Project1.getName(), null);
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
         Assertions.assertEquals(topic.getName(), r.getName());
@@ -72,8 +70,7 @@ public class TopicTests extends E2EBase {
     @Test
     public void createTopicWithValidationFailure() {
         String topicName = "ab";
-        TopicResource topic =
-                new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
+        TopicResource topic = TopicResource.unGrouped(topicName, o1t1Project1.getName(), null);
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 400, errorValidationTopic, true);
 
@@ -84,10 +81,8 @@ public class TopicTests extends E2EBase {
     @Test
     public void createTopicsWithMultiTenancy() {
         String topicName = "test-topic-2";
-        TopicResource topic1 =
-                new TopicResource(topicName, INITIAL_VERSION, o1t1Project1.getName(), false, null);
-        TopicResource topic2 =
-                new TopicResource(topicName, INITIAL_VERSION, o2t1Project1.getName(), false, null);
+        TopicResource topic1 = TopicResource.unGrouped(topicName, o1t1Project1.getName(), null);
+        TopicResource topic2 = TopicResource.unGrouped(topicName, o2t1Project1.getName(), null);
 
         TopicResource r1 = makeCreateRequest(getTopicsUri(o1t1Project1), topic1, 200);
         TopicResource r2 = makeCreateRequest(getTopicsUri(o2t1Project1), topic2, 200);

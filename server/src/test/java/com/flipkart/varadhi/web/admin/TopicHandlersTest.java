@@ -31,7 +31,7 @@ public class TopicHandlersTest extends WebTestBase {
     private final String topicName = "topic1";
     private final String team1 = "team1";
     private final String org1 = "org1";
-    private final Project project = new Project("project1", 0, "", team1, org1);
+    private final Project project = Project.of("project1", "", team1, org1);
     TopicHandlers topicHandlers;
     VaradhiTopicService varadhiTopicService;
     VaradhiTopicFactory varadhiTopicFactory;
@@ -128,13 +128,7 @@ public class TopicHandlersTest extends WebTestBase {
     }
 
     private TopicResource getTopicResource(String topicName, Project project) {
-        return new TopicResource(
-                topicName,
-                1,
-                project.getName(),
-                true,
-                Constants.DefaultTopicCapacity
-        );
+        return TopicResource.grouped(topicName,  project.getName(), Constants.DefaultTopicCapacity);
     }
 
     private String getTopicsUrl(Project project) {

@@ -63,8 +63,7 @@ public class IamPolicyService {
                     iamPolicyRecord.getName()
             ));
         }
-        int updatedVersion = iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
-        iamPolicyRecord.setVersion(updatedVersion);
+        iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
         return iamPolicyRecord;
     }
 

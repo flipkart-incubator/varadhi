@@ -26,7 +26,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
-
+    private final int NUMBER_OF_RETRIES_ALLOWED = 3;
     private final SubscriptionService subscriptionService;
     private final ProjectService projectService;
     private final VaradhiTopicService topicService;
@@ -174,8 +174,16 @@ public class SubscriptionHandlers implements RouteProvider {
         if (!projectName.equals(subscription.getProject())) {
             throw new IllegalArgumentException("Specified Project name is different from Project name in url");
         }
+        validateRetryPolicy(subscription.getRetryPolicy());
         return subscription;
     }
+
+    private void validateRetryPolicy(RetryPolicy retryPolicy) {
+       if (retryPolicy.getRetryAttempts() != NUMBER_OF_RETRIES_ALLOWED) {
+           throw new IllegalArgumentException(String.format("Only %d retries are supported.", NUMBER_OF_RETRIES_ALLOWED));
+       }
+    }
+
 
     private VaradhiTopic getSubscribedTopic(SubscriptionResource subscription) {
         String projectName = subscription.getTopicProject();

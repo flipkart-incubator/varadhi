@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;

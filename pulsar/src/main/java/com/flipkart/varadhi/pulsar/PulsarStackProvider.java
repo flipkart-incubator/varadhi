@@ -3,6 +3,7 @@ package com.flipkart.varadhi.pulsar;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
+import com.flipkart.varadhi.pulsar.consumer.PulsarConsumerFactory;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
@@ -14,6 +15,7 @@ import com.flipkart.varadhi.utils.YamlLoader;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.UnknownHostException;
+import java.util.HashMap;
 
 @Slf4j
 public class PulsarStackProvider
@@ -23,6 +25,7 @@ public class PulsarStackProvider
     private PulsarProducerFactory producerFactory;
     private PulsarSubscriptionFactory subscriptionFactory;
     private PulsarSubscriptionService subscriptionService;
+    private PulsarConsumerFactory consumerFactory;
     private volatile boolean initialised = false;
 
     @Override
@@ -43,6 +46,7 @@ public class PulsarStackProvider
         producerFactory =
                 new PulsarProducerFactory(
                         clientProvider.getPulsarClient(), pulsarConfig.getProducerOptions(), hostName);
+        consumerFactory = new PulsarConsumerFactory(clientProvider.getPulsarClient(), new HashMap<>());
         subscriptionFactory = new PulsarSubscriptionFactory();
         subscriptionService = new PulsarSubscriptionService(clientProvider);
         registerSubtypes(mapper);
@@ -85,7 +89,8 @@ public class PulsarStackProvider
 
     @Override
     public ConsumerFactory<PulsarStorageTopic, PulsarOffset> getConsumerFactory() {
-        return null;
+        ensureInitialized();
+        return consumerFactory;
     }
 
     private void registerSubtypes(ObjectMapper mapper) {

@@ -16,8 +16,8 @@ public class OrgTests extends E2EBase {
 
     @BeforeEach
     public void setup() {
-        org1 = new Org("org10", 0);
-        org2 = new Org("org12", 0);
+        org1 = Org.of("org10");
+        org2 = Org.of("org12");
     }
 
     @AfterEach

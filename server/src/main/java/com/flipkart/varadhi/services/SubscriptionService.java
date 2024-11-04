@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.INITIAL_VERSION;
-
 @Slf4j
 public class SubscriptionService {
     private final MetaStore metaStore;
@@ -37,7 +35,6 @@ public class SubscriptionService {
             VaradhiTopic subscribedTopic, VaradhiSubscription subscription, Project subProject
     ) {
         validateCreation(subscribedTopic, subscription);
-        subscription.setVersion(INITIAL_VERSION);
         metaStore.createSubscription(subscription);
         try {
             shardProvisioner.provision(subscription, subProject);
@@ -47,8 +44,7 @@ public class SubscriptionService {
             subscription.markCreateFailed(e.getMessage());
             throw e;
         } finally {
-            int updated = metaStore.updateSubscription(subscription);
-            subscription.setVersion(updated);
+            metaStore.updateSubscription(subscription);
         }
         return subscription;
     }
@@ -96,8 +92,7 @@ public class SubscriptionService {
             existingSubscription.setRetryPolicy(retryPolicy);
             existingSubscription.setConsumptionPolicy(consumptionPolicy);
 
-            int updatedVersion = metaStore.updateSubscription(existingSubscription);
-            existingSubscription.setVersion(updatedVersion);
+            metaStore.updateSubscription(existingSubscription);
             return existingSubscription;
         });
 
@@ -127,8 +122,7 @@ public class SubscriptionService {
                         String.format("Subscription deletion not allowed in state: %s.", ss.getState()));
             }
             subscription.markDeleting();
-            int updated = metaStore.updateSubscription(subscription);
-            subscription.setVersion(updated);
+            metaStore.updateSubscription(subscription);
             try {
                 shardProvisioner.deProvision(subscription, subProject);
                 metaStore.deleteSubscription(subscriptionName);

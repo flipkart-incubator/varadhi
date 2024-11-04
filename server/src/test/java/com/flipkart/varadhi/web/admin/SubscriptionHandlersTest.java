@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -33,30 +34,36 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private static final RetryPolicy retryPolicy = new RetryPolicy(
             new CodeRange[]{new CodeRange(500, 502)},
             RetryPolicy.BackoffType.LINEAR,
-            1, 1, 1, 1
+            1, 1, 1, 3
     );
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
     private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
 
-    private final Project project = new Project("project1", 0, "", "team1", "org1");
-    private final TopicResource topicResource = new TopicResource("topic1", 0, "project2", false, null);
+    private final Project project = Project.of("project1", "", "team1", "org1");
+    private final TopicResource topicResource = TopicResource.unGrouped("topic1", "project2", null);
     SubscriptionHandlers subscriptionHandlers;
     SubscriptionService subscriptionService;
     ProjectService projectService;
     VaradhiTopicService topicService;
     VaradhiSubscriptionFactory subscriptionFactory;
 
-    public static VaradhiSubscription getVaradhiSubscription(
-            String subscriptionName, Project project, VaradhiTopic topic, int version
+    public static VaradhiSubscription getUngroupedSubscription(
+            String subscriptionName, Project project, VaradhiTopic topic
     ) {
-        return getVaradhiSubscription(subscriptionName, false, project, topic, version);
+        return getSubscription(subscriptionName, false, project, topic);
     }
 
-    public static VaradhiSubscription getVaradhiSubscription(
-            String subscriptionName, boolean grouped, Project project, VaradhiTopic topic, int version
+    public static VaradhiSubscription getGroupedSubscription(
+            String subscriptionName, Project project, VaradhiTopic topic
     ) {
-        VaradhiSubscription subscription = VaradhiSubscription.of(
+        return getSubscription(subscriptionName, true, project, topic);
+    }
+
+    private static VaradhiSubscription getSubscription(
+            String subscriptionName, boolean grouped, Project project, VaradhiTopic topic
+    ) {
+        return VaradhiSubscription.of(
                 SubscriptionResource.buildInternalName(project.getName(), subscriptionName),
                 project.getName(),
                 topic.getName(),
@@ -67,8 +74,6 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 consumptionPolicy,
                 shards
         );
-        subscription.setVersion(version);
-        return subscription;
     }
 
     @BeforeEach
@@ -121,7 +126,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
         SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
         assertEquals(subscription.getName(), created.getSubscriptionInternalName());
@@ -132,7 +137,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
 
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
         doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
@@ -148,7 +153,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, vTopic, 0);
+        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
 
         doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
         doReturn(project).when(projectService).getCachedProject(project.getName());
@@ -164,7 +169,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
     void testSubscriptionCreateInconsistentProjectNameFailure() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         SubscriptionResource resource =
-                getSubscriptionResource("sub1", new Project("project2", 0, "", "team1", "org1"), topicResource);
+                getSubscriptionResource("sub1", Project.of("project2", "", "team1", "org1"), topicResource);
 
         String errMsg = "Specified Project name is different from Project name in url";
         ErrorResponse resp = sendRequestWithBody(request, resource, 400, errMsg, ErrorResponse.class);
@@ -176,7 +181,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub12", project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub12", project, VaradhiTopic.of(topicResource), 0);
+        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, VaradhiTopic.of(topicResource));
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         when(subscriptionService.getSubscription(captor.capture())).thenReturn(subscription);
 
@@ -227,7 +232,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
         VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
-        VaradhiSubscription subscription = getVaradhiSubscription("sub1", project, vTopic, 2);
+        VaradhiSubscription subscription = getUngroupedSubscription("sub1", project, vTopic);
+        subscription.setVersion(2);
         doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
         ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Integer> versionCaptor = ArgumentCaptor.forClass(Integer.class);
@@ -240,7 +246,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
         SubscriptionResource updated = sendRequestWithBody(request, resource, SubscriptionResource.class);
         assertEquals(resource.getName(), updated.getName());
         assertEquals(resource.getSubscriptionInternalName(), nameCaptor.getValue());
-        assertEquals(1, versionCaptor.getValue());
+        assertEquals(0, versionCaptor.getValue());
     }
 
     private String getSubscriptionsUrl(Project project) {
@@ -254,9 +260,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private SubscriptionResource getSubscriptionResource(
             String subscriptionName, Project project, TopicResource topic
     ) {
-        return new SubscriptionResource(
+        return SubscriptionResource.of(
                 subscriptionName,
-                1,
                 project.getName(),
                 topic.getName(),
                 topic.getProject(),

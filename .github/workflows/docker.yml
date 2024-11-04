@@ -1,0 +1,41 @@
+name: Docker Image Build and/or Push
+
+on:
+  workflow_call:
+    inputs:
+      pushToDockerHub:
+        description: 'Whether to push image to dockerhub'
+        required: true
+        type: boolean
+      releaseVersion:
+        description: 'Docker image tag'
+        type: string
+        required: true
+    secrets:
+      dockerHubToken:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'gradle'
+    - name: Setup Gradle 8.x
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: "8.10.2"
+    - name: Execute Gradle build
+      run: ./gradlew clean build copyDependencies :server:copyJacocoAgent -x test
+    - name: Build the Docker image
+      run: docker build . --file setup/docker/Dockerfile --tag varadhi/varadhi:${{ inputs.releaseVersion }}
+    - name: Push to DockerHub
+      if: ${{ inputs.pushToDockerHub }}
+      run: |
+        docker login -u varadhi -p ${{ secrets.dockerHubToken }}
+        docker push varadhi/varadhi:${{ inputs.releaseVersion }}

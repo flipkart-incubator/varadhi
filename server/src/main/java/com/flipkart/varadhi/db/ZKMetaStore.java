@@ -69,7 +69,7 @@ class ZKMetaStore {
         }
     }
 
-    <T extends MetaStoreEntity> int updateZNodeWithData(ZNode znode, T dataObject) {
+    <T extends MetaStoreEntity> void updateZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
             Stat stat = zkCurator.setData().withVersion(dataObject.getVersion())
@@ -77,7 +77,7 @@ class ZKMetaStore {
             log.debug("Updated {}({}) in at {}: New Version{}.", znode.getKind(), znode.getName(), znode.getPath(),
                     stat.getVersion()
             );
-            return stat.getVersion();
+            dataObject.setVersion(stat.getVersion());
         } catch (KeeperException.NoNodeException e) {
             throw new ResourceNotFoundException(
                     String.format("%s(%s) not found.", znode.getKind(), znode.getName()), e);

@@ -19,7 +19,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     private Status status;
 
 
-    public VaradhiSubscription(
+    private VaradhiSubscription(
             String name,
             int version,
             String project,

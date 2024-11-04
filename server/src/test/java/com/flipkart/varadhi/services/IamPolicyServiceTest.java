@@ -57,12 +57,12 @@ class IamPolicyServiceTest {
         projectService =
                 new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
         iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore);
-        org1 = new Org("org1", 0);
-        org2 = new Org("org2", 0);
-        org1team1 = new Team("team1", 0, org1.getName());
-        org2team1 = new Team("team1", 0, org2.getName());
-        proj1 = new Project("proj1", 0, "", org1team1.getName(), org1.getName());
-        proj2 = new Project("proj2", 0, "", org2team1.getName(), org2.getName());
+        org1 = Org.of("org1");
+        org2 = Org.of("org2");
+        org1team1 = Team.of("team1", org1.getName());
+        org2team1 = Team.of("team1", org2.getName());
+        proj1 = Project.of("proj1", "", org1team1.getName(), org1.getName());
+        proj2 = Project.of("proj2", "", org2team1.getName(), org2.getName());
     }
 
     @Test

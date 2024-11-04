@@ -68,3 +68,14 @@ zookeeperOptions:
 
 controller:
   maxConcurrentOps: 2
+  maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60
+
+otlpConfig:
+  otlp.url: "http://localhost:4318/v1/metrics"
+  otlp.step: "20s"
+  otlp.aggregationTemporality: "CUMULATIVE"
+  otlp.resourceAttributes:
+  otlp.headers:

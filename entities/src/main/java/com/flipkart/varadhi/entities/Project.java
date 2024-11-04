@@ -19,7 +19,7 @@ public class Project extends MetaStoreEntity implements Validatable {
     @Size(max = 100)
     private String description;
 
-    public Project(
+    private Project(
             String name,
             int version,
             String description,
@@ -30,5 +30,14 @@ public class Project extends MetaStoreEntity implements Validatable {
         this.description = description;
         this.team = team;
         this.org = org;
+    }
+
+    public static Project of(
+            String name,
+            String description,
+            String team,
+            String org
+    ) {
+        return new Project(name, INITIAL_VERSION, description, team, org);
     }
 }

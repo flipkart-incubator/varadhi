@@ -22,7 +22,7 @@ class VaradhiTopicTest {
 
     @Test
     void addAndGetInternalTopic() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(new TopicResource(topicName, 1, projectName, false, null));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(TopicResource.unGrouped(topicName, projectName, null));
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(st));
         assertEquals(st.getName(), varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName());
@@ -30,8 +30,7 @@ class VaradhiTopicTest {
 
     @Test
     void getTopicResource() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(
-                new TopicResource(topicName, INITIAL_VERSION, projectName, false, topicCapacity));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(TopicResource.unGrouped(topicName, projectName, topicCapacity));
         TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertEquals(topicName, topicResource.getName());
         assertEquals(INITIAL_VERSION, topicResource.getVersion());
