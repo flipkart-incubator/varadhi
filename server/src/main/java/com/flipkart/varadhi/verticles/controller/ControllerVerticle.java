@@ -7,12 +7,12 @@ import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.controller.DistributedRateLimiterImpl;
 import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
-import com.flipkart.varadhi.controller.SuppressionManager;
-import com.flipkart.varadhi.controller.TopicLimitService;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
+import com.flipkart.varadhi.core.capacity.TopicCapacityService;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.exceptions.NotImplementedException;
@@ -20,13 +20,13 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.google.common.base.Ticker;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -62,18 +62,14 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
-        SuppressionManager suppressionManager = new SuppressionManager(5, new TopicLimitService() {
-            @Override
-            public int getThroughput(String topic) {
-                return varadhiTopicService.get(topic).getCapacity().getThroughputKBps() * 1024;
-            }
-        }, new Ticker() {
-            @Override
-            public long read() {
-                return System.currentTimeMillis();
-            }
-        }); //TODO(rl): config driven
-        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(suppressionManager);
+        DistributedRateLimiterImpl distributedRateLimiterImpl =
+                new DistributedRateLimiterImpl(5, new TopicCapacityService() {
+                    @Override
+                    public int getThroughputLimit(String topic) {
+                        return varadhiTopicService.get(topic).getCapacity().getThroughputKBps() * 1024;
+                    }
+                }, Clock.systemUTC()); //TODO(rl): config driven
+        TrafficDataHandler trafficDataHandler = new TrafficDataHandler(distributedRateLimiterImpl);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
         onLeaderElected(controllerApiMgr, handler, trafficDataHandler, messageRouter).onComplete(ar -> {

@@ -3,7 +3,6 @@ package com.flipkart.varadhi.qos.entity;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,6 +11,6 @@ import java.util.Map;
  */
 @Getter
 @Setter
-public class SuppressionData implements Serializable {
+public class SuppressionData {
     private Map<String, SuppressionFactor> suppressionFactor = new HashMap<>();
 }

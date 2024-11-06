@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TopicRateLimiter implements RateLimiter {
+public class TopicRateLimiter implements FactorRateLimiter {
 
     @Getter
     private final String topic;
@@ -28,19 +28,20 @@ public class TopicRateLimiter implements RateLimiter {
     }
 
     @Override
-    public boolean isAllowed(long value) {
-        this.currentObserved.add(value);
+    public Boolean addTrafficData(Long value) {
+        currentObserved.add(value);
         // todo(rl): allows spikes, need to consider a better way to handle spikes
-        if (this.suppressionFactor == 0) {
+        if (suppressionFactor == 0) {
             return true;
         }
-        return this.currentObserved.longValue() <= this.lastObserved * (1 - this.suppressionFactor);
+        return currentObserved.longValue() <= lastObserved * (1 - suppressionFactor);
     }
 
+    @Override
     public void updateSuppressionFactor(double suppressionFactor) {
-        this.lastObserved = this.currentObserved.longValue();
+        lastObserved = currentObserved.longValue();
         // remove last recorded value
-        this.currentObserved.add(-lastObserved);
+        currentObserved.add(-lastObserved);
         this.suppressionFactor = suppressionFactor;
     }
 }

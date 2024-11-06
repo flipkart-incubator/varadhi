@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.controller.qos;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.MockTicker;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.controller.SuppressionManager;
-import com.flipkart.varadhi.controller.TopicLimitService;
+import com.flipkart.varadhi.controller.DistributedRateLimiterImpl;
+import com.flipkart.varadhi.core.capacity.TopicCapacityService;
 import com.flipkart.varadhi.utils.HostUtils;
 import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
 import com.google.common.util.concurrent.RateLimiter;
@@ -23,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.time.Clock;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -36,9 +36,9 @@ import static org.mockito.Mockito.when;
 public class RateLimiterServiceTest {
 
     private static MeterRegistry meterRegistry;
-    private SuppressionManager suppressionManager;
+    private DistributedRateLimiterImpl distributedRateLimiterImpl;
     @Mock
-    private TopicLimitService topicLimitService;
+    private TopicCapacityService topicCapacityService;
 
     @BeforeAll
     public static void setup() throws UnknownHostException {
@@ -58,26 +58,20 @@ public class RateLimiterServiceTest {
         MockitoAnnotations.openMocks(this); // Initialize mocks
 
         //setup controller side of things
-        MockTicker ticker = new MockTicker(System.currentTimeMillis());
-        suppressionManager = new SuppressionManager(10, topicLimitService, ticker);
+        Clock clock = Clock.systemUTC();
+        distributedRateLimiterImpl = new DistributedRateLimiterImpl(10, topicCapacityService, clock);
     }
 
     private static Stream<Arguments> provideRateLimitTestFilePaths() {
         return Stream.of(
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-//                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile"),
-                Arguments.of("src/test/resources/simulation_profiles/test_load1.profile")
-//              todo(rl): fix these profiles
-//                Arguments.of("src/test/resources/simulation_profiles/test_load.profile")
-//                Arguments.of("src/test/resources/simulation_profiles/single_client_single_topic_test"),
-//                Arguments.of("src/test/resources/simulation_profiles/single_client_multi_topic_test")
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_low.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_low.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_medium.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_medium.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_high.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_high.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_very_high.profile"),
+                Arguments.of("src/test/resources/simulation_profiles/test_skewness_very_high.profile")
         );
     }
 
@@ -102,7 +96,7 @@ public class RateLimiterServiceTest {
             int throughputQuota = Integer.parseInt(topicLoads[0]);
             topicThroughputQuotaMap.put(topic, throughputQuota);
             log.info("Setting throughput for topic: {}, throughput: {}", topic, throughputQuota);
-            when(topicLimitService.getThroughput(topic)).thenReturn(throughputQuota);
+            when(topicCapacityService.getThroughputLimit(topic)).thenReturn(throughputQuota);
 
             // check if ratelimiterservice exists for a topic
             clientRateLimiterMap.putIfAbsent(client, createRateLimiterSvc(client));
@@ -175,7 +169,8 @@ public class RateLimiterServiceTest {
                 List<Double> errors = calculateNormalisedError(clientDataList, topicThroughputQuotaMap.get(topic));
                 log.info("topic: {} errors: {}", topic, errors);
                 log.info("topic: {} absolute error: {}", topic, calculateAbsoluteError(errors));
-                log.info("Standard Deviation: {}", calculateStandardDeviation(errors));
+                log.info("topic: {} mean error: {}", topic, calculateAbsoluteError(errors)/errors.size());
+                log.info("topic: {} standard deviation: {}", topic, calculateStandardDeviation(errors));
             }
         });
     }
@@ -270,7 +265,7 @@ public class RateLimiterServiceTest {
     }
 
     private RateLimiterService createRateLimiterSvc(String clientId) throws UnknownHostException {
-        return new RateLimiterService(info -> suppressionManager.addTrafficDataAsync(info), meterRegistry, 1, clientId);
+        return new RateLimiterService(load -> distributedRateLimiterImpl.addTrafficData(load), meterRegistry, 1, clientId);
     }
 
     @Getter

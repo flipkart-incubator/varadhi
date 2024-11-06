@@ -5,7 +5,7 @@
         <option name="envFilePath" value="" />
         <option name="profiles">
           <list>
-            <option value="dev-metric" />
+            <option value="dev" />
           </list>
         </option>
         <option name="removeOrphansOnComposeDown" value="false" />

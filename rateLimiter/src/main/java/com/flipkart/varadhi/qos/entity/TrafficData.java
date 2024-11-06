@@ -10,7 +10,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-// TODO(rl): not in RL module, move to entity module
 public class TrafficData {
     private String topic;
     private long bytesIn;

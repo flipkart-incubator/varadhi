@@ -1,48 +1,31 @@
 package com.flipkart.varadhi.qos.entity;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
-public class ClientHistory<T> {
-    Map<String, Deque<T>> clientHistoryMap; // clientId to history records
+public class ClientHistory {
+    Map<String, Deque<TopicLoadInfo>> clientHistoryMap; // clientId to history records
     private final int slots;
+    LoadPrediction loadPredictor;
 
-    public ClientHistory(int historySlots) {
+    public ClientHistory(int historySlots, LoadPrediction loadPredictor) {
         this.clientHistoryMap = new ConcurrentHashMap<>();
         this.slots = historySlots;
+        this.loadPredictor = loadPredictor;
     }
 
-    public T getRecentRecord(String clientId) {
-        var load = clientHistoryMap.get(clientId);
-        if(ObjectUtils.isEmpty(load)) {
-            return null;
-        }
-        return load.peekLast();
+    public List<TopicLoadInfo> getTotalLoad() {
+        // returns the best possible prediction of load
+        return loadPredictor.predictLoad(clientHistoryMap);
     }
 
-    public List<T> getRecentRecordForAll() {
-        // for each client, get the most recent record and return it
-        List<T> recentRecordMap = new ArrayList<>();
-        clientHistoryMap.forEach((clientId, history) -> {
-            if(!history.isEmpty()) {
-                T t = history.peekLast();
-                if(t != null) {
-                    recentRecordMap.add(t);
-                }
-            }
-        });
-        return recentRecordMap;
-    }
-
-    public void add(String clientId, T load) {
+    public void add(String clientId, TopicLoadInfo load) {
         // first time for client, create a new history queue
         if(!clientHistoryMap.containsKey(clientId)) {
             addClient(clientId);

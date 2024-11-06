@@ -1,3 +1,0 @@
-client,topic:duration,throughput,qps:duration,throughput,qps:duration,throughput,qps:...
-client1,topic1:2,10000,100:2,15000,100:2,30000,100
-client1,topic2:2,10000,100:2,15000,100:2,30000,100

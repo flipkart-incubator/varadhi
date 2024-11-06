@@ -1,8 +1,7 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import com.flipkart.varadhi.controller.SuppressionService;
+import com.flipkart.varadhi.qos.DistributedRateLimiter;
 import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
-import com.flipkart.varadhi.qos.entity.RateLimiterType;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.qos.entity.TrafficData;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,7 @@ public class TrafficAggregator {
     private final ClientLoadInfo loadInfo;
     private final int frequency;
     private final ScheduledExecutorService scheduledExecutorService;
-    private final SuppressionService suppressionService;
+    private final DistributedRateLimiter distributedRateLimiter;
     private final RateLimiterService rateLimiterService;
     private final Map<String, ConcurrentTopicData> topicTrafficMap;
 
@@ -43,12 +42,12 @@ public class TrafficAggregator {
     }
 
     public TrafficAggregator(
-            String clientId, int frequency, SuppressionService suppressionService, RateLimiterService rateLimiterService,
+            String clientId, int frequency, DistributedRateLimiter distributedRateLimiter, RateLimiterService rateLimiterService,
             ScheduledExecutorService scheduledExecutorService
     ) {
         this.frequency = frequency;
         this.scheduledExecutorService = scheduledExecutorService;
-        this.suppressionService = suppressionService;
+        this.distributedRateLimiter = distributedRateLimiter;
         this.rateLimiterService = rateLimiterService;
         this.loadInfo = new ClientLoadInfo(clientId, 0,0, new ArrayList<>());
         this.topicTrafficMap = new ConcurrentHashMap<>();
@@ -89,23 +88,18 @@ public class TrafficAggregator {
         // convert ConcurrentTopicData to TrafficData.list
         topicTrafficMap.forEach((topic, data) -> loadInfo.getTopicUsageList()
                 .add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build()));
-        log.info("Sending traffic data to controller: {}", loadInfo);
+        log.debug("Sending traffic data to controller: {}", loadInfo);
         // TODO(rl); simulate add delay for degradation;
-        suppressionService.addTrafficDataAsync(loadInfo).whenComplete(this::handleSuppressionDataResponse);
+        SuppressionData suppressionData = distributedRateLimiter.addTrafficData(loadInfo);
+        applySuppressionFactors(suppressionData);
         resetData(currentTime);
     }
 
-    private void handleSuppressionDataResponse(
-            SuppressionData suppressionData, Throwable throwable
-    ) {
-        if (throwable != null) {
-            log.error("Error while receiving suppression data from controller", throwable);
-        } else {
-            suppressionData.getSuppressionFactor().forEach(
-                    (topic, suppressionFactor) -> rateLimiterService.updateSuppressionFactor(topic,
-                            RateLimiterType.THROUGHPUT_CHECK, suppressionFactor.getThroughputFactor()
-                    ));
-        }
+    private void applySuppressionFactors(SuppressionData suppressionData) {
+        suppressionData.getSuppressionFactor().forEach(
+                (topic, suppressionFactor) -> rateLimiterService.updateSuppressionFactor(topic,
+                        suppressionFactor.getThroughputFactor()
+                ));
     }
 
     private void resetData(long time) {

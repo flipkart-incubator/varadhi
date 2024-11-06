@@ -1,10 +1,10 @@
-package com.flipkart.varadhi.controller;
+package com.flipkart.varadhi.core.capacity;
 
-public interface TopicLimitService {
+public interface TopicCapacityService {
     /**
      * Get the throughput for a topic
      * @param topic varadhi topic name
      * @return throughput in bytes per second
      */
-    int getThroughput(String topic);
+    int getThroughputLimit(String topic);
 }
