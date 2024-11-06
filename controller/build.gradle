@@ -6,7 +6,7 @@ dependencies {
     api(project(":entities"))
     api(project(":spi"))
     api(project(":core"))
-    api(project(':rateLimiter'))
+    api(project(':ratelimiter'))
 
     implementation(project(":common"))
     implementation("io.vertx:vertx-micrometer-metrics")
