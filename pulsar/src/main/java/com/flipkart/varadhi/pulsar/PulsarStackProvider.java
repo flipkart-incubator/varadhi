@@ -37,7 +37,7 @@ public class PulsarStackProvider
         if (initialised) {
             return;
         }
-        String hostName = getHostName();
+        String hostName = HostUtils.getHostName();
         PulsarConfig pulsarConfig = getPulsarConfig(messagingStackOptions.getConfigFile());
         TopicPlanner planner = new TopicPlanner(pulsarConfig);
         topicFactory = new PulsarTopicFactory(planner);
@@ -51,15 +51,6 @@ public class PulsarStackProvider
         subscriptionService = new PulsarSubscriptionService(clientProvider);
         registerSubtypes(mapper);
         initialised = true;
-    }
-
-    private String getHostName() {
-        try {
-            return HostUtils.getHostName();
-        } catch (UnknownHostException e) {
-            log.error("Failed to obtain the hostname. {}", e.getMessage());
-            throw new MessagingException(e);
-        }
     }
 
     public StorageTopicFactory<PulsarStorageTopic> getStorageTopicFactory() {

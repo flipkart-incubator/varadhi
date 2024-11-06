@@ -1,19 +1,19 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.cluster.NodeCapacity;
-import com.flipkart.varadhi.utils.JsonMapper;
-import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
-import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
-import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
-import com.flipkart.varadhi.entities.cluster.ComponentKind;
-import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
+import com.flipkart.varadhi.entities.cluster.ComponentKind;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
+import com.flipkart.varadhi.entities.cluster.NodeCapacity;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.utils.HostUtils;
+import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
+import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
+import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -44,6 +44,7 @@ public class VaradhiApplication {
 
         try {
             log.info("Starting VaradhiApplication");
+            HostUtils.initHostUtils();
             AppConfiguration configuration = readConfiguration(args);
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration);
@@ -75,10 +76,11 @@ public class VaradhiApplication {
     }
 
     private static MemberInfo getMemberInfo(MemberConfig memberConfig) throws UnknownHostException {
-        String host = HostUtils.getHostName();
+        String hostName = HostUtils.getHostName();
+        String hostAddress = HostUtils.getHostAddress();
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
         NodeCapacity provisionedCapacity = new NodeCapacity(memberConfig.getMaxQps(), networkKBps);
-        return new MemberInfo(host, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);
+        return new MemberInfo(hostName, hostAddress, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);
     }
 
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
@@ -97,6 +99,7 @@ public class VaradhiApplication {
         EventBusOptions eventBusOptions = new EventBusOptions()
                 .setHost(memberInfo.hostname())
                 .setPort(port)
+                .setClusterPublicHost(memberInfo.address())
                 .setClusterNodeMetadata(memberInfoJson);
 
         VertxOptions vertxOptions = config.getVertxOptions()

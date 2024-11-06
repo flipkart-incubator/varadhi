@@ -24,7 +24,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -85,8 +85,8 @@ public class CoreServices {
 
         public ObservabilityStack(AppConfiguration configuration) {
 
-            Resource resource = Resource.getDefault()
-                    .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
+        Resource resource = Resource.getDefault()
+                .merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
             // TODO: make tracing togglable and configurable.
             float sampleRatio = 1.0f;
