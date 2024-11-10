@@ -194,7 +194,7 @@ varadhi:
     member:
       roles: [ "Server", "Controller" ]
       cpuCount: 1
-      nicMBps: 100
+      networkMBps: 100
     ports:
       jmx: 9990
       jvmDebug: 5005

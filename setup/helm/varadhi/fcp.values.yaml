@@ -210,7 +210,7 @@ varadhi:
     member:
       roles: [ "Server", "Controller" ]
       cpuCount: 1
-      nicMBps: 100
+      networkMBps: 100
 
 #############################################
 # Varadhi Server logging config
