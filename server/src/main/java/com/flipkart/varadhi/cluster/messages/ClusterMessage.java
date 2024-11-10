@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.cluster.messages;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
@@ -18,6 +19,7 @@ public class ClusterMessage {
         this.payload = payload;
     }
 
+    @JsonCreator
     ClusterMessage(String id, long timeStamp, String payload) {
         this.id = id;
         this.timeStamp = timeStamp;

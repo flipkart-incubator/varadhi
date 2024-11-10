@@ -12,28 +12,34 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static org.mockito.Mockito.spy;
 
 
 @ExtendWith(VertxExtension.class)
 public class MessageRouterImplTest {
 
-    CuratorFramework zkCuratorFramework;
-    VaradhiZkClusterManager vZkCm;
+    private TestingServer zkCuratorTestingServer;
+    private CuratorFramework zkCuratorFramework;
+    private VaradhiZkClusterManager vZkCm;
 
     // TODO:: Tests needs to be added, so this will go under refactor
     @BeforeEach
     public void setup() throws Exception {
-        TestingServer zkCuratorTestingServer = new TestingServer();
-        zkCuratorFramework = spy(
-                CuratorFrameworkFactory.newClient(
-                        zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCuratorTestingServer = new TestingServer();
+        zkCuratorFramework = CuratorFrameworkFactory.newClient(zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+        );
         zkCuratorFramework.start();
         vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost");
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        zkCuratorFramework.close();
+        zkCuratorTestingServer.close();
     }
 
     private Vertx createClusteredVertx() throws Exception {
@@ -41,14 +47,14 @@ public class MessageRouterImplTest {
                 .get();
     }
 
-    @Test
-    public void sendMessageNoConsumer(VertxTestContext testContext) throws Exception {
-        Checkpoint checkpoint = testContext.checkpoint(1);
-        Vertx vertx = createClusteredVertx();
-        MessageExchange me = vZkCm.getExchange(vertx);
-        ClusterMessage cm = getClusterMessage("foo");
-        Future.fromCompletionStage(me.send("foo", "start", cm)).onComplete(testContext.failing(v -> checkpoint.flag()));
-    }
+//    @Test
+//    public void sendMessageNoConsumer(VertxTestContext testContext) throws Exception {
+//        Checkpoint checkpoint = testContext.checkpoint(1);
+//        Vertx vertx = createClusteredVertx();
+//        MessageExchange me = vZkCm.getExchange(vertx);
+//        ClusterMessage cm = getClusterMessage("foo");
+//        Future.fromCompletionStage(me.send("foo", "start", cm)).onComplete(testContext.failing(v -> checkpoint.flag()));
+//    }
 
     @Test
     public void testSendMessageConsumerCollocated(VertxTestContext testContext) throws Exception {

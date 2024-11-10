@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.utils;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetAddress;
@@ -7,12 +8,17 @@ import java.net.UnknownHostException;
 
 @Slf4j
 public class HostUtils {
+    @Getter
+    private static String hostName;
+    @Getter
+    private static String hostAddress;
 
-    public static String getHostName() throws UnknownHostException {
-        // debug to see how much time it takes, in case DNS resolution is taking time.
-        log.debug("getHostName: started");
-        String host = InetAddress.getLocalHost().getHostName();
-        log.debug("getHostName: completed");
-        return host;
+    public static void initHostUtils() throws UnknownHostException {
+        if(hostName == null) {
+            hostName = InetAddress.getLocalHost().getHostName();
+        }
+        if(hostAddress == null) {
+            hostAddress = InetAddress.getLocalHost().getHostAddress();
+        }
     }
 }

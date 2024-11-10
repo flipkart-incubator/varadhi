@@ -1,7 +1,7 @@
 # base image for this should be jre based on instead of jdk.
-# Ubuntu 22.04.2 LTS
-FROM eclipse-temurin:17.0.7_7-jdk
-ARG SKIP_CERT_CHECK=false
+# Ubuntu 24.04.1 LTS
+FROM eclipse-temurin:21.0.5_11-jdk
+ARG SKIP_CERT_CHECK=true
 ARG VARADHI_HOME=.
 
 ENV PORT=18488
@@ -12,8 +12,9 @@ ENV ZK_URL=
 EXPOSE $PORT
 
 # Install common debug tools
-RUN apt-get update && apt-get install -y sudo  atop netcat screen procps iftop net-tools dstat jq iptables lsof iotop sysstat
-RUN apt-get update && apt-get install -y tcpdump ngrep libcap2-bin
+RUN apt-get update && apt-get install -y dstat iptables
+RUN apt-get install -y sudo atop screen procps iftop net-tools jq iptables lsof iotop sysstat
+RUN apt-get install -y tcpdump ngrep libcap2-bin
 RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/tcpdump
 RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/ngrep
 

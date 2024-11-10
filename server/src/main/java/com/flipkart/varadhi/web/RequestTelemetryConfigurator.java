@@ -9,7 +9,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import io.opentelemetry.semconv.SemanticAttributes;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
@@ -89,7 +89,7 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
     private void closeRequestSpan(Span span, String identity, String resource, MessageInfo messageInfo, int responseCode, long latencyMs) {
         // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/attributes.md#general-identity-attributes
         span.setAttribute(SemanticAttributes.ENDUSER_ID, identity);
-        span.setAttribute(SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH, messageInfo.payloadSize);
+        span.setAttribute(SemanticAttributes.HTTP_REQUEST_BODY_SIZE, messageInfo.payloadSize);
         span.setAttribute(SemanticAttributes.HTTP_STATUS_CODE, responseCode);
         span.setAttribute(AttributeKey.longKey("http.request.latency"), latencyMs);
         span.setAttribute("resource", resource);

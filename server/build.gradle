@@ -5,8 +5,6 @@ plugins {
     id "jacoco-report-aggregation"
 }
 
-def jacoco_version = "0.8.10"
-
 dependencies {
 
     implementation(project(":common"))
@@ -37,14 +35,14 @@ dependencies {
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
-        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.91.Final:osx-x86_64")
+        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.114.Final:osx-x86_64")
     }
 
     implementation("io.opentelemetry:opentelemetry-sdk")
     implementation("io.opentelemetry:opentelemetry-exporter-logging")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("io.opentelemetry:opentelemetry-exporter-prometheus")
-    implementation("io.opentelemetry:opentelemetry-semconv")
+    implementation("io.opentelemetry.semconv:opentelemetry-semconv")
 
     implementation("io.micrometer:micrometer-registry-otlp")
     implementation("io.micrometer:micrometer-registry-jmx")
