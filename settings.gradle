@@ -8,7 +8,5 @@
  */
 
 rootProject.name = 'varadhi'
-include('entities', 'spi', 'common', 'core', 'messaging', 'pulsar', 'consumer', 'controller', 'authz', 'server', 'ratelimiter')
-include 'testing-name'
-include 'testing-name'
+include('entities', 'spi', 'common', 'core', 'messaging', 'pulsar', 'consumer', 'controller', 'authz', 'server', 'rate-limiter')
 
