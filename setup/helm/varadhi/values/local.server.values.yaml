@@ -10,26 +10,18 @@ images:
     repository: varadhi
     tag: latest
 
+deployment:
+  name: server
+  replicaCount: 1
+
 varadhi:
   app:
     name: server
     configMapName: server
     httpServerOptions:
       port: 18488
-      alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
-      decompressionSupported: false
-      useAlpn: true
     authenticationEnabled: false
     authorizationEnabled: true
-    authorization:
-      superUsers: [ "thanos" ]
-      providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
-    messagingStackOptions:
-      providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-    metaStoreOptions:
-      providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-    featureFlags:
-      leanDeployment: false
     member:
       roles: [ "Server" ]
       cpuCount: 1

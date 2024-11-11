@@ -14,6 +14,18 @@ repositories {
     mavenCentral()
 }
 
+def loadProperties(path) {
+    def properties = new Properties()
+    def file = file(path)
+    if (file.exists()) {
+        file.withInputStream { stream ->
+            properties.load(stream)
+        }
+        return properties
+    }
+    return null
+}
+
 ext {
     lombok_version = "1.18.34"
     slf4j_version = "2.0.16"
@@ -42,6 +54,23 @@ ext {
     jmh_version = "1.37"
     awaitility_version = "4.2.2"
     jacoco_version = "0.8.10"
+
+    copyConfigToDir = {overridesFile, destination ->
+        return {
+            overrides = loadProperties(overridesFile)
+            if (!overrides) {
+                return
+            }
+
+            from("$rootDir/conf")
+            into(destination)
+            inputs.file(overridesFile)
+
+            filesMatching("*") {
+                expand(overrides)
+            }
+        }
+    }
 }
 
 sourceSets {
@@ -173,6 +202,11 @@ tasks.withType(JacocoReport).configureEach {
 }
 
 tasks.withType(Test).configureEach {
+    // check if tasks named 'copyConfig' is present in the project
+    if (tasks.findByName('copyTestConfig')) {
+        dependsOn 'copyTestConfig'
+    }
+
     useJUnitPlatform()
     testLogging {
         events "PASSED", "SKIPPED", "FAILED", "STANDARD_OUT", "STANDARD_ERROR"

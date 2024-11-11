@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-TODO:: This is not being auto picked. Needs to be fixed.
--->
-<!--
-  Preferring Log4j2 over logback primarily for Async logger feature.
-  However detailed evaluation and configuration for Async loggers by default  yet to be done.
- -->
 <Configuration status="info">
   <Appenders>
     <!-- Console appender configuration -->

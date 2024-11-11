@@ -28,7 +28,7 @@ jobs:
         with:
           gradle-version: "8.10.2"
       - name: Execute Gradle build
-        run: ./gradlew clean build copyDependencies :server:copyJacocoAgent -x test
+        run: ./gradlew clean build copyDependencies :server:copyJacocoAgent copyConfigForE2E -x test
       - name: Prepare mount directory for Web container - to write code coverage file.
         run: chmod a+w server/build/jacoco
       - name: Build the Varadhi Docker image

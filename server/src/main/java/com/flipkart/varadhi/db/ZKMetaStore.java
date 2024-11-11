@@ -40,9 +40,9 @@ class ZKMetaStore {
     void createZNode(ZNode znode) {
         try {
             if (!zkPathExist(znode)) {
-                String response = zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
+                zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
                         .forPath(znode.getPath());
-                log.debug("Created zk path {} in ZK: {}", znode, response);
+                log.debug("Created zk node {}", znode);
             }
         } catch (Exception e) {
             throw new MetaStoreException(String.format("Failed to create path %s.", znode.getPath()), e);
@@ -52,11 +52,9 @@ class ZKMetaStore {
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
-            String response = zkCurator.create().withMode(CreateMode.PERSISTENT)
+            zkCurator.create().withMode(CreateMode.PERSISTENT)
                     .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
-            log.debug("Created znode for {}({}) in at {}: {}.", znode.getKind(), znode.getName(), znode.getPath(),
-                    response
-            );
+            log.debug("Created zk node {} with data: {}", znode, jsonData);
             dataObject.setVersion(0);
         } catch (KeeperException.NodeExistsException e) {
             throw new DuplicateResourceException(

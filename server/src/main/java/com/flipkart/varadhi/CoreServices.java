@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -36,12 +37,14 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 @Getter
 public class CoreServices {
 
+    private final ConfigFileResolver configResolver;
     @Getter(AccessLevel.PRIVATE)
     private final ObservabilityStack observabilityStack;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
 
-    public CoreServices(AppConfiguration configuration) {
+    public CoreServices(AppConfiguration configuration, ConfigFileResolver configResolver) {
+        this.configResolver = configResolver;
         this.observabilityStack = setupObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());

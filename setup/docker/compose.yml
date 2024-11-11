@@ -17,13 +17,14 @@ services:
     profiles: [ "test", "service" ]
     environment:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
-      - ZOOKEEPER_SERVERS=zookeeper:2181
-      - PULSAR_URL=http://pulsar:8080
+      - JAVA_JMX_PORT=9990
+      - JAVA_DEBUG_PORT=5005
     networks:
       hostnet:
     ports:
       - 18488:18488
       - 9990:9990
+      - 5005:5005
     volumes:
       - ../../server/build/jacoco:/jacoco
     restart: "no"

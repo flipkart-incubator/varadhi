@@ -41,3 +41,6 @@ scratch
 
 scripts/benchmark/infra/
 nohup.out
+
+# auto generated configs
+setup/docker/configs/varadhi-auto-generated/**

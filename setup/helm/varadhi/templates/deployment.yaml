@@ -58,8 +58,8 @@ spec:
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
           env:
-            - name: JAVA_EXTRA_OPTS
-              value: "{{ .Values.varadhi.app.configs.javaExtraOpts }}"
+            - name: JAVA_JMX_PORT
+              value: "{{ .Values.varadhi.app.ports.jmx }}"
             {{- if .Values.varadhi.app.debug }}
             - name: JAVA_DEBUG_PORT
               value: "{{ .Values.varadhi.app.ports.jvmDebug }}"

@@ -8,6 +8,9 @@ import com.flipkart.varadhi.entities.cluster.ComponentKind;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.NodeCapacity;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.reflect.RecursiveFieldUpdater;
+import com.flipkart.varadhi.spi.ConfigFile;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.utils.HostUtils;
 import com.flipkart.varadhi.utils.JsonMapper;
@@ -33,6 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.net.UnknownHostException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
@@ -46,8 +51,9 @@ public class VaradhiApplication {
             log.info("Starting VaradhiApplication");
             HostUtils.initHostUtils();
             AppConfiguration configuration = readConfiguration(args);
+            ConfigFileResolver configResolver = nameOrPath -> Paths.get(args[0]).resolveSibling(nameOrPath).toString();
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
-            CoreServices services = new CoreServices(configuration);
+            CoreServices services = new CoreServices(configuration, configResolver);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
@@ -57,7 +63,7 @@ public class VaradhiApplication {
                                         if (ar.succeeded()) {
                                             log.info("component: {} started.", es.getKey());
                                         } else {
-                                            log.error("component: {} failed to start. {}", es.getKey(), ar.cause());
+                                            log.error("component: {} failed to start.", es.getKey(), ar.cause());
                                         }
                                     })).collect(Collectors.toList()))
                     )
@@ -121,7 +127,8 @@ public class VaradhiApplication {
             log.error("Usage: java com.flipkart.varadhi.VaradhiApplication configuration.yml");
             System.exit(-1);
         }
-        return readConfigFromFile(args[0]);
+        String mainConfigPath = args[0];
+        return resolveLinkedConfigFiles(mainConfigPath, readConfigFromFile(mainConfigPath));
     }
 
     public static AppConfiguration readConfigFromFile(String filePath) throws InvalidConfigException {
@@ -146,6 +153,26 @@ public class VaradhiApplication {
             retriever.close();
             vertx.close();
         }
+    }
+
+    public static AppConfiguration resolveLinkedConfigFiles(String mainConfigPath, AppConfiguration config) {
+        RecursiveFieldUpdater.visit(config, ConfigFile.class, (field, value) -> {
+            if (value instanceof String path) {
+                if (path.endsWith(".yml")) {
+                    Path providedPath = Paths.get(path);
+                    // read file and update the field
+                    Path resolvedPath = Paths.get(mainConfigPath).resolveSibling(path);
+                    if (!resolvedPath.equals(providedPath)) {
+                        log.info("Resolved the config file at {} to {}", field, resolvedPath);
+                    }
+                    return resolvedPath.toString();
+                }
+                throw new InvalidConfigException("config : " + field + " is not a yml file path");
+            } else {
+                throw new InvalidConfigException("config : " + field + " is not a string.");
+            }
+        });
+        return config;
     }
 
     private static Map<ComponentKind, Verticle> getComponentVerticles(

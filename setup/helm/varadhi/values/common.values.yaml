@@ -51,8 +51,6 @@ varadhi:
   app:
     name: server
     configMapName: server
-    configs:
-      javaExtraOpts: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=9990"
     debug: true
     restOptions:
       deployedRegion: "default"
