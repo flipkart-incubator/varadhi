@@ -91,3 +91,8 @@ application {
     mainClass = "com.flipkart.varadhi.VaradhiApplication"
 }
 
+task("version", {
+    doLast {
+        println("Version: ${version}")
+    }
+})

@@ -1,0 +1,79 @@
+# values for local k8 controller only deployment
+# value files order: common.values.yaml local.controller.values.yaml
+
+clusterDomain: cluster.local
+
+images:
+  pullPolicy: IfNotPresent
+  appImage:
+    registry: jfrog.fkinternal.com
+    repository: varadhi-oss/varadhi
+    tag: local-c1-remote-ip
+
+deployment:
+  name: controller
+  replicaCount: 1
+  resources:
+    requests:
+      memory: 500Mi
+      cpu: 500m
+    limits:
+      memory: 500Mi
+      cpu: 500m
+  service: null
+
+varadhi:
+  app:
+    name: controller
+    configMapName: controller
+    httpServerOptions:
+      port: 18488
+      alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+      decompressionSupported: false
+      useAlpn: true
+    authenticationEnabled: false
+    authorizationEnabled: true
+    authorization:
+      superUsers: [ "thanos" ]
+      providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+    messagingStackOptions:
+      providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
+    metaStoreOptions:
+      providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+    featureFlags:
+      leanDeployment: false
+    member:
+      roles: [ "Controller" ]
+      cpuCount: 1
+      networkMBps: 100
+
+#############################################
+# Varadhi Server logging config
+#############################################
+
+#############################################
+# Metastore config -- zookeeper
+#############################################
+metastore:
+  configMapName: metastore
+  zookeeper:
+    connectUrl: "http://host.docker.internal:2181"
+    sessionTimeoutMs: 60000
+    connectTimeoutMs: 2000
+
+#############################################
+# Messaging stack config - pulsar
+#############################################
+messaging:
+  configMapName: messaging
+  pulsar:
+    adminOptions:
+      serviceHttpUrl: "http://host.docker.internal:8080"
+    clientOptions:
+      serviceUrl: "http://host.docker.internal:8080"
+
+#############################################
+# Authz provider config
+#############################################
+
+otlpConfig: null

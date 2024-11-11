@@ -1,12 +1,13 @@
 # base image for this should be jre based on instead of jdk.
 # Ubuntu 24.04.1 LTS
 FROM eclipse-temurin:21.0.5_11-jdk
-ARG SKIP_CERT_CHECK=true
+ARG SKIP_CERT_CHECK=false
 ARG VARADHI_HOME=.
+ARG ZOOKEEPER_VERSION=3.6.0
+ARG PULSAR_VERSION=3.0.0
 
 ENV PORT=18488
-ENV PULSAR_URL=
-ENV ZK_URL=
+ENV JVM_DEBUG_PORT=""
 
 # Varadhi Server
 EXPOSE $PORT
@@ -22,22 +23,21 @@ RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/ngrep
 RUN mkdir -p /tools/zk
 WORKDIR /tools/zk
 RUN if "$SKIP_CERT_CHECK";  \
-    then wget https://archive.apache.org/dist/zookeeper/zookeeper-3.6.0/apache-zookeeper-3.6.0-bin.tar.gz --no-check-certificate ;  \
-    else wget https://archive.apache.org/dist/zookeeper/zookeeper-3.6.0/apache-zookeeper-3.6.0-bin.tar.gz ;  \
+    then wget https://archive.apache.org/dist/zookeeper/zookeeper-${ZOOKEEPER_VERSION}/apache-zookeeper-${ZOOKEEPER_VERSION}-bin.tar.gz --no-check-certificate ;  \
+    else wget https://archive.apache.org/dist/zookeeper/zookeeper-${ZOOKEEPER_VERSION}/apache-zookeeper-${ZOOKEEPER_VERSION}-bin.tar.gz ;  \
     fi
-RUN tar -xf apache-zookeeper-3.6.0-bin.tar.gz
-RUN rm apache-zookeeper-3.6.0-bin.tar.gz
+RUN tar -xf apache-zookeeper-${ZOOKEEPER_VERSION}-bin.tar.gz
+RUN rm apache-zookeeper-${ZOOKEEPER_VERSION}-bin.tar.gz
 
 # Install Pulsar Client.
 RUN mkdir -p /tools/pulsar
 WORKDIR /tools/pulsar
 RUN if "$SKIP_CERT_CHECK";  \
-    then wget https://archive.apache.org/dist/pulsar/pulsar-3.0.0/apache-pulsar-shell-3.0.0-bin.tar.gz --no-check-certificate ;  \
-    else wget https://archive.apache.org/dist/pulsar/pulsar-3.0.0/apache-pulsar-shell-3.0.0-bin.tar.gz ;  \
+    then wget https://archive.apache.org/dist/pulsar/pulsar-${PULSAR_VERSION}/apache-pulsar-shell-${PULSAR_VERSION}-bin.tar.gz --no-check-certificate ;  \
+    else wget https://archive.apache.org/dist/pulsar/pulsar-${PULSAR_VERSION}/apache-pulsar-shell-${PULSAR_VERSION}-bin.tar.gz ;  \
     fi
-RUN tar -xf apache-pulsar-shell-3.0.0-bin.tar.gz
-RUN rm apache-pulsar-shell-3.0.0-bin.tar.gz
-
+RUN tar -xf apache-pulsar-shell-${PULSAR_VERSION}-bin.tar.gz
+RUN rm apache-pulsar-shell-${PULSAR_VERSION}-bin.tar.gz
 
 RUN useradd varadhi --no-create-home --uid 10222 --shell /usr/sbin/nologin
 

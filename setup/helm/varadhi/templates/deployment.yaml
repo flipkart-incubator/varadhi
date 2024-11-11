@@ -58,10 +58,12 @@ spec:
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
           env:
-            - name: APP_DEBUG
-              value: "{{ .Values.varadhi.app.debug }}"
             - name: JAVA_EXTRA_OPTS
               value: "{{ .Values.varadhi.app.configs.javaExtraOpts }}"
+            {{- if .Values.varadhi.app.debug }}
+            - name: JAVA_DEBUG_PORT
+              value: "{{ .Values.varadhi.app.ports.jvmDebug }}"
+            {{- end }}
             - name: OTEL_SERVICE_NAME
               valueFrom:
                 fieldRef:
