@@ -2,15 +2,15 @@ package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.core.capacity.TopicCapacityService;
 import com.flipkart.varadhi.qos.DistributedRateLimiter;
-import com.flipkart.varadhi.qos.entity.*;
-
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Deque;
-
+import com.flipkart.varadhi.qos.entity.ClientHistory;
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
+import com.flipkart.varadhi.qos.entity.SuppressionFactor;
+import com.flipkart.varadhi.qos.entity.TopicLoadInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableDouble;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,33 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DistributedRateLimiterImpl implements DistributedRateLimiter {
     private Map<String, ClientHistory> topicTrafficDataMap; // topic to client load info
-    private int windowSize;
-    private TopicCapacityService topicCapacityService;
-    private Clock clock;
-    private final LoadPrediction loadPredictor;
+    private final int windowSlots;
+    private final int singleSlotMillis;
+    private final TopicCapacityService topicCapacityService;
+    private final Clock clock;
 
-    public DistributedRateLimiterImpl(int windowSize, TopicCapacityService topicCapacityService, Clock clock) {
+    public DistributedRateLimiterImpl(int windowSlots, int singleSlotMillis, TopicCapacityService topicCapacityService, Clock clock) {
         this.topicTrafficDataMap = new ConcurrentHashMap<>();
-        this.windowSize = windowSize;
+        this.windowSlots = windowSlots;
+        this.singleSlotMillis = singleSlotMillis;
         this.topicCapacityService = topicCapacityService;
         this.clock = clock;
-        this.loadPredictor = new LoadPrediction() {
-            @Override
-            public List<TopicLoadInfo> predictLoad(Map<String, Deque<TopicLoadInfo>> records) {
-                List<TopicLoadInfo> recentRecords = new ArrayList<>();
-                records.forEach((clientId, history) -> {
-                    if(!history.isEmpty()) {
-                        TopicLoadInfo topicLoadInfo = history.peekLast();
-                        if(topicLoadInfo != null) {
-                            if(!isExpired(topicLoadInfo.getTo())) {
-                                recentRecords.add(topicLoadInfo);
-                            }
-                        }
-                    }
-                });
-                return recentRecords;
-            }
-        };
     }
 
     // Adds throughput for current client and returns the updated suppression factor for the topic
@@ -56,7 +40,7 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
         MutableDouble actualThroughout = new MutableDouble(0.0);
         topicTrafficDataMap.compute(topic, (k, v) -> {
             if (v == null) {
-                v = new ClientHistory(windowSize, loadPredictor);
+                v = new ClientHistory(windowSlots, singleSlotMillis, clock);
             }
             v.add(clientId, topicLoadInfo);
             actualThroughout.setValue(getThroughput(v));
@@ -74,21 +58,12 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
 
     private Double getThroughput(ClientHistory clientsHistory) {
         double totalThroughput = 0.0;
-        List<TopicLoadInfo> records = clientsHistory.getTotalLoad();
+        List<TopicLoadInfo> records = clientsHistory.predictLoad();
         for(TopicLoadInfo record: records){
             double windowSizeInSeconds = (double) (record.getTo() - record.getFrom()) / 1000;
             totalThroughput += record.getTopicLoad().getBytesIn() / windowSizeInSeconds;
         }
         return totalThroughput;
-    }
-
-    /**
-     * check if record is older than windowSize
-     * @param time record time
-     * @return true if record is older than windowSize
-     */
-    private boolean isExpired(long time) {
-        return (clock.millis() - windowSize * 1000L) > time;
     }
 
     @Override

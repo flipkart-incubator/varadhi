@@ -59,7 +59,7 @@ public class RateLimiterServiceTest {
 
         //setup controller side of things
         Clock clock = Clock.systemUTC();
-        distributedRateLimiterImpl = new DistributedRateLimiterImpl(10, topicCapacityService, clock);
+        distributedRateLimiterImpl = new DistributedRateLimiterImpl(10, 1000, topicCapacityService, clock);
     }
 
     private static Stream<Arguments> provideRateLimitTestFilePaths() {

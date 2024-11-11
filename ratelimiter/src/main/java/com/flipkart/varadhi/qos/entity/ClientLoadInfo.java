@@ -19,12 +19,12 @@ public class ClientLoadInfo {
 
     @Override
     public String toString() {
-        return "\nLoadInfo{" +
+        return "ClientLoadInfo{" +
                 "clientId='" + clientId + '\'' +
                 ", from=" + from +
                 ", to=" + to +
                 ", topicUsageList=" + topicUsageList +
-                "}\n";
+                '}';
     }
 
 }

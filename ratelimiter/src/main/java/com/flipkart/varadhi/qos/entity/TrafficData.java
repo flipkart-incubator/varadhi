@@ -17,11 +17,11 @@ public class TrafficData {
 
     @Override
     public String toString() {
-        return "\nTrafficData{" +
+        return "TrafficData{" +
                 "topic='" + topic + '\'' +
                 ", bytesIn=" + bytesIn +
                 ", rateIn=" + rateIn +
-                "}\n";
+                '}';
     }
 
 }

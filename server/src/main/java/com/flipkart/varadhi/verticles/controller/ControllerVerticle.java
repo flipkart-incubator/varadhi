@@ -63,7 +63,7 @@ public class ControllerVerticle extends AbstractVerticle {
         ControllerApiMgr controllerApiMgr = getControllerApiMgr(messageExchange);
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
         DistributedRateLimiterImpl distributedRateLimiterImpl =
-                new DistributedRateLimiterImpl(5, new TopicCapacityService() {
+                new DistributedRateLimiterImpl(5, 1000, new TopicCapacityService() {
                     @Override
                     public int getThroughputLimit(String topic) {
                         return varadhiTopicService.get(topic).getCapacity().getThroughputKBps() * 1024;

@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.qos.entity;
 
 
-import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,11 +17,11 @@ public class TopicLoadInfo {
 
     @Override
     public String toString() {
-        return "\nTopicLoadInfo{" +
+        return "TopicLoadInfo{" +
                 "clientId='" + clientId + '\'' +
                 ", from=" + from +
                 ", to=" + to +
                 ", topicLoad=" + topicLoad +
-                "}\n";
+                '}';
     }
 }
