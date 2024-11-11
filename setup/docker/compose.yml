@@ -17,8 +17,8 @@ services:
     profiles: [ "test", "service" ]
     environment:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
-      - JAVA_JMX_PORT=9990
-      - JAVA_DEBUG_PORT=5005
+      - JAVA_JMX_PORT=
+      - JAVA_DEBUG_PORT=
     networks:
       hostnet:
     ports:

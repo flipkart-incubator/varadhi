@@ -33,10 +33,10 @@ import io.vertx.micrometer.MetricsNaming;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
@@ -50,8 +50,11 @@ public class VaradhiApplication {
         try {
             log.info("Starting VaradhiApplication");
             HostUtils.initHostUtils();
-            AppConfiguration configuration = readConfiguration(args);
-            ConfigFileResolver configResolver = nameOrPath -> Paths.get(args[0]).resolveSibling(nameOrPath).toString();
+
+            Pair<AppConfiguration, ConfigFileResolver> configReadResult = readConfiguration(args);
+            AppConfiguration configuration = configReadResult.getLeft();
+            ConfigFileResolver configResolver = configReadResult.getRight();
+
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration, configResolver);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
@@ -122,13 +125,14 @@ public class VaradhiApplication {
         return Vertx.builder().with(vertxOptions).withClusterManager(clusterManager).buildClustered();
     }
 
-    public static AppConfiguration readConfiguration(String[] args) {
+    public static Pair<AppConfiguration, ConfigFileResolver> readConfiguration(String[] args) {
         if (args.length < 1) {
             log.error("Usage: java com.flipkart.varadhi.VaradhiApplication configuration.yml");
             System.exit(-1);
         }
         String mainConfigPath = args[0];
-        return resolveLinkedConfigFiles(mainConfigPath, readConfigFromFile(mainConfigPath));
+        ConfigFileResolver configResolver = nameOrPath -> Paths.get(args[0]).resolveSibling(nameOrPath).toString();
+        return Pair.of(resolveLinkedConfigFiles(configResolver, readConfigFromFile(mainConfigPath)), configResolver);
     }
 
     public static AppConfiguration readConfigFromFile(String filePath) throws InvalidConfigException {
@@ -155,14 +159,13 @@ public class VaradhiApplication {
         }
     }
 
-    public static AppConfiguration resolveLinkedConfigFiles(String mainConfigPath, AppConfiguration config) {
+    public static AppConfiguration resolveLinkedConfigFiles(ConfigFileResolver configResolver, AppConfiguration config) {
         RecursiveFieldUpdater.visit(config, ConfigFile.class, (field, value) -> {
             if (value instanceof String path) {
                 if (path.endsWith(".yml")) {
-                    Path providedPath = Paths.get(path);
                     // read file and update the field
-                    Path resolvedPath = Paths.get(mainConfigPath).resolveSibling(path);
-                    if (!resolvedPath.equals(providedPath)) {
+                    String resolvedPath = configResolver.resolve(path);
+                    if (!resolvedPath.equals(path)) {
                         log.info("Resolved the config file at {} to {}", field, resolvedPath);
                     }
                     return resolvedPath.toString();

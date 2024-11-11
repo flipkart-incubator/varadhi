@@ -32,6 +32,8 @@ jobs:
         gradle-version: "8.10.2"
     - name: Execute Gradle build
       run: ./gradlew clean build copyDependencies :server:copyJacocoAgent -x test
+    - name: Create empty config directory
+      run: mkdir -p setup/docker/configs/varadhi-auto-generated
     - name: Build the Docker image
       run: docker build . --file setup/docker/Dockerfile --tag varadhi/varadhi:${{ inputs.releaseVersion }}
     - name: Push to DockerHub
