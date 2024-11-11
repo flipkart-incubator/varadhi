@@ -32,7 +32,7 @@ public class ClientHistory implements LoadPredictor {
             if(!history.isEmpty()) {
                 TopicLoadInfo topicLoadInfo = history.peekLast();
                 if(topicLoadInfo != null) {
-                    if(!isExpired(topicLoadInfo.getTo())) {
+                    if(!isExpired(topicLoadInfo.to())) {
                         recentRecords.add(topicLoadInfo);
                     } else {
                         // most recent record of given client is outside of window

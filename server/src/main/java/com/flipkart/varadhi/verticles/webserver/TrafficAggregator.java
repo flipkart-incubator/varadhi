@@ -87,7 +87,7 @@ public class TrafficAggregator {
         loadInfo.setTo(currentTime);
         // convert ConcurrentTopicData to TrafficData.list
         topicTrafficMap.forEach((topic, data) -> loadInfo.getTopicUsageList()
-                .add(TrafficData.builder().topic(topic).bytesIn(data.bytesIn.sum()).rateIn(data.rateIn.sum()).build()));
+                .add(new TrafficData(topic, data.bytesIn.sum(), data.rateIn.sum())));
         log.debug("Sending traffic data to controller: {}", loadInfo);
         // TODO(rl); simulate add delay for degradation;
         SuppressionData suppressionData = distributedRateLimiter.addTrafficData(loadInfo);
@@ -106,8 +106,8 @@ public class TrafficAggregator {
         loadInfo.setFrom(time);
         // remove snapshot from current aggregated data
         loadInfo.getTopicUsageList().forEach(trafficData -> {
-            topicTrafficMap.get(trafficData.getTopic()).bytesIn.add(-trafficData.getBytesIn());
-            topicTrafficMap.get(trafficData.getTopic()).rateIn.add(-trafficData.getRateIn());
+            topicTrafficMap.get(trafficData.topic()).bytesIn.add(-trafficData.bytesIn());
+            topicTrafficMap.get(trafficData.topic()).rateIn.add(-trafficData.rateIn());
         });
         // reset snapshot
         loadInfo.getTopicUsageList().clear();

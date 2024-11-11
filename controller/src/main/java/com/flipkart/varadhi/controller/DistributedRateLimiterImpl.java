@@ -36,7 +36,7 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
     // TODO(rl): cache for specific clientId and maintain a running agg.
     public SuppressionFactor addTrafficData(String clientId, TopicLoadInfo topicLoadInfo) {
         // check if clientId is already present in the list
-        String topic = topicLoadInfo.getTopicLoad().getTopic();
+        String topic = topicLoadInfo.topicLoad().topic();
         MutableDouble actualThroughout = new MutableDouble(0.0);
         topicTrafficDataMap.compute(topic, (k, v) -> {
             if (v == null) {
@@ -60,8 +60,8 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
         double totalThroughput = 0.0;
         List<TopicLoadInfo> records = clientsHistory.predictLoad();
         for(TopicLoadInfo record: records){
-            double windowSizeInSeconds = (double) (record.getTo() - record.getFrom()) / 1000;
-            totalThroughput += record.getTopicLoad().getBytesIn() / windowSizeInSeconds;
+            double windowSizeInSeconds = (double) (record.to() - record.from()) / 1000;
+            totalThroughput += record.topicLoad().bytesIn() / windowSizeInSeconds;
         }
         return totalThroughput;
     }
@@ -74,8 +74,8 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
                     info.getClientId(),
                     new TopicLoadInfo(info.getClientId(), info.getFrom(), info.getTo(), trafficData)
             );
-            log.debug("Topic: {}, SF thr-pt: {}", trafficData.getTopic(), suppressionFactor.getThroughputFactor());
-            suppressionData.getSuppressionFactor().put(trafficData.getTopic(), suppressionFactor);
+            log.debug("Topic: {}, SF thr-pt: {}", trafficData.topic(), suppressionFactor.getThroughputFactor());
+            suppressionData.getSuppressionFactor().put(trafficData.topic(), suppressionFactor);
         });
         return suppressionData;
     }

@@ -15,7 +15,7 @@ public class ClientLoadInfo {
     private String clientId;
     private long from;
     private long to;
-    private List<TrafficData> topicUsageList; // topic to incoming traffic map
+    private List<TrafficData> topicUsageList;
 
     @Override
     public String toString() {
