@@ -1,7 +1,7 @@
 ---
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: "src/main/resources/zkConfig.yml"
+  configFile: "metastore.yml"
 
 roleDefinitions:
   org.admin:

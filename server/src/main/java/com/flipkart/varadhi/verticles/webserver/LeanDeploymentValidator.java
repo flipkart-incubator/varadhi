@@ -72,13 +72,9 @@ public class LeanDeploymentValidator {
             ));
         }
         if (teams.isEmpty()) {
-            log.debug("Creating default team no team is present.");
-
             teamService.createTeam(Team.of(defaultTeam, defaultOrg));
-
-            log.debug("Created default team as no team is present.");
+            log.info("Created default team: {}/{} as no team is present.", defaultOrg, defaultTeam);
         }
-
     }
 
     private void ensureProjectConstraints(

@@ -22,6 +22,13 @@ spec:
       targetPort: {{ .Values.varadhi.app.httpServerOptions.port }}
       protocol: TCP
       name: server-http
+    # TODO: why does debug port needs to be present here in service?
+    {{- if .Values.varadhi.app.debug }}
+    - port: {{ .Values.varadhi.app.ports.jvmDebug }}
+      targetPort: {{ .Values.varadhi.app.ports.jvmDebug }}
+      protocol: TCP
+      name: jvm-debug
+    {{- end }}
   selector:
     {{- include "varadhi.commonLabels" . | nindent 4 }}
     component: {{ .Values.deployment.name }}
