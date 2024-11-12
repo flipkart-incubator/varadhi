@@ -6,6 +6,7 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
@@ -48,6 +49,7 @@ import java.util.function.Function;
 public class WebServerVerticle extends AbstractVerticle {
     private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
     private final AppConfiguration configuration;
+    private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
@@ -64,6 +66,7 @@ public class WebServerVerticle extends AbstractVerticle {
             AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
     ) {
         this.configuration = configuration;
+        this.configResolver = services.getConfigResolver();
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
@@ -234,7 +237,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private void setupRouteConfigurators() {
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
-        AuthzHandler authzHandler = new AuthzHandler(configuration);
+        AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
         RequestTelemetryConfigurator requestTelemetryConfigurator =
                 new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.

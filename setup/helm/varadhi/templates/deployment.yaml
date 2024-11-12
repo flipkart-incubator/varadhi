@@ -57,6 +57,24 @@ spec:
           {{- end }}
           resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
+          env:
+            - name: JAVA_JMX_PORT
+              value: "{{ .Values.varadhi.app.ports.jmx }}"
+            {{- if .Values.varadhi.app.debug }}
+            - name: JAVA_DEBUG_PORT
+              value: "{{ .Values.varadhi.app.ports.jvmDebug }}"
+            {{- end }}
+            - name: OTEL_SERVICE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: {{ .Values.varadhi.app.ports.jmx }} # jmx remote port
+              name: jmx
+          {{- if .Values.varadhi.app.debug }}
+            - containerPort: {{ .Values.varadhi.app.ports.jvmDebug }} # jvm remote Debug port
+              name: jvm-debug
+          {{- end }}
           volumeMounts:
             - mountPath: /etc/varadhi
               name: configs

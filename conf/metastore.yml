@@ -1,4 +1,4 @@
 zookeeperOptions:
-  connectUrl: "127.0.0.1:2181"
+  connectUrl: "${ZOOKEEPER_URL}"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
