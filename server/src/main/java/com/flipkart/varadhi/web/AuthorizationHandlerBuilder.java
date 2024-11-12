@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
@@ -71,7 +71,6 @@ public class AuthorizationHandlerBuilder {
             String resourcePath = resourceHierarchy.getResourcePath(authorizationOnAction.getResourceType());
             return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }
-
     }
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {

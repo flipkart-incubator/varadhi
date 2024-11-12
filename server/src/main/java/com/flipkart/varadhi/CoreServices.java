@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -24,7 +25,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,12 +37,14 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 @Getter
 public class CoreServices {
 
+    private final ConfigFileResolver configResolver;
     @Getter(AccessLevel.PRIVATE)
     private final ObservabilityStack observabilityStack;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
 
-    public CoreServices(AppConfiguration configuration) {
+    public CoreServices(AppConfiguration configuration, ConfigFileResolver configResolver) {
+        this.configResolver = configResolver;
         this.observabilityStack = setupObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
@@ -81,7 +84,7 @@ public class CoreServices {
     private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
 
         Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
+                .merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
 
         // TODO: make tracing togglable and configurable.
         float sampleRatio = 1.0f;
@@ -99,7 +102,7 @@ public class CoreServices {
                 .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "jmx";
+        String meterExporter = "otlp";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);

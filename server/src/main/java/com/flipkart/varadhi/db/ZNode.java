@@ -90,4 +90,8 @@ public class ZNode {
         return new ZNode(kind);
     }
 
+    @Override
+    public String toString() {
+        return "ZNode{[%s] %s @ %s}".formatted(kind, name, path);
+    }
 }

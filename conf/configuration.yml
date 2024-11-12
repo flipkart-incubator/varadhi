@@ -41,34 +41,30 @@ producerOptions:
   topicCacheBuilderSpec: ""
   metricEnabled: true
 
-authenticationEnabled: false
+authenticationEnabled: true
 authentication:
-  jwt:
-    jwksUrl: "http://localhost:9090/default/jwks"
-    options:
-      issuer: "http://localhost:9090/default"
-      ignoreExpiration: true
+  user_header:
 
 authorizationEnabled: true
 
 authorization:
   superUsers: [ "thanos" ]
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
-  configFile: "src/main/resources/authorizationConfig.yml"
+  configFile: "authorizationConfig.yml"
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
-  configFile: "src/main/resources/messaging.yml"
+  configFile: "messaging.yml"
 
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-  configFile: "src/main/resources/metastore.yml"
+  configFile: "metastore.yml"
 
 featureFlags:
   leanDeployment: false
 
 zookeeperOptions:
-  connectUrl: "127.0.0.1:2181"
+  connectUrl: "${ZOOKEEPER_URL}"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
 
@@ -80,9 +76,16 @@ controller:
   retryMaxBackOffInSeconds: 60
 
 otlpConfig:
+<<<<<<< HEAD:server/src/main/resources/configuration.yml
   otlp.url: "http://localhost:4318/v1/metrics"
+=======
+  otlp.url: "${OTEL_URL}"
+>>>>>>> master:conf/configuration.yml
   otlp.step: "20s"
   otlp.aggregationTemporality: "CUMULATIVE"
   otlp.resourceAttributes:
   otlp.headers:
+<<<<<<< HEAD:server/src/main/resources/configuration.yml
 
+=======
+>>>>>>> master:conf/configuration.yml

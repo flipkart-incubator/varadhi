@@ -1,0 +1,60 @@
+# values for local k8 server only deployment
+# value files order: common.values.yaml local.server.values.yaml
+
+clusterDomain: cluster.local
+
+images:
+  pullPolicy: IfNotPresent
+  appImage:
+    registry: varadhi.docker.registry
+    repository: varadhi
+    tag: latest
+
+deployment:
+  name: server
+  replicaCount: 1
+
+varadhi:
+  app:
+    name: server
+    configMapName: server
+    httpServerOptions:
+      port: 18488
+    authenticationEnabled: false
+    authorizationEnabled: true
+    member:
+      roles: [ "Server" ]
+      cpuCount: 1
+      networkMBps: 100
+
+#############################################
+# Varadhi Server logging config
+#############################################
+
+#############################################
+# Metastore config -- zookeeper
+#############################################
+metastore:
+  configMapName: metastore
+  zookeeper:
+    connectUrl: "172.17.0.1:2181"
+    sessionTimeoutMs: 60000
+    connectTimeoutMs: 2000
+
+#############################################
+# Messaging stack config - pulsar
+#############################################
+messaging:
+  configMapName: messaging
+  pulsar:
+    adminOptions:
+      serviceHttpUrl: "http://172.17.0.1:8080"
+    clientOptions:
+      serviceUrl: "http://172.17.0.1:8080"
+
+#############################################
+# Authz provider config
+#############################################
+
+otlpConfig:
+  otlp.url: "http://172.17.0.1:4318/v1/metrics"
