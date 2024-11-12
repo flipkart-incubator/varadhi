@@ -199,6 +199,7 @@ tasks.withType(JacocoReport).configureEach {
     getSourceDirectories().from(sourceSets.main.allSource.srcDirs)
     getClassDirectories().from(sourceSets.main.output)
     getExecutionData().from(fileTree(buildDir).include("/jacoco/*.exec"))
+    getExecutionData().from(file("$rootDir/setup/docker/coverage/testE2E.exec"))
 }
 
 tasks.withType(Test).configureEach {

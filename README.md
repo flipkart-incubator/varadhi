@@ -22,22 +22,32 @@ spec and other detailed information.
 
 ## Build
 
-./gradlew build
+```bash
+./gradlew build test
+```
 
-## Run
+## Integration Tests
+
+```bash
+./gradlew copyDependencies copyConfigForE2E -x test
+
+docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg
+
+docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
+
+./gradlew testE2E
+```
 
 ### Dependencies
 
-To provide the required functionality Varadhi takes a dependencies on various tech stack.
+To provide the required functionality, Varadhi takes dependencies on various tech stack.
 Current development environment supports below option for these.
 
 Run the following to start the below dependencies.
 
-```docker compose -f setup/docker/compose.yml -p docker --profile dev up -d```
+```docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 180```
 
 OR
-
-Start [Dev, start pulsar and zk](.run%2FDev%2C%20start%20pulsar%20and%20zk.run.xml) IntelliJ run profile.
 
 #### Message Broker
 
@@ -54,21 +64,20 @@ used in a standalone mode. Details can be found [here](https://hub.docker.com/_/
 
 ### Varadhi Server
 
-To run the Varadhi server execute below from repo root.
+Finally, to run the Varadhi server, provide the custom zk & pulsar endpoints at `server/src/main/resources/config.overrides` and then do
+```./gradlew run```
 
-```./gradlew run --args="src/main/resources/configuration.yml```
-
-OR
-
-Start [varadhi local \[run\]](.run%2Fvaradhi%20local%20%5Brun%5D.run.xml) IntelliJ run profile.
+If you are using the dev profile to start the zk and pulsar, then simply do `./gradlew run`. No config overrides are required.
 
 ## k8s Deployment
 
-```cd setup/helm/varadhi```
+```bash
+cd setup/helm/varadhi
 
-```helm install varadhi-server . -f values/common.values.yaml -f values/local.server.values.yaml```
+helm install varadhi-server . -f values/common.values.yaml -f values/local.server.values.yaml
 
-```helm install varadhi-controller . -f values/common.values.yaml -f values/local.controller.values.yaml```
+helm install varadhi-controller . -f values/common.values.yaml -f values/local.controller.values.yaml
+```
 
 ## Modules
 
