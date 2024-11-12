@@ -29,6 +29,8 @@ jobs:
           gradle-version: "8.10.2"
       - name: Execute Gradle build
         run: ./gradlew clean build copyDependencies copyConfigForE2E -x test
+      - name: Prepare mount directory for Web container - to write code coverage file.
+        run: chmod a+w setup/docker/coverage
       - name: Build the Varadhi Docker image
         run: docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test
       - name: Setup the environment
