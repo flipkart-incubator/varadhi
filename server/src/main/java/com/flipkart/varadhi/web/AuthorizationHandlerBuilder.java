@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
@@ -38,7 +38,7 @@ public class AuthorizationHandlerBuilder {
     }
 
     @AllArgsConstructor
-    class AuthorizationHandler implements Handler<RoutingContext> {
+    public class AuthorizationHandler implements Handler<RoutingContext> {
 
         private final ResourceAction authorizationOnAction;
 
@@ -71,6 +71,7 @@ public class AuthorizationHandlerBuilder {
 
             ResourceAction action = authorizationOnAction;
             String resource = resourceHierarchy.getResourcePath();
+
             return provider.isAuthorized(userContext, action, resource)
                     .compose(authorized -> {
                         if (Boolean.FALSE.equals(authorized)) {
@@ -86,6 +87,5 @@ public class AuthorizationHandlerBuilder {
                     }, t -> Future.failedFuture(
                             new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
         }
-
     }
 }

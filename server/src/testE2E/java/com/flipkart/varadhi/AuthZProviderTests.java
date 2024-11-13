@@ -1,7 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
-import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -73,7 +73,7 @@ public class AuthZProviderTests extends E2EBase {
                         ---
                         metaStoreOptions:
                           providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-                          configFile: "src/main/resources/metastore.yml"
+                          configFile: "metastore.yml"
 
                         roleDefinitions:
                           org.admin:
@@ -106,12 +106,12 @@ public class AuthZProviderTests extends E2EBase {
                             permissions:
                                 - TOPIC_GET
                         """;
-        Path configFile = tempDir.resolve("authorizationConfig.yaml");
+        Path configFile = tempDir.resolve("authorizationConfig.yml");
         Files.write(configFile, configContent.getBytes());
 
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
-        provider.init(authorizationOptions).onSuccess(t -> checkpoint.flag());
+        provider.init(c -> c, authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
     private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();

@@ -64,7 +64,7 @@ public class LeanDeploymentValidatorTest {
         when(messagingStackProvider.getProducerFactory()).thenReturn(mock(ProducerFactory.class));
 
         appConfiguration = YamlLoader.loadConfig(
-                "src/test/resources/testConfiguration.yml",
+                "test/configuration.yml",
                 AppConfiguration.class
         );
 
@@ -92,7 +92,7 @@ public class LeanDeploymentValidatorTest {
         Org org = orgService.getOrg(appConfiguration.getRestOptions().getDefaultOrg());
         assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), org.getName());
 
-        Team team = teamService.getTeam(org.getName(), appConfiguration.getRestOptions().getDefaultTeam());
+        Team team = teamService.getTeam(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), team.getName());
 
         Project project = projectService.getProject(appConfiguration.getRestOptions().getDefaultProject());
@@ -118,7 +118,7 @@ public class LeanDeploymentValidatorTest {
         Org orgObtained = orgService.getOrg(appConfiguration.getRestOptions().getDefaultOrg());
         assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), orgObtained.getName());
 
-        Team teamObtained = teamService.getTeam(org.getName(), appConfiguration.getRestOptions().getDefaultTeam());
+        Team teamObtained = teamService.getTeam(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), teamObtained.getName());
 
         Project pObtained = projectService.getProject(appConfiguration.getRestOptions().getDefaultProject());

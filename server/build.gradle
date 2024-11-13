@@ -73,12 +73,6 @@ dependencies {
 
 }
 
-task copyJacocoAgent(type: Copy) {
-    from configurations.testE2ERuntime.find { it.name.contentEquals("org.jacoco.agent-$jacoco_version-runtime.jar") }
-    into "$buildDir/jacoco"
-    rename("org.jacoco.agent-$jacoco_version-runtime.jar", "org.jacoco.agent-runtime.jar")
-}
-
 reporting {
     reports {
         combinedJacocoReport(JacocoCoverageReport) {
@@ -87,7 +81,22 @@ reporting {
     }
 }
 
+tasks.register('copyMainConfig', Copy.class, copyConfigForModule('main'))
+tasks.register('copyTestConfig', Copy.class, copyConfigForModule('test'))
+
+compileTestE2EJava {
+    dependsOn tasks.named('copyTestConfig')
+}
+
 application {
     mainClass = "com.flipkart.varadhi.VaradhiApplication"
 }
 
+run {
+    dependsOn "copyMainConfig"
+    args = ["$buildDir/resources/main/configuration.yml"]
+    jvmArgs = [
+            "-Dvertx.disableDnsResolver=true",
+            "-Dlog4j.configurationFile=$buildDir/resources/main/log4j2.xml"
+    ]
+}

@@ -90,6 +90,7 @@ spec:
             - name: leader-election
               containerPort: {{ .Values.zkDeployment.ports.leaderElection }}
           env:
+            # TODO: why is this env needed for zk?
             - name: ZOOKEEPER_SERVERS
               value: {{ template "varadhi.zookeeper.connectUrl" . }}
             - name: ZOO_LOG4J_PROP

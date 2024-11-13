@@ -1,0 +1,99 @@
+# Base values
+
+clusterDomain: cluster.local
+
+images:
+  pullPolicy: IfNotPresent
+  zookeeper:
+    registry: docker.io
+    repository: zookeeper
+    tag: 3.7.0
+
+zkDeployment:
+  enabled: true
+  name: zookeeper
+  replicaCount: 1
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: Parallel
+  restartPodsOnConfigMapChange: false
+  annotations:
+  nodeSelector:
+  tolerations:
+  affinity:
+    anti_affinity: false
+    anti_affinity_topology_key: kubernetes.io/hostname
+    type: requiredDuringSchedulingIgnoredDuringExecution
+  gracePeriod: 5
+  podSecurityContext:
+  ports:
+    http: 8000
+    client: 2181
+    follower: 2888
+    leaderElection: 3888
+  probe:
+    liveness:
+      enabled: true
+      failureThreshold: 10
+      initialDelaySeconds: 20
+      periodSeconds: 30
+      timeoutSeconds: 30
+    readiness:
+      enabled: true
+      failureThreshold: 10
+      initialDelaySeconds: 20
+      periodSeconds: 30
+      timeoutSeconds: 30
+    startup:
+      enabled: false
+      failureThreshold: 30
+      initialDelaySeconds: 20
+      periodSeconds: 30
+      timeoutSeconds: 30
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      add:
+        - NET_ADMIN
+  volumes:
+    # use a persistent volume or emptyDir
+    persistence: true
+    ## If you already have an existent storage class and want to reuse it, you can specify its name with the option below
+    ##
+    storageClassName: local-path
+    #
+    ## Instead if you want to create a new storage class define it below
+    ## If left undefined no storage class will be defined along with PVC
+    ##
+    storageClass:
+    # type: pd-ssd
+    # fsType: xfs
+    # provisioner: kubernetes.io/gce-pd
+    selector: { }
+    data:
+      name: data
+      size: 10Mi
+    dataLog:
+      name: datalog
+      size: 10Mi
+    conf:
+      name: zk-conf
+    scripts:
+      name: zk-scripts
+  service:
+    annotations:
+  configMapName: zookeeper
+  scriptsConfigMapName: zookeeper-scripts
+  logLevel: INFO
+  configData:
+    tickTime: 2000
+    globalOutstandingLimit: 5000
+    clientPort: 2181
+    maxClientCnxns: 10000
+    initLimit: 150
+    syncLimit: 15
+    skipACL: yes
+    purgeInterval: 24
+    snapRetainCount: 10
+    peerType: "participant"

@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -12,9 +13,9 @@ import org.apache.commons.lang3.StringUtils;
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthzHandler(AppConfiguration configuration) throws InvalidConfigException {
+    public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
-            authorizationHandlerBuilder = createAuthorizationHandler(configuration);
+            authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver);
         } else {
             authorizationHandlerBuilder = null;
         }
@@ -26,9 +27,9 @@ public class AuthzHandler implements RouteConfigurator {
         }
     }
 
-    AuthorizationHandlerBuilder createAuthorizationHandler(AppConfiguration configuration) {
+    AuthorizationHandlerBuilder createAuthorizationHandler(AppConfiguration configuration, ConfigFileResolver resolver) {
         if (configuration.isAuthorizationEnabled()) {
-            AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration);
+            AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
             return new AuthorizationHandlerBuilder(configuration.getAuthorization()
                     .getSuperUsers(), authorizationProvider);
         } else {
@@ -37,13 +38,13 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(AppConfiguration configuration) {
+    private AuthorizationProvider getAuthorizationProvider(AppConfiguration configuration, ConfigFileResolver resolver) {
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
                 Class<? extends AuthorizationProvider> clazz =
                         (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
-                return createAuthorizationProvider(clazz, configuration.getAuthorization());
+                return createAuthorizationProvider(clazz, configuration.getAuthorization(), resolver);
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new InvalidConfigException(e);
             }
@@ -52,11 +53,11 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     AuthorizationProvider createAuthorizationProvider(
-            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options
+            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options, ConfigFileResolver resolver
     ) throws InvalidConfigException {
         try {
             AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();
-            provider.init(options);
+            provider.init(resolver, options);
             return provider;
         } catch (Exception e) {
             throw new InvalidConfigException(e);

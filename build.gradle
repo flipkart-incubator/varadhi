@@ -1,0 +1,11 @@
+plugins {
+    id "com.flipkart.varadhi.java-common-conventions"
+}
+
+tasks.register('version') {
+    doLast {
+        println("Version: ${version}")
+    }
+}
+
+tasks.register("copyConfigForE2E", Copy, copyConfigToDir("setup/docker/config.overrides", "setup/docker/configs/varadhi-auto-generated"))
