@@ -33,8 +33,7 @@ public class DistributedRateLimiterImpl implements DistributedRateLimiter {
 
     // Adds throughput for current client and returns the updated suppression factor for the topic
     // TODO(rl): add NFR tests
-    // TODO(rl): cache for specific clientId and maintain a running agg.
-    public SuppressionFactor addTrafficData(String clientId, TopicLoadInfo topicLoadInfo) {
+    private SuppressionFactor addTrafficData(String clientId, TopicLoadInfo topicLoadInfo) {
         // check if clientId is already present in the list
         String topic = topicLoadInfo.topicLoad().topic();
         MutableDouble actualThroughout = new MutableDouble(0.0);

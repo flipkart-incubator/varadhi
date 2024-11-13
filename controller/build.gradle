@@ -15,5 +15,4 @@ dependencies {
     testImplementation(testFixtures(project(":entities")))
     testImplementation(testFixtures(project(":common")))
     testImplementation("org.awaitility:awaitility:4.2.1")
-    testImplementation(project(':server'))
 }

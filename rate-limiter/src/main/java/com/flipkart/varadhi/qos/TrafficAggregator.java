@@ -1,6 +1,5 @@
-package com.flipkart.varadhi.verticles.webserver;
+package com.flipkart.varadhi.qos;
 
-import com.flipkart.varadhi.qos.DistributedRateLimiter;
 import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.qos.entity.TrafficData;

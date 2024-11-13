@@ -62,7 +62,6 @@ public class ClientHistory implements LoadPredictor {
         });
     }
 
-    // TODO(rl): remove not active clients
     private void removeClient(String clientId) {
         clientHistoryMap.remove(clientId);
     }

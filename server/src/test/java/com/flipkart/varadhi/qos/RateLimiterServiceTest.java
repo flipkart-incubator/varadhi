@@ -1,11 +1,10 @@
-package com.flipkart.varadhi.controller.qos;
+package com.flipkart.varadhi.qos;
 
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.controller.DistributedRateLimiterImpl;
 import com.flipkart.varadhi.core.capacity.TopicCapacityService;
 import com.flipkart.varadhi.utils.HostUtils;
-import com.flipkart.varadhi.verticles.webserver.RateLimiterService;
 import com.google.common.util.concurrent.RateLimiter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.Getter;

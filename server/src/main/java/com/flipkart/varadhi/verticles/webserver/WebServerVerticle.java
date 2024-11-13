@@ -16,6 +16,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.qos.RateLimiterService;
 import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.services.*;

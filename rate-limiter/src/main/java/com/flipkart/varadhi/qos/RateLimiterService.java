@@ -1,9 +1,5 @@
-package com.flipkart.varadhi.verticles.webserver;
+package com.flipkart.varadhi.qos;
 
-import com.flipkart.varadhi.qos.DistributedRateLimiter;
-import com.flipkart.varadhi.qos.FactorRateLimiter;
-import com.flipkart.varadhi.qos.RateLimiter;
-import com.flipkart.varadhi.qos.TopicRateLimiter;
 import com.flipkart.varadhi.qos.entity.RateLimiterType;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
