@@ -2,7 +2,8 @@ package com.flipkart.varadhi.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
@@ -21,6 +22,7 @@ import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.admin.SubscriptionHandlersTest;
 import io.micrometer.core.instrument.Clock;
@@ -39,8 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.net.MalformedURLException;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -60,7 +62,7 @@ class SubscriptionServiceTest {
     ProjectService projectService;
     CuratorFramework zkCurator;
     VaradhiMetaStore varadhiMetaStore;
-    ControllerApi controllerApi;
+    ControllerRestApi controllerRestApi;
     SubscriptionService subscriptionService;
     ShardProvisioner shardProvisioner;
     MeterRegistry meterRegistry;
@@ -103,9 +105,9 @@ class SubscriptionServiceTest {
         projectService.createProject(o1t1p2);
         shardProvisioner = mock(ShardProvisioner.class);
         doNothing().when(shardProvisioner).provision(any(), any());
-        controllerApi = mock(ControllerApi.class);
+        controllerRestApi = mock(ControllerRestApi.class);
 
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerApi, varadhiMetaStore);
+        subscriptionService = new SubscriptionService(shardProvisioner, controllerRestApi, varadhiMetaStore);
     }
 
     @Test
@@ -141,7 +143,8 @@ class SubscriptionServiceTest {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                SubscriptionPropertyValidator.createPropertyDefaultValueProviders(new RestOptions())
         );
 
         VaradhiSubscriptionFactory factory = new VaradhiSubscriptionFactory(pts, psf, ptf, region);
@@ -267,7 +270,7 @@ class SubscriptionServiceTest {
         update.setVersion(1);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);
+        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
 
         Future.fromCompletionStage(updateSubscription(update)).onComplete(ctx.succeeding(
                 sub -> {
@@ -288,7 +291,7 @@ class SubscriptionServiceTest {
         update.setVersion(2);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);
+        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
         String expectedMessage = "Conflicting update, Subscription has been modified. Fetch latest and try again.";
 
         InvalidOperationForResourceException e = assertThrows(InvalidOperationForResourceException.class, () -> {
@@ -310,7 +313,7 @@ class SubscriptionServiceTest {
         update.setVersion(1);
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerApi).getSubscriptionStatus(update.getName(), requestedBy);
+        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
 
         String expectedMessage =
                 "Cannot update Subscription to grouped as it's Topic(%s) is not grouped".formatted(update.getTopic());
@@ -335,7 +338,7 @@ class SubscriptionServiceTest {
 
         CompletableFuture<SubscriptionStatus> status =
                 CompletableFuture.completedFuture(new SubscriptionStatus(name, SubscriptionState.STOPPED));
-        doReturn(status).when(controllerApi).getSubscriptionStatus(name, requestedBy);
+        doReturn(status).when(controllerRestApi).getSubscriptionStatus(name, requestedBy);
         Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy))
                 .onComplete(ctx.succeeding(
                         v -> {

@@ -4,6 +4,7 @@ import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.core.Future;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Objects;
 
+import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 
 @ExtendWith(VertxExtension.class)
@@ -29,15 +31,17 @@ public class AuthorizationHandlerTests {
     @Test
     public void testAuthorizationHandler(VertxTestContext testCtx) {
         Checkpoint checks = testCtx.checkpoint(5);
+        Project prj = Project.of("p1", "", "team1", "org1");
 
         authzHandlerBuilder
                 .build(ResourceAction.TOPIC_CREATE)
-                .authorize(testUser("a", false), new Hierarchies.ProjectHierarchy("org1", "team1", "p1"))
+                .authorize(testUser("a", false), new ProjectHierarchy(prj))
                 .onComplete(testCtx.succeeding(v -> checks.flag()));
 
         authzHandlerBuilder
                 .build(ResourceAction.SUBSCRIPTION_DELETE)
-                .authorize(testUser("a", true), new Hierarchies.SubscriptionHierarchy("org1", "team1", "p1", "s1"))
+                .authorize(
+                        testUser("a", true), new SubscriptionHierarchy(prj, "s1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(401, ((HttpException) t).getStatusCode());
                     checks.flag();
@@ -45,7 +49,7 @@ public class AuthorizationHandlerTests {
 
         authzHandlerBuilder
                 .build(ResourceAction.TOPIC_DELETE)
-                .authorize(testUser("alice", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
+                .authorize(testUser("alice", false), new Hierarchies.TopicHierarchy(prj, "t1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(403, ((HttpException) t).getStatusCode());
                     checks.flag();
@@ -53,12 +57,12 @@ public class AuthorizationHandlerTests {
 
         authzHandlerBuilder
                 .build(ResourceAction.TOPIC_GET)
-                .authorize(testUser("intern", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
+                .authorize(testUser("intern", false), new Hierarchies.TopicHierarchy(prj, "t1"))
                 .onComplete(testCtx.succeeding(v -> checks.flag()));
 
         authzHandlerBuilder
                 .build(ResourceAction.TOPIC_GET)
-                .authorize(testUser("doom", false), new Hierarchies.TopicHierarchy("org1", "team1", "p1", "t1"))
+                .authorize(testUser("doom", false), new Hierarchies.TopicHierarchy(prj, "t1"))
                 .onComplete(testCtx.failing(t -> {
                     Assertions.assertEquals(500, ((HttpException) t).getStatusCode());
                     checks.flag();

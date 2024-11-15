@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -24,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_RATE_LIMITED;
 import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -69,25 +69,22 @@ public class ProduceHandlers implements RouteProvider {
                                 .metricsEnabled()
                                 .preHandler(headerValidationHandler)
                                 .authorize(TOPIC_PRODUCE)
-                                .build(this::getHierarchy, this::produce)
+                                .build(this::getHierarchies, this::produce)
                 )
         ).get();
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
-        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
-        Project project = projectService.getCachedProject(projectName);
-        return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        Project project = projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
+        return Map.of(
+                ResourceType.TOPIC, new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC)));
     }
 
     public void produce(RoutingContext ctx) {
-
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
-        Hierarchies.TopicHierarchy topicHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
 
-        Map<String, String> produceAttributes = topicHierarchy.getAttributes();
+        Map<String, String> produceAttributes = ctx.getRequestAttributes();
         //TODO FIx attribute name semantics here.
         String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
         produceAttributes.put(TAG_REGION, produceRegion);

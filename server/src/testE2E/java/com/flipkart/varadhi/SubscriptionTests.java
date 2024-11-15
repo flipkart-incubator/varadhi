@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,7 +67,8 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, r);
@@ -92,7 +94,8 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created =
@@ -106,7 +109,8 @@ public class SubscriptionTests extends E2EBase {
                 created.isGrouped(),
                 created.getEndpoint(),
                 created.getRetryPolicy(),
-                created.getConsumptionPolicy()
+                created.getConsumptionPolicy(),
+                created.getProperties()
         );
         //create subscription executes update internally.
         update.setVersion(1);
@@ -130,7 +134,8 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid Subscription name. Check naming constraints.",
@@ -146,7 +151,8 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         makeCreateRequest(
                 getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")), projectNotExist, 404,
@@ -162,7 +168,8 @@ public class SubscriptionTests extends E2EBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), topicNotExist, 404,
@@ -178,7 +185,8 @@ public class SubscriptionTests extends E2EBase {
                 true,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), groupedOnUnGroupTopic, 400,

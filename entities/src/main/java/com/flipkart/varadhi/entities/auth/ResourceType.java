@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.entities.auth;
 
 public enum ResourceType {
+
+    ROOT("root"),
     ORG("org"),
     TEAM("team"),
     PROJECT("project"),

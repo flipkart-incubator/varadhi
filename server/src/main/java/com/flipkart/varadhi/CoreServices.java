@@ -102,11 +102,11 @@ public class CoreServices {
                 .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "otlp";
+        String meterExporter = "jmx";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
+            case "otlp" -> new OtlpMeterRegistry(configuration.getOtelOptions()::get, Clock.SYSTEM);
             default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);
