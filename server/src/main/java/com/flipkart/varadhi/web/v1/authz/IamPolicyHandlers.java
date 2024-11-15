@@ -1,16 +1,12 @@
 package com.flipkart.varadhi.web.v1.authz;
 
-import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
-import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -21,14 +17,14 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.Constants.PathParams.*;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
-import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
@@ -40,14 +36,10 @@ public class IamPolicyHandlers implements RouteProvider {
     private static final String TOPIC_POLICY_PATH = "projects/:project/topics/:topic/policy";
     private static final String SUBSCRIPTION_POLICY_PATH = "projects/:project/subscriptions/:subscription/policy";
     private final ProjectService projectService;
-    private final SubscriptionService subscriptionService;
     private final IamPolicyService iamPolicyService;
 
-    public IamPolicyHandlers(
-            ProjectService projectService, SubscriptionService subscriptionService, IamPolicyService iamPolicyService
-    ) {
+    public IamPolicyHandlers(ProjectService projectService, IamPolicyService iamPolicyService) {
         this.projectService = projectService;
-        this.subscriptionService = subscriptionService;
         this.iamPolicyService = iamPolicyService;
     }
 
@@ -66,47 +58,22 @@ public class IamPolicyHandlers implements RouteProvider {
             case SUBSCRIPTION -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_PROJECT),
                     ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
             );
-            case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
-
-        };
-    }
-
-    private static ResourceAction getActionBasedOnResource(ResourceType type) {
-        return switch (type) {
-            case TOPIC -> TOPIC_IAM_POLICY_GET;
-            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_GET;
-            default -> IAM_POLICY_GET;
-        };
-    }
-
-    private static ResourceAction setActionBasedOnResource(ResourceType type) {
-        return switch (type) {
-            case TOPIC -> TOPIC_IAM_POLICY_SET;
-            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_SET;
-            default -> IAM_POLICY_SET;
-        };
-    }
-
-    private static ResourceAction deleteActionBasedOnResource(ResourceType type) {
-        return switch (type) {
-            case TOPIC -> TOPIC_IAM_POLICY_DELETE;
-            case SUBSCRIPTION -> SUBSCRIPTION_IAM_POLICY_DELETE;
-            default -> IAM_POLICY_DELETE;
+            case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
         };
     }
 
     private List<RouteDefinition> getHandlersFor(String path, ResourceType resourceType) {
         return List.of(
-                RouteDefinition.get("GetIAMPolicy", path).authorize(getActionBasedOnResource(resourceType))
-                        .build(this::getHierarchy, this.getIamPolicyHandler(resourceType)),
-                RouteDefinition.put("SetIAMPolicy", path).hasBody().authorize(setActionBasedOnResource(resourceType))
-                        .build(this::getHierarchy, this.setIamPolicyHandler(resourceType)),
-                RouteDefinition.delete("DeleteIAMPolicy", path).authorize(deleteActionBasedOnResource(resourceType))
-                        .build(this::getHierarchy, this.deleteIamPolicyHandler(resourceType))
+                RouteDefinition.get("GetIAMPolicy", path).authorize(IAM_POLICY_GET)
+                        .build(this::getHierarchies, this.getIamPolicyHandler(resourceType)),
+                RouteDefinition.put("SetIAMPolicy", path).hasBody().authorize(IAM_POLICY_SET)
+                        .build(this::getHierarchies, this.setIamPolicyHandler(resourceType)),
+                RouteDefinition.delete("DeleteIAMPolicy", path).authorize(IAM_POLICY_DELETE)
+                        .build(this::getHierarchies, this.deleteIamPolicyHandler(resourceType))
         );
     }
 
-    private ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+    private Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String orgName = ctx.request().getParam(PATH_PARAM_ORG);
         String teamName = ctx.request().getParam(PATH_PARAM_TEAM);
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
@@ -114,39 +81,28 @@ public class IamPolicyHandlers implements RouteProvider {
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         if (subscriptionName != null) {
             Project project = projectService.getProject(projectName);
-            VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
-            String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-            Project topicProject = projectService.getProject(topicNameSegments[0]);
-            topicName = topicNameSegments[1];
-            Hierarchies.TopicHierarchy topicHierarchy =
-                    new Hierarchies.TopicHierarchy(topicProject.getOrg(), topicProject.getTeam(),
-                            topicProject.getName(), topicName
-                    );
-
-            return new Hierarchies.SubscriptionHierarchy(
-                    project.getOrg(), project.getTeam(), project.getName(), subscriptionName, topicHierarchy);
+            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new SubscriptionHierarchy(project, subscriptionName)));
         }
         if (topicName != null) {
             Project project = projectService.getProject(projectName);
-            return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new TopicHierarchy(project, topicName)));
         }
         if (projectName != null) {
-            Project project = projectService.getProject(projectName);
-            return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
+            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new ProjectHierarchy(projectService.getProject(projectName))));
         }
         if (teamName != null) {
-            return new Hierarchies.TeamHierarchy(orgName, teamName);
+            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new TeamHierarchy(orgName, teamName)));
         }
         if (orgName != null) {
-            return new Hierarchies.OrgHierarchy(orgName);
+            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new OrgHierarchy(orgName)));
         }
-        return new Hierarchies.RootHierarchy();
+        return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new RootHierarchy()));
     }
 
     public Handler<RoutingContext> getIamPolicyHandler(ResourceType resourceType) {
         return routingContext -> {
-            String resourceId = getResourceIdFromPath(routingContext, resourceType);
-            IamPolicyResponse response = toResponse(iamPolicyService.getIamPolicy(resourceType, resourceId));
+            String policyId = getResourceIdFromPath(routingContext, resourceType);
+            IamPolicyResponse response = toResponse(iamPolicyService.getIamPolicy(resourceType, policyId));
             routingContext.endApiWithResponse(response);
         };
     }

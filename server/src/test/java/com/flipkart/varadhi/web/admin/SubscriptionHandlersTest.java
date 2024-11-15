@@ -1,10 +1,12 @@
 package com.flipkart.varadhi.web.admin;
 
+import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -21,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -39,7 +42,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
     private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
     private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
-
+    private static final Map<String, String> subscriptionDefaultProperties =
+            SubscriptionPropertyValidator.createPropertyDefaultValueProviders(new RestOptions());
     private final Project project = Project.of("project1", "", "team1", "org1");
     private final TopicResource topicResource = TopicResource.unGrouped("topic1", "project2", null);
     SubscriptionHandlers subscriptionHandlers;
@@ -73,7 +77,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 retryPolicy,
                 consumptionPolicy,
                 shards,
-                new HashMap<>()
+                subscriptionDefaultProperties
         );
     }
 
@@ -85,7 +89,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
         topicService = mock(VaradhiTopicService.class);
         subscriptionFactory = mock(VaradhiSubscriptionFactory.class);
         subscriptionHandlers =
-                new SubscriptionHandlers(subscriptionService, projectService, topicService, subscriptionFactory);
+                new SubscriptionHandlers(
+                        subscriptionService, projectService, topicService, subscriptionFactory, new RestOptions());
 
         Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
                     subscriptionHandlers.setSubscription(ctx);
@@ -270,7 +275,8 @@ public class SubscriptionHandlersTest extends WebTestBase {
                 false,
                 endpoint,
                 retryPolicy,
-                consumptionPolicy
+                consumptionPolicy,
+                new HashMap<>()
         );
     }
 

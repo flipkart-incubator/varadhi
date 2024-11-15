@@ -2,7 +2,7 @@ package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.controller.ControllerApiMgr;
 import com.flipkart.varadhi.entities.cluster.ShardOpResponse;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOpRequest;
 import com.flipkart.varadhi.entities.cluster.UnsidelineOpRequest;
@@ -12,9 +12,9 @@ import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class ControllerApiHandler {
-    private final ControllerApi controllerMgr;
+    private final ControllerApiMgr controllerMgr;
 
-    public ControllerApiHandler(ControllerApi controllerMgr) {
+    public ControllerApiHandler(ControllerApiMgr controllerMgr) {
         this.controllerMgr = controllerMgr;
     }
 

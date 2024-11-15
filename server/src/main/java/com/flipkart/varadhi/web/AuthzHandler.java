@@ -4,17 +4,15 @@ import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.ext.web.Route;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Optional;
-
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
+    private final SuperUserHandler superUserHandler;
 
     public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
         if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
@@ -22,14 +20,16 @@ public class AuthzHandler implements RouteConfigurator {
         } else {
             authorizationHandlerBuilder = null;
         }
+        superUserHandler = new SuperUserHandler(configuration);
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
         if (authorizationHandlerBuilder != null && !routeDef.getAuthorizeOnActions().isEmpty()) {
-            routeDef.getAuthorizeOnActions().forEach(action -> route.handler(authorizationHandlerBuilder.build(action)));
+            routeDef.getAuthorizeOnActions()
+                    .forEach(action -> route.handler(authorizationHandlerBuilder.build(action)));
         }
+        superUserHandler.configure(route, routeDef);
     }
-
 
     AuthorizationHandlerBuilder createAuthorizationHandler(AppConfiguration configuration, ConfigFileResolver resolver) {
         if (configuration.isAuthorizationEnabled()) {

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -14,10 +14,10 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class SubscriptionService {
     private final MetaStore metaStore;
-    private final ControllerApi controllerClient;
+    private final ControllerRestApi controllerClient;
     private final ShardProvisioner shardProvisioner;
 
-    public SubscriptionService(ShardProvisioner shardProvisioner, ControllerApi controllerClient, MetaStore metaStore) {
+    public SubscriptionService(ShardProvisioner shardProvisioner, ControllerRestApi controllerClient, MetaStore metaStore) {
         this.shardProvisioner = shardProvisioner;
         this.metaStore = metaStore;
         this.controllerClient = controllerClient;

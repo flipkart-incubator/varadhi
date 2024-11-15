@@ -90,7 +90,7 @@ public class IamPolicyService {
                 String subscriptionName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
                 yield (segments.length == 2) && metaStore.checkSubscriptionExists(subscriptionName);
             }
-            case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
+            case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
         };
     }
 }

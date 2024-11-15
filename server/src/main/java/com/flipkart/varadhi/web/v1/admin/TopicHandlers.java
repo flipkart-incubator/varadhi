@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
@@ -16,7 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
@@ -48,18 +51,18 @@ public class TopicHandlers implements RouteProvider {
                 List.of(
                         RouteDefinition.get("GetTopic", "/:topic")
                                 .authorize(TOPIC_GET)
-                                .build(this::getHierarchy, this::get),
+                                .build(this::getHierarchies, this::get),
                         RouteDefinition.post("CreateTopic", "")
                                 .hasBody()
                                 .bodyParser(this::setTopic)
                                 .authorize(TOPIC_CREATE)
-                                .build(this::getHierarchy, this::create),
+                                .build(this::getHierarchies, this::create),
                         RouteDefinition.delete("DeleteTopic", "/:topic")
                                 .authorize(TOPIC_DELETE)
-                                .build(this::getHierarchy, this::delete),
+                                .build(this::getHierarchies, this::delete),
                         RouteDefinition.get("ListTopics", "")
                                 .authorize(TOPIC_LIST)
-                                .build(this::getHierarchy, this::listTopics)
+                                .build(this::getHierarchies, this::listTopics)
                 )
         ).get();
     }
@@ -69,19 +72,18 @@ public class TopicHandlers implements RouteProvider {
         ctx.put(CONTEXT_KEY_BODY, topic);
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectService.getCachedProject(projectName);
         if (hasBody) {
             TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
-            return new Hierarchies.TopicHierarchy(
-                    project.getOrg(), project.getTeam(), project.getName(), topicResource.getName());
+            return Map.of(ResourceType.TOPIC, new TopicHierarchy(project, topicResource.getName()));
         }
         String topicName = ctx.request().getParam(PATH_PARAM_TOPIC);
         if (null == topicName) {
-            return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
+            return Map.of(ResourceType.PROJECT, new ProjectHierarchy(project));
         }
-        return new Hierarchies.TopicHierarchy(project.getOrg(), project.getTeam(), project.getName(), topicName);
+        return Map.of(ResourceType.TOPIC, new TopicHierarchy(project, topicName));
     }
 
     public void get(RoutingContext ctx) {

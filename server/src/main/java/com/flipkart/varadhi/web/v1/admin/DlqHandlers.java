@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -13,6 +14,7 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -20,8 +22,10 @@ import java.util.function.Function;
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
-import static com.flipkart.varadhi.entities.VaradhiSubscription.*;
+import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.*;
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
+import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j
@@ -49,14 +53,14 @@ public class DlqHandlers implements RouteProvider {
                                 .bodyParser(this::setUnsidelineRequest)
                                 .authorize(SUBSCRIPTION_GET)
                                 .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchy, this::enqueueUnsideline),
+                                .build(this::getHierarchies, this::enqueueUnsideline),
                         RouteDefinition
                                 .post("GetMessages", "")
                                 .nonBlocking()
                                 .bodyParser(this::setGetMessageRequest)
                                 .authorize(SUBSCRIPTION_GET)
                                 .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchy, this::getMessages)
+                                .build(this::getHierarchies, this::getMessages)
                 )
         ).get();
     }
@@ -71,7 +75,7 @@ public class DlqHandlers implements RouteProvider {
         ctx.put(CONTEXT_KEY_BODY, request);
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectService.getCachedProject(projectName);
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
@@ -79,27 +83,24 @@ public class DlqHandlers implements RouteProvider {
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];
-        Hierarchies.TopicHierarchy topicHierarchy =
-                new Hierarchies.TopicHierarchy(topicProject.getOrg(), topicProject.getTeam(),
-                        topicProject.getName(), topicName
-                );
-        return new Hierarchies.SubscriptionHierarchy(
-                project.getOrg(), project.getTeam(), project.getName(), subscriptionName, topicHierarchy);
+        return Map.ofEntries(
+                Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
+                Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
+        );
     }
 
     public void enqueueUnsideline(RoutingContext ctx) {
         UnsidelineRequest unsidelineRequest = ctx.get(CONTEXT_KEY_BODY);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         log.info("Unsideline requested for Subscription:{}", subscription.getName());
-        ctx.executeAsyncRequest(() -> {
-            int max_messages = subscription.getIntProperty(DLQ_UNSIDELINE_MAX_MSGS, DEFAULT_UNSIDELINE_MAX_MSGS);
-            int max_groups = subscription.getIntProperty(DLQ_UNSIDELINE_MAX_GROUPS, DEFAULT_UNSIDELINE_MAX_GROUPS);
-            unsidelineRequest.validate(max_groups, max_messages);
-            if (!unsidelineRequest.getGroupIds().isEmpty() || !unsidelineRequest.getMessageIds().isEmpty()) {
-                throw new IllegalArgumentException("Selective unsideline is not yet supported.");
-            }
-            return dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault());
-        });
+
+        int max_messages = subscription.getIntProperty(UNSIDELINE_API_MESSAGE_COUNT);
+        int max_groups = subscription.getIntProperty(UNSIDELINE_API_GROUP_COUNT);
+        unsidelineRequest.validate(max_groups, max_messages);
+        if (!unsidelineRequest.getGroupIds().isEmpty() || !unsidelineRequest.getMessageIds().isEmpty()) {
+            throw new IllegalArgumentException("Selective unsideline is not yet supported.");
+        }
+        ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
     /*
@@ -116,8 +117,8 @@ public class DlqHandlers implements RouteProvider {
     public void getMessages(RoutingContext ctx) {
         GetMessagesRequest messagesRequest = ctx.get(CONTEXT_KEY_BODY);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        ctx.executeAsyncRequestWithChunkedResponses((Function<Consumer<GetMessagesResponse>, CompletableFuture<Void>>) responseWriter -> {
-            int max_limit = subscription.getIntProperty(DLQ_GET_MESSAGES_LIMIT, DEFAULT_GET_MESSAGES_LIMIT);
+        ctx.handleChunkedResponse((Function<Consumer<GetMessagesResponse>, CompletableFuture<Void>>) responseWriter -> {
+            int max_limit = subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT);
             messagesRequest.validate(max_limit);
             return dlqService.getMessages(subscription, messagesRequest, responseWriter);
         });

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
@@ -13,10 +13,10 @@ import java.util.function.Consumer;
 
 @Slf4j
 public class DlqService {
-    private final ControllerApi controllerClient;
+    private final ControllerRestApi controllerClient;
     private final ConsumerClientFactory consumerFactory;
 
-    public DlqService(ControllerApi controllerClient, ConsumerClientFactory consumerFactory) {
+    public DlqService(ControllerRestApi controllerClient, ConsumerClientFactory consumerFactory) {
         this.controllerClient = controllerClient;
         this.consumerFactory = consumerFactory;
     }

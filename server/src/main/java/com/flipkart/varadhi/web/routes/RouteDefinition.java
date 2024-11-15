@@ -147,7 +147,7 @@ public class RouteDefinition {
             if (metricsEnabled || !logsDisabled || !tracingDisabled) {
                 behaviours.add(RouteBehaviour.telemetry);
             }
-            if (null != authorizeOnActions) {
+            if (authorizeOnActions.size() > 0) {
                 behaviours.add(RouteBehaviour.authorized);
             }
 

@@ -11,15 +11,6 @@ import java.util.Map;
 @Setter
 @EqualsAndHashCode(callSuper = true)
 public class VaradhiSubscription extends MetaStoreEntity {
-    public static final int DEFAULT_UNSIDELINE_MAX_MSGS = 1000;
-    public static final int DEFAULT_UNSIDELINE_MAX_GROUPS = 1000;
-    public static final int DEFAULT_GET_MESSAGES_LIMIT = 200;
-
-    public static final String DLQ_UNSIDELINE_MAX_MSGS = "dlq.unsideline.max_messages";
-    public static final String DLQ_UNSIDELINE_MAX_GROUPS = "dlq.unsideline.max_groups";
-    public static final String DLQ_GET_MESSAGES_LIMIT = "dlq.messages.get_limit";
-
-
     private final String project;
     private final String topic;
     private String description;
@@ -59,7 +50,10 @@ public class VaradhiSubscription extends MetaStoreEntity {
         }
         this.shards = shards;
         this.status = status;
-        this.properties = properties == null ? Maps.newHashMap() : properties;
+        if (null == properties || properties.isEmpty()) {
+            throw new IllegalArgumentException("properties cannot be null or empty");
+        }
+        this.properties = properties;
     }
 
     public static VaradhiSubscription of(
@@ -104,11 +98,8 @@ public class VaradhiSubscription extends MetaStoreEntity {
     }
 
     @JsonIgnore
-    public int getIntProperty(String property, int defaultValue) {
-        if (properties.containsKey(property)) {
-            return Integer.parseInt(properties.get(property));
-        }
-        return defaultValue;
+    public int getIntProperty(String property) {
+        return Integer.parseInt(properties.get(property));
     }
 
     public enum State {

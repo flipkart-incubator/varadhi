@@ -20,7 +20,7 @@ public class UnsidelineRequest {
         if ((latestFailedAt != UNSPECIFIED_TS && (!groupIds.isEmpty() || !messageIds.isEmpty()))
                 || (latestFailedAt == UNSPECIFIED_TS && (!groupIds.isEmpty() && !messageIds.isEmpty()))) {
             throw new IllegalArgumentException(
-                    "Only one of the unsideline should be specified.");
+                    "Only one of the unsideline criteria should be specified.");
         }
 
         if (groupIds.size() > maxGroupIds) {

@@ -46,7 +46,10 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
         List<Assignment> stopsFailed = new ArrayList<>();
         List<CompletableFuture<Boolean>> shardFutures =
                 scheduleStopOnShards(subscription, subOp, assignments, stopsFailed);
-        log.info("Executed Stop on {} shards for SubOp({}).", shards.getShardCount(), subOp.getData());
+        log.info(
+                "Executed Stop on {} shards for SubOp({}), Scheduled ShardOperations {}.", shards.getShardCount(),
+                subOp.getData(), shardFutures.size()
+        );
 
         // in case assignments is empty i.e. no assignment exists for this subscription.
         // nothing special is needed. Default flow will take care of marking operation complete.

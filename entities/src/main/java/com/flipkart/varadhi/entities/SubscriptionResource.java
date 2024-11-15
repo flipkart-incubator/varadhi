@@ -11,6 +11,7 @@ import java.util.Map;
 @Getter
 @ValidateResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
 public class SubscriptionResource extends VersionedEntity implements Validatable {
+
     @NotBlank
     String project;
 
@@ -59,24 +60,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
-        this.properties = properties;
-    }
-
-    public static SubscriptionResource of(
-            String name,
-            String project,
-            String topic,
-            String topicProject,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy
-    ) {
-        return new SubscriptionResource(
-                name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
-                consumptionPolicy, new HashMap<>()
-        );
+        this.properties = null == properties ? new HashMap<>() : properties;
     }
 
     public static SubscriptionResource of(

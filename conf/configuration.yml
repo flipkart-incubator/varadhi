@@ -75,17 +75,9 @@ controller:
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
 
-otlpConfig:
-<<<<<<< HEAD:server/src/main/resources/configuration.yml
-  otlp.url: "http://localhost:4318/v1/metrics"
-=======
+otelOptions:
   otlp.url: "${OTEL_URL}"
->>>>>>> master:conf/configuration.yml
   otlp.step: "20s"
   otlp.aggregationTemporality: "CUMULATIVE"
   otlp.resourceAttributes:
   otlp.headers:
-<<<<<<< HEAD:server/src/main/resources/configuration.yml
-
-=======
->>>>>>> master:conf/configuration.yml

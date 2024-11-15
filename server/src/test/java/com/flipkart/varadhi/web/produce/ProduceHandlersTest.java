@@ -45,8 +45,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         super.setUp();
         route.handler(bodyHandler)
                 .handler(ctx -> {
-                    ResourceHierarchy hierarchy = produceHandlers.getHierarchy(ctx, true);
-                    ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchy);
+                    ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
                     ctx.next();
                 })
                 .handler(ctx -> {

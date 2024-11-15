@@ -120,15 +120,9 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     public static class OpData {
         private String operationId;
         private String parentOpId;
-
         private int shardId;
         private String subscriptionId;
         private String project;
-        private boolean grouped;
-        private Endpoint endpoint;
-        private ConsumptionPolicy consumptionPolicy;
-        private RetryPolicy retryPolicy;
-        private SubscriptionUnitShard shard;
 
         @Override
         public String toString() {
@@ -139,16 +133,26 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
-
-    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends ShardOperation.OpData {
+        private boolean grouped;
+        private Endpoint endpoint;
+        private ConsumptionPolicy consumptionPolicy;
+        private RetryPolicy retryPolicy;
+        private SubscriptionUnitShard shard;
+
         StartData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+                    subscription.getProject()
             );
+            this.grouped = subscription.isGrouped();
+            this.endpoint = subscription.getEndpoint();
+            this.consumptionPolicy = subscription.getConsumptionPolicy();
+            this.retryPolicy = subscription.getRetryPolicy();
+            this.shard = shard;
         }
 
         @Override
@@ -157,14 +161,13 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
-    @AllArgsConstructor
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StopData extends ShardOperation.OpData {
         StopData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+                    subscription.getProject()
             );
         }
 
@@ -174,8 +177,8 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
+    @Getter
     @NoArgsConstructor
-    @AllArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class UnsidelineData extends ShardOperation.OpData {
         UnsidelineRequest request;
@@ -185,8 +188,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         ) {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+                    subscription.getProject()
             );
             this.request = request;
         }

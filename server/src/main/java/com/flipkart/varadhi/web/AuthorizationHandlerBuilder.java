@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
@@ -37,6 +39,23 @@ public class AuthorizationHandlerBuilder {
         return new AuthorizationHandler(authorizationOnResource);
     }
 
+    private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
+        return provider.isAuthorized(userContext, action, resourcePath)
+                .compose(authorized -> {
+                    if (Boolean.FALSE.equals(authorized)) {
+                        return Future.failedFuture(new HttpException(
+                                HTTP_FORBIDDEN,
+                                "user is not authorized to perform action '" + action.toString() +
+                                        "' on resource '" +
+                                        resourcePath + "'"
+                        ));
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                }, t -> Future.failedFuture(
+                        new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
+    }
+
     @AllArgsConstructor
     public class AuthorizationHandler implements Handler<RoutingContext> {
 
@@ -45,11 +64,17 @@ public class AuthorizationHandlerBuilder {
         @Override
         public void handle(RoutingContext ctx) {
             UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
-            ResourceHierarchy resourceHierarchy = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
-            authorize(user, resourceHierarchy).onFailure(ctx::fail).onSuccess(result -> ctx.next());
+            Map<ResourceType, ResourceHierarchy> hierarchies = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+            ResourceHierarchy hierarchy = hierarchies.getOrDefault(authorizationOnAction.getResourceType(), null);
+            if (null == hierarchy) {
+                ctx.fail(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set."));
+                return;
+            }
+            authorize(user, hierarchy).onFailure(ctx::fail).onComplete(result -> ctx.next());
         }
 
-        public Future<Void> authorize(
+
+        Future<Void> authorize(
                 UserContext userContext, ResourceHierarchy resourceHierarchy
         ) {
 
@@ -68,25 +93,8 @@ public class AuthorizationHandlerBuilder {
             if (superUsers.contains(userContext.getSubject())) {
                 return Future.succeededFuture();
             }
-            String resourcePath = resourceHierarchy.getResourcePath(authorizationOnAction.getResourceType());
+            String resourcePath = resourceHierarchy.getResourcePath();
             return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }
-    }
-
-    private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
-        return provider.isAuthorized(userContext, action, resourcePath)
-                .compose(authorized -> {
-                    if (Boolean.FALSE.equals(authorized)) {
-                        return Future.failedFuture(new HttpException(
-                                HTTP_FORBIDDEN,
-                                "user is not authorized to perform action '" + action.toString() +
-                                        "' on resource '" +
-                                        resourcePath + "'"
-                        ));
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                }, t -> Future.failedFuture(
-                        new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
     }
 }

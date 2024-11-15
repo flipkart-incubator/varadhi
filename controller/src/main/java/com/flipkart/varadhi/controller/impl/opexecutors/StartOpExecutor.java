@@ -37,7 +37,10 @@ public class StartOpExecutor extends SubscriptionStartShardExecutor {
         SubscriptionShards shards = subscription.getShards();
         return getOrCreateShardAssignment(subscription).thenCompose(assignments -> {
             List<CompletableFuture<Boolean>> shardFutures = scheduleStartOnShards(subscription, subOp, assignments);
-            log.info("Executed Start on {} shards for SubOp({}).", shards.getShardCount(), subOp.getData());
+            log.info(
+                    "Executed Start on {} shards for SubOp({}), Scheduled ShardOperations {}.", shards.getShardCount(),
+                    subOp.getData(), shardFutures.size()
+            );
             return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0])).thenApply(ignore -> {
                 if (allShardsSkipped(shardFutures)) {
                     log.info("Start {} completed without any shard operations being scheduled.", subOp.getData());

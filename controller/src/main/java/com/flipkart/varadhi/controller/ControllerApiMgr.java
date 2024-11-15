@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import static com.flipkart.varadhi.Constants.SYSTEM_IDENTITY;
 
 @Slf4j
-public class ControllerApiMgr implements ControllerApi {
+public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerApi {
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final MetaStore metaStore;

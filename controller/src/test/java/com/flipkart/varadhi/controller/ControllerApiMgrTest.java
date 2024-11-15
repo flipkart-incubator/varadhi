@@ -4,7 +4,7 @@ import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.NodeProvider;
-import com.flipkart.varadhi.entities.SubProvider;
+import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.*;
@@ -100,8 +100,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testGetSubscriptionStatus() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         assignments.add(getAssignment(sub1, consumerNodes.get(0), shards.get(0)));
@@ -127,8 +127,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscription() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -146,8 +146,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartOfRunningSubscription() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
@@ -163,8 +163,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartOfStartingSubscription() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STARTING);
@@ -180,7 +180,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscription_SubscriptionStatusFailure() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
 
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(
@@ -197,8 +197,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscriptionOneShardAlreadyStarted() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -217,8 +217,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscriptionAllShardsAlreadyStarted() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -241,8 +241,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscriptionWhenConsumerStartFails() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -274,8 +274,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartSubscriptionWhenConsumerStartShardThrows() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -300,8 +300,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopSubscriptionAssignmentExists() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
 
@@ -321,8 +321,8 @@ public class ControllerApiMgrTest {
         //ideally shouldn't happen as Status would return appropriate state, but to ensure
         // code path doesn't fail for this case
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.ERRORED);
@@ -343,8 +343,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopOfStoppedSubscription() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPED);
@@ -360,8 +360,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStartOfStoppingSubscription() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.STOPPING);
@@ -377,7 +377,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopSubscription_SubscriptionStatusFailure() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(
                 assignmentManager).getSubAssignments(sub1.getName());
@@ -393,8 +393,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopSubscriptionOneShardAlreadyStopped() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.ERRORED);
@@ -416,8 +416,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopSubscriptionWhenConsumerStopFails() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
@@ -445,8 +445,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testStopSubscriptionWhenConsumerStopShardThrows() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.RUNNING);
@@ -474,8 +474,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testUpdateShardOp() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         ShardOperation shardOp = OperationMgrTest.getShardStartOp(subOp.getId(), shards.get(0), sub1);
         doNothing().when(opStore).updateShardOp(any());
@@ -488,8 +488,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testUpdateWhenUpdateShardOpThrows() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         ShardOperation shardOp = OperationMgrTest.getShardStartOp(subOp.getId(), shards.get(0), sub1);
         doThrow(new MetaStoreException("DB update error.")).when(operationMgr)
@@ -518,7 +518,7 @@ public class ControllerApiMgrTest {
     @Test
     public void testRetryOperation() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
         doNothing().when(operationMgr).enqueue(any(), any());
@@ -530,8 +530,8 @@ public class ControllerApiMgrTest {
     @Test
     public void testConsumerNodeJoined() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(3).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         ConsumerNode node = NodeProvider.getConsumerNodes(1).get(0);
         doReturn(CompletableFuture.completedFuture(NodeProvider.getConsumerInfo(node, sub1, shards))).when(consumerApi)
                 .getConsumerInfo();
@@ -545,11 +545,11 @@ public class ControllerApiMgrTest {
     @Test
     public void testConsumerNodeLeft() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards1 = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards1 = SubscriptionUtils.shardsOf(sub1);
         VaradhiSubscription sub2 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub2", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards2 = SubProvider.shardsOf(sub2);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub2", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards2 = SubscriptionUtils.shardsOf(sub2);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
 
         List<Assignment> consumer0Assignments = new ArrayList<>();

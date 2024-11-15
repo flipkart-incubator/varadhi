@@ -45,7 +45,10 @@ public class UnsidelinepOpExecutor extends SubscriptionOpExecutor {
 
         List<CompletableFuture<Boolean>> shardFutures =
                 scheduleUnsidelineOnShards(subscription, subOp, assignments);
-        log.info("Executed Un-sideline on {} shards for SubOp({}).", shards.getShardCount(), subOp.getData());
+        log.info(
+                "Executed Un-sideline on {} shards for SubOp({}), Scheduled ShardOperations {}.",
+                shards.getShardCount(), subOp.getData(), shardFutures.size()
+        );
 
         return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0])).thenApply(ignore -> {
             if (allShardsSkipped(shardFutures)) {

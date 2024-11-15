@@ -19,15 +19,15 @@ public class ConsumerApiMgr implements ConsumerApi {
     private final ConsumersManager consumersManager;
     private final ConsumerInfo consumerInfo;
 
-    //TODO:: removed or refactor shardMap appropriately when actual conumer implementation PR is merged.
-    //This is to support testing for timme being.
-    private final Map<String, ShardStatus> shardMap;
+    //TODO:: remove or refactor allocatedShards appropriately when actual consumer implementation PR is merged.
+    //This is to support testing for time being.
+    private final Map<String, AllocatedShard> allocatedShards;
 
 
     public ConsumerApiMgr(ConsumersManager consumersManager, ConsumerInfo consumerInfo) {
         this.consumersManager = consumersManager;
         this.consumerInfo = consumerInfo;
-        this.shardMap = new ConcurrentHashMap<>();
+        this.allocatedShards = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -41,7 +41,7 @@ public class ConsumerApiMgr implements ConsumerApi {
                         shard.getDeadLetterSubscription()
                 );
 
-        // TODO::Re-evalute interface w.r.to shardId object/record instead of project+subId+shardId.
+        //TODO::Re-evaluate interface w.r.to shardId object/record instead of project+subId+shardId.
         return consumersManager.startSubscription(
                 operation.getProject(),
                 operation.getSubscriptionId(),
@@ -57,24 +57,28 @@ public class ConsumerApiMgr implements ConsumerApi {
                     null == t ? ShardState.STARTED : ShardState.ERRORED,
                     null == t ? null : t.getMessage()
             );
-            shardMap.put(shardFqn, status);
+            allocatedShards.put(shardFqn, new AllocatedShard(shard, status));
         });
     }
 
     @Override
     public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
         log.info("Consumer: Stopping shard {}", operation);
-        SubscriptionUnitShard shard = operation.getShard();
-        consumerInfo.freeShardCapacity(operation.getSubscriptionId(), shard.getShardId(), shard.getCapacityRequest());
+        String shardFqn = String.format("%s:%d", operation.getSubscriptionId(), operation.getShardId());
+        AllocatedShard allocatedShard = allocatedShards.get(shardFqn);
+        if (null == allocatedShard) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Not a owner of shard."));
+        }
+        consumerInfo.freeShardCapacity(
+                operation.getSubscriptionId(), operation.getShardId(), allocatedShard.getShard().getCapacityRequest());
         return consumersManager.stopSubscription(
                 operation.getSubscriptionId(),
                 operation.getShardId()
         ).whenComplete((v, t) -> {
-            String shardFqn = String.format("%s:%d", operation.getSubscriptionId(), operation.getShardId());
             if (null == t) {
-                shardMap.remove(shardFqn);
+                allocatedShards.remove(shardFqn);
             } else {
-                shardMap.put(shardFqn, new ShardStatus(ShardState.ERRORED, t.getMessage()));
+                allocatedShards.get(shardFqn).setStatus(new ShardStatus(ShardState.ERRORED, t.getMessage()));
             }
         });
     }
@@ -88,10 +92,11 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId) {
         String shardFqn = String.format("%s:%d", subscriptionId, shardId);
-        if (shardMap.containsKey(shardFqn)) {
-            return CompletableFuture.completedFuture(shardMap.get(shardFqn));
+        AllocatedShard allocatedShard = allocatedShards.get(shardFqn);
+        if (null == allocatedShard) {
+            return CompletableFuture.completedFuture(new ShardStatus(ShardState.UNKNOWN, "Not a owner of shard."));
         }
-        return CompletableFuture.completedFuture(new ShardStatus(ShardState.UNKNOWN, "Not a owner of shard"));
+        return CompletableFuture.completedFuture(allocatedShard.getStatus());
     }
 
     @Override
@@ -102,7 +107,7 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<List<Message>> getMessages(GetMessagesRequest messagesRequest) {
         //TODO::Along with implementation take care of (de)serialization format.
-        // This should be byte array instead of string (check elsewhere as well for Message serialization)
+        //This should be byte array instead of string (check elsewhere as well for Message serialization)
         return CompletableFuture.supplyAsync(ArrayList::new);
     }
 }
