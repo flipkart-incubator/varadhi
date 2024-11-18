@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities.cluster;
 
 public interface Operation {
+
     String getId();
 
     State getState();

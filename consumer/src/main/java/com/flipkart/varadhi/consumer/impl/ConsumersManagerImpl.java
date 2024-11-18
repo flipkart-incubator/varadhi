@@ -42,11 +42,12 @@ public class ConsumersManagerImpl implements ConsumersManager {
         }
         ConsumerHolder newConsumer = consumers.get(id);
         newConsumer.consumer =
-                new VaradhiConsumerImpl(buildEnv(), project, subscription, shardId, storageSubscription, grouped,
+                new VaradhiConsumerImpl(env, project, subscription, shardId, storageSubscription, grouped,
                         endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler
                 );
 
         return CompletableFuture.supplyAsync(() -> {
+            newConsumer.consumer.connect();
             newConsumer.consumer.start();
             return null;
         });
@@ -54,6 +55,7 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public CompletableFuture<Void> stopSubscription(String subscription, int shardId) {
+        // TODO
         return CompletableFuture.completedFuture(null);
     }
 
@@ -77,13 +79,5 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     static class ConsumerHolder {
         private VaradhiConsumer consumer;
-    }
-
-    ConsumerEnvironment buildEnv() {
-        return new ConsumerEnvironment(
-                producerFactory,
-                consumerFactory,
-                httpClient
-        );
     }
 }

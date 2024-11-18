@@ -35,7 +35,7 @@ public class ConsumerVerticle extends AbstractVerticle {
                 coreServices.getMessagingStackProvider().getProducerFactory(),
                 coreServices.getMessagingStackProvider().getConsumerFactory()
         );
-        ControllerClient controllerClient = new ControllerClient(messageExchange);
+        ControllerConsumerClient controllerClient = new ControllerConsumerClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, consumerInfo);
         ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
         setupApiHandlers(messageRouter, handler);
