@@ -9,6 +9,8 @@ networks:
   hostnet:
     ipam:
       driver: default
+      config:
+        - subnet: 10.5.5.0/24
 
 services:
   server:
@@ -17,15 +19,17 @@ services:
     profiles: [ "test", "service" ]
     environment:
       - JAVA_TOOL_OPTIONS=-javaagent:/jacoco/org.jacoco.agent-runtime.jar=destfile=/jacoco/testE2E.exec
-      - ZOOKEEPER_SERVERS=zookeeper:2181
-      - PULSAR_URL=http://pulsar:8080
+      - JAVA_JMX_PORT=
+      - JAVA_DEBUG_PORT=
     networks:
       hostnet:
+        ipv4_address: 10.5.5.2
     ports:
       - 18488:18488
       - 9990:9990
+      - 5005:5005
     volumes:
-      - ../../server/build/jacoco:/jacoco
+      - ./coverage:/jacoco
     restart: "no"
     healthcheck:
       test: curl -s http://localhost:18488/v1/health-check | grep iam_ok
@@ -45,6 +49,7 @@ services:
     profiles: [ "test", "dev", "pulsar" , "dev-metric"]
     networks:
       hostnet:
+        ipv4_address: 10.5.5.3
     ports:
       - "8080:8080"
       - "6650:6650"
@@ -70,6 +75,7 @@ services:
     profiles: [ "test", "dev", "zk" , "dev-metric"]
     networks:
       hostnet:
+        ipv4_address: 10.5.5.4
     ports:
       - "2181:2181"
       - "2888:2888"
@@ -92,6 +98,7 @@ services:
     container_name: otel-collector
     networks:
       hostnet:
+        ipv4_address: 10.5.5.5
     ports:
       - 4318:4318 # OTLP http receiver
       - 8889:8889 # Promentheus exporter metrics

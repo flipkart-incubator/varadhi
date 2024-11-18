@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(VertxExtension.class)
 class DefaultAuthorizationProviderTest {
 
+    private static final ConfigFileResolver ID = p -> p;
+
     @TempDir
     private Path tempDir;
 
@@ -43,7 +46,7 @@ class DefaultAuthorizationProviderTest {
     @BeforeEach
     public void setUp() throws IOException {
         authorizationOptions = new AuthorizationOptions();
-        authorizationOptions.setConfigFile("src/test/resources/testAuthorizationConfig.yml");
+        authorizationOptions.setConfigFile("testAuthorizationConfig.yml");
 
         provider = spy(new DefaultAuthorizationProvider());
         iamPolicyService =
@@ -53,7 +56,7 @@ class DefaultAuthorizationProviderTest {
     @Test
     void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -80,7 +83,7 @@ class DefaultAuthorizationProviderTest {
         opts.setConfigFile(configFile.toString());
         Assertions.assertThrows(
                 IllegalStateException.class,
-                () -> provider.init(opts)
+                () -> provider.init(ID, opts)
         );
     }
 
@@ -104,7 +107,7 @@ class DefaultAuthorizationProviderTest {
                 1, Map.of(userName, Set.of("org.admin"))
         )).when(iamPolicyService).getIamPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture());
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -125,7 +128,7 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -145,7 +148,7 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -173,7 +176,7 @@ class DefaultAuthorizationProviderTest {
         )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -212,7 +215,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -243,7 +246,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -270,7 +273,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -297,7 +300,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -332,7 +335,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -359,7 +362,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -394,7 +397,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -421,7 +424,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -443,7 +446,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(authorizationOptions)
+        provider.init(ID, authorizationOptions)
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();

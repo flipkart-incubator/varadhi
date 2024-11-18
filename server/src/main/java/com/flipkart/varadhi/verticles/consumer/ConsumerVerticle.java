@@ -9,7 +9,7 @@ import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
-import com.flipkart.varadhi.verticles.controller.ControllerClient;
+import com.flipkart.varadhi.verticles.controller.ControllerConsumerClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 
@@ -51,7 +51,9 @@ public class ConsumerVerticle extends AbstractVerticle {
         String consumerId = consumerInfo.getConsumerId();
         messageRouter.sendHandler(consumerId, "start", handler::start);
         messageRouter.sendHandler(consumerId, "stop", handler::stop);
+        messageRouter.sendHandler(consumerId, "unsideline", handler::unsideline);
         messageRouter.requestHandler(consumerId, "status", handler::status);
         messageRouter.requestHandler(consumerId, "info", handler::info);
+        messageRouter.requestHandler(consumerId, "getMessages", handler::getMessages);
     }
 }

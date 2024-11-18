@@ -6,7 +6,6 @@ build
 
 # IntelliJ
 .idea/*
-.run/*
 !.idea/vcs.xml
 *.iml
 *.iws
@@ -41,3 +40,9 @@ scratch
 
 scripts/benchmark/infra/
 nohup.out
+
+# auto generated configs
+setup/docker/configs/varadhi-auto-generated/*
+
+# coverage results
+**/*testE2E.exec

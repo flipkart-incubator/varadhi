@@ -69,6 +69,8 @@ public class IamPolicyService {
 
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
         return switch (resourceType) {
+            case ROOT -> throw new IllegalArgumentException(
+                    "ROOT is implicit resource type. No Iam policies supported on it.");
             case ORG -> metaStore.checkOrgExists(resourceId);
             case TEAM -> {
                 // org:team
@@ -88,7 +90,7 @@ public class IamPolicyService {
                 String subscriptionName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
                 yield (segments.length == 2) && metaStore.checkSubscriptionExists(subscriptionName);
             }
-            case IAM_POLICY -> throw new IllegalArgumentException("Iam Policy is not a resource");
+            case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
         };
     }
 }

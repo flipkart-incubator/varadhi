@@ -2,7 +2,10 @@ package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.Maps;
 import lombok.*;
+
+import java.util.Map;
 
 @Getter
 @Setter
@@ -17,6 +20,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     private ConsumptionPolicy consumptionPolicy;
     private SubscriptionShards shards;
     private Status status;
+    private Map<String, String> properties;
 
 
     private VaradhiSubscription(
@@ -30,7 +34,8 @@ public class VaradhiSubscription extends MetaStoreEntity {
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             SubscriptionShards shards,
-            Status status
+            Status status,
+            Map<String, String> properties
     ) {
         super(name, version);
         this.project = project;
@@ -45,6 +50,10 @@ public class VaradhiSubscription extends MetaStoreEntity {
         }
         this.shards = shards;
         this.status = status;
+        if (null == properties || properties.isEmpty()) {
+            throw new IllegalArgumentException("properties cannot be null or empty");
+        }
+        this.properties = properties;
     }
 
     public static VaradhiSubscription of(
@@ -56,11 +65,12 @@ public class VaradhiSubscription extends MetaStoreEntity {
             Endpoint endpoint,
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards
+            SubscriptionShards shards,
+            Map<String, String> properties
     ) {
         return new VaradhiSubscription(
                 name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, new Status(State.Creating)
+                shards, new Status(State.Creating), properties
         );
     }
 
@@ -87,6 +97,11 @@ public class VaradhiSubscription extends MetaStoreEntity {
         status.state = State.Deleting;
     }
 
+    @JsonIgnore
+    public int getIntProperty(String property) {
+        return Integer.parseInt(properties.get(property));
+    }
+
     public enum State {
         Creating,
         CreateFailed,
@@ -100,6 +115,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     public static class Status {
         String message;
         State state;
+
         public Status(State state) {
             this.state = state;
         }

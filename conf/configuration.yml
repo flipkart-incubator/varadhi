@@ -1,0 +1,83 @@
+member:
+  roles: [ "Server", "Controller", "Consumer" ]
+  maxQps: 5000
+  networkMBps: 30
+
+vertxOptions:
+  eventLoopPoolSize: 1
+  workerPoolSize: 1
+  internalBlockingPoolSize: 1
+  blockedThreadCheckInterval: 1800000
+
+verticleDeploymentOptions:
+  instances: 1
+  worker: false
+  workerPoolSize: 2
+
+# Refer Vertx DeliveryOptions for details, used for inter node communication.
+deliveryOptions:
+  timeoutMs: 10000
+  tracingPolicy: "PROPAGATE"
+
+httpServerOptions:
+  port: 18488
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+restOptions:
+  defaultTopicCapacity:
+    throughputKBps: 400
+    qps: 100
+    readFanOut: 2
+  deployedRegion: "default"
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
+
+producerOptions:
+  producerCacheBuilderSpec: ""
+  topicCacheBuilderSpec: ""
+  metricEnabled: true
+
+authenticationEnabled: true
+authentication:
+  user_header:
+
+authorizationEnabled: true
+
+authorization:
+  superUsers: [ "thanos" ]
+  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  configFile: "authorizationConfig.yml"
+
+messagingStackOptions:
+  providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
+  configFile: "messaging.yml"
+
+metaStoreOptions:
+  providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+  configFile: "metastore.yml"
+
+featureFlags:
+  leanDeployment: false
+
+zookeeperOptions:
+  connectUrl: "${ZOOKEEPER_URL}"
+  sessionTimeoutMs: 60000
+  connectTimeoutMs: 2000
+
+controller:
+  maxConcurrentOps: 2
+  maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60
+
+otelOptions:
+  otlp.url: "${OTEL_URL}"
+  otlp.step: "20s"
+  otlp.aggregationTemporality: "CUMULATIVE"
+  otlp.resourceAttributes:
+  otlp.headers:

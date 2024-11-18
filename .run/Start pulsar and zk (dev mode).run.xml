@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Start pulsar and zk (dev mode)" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value="" />
+        <option name="profiles">
+          <list>
+            <option value="dev-metric" />
+          </list>
+        </option>
+        <option name="removeOrphansOnComposeDown" value="false" />
+        <option name="sourceFilePath" value="setup/docker/compose.yml" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>

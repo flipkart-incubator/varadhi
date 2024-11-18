@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 
 import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
@@ -36,12 +37,14 @@ import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 @Getter
 public class CoreServices {
 
+    private final ConfigFileResolver configResolver;
     @Getter(AccessLevel.PRIVATE)
     private final ObservabilityStack observabilityStack;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
 
-    public CoreServices(AppConfiguration configuration) {
+    public CoreServices(AppConfiguration configuration, ConfigFileResolver configResolver) {
+        this.configResolver = configResolver;
         this.observabilityStack = setupObservabilityStack(configuration);
         this.messagingStackProvider = setupMessagingStackProvider(configuration.getMessagingStackOptions());
         this.metaStoreProvider = setupMetaStoreProvider(configuration.getMetaStoreOptions());
@@ -99,11 +102,11 @@ public class CoreServices {
                 .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "otlp";
+        String meterExporter = "jmx";
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
+            case "otlp" -> new OtlpMeterRegistry(configuration.getOtelOptions()::get, Clock.SYSTEM);
             default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);

@@ -4,6 +4,7 @@ package com.flipkart.varadhi.web.v1.admin;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -14,6 +15,7 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -35,20 +37,20 @@ public class ProjectHandlers implements RouteProvider {
                 List.of(
                         RouteDefinition.get("GetProject", "/:project")
                                 .authorize(PROJECT_GET)
-                                .build(this::getHierarchy, this::get),
+                                .build(this::getHierarchies, this::get),
                         RouteDefinition.post("CreateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
                                 .authorize(PROJECT_CREATE)
-                                .build(this::getHierarchy, this::create),
+                                .build(this::getHierarchies, this::create),
                         RouteDefinition.put("UpdateProject", "")
                                 .hasBody()
                                 .bodyParser(this::setProject)
                                 .authorize(PROJECT_UPDATE)
-                                .build(this::getHierarchy, this::update),
+                                .build(this::getHierarchies, this::update),
                         RouteDefinition.delete("DeleteProject", "/:project")
                                 .authorize(PROJECT_DELETE)
-                                .build(this::getHierarchy, this::delete)
+                                .build(this::getHierarchies, this::delete)
                 )
         ).get();
     }
@@ -58,16 +60,11 @@ public class ProjectHandlers implements RouteProvider {
         ctx.put(CONTEXT_KEY_BODY, project);
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
-        if (hasBody) {
-            Project project = ctx.get(CONTEXT_KEY_BODY);
-            return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
-        }
-        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectService.getCachedProject(projectName);
-        return new Hierarchies.ProjectHierarchy(project.getOrg(), project.getTeam(), project.getName());
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        Project project = hasBody ? ctx.get(CONTEXT_KEY_BODY) :
+                projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
+        return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(project));
     }
-
 
     public void get(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);

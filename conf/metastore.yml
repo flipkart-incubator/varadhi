@@ -1,0 +1,4 @@
+zookeeperOptions:
+  connectUrl: "${ZOOKEEPER_URL}"
+  sessionTimeoutMs: 60000
+  connectTimeoutMs: 2000
