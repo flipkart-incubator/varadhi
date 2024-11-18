@@ -2,6 +2,7 @@ package com.flipkart.varadhi.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.controller.impl.opexecutors.*;
@@ -40,18 +41,23 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     CompletableFuture<SubscriptionStatus> getSubscriptionStatus(VaradhiSubscription subscription) {
         String subId = subscription.getName();
-
+        // TODO: what is contract of getSubAssignments? a subscription might not even be allocated.
         return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
                 .thenCompose(assignments -> {
-                    List<CompletableFuture<ShardStatus>> shardFutures = assignments.stream().map(a -> {
+                    List<CompletableFuture<Optional<ConsumerState>>> shardFutures = assignments.stream().map(a -> {
                         ConsumerApi consumer = consumerClientFactory.getInstance(a.getConsumerId());
-                        return consumer.getShardStatus(subId, a.getShardId());
+                        return consumer.getConsumerState(subId, a.getShardId()).handle((state, t) -> {
+                            if (t == null) {
+                                return Optional.<ConsumerState>empty();
+                            }
+                            return state;
+                        });
                     }).toList();
 
                     return CompletableFuture.allOf(shardFutures.toArray(CompletableFuture[]::new)).thenApply(v -> {
-                        List<ShardStatus> shardStatuses = new ArrayList<>();
-                        shardFutures.forEach(sf -> shardStatuses.add(sf.join()));
-                        return getSubscriptionStatusFromShardStatus(subscription, assignments, shardStatuses);
+                        List<Optional<ConsumerState>> states = new ArrayList<>();
+                        shardFutures.forEach(sf -> states.add(sf.join()));
+                        return getSubscriptionStatusFromShardStatus(subscription, assignments, states);
                     });
                 }).exceptionally(t -> {
                     // If not temporary, then alternate needs to be provided to allow recovery from this.
@@ -64,9 +70,10 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     }
 
     private SubscriptionStatus getSubscriptionStatusFromShardStatus(
-            VaradhiSubscription subscription, List<Assignment> assignments, List<ShardStatus> shardStatuses
+            VaradhiSubscription subscription, List<Assignment> assignments, List<Optional<ConsumerState>> states
     ) {
-        SubscriptionState state = SubscriptionState.getFromShardStates(assignments, shardStatuses);
+        SubscriptionState state =
+                SubscriptionState.getFromShardStates(subscription.getShards().getShardCount(), assignments, states);
         return new SubscriptionStatus(subscription.getName(), state);
     }
 
@@ -234,5 +241,4 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             throw new IllegalArgumentException("Can't get OpExecutor for Operation %s.".formatted(operation.getData()));
         }
     }
-
 }

@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
+import com.flipkart.varadhi.entities.cluster.ConsumerState;
+
 /**
  * Base varadhi consumer to consume messages from a varadhi topic. It corresponds to a single shard of some
  * subscription.

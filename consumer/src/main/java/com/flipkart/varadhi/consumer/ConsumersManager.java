@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.cluster.ConsumerState;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -17,14 +19,9 @@ public interface ConsumersManager {
      * @return Future that will be completed when the consumer is started & ready to consume messages.
      */
     CompletableFuture<Void> startSubscription(
-            String project,
-            String subscription,
-            int shardId,
-            StorageSubscription<StorageTopic> mainSubscription,
-            boolean grouped,
-            Endpoint endpoint,
-            ConsumptionPolicy consumptionPolicy,
-            ConsumptionFailurePolicy failurePolicy
+            String project, String subscription, int shardId, StorageSubscription<StorageTopic> mainSubscription,
+            boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
+            ConsumptionFailurePolicy failurePolicy, TopicCapacityPolicy capacityPolicy
     );
 
     CompletableFuture<Void> stopSubscription(String subscription, int shardId);
@@ -33,7 +30,10 @@ public interface ConsumersManager {
 
     void resumeSubscription(String subscription, int shardId);
 
-    ConsumerState getConsumerState(String subscription, int shardId);
+    Optional<ConsumerState> getConsumerState(String subscription, int shardId);
 
-    // TODO likely need status on the starting / stopping as well; as the above status is for a running consumer..
+    Iterable<Info> getConsumersInfo();
+
+    record Info(String subscription, int shardId, ConsumerState state, TopicCapacityPolicy capacityPolicy) {
+    }
 }

@@ -7,23 +7,21 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
-import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.verticles.controller.ControllerConsumerClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 
-
 public class ConsumerVerticle extends AbstractVerticle {
 
     private final CoreServices coreServices;
     private final VaradhiClusterManager clusterManager;
-    private final ConsumerInfo consumerInfo;
+    private final MemberInfo memberInfo;
 
     public ConsumerVerticle(CoreServices coreServices, MemberInfo memberInfo, VaradhiClusterManager clusterManager) {
         this.coreServices = coreServices;
         this.clusterManager = clusterManager;
-        this.consumerInfo = ConsumerInfo.from(memberInfo);
+        this.memberInfo = memberInfo;
     }
 
     @Override
@@ -36,7 +34,7 @@ public class ConsumerVerticle extends AbstractVerticle {
                 coreServices.getMessagingStackProvider().getConsumerFactory()
         );
         ControllerConsumerClient controllerClient = new ControllerConsumerClient(messageExchange);
-        ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, consumerInfo);
+        ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);
         ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
         setupApiHandlers(messageRouter, handler);
         startPromise.complete();
@@ -48,7 +46,7 @@ public class ConsumerVerticle extends AbstractVerticle {
     }
 
     private void setupApiHandlers(MessageRouter messageRouter, ConsumerApiHandler handler) {
-        String consumerId = consumerInfo.getConsumerId();
+        String consumerId = memberInfo.hostname();
         messageRouter.sendHandler(consumerId, "start", handler::start);
         messageRouter.sendHandler(consumerId, "stop", handler::stop);
         messageRouter.sendHandler(consumerId, "unsideline", handler::unsideline);

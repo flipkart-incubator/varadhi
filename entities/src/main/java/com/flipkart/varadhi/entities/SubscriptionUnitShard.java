@@ -13,6 +13,8 @@ public class SubscriptionUnitShard extends SubscriptionShards {
     public static final Comparator<SubscriptionUnitShard> ShardCapacityComparator = comparing(o -> o.capacityRequest);
 
     private final int shardId;
+
+    // TODO: why is topicCapacity object being used here?
     private final TopicCapacityPolicy capacityRequest;
     private final InternalCompositeSubscription mainSubscription;
     private final RetrySubscription retrySubscription;

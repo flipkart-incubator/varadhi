@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.consumer;
+package com.flipkart.varadhi.entities.cluster;
 
 /**
  * Status for a consumer that has been started.

@@ -50,7 +50,7 @@ public class ConsumerApiHandler {
 
     public CompletableFuture<ResponseMessage> status(ClusterMessage message) {
         ShardStatusRequest request = message.getRequest(ShardStatusRequest.class);
-        return consumerApiMgr.getShardStatus(request.getSubscriptionId(), request.getShardId())
+        return consumerApiMgr.getConsumerState(request.getSubscriptionId(), request.getShardId())
                 .thenApply(message::getResponseMessage);
     }
 

@@ -8,22 +8,21 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public class ShardStatus {
-    private final ShardState state;
+    private final ShardAssignmentState state;
     private final String failureReason;
 
     @JsonIgnore
     public boolean isStarted() {
-        return state == ShardState.STARTED;
+        return state == ShardAssignmentState.STARTED;
     }
 
     public boolean canSkipStart() {
-        return state == ShardState.STARTED ||  state == ShardState.STARTING;
+        return state == ShardAssignmentState.STARTED ||  state == ShardAssignmentState.STARTING;
     }
 
     @JsonIgnore
     public boolean canSkipStop() {
-        return state == ShardState.STOPPED ||  state == ShardState.UNKNOWN ||
-                state == ShardState.STOPPING;
+        return state == ShardAssignmentState.STOPPED ||
+                state == ShardAssignmentState.STOPPING;
     }
-
 }

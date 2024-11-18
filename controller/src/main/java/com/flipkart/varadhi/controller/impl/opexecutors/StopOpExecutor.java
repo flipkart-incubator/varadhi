@@ -92,11 +92,11 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
     private CompletableFuture<Boolean> stopShard(ShardOperation stopOp, boolean isRetry, ConsumerApi consumer) {
         String subId = stopOp.getOpData().getSubscriptionId();
         int shardId = stopOp.getOpData().getShardId();
-        return consumer.getShardStatus(subId, shardId).thenCompose(shardStatus -> {
+        return consumer.getConsumerState(subId, shardId).thenCompose(state -> {
             // Stop can be executed in starting subscription as well.
             // in general this shouldn't happen as multiple in-progress operations are not allowed.
-            if (shardStatus.canSkipStop()) {
-                log.info("Subscription:{} Shard:{} is already Stopped. Skipping.", subId, shardId);
+            if (state.isEmpty()) {
+                log.info("Subscription:{} Shard:{} is not running. Skipping.", subId, shardId);
                 return CompletableFuture.completedFuture(false);
             }
             operationMgr.submitShardOp(stopOp, isRetry);

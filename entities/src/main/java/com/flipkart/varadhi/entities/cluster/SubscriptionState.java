@@ -1,10 +1,7 @@
 package com.flipkart.varadhi.entities.cluster;
 
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 public enum SubscriptionState {
     STARTING,
@@ -13,7 +10,7 @@ public enum SubscriptionState {
     STOPPED,
     ERRORED;
 
-    public static SubscriptionState getFromShardStates(List<Assignment> assignments, List<ShardStatus> shardStatuses) {
+    public static SubscriptionState getFromShardStates(int totalShards, List<Assignment> assignments, List<Optional<ConsumerState>> states) {
         // len(ShardAssignment) == 0, State can be either of Stopped/Errored (Create/Delete failed).
 
         // len(ShardAssignment) > 0, State cn be Running, Stopping, Starting, Errored.
@@ -34,25 +31,31 @@ public enum SubscriptionState {
             return STOPPED;
         }
 
-        Map<ShardState, Integer> stateCounts = new HashMap<>();
-        shardStatuses.forEach(ss -> stateCounts.compute(ss.getState(), (k, v) -> v == null ? 1 : v + 1));
-        SubscriptionState subState;
-        int totalShards = shardStatuses.size();
-        int runningShards = stateCounts.getOrDefault(ShardState.STARTED, 0);
-        int startingShards = stateCounts.getOrDefault(ShardState.STARTING, 0);
-        int stoppingShards = stateCounts.getOrDefault(ShardState.STOPPING, 0);
-        if (totalShards == runningShards) {
-            subState = RUNNING;
-        } else if (startingShards > 0 && stoppingShards > 0) {
-            subState = ERRORED;
-        } else if (startingShards > 0) {
-            subState = STARTING;
-        } else if (stoppingShards > 0) {
-            subState = STOPPING;
-        } else {
-            //TODO:: Other conditions are ignored for now and being folded into ERRORED.
-            subState = ERRORED;
+        if(assignments.size() != states.size()) {
+            throw new IllegalStateException("Assignment and State size mismatch");
         }
-        return subState;
+
+        // TODO: whether this is ok to do? SubscriptionState looks more of assignment pov. We can look at consumptino status as well.
+        // There are 2 things. Assignment and actual consumption.
+        if (states.stream().anyMatch(s -> s.isPresent() && s.get() == ConsumerState.ERRORED)) {
+            return ERRORED;
+        }
+
+        // TODO: could be starting as well. need the final "op" on the subscription to distinguish that.
+        if (assignments.isEmpty()) {
+            return STOPPED;
+        }
+
+        // TODO: could be stopping as well. need the final "op" on the subscription to distinguish that.
+        if (assignments.size() < totalShards) {
+            return STARTING;
+        }
+
+        // TODO: could be stopping as well. need the final "op" on the subscription to distinguish that.
+        if (assignments.size() == totalShards) {
+            return RUNNING;
+        }
+
+        throw new IllegalStateException("unreachable code");
     }
 }

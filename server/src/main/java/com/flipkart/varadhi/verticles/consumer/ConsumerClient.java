@@ -4,14 +4,12 @@ import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.GetMessagesRequest;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
-import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
+import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.entities.cluster.ShardStatus;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -46,10 +44,10 @@ public class ConsumerClient implements ConsumerApi {
     }
 
     @Override
-    public CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId) {
+    public CompletableFuture<Optional<ConsumerState>> getConsumerState(String subscriptionId, int shardId) {
         return exchange.request(
                         consumerId, "status", ClusterMessage.of(new ShardStatusRequest(subscriptionId, shardId)))
-                .thenApply(rm -> rm.getResponse(ShardStatus.class));
+                .thenApply(rm -> Optional.ofNullable(rm.getResponse(ConsumerState.class)));
     }
 
     @Override

@@ -5,11 +5,13 @@ import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.concurrent.CustomThread;
 import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.cluster.ConsumerState;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 
 import java.net.http.HttpClient;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.*;
 
 public class ConsumersManagerImpl implements ConsumersManager {
@@ -33,7 +35,7 @@ public class ConsumersManagerImpl implements ConsumersManager {
     public CompletableFuture<Void> startSubscription(
             String project, String subscription, int shardId, StorageSubscription<StorageTopic> storageSubscription,
             boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
-            ConsumptionFailurePolicy failurePolicy
+            ConsumptionFailurePolicy failurePolicy, TopicCapacityPolicy capacityPolicy
     ) {
         ShardId id = new ShardId(subscription, shardId);
         ConsumerHolder prev = consumers.putIfAbsent(id, new ConsumerHolder());
@@ -45,6 +47,7 @@ public class ConsumersManagerImpl implements ConsumersManager {
                 new VaradhiConsumerImpl(env, project, subscription, shardId, storageSubscription, grouped,
                         endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler
                 );
+        newConsumer.capacityPolicy = capacityPolicy;
 
         return CompletableFuture.supplyAsync(() -> {
             newConsumer.consumer.connect();
@@ -70,14 +73,17 @@ public class ConsumersManagerImpl implements ConsumersManager {
     }
 
     @Override
-    public ConsumerState getConsumerState(String subscription, int shardId) {
+    public Optional<ConsumerState> getConsumerState(String subscription, int shardId) {
         return null;
     }
 
-    record ShardId(String subscription, int shardId) {
+    @Override
+    public Iterable<Info> getConsumersInfo() {
+        return null;
     }
 
     static class ConsumerHolder {
         private VaradhiConsumer consumer;
+        private TopicCapacityPolicy capacityPolicy;
     }
 }
