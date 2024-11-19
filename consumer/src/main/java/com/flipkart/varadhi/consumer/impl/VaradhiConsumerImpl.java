@@ -59,21 +59,20 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
      */
     private final Map<InternalQueueType, FailedMsgProducer> internalProducers = new HashMap<>();
 
-    private volatile boolean connected = false;
-    private volatile boolean started = false;
+    /*
+        secured by synchronized block
+     */
+    private boolean connected = false;
+
+    /*
+        It is fetched by the processing loop & various places to know if the consumer is to be stopped.
+     */
     private volatile boolean stopRequested = false;
 
-    InternalQueueType[] getPriority() {
-        int maxRetryAttempts = failurePolicy.getRetryPolicy().getRetryAttempts();
-        InternalQueueType[] priority = new InternalQueueType[1 + maxRetryAttempts];
-        priority[0] = InternalQueueType.mainType();
-        for (int r = 1; r <= maxRetryAttempts; ++r) {
-            priority[r] = InternalQueueType.retryType(r);
-        }
-
-        ArrayUtils.reverse(priority);
-        return priority;
-    }
+    /*
+        can be updated by the processing loop concurrently
+     */
+    private volatile ConsumerState state = ConsumerState.CONSUMING;
 
     @Override
     public String getSubscriptionName() {
@@ -92,6 +91,19 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     @Override
     public synchronized void connect() {
+        try {
+            connectUnsafe();
+        } catch (Throwable t) {
+            log.error("Error initializing consumer", t);
+            state = ConsumerState.ERRORED;
+            throw t;
+        }
+    }
+
+    /**
+     * Will throw if anything goes wrong during initialization.
+     */
+    private synchronized void connectUnsafe() {
         if (connected) {
             throw new IllegalStateException();
         }
@@ -104,6 +116,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             String role = "retry-" + r;
             StorageSubscription<StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
                     .getSubscriptionForRetry(r).getSubscriptionForConsume();
+            // TODO: the retry delay should be configurable.
             internalConsumers.computeIfAbsent(
                     InternalQueueType.retryType(r),
                     type -> delayConsumer(createConsumer(retrySubscription, role), 5000)
@@ -135,8 +148,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             throttler.onThresholdChange(Math.max(newThreshold, 1));
         });
 
-        // todo: http client 1% failure
-
+        // Assuming static endpoint for message delivery.
         deliveryClient = MessageDelivery.of(endpoint, env::getHttpClient);
 
         if (grouped) {
@@ -153,26 +165,34 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     @Override
     public synchronized void start() {
-        if (!connected || started) {
-            throw new IllegalStateException("connected: " + connected + ", started: " + started);
+        if (!connected || stopRequested) {
+            throw new IllegalStateException(
+                    "connected: " + connected + ", current state: " + state + ", stopRequested: " + stopRequested);
         }
 
+        state = ConsumerState.CONSUMING;
         startLoop();
     }
 
     @Override
     public void pause() {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void resume() {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public synchronized void close() {
-        // todo stop consumption loop
+        if (stopRequested) {
+            return;
+        }
+        stopRequested = true;
+
+        // TODO: any provision to wait for the processing loop to stop / pending tasks to finish.
+
         Stream.concat(internalConsumers.values().stream(), internalProducers.values().stream())
                 .forEach(closeable -> {
                     try {
@@ -202,7 +222,6 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     ConsumerHolder createConsumer(StorageSubscription<StorageTopic> storageSubscription, String role) {
-        // todo: create proper consumer name
         String consumerName = String.format("%s/%s/%s/%s", project, subscriptionName, shardId, role);
         Consumer<Offset> consumer =
                 env.getConsumerFactory()
@@ -225,5 +244,17 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     void startLoop() {
         context.run(processingLoop);
+    }
+
+    InternalQueueType[] getPriority() {
+        int maxRetryAttempts = failurePolicy.getRetryPolicy().getRetryAttempts();
+        InternalQueueType[] priority = new InternalQueueType[1 + maxRetryAttempts];
+        priority[0] = InternalQueueType.mainType();
+        for (int r = 1; r <= maxRetryAttempts; ++r) {
+            priority[r] = InternalQueueType.retryType(r);
+        }
+
+        ArrayUtils.reverse(priority);
+        return priority;
     }
 }

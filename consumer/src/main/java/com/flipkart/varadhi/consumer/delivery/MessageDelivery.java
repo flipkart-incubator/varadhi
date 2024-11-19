@@ -45,15 +45,16 @@ public interface MessageDelivery {
                     );
 
             // apply request headers from message
-            Multimap<String, String> requestHeaders = message.getRequestHeaders();
+            Multimap<String, String> requestHeaders = message.getHeaders();
             if (requestHeaders != null) {
                 requestHeaders.entries().forEach(entry -> requestBuilder.header(entry.getKey(), entry.getValue()));
             }
 
             HttpRequest request = requestBuilder.build();
 
-            return httpClient.sendAsync(
-                            request, HttpResponse.BodyHandlers.ofByteArray())
+            // TODO: can response body handlers be pooled?
+            return httpClient
+                    .sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
                     .thenApply(response -> new DeliveryResponse(response.statusCode(), endpoint.getProtocol(),
                             response.body()
                     ));

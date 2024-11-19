@@ -30,6 +30,11 @@ public interface ConsumersManager {
 
     void resumeSubscription(String subscription, int shardId);
 
+    /**
+     * @param subscription
+     * @param shardId
+     * @return Optional.empty() if the shard is not being managed.
+     */
     Optional<ConsumerState> getConsumerState(String subscription, int shardId);
 
     Iterable<Info> getConsumersInfo();

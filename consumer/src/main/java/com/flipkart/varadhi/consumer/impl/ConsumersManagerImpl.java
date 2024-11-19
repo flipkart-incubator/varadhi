@@ -58,8 +58,20 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public CompletableFuture<Void> stopSubscription(String subscription, int shardId) {
-        // TODO
-        return CompletableFuture.completedFuture(null);
+        ShardId id = new ShardId(subscription, shardId);
+        ConsumerHolder holder = consumers.get(id);
+
+        if (holder == null) {
+            throw new IllegalArgumentException("Consumer not found for " + id);
+        }
+
+        return CompletableFuture.runAsync(() -> {
+            try {
+                holder.consumer.close();
+            } finally {
+                consumers.remove(id, holder);
+            }
+        });
     }
 
     @Override
@@ -74,12 +86,16 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public Optional<ConsumerState> getConsumerState(String subscription, int shardId) {
-        return null;
+        return Optional.ofNullable(consumers.get(new ShardId(subscription, shardId)))
+                .map(holder -> holder.consumer.getState());
     }
 
     @Override
     public Iterable<Info> getConsumersInfo() {
-        return null;
+        return () -> consumers.values().stream().map(holder -> new Info(
+                holder.consumer.getSubscriptionName(), holder.consumer.getShardId(), holder.consumer.getState(),
+                holder.capacityPolicy
+        )).iterator();
     }
 
     static class ConsumerHolder {

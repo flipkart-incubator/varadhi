@@ -26,7 +26,7 @@ public class SubscriptionTests extends E2EBase {
             RetryPolicy.BackoffType.LINEAR,
             1, 1, 1, 3
     );
-    private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
+    private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(10, 1, 1, false, 1, null);
 
     @BeforeAll
     public static void setup() {

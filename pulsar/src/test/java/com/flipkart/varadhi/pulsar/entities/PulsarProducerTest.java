@@ -141,20 +141,20 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getRequestHeaders().put(GROUP_ID, groupId1);
+        message.getHeaders().put(GROUP_ID, groupId1);
         pulsarProducer.produceAsync(message);
         org.apache.pulsar.client.api.Message<byte[]> actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertEquals(groupId1, actualMessage.getKey());
 
-        message.getRequestHeaders().remove(GROUP_ID, groupId1);
+        message.getHeaders().remove(GROUP_ID, groupId1);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertNotEquals(groupId1, actualMessage.getKey());
         Assertions.assertEquals(RANDOM_PARTITION_KEY_LENGTH, actualMessage.getKeyBytes().length);
 
-        message.getRequestHeaders().put(GROUP_ID, groupId2);
+        message.getHeaders().put(GROUP_ID, groupId2);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
@@ -170,12 +170,12 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getRequestHeaders().put(GROUP_ID, groupId1);
-        message.getRequestHeaders().put("SomeHeader", "someheadervalue");
-        message.getRequestHeaders().put("x_foobar", "x_foobar_value");
-        message.getRequestHeaders().put("x_multivalue", "x_multivalue1");
-        message.getRequestHeaders().put("x_multivalue", "x_multivalue2");
-        message.getRequestHeaders().put("x_multivalue", "x_multivalue3");
+        message.getHeaders().put(GROUP_ID, groupId1);
+        message.getHeaders().put("SomeHeader", "someheadervalue");
+        message.getHeaders().put("x_foobar", "x_foobar_value");
+        message.getHeaders().put("x_multivalue", "x_multivalue1");
+        message.getHeaders().put("x_multivalue", "x_multivalue2");
+        message.getHeaders().put("x_multivalue", "x_multivalue3");
         pulsarProducer.produceAsync(message);
         org.apache.pulsar.client.api.Message<byte[]> actualMessage = messageBuilder.getMessage();
         Map<String, String> properites = actualMessage.getProperties();

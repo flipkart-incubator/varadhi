@@ -120,7 +120,7 @@ public class DummyConsumer implements Consumer<DummyOffset> {
                             }
 
                             @Override
-                            public Multimap<String, String> getRequestHeaders() {
+                            public Multimap<String, String> getHeaders() {
                                 return null;
                             }
 

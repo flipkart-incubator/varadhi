@@ -86,7 +86,7 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     }
 
     @Override
-    public Multimap<String, String> getRequestHeaders() {
+    public Multimap<String, String> getHeaders() {
         return requestHeaders();
     }
 

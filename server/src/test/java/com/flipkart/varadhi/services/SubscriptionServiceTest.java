@@ -118,7 +118,7 @@ class SubscriptionServiceTest {
                 RetryPolicy.BackoffType.LINEAR,
                 1, 1, 1, 1
         );
-        ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
+        ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(10, 1, 1, false, 1, null);
         endpoint = new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
         TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
 

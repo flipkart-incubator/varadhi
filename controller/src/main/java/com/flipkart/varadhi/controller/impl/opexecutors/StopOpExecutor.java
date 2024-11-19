@@ -96,7 +96,7 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
             // Stop can be executed in starting subscription as well.
             // in general this shouldn't happen as multiple in-progress operations are not allowed.
             if (state.isEmpty()) {
-                log.info("Subscription:{} Shard:{} is not running. Skipping.", subId, shardId);
+                log.info("Subscription:{} Shard:{} is already Stopped. Skipping.", subId, shardId);
                 return CompletableFuture.completedFuture(false);
             }
             operationMgr.submitShardOp(stopOp, isRetry);

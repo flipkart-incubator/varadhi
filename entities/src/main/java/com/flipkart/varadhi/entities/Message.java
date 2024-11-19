@@ -18,15 +18,15 @@ public interface Message {
 
     byte[] getPayload();
 
-    Multimap<String, String> getRequestHeaders();
+    Multimap<String, String> getHeaders();
 
     default Message withHeader(String key, String value) {
-        getRequestHeaders().put(key, value);
+        getHeaders().put(key, value);
         return this;
     }
 
     default Message withoutHeader(String key) {
-        getRequestHeaders().removeAll(key);
+        getHeaders().removeAll(key);
         return this;
     }
 }

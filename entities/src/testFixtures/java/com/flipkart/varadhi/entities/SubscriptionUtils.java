@@ -28,7 +28,7 @@ public class SubscriptionUtils {
     }
 
     public static ConsumptionPolicy getConsumptionPolicy() {
-        return new ConsumptionPolicy(1, 1, false, 1, null);
+        return new ConsumptionPolicy(10, 1, 1, false, 1, null);
     }
 
     public static SubscriptionShards getShards(int numShards, TopicCapacityPolicy shardCapacity) {
