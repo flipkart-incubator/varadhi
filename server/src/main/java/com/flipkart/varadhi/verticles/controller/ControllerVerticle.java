@@ -9,7 +9,6 @@ import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
@@ -168,7 +167,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
 
     private void abortLeaderShip() {
-        throw new NotImplementedException("abortLeaderShip to be implemented.");
+        throw new UnsupportedOperationException("abortLeaderShip to be implemented.");
     }
 
     @Override

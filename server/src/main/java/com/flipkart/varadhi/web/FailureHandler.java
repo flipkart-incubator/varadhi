@@ -100,7 +100,7 @@ public class FailureHandler implements Handler<RoutingContext> {
             return HTTP_NOT_FOUND;
         } else if (InvalidOperationForResourceException.class == tClazz) {
             return HTTP_CONFLICT;
-        } else if (NotImplementedException.class == tClazz) {
+        } else if (UnsupportedOperationException.class == tClazz) {
             return HTTP_NOT_IMPLEMENTED;
         }
         return HTTP_INTERNAL_ERROR;

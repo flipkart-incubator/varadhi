@@ -8,7 +8,6 @@ import com.flipkart.varadhi.consumer.processing.ProcessingLoop;
 import com.flipkart.varadhi.consumer.processing.UngroupedProcessingLoop;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.google.common.base.Ticker;
 import lombok.Getter;
@@ -86,7 +85,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     @Override
     public ConsumerState getState() {
-        throw new NotImplementedException();
+        return state;
     }
 
     @Override
@@ -176,12 +175,12 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     @Override
     public void pause() {
-        throw new NotImplementedException();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void resume() {
-        throw new NotImplementedException();
+        throw new UnsupportedOperationException();
     }
 
     @Override

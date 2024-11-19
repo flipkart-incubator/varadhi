@@ -2,7 +2,6 @@ package com.flipkart.varadhi.cluster;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -48,7 +47,7 @@ public class MessageExchange {
     }
 
     public void publish(String routeName, String apiName, ClusterMessage msg) {
-        throw new NotImplementedException("publish not implemented");
+        throw new UnsupportedOperationException("publish not implemented");
     }
 
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {

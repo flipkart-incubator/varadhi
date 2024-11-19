@@ -76,12 +76,12 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public void pauseSubscription(String subscription, int shardId) {
-
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public void resumeSubscription(String subscription, int shardId) {
-
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.AsyncProducerReadStream;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -156,7 +155,7 @@ public class Extensions {
         }
 
         public static void todo(RoutingContext context) {
-            throw new NotImplementedException("Not Implemented.");
+            throw new UnsupportedOperationException("Not Implemented.");
         }
 
         public static String getIdentityOrDefault(RoutingContext ctx) {
