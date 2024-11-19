@@ -40,7 +40,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
                 if (response.response().success()) {
                     onComplete(response.message(), MessageConsumptionStatus.SENT);
                 } else {
-                    onPushFailure(polled.getInternalQueueType(), response.message());
+                    onDeliveryFailure(polled.getInternalQueueType(), response.message());
                 }
             }));
         }
@@ -56,7 +56,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
         asyncProduce.whenComplete((offset, e) -> onComplete(message, status));
     }
 
-    void onPushFailure(InternalQueueType type, MessageTracker message) {
+    void onDeliveryFailure(InternalQueueType type, MessageTracker message) {
         InternalQueueType nextQueue = nextInternalQueue(type);
         onFailure(type, nextQueue, message, MessageConsumptionStatus.FAILED);
     }

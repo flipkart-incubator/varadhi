@@ -109,16 +109,16 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
         InternalQueueType[] iqPriority = getPriority();
 
-        internalConsumers.computeIfAbsent(
-                InternalQueueType.mainType(), type -> createConsumer(storageSubscription, "main"));
+        internalConsumers.put(
+                InternalQueueType.mainType(), createConsumer(storageSubscription, "main"));
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             String role = "retry-" + r;
             StorageSubscription<StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
                     .getSubscriptionForRetry(r).getSubscriptionForConsume();
             // TODO: the retry delay should be configurable.
-            internalConsumers.computeIfAbsent(
+            internalConsumers.put(
                     InternalQueueType.retryType(r),
-                    type -> delayConsumer(createConsumer(retrySubscription, role), 5000)
+                    delayConsumer(createConsumer(retrySubscription, role), 5000)
             );
         }
 
@@ -151,7 +151,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         deliveryClient = MessageDelivery.of(endpoint, env::getHttpClient);
 
         if (grouped) {
-            throw new IllegalStateException("not implemented");
+            throw new UnsupportedOperationException("not implemented");
         } else {
             processingLoop =
                     new UngroupedProcessingLoop(context, createMessageSrcSelector(64), concurrencyControl, throttler,
@@ -189,8 +189,22 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             return;
         }
         stopRequested = true;
+        processingLoop.stop();
 
-        // TODO: any provision to wait for the processing loop to stop / pending tasks to finish.
+        // TODO: long blocking is bad. add provision for non-blocking wait & close and provision to drop all pending processing.
+        while(true) {
+            int count;
+            if((count = processingLoop.getInFlightMessageCount()) > 0) {
+                log.info("Waiting for current in-flight messages {} to be processed", count);
+            } else {
+                break;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+        }
 
         Stream.concat(internalConsumers.values().stream(), internalProducers.values().stream())
                 .forEach(closeable -> {

@@ -20,6 +20,8 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public abstract class ProcessingLoop implements Context.Task {
 
+    protected volatile boolean stopRequested = false;
+
     protected final Context context;
     private final MessageSrcSelector msgSrcSelector;
     private final ConcurrencyControl<DeliveryResult> concurrencyControl;
@@ -30,9 +32,17 @@ public abstract class ProcessingLoop implements Context.Task {
     private final AtomicInteger inFlightMessages = new AtomicInteger(0);
     private final AtomicBoolean iterationInProgress = new AtomicBoolean(false);
 
+    public void stop() {
+        stopRequested = true;
+    }
+
     @Override
     public Context getContext() {
         return context;
+    }
+
+    public int getInFlightMessageCount() {
+        return inFlightMessages.get();
     }
 
     public void runLoopIfRequired(int currentInFlightMessages) {
@@ -53,6 +63,11 @@ public abstract class ProcessingLoop implements Context.Task {
     @Override
     public void run() {
         assert context.isInContext();
+
+        if(stopRequested) {
+            log.info("stop requested. Not polling messages");
+            return;
+        }
 
         CompletableFuture<MessageSrcSelector.PolledMessageTrackers> polledFuture = msgSrcSelector.nextMessages();
         polledFuture.whenComplete((polled, err) -> {
