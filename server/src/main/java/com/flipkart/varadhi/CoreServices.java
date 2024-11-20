@@ -27,7 +27,6 @@ import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.semconv.ServiceAttributes;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -111,7 +110,7 @@ public class CoreServices {
             this.meterRegistry = switch (meterExporter) {
                 case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
                 case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-                case "otlp" -> new OtlpMeterRegistry(configuration.getOtlpConfig()::get, Clock.SYSTEM);
+                case "otlp" -> new OtlpMeterRegistry(configuration.getOtelOptions()::get, Clock.SYSTEM);
                 default -> null;
             };
         }
