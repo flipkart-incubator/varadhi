@@ -76,7 +76,10 @@ public class ClientHistoryTests {
         );
         clientHistory.add(DEFAULT_CLIENT_ID, loadInfo);
         assertEquals(1, clientHistory.predictLoad().size());
+        // debug statements
+        System.out.println("Current time " + clock.millis());
         Thread.sleep((historySlots + 1) * slotDuration);
+        System.out.println("New time " + clock.millis());
         assertTrue(clientHistory.predictLoad().isEmpty());
     }
 
