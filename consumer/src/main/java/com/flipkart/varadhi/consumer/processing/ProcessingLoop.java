@@ -45,15 +45,34 @@ public abstract class ProcessingLoop implements Context.Task {
         return inFlightMessages.get();
     }
 
+    /**
+     * Enqueues the next iteration of the loop onto the context. This is usually called after the previously fetched
+     * messages have been passed to the next stages for processing. Since there is no fetch from messageSrcSelector,
+     * it should now be possible to enqueue another iteration.
+     * <p>
+     * Recap on stages:
+     * <li>1. Fetch messages from messageSrcSelector</li>
+     * <li>2. Messages Squeeze through the CC.</li>
+     * <li>3. Messages are delivered to the destination or another topics.</li>
+     * </p>
+     * <p>
+     * There are 2 bottlenecks where messages can buffer uncontrolled. One at the CC layer, because of throttling and
+     * second is at the failure processing where produce to RQ/DLQ topic is facing issues.
+     * </p>
+     * <p>
+     * So, it appears that in some cases, the next iteration doesn't need to run immediately.
+     * <li>If we have too many in-flight messages, due to above mentioned bottlenecks. </li>
+     * <p>
+     * So, we skip if we have too many in-flight messages. But we "enable" iterations as soon as we are under
+     * (maxInFlightMessages - batchSize).
+     *
+     * Can be called on any thread.
+     *
+     * @param currentInFlightMessages
+     */
     public void runLoopIfRequired(int currentInFlightMessages) {
-        // isCCFree() is needed by iteration_body & processing_end(). ifCCFree is false, then skip next_iteration
-        // CC.onFree() will trigger next_iteration
-
-        if (currentInFlightMessages < maxInFlightMessages && concurrencyControl.isFree() &&
-                iterationInProgress.compareAndSet(false, true)) {
+        if (currentInFlightMessages < (maxInFlightMessages - msgSrcSelector.getBatchSize()) && iterationInProgress.compareAndSet(false, true)) {
             context.run(this);
-        } else {
-            concurrencyControl.onFree(this);
         }
     }
 
@@ -64,7 +83,7 @@ public abstract class ProcessingLoop implements Context.Task {
     public void run() {
         assert context.isInContext();
 
-        if(stopRequested) {
+        if (stopRequested) {
             log.info("stop requested. Not polling messages");
             return;
         }
@@ -120,6 +139,13 @@ public abstract class ProcessingLoop implements Context.Task {
         }
     }
 
+    /**
+     * Called when a message's processing is finished completely. Delivery Failure or Success.
+     * Likely called on the IO thread.
+     *
+     * @param message
+     * @param status
+     */
     protected void onComplete(MessageTracker message, MessageConsumptionStatus status) {
         message.onConsumed(status);
         runLoopIfRequired(inFlightMessages.decrementAndGet());

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.consumer.concurrent;
 
+import com.flipkart.varadhi.SafeCallable;
 import io.netty.util.concurrent.FastThreadLocal;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +75,7 @@ public class Context {
         }
     }
 
-    public <T> CompletableFuture<T> executeOnContext(Callable<T> callable) throws Exception {
+    public <T> CompletableFuture<T> executeOnContext(SafeCallable<T> callable) {
         if (isInContext()) {
             return CompletableFuture.completedFuture(callable.call());
         } else {

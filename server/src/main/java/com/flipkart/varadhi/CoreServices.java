@@ -91,7 +91,7 @@ public class CoreServices {
 
         // exporting spans as logs, but can be replaced with otlp exporter.
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
+//                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
                 .setResource(resource)
                 .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
                 .build();

@@ -6,10 +6,12 @@ import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @RequiredArgsConstructor
 public class PulsarConsumer implements Consumer<PulsarOffset> {
 
@@ -24,10 +26,13 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
 
     private void receiveNonZeroMessages(CompletableFuture<PolledMessages<PulsarOffset>> promise) {
         pulsarConsumer.batchReceiveAsync().thenAccept(m -> {
-            if (m.size() == 0) {
-                receiveNonZeroMessages(promise);
-            } else {
+            if (promise.isCancelled()) {
+                return;
+            }
+            if (m.size() > 0) {
                 promise.complete(new PulsarMessages(m));
+            } else {
+                receiveNonZeroMessages(promise);
             }
         });
     }

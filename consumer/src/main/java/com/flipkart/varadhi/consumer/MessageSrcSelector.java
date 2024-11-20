@@ -30,8 +30,11 @@ public class MessageSrcSelector {
             var holder = new Holder(context, entries.getKey(), entries.getValue(), new MessageTracker[batchSize],
                     this::tryCompleteRequest
             );
-            // simulate the first fetch
-            holder.recycle();
+            // simulate the first fetch on the context
+            context.executeOnContext(() -> {
+                holder.recycle();
+                return null;
+            }).join();
             messageSrcs[i] = holder;
             ++i;
         }

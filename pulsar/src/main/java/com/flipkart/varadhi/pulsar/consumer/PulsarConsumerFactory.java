@@ -65,7 +65,7 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
                             .batchReceivePolicy(BatchReceivePolicy.builder()
                                     .maxNumMessages(2000)
                                     .maxNumBytes(5 * 1024 * 1024)
-                                    .timeout(5, TimeUnit.SECONDS)
+                                    .timeout(200, TimeUnit.MILLISECONDS)
                                     .build())
                             .subscribe());
         } catch (PulsarClientException e) {

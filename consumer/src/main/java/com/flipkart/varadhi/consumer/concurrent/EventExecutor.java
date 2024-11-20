@@ -2,12 +2,20 @@ package com.flipkart.varadhi.consumer.concurrent;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
+import java.util.Arrays;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class EventExecutor implements Executor {
+
+    /**
+     * only for debugging purposes. Can be used to enable extensive info to be validated, logged and verified. Not a
+     * replacement for debug logs.
+     */
+    private static final boolean DEBUG = false;
 
     private final ScheduledExecutorService scheduler;
 
@@ -23,7 +31,7 @@ public class EventExecutor implements Executor {
         this.scheduler = scheduler;
         this.taskQueue = taskQueue;
         this.thread = (CustomThread) threadFactory.newThread(this::run);
-        this.thread.setName("consumer-event-exeutor");
+        this.thread.setName("consumer-event-executor");
         this.thread.start();
     }
 
@@ -44,11 +52,25 @@ public class EventExecutor implements Executor {
                 throw new IllegalStateException(
                         "task is tied to an executor:" + boundExecutor + ", but is being executed on:" + this);
             }
-            taskQueue.add(task);
+            add(task);
             return;
         }
 
-        taskQueue.add(new WrappedTask(Context.getCurrentThreadContext(), command));
+        add(new WrappedTask(Context.getCurrentThreadContext(), command));
+    }
+
+    private void add(Context.Task task) {
+        if (DEBUG) {
+            StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
+            String caller = Arrays.stream(stacks)
+                    .skip(1)
+                    .filter(e -> !e.toString().startsWith("com.flipkart.varadhi.consumer.concurrent"))
+                    .findFirst()
+                    .map(StackTraceElement::toString)
+                    .orElse("UNKNOWN");
+            log.info("Adding task: {}@{}", caller, System.identityHashCode(task));
+        }
+        taskQueue.add(task);
     }
 
     public void stop() {
@@ -65,10 +87,21 @@ public class EventExecutor implements Executor {
                 Context.Task task = taskQueue.take();
                 // TODO: right now we are setting it to the thread's field. But we may want to unify the context storage by using FastThreadLocal.
                 thread.setContext(task.getContext());
+
+                if (DEBUG) {
+                    MDC.put("coroutine_id", String.valueOf(System.identityHashCode(task)));
+                    log.info("Task Starting");
+                }
+
                 runSafely(task);
 
                 // probably can be removed
                 thread.setContext(null);
+
+                if (DEBUG) {
+                    log.info("Task Finished");
+                    MDC.remove("coroutine_id");
+                }
             }
         } catch (InterruptedException e) {
             log.warn("EventExecutor interrupted. Exiting", e);
@@ -81,6 +114,7 @@ public class EventExecutor implements Executor {
             task.run();
         } catch (Throwable t) {
             log.error("Error while executing task: {}", task, t);
+            assert false;
         }
     }
 
