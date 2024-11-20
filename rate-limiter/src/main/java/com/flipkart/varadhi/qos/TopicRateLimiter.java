@@ -31,7 +31,7 @@ public class TopicRateLimiter implements FactorRateLimiter {
     public Boolean addTrafficData(Long value) {
         currentObserved.add(value);
         // todo(rl): allows spikes, need to consider a better way to handle spikes
-        if (suppressionFactor == 0) {
+        if (suppressionFactor == 0 || lastObserved == 0L) {
             return true;
         }
         return currentObserved.longValue() <= lastObserved * (1 - suppressionFactor);

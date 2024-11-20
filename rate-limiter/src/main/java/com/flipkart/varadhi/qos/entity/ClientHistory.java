@@ -18,7 +18,10 @@ public class ClientHistory implements LoadPredictor {
     private final int slotDuration;
     private final Clock clock;
 
-    public ClientHistory(int historySlots, int slotDuration, Clock clock) {//, LoadPredictor loadPredictor) {
+    public ClientHistory(int historySlots, int slotDuration, Clock clock) {
+        if(historySlots <= 0 || slotDuration <= 0) {
+            throw new IllegalArgumentException("Invalid history slots or slot duration");
+        }
         this.clientHistoryMap = new ConcurrentHashMap<>();
         this.slots = historySlots;
         this.slotDuration = slotDuration;

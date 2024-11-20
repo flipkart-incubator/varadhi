@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
+import com.flipkart.varadhi.qos.RateLimiterMetrics;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -144,18 +145,20 @@ public class WebServerVerticle extends AbstractVerticle {
         subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
         try {
             // use host address as clientId for now.
+            String clientId = memberInfo.hostname();
             rateLimiterService = new RateLimiterService(new DistributedRateLimiter() {
                 final MessageExchange exchange = clusterManager.getExchange(vertx);
+
                 @Override
                 public SuppressionData addTrafficData(ClientLoadInfo loadInfo) {
                     ClusterMessage msg = ClusterMessage.of(loadInfo);
-                    CompletableFuture<SuppressionData> suppressionDataResponse = exchange.request(ROUTE_CONTROLLER, "collect", msg).thenApply(rm -> rm.getResponse(SuppressionData.class));
+                    CompletableFuture<SuppressionData> suppressionDataResponse =
+                            exchange.request(ROUTE_CONTROLLER, "collect", msg)
+                                    .thenApply(rm -> rm.getResponse(SuppressionData.class));
                     // todo(rl): runtime exceptions not caught. Can this lead to unrecoverable state?
                     return suppressionDataResponse.join();
                 }
-            }, meterRegistry, 1,
-                    memberInfo.hostname()
-            ); // TODO(rl): convert to config
+            }, new RateLimiterMetrics(meterRegistry, clientId), 1, clientId); // TODO(rl): convert to config
         } catch (UnknownHostException e) {
             log.error("Error creating RateLimiterService", e);
         }

@@ -47,7 +47,7 @@ public class RateLimiterServiceTest {
 
     public static void setupMetrics() {
         String[] args = {"src/test/resources/testConfiguration.yml"};
-        AppConfiguration configuration = readConfiguration(args);
+        AppConfiguration configuration = readConfiguration(args).getKey();
         CoreServices.ObservabilityStack observabilityStack = new CoreServices.ObservabilityStack(configuration);
         meterRegistry = observabilityStack.getMeterRegistry();
     }
@@ -264,7 +264,10 @@ public class RateLimiterServiceTest {
     }
 
     private RateLimiterService createRateLimiterSvc(String clientId) throws UnknownHostException {
-        return new RateLimiterService(load -> distributedRateLimiterImpl.addTrafficData(load), meterRegistry, 1, clientId);
+        return new RateLimiterService(
+                load -> distributedRateLimiterImpl.addTrafficData(load),
+                new RateLimiterMetrics(meterRegistry, clientId), 1, clientId
+        );
     }
 
     @Getter
