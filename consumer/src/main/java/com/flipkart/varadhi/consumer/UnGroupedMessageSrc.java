@@ -53,8 +53,12 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
         // Therefore, we use the futureInProgress flag to limit the concurrency and ensure only one future is in progress at a time.
         ongoingIterator = null;
         if (pendingAsyncFetch.compareAndSet(false, true)) {
-            return consumer.receiveAsync().whenComplete((result, ex) -> pendingAsyncFetch.set(false))
-                    .thenApply(polledMessages -> processPolledMessages(polledMessages, messages));
+            return consumer.receiveAsync()
+                    .thenApply(polledMessages -> {
+                        int processedCount = processPolledMessages(polledMessages, messages);
+                        pendingAsyncFetch.set(false);
+                        return processedCount;
+                    });
         } else {
             throw new IllegalStateException(
                     "nextMessages method is not supposed to be called concurrently. There seems to be an ongoing consumer.receiveAsync() operation.");
@@ -63,8 +67,11 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
 
     private int processPolledMessages(PolledMessages<O> polledMessages, MessageTracker[] messages) {
         Iterator<PolledMessage<O>> polledMessagesIterator = polledMessages.iterator();
-        ongoingIterator = polledMessagesIterator;
-        return fetchFromIterator(consumer, messages, polledMessagesIterator);
+        int count = fetchFromIterator(consumer, messages, polledMessagesIterator);
+        if (polledMessagesIterator.hasNext()) {
+            ongoingIterator = polledMessagesIterator;
+        }
+        return count;
     }
 
     /**
@@ -89,6 +96,7 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
             MessageTracker messageTracker = new PolledMessageTracker<>(consumer, polledMessage);
             messages[i++] = messageTracker;
         }
+
         return i;
     }
 }

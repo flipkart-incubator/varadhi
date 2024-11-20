@@ -81,7 +81,7 @@ public abstract class ProcessingLoop implements Context.Task {
                 inFlightMessages.addAndGet(polled.getSize());
                 onMessagesPolled(polled);
                 // polled variable is now free to be released.
-                polled.release();
+                polled.recycle();
                 iterationInProgress.set(false);
                 runLoopIfRequired(inFlightMessages.get());
             });
@@ -105,6 +105,7 @@ public abstract class ProcessingLoop implements Context.Task {
     private CompletableFuture<DeliveryResponse> deliver(InternalQueueType type, MessageTracker msg) {
         try {
             return deliveryClient.deliver(msg.getMessage()).thenCompose(response -> {
+                log.info("Delivered message. status: {}", response.statusCode());
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);
                 } else {

@@ -23,6 +23,7 @@ public class EventExecutor implements Executor {
         this.scheduler = scheduler;
         this.taskQueue = taskQueue;
         this.thread = (CustomThread) threadFactory.newThread(this::run);
+        this.thread.setName("consumer-event-exeutor");
         this.thread.start();
     }
 

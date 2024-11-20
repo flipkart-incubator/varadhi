@@ -17,7 +17,19 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
 
     @Override
     public CompletableFuture<PolledMessages<PulsarOffset>> receiveAsync() {
-        return pulsarConsumer.batchReceiveAsync().thenApply(PulsarMessages::new);
+        CompletableFuture<PolledMessages<PulsarOffset>> promise = new CompletableFuture<>();
+        receiveNonZeroMessages(promise);
+        return promise;
+    }
+
+    private void receiveNonZeroMessages(CompletableFuture<PolledMessages<PulsarOffset>> promise) {
+        pulsarConsumer.batchReceiveAsync().thenAccept(m -> {
+            if (m.size() == 0) {
+                receiveNonZeroMessages(promise);
+            } else {
+                promise.complete(new PulsarMessages(m));
+            }
+        });
     }
 
     @Override

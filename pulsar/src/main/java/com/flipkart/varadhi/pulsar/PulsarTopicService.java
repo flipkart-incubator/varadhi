@@ -61,7 +61,7 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
 
             //TODO:: Check any other attributes to set on the topic e.g. retention, secure etc.
             clientProvider.getAdminClient().topics().createPartitionedTopic(topic.getName(), topic.getPartitionCount());
-            log.info("Created the pulsar topic:{}", topic.getName());
+            log.info("Created the pulsar topic: {} with partitions: {}", topic.getName(), topic.getPartitionCount());
         } catch (PulsarAdminException e) {
             throw new MessagingException(e);
         }
@@ -73,6 +73,7 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
     ) {
         List<TopicPartitions<PulsarStorageTopic>> topicPartitions = new ArrayList<>();
         int shardCount = topicPlanner.getShardCount(topic.getCapacity(), category);
+        shardCount = Math.min(shardCount, topic.getPartitionCount());
         int partitionsPerShard = topic.getPartitionCount() / shardCount;
         for (int shardId = 0; shardId < shardCount; shardId++) {
             topicPartitions.add(

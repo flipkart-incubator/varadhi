@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 public interface Consumer<O extends Offset> extends Closeable {
 
     /**
-     * Receive a batch of messages from the subscribed topics.
+     * Receive a batch of messages from the subscribed topics. Cancellable & never returns 0 messages.
      */
     CompletableFuture<PolledMessages<O>> receiveAsync();
 

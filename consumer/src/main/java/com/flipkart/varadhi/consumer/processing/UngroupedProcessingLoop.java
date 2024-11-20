@@ -33,7 +33,10 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
 
         if (polled.getSize() > 0) {
             Collection<CompletableFuture<DeliveryResult>> asyncResponses =
-                    deliverMessages(polled.getInternalQueueType(), Arrays.asList(polled.getMessages()));
+                    deliverMessages(
+                            polled.getInternalQueueType(),
+                            () -> Arrays.stream(polled.getMessages()).limit(polled.getSize()).iterator()
+                    );
             // Some of the push will have succeeded, for which we can begin the post processing.
             // For others we start the failure management.
             asyncResponses.forEach(fut -> fut.whenComplete((response, ex) -> {

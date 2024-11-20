@@ -38,7 +38,6 @@ public class FailureHandler implements Handler<RoutingContext> {
                 log.error(failureLog);
             }
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-            response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);
             response.setStatusMessage(errorMsg);
             response.end(Json.encodeToBuffer(new ErrorResponse(errorMsg)));

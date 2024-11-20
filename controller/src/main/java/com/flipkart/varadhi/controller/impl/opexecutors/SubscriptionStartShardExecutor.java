@@ -26,8 +26,8 @@ public abstract class SubscriptionStartShardExecutor extends SubscriptionOpExecu
         return consumer.getConsumerState(subId, shardId).thenCompose(state -> {
             // Start can be executed in stopping subscription as well.
             // in general this shouldn't happen as multiple in-progress operations are not allowed.
-            if (state.isEmpty()) {
-                log.info("Subscription:{} Shard:{} is not allocated. Skipping.", subId, shardId);
+            if (state.isPresent()) {
+                log.info("Subscription:{} Shard:{} already started. Skipping.", subId, shardId);
                 return CompletableFuture.completedFuture(false);
             }
             operationMgr.submitShardOp(startOp, isRetry);

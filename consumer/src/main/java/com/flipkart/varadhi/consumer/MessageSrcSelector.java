@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 public class MessageSrcSelector {
 
@@ -26,7 +27,12 @@ public class MessageSrcSelector {
         this.messageSrcs = new Holder[msgSrcs.size()];
         int i = 0;
         for (var entries : msgSrcs.entrySet()) {
-            messageSrcs[i] = new Holder(entries.getKey(), entries.getValue(), new MessageTracker[batchSize]);
+            var holder = new Holder(context, entries.getKey(), entries.getValue(), new MessageTracker[batchSize],
+                    this::tryCompleteRequest
+            );
+            // simulate the first fetch
+            holder.recycle();
+            messageSrcs[i] = holder;
             ++i;
         }
     }
@@ -47,7 +53,7 @@ public class MessageSrcSelector {
             if (holder.fetcher.get() == null) {
                 // possibility of having msgs. return it.
                 promise = tryCompleteRequest(holder);
-                if(promise != null) {
+                if (promise != null) {
                     return promise;
                 }
             }
@@ -59,7 +65,7 @@ public class MessageSrcSelector {
 
     private CompletableFuture<PolledMessageTrackers> tryCompleteRequest(Holder holder) {
         CompletableFuture<PolledMessageTrackers> promise = pendingRequest.getAndSet(null);
-        if(promise != null) {
+        if (promise != null) {
             promise.complete(new PolledMessageTrackers(holder));
             return promise;
         }
@@ -68,15 +74,34 @@ public class MessageSrcSelector {
 
     @RequiredArgsConstructor
     private static final class Holder {
+        private final Context context;
         private final InternalQueueType internalQueueType;
         private final MessageSrc msgSrc;
         private final MessageTracker[] messages;
         private int size = 0;
         private final AtomicReference<Future<Integer>> fetcher = new AtomicReference<>();
+        private final Consumer<Holder> onFetchComplete;
+
+        public void recycle() {
+            assert context.isInContext();
+            assert fetcher.get() == null;
+
+            int currentSize = size;
+            size = 0;
+            Arrays.fill(messages, 0, currentSize, null);
+
+            var nextFetch = msgSrc.nextMessages(messages);
+            fetcher.set(nextFetch);
+            nextFetch.whenComplete((count, _ignored) -> {
+                size = count;
+                fetcher.set(null);
+                onFetchComplete.accept(this);
+            });
+        }
     }
 
     @RequiredArgsConstructor
-    public final class PolledMessageTrackers {
+    public static final class PolledMessageTrackers {
         private final Holder holder;
 
         public InternalQueueType getInternalQueueType() {
@@ -91,18 +116,8 @@ public class MessageSrcSelector {
             return holder.size;
         }
 
-        public void release() {
-            assert context.isInContext();
-
-            int size = holder.size;
-            holder.size = 0;
-            Arrays.fill(holder.messages, 0, size, null);
-            holder.fetcher.set(holder.msgSrc.nextMessages(holder.messages).thenApply(count -> {
-                holder.size = count;
-                holder.fetcher.set(null);
-                tryCompleteRequest(holder);
-                return null;
-            }));
+        public void recycle() {
+            holder.recycle();
         }
     }
 }

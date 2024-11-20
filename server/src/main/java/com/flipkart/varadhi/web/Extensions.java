@@ -134,7 +134,6 @@ public class Extensions {
         private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
             if (hasContent) {
                 ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-                ctx.response().putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             }
         }
 
