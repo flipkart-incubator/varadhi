@@ -100,3 +100,8 @@ run {
             "-Dlog4j.configurationFile=$buildDir/resources/main/log4j2.xml"
     ]
 }
+
+// excluding simulation tests from the test task
+test {
+    exclude "**/com/flipkart/varadhi/qos/RateLimiterServiceTest*"
+}
