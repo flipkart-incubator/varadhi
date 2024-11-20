@@ -75,7 +75,7 @@ controller:
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
 
-otlpConfig:
+otelOptions:
   otlp.url: "${OTEL_URL}"
   otlp.step: "20s"
   otlp.aggregationTemporality: "CUMULATIVE"

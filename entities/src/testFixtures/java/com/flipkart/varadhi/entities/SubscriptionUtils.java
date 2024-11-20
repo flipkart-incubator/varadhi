@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class SubProvider {
+public class SubscriptionUtils {
     public static Endpoint getHttpEndpoint() {
         return new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
     }
@@ -17,6 +17,14 @@ public class SubProvider {
                 RetryPolicy.BackoffType.LINEAR,
                 1, 100, 4, 3
         );
+    }
+
+    public static Map<String, String> getSubscriptionDefaultProperties() {
+        Map<String, String> properties = new HashMap<>();
+        properties.put("unsideline.api.message_count", "100");
+        properties.put("unsideline.api.group_count", "20");
+        properties.put("getmessages.api.messages_limit", "100");
+        return properties;
     }
 
     public static ConsumptionPolicy getConsumptionPolicy() {
@@ -64,6 +72,7 @@ public class SubProvider {
         private RetryPolicy retryPolicy;
         private ConsumptionPolicy consumptionPolicy;
         private SubscriptionShards shards;
+        private final Map<String, String> properties = getSubscriptionDefaultProperties();
 
         public Builder setDescription(String description) {
             this.description = description;
@@ -104,6 +113,10 @@ public class SubProvider {
             this.numShards = numShards;
             return this;
         }
+        public Builder setProperty(String property, String value) {
+            this.properties.put(property, value);
+            return this;
+        }
 
         public VaradhiSubscription build(String name, String subProject, String subscribedTopic) {
             if (null == subCapacity) {
@@ -125,7 +138,8 @@ public class SubProvider {
                     endpoint == null ? getHttpEndpoint() : endpoint,
                     retryPolicy == null ? getRetryPolicy() : retryPolicy,
                     consumptionPolicy == null ? getConsumptionPolicy() : consumptionPolicy,
-                    shards
+                    shards,
+                    properties
             );
         }
     }

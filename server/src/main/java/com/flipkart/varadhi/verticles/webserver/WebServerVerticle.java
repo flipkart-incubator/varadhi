@@ -1,27 +1,25 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
-
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.qos.DistributedRateLimiter;
-import com.flipkart.varadhi.core.cluster.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.MemberInfo;
-import com.flipkart.varadhi.qos.RateLimiterMetrics;
-import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.qos.DistributedRateLimiter;
+import com.flipkart.varadhi.qos.RateLimiterMetrics;
 import com.flipkart.varadhi.qos.RateLimiterService;
 import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
 import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -29,7 +27,8 @@ import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.verticles.controller.ControllerClient;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
+import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -46,19 +45,18 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
 
 @Slf4j
 @ExtensionMethod({Extensions.RoutingContextExtension.class})
@@ -78,6 +76,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
     private RateLimiterService rateLimiterService;
+    private DlqService dlqService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -137,12 +136,14 @@ public class WebServerVerticle extends AbstractVerticle {
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
-        ControllerApi controllerApiProxy = new ControllerClient(clusterManager.getExchange(vertx));
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
                 messagingStackProvider.getStorageSubscriptionService(),
                 messagingStackProvider.getStorageTopicService()
         );
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerApiProxy, metaStore);
+        subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
+        dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
         try {
             // use host address as clientId for now.
             String clientId = memberInfo.hostname();
@@ -328,11 +329,9 @@ public class WebServerVerticle extends AbstractVerticle {
         // This is independent of Authorization is enabled or not
         if (isDefaultProvider) {
             if (isIamPolicyStore) {
-                routes.addAll(
-                        new IamPolicyHandlers(
-                                projectService,
-                                new IamPolicyService(metaStore, (IamPolicyMetaStore) metaStore)
-                        ).get());
+                routes.addAll(new IamPolicyHandlers(projectService,
+                        new IamPolicyService(metaStore, (IamPolicyMetaStore) metaStore)
+                ).get());
             } else {
                 log.error(
                         "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
@@ -345,6 +344,7 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    @SuppressWarnings("unchecked")
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
         TopicCapacityPolicy defaultTopicCapacity = configuration.getRestOptions().getDefaultTopicCapacity();
@@ -360,8 +360,9 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(getManagementEntitiesApiRoutes());
         routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
         routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService,
-                subscriptionFactory
+                subscriptionFactory, configuration.getRestOptions()
         ).get());
+        routes.addAll(new DlqHandlers(dlqService, subscriptionService, projectService).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
     }
@@ -376,6 +377,7 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    @SuppressWarnings("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getRestOptions());

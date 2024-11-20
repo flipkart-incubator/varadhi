@@ -40,7 +40,8 @@ public class IamPolicyHandlersTest extends WebTestBase {
         super.setUp();
         iamPolicyService = mock(IamPolicyService.class);
         projectService = mock(ProjectService.class);
-        iamPolicyHandlers = new IamPolicyHandlers(projectService, iamPolicyService);
+
+        iamPolicyHandlers = new IamPolicyHandlers(projectService,  iamPolicyService);
 
         Route routeGetIamPolicy = router.get(AUTHZ_ORG_POLICY)
                 .handler(wrapBlocking(iamPolicyHandlers.getIamPolicyHandler(ResourceType.ORG)));

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
 import com.flipkart.varadhi.entities.NodeProvider;
-import com.flipkart.varadhi.entities.SubProvider;
+import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -49,8 +49,8 @@ public class AssignmentManagerTest {
     @Test
     public void testAssignShards() throws Exception {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         NodeCapacity c1 = nodes.get(1).getAvailable().clone();
@@ -85,8 +85,8 @@ public class AssignmentManagerTest {
     @Test
     public void testAssignShards_StoreThrows() {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         NodeCapacity c0 = nodes.get(0).getAvailable().clone();
@@ -123,8 +123,8 @@ public class AssignmentManagerTest {
     @Test
     public void testUnAssignShards() throws Exception {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         NodeCapacity c0 = nodes.get(0).getAvailable().clone();
@@ -183,8 +183,8 @@ public class AssignmentManagerTest {
     @Test
     public void testUnAssignShards_Throws() throws Exception {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
@@ -220,8 +220,8 @@ public class AssignmentManagerTest {
     @Test
     public void testReAssign() throws Exception {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
@@ -241,8 +241,8 @@ public class AssignmentManagerTest {
     @Test
     public void testReAssign_Throws() throws Exception {
         VaradhiSubscription sub1 =
-                SubProvider.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubProvider.shardsOf(sub1);
+                SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
         NodeCapacity c0 = nodes.get(0).getAvailable().clone();

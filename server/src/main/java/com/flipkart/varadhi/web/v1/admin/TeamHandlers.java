@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -14,6 +15,7 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_ORG;
@@ -36,21 +38,21 @@ public class TeamHandlers implements RouteProvider {
                 List.of(
                         RouteDefinition.get("ListTeams", "")
                                 .authorize(TEAM_LIST)
-                                .build(this::getHierarchy, this::listTeams),
+                                .build(this::getHierarchies, this::listTeams),
                         RouteDefinition.get("ListProjects", "/:team/projects")
                                 .authorize(PROJECT_LIST)
-                                .build(this::getHierarchy, this::listProjects),
+                                .build(this::getHierarchies, this::listProjects),
                         RouteDefinition.get("GetTeam", "/:team")
                                 .authorize(TEAM_GET)
-                                .build(this::getHierarchy, this::get),
+                                .build(this::getHierarchies, this::get),
                         RouteDefinition.post("CreateTeam", "")
                                 .hasBody()
                                 .bodyParser(this::setTeam)
                                 .authorize(TEAM_CREATE)
-                                .build(this::getHierarchy, this::create),
+                                .build(this::getHierarchies, this::create),
                         RouteDefinition.delete("DeleteTeam", "/:team")
                                 .authorize(TEAM_DELETE)
-                                .build(this::getHierarchy, this::delete)
+                                .build(this::getHierarchies, this::delete)
                 )
         ).get();
     }
@@ -60,17 +62,17 @@ public class TeamHandlers implements RouteProvider {
         ctx.put(CONTEXT_KEY_BODY, team);
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         if (hasBody) {
             Team team = ctx.get(CONTEXT_KEY_BODY);
-            return new Hierarchies.TeamHierarchy(team.getOrg(), team.getName());
+            return Map.of(ResourceType.TEAM, new Hierarchies.TeamHierarchy(team.getOrg(), team.getName()));
         }
         String org = ctx.request().getParam(PATH_PARAM_ORG);
         String team = ctx.request().getParam(PATH_PARAM_TEAM);
         if (team == null) {
-            return new Hierarchies.OrgHierarchy(org);
+            return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(org));
         }
-        return new Hierarchies.TeamHierarchy(org, team);
+        return Map.of(ResourceType.TEAM, new Hierarchies.TeamHierarchy(org, team));
     }
 
 

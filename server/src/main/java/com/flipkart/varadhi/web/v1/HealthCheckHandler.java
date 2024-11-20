@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1;
 
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -12,6 +13,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -44,12 +46,12 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
                 RouteDefinition.get("HealthCheck", "/v1/health-check")
                         .unAuthenticated()
                         .logsDisabled().tracingDisabled()
-                        .build(this::getHierarchy, this)
+                        .build(this::getHierarchies, this)
 
         );
     }
 
-    public ResourceHierarchy getHierarchy(RoutingContext ctx, boolean hasBody) {
-        return new Hierarchies.RootHierarchy();
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        return Map.of(ResourceType.ROOT, new Hierarchies.RootHierarchy());
     }
 }

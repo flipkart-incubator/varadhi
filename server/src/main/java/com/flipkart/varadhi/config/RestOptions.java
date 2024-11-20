@@ -21,6 +21,14 @@ public class RestOptions {
     private int headerNameSizeMax = HEADER_NAME_SIZE_MAX;
     private int headerValueSizeMax = HEADER_VALUE_SIZE_MAX;
 
+    private int unsidelineApiMsgCountMax = 1000;
+    private int unsidelineApiGroupCountMax = 100;
+    private int getMessagesApiMessagesLimitMax = 1000;
+    private int unsidelineApiMsgCountDefault = 100;
+    private int unsidelineApiGroupCountDefault = 20;
+    private int getMessagesApiMessagesLimitDefault = 100;
+
+
     // TODO: These dont look related to rest. Looks related to lean deployment.
     private String defaultOrg = DEFAULT_ORG;
     private String defaultTeam = DEFAULT_TEAM;

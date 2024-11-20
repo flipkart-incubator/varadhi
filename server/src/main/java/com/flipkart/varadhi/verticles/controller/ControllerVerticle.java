@@ -35,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import static com.flipkart.varadhi.core.cluster.ControllerApi.ROUTE_CONTROLLER;
+import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
 
 @Slf4j
 public class ControllerVerticle extends AbstractVerticle {
@@ -202,6 +202,8 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "start", handler::start);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "stop", handler::stop);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "status", handler::status);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "collect", trafficDataHandler::handle);
     }

@@ -69,5 +69,5 @@ public class AppConfiguration {
     @NotNull
     private ControllerConfig controller;
 
-    private Map<String, String> otlpConfig;
+    private Map<String, String> otelOptions;
 }

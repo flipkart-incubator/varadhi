@@ -51,6 +51,12 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         return new ShardOperation(new ShardOperation.StopData(subOpId, shard, subscription));
     }
 
+    public static ShardOperation unsidelineOp(
+            String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+    ) {
+        return new ShardOperation(new ShardOperation.UnsidelineData(subOpId, shard, subscription, request));
+    }
+
     @JsonIgnore
     @Override
     public String getId() {
@@ -109,19 +115,14 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = ShardOperation.StartData.class, name = "startShardData"),
             @JsonSubTypes.Type(value = ShardOperation.StopData.class, name = "stopShardData"),
+            @JsonSubTypes.Type(value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),
     })
     public static class OpData {
         private String operationId;
         private String parentOpId;
-
         private int shardId;
         private String subscriptionId;
         private String project;
-        private boolean grouped;
-        private Endpoint endpoint;
-        private ConsumptionPolicy consumptionPolicy;
-        private RetryPolicy retryPolicy;
-        private SubscriptionUnitShard shard;
 
         @Override
         public String toString() {
@@ -132,16 +133,26 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
-
-    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StartData extends ShardOperation.OpData {
+        private boolean grouped;
+        private Endpoint endpoint;
+        private ConsumptionPolicy consumptionPolicy;
+        private RetryPolicy retryPolicy;
+        private SubscriptionUnitShard shard;
+
         StartData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+                    subscription.getProject()
             );
+            this.grouped = subscription.isGrouped();
+            this.endpoint = subscription.getEndpoint();
+            this.consumptionPolicy = subscription.getConsumptionPolicy();
+            this.retryPolicy = subscription.getRetryPolicy();
+            this.shard = shard;
         }
 
         @Override
@@ -150,20 +161,41 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
-    @AllArgsConstructor
+    @NoArgsConstructor
     @EqualsAndHashCode(callSuper = true)
     public static class StopData extends ShardOperation.OpData {
         StopData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
                     UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject(), subscription.isGrouped(), subscription.getEndpoint(),
-                    subscription.getConsumptionPolicy(), subscription.getRetryPolicy(), shard
+                    subscription.getProject()
             );
         }
 
         @Override
         public String toString() {
             return String.format("Stop.OpData{%s}", super.toString());
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @EqualsAndHashCode(callSuper = true)
+    public static class UnsidelineData extends ShardOperation.OpData {
+        UnsidelineRequest request;
+
+        UnsidelineData(
+                String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+        ) {
+            super(
+                    UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
+                    subscription.getProject()
+            );
+            this.request = request;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Unsideline.OpData{%s}", super.toString());
         }
     }
 }
