@@ -1,8 +1,10 @@
 package com.flipkart.varadhi.cluster;
 
 
-import com.flipkart.varadhi.cluster.messages.*;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
+import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.cluster.messages.MsgHandler;
+import com.flipkart.varadhi.cluster.messages.RequestHandler;
+import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -61,7 +63,7 @@ public class MessageRouter {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.REQUEST);
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
-            log.debug("Received msg via - request({}, {})", apiPath, msg.getId());
+            log.info("Received msg via - request({}, {})", apiPath, msg.getId());
             try {
                 handler.handle(msg).thenAccept(response -> message.reply(
                         JsonMapper.jsonSerialize(response),
@@ -90,7 +92,18 @@ public class MessageRouter {
     }
 
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new NotImplementedException("handlePublish not implemented");
+        // TODO(rl): not sure if publishHandler should do anything different as compared to sendHandler except sending reply
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
+        vertxEventBus.consumer(apiPath, message -> {
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            log.debug("Received msg via - publish({}, {})", apiPath, msg.getId());
+            try {
+                // this is async invocation.
+                handler.handle(msg);
+            } catch (Exception e) {
+                log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+            }
+        });
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {

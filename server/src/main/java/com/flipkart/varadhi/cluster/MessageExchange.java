@@ -2,7 +2,6 @@ package com.flipkart.varadhi.cluster;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -48,7 +47,13 @@ public class MessageExchange {
     }
 
     public void publish(String routeName, String apiName, ClusterMessage msg) {
-        throw new NotImplementedException("publish not implemented");
+        String apiPath = getPath(routeName, apiName, RouteMethod.PUBLISH);
+        try {
+            vertxEventBus.publish(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions);
+            log.debug("publish({}, {}) delivered.", apiPath, msg.getId());
+        } catch (Exception e) {
+            log.error("publish({}, {}) Unexpected failure:{}", apiPath, msg.getId(), e.getMessage());
+        }
     }
 
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
@@ -57,7 +62,7 @@ public class MessageExchange {
         try {
             vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
                 if (ar.succeeded()) {
-                    log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
+                    log.info("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
                     ResponseMessage response =
                             JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
                     if (response.getException() != null) {

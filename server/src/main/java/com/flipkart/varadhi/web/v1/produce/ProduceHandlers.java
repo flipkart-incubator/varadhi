@@ -9,6 +9,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.MessageHelper;
+import com.flipkart.varadhi.qos.RateLimiterService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -45,16 +46,18 @@ public class ProduceHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
+    private final RateLimiterService rateLimiterService;
 
     public ProduceHandlers(
             String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
-            ProjectService projectService, ProducerMetricHandler metricHandler
+            ProjectService projectService, ProducerMetricHandler metricHandler, RateLimiterService rateLimiterService
     ) {
         this.produceRegion = produceRegion;
         this.producerService = producerService;
         this.headerValidationHandler = headerValidationHandler;
         this.projectService = projectService;
         this.metricHandler = metricHandler;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @Override
@@ -92,12 +95,18 @@ public class ProduceHandlers implements RouteProvider {
         ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
 
         String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
+        if(!rateLimiterService.isAllowed(varadhiTopicName, ctx.body().length())) {
+            ctx.endRequestWithStatusAndErrorMsg(HTTP_RATE_LIMITED, "Rate limited");
+            return;
+        }
 
         // TODO:: Below is making extra copy, this needs to be avoided.
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
+
+
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->

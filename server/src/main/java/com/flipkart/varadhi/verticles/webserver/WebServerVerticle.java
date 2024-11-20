@@ -4,25 +4,31 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.entities.cluster.MemberInfo;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.qos.DistributedRateLimiter;
+import com.flipkart.varadhi.qos.RateLimiterMetrics;
+import com.flipkart.varadhi.qos.RateLimiterService;
+import com.flipkart.varadhi.qos.entity.ClientLoadInfo;
+import com.flipkart.varadhi.qos.entity.SuppressionData;
 import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
+import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
@@ -42,9 +48,12 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
 
 @Slf4j
 @ExtensionMethod({Extensions.RoutingContextExtension.class})
@@ -52,6 +61,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
     private final AppConfiguration configuration;
     private final ConfigFileResolver configResolver;
+    private final MemberInfo memberInfo;
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
@@ -62,14 +72,16 @@ public class WebServerVerticle extends AbstractVerticle {
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
+    private RateLimiterService rateLimiterService;
     private DlqService dlqService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
-            AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
+            AppConfiguration configuration, MemberInfo memberInfo, CoreServices services, VaradhiClusterManager clusterManager
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
+        this.memberInfo = memberInfo;
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
@@ -128,7 +140,25 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
         dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
+        try {
+            // use host address as clientId for now.
+            String clientId = memberInfo.hostname();
+            rateLimiterService = new RateLimiterService(new DistributedRateLimiter() {
+                final MessageExchange exchange = clusterManager.getExchange(vertx);
 
+                @Override
+                public SuppressionData addTrafficData(ClientLoadInfo loadInfo) {
+                    ClusterMessage msg = ClusterMessage.of(loadInfo);
+                    CompletableFuture<SuppressionData> suppressionDataResponse =
+                            exchange.request(ROUTE_CONTROLLER, "collect", msg)
+                                    .thenApply(rm -> rm.getResponse(SuppressionData.class));
+                    // todo(rl): runtime exceptions not caught. Can this lead to unrecoverable state?
+                    return suppressionDataResponse.join();
+                }
+            }, new RateLimiterMetrics(meterRegistry, clientId), 1, clientId); // TODO(rl): convert to config
+        } catch (UnknownHostException e) {
+            log.error("Error creating RateLimiterService", e);
+        }
     }
 
     private void performValidations() {
@@ -238,7 +268,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
                 new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
+                        producerMetricsHandler, rateLimiterService
                 ).get());
     }
 
