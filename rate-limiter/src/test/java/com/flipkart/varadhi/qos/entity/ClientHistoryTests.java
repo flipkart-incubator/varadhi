@@ -1,14 +1,15 @@
 package com.flipkart.varadhi.qos.entity;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ClientHistoryTests {
 
@@ -21,7 +22,7 @@ public class ClientHistoryTests {
 
     @BeforeEach
     public void setUp() {
-        clock = Clock.systemUTC();
+        clock = Clock.fixed(Instant.now(), Clock.systemDefaultZone().getZone());
         clientHistory = new ClientHistory(historySlots, slotDuration, clock);
     }
 
@@ -67,16 +68,24 @@ public class ClientHistoryTests {
         assertEquals(historySlots, predictedLoad.size());
     }
 
-    @SneakyThrows
     @Test
     public void testExpiredLoad() {
+        // mocking clock explicitly to remove usage of sleep
         long currentTime = Instant.now(clock).toEpochMilli();
+        clock = mock(Clock.class);
+        clientHistory = new ClientHistory(historySlots, slotDuration, clock);
+
+        when(clock.millis()).thenReturn(currentTime);
+
         TopicLoadInfo loadInfo = new TopicLoadInfo(DEFAULT_CLIENT_ID, currentTime, currentTime + slotDuration,
                 new TrafficData(DEFAULT_TOPIC, 100, 100)
         );
+
         clientHistory.add(DEFAULT_CLIENT_ID, loadInfo);
         assertEquals(1, clientHistory.predictLoad().size());
-        Thread.sleep((historySlots + 1) * slotDuration);
+
+        // expired time
+        when(clock.millis()).thenReturn(currentTime + (historySlots + 2) * slotDuration);
         assertTrue(clientHistory.predictLoad().isEmpty());
     }
 
