@@ -16,6 +16,8 @@ public class ClientHistoryTests {
     private Clock clock;
     private final int historySlots = 5;
     private final int slotDuration = 1000; // 1 second
+    private final String DEFAULT_CLIENT_ID = "client1";
+    private final String DEFAULT_TOPIC = "topic1";
 
     @BeforeEach
     public void setUp() {
@@ -33,20 +35,20 @@ public class ClientHistoryTests {
 
     @Test
     public void testAddAndPredictLoadForSingleClient() {
-        String clientId = "client1";
-        String topic = "topic1";
         long currentTime = Instant.now(clock).toEpochMilli();
-        TopicLoadInfo loadInfo = new TopicLoadInfo(clientId, currentTime, currentTime+slotDuration, new TrafficData(topic, 100, 100));
+        TopicLoadInfo loadInfo = new TopicLoadInfo(DEFAULT_CLIENT_ID, currentTime, currentTime + slotDuration,
+                new TrafficData(DEFAULT_TOPIC, 100, 100)
+        );
 
-        clientHistory.add(clientId, loadInfo);
+        clientHistory.add(DEFAULT_CLIENT_ID, loadInfo);
         List<TopicLoadInfo> predictedLoad = clientHistory.predictLoad();
 
         assertEquals(1, predictedLoad.size());
         assertEquals(loadInfo, predictedLoad.get(0));
-        assertEquals(clientId, predictedLoad.get(0).clientId());
+        assertEquals(DEFAULT_CLIENT_ID, predictedLoad.get(0).clientId());
         assertEquals(currentTime, predictedLoad.get(0).from());
-        assertEquals(currentTime+slotDuration, predictedLoad.get(0).to());
-        assertEquals(topic, predictedLoad.get(0).topicLoad().topic());
+        assertEquals(currentTime + slotDuration, predictedLoad.get(0).to());
+        assertEquals(DEFAULT_TOPIC, predictedLoad.get(0).topicLoad().topic());
         assertEquals(100, predictedLoad.get(0).topicLoad().bytesIn());
         assertEquals(100, predictedLoad.get(0).topicLoad().rateIn());
     }
@@ -54,13 +56,12 @@ public class ClientHistoryTests {
     @Test
     public void testAddMultipleLoads() {
         String clientId = "client";
-        String topic = "topic1";
         long currentTime = Instant.now(clock).toEpochMilli();
         for (int i = 0; i < historySlots; i++) {
-            TopicLoadInfo loadInfo = new TopicLoadInfo(clientId+i, currentTime,
-                    currentTime + slotDuration, new TrafficData(topic, 100, 100)
+            TopicLoadInfo loadInfo = new TopicLoadInfo(clientId + i, currentTime,
+                    currentTime + slotDuration, new TrafficData(DEFAULT_TOPIC, 100, 100)
             );
-            clientHistory.add(clientId+i, loadInfo);
+            clientHistory.add(clientId + i, loadInfo);
         }
         List<TopicLoadInfo> predictedLoad = clientHistory.predictLoad();
         assertEquals(historySlots, predictedLoad.size());
@@ -69,12 +70,11 @@ public class ClientHistoryTests {
     @SneakyThrows
     @Test
     public void testExpiredLoad() {
-        String clientId = "client1";
-        String topic = "topic1";
         long currentTime = Instant.now(clock).toEpochMilli();
-        TopicLoadInfo loadInfo = new TopicLoadInfo(clientId, currentTime, currentTime+slotDuration, new TrafficData(topic, 100, 100));
-
-        clientHistory.add(clientId, loadInfo);
+        TopicLoadInfo loadInfo = new TopicLoadInfo(DEFAULT_CLIENT_ID, currentTime, currentTime + slotDuration,
+                new TrafficData(DEFAULT_TOPIC, 100, 100)
+        );
+        clientHistory.add(DEFAULT_CLIENT_ID, loadInfo);
         assertEquals(1, clientHistory.predictLoad().size());
         Thread.sleep((historySlots + 1) * slotDuration);
         assertTrue(clientHistory.predictLoad().isEmpty());

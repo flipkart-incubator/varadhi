@@ -9,17 +9,17 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ProbabilisticTopicRateLimiterTests {
 
     private ProbabilisticTopicRateLimiter rateLimiter;
-    private final String topic = "test-topic";
+    private final String DEFAULT_TOPIC = "topic1";
     private final RateLimiterType type = RateLimiterType.THROUGHPUT;
 
     @BeforeEach
     public void setUp() {
-        rateLimiter = new ProbabilisticTopicRateLimiter(topic, type);
+        rateLimiter = new ProbabilisticTopicRateLimiter(DEFAULT_TOPIC, type);
     }
 
     @Test
     public void testInitialization() {
-        assertEquals(topic, rateLimiter.getTopic());
+        assertEquals(DEFAULT_TOPIC, rateLimiter.getTopic());
         assertEquals(type, rateLimiter.getType());
         assertEquals(0, rateLimiter.getSuppressionFactor());
     }
