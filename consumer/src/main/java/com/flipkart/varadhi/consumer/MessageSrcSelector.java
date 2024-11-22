@@ -3,6 +3,7 @@ package com.flipkart.varadhi.consumer;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -11,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+@Slf4j
 public class MessageSrcSelector {
 
     private final Context context;
@@ -54,7 +56,7 @@ public class MessageSrcSelector {
 
         for (Holder holder : messageSrcs) {
             if (holder.fetcher.get() == null) {
-                // possibility of having msgs. return it.
+                // No fetcher means -> fetcher is not running -> previous fetcher must have returned with messages.
                 promise = tryCompleteRequest(holder);
                 if (promise != null) {
                     return promise;
@@ -69,10 +71,13 @@ public class MessageSrcSelector {
     private CompletableFuture<PolledMessageTrackers> tryCompleteRequest(Holder holder) {
         CompletableFuture<PolledMessageTrackers> promise = pendingRequest.getAndSet(null);
         if (promise != null) {
+            log.info("returning messages from message src of type: {}. msgs now: {}", holder.internalQueueType, holder.size);
             promise.complete(new PolledMessageTrackers(holder));
             return promise;
+        } else {
+            log.info("fetched new message for the message src, no pending request to finish: {}", holder.internalQueueType);
+            return null;
         }
-        return null;
     }
 
     @RequiredArgsConstructor
@@ -93,11 +98,14 @@ public class MessageSrcSelector {
             size = 0;
             Arrays.fill(messages, 0, currentSize, null);
 
+            log.info("IQ:[{}]. Recycling messages array. Fetching new messages", internalQueueType);
             var nextFetch = msgSrc.nextMessages(messages);
             fetcher.set(nextFetch);
+            log.info("IQ:[{}]. New messages future got created: {}", internalQueueType, fetcher.get());
             nextFetch.whenComplete((count, _ignored) -> {
                 size = count;
                 fetcher.set(null);
+                log.info("IQ:[{}]. New messages future got completed: {}", internalQueueType, fetcher.get());
                 onFetchComplete.accept(this);
             });
         }

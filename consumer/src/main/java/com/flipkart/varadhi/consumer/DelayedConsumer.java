@@ -9,6 +9,7 @@ import com.flipkart.varadhi.spi.services.PolledMessages;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,9 +23,13 @@ import java.util.concurrent.TimeUnit;
  * Allows changing the delay in runtime.
  *
  * TODO: allow passing a filter that recognizes some messages as follow-through and not apply delay on them.
+ * TODO: limit the msg count returned.
+ *
+ * Not thread safe. All interaction to this class should be done on the context.
  *
  * @param <O>
  */
+@Slf4j
 @ExtensionMethod({FutureExtensions.class})
 public class DelayedConsumer<O extends Offset> implements Consumer<O> {
 
@@ -33,7 +38,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
     @Getter
     private long delayMs;
 
-    private final Batch<O> polledMessages = Batch.emtpyBatch();
+    private final Batch<O> polledMessages = Batch.emptyBatch();
 
     public DelayedConsumer(Consumer<O> delegate, Context context, long delayMs) {
         this.delegate = delegate;
@@ -49,30 +54,36 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
     }
 
     /**
-     * only to be called from the context
+     * Repeated calls to this method is not expected.
+     * Call this method only when previous future is completed.
+     *
+     * TODO: add guard and assertion.
+     * Must be called on the context. The returned future will be completed on the context as well.
      *
      * @return
      */
     @Override
     public CompletableFuture<PolledMessages<O>> receiveAsync() {
         assert context.isInContext();
+        CompletableFuture<PolledMessages<O>> promise = new CompletableFuture<>();
+        log.info("called receive. promise: {}", promise);
 
         if (polledMessages.isEmpty()) {
-            CompletableFuture<PolledMessages<O>> promise = new CompletableFuture<>();
             delegate.receiveAsync().whenComplete((messages, t) -> {
                 if (t != null) {
                     promise.completeExceptionally(t);
                 } else {
                     context.runOnContext(() -> {
                         polledMessages.add(messages);
-                        getConsumableMsgs().handleCompletion(promise);
+                        findConsumableMsgs(promise);
                     });
                 }
             });
             return promise;
         } else {
-            return getConsumableMsgs();
+            findConsumableMsgs(promise);
         }
+        return promise.whenComplete((p, t) -> log.info("finishing receive. promise: {}", promise));
     }
 
     @Override
@@ -95,7 +106,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
      *
      * @return
      */
-    private CompletableFuture<PolledMessages<O>> getConsumableMsgs() {
+    private void findConsumableMsgs(CompletableFuture<PolledMessages<O>> promise) {
         assert context.isInContext();
 
         long now = System.currentTimeMillis();
@@ -106,30 +117,42 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
 
         long timeLeft = Math.max(0, delayMs - (now - earliestMessageTs));
 
-        CompletableFuture<PolledMessages<O>> delayedMsgs = new CompletableFuture<>();
         if (timeLeft == 0) {
-            delayedMsgs.complete(polledMessages.getConsumableMsgs(delayMs));
+            promise.complete(polledMessages.getConsumableMsgs(delayMs));
         } else {
+            log.info("dont have messages to consume just yet. delay : {}ms", timeLeft);
             context.scheduleOnContext(
-                    () -> delayedMsgs.complete(polledMessages.getConsumableMsgs(delayMs)),
+                    () -> promise.complete(polledMessages.getConsumableMsgs(delayMs)),
                     timeLeft,
                     TimeUnit.MILLISECONDS
             );
         }
-        return delayedMsgs;
     }
 
-    @AllArgsConstructor
     static final class DelayedMessages<O extends Offset> {
-        int arrOffset;
-        final ArrayList<PolledMessage<O>> messages;
+        int offset = 0;
+        final ArrayList<PolledMessage<O>> messages = new ArrayList<>();
 
         long earliestMessageTimestamp() {
-            if (arrOffset < messages.size()) {
-                return messages.get(arrOffset).getProducedTimestampMs();
+            if (offset < messages.size()) {
+                return messages.get(offset).getProducedTimestampMs();
             } else {
                 return Long.MAX_VALUE;
             }
+        }
+
+        void clear() {
+            offset = 0;
+            messages.clear();
+        }
+
+        int drainConsumableMsgsTo(ArrayList<PolledMessage<O>> msgs, long cutoffMs) {
+            int prevOffset = offset;
+            while (offset < messages.size() && messages.get(offset).getProducedTimestampMs() <= cutoffMs) {
+                msgs.add(messages.get(offset));
+                ++offset;
+            }
+            return offset - prevOffset;
         }
     }
 
@@ -142,7 +165,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         private int consumed;
         private final Map<Integer, DelayedMessages<O>> delayedMsgs;
 
-        static <O extends Offset> Batch<O> emtpyBatch() {
+        static <O extends Offset> Batch<O> emptyBatch() {
             return new Batch<>(0, 0, new HashMap<>());
         }
 
@@ -152,10 +175,13 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
                 clear();
             }
             for (PolledMessage<O> message : newMsgs) {
-                delayedMsgs.computeIfAbsent(
-                                message.getPartition(), partition -> new DelayedMessages<>(0, new ArrayList<>())
-                        )
-                        .messages.add(message);
+                delayedMsgs.compute(message.getPartition(), (k, v) -> {
+                    if (v == null) {
+                        v = new DelayedMessages<>();
+                    }
+                    v.messages.add(message);
+                    return v;
+                });
             }
             total += newMsgs.getCount();
         }
@@ -163,7 +189,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         void clear() {
             total = 0;
             consumed = 0;
-            delayedMsgs.values().forEach(a -> a.messages.clear());
+            delayedMsgs.values().forEach(DelayedMessages::clear);
         }
 
         boolean isEmpty() {
@@ -178,14 +204,11 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         }
 
         PolledMessages<O> getConsumableMsgs(long delayMillis) {
-            long now = System.currentTimeMillis();
+            ;
+            long cutoff = System.currentTimeMillis() - delayMillis;
             ArrayList<PolledMessage<O>> msgs = new ArrayList<>();
             for (var m : delayedMsgs.values()) {
-                while (m.arrOffset < m.messages.size() &&
-                        (m.messages.get(m.arrOffset).getProducedTimestampMs() + delayMillis) <= now) {
-                    msgs.add(m.messages.get(m.arrOffset));
-                    ++m.arrOffset;
-                }
+                consumed += m.drainConsumableMsgsTo(msgs, cutoff);
             }
             return new PolledMessages.ArrayBacked<>(msgs);
         }

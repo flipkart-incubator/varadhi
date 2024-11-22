@@ -32,9 +32,4 @@ public class FailedMsgProducer implements Producer {
     public CompletableFuture<Offset> produceFollowThroughMsgAsync(Message msg, String previousOffset) {
         return delegate.produceAsync(msg.withHeader(FOLLOW_THROUGH_MSG_HEADER, previousOffset));
     }
-
-    @Override
-    public void close() throws IOException {
-        Producer.super.close();
-    }
 }

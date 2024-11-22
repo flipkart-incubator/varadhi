@@ -29,6 +29,7 @@ public abstract sealed class InternalQueueType {
             return InternalQueueCategory.MAIN;
         }
 
+        @Override
         public boolean equals(final Object o) {
             if (o == this) {
                 return true;
@@ -36,8 +37,14 @@ public abstract sealed class InternalQueueType {
             return o instanceof Main;
         }
 
+        @Override
         public int hashCode() {
             return Main.class.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "Main";
         }
     }
 
@@ -58,6 +65,7 @@ public abstract sealed class InternalQueueType {
             return InternalQueueCategory.RETRY;
         }
 
+        @Override
         public boolean equals(final Object o) {
             if (o == this) {
                 return true;
@@ -68,11 +76,17 @@ public abstract sealed class InternalQueueType {
             return this.getRetryCount() == other.getRetryCount();
         }
 
+        @Override
         public int hashCode() {
             final int PRIME = 59;
             int result = Retry.class.hashCode();
             result = result * PRIME + this.getRetryCount();
             return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Retry-" + retryCount;
         }
     }
 
@@ -86,6 +100,7 @@ public abstract sealed class InternalQueueType {
             return InternalQueueCategory.DEAD_LETTER;
         }
 
+        @Override
         public boolean equals(final Object o) {
             if (o == this) {
                 return true;
@@ -93,8 +108,14 @@ public abstract sealed class InternalQueueType {
             return o instanceof DeadLetter;
         }
 
+        @Override
         public int hashCode() {
             return DeadLetter.class.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "DeadLetter";
         }
     }
 

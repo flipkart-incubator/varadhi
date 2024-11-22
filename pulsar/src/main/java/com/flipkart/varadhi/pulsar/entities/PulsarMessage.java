@@ -7,6 +7,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.impl.MessageIdImpl;
+import org.apache.pulsar.client.impl.TopicMessageIdImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,15 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public int getPartition() {
-        return ((MessageIdImpl) msg.getMessageId()).getPartitionIndex();
+        if (msg.getMessageId() instanceof MessageIdImpl) {
+            return ((MessageIdImpl) msg.getMessageId()).getPartitionIndex();
+        } else if (msg.getMessageId() instanceof TopicMessageIdImpl) {
+            MessageIdImpl innerMessageId =
+                    (MessageIdImpl) ((TopicMessageIdImpl) msg.getMessageId()).getInnerMessageId();
+            return innerMessageId.getPartitionIndex();
+        } else {
+            throw new IllegalStateException("Unknown message id type: " + msg.getMessageId().getClass());
+        }
     }
 
     @Override

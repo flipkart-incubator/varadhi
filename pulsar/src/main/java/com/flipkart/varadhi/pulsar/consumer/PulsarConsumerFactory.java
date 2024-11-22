@@ -67,6 +67,7 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
                                     .maxNumBytes(5 * 1024 * 1024)
                                     .timeout(200, TimeUnit.MILLISECONDS)
                                     .build())
+                            .acknowledgmentGroupTime(1, TimeUnit.SECONDS)
                             .subscribe());
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);

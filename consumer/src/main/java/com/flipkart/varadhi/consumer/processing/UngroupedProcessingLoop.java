@@ -6,10 +6,13 @@ import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StandardHeaders;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class UngroupedProcessingLoop extends ProcessingLoop {
 
     private final Map<InternalQueueType, FailedMsgProducer> internalProducers;
@@ -31,6 +34,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
     protected void onMessagesPolled(MessageSrcSelector.PolledMessageTrackers polled) {
         super.onMessagesPolled(polled);
 
+        log.info("Got {} polled messages to process.", polled.getSize());
         if (polled.getSize() > 0) {
             Collection<CompletableFuture<DeliveryResult>> asyncResponses =
                     deliverMessages(
@@ -56,7 +60,14 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
         // failed msgs are present in failedMsgInQueue, so produce this msg there
         CompletableFuture<Offset> asyncProduce =
                 internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
-        asyncProduce.whenComplete((offset, e) -> onComplete(message, status));
+        asyncProduce.whenComplete((offset, e) -> {
+            log.info(
+                    "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue, offset,
+                    message.getMessage().getHeader(
+                            StandardHeaders.MESSAGE_ID)
+            );
+            onComplete(message, status);
+        });
     }
 
     void onDeliveryFailure(InternalQueueType type, MessageTracker message) {

@@ -5,6 +5,7 @@ import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
+import com.flipkart.varadhi.entities.StandardHeaders;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -71,8 +72,12 @@ public abstract class ProcessingLoop implements Context.Task {
      * @param currentInFlightMessages
      */
     public void runLoopIfRequired(int currentInFlightMessages) {
-        if (currentInFlightMessages < (maxInFlightMessages - msgSrcSelector.getBatchSize()) && iterationInProgress.compareAndSet(false, true)) {
+        if (currentInFlightMessages <= Math.max(maxInFlightMessages - msgSrcSelector.getBatchSize(), 0) &&
+                iterationInProgress.compareAndSet(false, true)) {
+            log.info("enqueuing next iteration. inFlightMessages: {}", currentInFlightMessages);
             context.run(this);
+        } else {
+            log.info("skipping next iteration. inFlightMessages: {}", currentInFlightMessages);
         }
     }
 
@@ -124,7 +129,10 @@ public abstract class ProcessingLoop implements Context.Task {
     private CompletableFuture<DeliveryResponse> deliver(InternalQueueType type, MessageTracker msg) {
         try {
             return deliveryClient.deliver(msg.getMessage()).thenCompose(response -> {
-                log.info("Delivered message. status: {}", response.statusCode());
+                log.info(
+                        "Delivery attempt was made. message id: {}. status: {}",
+                        msg.getMessage().getHeader(StandardHeaders.MESSAGE_ID), response.statusCode()
+                );
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);
                 } else {
