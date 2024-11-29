@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  * Idea is:
  * Vertx : provides multithreaded runtime.
  * Event Executor : vertx's event loop
- * Subscription : Deployment
+ * Subscription : Vertx verticle which can be 'deployed' on a event loop.
  *
  * Deployment -> choose Event loop (should be customizable). validate if possible in vertx.
  */

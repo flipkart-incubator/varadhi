@@ -31,7 +31,8 @@ public class ConsumerVerticle extends AbstractVerticle {
         //TODO:: decide who manages consumerInfo -- ConsumersManagerImpl or ConsumerApiMgr, mostly later.
         ConsumersManager consumersManager = new ConsumersManagerImpl(
                 coreServices.getMessagingStackProvider().getProducerFactory(),
-                coreServices.getMessagingStackProvider().getConsumerFactory()
+                coreServices.getMessagingStackProvider().getConsumerFactory(),
+                coreServices.getMeterRegistry()
         );
         ControllerConsumerClient controllerClient = new ControllerConsumerClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);

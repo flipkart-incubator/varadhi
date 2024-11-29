@@ -71,11 +71,11 @@ public class MessageSrcSelector {
     private CompletableFuture<PolledMessageTrackers> tryCompleteRequest(Holder holder) {
         CompletableFuture<PolledMessageTrackers> promise = pendingRequest.getAndSet(null);
         if (promise != null) {
-            log.info("returning messages from message src of type: {}. msgs now: {}", holder.internalQueueType, holder.size);
+            log.debug("returning messages from message src of type: {}. msgs now: {}", holder.internalQueueType, holder.size);
             promise.complete(new PolledMessageTrackers(holder));
             return promise;
         } else {
-            log.info("fetched new message for the message src, no pending request to finish: {}", holder.internalQueueType);
+            log.debug("fetched new message for the message src, no pending request to finish: {}", holder.internalQueueType);
             return null;
         }
     }
@@ -98,14 +98,14 @@ public class MessageSrcSelector {
             size = 0;
             Arrays.fill(messages, 0, currentSize, null);
 
-            log.info("IQ:[{}]. Recycling messages array. Fetching new messages", internalQueueType);
+            log.debug("IQ:[{}]. Recycling messages array. Fetching new messages", internalQueueType);
             var nextFetch = msgSrc.nextMessages(messages);
             fetcher.set(nextFetch);
-            log.info("IQ:[{}]. New messages future got created: {}", internalQueueType, fetcher.get());
+            log.debug("IQ:[{}]. New messages future got created: {}", internalQueueType, fetcher.get());
             nextFetch.whenComplete((count, _ignored) -> {
                 size = count;
                 fetcher.set(null);
-                log.info("IQ:[{}]. New messages future got completed: {}", internalQueueType, fetcher.get());
+                log.debug("IQ:[{}]. New messages future got completed: {}", internalQueueType, fetcher.get());
                 onFetchComplete.accept(this);
             });
         }

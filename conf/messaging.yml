@@ -2,3 +2,4 @@ pulsarAdminOptions:
   serviceHttpUrl: "${PULSAR_URL}"
 pulsarClientOptions:
   serviceUrl: "${PULSAR_URL}"
+maxPartitionPerTopic: 1

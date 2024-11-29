@@ -21,11 +21,14 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
     public UngroupedProcessingLoop(
             Context context,
             MessageSrcSelector msgSrcSelector, ConcurrencyControl<DeliveryResult> concurrencyControl,
-            Throttler<DeliveryResponse> throttler, MessageDelivery deliveryClient,
-            Map<InternalQueueType, FailedMsgProducer> internalProducers,
+            ThresholdProvider.Dynamic throttleThresholdProvider, Throttler<DeliveryResponse> throttler,
+            MessageDelivery deliveryClient, Map<InternalQueueType, FailedMsgProducer> internalProducers,
             ConsumptionFailurePolicy failurePolicy, int maxInFlightMessages
     ) {
-        super(context, msgSrcSelector, concurrencyControl, throttler, deliveryClient, maxInFlightMessages);
+        super(
+                context, msgSrcSelector, concurrencyControl, throttleThresholdProvider, throttler, deliveryClient,
+                maxInFlightMessages
+        );
         this.internalProducers = internalProducers;
         this.failurePolicy = failurePolicy;
     }
@@ -34,7 +37,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
     protected void onMessagesPolled(MessageSrcSelector.PolledMessageTrackers polled) {
         super.onMessagesPolled(polled);
 
-        log.info("Got {} polled messages to process.", polled.getSize());
+        log.debug("Got {} polled messages to process.", polled.getSize());
         if (polled.getSize() > 0) {
             Collection<CompletableFuture<DeliveryResult>> asyncResponses =
                     deliverMessages(
@@ -61,8 +64,9 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
         CompletableFuture<Offset> asyncProduce =
                 internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
         asyncProduce.whenComplete((offset, e) -> {
-            log.info(
-                    "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue, offset,
+            log.debug(
+                    "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue,
+                    offset,
                     message.getMessage().getHeader(
                             StandardHeaders.MESSAGE_ID)
             );

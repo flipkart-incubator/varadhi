@@ -8,12 +8,15 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.http.HttpClient;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 
+@Slf4j
 public class ConsumersManagerImpl implements ConsumersManager {
 
     private final ConsumerEnvironment env;
@@ -23,11 +26,12 @@ public class ConsumersManagerImpl implements ConsumersManager {
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
     public ConsumersManagerImpl(
-            ProducerFactory<StorageTopic> producerFactory, ConsumerFactory<StorageTopic, Offset> consumerFactory
+            ProducerFactory<StorageTopic> producerFactory, ConsumerFactory<StorageTopic, Offset> consumerFactory,
+            MeterRegistry meterRegistry
     ) {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.executor = new EventExecutor(this.scheduler, CustomThread::new, new LinkedBlockingQueue<>());
-        this.env = new ConsumerEnvironment(producerFactory, consumerFactory, HttpClient.newHttpClient());
+        this.env = new ConsumerEnvironment(producerFactory, consumerFactory, HttpClient.newHttpClient(), meterRegistry);
     }
 
 
@@ -44,14 +48,19 @@ public class ConsumersManagerImpl implements ConsumersManager {
         }
         ConsumerHolder newConsumer = consumers.get(id);
         newConsumer.consumer =
-                new VaradhiConsumerImpl(env, project, subscription, shardId, storageSubscription, grouped,
-                        endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler
+                new VaradhiConsumerImpl(
+                        env, project, subscription, shardId, storageSubscription, grouped,
+                        endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler,
+                        (s, sid, iqs) -> new ConsumerMetrics(env.getMeterRegistry(), s, sid, iqs)
                 );
         newConsumer.capacityPolicy = capacityPolicy;
 
         return CompletableFuture.supplyAsync(() -> {
+            log.info("Consumer starting for {}/{}", subscription, id);
             newConsumer.consumer.connect();
+            log.info("Consumer connected for {}/{}", subscription, id);
             newConsumer.consumer.start();
+            log.info("Consumption started for {}/{}", subscription, id);
             return null;
         });
     }
@@ -67,7 +76,9 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
         return CompletableFuture.runAsync(() -> {
             try {
+                log.info("Consumer stopping for {}/{}", subscription, id);
                 holder.consumer.close();
+                log.info("Consumer sopped for {}/{}", subscription, id);
             } finally {
                 consumers.remove(id, holder);
             }

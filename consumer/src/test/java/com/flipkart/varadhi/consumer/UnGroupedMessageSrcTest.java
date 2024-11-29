@@ -3,6 +3,7 @@ package com.flipkart.varadhi.consumer;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.spi.services.DummyConsumer;
 import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -15,13 +16,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 class UnGroupedMessageSrcTest {
 
+    private ConsumerMetrics dummyMetrics = new ConsumerMetrics(
+            new SimpleMeterRegistry(), "test", 0, new InternalQueueType[] { InternalQueueType.mainType() }
+    );
+
     @Test
     void testShouldNotBufferMessagesWhenConsumerReturnExactBatch() {
         List<String> messages = List.of("a", "b", "c");
         MessageTracker[] messageTrackers = new MessageTracker[messages.size()];
 
         DummyConsumer consumer = new DummyConsumer(messages);
-        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer, dummyMetrics);
         Integer res = messageSrc.nextMessages(messageTrackers).join();
 
         assertEquals(3, res);
@@ -43,7 +48,7 @@ class UnGroupedMessageSrcTest {
         MessageTracker[] messageTrackers = new MessageTracker[3];
 
         DummyConsumer consumer = new DummyConsumer(messages);
-        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer, dummyMetrics);
         Integer res = messageSrc.nextMessages(messageTrackers).join();
 
         assertEquals(3, res);
@@ -79,7 +84,7 @@ class UnGroupedMessageSrcTest {
         MessageTracker[] messageTrackers = new MessageTracker[4];
 
         DummyConsumer consumer = new DummyConsumer(messages);
-        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer, dummyMetrics);
         Integer res = messageSrc.nextMessages(messageTrackers).join();
 
         assertEquals(4, res);
@@ -115,7 +120,7 @@ class UnGroupedMessageSrcTest {
         MessageTracker[] messageTrackers = new MessageTracker[3];
 
         DummyConsumer consumer = new DummyConsumer(messages);
-        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer, dummyMetrics);
         Integer res = messageSrc.nextMessages(messageTrackers).join();
 
         assertEquals(3, res);
@@ -151,7 +156,7 @@ class UnGroupedMessageSrcTest {
         MessageTracker[] messageTrackers = new MessageTracker[3];
 
         DummyConsumer.SlowConsumer consumer = new DummyConsumer.SlowConsumer(messages, 3);
-        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer);
+        UnGroupedMessageSrc<DummyOffset> messageSrc = new UnGroupedMessageSrc<>(InternalQueueType.mainType(), consumer, dummyMetrics);
         var f1 = messageSrc.nextMessages(messageTrackers);
 
         try {

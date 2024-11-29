@@ -46,7 +46,6 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         this.delayMs = delayMs;
     }
 
-
     public void setDelayMsAsync(long delayMs) {
         context.runOnContext(() -> {
             this.delayMs = delayMs;
@@ -66,7 +65,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
     public CompletableFuture<PolledMessages<O>> receiveAsync() {
         assert context.isInContext();
         CompletableFuture<PolledMessages<O>> promise = new CompletableFuture<>();
-        log.info("called receive. promise: {}", promise);
+        log.debug("called receive. promise: {}", promise);
 
         if (polledMessages.isEmpty()) {
             delegate.receiveAsync().whenComplete((messages, t) -> {
@@ -83,7 +82,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         } else {
             findConsumableMsgs(promise);
         }
-        return promise.whenComplete((p, t) -> log.info("finishing receive. promise: {}", promise));
+        return promise.whenComplete((p, t) -> log.debug("finishing receive. promise: {}", promise));
     }
 
     @Override
@@ -120,7 +119,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         if (timeLeft == 0) {
             promise.complete(polledMessages.getConsumableMsgs(delayMs));
         } else {
-            log.info("dont have messages to consume just yet. delay : {}ms", timeLeft);
+            log.debug("dont have messages to consume just yet. delay : {}ms", timeLeft);
             context.scheduleOnContext(
                     () -> promise.complete(polledMessages.getConsumableMsgs(delayMs)),
                     timeLeft,

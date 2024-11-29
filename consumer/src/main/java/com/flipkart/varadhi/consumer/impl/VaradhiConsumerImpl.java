@@ -39,11 +39,14 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     private final Context context;
     private final ScheduledExecutorService scheduler;
 
+    private final ConsumerMetricsBuilder metricsProvider;
+
     private MessageDelivery deliveryClient;
     private ConcurrencyControl<ProcessingLoop.DeliveryResult> concurrencyControl;
     private SlidingWindowThresholdProvider dynamicThreshold;
     private SlidingWindowThrottler<DeliveryResponse> throttler;
     private ProcessingLoop processingLoop;
+    private ConsumerMetrics metrics;
 
 
     //todo: any app config
@@ -109,6 +112,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
         InternalQueueType[] iqPriority = getPriority();
 
+        metrics = metricsProvider.build(subscriptionName, shardId, iqPriority);
+
         internalConsumers.put(
                 InternalQueueType.mainType(),
                 createConsumerHolder(
@@ -153,8 +158,12 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
                 consumptionPolicy.getMaxErrorThreshold()
         );
         throttler = new SlidingWindowThrottler<>(scheduler, Ticker.systemTicker(), 1, 1_000, 10, getPriority());
+
+        // TODO: currently throttler is hooked into thresholdProvider externally. Because of that the processing loop now requires for instance.
+        // One to mark the delivery rate and the other to acquire the quota from throttler. If throttler was a wrapper on the
+        // dynamic threshold then old throttler instance would have required. Maybe add a class to wrap these 2 together and then pass that to the processing loop.
         dynamicThreshold.addListener(newThreshold -> {
-            log.debug("threshold changed to : {}", newThreshold);
+            log.info("threshold changed to : {}", newThreshold);
             throttler.onThresholdChange(Math.max(newThreshold, 1));
         });
 
@@ -166,7 +175,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         } else {
             processingLoop =
                     new UngroupedProcessingLoop(
-                            context, createMessageSrcSelector(64), concurrencyControl, throttler,
+                            context, createMessageSrcSelector(64), concurrencyControl, dynamicThreshold, throttler,
                             deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages()
                     );
         }
@@ -229,6 +238,11 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
                 });
         internalConsumers.clear();
         internalProducers.clear();
+
+        if (metrics != null) {
+            metrics.close();
+        }
+
         connected = false;
     }
 
@@ -266,7 +280,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     ConsumerHolder createConsumerHolder(Consumer<Offset> consumer, InternalQueueType queueType) {
         // TODO: configurable unacked messages.
         MessageSrc messageSrc =
-                grouped ? new GroupedMessageSrc<>(consumer, 1000) : new UnGroupedMessageSrc<>(queueType, consumer);
+                grouped ? new GroupedMessageSrc<>(consumer, 1000, metrics) :
+                        new UnGroupedMessageSrc<>(queueType, consumer, metrics);
         return new ConsumerHolder(consumer, messageSrc);
     }
 

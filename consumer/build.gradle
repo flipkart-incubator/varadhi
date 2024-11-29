@@ -8,12 +8,11 @@ dependencies {
     api(project(':common'))
     api(project(":core"))
 
-    // async interface are using vertx.Future
-    api("io.vertx:vertx-core:$vertx_version")
     api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
     implementation("org.slf4j:slf4j-api:$slf4j_version")
     implementation("org.jctools:jctools-core:$jctools_version")
     implementation("org.apache.commons:commons-lang3")
+    implementation("io.micrometer:micrometer-core:$micrometer_version")
 
     testImplementation(testFixtures(project(':common')))
     testImplementation(testFixtures(project(":spi")))

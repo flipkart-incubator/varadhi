@@ -26,12 +26,16 @@ public class GroupedProcessingLoop extends ProcessingLoop {
     public GroupedProcessingLoop(
             Context context,
             MessageSrcSelector msgSrcSelector, ConcurrencyControl<DeliveryResult> concurrencyControl,
-            Throttler<DeliveryResponse> throttler, MessageDelivery deliveryClient,
+            ThresholdProvider.Dynamic throttleThresholdProvider, Throttler<DeliveryResponse> throttler,
+            MessageDelivery deliveryClient,
             SubscriptionGroupsState subscriptionGroupsState,
             Map<InternalQueueType, FailedMsgProducer> internalProducers,
             ConsumptionFailurePolicy failurePolicy, int maxInFlightMessages
     ) {
-        super(context, msgSrcSelector, concurrencyControl, throttler, deliveryClient, maxInFlightMessages);
+        super(
+                context, msgSrcSelector, concurrencyControl, throttleThresholdProvider, throttler, deliveryClient,
+                maxInFlightMessages
+        );
         this.groupPointers = new GroupPointer[msgSrcSelector.getBatchSize()];
         this.subscriptionGroupsState = subscriptionGroupsState;
         this.internalProducers = internalProducers;

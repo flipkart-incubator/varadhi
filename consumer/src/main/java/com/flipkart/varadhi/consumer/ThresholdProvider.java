@@ -13,6 +13,8 @@ public interface ThresholdProvider {
      */
     interface Dynamic extends ThresholdProvider {
 
+        void mark();
+
         void addListener(ThresholdChangeListener listener);
 
         void removeListener(ThresholdChangeListener listener);

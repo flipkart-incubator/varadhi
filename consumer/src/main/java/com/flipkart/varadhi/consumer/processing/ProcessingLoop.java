@@ -26,6 +26,7 @@ public abstract class ProcessingLoop implements Context.Task {
     protected final Context context;
     private final MessageSrcSelector msgSrcSelector;
     private final ConcurrencyControl<DeliveryResult> concurrencyControl;
+    private final ThresholdProvider.Dynamic throttleThresholdProvider;
     private final Throttler<DeliveryResponse> throttler;
     private final MessageDelivery deliveryClient;
     private final int maxInFlightMessages;
@@ -74,10 +75,10 @@ public abstract class ProcessingLoop implements Context.Task {
     public void runLoopIfRequired(int currentInFlightMessages) {
         if (currentInFlightMessages <= Math.max(maxInFlightMessages - msgSrcSelector.getBatchSize(), 0) &&
                 iterationInProgress.compareAndSet(false, true)) {
-            log.info("enqueuing next iteration. inFlightMessages: {}", currentInFlightMessages);
+            log.debug("enqueuing next iteration. inFlightMessages: {}", currentInFlightMessages);
             context.run(this);
         } else {
-            log.info("skipping next iteration. inFlightMessages: {}", currentInFlightMessages);
+            log.debug("skipping next iteration. inFlightMessages: {}", currentInFlightMessages);
         }
     }
 
@@ -126,23 +127,33 @@ public abstract class ProcessingLoop implements Context.Task {
         return concurrencyControl.enqueueTasks(type, forPush);
     }
 
+    /**
+     * Deliver the message to the destination. If the delivery fails, then we wait for the quota from the error throttler.
+     */
     private CompletableFuture<DeliveryResponse> deliver(InternalQueueType type, MessageTracker msg) {
         try {
+            // msg delivery marks the start of the consumption of the message.
+            msg.onConsumeStart(type);
+
             return deliveryClient.deliver(msg.getMessage()).thenCompose(response -> {
-                log.info(
-                        "Delivery attempt was made. message id: {}. status: {}",
+                throttleThresholdProvider.mark();
+                log.debug(
+                        "Delivery attempt was made. queue: {}, message id: {}. status: {}", type,
                         msg.getMessage().getHeader(StandardHeaders.MESSAGE_ID), response.statusCode()
                 );
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);
                 } else {
-                    return throttler.acquire(type, () -> {
-                        // acquired the error throttler. now complete the push task
-                        return CompletableFuture.completedFuture(response);
-                    }, 1);
+                    return throttler.acquire(
+                            type, () -> {
+                                // acquired the error throttler. now complete the push task
+                                return CompletableFuture.completedFuture(response);
+                            }, 1
+                    );
                 }
             });
         } catch (Exception e) {
+            throttleThresholdProvider.mark();
             return CompletableFuture.failedFuture(e);
         }
     }
@@ -155,7 +166,9 @@ public abstract class ProcessingLoop implements Context.Task {
      * @param status
      */
     protected void onComplete(MessageTracker message, MessageConsumptionStatus status) {
+        // all kind of processing finishes here for the message.
         message.onConsumed(status);
+
         runLoopIfRequired(inFlightMessages.decrementAndGet());
     }
 
