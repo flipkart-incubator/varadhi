@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.controller.impl.opexecutors.*;
@@ -34,20 +32,19 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     }
 
     @Override
-    public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
+    public CompletableFuture<SubscriptionState> getSubscriptionState(String subscriptionId, String requestedBy) {
         return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
-                .thenCompose(this::getSubscriptionStatus);
+                .thenCompose(this::getSubscriptionState);
     }
 
-    CompletableFuture<SubscriptionStatus> getSubscriptionStatus(VaradhiSubscription subscription) {
+    CompletableFuture<SubscriptionState> getSubscriptionState(VaradhiSubscription subscription) {
         String subId = subscription.getName();
-        // TODO: what is contract of getSubAssignments? a subscription might not even be allocated.
         return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
                 .thenCompose(assignments -> {
                     List<CompletableFuture<Optional<ConsumerState>>> shardFutures = assignments.stream().map(a -> {
                         ConsumerApi consumer = consumerClientFactory.getInstance(a.getConsumerId());
                         return consumer.getConsumerState(subId, a.getShardId()).handle((state, t) -> {
-                            if (t == null) {
+                            if (t != null) {
                                 return Optional.<ConsumerState>empty();
                             }
                             return state;
@@ -69,12 +66,23 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                 });
     }
 
-    private SubscriptionStatus getSubscriptionStatusFromShardStatus(
+    private SubscriptionState getSubscriptionStatusFromShardStatus(
             VaradhiSubscription subscription, List<Assignment> assignments, List<Optional<ConsumerState>> states
     ) {
-        SubscriptionState state =
-                SubscriptionState.getFromShardStates(subscription.getShards().getShardCount(), assignments, states);
-        return new SubscriptionStatus(subscription.getName(), state);
+        List<SubscriptionState> shardStates = new ArrayList<>(subscription.getShards().getShardCount());
+        for(int i = 0; i < subscription.getShards().getShardCount(); ++i) {
+            shardStates.add(new SubscriptionState(AssignmentState.NOT_ASSIGNED, null));
+        }
+
+        for(int i = 0; i < assignments.size(); ++i) {
+            Assignment a = assignments.get(i);
+            Optional<ConsumerState> state = states.get(i);
+            int shardId = a.getShardId();
+
+            shardStates.set(shardId, new SubscriptionState(AssignmentState.ASSIGNED, state.orElse(null)));
+        }
+
+        return SubscriptionState.mergeShardStates(shardStates);
     }
 
     @Override
@@ -82,10 +90,10 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             String subscriptionId, String requestedBy
     ) {
         return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
-                .thenCompose(subscription -> getSubscriptionStatus(subscription).thenApply(ss -> {
-                    if (ss.getState() == SubscriptionState.RUNNING || ss.getState() == SubscriptionState.STARTING) {
+                .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
+                    if (!AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
                         throw new InvalidOperationForResourceException(
-                                "Subscription is either already running or starting.");
+                                "Subscription is already assigned and may be running.");
                     }
                     log.info("Starting the Subscription: {}", subscriptionId);
                     SubscriptionOperation operation = SubscriptionOperation.startOp(subscriptionId, requestedBy);
@@ -102,12 +110,12 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     public CompletableFuture<SubscriptionOperation> stopSubscription(
             String subscriptionId, String requestedBy
     ) {
-
         return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
-                .thenCompose(subscription -> getSubscriptionStatus(subscription).thenApply(ss -> {
-                    if (ss.getState() == SubscriptionState.STOPPED || ss.getState() == SubscriptionState.STOPPING) {
+                .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
+                    // This means that partially assigned subscriptions can be stopped.
+                    if (AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
                         throw new InvalidOperationForResourceException(
-                                "Subscription is either already stopped or stopping.");
+                                "Subscription is already stopped.");
                     }
                     log.info("Stopping the Subscription: {}", subscriptionId);
                     SubscriptionOperation operation = SubscriptionOperation.stopOp(subscriptionId, requestedBy);
@@ -149,10 +157,10 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             String subscriptionId, UnsidelineRequest request, String requestedBy
     ) {
         return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId)).thenCompose(subscription ->
-        getSubscriptionStatus(subscription).thenApply(ss -> {
-            if (ss.getState() == SubscriptionState.STOPPED || ss.getState() == SubscriptionState.STOPPING) {
+        getSubscriptionState(subscription).thenApply(ss -> {
+            if (!ss.isRunningSuccessfully()) {
                 throw new InvalidOperationForResourceException(
-                        String.format("Unsideline not allowed in subscription state %s.", ss.getState()));
+                        String.format("Unsideline not allowed in subscription state %s.", ss));
             }
             SubscriptionOperation operation = SubscriptionOperation.unsidelineOp(subscriptionId, request, requestedBy);
             operationMgr.createAndEnqueue(

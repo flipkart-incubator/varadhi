@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 public interface ControllerRestApi {
     String ROUTE_CONTROLLER = "controller";
 
-    CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy);
+    CompletableFuture<SubscriptionState> getSubscriptionState(String subscriptionId, String requestedBy);
 
     CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy);
 

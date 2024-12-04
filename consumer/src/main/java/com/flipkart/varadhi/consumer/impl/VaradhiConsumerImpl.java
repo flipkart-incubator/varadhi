@@ -163,7 +163,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         // One to mark the delivery rate and the other to acquire the quota from throttler. If throttler was a wrapper on the
         // dynamic threshold then old throttler instance would have required. Maybe add a class to wrap these 2 together and then pass that to the processing loop.
         dynamicThreshold.addListener(newThreshold -> {
-            log.info("threshold changed to : {}", newThreshold);
+            log.debug("threshold changed to : {}", newThreshold);
             throttler.onThresholdChange(Math.max(newThreshold, 1));
         });
 

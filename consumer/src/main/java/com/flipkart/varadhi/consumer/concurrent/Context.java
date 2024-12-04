@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.consumer.concurrent;
 
 import com.flipkart.varadhi.SafeCallable;
+import com.google.common.annotations.VisibleForTesting;
 import io.netty.util.concurrent.FastThreadLocal;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,9 @@ public class Context {
     }
 
     /**
-     * Update the current thread's context to this context.
+     * Update the current thread's context to this context. Useful in tests.
      */
+    @VisibleForTesting
     public void updateCurrentThreadContext() {
         Thread currentThread = Thread.currentThread();
         if (currentThread instanceof CustomThread) {

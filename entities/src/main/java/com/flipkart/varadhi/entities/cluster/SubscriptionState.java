@@ -1,61 +1,117 @@
 package com.flipkart.varadhi.entities.cluster;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.annotation.Nullable;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import java.util.Optional;
 
-public enum SubscriptionState {
-    STARTING,
-    RUNNING,
-    STOPPING,
-    STOPPED,
-    ERRORED;
+/**
+ * Represents the state of a subscription.
+ * Can be used to represent the state of the shard or the overall subscription. For a shard, though, the assignment
+ * cannot be partially assigned.
+ */
+@Getter
+@EqualsAndHashCode
+@RequiredArgsConstructor
+public class SubscriptionState {
 
-    public static SubscriptionState getFromShardStates(int totalShards, List<Assignment> assignments, List<Optional<ConsumerState>> states) {
-        // len(ShardAssignment) == 0, State can be either of Stopped/Errored (Create/Delete failed).
+    /**
+     * Subscription state needs to be computed in this priority.
+     * ASSIGNED, if all shards are assigned
+     * NOT_ASSIGNED, if all shards are unassigned
+     * PARTIALLY_ASSIGNED, if some shards are assigned and some are unassigned
+     */
+    private final AssignmentState assignmentState;
 
-        // len(ShardAssignment) > 0, State cn be Running, Stopping, Starting, Errored.
-        //  ShardCount == Running Shard --> Running
-        //  Starting shard > 0 --> Starting
-        //  Stopping shard > 0 --> Stopping
+    /**
+     * Errored: if any shard is errored. (can be partial)
+     * Throttled: if any shard is throttled.
+     * Paused: if any shard is paused. (can be partial)
+     * Running: if all shards are running.
+     *
+     * Will be populated only when the assignmentState is ASSIGNED.
+     */
+    @Nullable
+    private final ConsumerState consumerState;
 
-        // Below would need additional details like last operation executed.
-        // For now all the below are being classified as Error'ed.
+    public static SubscriptionState mergeShardStates(List<SubscriptionState> states) {
+        int totalShards = states.size();
 
-        //  Starting > 0 & Stopping > 0 --> Starting/Stopping (when sub operation are allowed in parallel)
-        //  ShardCount ==  Unknown shard --> Starting/Stopping
-        //  ShardCount ==  Unknown Shard + Errored Shard --> Errored (Could be from Start or Stop)
-        //  Errored shard > 0 --> Errored (Could be from Start or Stop)
-
-        if (assignments.isEmpty()) {
-            //TODO:: error conditions are being ignored for now.
-            return STOPPED;
+        long partial =
+                states.stream().filter(state -> state.assignmentState == AssignmentState.PARTIALLY_ASSIGNED).count();
+        if (partial > 0) {
+            throw new IllegalStateException("Invalid state. A single shard cannot be in partial state");
         }
 
-        if(assignments.size() != states.size()) {
-            throw new IllegalStateException("Assignment and State size mismatch");
-        }
+        long assigned = states.stream().filter(state -> state.assignmentState == AssignmentState.ASSIGNED).count();
+        long unassigned =
+                states.stream().filter(state -> state.assignmentState == AssignmentState.NOT_ASSIGNED).count();
 
-        // TODO: whether this is ok to do? SubscriptionState looks more of assignment pov. We can look at consumptino status as well.
-        // There are 2 things. Assignment and actual consumption.
-        if (states.stream().anyMatch(s -> s.isPresent() && s.get() == ConsumerState.ERRORED)) {
-            return ERRORED;
-        }
+        if (assigned > 0 && unassigned > 0) {
+            return new SubscriptionState(AssignmentState.PARTIALLY_ASSIGNED, null);
+        } else if (unassigned == totalShards) {
+            return new SubscriptionState(AssignmentState.NOT_ASSIGNED, null);
+        } else if (assigned == totalShards) {
+            long unknownConsumerState = states.stream().filter(s -> s.consumerState == null).count();
+            if (unknownConsumerState > 0) {
+                return new SubscriptionState(AssignmentState.ASSIGNED, null);
+            }
 
-        // TODO: could be starting as well. need the final "op" on the subscription to distinguish that.
-        if (assignments.isEmpty()) {
-            return STOPPED;
-        }
+            Optional<ConsumerState> erroredState =
+                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.ERRORED)
+                            .findAny();
+            if (erroredState.isPresent()) {
+                return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.ERRORED);
+            }
 
-        // TODO: could be stopping as well. need the final "op" on the subscription to distinguish that.
-        if (assignments.size() < totalShards) {
-            return STARTING;
-        }
+            Optional<ConsumerState> pausedState =
+                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.PAUSED)
+                            .findAny();
+            if (pausedState.isPresent()) {
+                return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.PAUSED);
+            }
 
-        // TODO: could be stopping as well. need the final "op" on the subscription to distinguish that.
-        if (assignments.size() == totalShards) {
-            return RUNNING;
-        }
+            Optional<ConsumerState> throttledState =
+                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.THROTTLED)
+                            .findAny();
+            if (throttledState.isPresent()) {
+                return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.THROTTLED);
+            }
 
-        throw new IllegalStateException("unreachable code");
+            return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.CONSUMING);
+        } else {
+            throw new IllegalStateException("Invalid state");
+        }
+    }
+
+    public static SubscriptionState forRunning() {
+        return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.CONSUMING);
+    }
+
+    public static SubscriptionState forStopped() {
+        return new SubscriptionState(AssignmentState.NOT_ASSIGNED, null);
+    }
+
+    public static SubscriptionState forPartiallyAssigned() {
+        return new SubscriptionState(AssignmentState.PARTIALLY_ASSIGNED, null);
+    }
+
+    @JsonIgnore
+    public boolean isRunningSuccessfully() {
+        return assignmentState == AssignmentState.ASSIGNED && consumerState == ConsumerState.CONSUMING;
+    }
+
+    @JsonIgnore
+    public boolean isStoppedSuccessfully() {
+        return assignmentState == AssignmentState.NOT_ASSIGNED;
+    }
+
+    @Override
+    public String toString() {
+        return "SubscriptionState(" + assignmentState + ", " + consumerState + ")";
     }
 }

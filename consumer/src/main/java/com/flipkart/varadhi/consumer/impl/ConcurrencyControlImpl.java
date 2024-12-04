@@ -73,6 +73,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
                 Supplier<CompletableFuture<T>> task = tasksIt.next();
                 CompletableFuture<T> future = new CompletableFuture<>();
                 queue.tasks.add(new Holder<>(future, task, this::onTaskCompletion));
+                pendingTasks.incrementAndGet();
                 futures.add(future);
             }
         }

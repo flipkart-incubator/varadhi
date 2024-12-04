@@ -2,6 +2,9 @@ package com.flipkart.varadhi.entities.cluster;
 
 /**
  * Status for a consumer that has been started.
+ *
+ * Can we use for overall subscription / a shard.
+ * TODO: add few more states for overall subscription. PARTIAL_ERRORED, PARTIAL_PAUSE!!
  */
 public enum ConsumerState {
 
