@@ -27,3 +27,5 @@ services:
       hostnet:
     ports:
       - 3000:3000
+    volumes:
+      - ./configs/datasources:/etc/grafana/provisioning/datasources

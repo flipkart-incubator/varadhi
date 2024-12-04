@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Message source that maintains ordering among messages of the same groupId.
  */
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
 
     private final ConcurrentHashMap<String, GroupTracker> allGroupedMessages = new ConcurrentHashMap<>();
@@ -36,6 +36,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
      * Used to limit the message buffering. Will be driven via consumer configuration.
      */
     private final long maxUnAckedMessages;
+
+    private final ConsumerMetrics metrics;
 
     /**
      * Maintains the count of total messages read from the consumer so far.
@@ -91,6 +93,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     private void tryCompletePendingRequest() {
         NextMsgsRequest request;
         if ((request = pendingRequest.getAndSet(null)) != null) {
+            // TODO: does it need to be done on the context?
             request.result.complete(nextMessagesInternal(request.messages));
         }
     }
@@ -163,7 +166,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
     private Map<String, List<MessageTracker>> groupMessagesByGroupId(PolledMessages<O> polledMessages) {
         Map<String, List<MessageTracker>> groups = new HashMap<>();
         for (PolledMessage<O> polledMessage : polledMessages) {
-            MessageTracker messageTracker = new PolledMessageTracker<>(consumer, polledMessage);
+            MessageTracker messageTracker = new PolledMessageTracker<>(consumer, polledMessage, metrics::begin);
             String groupId = messageTracker.getGroupId();
             if (StringUtils.isBlank(groupId)) {
                 throw new IllegalStateException("Group id not found for message " + messageTracker.getMessage());
@@ -196,8 +199,13 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
         private final MessageTracker messageTracker;
 
         @Override
-        public Message getMessage() {
+        public PolledMessage<? extends Offset> getMessage() {
             return messageTracker.getMessage();
+        }
+
+        @Override
+        public void onConsumeStart(InternalQueueType queueType) {
+            messageTracker.onConsumeStart(queueType);
         }
 
         @Override

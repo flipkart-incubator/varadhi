@@ -50,7 +50,7 @@ public class ProducerMessage implements Message {
     }
 
     @Override
-    public Multimap<String, String> getRequestHeaders() {
+    public Multimap<String, String> getHeaders() {
         return requestHeaders;
     }
 }

@@ -3,7 +3,7 @@
   <Appenders>
     <!-- Console appender configuration -->
     <Console name="console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p [%thread]${MDC} %c{1}:%L - %m%n"/>
     </Console>
   </Appenders>
   <Loggers>

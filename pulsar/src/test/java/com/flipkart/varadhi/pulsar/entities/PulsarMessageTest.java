@@ -32,7 +32,7 @@ class PulsarMessageTest {
         // create produce path message builder
         TypedMessageBuilder<byte[]> messageBuilder = new TypedMessageBuilderImpl<>(null, Schema.BYTES)
                 .key("key").value(producerMessage.getPayload());
-        producerMessage.getRequestHeaders().asMap()
+        producerMessage.getHeaders().asMap()
                 .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 
         // create pulsar message, which is the message that is consumed by the consumer
@@ -43,10 +43,10 @@ class PulsarMessageTest {
         Assertions.assertEquals(producerMessage.getMessageId(), pulsarMessage.getMessageId());
         Assertions.assertEquals(producerMessage.getGroupId(), producerMessage.getGroupId());
 
-        Assertions.assertEquals(producerMessage.getRequestHeaders().size(), pulsarMessage.getRequestHeaders().size());
-        producerMessage.getRequestHeaders().asMap().forEach((key, values) -> {
-            Assertions.assertTrue(pulsarMessage.getRequestHeaders().containsKey(key));
-            Assertions.assertEquals(values, pulsarMessage.getRequestHeaders().get(key));
+        Assertions.assertEquals(producerMessage.getHeaders().size(), pulsarMessage.getHeaders().size());
+        producerMessage.getHeaders().asMap().forEach((key, values) -> {
+            Assertions.assertTrue(pulsarMessage.getHeaders().containsKey(key));
+            Assertions.assertEquals(values, pulsarMessage.getHeaders().get(key));
         });
 
     }

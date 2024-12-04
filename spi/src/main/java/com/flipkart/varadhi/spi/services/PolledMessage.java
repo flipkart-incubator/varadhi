@@ -10,6 +10,8 @@ import com.flipkart.varadhi.entities.Offset;
 // unnecessary deserialization / array copy & then we can tweak this interface.
 public interface PolledMessage<O extends Offset> extends Message {
 
+    long getProducedTimestampMs();
+
     String getTopicName();
 
     /**

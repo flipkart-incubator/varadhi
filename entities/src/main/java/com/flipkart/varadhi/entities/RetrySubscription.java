@@ -4,8 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
 @Getter
-@RequiredArgsConstructor(onConstructor=@__(@JsonCreator))
+@RequiredArgsConstructor(onConstructor_ = {@JsonCreator})
 public class RetrySubscription {
     private final InternalCompositeSubscription[] retrySubscriptions;
 

@@ -45,13 +45,17 @@ class ConcurrencyControlImplTest {
 
         ConcurrencyControlImpl<Integer> cc = new ConcurrencyControlImpl<>(ctx, 2, priority);
 
+        // tasks that have been executed by the CC
         List<TaskWithType> executed = Collections.synchronizedList(new LinkedList<>());
+
+        // tasks that have been enqueued to the CC
         Map<InternalQueueType, List<CompletableFuture<Integer>>> enqueued = new HashMap<>();
         Arrays.stream(priority).forEach(t -> enqueued.put(t, new ArrayList<>()));
         Supplier<Integer> enqueuedSize = () -> enqueued.values().stream().mapToInt(List::size).sum();
 
         List<InternalQueueType> types = new ArrayList<>(Arrays.stream(priority).toList());
         Collections.reverse(types);
+
         types.forEach(t -> {
             // create 3 tasks
             List<Supplier<CompletableFuture<Integer>>> tasks =
@@ -66,7 +70,7 @@ class ConcurrencyControlImplTest {
             enqueueFuture.join();
         });
 
-        // The concurrency is set to 2, but we have enqueue 3 tasks for each priority in reverse priority order.
+        // The concurrency is set to 2, but we have enqueued 3 tasks for each priority in reverse priority order.
         assertEquals(2, executed.size());
         assertEquals(12, enqueuedSize.get());
         assertEquals(10, cc.getPendingCount());

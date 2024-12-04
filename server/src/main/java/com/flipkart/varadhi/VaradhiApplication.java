@@ -186,7 +186,7 @@ public class VaradhiApplication {
                 .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
                     case Server -> new WebServerVerticle(config, coreServices, clusterManager);
                     case Controller -> new ControllerVerticle(config.getController(), coreServices, clusterManager);
-                    case Consumer -> new ConsumerVerticle(memberInfo, clusterManager);
+                    case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
                 }));
     }
 }

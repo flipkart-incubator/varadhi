@@ -39,7 +39,7 @@ public class SubscriptionHandlersTest extends WebTestBase {
             RetryPolicy.BackoffType.LINEAR,
             1, 1, 1, 3
     );
-    private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
+    private static final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(10, 1, 1, false, 1, null);
     private static final TopicCapacityPolicy capacityPolicy = new TopicCapacityPolicy(1, 10, 1);
     private static final SubscriptionShards shards = new SubscriptionUnitShard(0, capacityPolicy, null, null, null);
     private static final Map<String, String> subscriptionDefaultProperties =

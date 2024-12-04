@@ -13,4 +13,5 @@ module com.flipkart.varadhi.consumer {
     requires jakarta.annotation;
     requires com.fasterxml.jackson.annotation;
     requires java.net.http;
+    requires micrometer.core;
 }

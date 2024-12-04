@@ -85,7 +85,7 @@ public class SubscriptionService {
         validateForConflictingUpdate(fromVersion, existingSubscription.getVersion());
         VaradhiTopic subscribedTopic = metaStore.getTopic(existingSubscription.getTopic());
         validateForSubscribedTopic(subscribedTopic, grouped);
-        return controllerClient.getSubscriptionStatus(subscriptionName, requestedBy).thenApply(ss -> {
+        return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(ss -> {
             existingSubscription.setGrouped(grouped);
             existingSubscription.setDescription(description);
             existingSubscription.setEndpoint(endpoint);
@@ -116,10 +116,10 @@ public class SubscriptionService {
 
     public CompletableFuture<Void> deleteSubscription(String subscriptionName, Project subProject, String requestedBy) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
-        return controllerClient.getSubscriptionStatus(subscriptionName, requestedBy).thenAccept(ss -> {
-            if (!ss.canDelete()) {
+        return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenAccept(ss -> {
+            if (!ss.isStoppedSuccessfully()) {
                 throw new IllegalArgumentException(
-                        String.format("Subscription deletion not allowed in state: %s.", ss.getState()));
+                        String.format("Subscription deletion not allowed in state: %s.", ss));
             }
             subscription.markDeleting();
             metaStore.updateSubscription(subscription);

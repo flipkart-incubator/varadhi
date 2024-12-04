@@ -3,6 +3,7 @@ module com.flipkart.varadhi.entities {
     requires com.fasterxml.jackson.annotation;
     requires com.google.common;
     requires jakarta.validation;
+    requires jakarta.annotation;
 
     exports com.flipkart.varadhi.entities;
     exports com.flipkart.varadhi.entities.cluster;

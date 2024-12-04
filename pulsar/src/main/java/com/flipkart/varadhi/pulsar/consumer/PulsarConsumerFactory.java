@@ -6,12 +6,14 @@ import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.entities.TopicPartitions;
+import org.apache.pulsar.client.api.BatchReceivePolicy;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.common.naming.TopicName;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic, PulsarOffset> {
 
@@ -60,6 +62,12 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
                             .subscriptionName(subscriptionName)
                             .consumerName(consumerName)
                             .poolMessages(true)
+                            .batchReceivePolicy(BatchReceivePolicy.builder()
+                                    .maxNumMessages(2000)
+                                    .maxNumBytes(5 * 1024 * 1024)
+                                    .timeout(200, TimeUnit.MILLISECONDS)
+                                    .build())
+                            .acknowledgmentGroupTime(1, TimeUnit.SECONDS)
                             .subscribe());
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);
