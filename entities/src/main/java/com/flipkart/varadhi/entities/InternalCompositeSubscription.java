@@ -1,11 +1,10 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Getter
@@ -16,7 +15,6 @@ public class InternalCompositeSubscription {
     private int produceIndex;
     private int consumeIndex;
 
-
     public static InternalCompositeSubscription of(
             StorageSubscription<StorageTopic> storageSubscription, InternalQueueType queueType
     ) {
@@ -24,20 +22,20 @@ public class InternalCompositeSubscription {
     }
 
     @JsonIgnore
-    public StorageTopic getTopicToProduce() {
+    public StorageTopic getTopicForProduce() {
         if (queueType.getCategory() == InternalQueueCategory.MAIN) {
             throw new IllegalArgumentException("Main Subscription does not have a topic to produce");
         }
-        return storageSubscriptions[produceIndex].getTopicPartitions().getTopic();
+        return storageSubscriptions[produceIndex].getStorageTopic();
     }
 
     @JsonIgnore
-    public StorageSubscription<StorageTopic> getSubscriptionToConsume() {
+    public StorageSubscription<StorageTopic> getSubscriptionForConsume() {
         return storageSubscriptions[consumeIndex];
     }
 
     @JsonIgnore
     public List<StorageSubscription<StorageTopic>> getActiveSubscriptions() {
-        return new ArrayList<>(Arrays.asList(storageSubscriptions));
+        return Lists.newArrayList(storageSubscriptions);
     }
 }

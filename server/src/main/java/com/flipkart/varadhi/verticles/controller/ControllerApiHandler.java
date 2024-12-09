@@ -32,7 +32,7 @@ public class ControllerApiHandler {
 
     public CompletableFuture<ResponseMessage> status(ClusterMessage message) {
         SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
-        return controllerMgr.getSubscriptionStatus(request.getSubscriptionId(), request.getRequestedBy())
+        return controllerMgr.getSubscriptionState(request.getSubscriptionId(), request.getRequestedBy())
                 .thenApply(message::getResponseMessage);
     }
 

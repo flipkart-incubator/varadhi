@@ -29,8 +29,8 @@ public record DlqMessage(byte[] payload, ArrayListMultimap<String, String> reque
 
     @Override
     public String getHeader(String key) {
-        return !requestHeaders.containsKey(key) || requestHeaders.get(key).size() == 0 ? null :
-                requestHeaders.get(key).get(0);
+        return !requestHeaders.containsKey(key) || requestHeaders.get(key).isEmpty() ? null :
+                requestHeaders.get(key).getFirst();
     }
 
     @Override
@@ -44,7 +44,7 @@ public record DlqMessage(byte[] payload, ArrayListMultimap<String, String> reque
     }
 
     @Override
-    public Multimap<String, String> getRequestHeaders() {
+    public Multimap<String, String> getHeaders() {
         return requestHeaders;
     }
 }

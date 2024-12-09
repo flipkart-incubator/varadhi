@@ -56,7 +56,6 @@ public final class VaradhiSubscriptionFactory {
         );
     }
 
-
     private SubscriptionShards getSubscriptionShards(
             String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy,
             RetryPolicy retryPolicy

@@ -7,7 +7,6 @@ import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
-import com.flipkart.varadhi.entities.cluster.SubscriptionStatus;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.pulsar.PulsarSubscriptionFactory;
@@ -117,7 +116,7 @@ class SubscriptionServiceTest {
                 RetryPolicy.BackoffType.LINEAR,
                 1, 1, 1, 1
         );
-        ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(1, 1, false, 1, null);
+        ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(10, 1, 1, false, 1, null);
         endpoint = new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
         TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
 
@@ -173,7 +172,9 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         subscriptionService.createSubscription(unGroupedTopic, sub2, o1t1p1);
         subscriptionService.createSubscription(
-                unGroupedTopic, SubscriptionHandlersTest.getUngroupedSubscription("sub3", o1t1p2, unGroupedTopic), o1t1p2);
+                unGroupedTopic, SubscriptionHandlersTest.getUngroupedSubscription("sub3", o1t1p2, unGroupedTopic),
+                o1t1p2
+        );
 
         List<String> actualSubscriptions = subscriptionService.getSubscriptionList(o1t1p1.getName());
 
@@ -265,11 +266,12 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+                SubscriptionHandlersTest.getUngroupedSubscription(
+                        sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
         update.setVersion(1);
-        CompletableFuture<SubscriptionStatus> status =
-                CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
+        CompletableFuture<SubscriptionState> status =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), requestedBy);
 
         Future.fromCompletionStage(updateSubscription(update)).onComplete(ctx.succeeding(
                 sub -> {
@@ -286,17 +288,21 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, sub1, o1t1p1);
         VaradhiSubscription update =
-                SubscriptionHandlersTest.getUngroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
+                SubscriptionHandlersTest.getUngroupedSubscription(
+                        sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
         update.setVersion(2);
-        CompletableFuture<SubscriptionStatus> status =
-                CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
+        CompletableFuture<SubscriptionState> status =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), requestedBy);
         String expectedMessage = "Conflicting update, Subscription has been modified. Fetch latest and try again.";
 
-        InvalidOperationForResourceException e = assertThrows(InvalidOperationForResourceException.class, () -> {
-            CompletableFuture<VaradhiSubscription> result = updateSubscription(update);
-            Future.fromCompletionStage(result).onComplete((v) -> ctx.failNow("Update Subscription didn't fail"));
-        });
+        InvalidOperationForResourceException e = assertThrows(
+                InvalidOperationForResourceException.class, () -> {
+                    CompletableFuture<VaradhiSubscription> result = updateSubscription(update);
+                    Future.fromCompletionStage(result)
+                            .onComplete((v) -> ctx.failNow("Update Subscription didn't fail"));
+                }
+        );
         assertEquals(expectedMessage, e.getMessage());
         checkpoint.flag();
     }
@@ -310,16 +316,19 @@ class SubscriptionServiceTest {
         VaradhiSubscription update =
                 getGroupedSubscription(sub1.getName().split(NAME_SEPARATOR_REGEX)[1], o1t1p1, unGroupedTopic);
         update.setVersion(1);
-        CompletableFuture<SubscriptionStatus> status =
-                CompletableFuture.completedFuture(new SubscriptionStatus(update.getName(), SubscriptionState.STOPPED));
-        doReturn(status).when(controllerRestApi).getSubscriptionStatus(update.getName(), requestedBy);
+        CompletableFuture<SubscriptionState> status =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), requestedBy);
 
         String expectedMessage =
                 "Cannot update Subscription to grouped as it's Topic(%s) is not grouped".formatted(update.getTopic());
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
-            CompletableFuture<VaradhiSubscription> result = updateSubscription(update);
-            Future.fromCompletionStage(result).onComplete((v) -> ctx.failNow("Update Subscription didn't fail"));
-        });
+        IllegalArgumentException e = assertThrows(
+                IllegalArgumentException.class, () -> {
+                    CompletableFuture<VaradhiSubscription> result = updateSubscription(update);
+                    Future.fromCompletionStage(result)
+                            .onComplete((v) -> ctx.failNow("Update Subscription didn't fail"));
+                }
+        );
         assertEquals(expectedMessage, e.getMessage());
         checkpoint.flag();
     }
@@ -335,9 +344,9 @@ class SubscriptionServiceTest {
         VaradhiSubscription subscription = subscriptionService.getSubscription(name);
         assertNotNull(subscription);
 
-        CompletableFuture<SubscriptionStatus> status =
-                CompletableFuture.completedFuture(new SubscriptionStatus(name, SubscriptionState.STOPPED));
-        doReturn(status).when(controllerRestApi).getSubscriptionStatus(name, requestedBy);
+        CompletableFuture<SubscriptionState> status =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(status).when(controllerRestApi).getSubscriptionState(name, requestedBy);
         Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy))
                 .onComplete(ctx.succeeding(
                         v -> {

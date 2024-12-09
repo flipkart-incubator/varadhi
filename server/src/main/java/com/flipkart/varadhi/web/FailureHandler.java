@@ -38,7 +38,6 @@ public class FailureHandler implements Handler<RoutingContext> {
                 log.error(failureLog);
             }
             response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-            response.putHeader(HttpHeaders.CONTENT_ENCODING, "utf-8");
             response.setStatusCode(statusCode);
             response.setStatusMessage(errorMsg);
             response.end(Json.encodeToBuffer(new ErrorResponse(errorMsg)));
@@ -100,7 +99,7 @@ public class FailureHandler implements Handler<RoutingContext> {
             return HTTP_NOT_FOUND;
         } else if (InvalidOperationForResourceException.class == tClazz) {
             return HTTP_CONFLICT;
-        } else if (NotImplementedException.class == tClazz) {
+        } else if (UnsupportedOperationException.class == tClazz) {
             return HTTP_NOT_IMPLEMENTED;
         }
         return HTTP_INTERNAL_ERROR;

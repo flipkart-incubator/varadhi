@@ -44,7 +44,7 @@ services:
         condition: service_healthy
 
   pulsar:
-    image: apachepulsar/pulsar:3.0.0
+    image: apachepulsar/pulsar:3.3.2
     container_name: pulsar
     profiles: [ "test", "dev", "pulsar" , "dev-metric"]
     networks:

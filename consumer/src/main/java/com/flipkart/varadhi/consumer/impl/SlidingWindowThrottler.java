@@ -64,12 +64,12 @@ public class SlidingWindowThrottler<T>
     private ScheduledFuture<?> throttledTaskExecutor;
 
     public SlidingWindowThrottler(
-            ScheduledExecutorService scheduler, Ticker ticker, float intitialThreshold, int windowSizeMs, int tickMs,
+            ScheduledExecutorService scheduler, Ticker ticker, float initialThreshold, int windowSizeMs, int tickMs,
             InternalQueueType[] priorityOrder
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
-        this.threshold = intitialThreshold;
+        this.threshold = initialThreshold;
         this.tickMs = tickMs;
 
         if (windowSizeMs % tickMs != 0) {

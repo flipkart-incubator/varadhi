@@ -73,6 +73,7 @@ public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic
      * Add a new datapoint to the current tick. If the tick has changed, then move the window adjusting the total data points.
      * Can be called by arbitrary threads.
      */
+    @Override
     public void mark() {
         long currentTick = currentTick();
         // mark

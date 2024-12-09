@@ -69,7 +69,7 @@ public class PulsarProducer implements Producer {
         TypedMessageBuilder<byte[]> messageBuilder =
                 pulsarProducer.newMessage().key(partitioningKey).value(message.getPayload());
 
-        message.getRequestHeaders().asMap()
+        message.getHeaders().asMap()
                 .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 
         // In general Pulsar client and producer, auto-reconnects so this should be fine.Might need to

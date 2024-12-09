@@ -27,6 +27,8 @@ public class ConsumerInfo {
         Assignment assignment = new Assignment(subscriptionName, shardId, consumerId);
         if (null == assignments.putIfAbsent(assignment.getName(), assignment)) {
             available.allocate(capacity);
+        } else {
+            throw new IllegalStateException("Assignment already exists for " + assignment.getName());
         }
     }
 
@@ -34,6 +36,8 @@ public class ConsumerInfo {
         Assignment assignment = new Assignment(subscriptionName, shardId, consumerId);
         if (null != assignments.remove(assignment.getName())) {
             available.free(capacity);
+        } else {
+            throw new IllegalStateException("Assignment does not exist for " + assignment.getName());
         }
     }
 }

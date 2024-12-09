@@ -10,8 +10,11 @@ import static java.util.Comparator.comparing;
 public class SubscriptionUnitShard extends SubscriptionShards {
     //TODO::Add a notion of regions to either Shard or VaradhiSubscription
     // and bring operation down to regional level e.g. start/stop/assignment.
-    public static Comparator<SubscriptionUnitShard> ShardCapacityComparator = comparing(o -> o.capacityRequest);
+    public static final Comparator<SubscriptionUnitShard> ShardCapacityComparator = comparing(o -> o.capacityRequest);
+
     private final int shardId;
+
+    // TODO: why is topicCapacity object being used here?
     private final TopicCapacityPolicy capacityRequest;
     private final InternalCompositeSubscription mainSubscription;
     private final RetrySubscription retrySubscription;

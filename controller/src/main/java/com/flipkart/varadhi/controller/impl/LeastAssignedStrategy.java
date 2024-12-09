@@ -38,7 +38,6 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
         int nextShardIndex = 1;
         for (SubscriptionUnitShard shard : shardsToAssign) {
             ConsumerNode consumerNode = consumers.remove();
-            Objects.requireNonNull(consumerNode);
             //TODO::handle for creating required capacity via re-assigning the shards.
             if (!consumerNode.canAllocate(shard.getCapacityRequest())) {
                 log.error(

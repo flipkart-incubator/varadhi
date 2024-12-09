@@ -83,10 +83,11 @@ public class UnsidelinepOpExecutor extends SubscriptionOpExecutor {
         ShardOperation.UnsidelineData opData = (ShardOperation.UnsidelineData) unsidelineOp.getOpData();
         String subId = opData.getSubscriptionId();
         int shardId = opData.getShardId();
-        return consumer.getShardStatus(subId, shardId).thenCompose(shardStatus -> {
+        // TOOD: why is state check even required? why not assume "happy path" and then handle errors?
+        return consumer.getConsumerState(subId, shardId).thenCompose(state -> {
             // unsideline can be executed when subscription is in running/started state.
             // may be special handing needs to be enabled when only DLQ unsideline needs to be handled.
-            if (!shardStatus.isStarted()) {
+            if (state.isEmpty()) {
                 log.error("Subscription:{} Shard:{} is not in started state, can't un-sideline.", subId, shardId);
                 //TODO::evaluate sending appropriate error ??
                 return CompletableFuture.completedFuture(false);

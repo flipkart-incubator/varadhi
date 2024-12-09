@@ -8,6 +8,7 @@ import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -42,10 +43,10 @@ public class ConsumerClient implements ConsumerApi {
     }
 
     @Override
-    public CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId) {
+    public CompletableFuture<Optional<ConsumerState>> getConsumerState(String subscriptionId, int shardId) {
         return exchange.request(
                         consumerId, "status", ClusterMessage.of(new ShardStatusRequest(subscriptionId, shardId)))
-                .thenApply(rm -> rm.getResponse(ShardStatus.class));
+                .thenApply(rm -> Optional.ofNullable(rm.getResponse(ConsumerState.class)));
     }
 
     @Override

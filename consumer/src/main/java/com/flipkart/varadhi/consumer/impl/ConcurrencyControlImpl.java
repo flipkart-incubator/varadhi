@@ -2,12 +2,15 @@ package com.flipkart.varadhi.consumer.impl;
 
 import com.flipkart.varadhi.CircularQueue;
 import com.flipkart.varadhi.consumer.ConcurrencyControl;
-import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.consumer.concurrent.Context;
+import com.flipkart.varadhi.entities.InternalQueueType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -28,6 +31,8 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
 
     private final TaskQueue<T>[] queues;
 
+    private final AtomicInteger pendingTasks = new AtomicInteger(0);
+
     private final AtomicInteger schedulePendingTaskCounter = new AtomicInteger(0);
 
     /**
@@ -44,8 +49,9 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
     }
 
+    @Override
     public Collection<CompletableFuture<T>> enqueueTasks(
-            InternalQueueType type, Collection<Supplier<CompletableFuture<T>>> tasks
+            InternalQueueType type, Iterable<Supplier<CompletableFuture<T>>> tasks
     ) {
         int currentConcurrency = executePendingTasksInternal();
 
@@ -67,6 +73,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
                 Supplier<CompletableFuture<T>> task = tasksIt.next();
                 CompletableFuture<T> future = new CompletableFuture<>();
                 queue.tasks.add(new Holder<>(future, task, this::onTaskCompletion));
+                pendingTasks.incrementAndGet();
                 futures.add(future);
             }
         }
@@ -94,10 +101,12 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         for (TaskQueue<T> queue : queues) {
             while (currentConcurrency < maxConcurrency && !queue.tasks.isEmpty()) {
                 Holder<T> taskHolder = queue.tasks.poll();
-                taskHolder.execute();
                 currentConcurrency = concurrency.incrementAndGet();
+                pendingTasks.decrementAndGet();
+                taskHolder.execute();
             }
         }
+
         return currentConcurrency;
     }
 
@@ -111,11 +120,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
     }
 
     public int getPendingCount() {
-        int count = 0;
-        for (TaskQueue<T> queue : queues) {
-            count += queue.tasks.size();
-        }
-        return count;
+        return pendingTasks.get();
     }
 
     /**
@@ -125,6 +130,8 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
      * 2. If this was the "last" concurrency slot, then we should enqueue a task to schedule any pending tasks.
      * Otherwise, pending tasks may sit idle forever.
      * 3. If there is no task running at the moment to schedule any pending task, then we should schedule it regardless.
+     *
+     * This method can run on any arbitrary thread.
      *
      * @param result
      * @param ex
@@ -141,7 +148,7 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         }
 
         if (scheduleRequired) {
-            context.getExecutor().execute(() -> {
+            context.runOnContext(() -> {
                 executePendingTasks();
                 schedulePendingTaskCounter.decrementAndGet();
             });

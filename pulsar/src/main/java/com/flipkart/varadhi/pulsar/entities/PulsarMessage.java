@@ -7,6 +7,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.impl.MessageIdImpl;
+import org.apache.pulsar.client.impl.TopicMessageIdImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -36,13 +37,26 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     }
 
     @Override
+    public long getProducedTimestampMs() {
+        return msg.getPublishTime();
+    }
+
+    @Override
     public String getTopicName() {
         return msg.getTopicName();
     }
 
     @Override
     public int getPartition() {
-        return ((MessageIdImpl) msg.getMessageId()).getPartitionIndex();
+        if (msg.getMessageId() instanceof MessageIdImpl) {
+            return ((MessageIdImpl) msg.getMessageId()).getPartitionIndex();
+        } else if (msg.getMessageId() instanceof TopicMessageIdImpl) {
+            MessageIdImpl innerMessageId =
+                    (MessageIdImpl) ((TopicMessageIdImpl) msg.getMessageId()).getInnerMessageId();
+            return innerMessageId.getPartitionIndex();
+        } else {
+            throw new IllegalStateException("Unknown message id type: " + msg.getMessageId().getClass());
+        }
     }
 
     @Override
@@ -81,7 +95,7 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     }
 
     @Override
-    public Multimap<String, String> getRequestHeaders() {
+    public Multimap<String, String> getHeaders() {
         return requestHeaders();
     }
 

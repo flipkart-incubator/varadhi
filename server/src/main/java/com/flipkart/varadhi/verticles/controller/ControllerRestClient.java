@@ -16,11 +16,11 @@ public class ControllerRestClient implements ControllerRestApi {
     }
 
     @Override
-    public CompletableFuture<SubscriptionStatus> getSubscriptionStatus(String subscriptionId, String requestedBy) {
+    public CompletableFuture<SubscriptionState> getSubscriptionState(String subscriptionId, String requestedBy) {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
-        return exchange.request(ROUTE_CONTROLLER, "status", message)
-                .thenApply(rm -> rm.getResponse(SubscriptionStatus.class));
+        return exchange.request(ROUTE_CONTROLLER, "state", message)
+                .thenApply(rm -> rm.getResponse(SubscriptionState.class));
     }
 
     @Override

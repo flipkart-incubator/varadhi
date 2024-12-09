@@ -2,7 +2,6 @@ package com.flipkart.varadhi.cluster;
 
 
 import com.flipkart.varadhi.cluster.messages.*;
-import com.flipkart.varadhi.exceptions.NotImplementedException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -90,7 +89,7 @@ public class MessageRouter {
     }
 
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new NotImplementedException("handlePublish not implemented");
+        throw new UnsupportedOperationException("handlePublish not implemented");
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {
