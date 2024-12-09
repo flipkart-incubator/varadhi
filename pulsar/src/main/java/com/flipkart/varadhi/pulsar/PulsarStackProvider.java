@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.consumer.PulsarConsumerFactory;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
@@ -87,6 +88,7 @@ public class PulsarStackProvider
     private void registerSubtypes(ObjectMapper mapper) {
         mapper.registerSubtypes(new NamedType(PulsarStorageTopic.class, "PulsarTopic"));
         mapper.registerSubtypes(new NamedType(PulsarSubscription.class, "PulsarSubscription"));
+        mapper.registerSubtypes(new NamedType(PulsarOffset.class, "PulsarOffset"));
     }
 
     private PulsarConfig getPulsarConfig(String file) {

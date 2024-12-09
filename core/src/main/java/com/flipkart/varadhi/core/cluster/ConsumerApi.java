@@ -1,12 +1,10 @@
 package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.entities.GetMessagesRequest;
-import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.ShardStatus;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface ConsumerApi {
@@ -19,5 +17,6 @@ public interface ConsumerApi {
     CompletableFuture<ShardStatus> getShardStatus(String subscriptionId, int shardId);
 
     CompletableFuture<ConsumerInfo> getConsumerInfo();
-    CompletableFuture<List<Message>> getMessages(GetMessagesRequest messagesRequest);
+    CompletableFuture<ShardDlqMessageResponse> getMessagesByTimestamp(long earliestFailedAt, int max_limit);
+    CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarkers, int max_limit);
 }

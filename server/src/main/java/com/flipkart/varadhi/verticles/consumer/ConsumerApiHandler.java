@@ -2,7 +2,7 @@ package com.flipkart.varadhi.verticles.consumer;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.entities.GetMessagesRequest;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageRequest;
 import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
 import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
@@ -43,9 +43,14 @@ public class ConsumerApiHandler {
         failOperation(unsidelineData, "Failed to unsideline messages");
     }
 
-    public CompletableFuture<ResponseMessage> getMessages(ClusterMessage message) {
-        GetMessagesRequest messagesRequest = message.getData(GetMessagesRequest.class);
-        return consumerApiMgr.getMessages(messagesRequest).thenApply(message::getResponseMessage);
+    public CompletableFuture<ResponseMessage> getMessagesByTimestamp(ClusterMessage message) {
+        ShardDlqMessageRequest request = message.getData(ShardDlqMessageRequest.class);
+        return consumerApiMgr.getMessagesByTimestamp(request.getEarliestFailedAt(), request.getLimit()).thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> getMessagesByOffset(ClusterMessage message) {
+        ShardDlqMessageRequest request = message.getData(ShardDlqMessageRequest.class);
+        return consumerApiMgr.getMessagesByOffset(request.getPageMarker(), request.getLimit()).thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> status(ClusterMessage message) {

@@ -57,6 +57,6 @@ public class PulsarOffsetTest {
     public void testToString() {
         MessageId id1 = new MessageIdImpl(10, 9, 1);
         PulsarOffset p1 = new PulsarOffset(id1);
-        Assertions.assertEquals(id1.toString(), p1.toString());
+        Assertions.assertEquals("mId:" + id1, p1.toString());
     }
 }
