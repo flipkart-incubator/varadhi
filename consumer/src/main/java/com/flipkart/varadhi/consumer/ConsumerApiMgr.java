@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -77,9 +77,16 @@ public class ConsumerApiMgr implements ConsumerApi {
     }
 
     @Override
-    public CompletableFuture<List<Message>> getMessages(GetMessagesRequest messagesRequest) {
-        //TODO::Along with implementation take care of (de)serialization format.
-        //This should be byte array instead of string (check elsewhere as well for Message serialization)
-        return CompletableFuture.supplyAsync(ArrayList::new);
+    public CompletableFuture<ShardDlqMessageResponse> getMessagesByTimestamp(long earliestFailedAt, int max_limit) {
+        //TODO::Message serialization should be byte arrasdy
+        log.info("Polled from earliestFailedAt: {}",  earliestFailedAt);
+        return CompletableFuture.supplyAsync(() -> new ShardDlqMessageResponse(new ArrayList<>(), null));
+    }
+    @Override
+    public CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarkers, int max_limit
+    ) {
+        //TODO::Message serialization should be byte array
+        log.info("Polled from pagerMarkers: {}",  pageMarkers);
+        return CompletableFuture.supplyAsync(() -> new ShardDlqMessageResponse(new ArrayList<>(), null));
     }
 }

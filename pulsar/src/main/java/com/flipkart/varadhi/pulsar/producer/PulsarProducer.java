@@ -90,6 +90,7 @@ public class PulsarProducer implements Producer {
     )
             throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, options, hostname);
+        
         return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 

@@ -1,18 +1,30 @@
 package com.flipkart.varadhi.pulsar.services;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
+import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
+import com.flipkart.varadhi.pulsar.entities.PulsarOffsets;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingException;
+import com.flipkart.varadhi.utils.JsonMapper;
 import org.apache.pulsar.client.admin.*;
+import org.apache.pulsar.client.api.MessageId;
+import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -41,6 +53,8 @@ public class PulsarTopicServiceTest {
         doReturn(pulsarAdmin).when(clientProvider).getAdminClient();
         PulsarConfig pulsarConfig = new PulsarConfig();
         pulsarTopicService = new PulsarTopicService(clientProvider, new TopicPlanner(pulsarConfig));
+
+        JsonMapper.getMapper().registerSubtypes(new NamedType(PulsarOffset.class, "PulsarOffset"));
     }
 
     @Test

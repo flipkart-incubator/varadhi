@@ -3,6 +3,7 @@ package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
+import com.flipkart.varadhi.entities.TopicResource;
 
 public class VaradhiTopicFactory {
 
