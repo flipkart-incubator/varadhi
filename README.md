@@ -22,7 +22,7 @@ spec and other detailed information.
 
 ## Try locally
 Give it a go locally on your machine. You will require java 21, docker & python.
-Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/)
+Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/Try-Locally)
 
 ## Build
 
