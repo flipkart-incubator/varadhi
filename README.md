@@ -20,6 +20,10 @@ With Varadhi we hope others would be able to benefit from our learnings of a dec
 See the [Wiki](https://github.com/flipkart-incubator/varadhi/wiki/) for concepts, use cases, architecture details, API
 spec and other detailed information.
 
+## Try locally
+Give it a go locally on your machine. You will require java 21, docker & python.
+Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/)
+
 ## Build
 
 ```bash
@@ -40,11 +44,9 @@ docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-ti
 
 ### Dependencies
 
-To provide the required functionality, Varadhi takes dependencies on various tech stack.
-Current development environment supports below option for these.
+To provide the required functionality, Varadhi takes dependency on various tech stack.
 
 Run the following to start the below dependencies.
-
 ```docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 180```
 
 OR
@@ -55,19 +57,18 @@ Varadhi needs a message broker for message persistence and delivery. [Apache Pul
 as underlying message broker. For the development environment users can use containerised Pulsar in a standalone mode.
 Details can be found [here](https://pulsar.apache.org/docs/3.0.x/standalone-docker/).
 
-#### Persistent Store
+#### Metadata Store
 
 For storing metadata about various Varadhi entities, a datastore is needed. [Zookeeper](https://zookeeper.apache.org/)
 is used as global datastore to persist json formatted entities. For the development environment, containerised Zookeeper
-can be
-used in a standalone mode. Details can be found [here](https://hub.docker.com/_/zookeeper).
+can be used in a standalone mode. Details can be found [here](https://hub.docker.com/_/zookeeper).
 
 ### Varadhi Server
 
 Finally, to run the Varadhi server, provide the custom zk & pulsar endpoints at `server/src/main/resources/config.overrides` and then do
 ```./gradlew run```
 
-If you are using the dev profile to start the zk and pulsar, then simply do `./gradlew run`. No config overrides are required.
+If you are using the dev profile in our docker compose to start the zk and pulsar, then simply do `./gradlew run`. No config overrides are required.
 
 ## k8s Deployment
 
@@ -111,8 +112,8 @@ You can also reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com.
 [ TBD ]
 
 ## Blogs
-
-[Effective Failure Handling in Flipkart’s Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc)
+- [Effective Failure Handling in Flipkart’s Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc)
+- [Flipkart to Community: Open Source Varadhi](https://www.youtube.com/watch?v=A9ET2lw6nxM&t=144s)
 
 ## LICENSE
 

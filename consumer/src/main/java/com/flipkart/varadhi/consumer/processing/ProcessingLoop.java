@@ -137,7 +137,7 @@ public abstract class ProcessingLoop implements Context.Task {
 
             return deliveryClient.deliver(msg.getMessage()).thenCompose(response -> {
                 throttleThresholdProvider.mark();
-                log.debug(
+                log.info(
                         "Delivery attempt was made. queue: {}, message id: {}. status: {}", type,
                         msg.getMessage().getHeader(StandardHeaders.MESSAGE_ID), response.statusCode()
                 );
@@ -166,6 +166,7 @@ public abstract class ProcessingLoop implements Context.Task {
      * @param status
      */
     protected void onComplete(MessageTracker message, MessageConsumptionStatus status) {
+        log.info("Message processing complete. message id: {}, status: {}", message.getMessage().getMessageId(), status);
         // all kind of processing finishes here for the message.
         message.onConsumed(status);
 
