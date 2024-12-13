@@ -5,11 +5,12 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.pulsar.util.PulsarOffsetDeserializer;
 import com.flipkart.varadhi.pulsar.util.PulsarOffsetSerializer;
+import lombok.Getter;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.impl.MessageIdImpl;
-import org.bouncycastle.util.Strings;
 
 
+@Getter
 @JsonSerialize(using = PulsarOffsetSerializer.class)
 @JsonDeserialize(using = PulsarOffsetDeserializer.class)
 public class PulsarOffset implements Offset {
@@ -17,10 +18,6 @@ public class PulsarOffset implements Offset {
 
     public PulsarOffset(MessageId messageId) {
         this.messageId = messageId;
-    }
-
-    public MessageId getMessageId() {
-        return this.messageId;
     }
 
     @Override
@@ -44,7 +41,7 @@ public class PulsarOffset implements Offset {
     }
 
     public static PulsarOffset fromString(String offset) {
-        String[] parts = Strings.split(offset, ':');
+        String[] parts = offset.split(":");
         if ("mId".equals(parts[0]) && parts.length == 4) {
             return new PulsarOffset(fromParts(parts[1], parts[2], parts[3]));
         }

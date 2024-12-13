@@ -12,9 +12,9 @@ import java.util.List;
 @Data
 @AllArgsConstructor(onConstructor = @__(@JsonCreator))
 public class ShardDlqMessageRequest {
-    private long earliestFailedAt = 0L;
+    private final long earliestFailedAt;
     private final String pageMarker;
-    private int limit = -1;
+    private final int limit;
 
     public ShardDlqMessageRequest(long earliestFailedAt, int limit) {
         this.earliestFailedAt = earliestFailedAt;

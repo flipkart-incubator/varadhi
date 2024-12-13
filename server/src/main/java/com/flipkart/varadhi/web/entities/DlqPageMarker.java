@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @Data
 @Slf4j
 public class DlqPageMarker {
-    private static final Pattern validPargeMarkerPattern = Pattern.compile("\\d+=([^~]+)(?:[~]\\d+=([^~]+))*[~]?");
+    private static final Pattern validPageMarkerPattern = Pattern.compile("\\d+=([^~]+)(?:[~]\\d+=([^~]+))*[~]?");
     /*
      * Subscription marker format is
      * shardId=shardMarker[~shardId=shardMarker]{0..n}
@@ -29,7 +29,7 @@ public class DlqPageMarker {
         if (str.isBlank()) {
             return new DlqPageMarker(Map.of());
         }
-        if (!validPargeMarkerPattern.matcher(str).matches()) {
+        if (!validPageMarkerPattern.matcher(str).matches()) {
             throw new IllegalArgumentException("Invalid page marker: " + str);
         }
         String[] markers = str.split("[~]");
