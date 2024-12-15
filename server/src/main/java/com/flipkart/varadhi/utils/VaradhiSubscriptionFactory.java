@@ -56,12 +56,6 @@ public final class VaradhiSubscriptionFactory {
         );
     }
 
-    /*
-     * TODO::
-     *  Push sharding logic further down to messaging stack as Vardhi can't decide if messaging stack
-     *  allows sharding or not based on topic's capacity.
-     */
-
     private SubscriptionShards getSubscriptionShards(
             String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy,
             RetryPolicy retryPolicy
@@ -165,8 +159,11 @@ public final class VaradhiSubscriptionFactory {
         TopicCapacityPolicy errCapacity =
                 capacity.from(consumptionPolicy.getMaxErrorThreshold(), READ_FAN_OUT_FOR_INTERNAL_QUEUE);
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
-        TopicPartitions<StorageTopic> tp = TopicPartitions.byPartitions(st, new int[]{1});
-        StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, tp, project);
+        List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(st, queueType.getCategory());
+        if (topicPartitions.size() != 1) {
+            throw new IllegalArgumentException("Multi shard internal topics are unsupported for now.");
+        }
+        StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, topicPartitions.get(0), project);
         return InternalCompositeSubscription.of(ss, queueType);
     }
 
