@@ -56,6 +56,12 @@ public final class VaradhiSubscriptionFactory {
         );
     }
 
+    /*
+     * TODO::
+     *  Push sharding logic further down to messaging stack as Vardhi can't decide if messaging stack
+     *  allows sharding or not based on topic's capacity.
+     */
+
     private SubscriptionShards getSubscriptionShards(
             String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy,
             RetryPolicy retryPolicy
@@ -159,7 +165,7 @@ public final class VaradhiSubscriptionFactory {
         TopicCapacityPolicy errCapacity =
                 capacity.from(consumptionPolicy.getMaxErrorThreshold(), READ_FAN_OUT_FOR_INTERNAL_QUEUE);
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
-        TopicPartitions<StorageTopic> tp = TopicPartitions.byTopic(st);
+        TopicPartitions<StorageTopic> tp = TopicPartitions.byPartitions(st, new int[]{1});
         StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, tp, project);
         return InternalCompositeSubscription.of(ss, queueType);
     }

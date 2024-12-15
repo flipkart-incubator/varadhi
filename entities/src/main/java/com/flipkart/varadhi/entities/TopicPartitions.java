@@ -20,8 +20,6 @@ public class TopicPartitions<T extends StorageTopic> {
     }
 
     public static <T extends StorageTopic> TopicPartitions<T> byTopic(T topic) {
-        //TODO:: Discuss this
-        // Can a topic be non partitioned or assume there is always 1 (implicit).
         return new TopicPartitions<>(topic,null);
     }
 
