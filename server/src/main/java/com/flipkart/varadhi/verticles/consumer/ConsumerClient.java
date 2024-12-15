@@ -2,13 +2,12 @@ package com.flipkart.varadhi.verticles.consumer;
 
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.entities.GetMessagesRequest;
-import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageRequest;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -59,9 +58,16 @@ public class ConsumerClient implements ConsumerApi {
     }
 
     @Override
-    public CompletableFuture<List<Message>> getMessages(GetMessagesRequest messagesRequest) {
-        ClusterMessage message = ClusterMessage.of(messagesRequest);
-        return exchange.request(consumerId, "getMessages", message)
-                .thenApply(rm -> rm.getResponse(List.class));
+    public CompletableFuture<ShardDlqMessageResponse> getMessagesByTimestamp(long earliestFailedAt, int max_limit) {
+        ClusterMessage message = ClusterMessage.of(new ShardDlqMessageRequest(earliestFailedAt, max_limit));
+        return exchange.request(consumerId, "getMessagesByTimestamp", message)
+                .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
+    }
+
+    @Override
+    public CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarker, int max_limit) {
+        ClusterMessage message = ClusterMessage.of(new ShardDlqMessageRequest(pageMarker, max_limit));
+        return exchange.request(consumerId, "getMessagesByOffset", message)
+                .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
     }
 }

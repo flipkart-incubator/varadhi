@@ -53,6 +53,7 @@ public class ConsumerVerticle extends AbstractVerticle {
         messageRouter.sendHandler(consumerId, "unsideline", handler::unsideline);
         messageRouter.requestHandler(consumerId, "status", handler::status);
         messageRouter.requestHandler(consumerId, "info", handler::info);
-        messageRouter.requestHandler(consumerId, "getMessages", handler::getMessages);
+        messageRouter.requestHandler(consumerId, "getMessagesByTimestamp", handler::getMessagesByTimestamp);
+        messageRouter.requestHandler(consumerId, "getMessagesByOffset", handler::getMessagesByOffset);
     }
 }
