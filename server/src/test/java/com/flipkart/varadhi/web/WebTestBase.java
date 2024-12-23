@@ -43,7 +43,7 @@ public class WebTestBase {
     public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz)
             throws Exception {
         JavaType type = JsonMapper.getMapper().getTypeFactory().constructCollectionType(collectionClass, clazz);
-        return (R) JsonMapper.getMapper().readValue(data, type);
+        return JsonMapper.getMapper().readValue(data, type);
 
     }
 
@@ -139,26 +139,31 @@ public class WebTestBase {
             throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, null);
         Assertions.assertEquals(HTTP_OK, response.statusCode());
+
+        System.out.println("BODY == " + response.bodyAsString());
         if (null != responseClazz) {
             return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
         }
         return null;
     }
+    public byte[] sendRequestWithoutBody(HttpRequest<Buffer> request)
+            throws InterruptedException {
+        HttpResponse<Buffer> response = sendRequest(request, null);
+        Assertions.assertEquals(HTTP_OK, response.statusCode());
+        return response.body().getBytes();
+    }
 
-    public <R> R sendRequestWithoutBody(
-            HttpRequest<Buffer> request, int statusCode, String statusMessage, Class<R> responseClazz
-    )
+    public void sendRequestWithoutBody(HttpRequest<Buffer> request, int statusCode, String statusMessage)
             throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, null);
         Assertions.assertEquals(statusCode, response.statusCode());
         if (null != statusMessage) {
             Assertions.assertEquals(statusMessage, response.statusMessage());
         }
-        if (null != responseClazz) {
-            return (R) JsonMapper.jsonDeserialize(response.bodyAsString(), responseClazz);
-        }
-        return null;
+        ErrorResponse error = JsonMapper.jsonDeserialize(response.body().getBytes(), ErrorResponse.class);
+        Assertions.assertEquals(statusMessage, error.reason());
     }
+
 
     public HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, byte[] payload)
             throws InterruptedException {

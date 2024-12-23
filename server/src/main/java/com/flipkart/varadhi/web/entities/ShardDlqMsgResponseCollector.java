@@ -4,6 +4,7 @@ package com.flipkart.varadhi.web.entities;
 import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import org.apache.logging.log4j.util.Strings;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,8 +25,11 @@ public class ShardDlqMsgResponseCollector {
         }
     }
 
-    public DlqMessagesResponse toAggregatedResponse() {
-        DlqMessagesResponse response = new DlqMessagesResponse();
+    public DlqMessagesResponse toAggregatedResponse(Throwable t) {
+        DlqMessagesResponse response = DlqMessagesResponse.of(new ArrayList<>());
+        if (t != null) {
+            response.setError(t.getMessage());
+        }
         if (!errors.isEmpty()) {
             response.setError(Strings.join(
                     errors.entrySet().stream().map(e -> String.format("%d:%s", e.getKey(), e.getValue())).toList(),
@@ -34,7 +38,6 @@ public class ShardDlqMsgResponseCollector {
         } else if (pageMarker.hasMarkers()) {
             response.setNextPage(pageMarker.toString());
         }
-
         return response;
     }
 }

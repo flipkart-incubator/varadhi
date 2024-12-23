@@ -112,8 +112,7 @@ public class OrgHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("Org(%s) not found.", org1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(orgService).getOrg(org1.getName());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
     }
 
     @Test
@@ -144,13 +143,11 @@ public class OrgHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("Org(%s) not found.", org1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(orgService).deleteOrg(org1.getName());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
 
         String invalidOpError = String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(orgService).deleteOrg(org1.getName());
-        response = sendRequestWithoutBody(request, 409, invalidOpError, ErrorResponse.class);
-        Assertions.assertEquals(invalidOpError, response.reason());
+        sendRequestWithoutBody(request, 409, invalidOpError);
     }
 
 }

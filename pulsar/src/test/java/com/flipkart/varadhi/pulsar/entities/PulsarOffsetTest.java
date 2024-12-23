@@ -1,12 +1,19 @@
 package com.flipkart.varadhi.pulsar.entities;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.utils.JsonMapper;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class PulsarOffsetTest {
+    @BeforeEach
+    public void foo() {
+        JsonMapper.getMapper().registerSubtypes(new NamedType(PulsarOffset.class, "PulsarOffset"));
+    }
 
     @Test
     public void defaultOffsetWorks() {

@@ -43,7 +43,7 @@ public class DlqService {
 
     public CompletableFuture<Void> getMessages(
             VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker pageMarkers,
-            int limit, Consumer<DlqMessagesResponse> responseWriter
+            int limit, Consumer<DlqMessagesResponse> recordWriter
     ) {
         if (!subscription.isWellProvisioned()) {
             throw new InvalidOperationForResourceException(
@@ -66,14 +66,14 @@ public class DlqService {
                 }
                 shardFutures.add(getMessagesForShard(isRequestByTimeStamp, a.getConsumerId(), earliestFailedAt,
                         pageMarkers.getShardMarker(shardId), limit
-                ).whenComplete((r, t) -> processShardResponse(shardId, responseWriter, r, t, finalResponse)));
+                ).whenComplete((r, t) -> processShardResponse(shardId, recordWriter, r, t, finalResponse)));
             }
             return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0]));
-        }).whenComplete((v, t) -> responseWriter.accept(finalResponse.toAggregatedResponse()));
+        }).whenComplete((v, t) -> recordWriter.accept(finalResponse.toAggregatedResponse(t)));
     }
 
     private void processShardResponse(
-            int shardId, Consumer<DlqMessagesResponse> responseWriter, ShardDlqMessageResponse r, Throwable t,
+            int shardId, Consumer<DlqMessagesResponse> recordWriter, ShardDlqMessageResponse r, Throwable t,
             ShardDlqMsgResponseCollector finalResponse
     ) {
         if (r != null && !r.getMessages().isEmpty()) {
@@ -81,7 +81,7 @@ public class DlqService {
                     "shard {} returned {} messages nextMarker {}.", shardId, r.getMessages().size(),
                     r.getNextPageMarker()
             );
-            responseWriter.accept(DlqMessagesResponse.of(r.getMessages()));
+            recordWriter.accept(DlqMessagesResponse.of(r.getMessages()));
         }
         finalResponse.collectShardResponse(shardId, t, r);
     }

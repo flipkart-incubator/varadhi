@@ -118,8 +118,7 @@ public class TeamHandlersTest extends WebTestBase {
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
                 .getTeam(team1.getName(), team1.getOrg());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
     }
 
 
@@ -178,14 +177,12 @@ public class TeamHandlersTest extends WebTestBase {
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
                 .deleteTeam(team1.getName(), team1.getOrg());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
 
         String invalidOpError =
                 String.format("Can not delete Team(%s) as it has associated Project(s).", team1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(teamService)
                 .deleteTeam(team1.getName(), team1.getOrg());
-        response = sendRequestWithoutBody(request, 409, invalidOpError, ErrorResponse.class);
-        Assertions.assertEquals(invalidOpError, response.reason());
+        sendRequestWithoutBody(request, 409, invalidOpError);
     }
 }

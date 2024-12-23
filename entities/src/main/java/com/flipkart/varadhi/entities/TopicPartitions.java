@@ -20,7 +20,7 @@ public class TopicPartitions<T extends StorageTopic> {
     }
 
     public static <T extends StorageTopic> TopicPartitions<T> byTopic(T topic) {
-        return new TopicPartitions<>(topic,null);
+        return new TopicPartitions<>(topic, null);
     }
 
     public boolean hasSpecificPartitions() {

@@ -115,8 +115,7 @@ public class ProjectHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("Project(%s) not found.", p1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(projectService).getProject(p1.getName());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
     }
 
 
@@ -155,14 +154,12 @@ public class ProjectHandlersTest extends WebTestBase {
         String notFoundError = String.format("Project(%s) not found.", p1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(projectService)
                 .deleteProject(p1.getName());
-        ErrorResponse response = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        Assertions.assertEquals(notFoundError, response.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
 
         String invalidOpError =
                 String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService)
                 .deleteProject(p1.getName());
-        response = sendRequestWithoutBody(request, 409, invalidOpError, ErrorResponse.class);
-        Assertions.assertEquals(invalidOpError, response.reason());
+        sendRequestWithoutBody(request, 409, invalidOpError);
     }
 }

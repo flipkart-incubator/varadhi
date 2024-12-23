@@ -112,15 +112,17 @@ public class DlqHandlers implements RouteProvider {
         DlqPageMarker dlqPageMarker = DlqPageMarker.fromString(nextPageParam);
         validateGetMessageCriteria(subscription, earliestFailedAt, dlqPageMarker, limit);
         ctx.handleChunkedResponse(
-                (Function<Consumer<DlqMessagesResponse>, CompletableFuture<Void>>) responseWriter -> dlqService.getMessages(
-                        subscription, earliestFailedAt, dlqPageMarker, limit, responseWriter));
+                (Function<Consumer<DlqMessagesResponse>, CompletableFuture<Void>>) (
+                        responseWriter -> dlqService.getMessages(
+                                subscription, earliestFailedAt, dlqPageMarker, limit, responseWriter)
+                ));
     }
 
     private void validateGetMessageCriteria(
             VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker dlqPageMarker,
             int limit
     ) {
-        if (earliestFailedAt == UNSPECIFIED_TS  && !dlqPageMarker.hasMarkers()) {
+        if (earliestFailedAt == UNSPECIFIED_TS && !dlqPageMarker.hasMarkers()) {
             throw new IllegalArgumentException("At least one get messages criteria needs to be specified.");
         }
         if (earliestFailedAt != UNSPECIFIED_TS && dlqPageMarker.hasMarkers()) {
