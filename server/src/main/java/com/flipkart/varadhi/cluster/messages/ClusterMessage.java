@@ -2,7 +2,7 @@ package com.flipkart.varadhi.cluster.messages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
+import com.flipkart.varadhi.core.cluster.entities.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.Getter;

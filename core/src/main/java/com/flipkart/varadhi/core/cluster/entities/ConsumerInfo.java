@@ -1,5 +1,6 @@
-package com.flipkart.varadhi.entities.cluster;
+package com.flipkart.varadhi.core.cluster.entities;
 
+import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

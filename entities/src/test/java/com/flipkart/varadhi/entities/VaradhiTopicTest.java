@@ -22,20 +22,10 @@ class VaradhiTopicTest {
 
     @Test
     void addAndGetInternalTopic() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(TopicResource.unGrouped(topicName, projectName, null));
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(projectName, topicName, false, topicCapacity);
         StorageTopic st = new DummyStorageTopic(varadhiTopic.getName(), 0);
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(st));
         assertEquals(st.getName(), varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName());
-    }
-
-    @Test
-    void getTopicResource() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(TopicResource.unGrouped(topicName, projectName, topicCapacity));
-        TopicResource topicResource = TopicResource.from(varadhiTopic);
-        assertEquals(topicName, topicResource.getName());
-        assertEquals(INITIAL_VERSION, topicResource.getVersion());
-        assertEquals(projectName, topicResource.getProject());
-        assertFalse(topicResource.isGrouped());
     }
 
     @EqualsAndHashCode(callSuper = true)

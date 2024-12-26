@@ -53,7 +53,7 @@ public class AuthzHandler implements RouteConfigurator {
                 throw new InvalidConfigException(e);
             }
         }
-        return new AuthorizationProvider.NoAuthorizationProvider();
+        throw new InvalidConfigException("AuthorizationProvider class not configured.");
     }
 
     AuthorizationProvider createAuthorizationProvider(

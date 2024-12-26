@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.entities.cluster;
+package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;

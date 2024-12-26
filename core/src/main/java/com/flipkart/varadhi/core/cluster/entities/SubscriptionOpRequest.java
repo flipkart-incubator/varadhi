@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.entities.cluster;
+package com.flipkart.varadhi.core.cluster.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

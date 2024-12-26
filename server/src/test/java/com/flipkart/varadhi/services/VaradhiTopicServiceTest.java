@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

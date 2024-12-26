@@ -91,13 +91,7 @@ public class DlqHandlers implements RouteProvider {
         UnsidelineRequest unsidelineRequest = ctx.get(CONTEXT_KEY_BODY);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         log.info("Unsideline requested for Subscription:{}", subscription.getName());
-
-        int max_messages = subscription.getIntProperty(UNSIDELINE_API_MESSAGE_COUNT);
-        int max_groups = subscription.getIntProperty(UNSIDELINE_API_GROUP_COUNT);
-        unsidelineRequest.validate(max_groups, max_messages);
-        if (!unsidelineRequest.getGroupIds().isEmpty() || !unsidelineRequest.getMessageIds().isEmpty()) {
-            throw new IllegalArgumentException("Selective unsideline is not yet supported.");
-        }
+        validateUnsidelineCriteria(subscription, unsidelineRequest);
         ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
@@ -132,6 +126,15 @@ public class DlqHandlers implements RouteProvider {
         int max_limit = subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT);
         if (limit > max_limit) {
             throw new IllegalArgumentException("Limit cannot be more than " + max_limit + ".");
+        }
+    }
+
+    private void validateUnsidelineCriteria(VaradhiSubscription subscription, UnsidelineRequest request) {
+        int max_messages = subscription.getIntProperty(UNSIDELINE_API_MESSAGE_COUNT);
+        int max_groups = subscription.getIntProperty(UNSIDELINE_API_GROUP_COUNT);
+        request.validate(max_groups, max_messages);
+        if (!request.getGroupIds().isEmpty() || !request.getMessageIds().isEmpty()) {
+            throw new IllegalArgumentException("Selective unsideline is not yet supported.");
         }
     }
 
