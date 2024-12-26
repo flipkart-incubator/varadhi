@@ -4,6 +4,7 @@ import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -69,7 +70,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
     void testSubscriptionCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic =  topicResource.toVaradhiTopic();
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
         VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
@@ -81,7 +82,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
     @Test
     void testCreateSubscriptionWithNonExistentProject() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
         VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
 
@@ -97,7 +98,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
     @Test
     void testCreateSubscriptionWithNonExistentTopic() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
         VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
 
@@ -127,7 +128,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub12", project));
         SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
 
-        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, VaradhiTopic.of(topicResource));
+        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, topicResource.toVaradhiTopic());
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         when(subscriptionService.getSubscription(captor.capture())).thenReturn(subscription);
 
@@ -175,7 +176,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
         SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
 
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
         doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
 
         VaradhiSubscription subscription = getUngroupedSubscription("sub1", project, vTopic);

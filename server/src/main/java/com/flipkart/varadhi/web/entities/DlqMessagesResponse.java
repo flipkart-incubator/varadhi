@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.entities;
 
-import com.flipkart.varadhi.entities.cluster.DlqMessage;
+import com.flipkart.varadhi.entities.DlqMessage;
 import lombok.Data;
 import org.apache.logging.log4j.util.Strings;
 

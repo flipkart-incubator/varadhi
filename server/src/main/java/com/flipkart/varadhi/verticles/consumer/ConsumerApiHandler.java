@@ -3,7 +3,7 @@ package com.flipkart.varadhi.verticles.consumer;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageRequest;
-import com.flipkart.varadhi.entities.cluster.ShardStatusRequest;
+import com.flipkart.varadhi.core.cluster.entities.ShardStatusRequest;
 import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.verticles.controller.ControllerConsumerClient;

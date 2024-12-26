@@ -9,7 +9,7 @@ dependencies {
 
     implementation(project(":common"))
     implementation(project(":core"))
-    implementation(project(":messaging"))
+    implementation(project(":producer"))
     implementation(project(":entities"))
     implementation(project(":authz"))
     implementation(project(":controller"))

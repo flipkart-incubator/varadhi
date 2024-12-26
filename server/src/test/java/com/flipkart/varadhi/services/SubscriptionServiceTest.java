@@ -24,6 +24,7 @@ import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.admin.SubscriptionHandlersTest;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -91,8 +92,8 @@ class SubscriptionServiceTest {
         o1t1 = Team.of("TestTeam1", o1.getName());
         o1t1p1 = Project.of("o1t1p1", "", o1t1.getName(), o1t1.getOrg());
         o1t1p2 = Project.of("o1t1p2", "", o1t1.getName(), o1t1.getOrg());
-        unGroupedTopic = VaradhiTopic.of(TopicResource.unGrouped("topic1", o1t1p1.getName(), null));
-        groupedTopic = VaradhiTopic.of(TopicResource.grouped("topic2", o1t1p2.getName(), null));
+        unGroupedTopic = VaradhiTopic.of("topic1", o1t1p1.getName(), false,null);
+        groupedTopic = VaradhiTopic.of("topic2", o1t1p2.getName(), true,null);
 
         sub1 = SubscriptionHandlersTest.getUngroupedSubscription("sub1", o1t1p1, unGroupedTopic);
         sub2 = SubscriptionHandlersTest.getUngroupedSubscription("sub2", o1t1p1, unGroupedTopic);
@@ -126,8 +127,7 @@ class SubscriptionServiceTest {
         StorageTopicFactory ptf = new PulsarTopicFactory(planner);
         StorageTopicService pts = new PulsarTopicService(null, planner);
 
-        TopicResource tr = TopicResource.grouped("topic2", o1t1p2.getName(), capacity);
-        VaradhiTopic vt = VaradhiTopic.of(tr);
+        VaradhiTopic vt = VaradhiTopic.of("topic2", o1t1p2.getName(), true, capacity);
 
         StorageTopic storageTopic = ptf.getTopic(vt.getName(), o1t1p2, capacity, InternalQueueCategory.MAIN);
         vt.addInternalTopic(region, InternalCompositeTopic.of(storageTopic));

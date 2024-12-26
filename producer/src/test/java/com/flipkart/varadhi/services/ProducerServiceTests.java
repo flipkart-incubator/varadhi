@@ -252,7 +252,7 @@ public class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(TopicResource.unGrouped(name, project.getName(), null));
+        VaradhiTopic topic = VaradhiTopic.of(project.getName(), name, false, null);
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);

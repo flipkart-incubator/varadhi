@@ -1,7 +1,10 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.*;
 import lombok.extern.slf4j.Slf4j;

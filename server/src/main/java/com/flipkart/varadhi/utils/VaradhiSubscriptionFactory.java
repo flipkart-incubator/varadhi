@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;

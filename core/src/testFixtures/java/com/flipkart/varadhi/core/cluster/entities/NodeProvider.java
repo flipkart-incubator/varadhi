@@ -1,6 +1,8 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.core.cluster.entities;
 
-import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 
 import java.util.ArrayList;
 import java.util.List;

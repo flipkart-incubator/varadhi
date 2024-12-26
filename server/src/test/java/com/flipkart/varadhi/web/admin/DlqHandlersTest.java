@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.cluster.DlqMessage;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.DlqService;
@@ -12,6 +11,7 @@ import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
 import com.flipkart.varadhi.web.entities.DlqPageMarker;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -68,7 +68,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     private VaradhiSubscription prepUnsidelineRequest(UnsidelineRequest unsidelineRequest, ArgumentCaptor<UnsidelineRequest> captor) {
         SubscriptionResource subResource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic =  topicResource.toVaradhiTopic();
         VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
         doReturn(project).when(projectService).getCachedProject(project.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
@@ -232,7 +232,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     private VaradhiSubscription setupSubscriptionForGetMessages(){
         SubscriptionResource subResource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiTopic vTopic = VaradhiTopic.of(topicResource);
+        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
         VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
         doReturn(project).when(projectService).getCachedProject(project.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());

@@ -5,7 +5,7 @@ import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;

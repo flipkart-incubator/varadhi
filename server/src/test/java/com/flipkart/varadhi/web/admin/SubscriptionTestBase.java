@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.cluster.DlqMessage;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -10,6 +9,8 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
+import com.flipkart.varadhi.web.entities.TopicResource;
 import com.google.common.collect.ArrayListMultimap;
 
 import java.net.URI;

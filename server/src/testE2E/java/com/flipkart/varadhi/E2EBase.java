@@ -3,7 +3,7 @@ package com.flipkart.varadhi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.SubscriptionResource;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
