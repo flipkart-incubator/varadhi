@@ -159,8 +159,11 @@ public final class VaradhiSubscriptionFactory {
         TopicCapacityPolicy errCapacity =
                 capacity.from(consumptionPolicy.getMaxErrorThreshold(), READ_FAN_OUT_FOR_INTERNAL_QUEUE);
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
-        TopicPartitions<StorageTopic> tp = TopicPartitions.byTopic(st);
-        StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, tp, project);
+        List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(st, queueType.getCategory());
+        if (topicPartitions.size() != 1) {
+            throw new IllegalArgumentException("Multi shard internal topics are unsupported for now.");
+        }
+        StorageSubscription<StorageTopic> ss = subscriptionFactory.get(itSubName, topicPartitions.get(0), project);
         return InternalCompositeSubscription.of(ss, queueType);
     }
 

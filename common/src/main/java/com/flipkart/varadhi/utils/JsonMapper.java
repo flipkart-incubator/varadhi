@@ -11,6 +11,8 @@ import com.flipkart.varadhi.exceptions.VaradhiException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+
 @Slf4j
 public class JsonMapper {
     @Getter
@@ -42,6 +44,24 @@ public class JsonMapper {
         try {
             return mapper.readValue(data, clazz);
         } catch (JsonProcessingException e) {
+            log.error("Failed to jsonDeserialize({}): {}", data, e);
+            throw new VaradhiException(e);
+        }
+    }
+
+    public static <T> byte[] jsonSerializeAsBytes(T entity) {
+        try {
+            return mapper.writeValueAsBytes(entity);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to jsonSerialize({}): {}", entity, e);
+            throw new VaradhiException(e);
+        }
+    }
+
+    public static <T> T jsonDeserialize(byte[] data, Class<T> clazz) {
+        try {
+            return mapper.readValue(data, clazz);
+        } catch (IOException e) {
             log.error("Failed to jsonDeserialize({}): {}", data, e);
             throw new VaradhiException(e);
         }

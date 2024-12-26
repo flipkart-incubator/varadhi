@@ -4,12 +4,20 @@ import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
+import com.flipkart.varadhi.web.entities.DlqPageMarker;
+import com.flipkart.varadhi.web.entities.ShardDlqMsgResponseCollector;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import static com.flipkart.varadhi.entities.UnsidelineRequest.UNSPECIFIED_TS;
 
 @Slf4j
 public class DlqService {
@@ -34,37 +42,55 @@ public class DlqService {
 
 
     public CompletableFuture<Void> getMessages(
-            VaradhiSubscription subscription, GetMessagesRequest messagesRequest,
-            Consumer<GetMessagesResponse> responseWriter
+            VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker pageMarkers,
+            int limit, Consumer<DlqMessagesResponse> recordWriter
     ) {
         if (!subscription.isWellProvisioned()) {
             throw new InvalidOperationForResourceException(
-                    "Subscription is in state %s. GetMessages not allowed.".formatted(
+                    "Dlq messages can't be queried in Subscription's current state %s.".formatted(
                             subscription.getStatus().getState()));
         }
         // Get subscription shard's consumer
         // call getMessage() for each shard on respective consumers.
         // Write response back as and when received from each shard.
         // Return CompletedFuture<Void> will complete/end the request.
-        return controllerClient.getShardAssignments(subscription.getName())
-                .thenCompose(shardAssignments -> CompletableFuture.allOf(
-                        shardAssignments.getAssignments().stream().map(assignment -> {
-                            ConsumerApi consumer = consumerFactory.getInstance(assignment.getConsumerId());
-                            return consumer.getMessages(messagesRequest).whenComplete((messages, t) -> {
-                                // write partial response i.e. return messages from single shard or error.
-                                GetMessagesResponse shardResponse = GetMessagesResponse.of(assignment.getShardId());
-                                if (t == null) {
-                                    shardResponse.setMessages(messages);
-                                } else {
-                                    log.error(
-                                            "Failed to getMessages for {}(shard:{}). Error:{}", subscription.getName(),
-                                            assignment.getShardId(), t.getMessage()
-                                    );
-                                    shardResponse.setError(t.getMessage());
-                                }
-                                log.info("Sending a GetMessage response for {}", assignment);
-                                responseWriter.accept(shardResponse);
-                            });
-                        }).toArray(CompletableFuture[]::new)));
+        ShardDlqMsgResponseCollector finalResponse = new ShardDlqMsgResponseCollector();
+        boolean isRequestByTimeStamp = earliestFailedAt != UNSPECIFIED_TS;
+        return controllerClient.getShardAssignments(subscription.getName()).thenCompose(assignments -> {
+            List<CompletableFuture<ShardDlqMessageResponse>> shardFutures = new ArrayList<>();
+            for (Assignment a : assignments.getAssignments()) {
+                int shardId = a.getShardId();
+                if (!isRequestByTimeStamp && !pageMarkers.hasMarker(shardId)) {
+                    log.info("Shard {} has no markers, skipping getMessages().", shardId);
+                    continue;
+                }
+                shardFutures.add(getMessagesForShard(isRequestByTimeStamp, a.getConsumerId(), earliestFailedAt,
+                        pageMarkers.getShardMarker(shardId), limit
+                ).whenComplete((r, t) -> processShardResponse(shardId, recordWriter, r, t, finalResponse)));
+            }
+            return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0]));
+        }).whenComplete((v, t) -> recordWriter.accept(finalResponse.toAggregatedResponse(t)));
+    }
+
+    private void processShardResponse(
+            int shardId, Consumer<DlqMessagesResponse> recordWriter, ShardDlqMessageResponse r, Throwable t,
+            ShardDlqMsgResponseCollector finalResponse
+    ) {
+        if (r != null && !r.getMessages().isEmpty()) {
+            log.info(
+                    "shard {} returned {} messages nextMarker {}.", shardId, r.getMessages().size(),
+                    r.getNextPageMarker()
+            );
+            recordWriter.accept(DlqMessagesResponse.of(r.getMessages()));
+        }
+        finalResponse.collectShardResponse(shardId, t, r);
+    }
+
+    private CompletableFuture<ShardDlqMessageResponse> getMessagesForShard(
+            boolean isRequestByTimeStamp, String consumerId, long earliestFailedAt, String shardPageMarker, int limit
+    ) {
+        ConsumerApi consumer = consumerFactory.getInstance(consumerId);
+        return isRequestByTimeStamp ? consumer.getMessagesByTimestamp(earliestFailedAt, limit) :
+                consumer.getMessagesByOffset(shardPageMarker, limit);
     }
 }

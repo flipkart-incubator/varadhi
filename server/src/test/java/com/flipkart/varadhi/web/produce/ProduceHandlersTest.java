@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;

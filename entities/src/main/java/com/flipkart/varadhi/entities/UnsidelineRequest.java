@@ -1,17 +1,33 @@
 package com.flipkart.varadhi.entities;
 
 import lombok.Data;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
 public class UnsidelineRequest {
     public static final long UNSPECIFIED_TS = 0L;
+    private long latestFailedAt;
+    private List<String> groupIds;
+    private List<String> messageIds;
 
-    private long latestFailedAt = 0;
-    private List<String> groupIds = new ArrayList<>();
-    private List<String> messageIds = new ArrayList<>();
+    private UnsidelineRequest(long failedAt, List<String> groupIds, List<String> messageIds) {
+        this.latestFailedAt = failedAt;
+        this.groupIds = groupIds;
+        this.messageIds = messageIds;
+    }
+    public static UnsidelineRequest ofFailedAt(long latestFailedAt) {
+        return new UnsidelineRequest(latestFailedAt, new ArrayList<>(), new ArrayList<>());
+    }
+    public static UnsidelineRequest ofGroupIds(List<String> groupIds) {
+        return new UnsidelineRequest(UNSPECIFIED_TS, groupIds, new ArrayList<>());
+    }
+
+    public static UnsidelineRequest ofMessageIds(List<String> messageIds) {
+        return new UnsidelineRequest(UNSPECIFIED_TS, new ArrayList<>(), messageIds);
+    }
 
     public void validate(int maxGroupIds, int maxMessageIds) {
         if (latestFailedAt == UNSPECIFIED_TS && messageIds.isEmpty() && groupIds.isEmpty()) {

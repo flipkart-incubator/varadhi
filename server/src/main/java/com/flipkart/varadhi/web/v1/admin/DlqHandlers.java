@@ -6,6 +6,9 @@ import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
+import com.flipkart.varadhi.web.entities.DlqPageMarker;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -31,6 +34,7 @@ import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscrip
 @Slf4j
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class DlqHandlers implements RouteProvider {
+    private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
     private final ProjectService projectService;
     private final DlqService dlqService;
@@ -55,19 +59,13 @@ public class DlqHandlers implements RouteProvider {
                                 .authorize(TOPIC_CONSUME)
                                 .build(this::getHierarchies, this::enqueueUnsideline),
                         RouteDefinition
-                                .post("GetMessages", "")
+                                .get("GetMessages", "")
                                 .nonBlocking()
-                                .bodyParser(this::setGetMessageRequest)
                                 .authorize(SUBSCRIPTION_GET)
                                 .authorize(TOPIC_CONSUME)
                                 .build(this::getHierarchies, this::getMessages)
                 )
         ).get();
-    }
-
-    public void setGetMessageRequest(RoutingContext ctx) {
-        GetMessagesRequest request = ctx.body().asPojo(GetMessagesRequest.class);
-        ctx.put(CONTEXT_KEY_BODY, request);
     }
 
     public void setUnsidelineRequest(RoutingContext ctx) {
@@ -103,25 +101,38 @@ public class DlqHandlers implements RouteProvider {
         ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
-    /*
-     * To be discussed:
-     * GetMessages is a POST call.
-     * For selective message retrieval it needs list of messages references. For now these references are assumed
-     * to be respective message offset. Encoding the list of offsets in query param could be challenging as offset
-     * is an object.
-     * To circumvent the above, GetMessages() is implemented as POST call instead of standard GET.
-     * An alternative could be
-     *  - still use GET.
-     *  - use metastore offset (but metastore is optional)
-     */
     public void getMessages(RoutingContext ctx) {
-        GetMessagesRequest messagesRequest = ctx.get(CONTEXT_KEY_BODY);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        ctx.handleChunkedResponse((Function<Consumer<GetMessagesResponse>, CompletableFuture<Void>>) responseWriter -> {
-            int max_limit = subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT);
-            messagesRequest.validate(max_limit);
-            return dlqService.getMessages(subscription, messagesRequest, responseWriter);
-        });
+        String limitStr = ctx.request().getParam("limit");
+        int limit = limitStr == null ? subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT) :
+                Integer.parseInt(limitStr);
+        long earliestFailedAt =
+                Long.parseLong(ctx.request().getParam("earliestFailedAt", String.valueOf(UNSPECIFIED_TS)));
+        String nextPageParam = ctx.request().getParam("nextPage", "");
+        DlqPageMarker dlqPageMarker = DlqPageMarker.fromString(nextPageParam);
+        validateGetMessageCriteria(subscription, earliestFailedAt, dlqPageMarker, limit);
+        ctx.handleChunkedResponse(
+                (Function<Consumer<DlqMessagesResponse>, CompletableFuture<Void>>) (
+                        responseWriter -> dlqService.getMessages(
+                                subscription, earliestFailedAt, dlqPageMarker, limit, responseWriter)
+                ));
+    }
+
+    private void validateGetMessageCriteria(
+            VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker dlqPageMarker,
+            int limit
+    ) {
+        if (earliestFailedAt == UNSPECIFIED_TS && !dlqPageMarker.hasMarkers()) {
+            throw new IllegalArgumentException("At least one get messages criteria needs to be specified.");
+        }
+        if (earliestFailedAt != UNSPECIFIED_TS && dlqPageMarker.hasMarkers()) {
+            throw new IllegalArgumentException(
+                    "Only one of the get messages criteria should be specified.");
+        }
+        int max_limit = subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT);
+        if (limit > max_limit) {
+            throw new IllegalArgumentException("Limit cannot be more than " + max_limit + ".");
+        }
     }
 
 }

@@ -9,6 +9,8 @@ import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;

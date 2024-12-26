@@ -4,8 +4,14 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.streams.ReadStream;
 import lombok.extern.slf4j.Slf4j;
 
+/*
+ * This can be used when stream response is required for an API.
+ * Current uses is used in Http Chunked response (primarily Dlq.GetMessages() response).
+ * ResponseHandler reads the content from this stream, while application can write
+ * content to this stream via (send()).
+ */
 @Slf4j
-public class AsyncProducerReadStream implements ReadStream<Buffer> {
+public class ResponseContentReadStream implements ReadStream<Buffer> {
 
     private boolean paused = false;
     private boolean ended = false;
@@ -15,8 +21,7 @@ public class AsyncProducerReadStream implements ReadStream<Buffer> {
     private io.vertx.core.Handler<Throwable> exceptionHandler;
 
 
-
-    public AsyncProducerReadStream() {
+    public ResponseContentReadStream() {
     }
 
     @Override
@@ -59,10 +64,15 @@ public class AsyncProducerReadStream implements ReadStream<Buffer> {
         return this;
     }
 
-    public void send(String data) {
+    public void send(byte[] data) {
+        Buffer buffer = Buffer.buffer(data);
+        send(buffer);
+    }
+
+    public void send(Buffer buffer) {
+        // TODO::handle paused and ended.
         if (!paused && !ended) {
             if (dataHandler != null) {
-                Buffer buffer = Buffer.buffer(data);
                 dataHandler.handle(buffer);
                 log.info("Data sent");
             }

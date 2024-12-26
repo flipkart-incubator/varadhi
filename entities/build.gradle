@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     api("com.fasterxml.jackson.core:jackson-annotations:$jackson_version")
+    api("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
     api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")
 

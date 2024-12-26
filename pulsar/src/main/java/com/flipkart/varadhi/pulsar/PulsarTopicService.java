@@ -72,8 +72,7 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
             PulsarStorageTopic topic, InternalQueueCategory category
     ) {
         List<TopicPartitions<PulsarStorageTopic>> topicPartitions = new ArrayList<>();
-        int shardCount = topicPlanner.getShardCount(topic.getCapacity(), category);
-        shardCount = Math.min(shardCount, topic.getPartitionCount());
+        int shardCount = topicPlanner.getShardCount(topic, category);
         int partitionsPerShard = topic.getPartitionCount() / shardCount;
         for (int shardId = 0; shardId < shardCount; shardId++) {
             topicPartitions.add(

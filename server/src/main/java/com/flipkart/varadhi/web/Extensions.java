@@ -3,8 +3,8 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.utils.AsyncProducerReadStream;
 import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.utils.JsonSeqStream;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
@@ -27,6 +27,17 @@ import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 
 
 public class Extensions {
+    private enum ContentKind {
+        APPLICATION_JSON(HttpHeaderValues.APPLICATION_JSON.toString()),
+        APPLICATION_JSON_SEQ("application/json-seq"),
+        NONE("");
+
+        private final String value;
+
+        ContentKind(String value) {
+            this.value = value;
+        }
+    }
 
     public static class RequestBodyExtension {
 
@@ -67,22 +78,18 @@ public class Extensions {
         public static <T> void handleChunkedResponse(
                 RoutingContext ctx, Function<Consumer<T>, CompletableFuture<Void>> executor
         ) {
-
-            AsyncProducerReadStream readStream = new AsyncProducerReadStream();
+            JsonSeqStream seqStream = new JsonSeqStream();
             ctx.response().setChunked(true);
-            addResponseHeaders(ctx, true);
-            ctx.response().send(readStream);
-            executor.apply(m -> {
-                        String responseBody = JsonMapper.jsonSerialize(m);
-                        readStream.send(responseBody);
-                    })
+            addResponseHeaders(ctx, ContentKind.APPLICATION_JSON_SEQ);
+            ctx.response().send(seqStream);
+            executor.apply(seqStream::send)
                     .whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
                         if (error != null) {
                             log.error("Completing chunked request response failure: {}", error.getMessage());
-                            readStream.end(error);
+                            seqStream.end(error);
                         } else {
                             log.info("Completing chunked request response");
-                            readStream.end();
+                            seqStream.end();
                         }
                     }));
         }
@@ -96,7 +103,7 @@ public class Extensions {
         }
 
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
-            addResponseHeaders(ctx, true);
+            addResponseHeaders(ctx, ContentKind.APPLICATION_JSON);
             String responseBody = JsonMapper.jsonSerialize(response);
             ctx.response().end(responseBody, (r) -> {
                 HttpServerRequest request = ctx.request();
@@ -109,14 +116,14 @@ public class Extensions {
         }
 
         public static void endRequestWithStatusAndErrorMsg(RoutingContext ctx, int httpStatus, String errorMessage) {
-            addResponseHeaders(ctx, true);
+            addResponseHeaders(ctx, ContentKind.APPLICATION_JSON);
             ctx.response().setStatusCode(httpStatus);
             ctx.response().setStatusMessage(errorMessage);
             endRequestWithResponse(ctx, new ErrorResponse(errorMessage));
         }
 
         public static void endRequest(RoutingContext ctx) {
-            addResponseHeaders(ctx, false);
+            addResponseHeaders(ctx, ContentKind.NONE);
             ctx.response().end((r) -> {
                 HttpServerRequest request = ctx.request();
                 if (r.succeeded()) {
@@ -131,9 +138,9 @@ public class Extensions {
             ctx.fail(throwable);
         }
 
-        private static void addResponseHeaders(RoutingContext ctx, boolean hasContent) {
-            if (hasContent) {
-                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+        private static void addResponseHeaders(RoutingContext ctx, ContentKind kind) {
+            if (kind != ContentKind.NONE) {
+                ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, kind.value);
             }
         }
 
@@ -163,7 +170,7 @@ public class Extensions {
         }
 
         // returns true if the request is from one of the configured super user(s).
-        // This can be used to make certain actions conditional on super user in addition to regular authz checks.
+        // This can be used to make certain actions conditional on superuser in addition to regular authz checks.
         // e.g. allow subscriptions properties to be updated beyond configured permissible limits.
         public static boolean isSuperUser(RoutingContext ctx) {
             return ctx.get(CONTEXT_KEY_IS_SUPER_USER, false);

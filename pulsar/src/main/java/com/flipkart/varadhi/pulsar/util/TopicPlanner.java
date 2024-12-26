@@ -3,6 +3,7 @@ package com.flipkart.varadhi.pulsar.util;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
+import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -29,16 +30,24 @@ public class TopicPlanner {
         partitionCount = partitionCount * fanOutMultiplier;
         // need to ensure that partitions are equally distributed across the shards and hence
         // partitionCount will be in multiple of shardCount.
-        int shardCount = getShardCount(ask, category);
+        int shardCount = getShardCount(ask, partitionCount, category);
         int deltaForMultiple = shardCount - (partitionCount % shardCount);
         partitionCount = deltaForMultiple == shardCount ? partitionCount : partitionCount + deltaForMultiple;
         int boundedPartitionCount =
                 Math.max(config.getMinPartitionPerTopic(), Math.min(partitionCount, config.getMaxPartitionPerTopic()));
+        if (0 != boundedPartitionCount % shardCount) {
+            log.error("Capacity ask:{} Suggested Partition(s):{} Suggested Shard(s):{}", ask, boundedPartitionCount, shardCount);
+            throw new IllegalArgumentException("Couldn't partition topic equally into shards.");
+        }
         log.debug("Suggested PartitionCount:{} for capacity:{}", boundedPartitionCount, ask);
         return boundedPartitionCount;
     }
 
-    public int getShardCount(TopicCapacityPolicy ask, InternalQueueCategory category) {
+    public int getShardCount(PulsarStorageTopic topic, InternalQueueCategory category) {
+        return getShardCount(topic.getCapacity(), topic.getPartitionCount(), category);
+    }
+
+    private int getShardCount(TopicCapacityPolicy ask, int topicPartitionCount, InternalQueueCategory category) {
         if (category != InternalQueueCategory.MAIN) {
             return 1;
         }
@@ -48,7 +57,8 @@ public class TopicPlanner {
         int shardCount = Math.max(countFromQps, countFromKBps);
         int deltaForMultiple = config.getShardMultiples() - (shardCount % config.getShardMultiples());
         shardCount = deltaForMultiple == config.getShardMultiples() ? shardCount : shardCount + deltaForMultiple;
-        shardCount = Math.min(shardCount, config.getMaxShardPerSubscription());
+        // Limit max shardCount to topic's partition count and max configured shard per subscription.
+        shardCount = Math.min(Math.min(shardCount, topicPartitionCount), config.getMaxShardPerSubscription());
         log.debug("Suggested ShardCount:{} for capacity:{}", shardCount, ask);
         return shardCount;
     }

@@ -91,8 +91,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         String notFoundError = String.format("IamPolicyRecord on resource(%s) not found.", resourceId);
         doThrow(new ResourceNotFoundException(notFoundError)).when(iamPolicyService)
                 .deleteIamPolicy(ResourceType.ORG, resourceId);
-        ErrorResponse errResponse = sendRequestWithoutBody(request, 404, notFoundError, ErrorResponse.class);
-        assertEquals(notFoundError, errResponse.reason());
+        sendRequestWithoutBody(request, 404, notFoundError);
     }
 
     @Test

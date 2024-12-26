@@ -24,12 +24,6 @@ public interface PolledMessage<O extends Offset> extends Message {
      */
     O getOffset();
 
-    /**
-     * @return the payload of this message.
-     */
-    // TODO: evaluate ByteBuf instead of byte[]. byte[] means heap allocated.
-    byte[] getPayload();
-
     // TODO: evaluate method for message properties that live outside of payload.
 
     /**
