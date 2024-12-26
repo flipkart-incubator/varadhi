@@ -24,6 +24,8 @@ services:
     networks:
       hostnet:
         ipv4_address: 10.5.5.2
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - 18488:18488
       - 9990:9990
@@ -56,7 +58,7 @@ services:
     volumes:
       - pulsarconf:/pulsar/conf
       - pulsardata:/pulsar/data
-    command: bin/pulsar standalone
+    command: bin/pulsar standalone --advertised-address 10.5.5.3
     restart: "no"
     healthcheck:
       test: ./bin/pulsar-admin tenants list
