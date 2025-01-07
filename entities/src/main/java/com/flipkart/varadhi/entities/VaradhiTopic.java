@@ -25,11 +25,8 @@ public class VaradhiTopic extends AbstractTopic {
         this.internalTopics = internalTopics;
     }
 
-
-    public static VaradhiTopic of(TopicResource topicResource) {
-        return new VaradhiTopic(buildTopicName(topicResource.getProject(), topicResource.getName()), INITIAL_VERSION,
-                topicResource.isGrouped(), topicResource.getCapacity(), new HashMap<>()
-        );
+    public static VaradhiTopic of(String project, String name, boolean grouped, TopicCapacityPolicy capacity) {
+        return new VaradhiTopic(buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>());
     }
 
     public static String buildTopicName(String projectName, String topicName) {

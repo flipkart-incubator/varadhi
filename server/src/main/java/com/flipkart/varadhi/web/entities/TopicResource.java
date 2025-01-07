@@ -1,8 +1,11 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.web.entities;
 
+import com.flipkart.varadhi.entities.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.HashMap;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -28,7 +31,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
     }
 
     public static TopicResource grouped(String name, String project, TopicCapacityPolicy capacity) {
-       return new TopicResource(name, INITIAL_VERSION, project, true, capacity);
+        return new TopicResource(name, INITIAL_VERSION, project, true, capacity);
     }
 
     public static TopicResource unGrouped(String name, String project, TopicCapacityPolicy capacity) {
@@ -44,5 +47,9 @@ public class TopicResource extends VersionedEntity implements Validatable {
                 varadhiTopic.isGrouped(),
                 varadhiTopic.getCapacity()
         );
+    }
+
+    public VaradhiTopic toVaradhiTopic() {
+        return VaradhiTopic.of(getProject(), getName(), isGrouped(), getCapacity());
     }
 }

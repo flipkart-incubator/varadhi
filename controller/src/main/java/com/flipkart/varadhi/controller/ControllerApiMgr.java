@@ -4,6 +4,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.controller.impl.opexecutors.*;
+import com.flipkart.varadhi.core.cluster.entities.*;
+import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.*;

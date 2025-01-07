@@ -1,6 +1,8 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.web.entities.SubscriptionResource;
+import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

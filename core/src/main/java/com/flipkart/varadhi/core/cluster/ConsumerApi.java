@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.entities.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;

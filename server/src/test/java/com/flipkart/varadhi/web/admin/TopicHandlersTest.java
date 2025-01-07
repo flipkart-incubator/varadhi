@@ -8,6 +8,7 @@ import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -84,7 +85,7 @@ public class TopicHandlersTest extends WebTestBase {
     public void testTopicCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicsUrl(project));
         TopicResource topicResource = getTopicResource(topicName, project);
-        VaradhiTopic vt = VaradhiTopic.of(topicResource);
+        VaradhiTopic vt = topicResource.toVaradhiTopic();
         doReturn(vt).when(varadhiTopicFactory).get(project, topicResource);
         TopicResource t1Created = sendRequestWithBody(request, topicResource, TopicResource.class);
         Assertions.assertEquals(topicResource.getProject(), t1Created.getProject());
@@ -95,7 +96,7 @@ public class TopicHandlersTest extends WebTestBase {
     @Test
     public void testTopicGet() throws InterruptedException {
         TopicResource topicResource = getTopicResource(topicName, project);
-        VaradhiTopic t1 = VaradhiTopic.of(topicResource);
+        VaradhiTopic t1 = topicResource.toVaradhiTopic();
         String varadhiTopicName = String.join(".", project.getName(), topicName);
         doReturn(t1).when(varadhiTopicService).get(varadhiTopicName);
 
@@ -107,7 +108,7 @@ public class TopicHandlersTest extends WebTestBase {
     @Test
     public void testListTopics() throws InterruptedException {
         TopicResource topicResource = getTopicResource(topicName, project);
-        VaradhiTopic t1 = VaradhiTopic.of(topicResource);
+        VaradhiTopic t1 = topicResource.toVaradhiTopic();
         List<String> listOfTopics = new ArrayList<>();
         listOfTopics.add(t1.getName());
 

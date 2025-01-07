@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.core.cluster;
 
+import com.flipkart.varadhi.core.cluster.entities.ShardAssignments;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.*;
 

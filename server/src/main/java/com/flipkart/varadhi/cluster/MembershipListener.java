@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.cluster;
 
-import com.flipkart.varadhi.entities.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 
 import java.util.concurrent.CompletableFuture;
 

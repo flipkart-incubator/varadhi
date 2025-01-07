@@ -3,7 +3,7 @@ package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
-import com.flipkart.varadhi.entities.TopicResource;
+import com.flipkart.varadhi.web.entities.TopicResource;
 
 public class VaradhiTopicFactory {
 
@@ -28,7 +28,7 @@ public class VaradhiTopicFactory {
         if (null == topicResource.getCapacity()) {
             topicResource.setCapacity(defaultTopicCapacityPolicy);
         }
-        VaradhiTopic vt = VaradhiTopic.of(topicResource);
+        VaradhiTopic vt = topicResource.toVaradhiTopic();
         planDeployment(project, vt);
         return vt;
     }
