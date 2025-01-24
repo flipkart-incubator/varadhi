@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import static com.flipkart.varadhi.Constants.REST_DEFAULTS.*;
+import static com.flipkart.varadhi.Constants.RestDefaults.*;
 
 @Data
 public class RestOptions {
