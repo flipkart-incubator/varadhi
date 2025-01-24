@@ -1,10 +1,11 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -13,9 +14,9 @@ import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -57,7 +58,7 @@ public class TopicHandlersTest extends WebTestBase {
 
         Route routeCreate = router.post("/projects/:project/topics").handler(bodyHandler)
                 .handler(bodyHandler).handler(ctx -> {
-                    topicHandlers.setTopic(ctx);
+                    topicHandlers.setRequestBody(ctx);
                     ctx.next();
                 })
                 .handler(ctx -> {

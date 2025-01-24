@@ -22,6 +22,11 @@ public class Constants {
         public static final String PATH_PARAM_SUBSCRIPTION = "subscription";
     }
 
+    public static class QueryParams {
+        public static final String QUERY_PARAM_DELETION_TYPE = "deletionType";
+        public static final String QUERY_PARAM_IGNORE_CONSTRAINTS = "ignoreConstraints";
+    }
+
     public static class Tags {
         public static final String TAG_REGION = "region";
         public static final String TAG_ORG = "org";
