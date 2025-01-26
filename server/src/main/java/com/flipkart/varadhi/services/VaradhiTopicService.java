@@ -88,7 +88,7 @@ public class VaradhiTopicService {
     /**
      * Handles the soft deletion of a Varadhi topic.
      *
-     * @param varadhiTopic the Varadhi topic to soft delete
+     * @param varadhiTopic the Varadhi topic to soft-delete
      */
     public void handleSoftDelete(VaradhiTopic varadhiTopic) {
         log.info("Soft deleting Varadhi topic: {}", varadhiTopic.getName());

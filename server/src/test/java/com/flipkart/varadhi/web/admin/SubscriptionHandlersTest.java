@@ -163,12 +163,12 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
         ArgumentCaptor<String> captorSubName = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Project> captorProject = ArgumentCaptor.forClass(Project.class);
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
-                .deleteSubscription(captorSubName.capture(), captorProject.capture(), any());
+                .deleteSubscription(captorSubName.capture(), captorProject.capture(), any(), any());
 
         sendRequestWithoutBody(request, null);
         assertEquals(captorSubName.getValue(), resource.getSubscriptionInternalName());
         assertEquals(captorProject.getValue().getName(), project.getName());
-        verify(subscriptionService, times(1)).deleteSubscription(any(), any(), any());
+        verify(subscriptionService, times(1)).deleteSubscription(any(), any(), any(), any());
     }
 
     @Test

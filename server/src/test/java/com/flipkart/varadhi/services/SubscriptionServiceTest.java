@@ -347,7 +347,8 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status =
                 CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(name, requestedBy);
-        Future.fromCompletionStage(subscriptionService.deleteSubscription(name, o1t1p1, requestedBy))
+        Future.fromCompletionStage(
+                        subscriptionService.deleteSubscription(name, o1t1p1, requestedBy, ResourceDeletionType.HARD_DELETE))
                 .onComplete(ctx.succeeding(
                         v -> {
                             Exception exception = assertThrows(
