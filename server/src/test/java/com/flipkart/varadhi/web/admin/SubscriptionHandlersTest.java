@@ -118,7 +118,7 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
         SubscriptionResource resource =
                 getSubscriptionResource("sub1", Project.of("project2", "", "team1", "org1"), topicResource);
 
-        String errMsg = "Specified Project name is different from Project name in url";
+        String errMsg = "Project name mismatch between URL and request body.";
         ErrorResponse resp = sendRequestWithBody(request, resource, 400, errMsg, ErrorResponse.class);
         assertEquals(errMsg, resp.reason());
     }

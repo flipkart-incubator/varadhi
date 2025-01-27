@@ -114,6 +114,7 @@ public class VaradhiTopic extends AbstractTopic {
      *
      * @return true if the topic is active, false otherwise
      */
+    @JsonIgnore
     public boolean isActive() {
         return this.status == Status.ACTIVE;
     }

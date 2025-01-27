@@ -236,7 +236,8 @@ class SubscriptionServiceTest {
                 () -> subscriptionService.createSubscription(unGroupedTopic, subscription, o1t1p1)
         );
 
-        String expectedMessage = "Cannot create grouped Subscription as it's Topic(%s) is not grouped".formatted(
+        String expectedMessage =
+                "Grouped subscription cannot be created or updated for a non-grouped topic '%s'".formatted(
                 unGroupedTopic.getName());
         String actualMessage = exception.getMessage();
 
@@ -294,7 +295,7 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status =
                 CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), requestedBy);
-        String expectedMessage = "Conflicting update, Subscription has been modified. Fetch latest and try again.";
+        String expectedMessage = "Conflicting update detected. Fetch the latest version and try again.";
 
         InvalidOperationForResourceException e = assertThrows(
                 InvalidOperationForResourceException.class, () -> {
@@ -321,7 +322,8 @@ class SubscriptionServiceTest {
         doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), requestedBy);
 
         String expectedMessage =
-                "Cannot update Subscription to grouped as it's Topic(%s) is not grouped".formatted(update.getTopic());
+                "Grouped subscription cannot be created or updated for a non-grouped topic '%s'".formatted(
+                        update.getTopic());
         IllegalArgumentException e = assertThrows(
                 IllegalArgumentException.class, () -> {
                     CompletableFuture<VaradhiSubscription> result = updateSubscription(update);

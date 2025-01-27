@@ -134,7 +134,7 @@ public class E2EBase {
     }
 
     static void cleanupTopic(String topicName, Project project) {
-        makeDeleteRequest(getTopicsUri(project, topicName), 200);
+        makeDeleteRequest(getTopicsUri(project, topicName), "HARD_DELETE", 200);
     }
 
     // this method traverses the resource hierarchy and clean-ups all subscriptions on the matching topics
@@ -153,7 +153,7 @@ public class E2EBase {
                         SubscriptionResource res =
                                 makeGetRequest(getSubscriptionsUri(project, sub), SubscriptionResource.class, 200);
                         if (topicNames.contains(res.getTopic()) && projectName.equals(res.getTopicProject())) {
-                            makeDeleteRequest(getSubscriptionsUri(project, sub), 200);
+                            makeDeleteRequest(getSubscriptionsUri(project, sub), "HARD_DELETE", 200);
                         }
                     });
                 });
@@ -163,7 +163,8 @@ public class E2EBase {
 
     static void cleanupSubscriptionsOnProject(Project project) {
         getSubscriptions(makeListRequest(getSubscriptionsUri(project), 200)).forEach(
-                s -> makeDeleteRequest(getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), 200));
+                s -> makeDeleteRequest(
+                        getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), "HARD_DELETE", 200));
     }
 
     static Client getClient() {
@@ -251,6 +252,11 @@ public class E2EBase {
         Assertions.assertEquals(expectedStatus, response.getStatus());
     }
 
+    static void makeDeleteRequest(String targetUrl, String deletionType, int expectedStatus) {
+        Response response = makeHttpDeleteRequest(targetUrl, deletionType);
+        Assertions.assertEquals(expectedStatus, response.getStatus());
+    }
+
     static void makeDeleteRequest(String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored) {
         Response response = makeHttpDeleteRequest(targetUrl);
         Assertions.assertEquals(expectedStatus, response.getStatus());
@@ -293,6 +299,14 @@ public class E2EBase {
                 .delete();
     }
 
+    static Response makeHttpDeleteRequest(String targetUrl, String deletionType) {
+        return getClient()
+                .target(targetUrl)
+                .queryParam("deletionType", deletionType)
+                .request(MediaType.APPLICATION_JSON_TYPE)
+                .header(USER_ID_HEADER, SUPER_USER)
+                .delete();
+    }
 
     @Provider
     public static class ObjectMapperContextResolver implements ContextResolver<ObjectMapper> {

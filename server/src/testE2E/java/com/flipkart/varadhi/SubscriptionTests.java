@@ -81,7 +81,7 @@ public class SubscriptionTests extends E2EBase {
 
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), sub, 409, "Subscription(default.sub1) already exists.", true);
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), "HARD_DELETE", 200);
     }
 
     @Test
@@ -122,7 +122,7 @@ public class SubscriptionTests extends E2EBase {
         assertEquals(update.getName(), updated.getName());
         assertEquals(update.getDescription(), updated.getDescription());
         assertEquals(2, updated.getVersion());
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), "HARD_DELETE", 200);
     }
 
     @Test
@@ -192,7 +192,7 @@ public class SubscriptionTests extends E2EBase {
         );
         makeCreateRequest(
                 getSubscriptionsUri(o1t1p1), groupedOnUnGroupTopic, 400,
-                "Cannot create grouped Subscription as it's Topic(default.topic1) is not grouped", true
+                "Grouped subscription cannot be created or updated for a non-grouped topic 'default.topic1'", true
         );
     }
 }
