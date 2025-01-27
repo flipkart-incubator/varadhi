@@ -2,6 +2,8 @@ package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.entities.auth.UserContext;
 
+import java.util.Map;
+
 public final class TestUser {
     private TestUser() {
     }
@@ -16,6 +18,16 @@ public final class TestUser {
             @Override
             public boolean isExpired() {
                 return expired;
+            }
+
+            @Override
+            public String getOrg() {
+                return "";
+            }
+
+            @Override
+            public Map<String, String> getAttributes() {
+                return Map.of();
             }
         };
     }

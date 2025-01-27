@@ -3,6 +3,8 @@ package com.flipkart.varadhi.entities;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.ext.auth.User;
 
+import java.util.Map;
+
 public class VertxUserContext implements UserContext {
 
     private final User user;
@@ -21,5 +23,15 @@ public class VertxUserContext implements UserContext {
     @Override
     public boolean isExpired() {
         return user.expired();
+    }
+
+    @Override
+    public String getOrg() {
+        return "";
+    }
+
+    @Override
+    public Map<String, String> getAttributes() {
+        return Map.of();
     }
 }
