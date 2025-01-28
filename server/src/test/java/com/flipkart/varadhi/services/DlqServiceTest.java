@@ -44,8 +44,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsideline() {
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        VaradhiSubscription subscription = spy(getUngroupedSubscription("sub12", project, vTopic));
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(System.currentTimeMillis());
         String requestedBy = "testUser";
         SubscriptionOperation operation =
@@ -64,8 +64,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsidelineInvalidState() {
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        VaradhiSubscription subscription = spy(getUngroupedSubscription("sub12", project, vTopic));
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         when(subscription.isWellProvisioned()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
                 InvalidOperationForResourceException.class,
@@ -80,7 +80,7 @@ class DlqServiceTest extends SubscriptionTestBase {
         int limit = 10;
 
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
-        List<DlqMessage> shard1Messages = List.of(getDlqMessage(1), getDlqMessage(2), getDlqMessage(1));
+        List<DlqMessage> shard1Messages = List.of(createDlqMessage(1), createDlqMessage(2), createDlqMessage(1));
         String shard1NextPage =
                 shard1Messages.get(1).getOffset().toString() + "," + shard1Messages.get(2).getOffset().toString();
         doReturn(CompletableFuture.completedFuture(new ShardDlqMessageResponse(shard1Messages, shard1NextPage))).when(
@@ -134,8 +134,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testGetMessagesInvalidState() {
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        VaradhiSubscription subscription = spy(getUngroupedSubscription("sub12", project, vTopic));
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         when(subscription.isWellProvisioned()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
                 InvalidOperationForResourceException.class,
@@ -179,8 +179,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     private VaradhiSubscription setupSubscriptionForGetMessages() {
         String consumerId = "consumerId";
-        VaradhiTopic vTopic =  topicResource.toVaradhiTopic();
-        VaradhiSubscription subscription = spy(getUngroupedSubscription("sub12", project, vTopic));
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = new ArrayList<>();
         for (int i = 0; i < shards.getShardCount(); i++) {

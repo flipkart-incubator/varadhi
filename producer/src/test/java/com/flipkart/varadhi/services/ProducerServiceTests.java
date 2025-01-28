@@ -284,7 +284,7 @@ public class ProducerServiceTests {
         produceAttributes.put(TAG_PROJECT, project.getName());
         produceAttributes.put(TAG_TOPIC, topic);
         produceAttributes.put(TAG_IDENTITY, ANONYMOUS_IDENTITY);
-        produceAttributes.put(TAG_REMOTEHOST, "remoteHost");
+        produceAttributes.put(TAG_REMOTE_HOST, "remoteHost");
         return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
     }
 

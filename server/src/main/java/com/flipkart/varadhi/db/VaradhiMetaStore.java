@@ -191,6 +191,12 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     @Override
+    public void updateTopic(VaradhiTopic topic) {
+        ZNode znode = ZNode.OfTopic(topic.getName());
+        zkMetaStore.updateZNodeWithData(znode, topic);
+    }
+
+    @Override
     public List<String> getAllSubscriptionNames() {
         ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
         return zkMetaStore.listChildren(znode)

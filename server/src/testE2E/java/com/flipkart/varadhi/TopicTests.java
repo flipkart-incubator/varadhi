@@ -59,12 +59,12 @@ public class TopicTests extends E2EBase {
         Assertions.assertNotNull(r.getCapacity());
         String errorDuplicateTopic =
                 String.format(
-                        "Specified Topic(%s) already exists.",
+                        "Topic '%s' already exists.",
                         String.join(NAME_SEPARATOR, topic.getProject(), topic.getName())
                 );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
         makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
-        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), "HARD_DELETE", 200);
     }
 
     @Test
@@ -95,7 +95,7 @@ public class TopicTests extends E2EBase {
         Assertions.assertEquals(topic2.getName(), r2.getName());
         Assertions.assertEquals(topic2.getProject(), r2.getProject());
 
-        makeDeleteRequest(getTopicsUri(o1t1Project1, topic1.getName()), 200);
-        makeDeleteRequest(getTopicsUri(o2t1Project1, topic2.getName()), 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topic1.getName()), "HARD_DELETE", 200);
+        makeDeleteRequest(getTopicsUri(o2t1Project1, topic2.getName()), "HARD_DELETE", 200);
     }
 }

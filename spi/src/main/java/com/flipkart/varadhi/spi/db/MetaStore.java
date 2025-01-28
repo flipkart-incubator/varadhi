@@ -49,6 +49,8 @@ public interface MetaStore {
 
     void deleteTopic(String topicName);
 
+    void updateTopic(VaradhiTopic topic);
+
     List<String> getAllSubscriptionNames();
 
     List<String> getSubscriptionNames(String projectName);
