@@ -7,7 +7,6 @@ dependencies {
     api(project(':entities'))
     api("io.vertx:vertx-core:$vertx_version")
     api('com.fasterxml.jackson.core:jackson-databind')
-    api("io.vertx:vertx-web:$vertx_version")
 
     testFixturesImplementation("com.google.guava:guava:$guava_version")
 }
