@@ -19,16 +19,6 @@ public final class TestUser {
             public boolean isExpired() {
                 return expired;
             }
-
-            @Override
-            public String getOrg() {
-                return "";
-            }
-
-            @Override
-            public Map<String, String> getAttributes() {
-                return Map.of();
-            }
         };
     }
 }

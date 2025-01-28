@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities.auth;
 
 import java.util.Map;
+import java.util.Optional;
 
 public interface UserContext {
 
@@ -8,9 +9,13 @@ public interface UserContext {
 
     boolean isExpired();
 
-    String getOrg();
+    default Optional<String> getOrg() {
+        return Optional.empty();
+    }
 
-    Map<String, String> getAttributes();
+    default Map<String, String> getAttributes() {
+        return Map.of();
+    }
 
     // TODO: enhance it to include more details like context around the authentication
 }
