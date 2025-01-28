@@ -123,7 +123,8 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .nonBlocking()
                                 .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchies, this::start),
-                        RouteDefinition.post("StopSubscription", "/:subscription/stop")
+                        RouteDefinition
+                                .post("StopSubscription", "/:subscription/stop")
                                 .nonBlocking()
                                 .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchies, this::stop)

@@ -126,7 +126,7 @@ class TopicHandlersTest extends WebTestBase {
 
         doReturn(varadhiTopic).when(varadhiTopicFactory).get(project, topicResource);
 
-        TopicResource createdTopic = sendRequestWithBody(
+        TopicResource createdTopic = sendRequestWithEntity(
                 createRequest(HttpMethod.POST, getTopicsUrl(project)),
                 topicResource,
                 TopicResource.class
@@ -174,7 +174,7 @@ class TopicHandlersTest extends WebTestBase {
 
         doReturn(varadhiTopic).when(varadhiTopicService).get(varadhiTopicName);
 
-        TopicResource retrievedTopic = sendRequestWithoutBody(
+        TopicResource retrievedTopic = sendRequestWithoutPayload(
                 createRequest(HttpMethod.GET, getTopicUrl(project)),
                 TopicResource.class
         );
@@ -188,7 +188,7 @@ class TopicHandlersTest extends WebTestBase {
 
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName());
 
-        List<String> retrievedTopics = sendRequestWithoutBody(
+        List<String> retrievedTopics = sendRequestWithoutPayload(
                 createRequest(HttpMethod.GET, getTopicsUrl(project)),
                 List.class
         );
@@ -200,7 +200,7 @@ class TopicHandlersTest extends WebTestBase {
     void listTopics_WithNoTopicsAvailable_ShouldReturnEmptyList() throws InterruptedException {
         doReturn(Collections.emptyList()).when(varadhiTopicService).getVaradhiTopics(project.getName());
 
-        List<String> retrievedTopics = sendRequestWithoutBody(
+        List<String> retrievedTopics = sendRequestWithoutPayload(
                 createRequest(HttpMethod.GET, getTopicsUrl(project)),
                 List.class
         );
@@ -233,7 +233,7 @@ class TopicHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicUrl(project) + "/restore");
         doNothing().when(varadhiTopicService).restore(any());
 
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
 
         verify(varadhiTopicService).restore(any());
     }
@@ -248,7 +248,7 @@ class TopicHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, url);
         doNothing().when(varadhiTopicService).delete(any(), eq(expectedDeletionType));
 
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
 
         verify(varadhiTopicService).delete(any(), eq(expectedDeletionType));
     }

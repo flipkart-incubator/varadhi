@@ -85,13 +85,13 @@ public class IamPolicyHandlersTest extends WebTestBase {
                 createRequest(HttpMethod.DELETE, getOrgIamPolicyUrl(resourceId));
         doNothing().when(iamPolicyService).deleteIamPolicy(eq(ResourceType.ORG), eq(resourceId));
 
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
         verify(iamPolicyService, times(1)).deleteIamPolicy(eq(ResourceType.ORG), eq(resourceId));
 
         String notFoundError = String.format("IamPolicyRecord on resource(%s) not found.", resourceId);
         doThrow(new ResourceNotFoundException(notFoundError)).when(iamPolicyService)
                 .deleteIamPolicy(ResourceType.ORG, resourceId);
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
     @Test
@@ -111,7 +111,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         doReturn(policyRecord).when(iamPolicyService)
                 .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
 
-        IamPolicyResponse response = sendRequestWithBody(request, assignmentUpdate, IamPolicyResponse.class);
+        IamPolicyResponse response = sendRequestWithEntity(request, assignmentUpdate, IamPolicyResponse.class);
         assertEquals(expected, response);
         verify(iamPolicyService, times(1)).setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
 
@@ -119,7 +119,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         doThrow(new MetaStoreException(someInternalError)).when(iamPolicyService)
                 .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
         ErrorResponse errResponse =
-                sendRequestWithBody(request, assignmentUpdate, 500, someInternalError, ErrorResponse.class);
+                sendRequestWithEntity(request, assignmentUpdate, 500, someInternalError, ErrorResponse.class);
         assertEquals(someInternalError, errResponse.reason());
     }
 }
