@@ -3,8 +3,6 @@ package com.flipkart.varadhi.entities;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.vertx.ext.auth.User;
 
-import java.util.Map;
-
 public class VertxUserContext implements UserContext {
 
     private final User user;

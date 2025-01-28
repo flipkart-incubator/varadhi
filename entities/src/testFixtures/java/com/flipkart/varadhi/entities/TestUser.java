@@ -2,8 +2,6 @@ package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.entities.auth.UserContext;
 
-import java.util.Map;
-
 public final class TestUser {
     private TestUser() {
     }
