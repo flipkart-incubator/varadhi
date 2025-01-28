@@ -430,16 +430,12 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                 HttpMethod.POST,
                 buildSubscriptionUrl("sub1", PROJECT) + "/restore"
         );
-        SubscriptionResource resource = createSubscriptionResource("sub1", PROJECT, TOPIC_RESOURCE);
-        VaradhiSubscription subscription =
-                createUngroupedSubscription("sub1", PROJECT, TOPIC_RESOURCE.toVaradhiTopic());
 
-        doReturn(CompletableFuture.completedFuture(subscription)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                 .restoreSubscription(any(), any());
 
-        SubscriptionResource restored = sendRequestWithoutPayload(request, SubscriptionResource.class);
+        sendRequestWithoutPayload(request, null);
 
-        assertEquals(resource.getName(), restored.getName());
         verify(subscriptionService, times(1)).restoreSubscription(any(), any());
     }
 

@@ -269,8 +269,8 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void restore(RoutingContext ctx) {
-        ctx.handleResponse(subscriptionService.restoreSubscription(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault())
-                .thenApply(SubscriptionResource::from));
+        ctx.handleResponse(
+                subscriptionService.restoreSubscription(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
     }
 
     /**
