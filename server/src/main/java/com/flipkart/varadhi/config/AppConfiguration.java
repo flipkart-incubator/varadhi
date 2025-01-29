@@ -70,4 +70,7 @@ public class AppConfiguration {
     private ControllerConfig controller;
 
     private Map<String, String> otelOptions;
+
+    private MessageHeaderConfiguration messageHeaderConfiguration;
+
 }

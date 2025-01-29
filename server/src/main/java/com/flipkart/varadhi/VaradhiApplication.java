@@ -61,10 +61,13 @@ public class VaradhiApplication {
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
-            if(!MessageHeaderConfiguration.validateHeaderMapping(MessageHeaderConfiguration.getDefaultMessageHeaders())){
+            MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderConfiguration.buildConfigWithDefaults(
+                    configuration.getMessageHeaderConfiguration());
+            if (!MessageHeaderConfiguration.validateHeaderMapping(messageHeaderConfiguration)) {
                 log.error("Header validation failed");
                 System.exit(-1);
             }
+            log.info(messageHeaderConfiguration.getGroupIdHeader());
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {

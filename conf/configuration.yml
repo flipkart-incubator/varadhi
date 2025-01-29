@@ -81,3 +81,8 @@ otelOptions:
   otlp.aggregationTemporality: "CUMULATIVE"
   otlp.resourceAttributes:
   otlp.headers:
+
+messageHeaderConfiguration:
+  msgHeaderPrefix: ["X_", "X-"]
+  msgIdHeader: "X_RESTBUS_MESSAGE_ID"
+  groupIdHeader: "X_RESTBUS_GROUP_ID"
