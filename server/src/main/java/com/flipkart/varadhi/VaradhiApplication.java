@@ -4,6 +4,7 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
+import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
@@ -60,6 +61,10 @@ public class VaradhiApplication {
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
+            if(!MessageHeaderConfiguration.validateHeaderMapping(MessageHeaderConfiguration.getDefaultMessageHeaders())){
+                log.error("Header validation failed");
+                System.exit(-1);
+            }
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {

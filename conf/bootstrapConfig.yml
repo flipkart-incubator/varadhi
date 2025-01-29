@@ -1,0 +1,7 @@
+bootstrapConfig:
+  messageHeaderConfig:
+    prefix: ["X_", "X-"]
+    mapping:
+      messageId: "X_RESTBUS_MESSAGE_ID"
+      groupId: "X_RESTBUS_GROUP_ID"
+
