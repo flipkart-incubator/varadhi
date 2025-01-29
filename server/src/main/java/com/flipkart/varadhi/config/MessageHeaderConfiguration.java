@@ -63,85 +63,36 @@ public class MessageHeaderConfiguration {
     private String responseCode;
     private String responseBody;
 
-    public static MessageHeaderConfiguration getDefaultMessageHeaders() {
+    public static MessageHeaderConfiguration buildConfigWithDefaults(MessageHeaderConfiguration providedConfig) {
         return MessageHeaderConfiguration.builder()
-                .msgHeaderPrefix(List.of("X_", "X-"))
-                .nfrMessageOrderPathHeader("X-PERF-ORDERPATH")
-                .nfrMessageHeader1("X_PERF_TEST")
-                .nfrMessageHeader2("X-PERF-TEST")
-                .proxyUserHeader("X-Proxy-User")
-                .xForwardedFor("X-FORWARDED-FOR")
-                .customTargetClientIdHeader("X_TARGET_CLIENT_ID_HEADER")
-                .callbackCodes("X_CALLBACK_CODES")
-                .exchangeNameHeader("X_EXCHANGE_NAME")
-                .originalTopicName("X_ORIGINAL_TOPIC_NAME")
-                .requestTimeout("X_REQUEST_TIMEOUT")
-                .authnUser("X_AUTHN_USER")
-                .replyToHttpUriHeader("X_REPLY_TO_HTTP_URI")
-                .replyToHttpMethodHeader("X_REPLY_TO_HTTP_METHOD")
-                .replyToHeader("X_REPLY_TO")
-                .httpUriHeader("X_HTTP_URI")
-                .httpMethodHeader("X_HTTP_METHOD")
-                .httpContentType("X_CONTENT_TYPE")
-                .bridged("X_BRIDGED")
-                .groupIdHeader("X_GROUP_ID")
-                .msgIdHeader("X_MESSAGE_ID")
-                .responseCode("X_RESPONSE_CODE")
-                .responseBody("X_RESPONSE_BODY")
+                .msgHeaderPrefix(getOrDefault(providedConfig.getMsgHeaderPrefix(), List.of("VARADHI_", "VARADHI-")))
+                .nfrMessageOrderPathHeader(getOrDefault(providedConfig.getNfrMessageOrderPathHeader(), "VARADHI-PERF-ORDERPATH"))
+                .nfrMessageHeader1(getOrDefault(providedConfig.getNfrMessageHeader1(), "VARADHI_PERF_TEST"))
+                .nfrMessageHeader2(getOrDefault(providedConfig.getNfrMessageHeader2(), "VARADHI-PERF-TEST"))
+                .proxyUserHeader(getOrDefault(providedConfig.getProxyUserHeader(), "VARADHI-Proxy-User"))
+                .xForwardedFor(getOrDefault(providedConfig.getXForwardedFor(), "VARADHI-FORWARDED-FOR"))
+                .customTargetClientIdHeader(getOrDefault(providedConfig.getCustomTargetClientIdHeader(), "VARADHI_TARGET_CLIENT_ID_HEADER"))
+                .callbackCodes(getOrDefault(providedConfig.getCallbackCodes(), "VARADHI_CALLBACK_CODES"))
+                .exchangeNameHeader(getOrDefault(providedConfig.getExchangeNameHeader(), "VARADHI_EXCHANGE_NAME"))
+                .originalTopicName(getOrDefault(providedConfig.getOriginalTopicName(), "VARADHI_ORIGINAL_TOPIC_NAME"))
+                .requestTimeout(getOrDefault(providedConfig.getRequestTimeout(), "VARADHI_REQUEST_TIMEOUT"))
+                .authnUser(getOrDefault(providedConfig.getAuthnUser(), "VARADHI_AUTHN_USER"))
+                .replyToHttpUriHeader(getOrDefault(providedConfig.getReplyToHttpUriHeader(), "VARADHI_REPLY_TO_HTTP_URI"))
+                .replyToHttpMethodHeader(getOrDefault(providedConfig.getReplyToHttpMethodHeader(), "VARADHI_REPLY_TO_HTTP_METHOD"))
+                .replyToHeader(getOrDefault(providedConfig.getReplyToHeader(), "VARADHI_REPLY_TO"))
+                .httpUriHeader(getOrDefault(providedConfig.getHttpUriHeader(), "VARADHI_HTTP_URI"))
+                .httpMethodHeader(getOrDefault(providedConfig.getHttpMethodHeader(), "VARADHI_HTTP_METHOD"))
+                .httpContentType(getOrDefault(providedConfig.getHttpContentType(), "VARADHI_CONTENT_TYPE"))
+                .bridged(getOrDefault(providedConfig.getBridged(), "VARADHI_BRIDGED"))
+                .groupIdHeader(getOrDefault(providedConfig.getGroupIdHeader(), "VARADHI_GROUP_ID"))
+                .msgIdHeader(getOrDefault(providedConfig.getMsgIdHeader(), "VARADHI_MSG_ID"))
+                .responseCode(getOrDefault(providedConfig.getResponseCode(), "VARADHI_RESPONSE_CODE"))
+                .responseBody(getOrDefault(providedConfig.getResponseBody(), "VARADHI_RESPONSE_BODY"))
                 .build();
     }
 
-    public static MessageHeaderConfiguration buildConfigWithDefaults(MessageHeaderConfiguration providedConfig) {
-        return MessageHeaderConfiguration.builder()
-                .msgHeaderPrefix(providedConfig.getMsgHeaderPrefix() != null ? providedConfig.getMsgHeaderPrefix() :
-                        List.of("X_", "X-"))
-                .nfrMessageOrderPathHeader(providedConfig.getNfrMessageOrderPathHeader() != null ?
-                        providedConfig.getNfrMessageOrderPathHeader() : "X-PERF-ORDERPATH")
-                .nfrMessageHeader1(
-                        providedConfig.getNfrMessageHeader1() != null ? providedConfig.getNfrMessageHeader1() :
-                                "X_PERF_TEST")
-                .nfrMessageHeader2(
-                        providedConfig.getNfrMessageHeader2() != null ? providedConfig.getNfrMessageHeader2() :
-                                "X-PERF-TEST")
-                .proxyUserHeader(providedConfig.getProxyUserHeader() != null ? providedConfig.getProxyUserHeader() :
-                        "X-Proxy-User")
-                .xForwardedFor(providedConfig.getXForwardedFor() != null ? providedConfig.getXForwardedFor() :
-                        "X-FORWARDED-FOR")
-                .customTargetClientIdHeader(providedConfig.getCustomTargetClientIdHeader() != null ?
-                        providedConfig.getCustomTargetClientIdHeader() : "X_TARGET_CLIENT_ID_HEADER")
-                .callbackCodes(providedConfig.getCallbackCodes() != null ? providedConfig.getCallbackCodes() :
-                        "X_CALLBACK_CODES")
-                .exchangeNameHeader(
-                        providedConfig.getExchangeNameHeader() != null ? providedConfig.getExchangeNameHeader() :
-                                "X_EXCHANGE_NAME")
-                .originalTopicName(
-                        providedConfig.getOriginalTopicName() != null ? providedConfig.getOriginalTopicName() :
-                                "X_ORIGINAL_TOPIC_NAME")
-                .requestTimeout(providedConfig.getRequestTimeout() != null ? providedConfig.getRequestTimeout() :
-                        "X_REQUEST_TIMEOUT")
-                .authnUser(providedConfig.getAuthnUser() != null ? providedConfig.getAuthnUser() : "X_AUTHN_USER")
-                .replyToHttpUriHeader(
-                        providedConfig.getReplyToHttpUriHeader() != null ? providedConfig.getReplyToHttpUriHeader() :
-                                "X_REPLY_TO_HTTP_URI")
-                .replyToHttpMethodHeader(providedConfig.getReplyToHttpMethodHeader() != null ?
-                        providedConfig.getReplyToHttpMethodHeader() : "X_REPLY_TO_HTTP_METHOD")
-                .replyToHeader(
-                        providedConfig.getReplyToHeader() != null ? providedConfig.getReplyToHeader() : "X_REPLY_TO")
-                .httpUriHeader(
-                        providedConfig.getHttpUriHeader() != null ? providedConfig.getHttpUriHeader() : "X_HTTP_URI")
-                .httpMethodHeader(providedConfig.getHttpMethodHeader() != null ? providedConfig.getHttpMethodHeader() :
-                        "X_HTTP_METHOD")
-                .httpContentType(providedConfig.getHttpContentType() != null ? providedConfig.getHttpContentType() :
-                        "X_CONTENT_TYPE")
-                .bridged(providedConfig.getBridged() != null ? providedConfig.getBridged() : "X_BRIDGED")
-                .groupIdHeader(
-                        providedConfig.getGroupIdHeader() != null ? providedConfig.getGroupIdHeader() : "X_GROUP_ID")
-                .msgIdHeader(providedConfig.getMsgIdHeader() != null ? providedConfig.getMsgIdHeader() : "X_MSG_ID")
-                .responseCode(
-                        providedConfig.getResponseCode() != null ? providedConfig.getResponseCode() : "X_RESPONSE_CODE")
-                .responseBody(
-                        providedConfig.getResponseBody() != null ? providedConfig.getResponseBody() : "X_RESPONSE_BODY")
-                .build();
+    private static <T> T getOrDefault(T providedValue, T defaultValue) {
+        return providedValue != null ? providedValue : defaultValue;
     }
 
     public static boolean validateHeaderMapping(MessageHeaderConfiguration messageHeaderConfiguration)
@@ -154,9 +105,8 @@ public class MessageHeaderConfiguration {
             if (!startsWithValidPrefix(messageHeaderConfiguration.getMsgHeaderPrefix(), (String) value)) {
                 return false;
             }
-            return true;
         }
-        return false;
+        return true;
     }
 
     private static boolean startsWithValidPrefix(List<String> prefixList, String value) {
