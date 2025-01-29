@@ -27,17 +27,17 @@ public class MessageHeaderConfiguration {
 
     public static MessageHeaderConfiguration getDefaultMessageHeaders() {
         return MessageHeaderConfiguration.builder()
-                .msgHeaderPrefix(Arrays.asList("X_", "X-"))
-                .messageId("X_RESTBUS_MESSAGE_ID")
-                .groupId("X_RESTBUS_GROUP_ID")
-                .httpUri("X_RESTBUS_HTTP_URI")
-                .httpMethod("X_RESTBUS_HTTP_METHOD")
-                .replyTo("X_RESTBUS_REPLY_TO")
-                .replyToHttpUri("X_RESTBUS_REPLY_TO_HTTP_URI")
-                .replyToHttpMethod("X_RESTBUS_REPLY_TO_HTTP_METHOD")
-                .responseCode("X-RESTBUS_RESPONSE_CODE")
-                .responseBody("X_RESTBUS_RESPONSE_BODY")
-                .contentType("X_RESTBUS_CONTENT_TYPE")
+                .msgHeaderPrefix(List.of("VARADHI"))
+                .messageId("VARADHI_MESSAGE_ID")
+                .groupId("VARADHI_GROUP_ID")
+                .httpUri("VARADHI_HTTP_URI")
+                .httpMethod("VARADHI_HTTP_METHOD")
+                .replyTo("VARADHI_REPLY_TO")
+                .replyToHttpUri("VARADHI_REPLY_TO_HTTP_URI")
+                .replyToHttpMethod("VARADHI_REPLY_TO_HTTP_METHOD")
+                .responseCode("VARADHI-RESPONSE_CODE")
+                .responseBody("VARADHI_RESPONSE_BODY")
+                .contentType("VARADHI_CONTENT_TYPE")
                 .build();
     }
 

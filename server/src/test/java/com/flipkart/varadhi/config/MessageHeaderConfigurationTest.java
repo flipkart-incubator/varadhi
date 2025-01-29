@@ -7,7 +7,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class MessageHeaderConfigurationTest {
+class MessageHeaderConfigurationTest {
 
     @Test
     void testValidConfiguration() throws IllegalAccessException {
