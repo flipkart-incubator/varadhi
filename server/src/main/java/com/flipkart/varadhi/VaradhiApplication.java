@@ -67,7 +67,6 @@ public class VaradhiApplication {
                 log.error("Header validation failed");
                 System.exit(-1);
             }
-            log.info(messageHeaderConfiguration.getGroupIdHeader());
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {

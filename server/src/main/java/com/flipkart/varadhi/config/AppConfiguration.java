@@ -71,6 +71,7 @@ public class AppConfiguration {
 
     private Map<String, String> otelOptions;
 
+    @NotNull
     private MessageHeaderConfiguration messageHeaderConfiguration;
 
 }
