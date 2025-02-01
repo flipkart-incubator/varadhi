@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicTest {
@@ -25,7 +24,10 @@ class VaradhiTopicTest {
     }
 
     private VaradhiTopic createDefaultVaradhiTopic(boolean grouped) {
-        return VaradhiTopic.of(PROJECT_NAME, TOPIC_NAME, grouped, TOPIC_CAPACITY);
+        return VaradhiTopic.of(
+                PROJECT_NAME, TOPIC_NAME, grouped, TOPIC_CAPACITY,
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
     }
 
     @Test
@@ -107,26 +109,40 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void updateStatus_ChangesActiveState() {
+    void markActive_ChangesStatusToActive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        varadhiTopic.updateStatus(VaradhiTopic.Status.INACTIVE);
-        assertFalse(varadhiTopic.isActive(), "Inactive status update failed");
+        varadhiTopic.markActive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Activated");
 
-        varadhiTopic.updateStatus(VaradhiTopic.Status.ACTIVE);
-        assertTrue(varadhiTopic.isActive(), "Active status update failed");
+        assertAll(
+                () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
+                () -> assertEquals(
+                        LifecycleStatus.State.ACTIVE, varadhiTopic.getStatus().getState(),
+                        "Status state mismatch"
+                ),
+                () -> assertEquals(
+                        LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode(),
+                        "Action code mismatch"
+                )
+        );
     }
 
     @Test
-    void updateStatus_WithNull_ThrowsIllegalArgumentException() {
+    void markInactive_ChangesStatusToInactive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> varadhiTopic.updateStatus(null),
-                "Null status should throw IllegalArgumentException"
-        );
+        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deactivated");
 
-        assertEquals("Status cannot be null", exception.getMessage(), "Exception message mismatch");
+        assertAll(
+                () -> assertFalse(varadhiTopic.isActive(), "Inactive status update failed"),
+                () -> assertEquals(
+                        LifecycleStatus.State.INACTIVE, varadhiTopic.getStatus().getState(),
+                        "Status state mismatch"
+                ),
+                () -> assertEquals(
+                        LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode(),
+                        "Action code mismatch"
+                )
+        );
     }
 }

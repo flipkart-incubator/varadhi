@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
     private RetryPolicy retryPolicy;
     private ConsumptionPolicy consumptionPolicy;
     private SubscriptionShards shards;
-    private Status status;
+    private LifecycleStatus status;
     private Map<String, String> properties;
 
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
@@ -55,7 +56,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             SubscriptionShards shards,
-            Status status,
+            LifecycleStatus status,
             Map<String, String> properties
     ) {
         super(name, version);
@@ -84,6 +85,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @param consumptionPolicy the consumption policy of the subscription
      * @param shards            the shards of the subscription
      * @param properties        the properties of the subscription
+     * @param actionCode        the action code indicating the reason for the state
      *
      * @return a new VaradhiSubscription instance
      */
@@ -97,11 +99,12 @@ public class VaradhiSubscription extends MetaStoreEntity {
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             SubscriptionShards shards,
-            Map<String, String> properties
+            Map<String, String> properties,
+            LifecycleStatus.ActionCode actionCode
     ) {
         return new VaradhiSubscription(
                 name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, new Status(State.CREATING), properties
+                shards, new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode), properties
         );
     }
 
@@ -112,7 +115,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
      */
     @JsonIgnore
     public boolean isWellProvisioned() {
-        return State.CREATED.equals(status.getState());
+        return LifecycleStatus.State.CREATED.equals(status.getState());
     }
 
     /**
@@ -122,7 +125,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
      */
     @JsonIgnore
     public boolean isActive() {
-        return !State.INACTIVE.equals(status.getState());
+        return !LifecycleStatus.State.INACTIVE.equals(status.getState());
     }
 
     /**
@@ -131,14 +134,14 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @param message the failure message
      */
     public void markCreateFailed(String message) {
-        updateStatus(State.CREATE_FAILED, message);
+        this.status.update(LifecycleStatus.State.CREATE_FAILED, message);
     }
 
     /**
      * Marks the subscription as created.
      */
     public void markCreated() {
-        updateStatus(State.CREATED, null);
+        this.status.update(LifecycleStatus.State.CREATED, null);
     }
 
     /**
@@ -147,28 +150,37 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @param message the failure message
      */
     public void markDeleteFailed(String message) {
-        updateStatus(State.DELETE_FAILED, message);
+        this.status.update(LifecycleStatus.State.DELETE_FAILED, message);
     }
 
     /**
      * Marks the subscription as deleting.
+     *
+     * @param actionCode the action code indicating why it's being deleted
+     * @param message    the message for the action
      */
-    public void markDeleting() {
-        updateStatus(State.DELETING, null);
+    public void markDeleting(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.DELETING, message, actionCode);
     }
 
     /**
      * Marks the subscription as inactive.
+     *
+     * @param actionCode the action code indicating why it's inactive
+     * @param message    the message for the action
      */
-    public void markInactive() {
-        updateStatus(State.INACTIVE, null);
+    public void markInactive(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.INACTIVE, message, actionCode);
     }
 
     /**
      * Restores the subscription to the created state.
+     *
+     * @param actionCode the action code indicating why it's restored
+     * @param message    the message for the action
      */
-    public void restore() {
-        updateStatus(State.CREATED, "Entity restored to created state.");
+    public void restore(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.CREATED, message, actionCode);
     }
 
     /**
@@ -236,47 +248,5 @@ public class VaradhiSubscription extends MetaStoreEntity {
             throw new IllegalArgumentException(PROPERTIES_ERROR);
         }
         return properties;
-    }
-
-    /**
-     * Updates the status of the subscription.
-     *
-     * @param state   the new state of the subscription
-     * @param message the status message
-     */
-    private void updateStatus(State state, String message) {
-        status.setState(state);
-        status.setMessage(message);
-    }
-
-    /**
-     * Enum representing the state of the subscription.
-     */
-    public enum State {
-        CREATING,
-        CREATE_FAILED,
-        CREATED,
-        DELETING,
-        DELETE_FAILED,
-        INACTIVE
-    }
-
-    /**
-     * Represents the status of the subscription.
-     */
-    @Data
-    @AllArgsConstructor(onConstructor = @__(@JsonCreator))
-    public static class Status {
-        String message;
-        State state;
-
-        /**
-         * Constructs a new Status instance with the given state.
-         *
-         * @param state the state of the subscription
-         */
-        public Status(State state) {
-            this.state = state;
-        }
     }
 }

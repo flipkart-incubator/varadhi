@@ -17,7 +17,7 @@ public class VaradhiTopic extends AbstractTopic {
     private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
-    private Status status;
+    private final LifecycleStatus status;
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -31,7 +31,7 @@ public class VaradhiTopic extends AbstractTopic {
      */
     private VaradhiTopic(
             String name, int version, boolean grouped, TopicCapacityPolicy capacity,
-            Map<String, InternalCompositeTopic> internalTopics, Status status
+            Map<String, InternalCompositeTopic> internalTopics, LifecycleStatus status
     ) {
         super(name, version);
         this.grouped = grouped;
@@ -43,22 +43,30 @@ public class VaradhiTopic extends AbstractTopic {
     /**
      * Creates a new VaradhiTopic instance.
      *
-     * @param project the project associated with the topic
-     * @param name the name of the topic
-     * @param grouped whether the topic is grouped
-     * @param capacity the capacity policy of the topic
+     * @param project    the project associated with the topic
+     * @param name       the name of the topic
+     * @param grouped    whether the topic is grouped
+     * @param capacity   the capacity policy of the topic
+     * @param actionCode the action code indicating the reason for the state
+     *
      * @return a new VaradhiTopic instance
      */
-    public static VaradhiTopic of(String project, String name, boolean grouped, TopicCapacityPolicy capacity) {
+    public static VaradhiTopic of(
+            String project, String name, boolean grouped, TopicCapacityPolicy capacity,
+            LifecycleStatus.ActionCode actionCode
+    ) {
         return new VaradhiTopic(
-                buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(), Status.ACTIVE);
+                buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(),
+                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actionCode)
+        );
     }
 
     /**
      * Builds the topic name from the project name and topic name.
      *
      * @param projectName the name of the project
-     * @param topicName the name of the topic
+     * @param topicName   the name of the topic
+     *
      * @return the constructed topic name
      */
     public static String buildTopicName(String projectName, String topicName) {
@@ -68,7 +76,7 @@ public class VaradhiTopic extends AbstractTopic {
     /**
      * Adds an internal topic for a specific region.
      *
-     * @param region the region for the internal topic
+     * @param region        the region for the internal topic
      * @param internalTopic the internal topic to add
      */
     public void addInternalTopic(String region, InternalCompositeTopic internalTopic) {
@@ -89,6 +97,7 @@ public class VaradhiTopic extends AbstractTopic {
      * Retrieves the produce topic for a specific region.
      *
      * @param region the region for which to retrieve the produce topic
+     *
      * @return the produce topic for the specified region
      */
     public InternalCompositeTopic getProduceTopicForRegion(String region) {
@@ -96,17 +105,23 @@ public class VaradhiTopic extends AbstractTopic {
     }
 
     /**
-     * Updates the status of the topic.
+     * Marks the topic as active.
      *
-     * @param newStatus the new status to set
-     *
-     * @throws IllegalArgumentException if the new status is null
+     * @param actionCode the action code indicating why the topic is being marked as active
+     * @param message    the message for the action
      */
-    public void updateStatus(Status newStatus) {
-        if (newStatus == null) {
-            throw new IllegalArgumentException("Status cannot be null");
-        }
-        this.status = newStatus;
+    public void markActive(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.ACTIVE, message, actionCode);
+    }
+
+    /**
+     * Marks the topic as inactive.
+     *
+     * @param actionCode the action code indicating why the topic is being marked as inactive
+     * @param message    the message for the action
+     */
+    public void markInactive(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.INACTIVE, message, actionCode);
     }
 
     /**
@@ -116,14 +131,6 @@ public class VaradhiTopic extends AbstractTopic {
      */
     @JsonIgnore
     public boolean isActive() {
-        return this.status == Status.ACTIVE;
-    }
-
-    /**
-     * Enum representing the status of the topic.
-     */
-    public enum Status {
-        ACTIVE,
-        INACTIVE
+        return this.status.getState() == LifecycleStatus.State.ACTIVE;
     }
 }

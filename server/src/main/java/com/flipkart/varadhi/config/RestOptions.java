@@ -14,7 +14,7 @@ public class RestOptions {
     private String deployedRegion;
     @NotNull
     private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
-    private TopicCapacityPolicy defaultTopicCapacity = Constants.DefaultTopicCapacity;
+    private TopicCapacityPolicy defaultTopicCapacity = Constants.DEFAULT_TOPIC_CAPACITY;
     private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -9,6 +10,7 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -21,6 +23,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
+import lombok.experimental.ExtensionMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +44,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 
+@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 class TopicHandlersTest extends WebTestBase {
 
     private static final String TOPIC_NAME = "topic1";
@@ -104,7 +108,7 @@ class TopicHandlersTest extends WebTestBase {
         router.delete("/projects/:project/topics/:topic")
                 .handler(wrapBlocking(topicHandlers::delete));
 
-        router.post("/projects/:project/topics/:topic/restore")
+        router.patch("/projects/:project/topics/:topic/restore")
                 .handler(wrapBlocking(topicHandlers::restore));
 
         setupFailureHandlers();
@@ -186,7 +190,7 @@ class TopicHandlersTest extends WebTestBase {
     void listTopics_WithTopicsAvailable_ShouldReturnAllTopics() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
-        doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName());
+        doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
                 createRequest(HttpMethod.GET, getTopicsUrl(project)),
@@ -197,8 +201,22 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     @Test
+    void listTopics_WithIncludeInactive_ShouldReturnAllTopicsIncludingInactive() throws InterruptedException {
+        List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
+
+        doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), true);
+
+        List<String> retrievedTopics = sendRequestWithoutPayload(
+                createRequest(HttpMethod.GET, getTopicsUrl(project) + "?includeInactive=true"),
+                List.class
+        );
+
+        assertEquals(topics.size(), retrievedTopics.size());
+    }
+
+    @Test
     void listTopics_WithNoTopicsAvailable_ShouldReturnEmptyList() throws InterruptedException {
-        doReturn(Collections.emptyList()).when(varadhiTopicService).getVaradhiTopics(project.getName());
+        doReturn(Collections.emptyList()).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
                 createRequest(HttpMethod.GET, getTopicsUrl(project)),
@@ -230,12 +248,12 @@ class TopicHandlersTest extends WebTestBase {
 
     @Test
     void restoreTopic_WithValidRequest_ShouldRestoreTopicSuccessfully() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getTopicUrl(project) + "/restore");
-        doNothing().when(varadhiTopicService).restore(any());
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PATCH, getTopicUrl(project) + "/restore");
+        doNothing().when(varadhiTopicService).restore(any(), any());
 
         sendRequestWithoutPayload(request, null);
 
-        verify(varadhiTopicService).restore(any());
+        verify(varadhiTopicService).restore(any(), any());
     }
 
     private void verifyDeleteRequest(String deletionType, ResourceDeletionType expectedDeletionType)
@@ -246,11 +264,11 @@ class TopicHandlersTest extends WebTestBase {
         }
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, url);
-        doNothing().when(varadhiTopicService).delete(any(), eq(expectedDeletionType));
+        doNothing().when(varadhiTopicService).delete(any(), eq(expectedDeletionType), any());
 
         sendRequestWithoutPayload(request, null);
 
-        verify(varadhiTopicService).delete(any(), eq(expectedDeletionType));
+        verify(varadhiTopicService).delete(any(), eq(expectedDeletionType), any());
     }
 
     private void assertErrorResponse(HttpResponse<Buffer> response, String expectedReason) {
@@ -259,7 +277,10 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     private TopicResource getTopicResource(Project project) {
-        return TopicResource.grouped(TOPIC_NAME, project.getName(), Constants.DefaultTopicCapacity);
+        return TopicResource.grouped(
+                TOPIC_NAME, project.getName(), Constants.DEFAULT_TOPIC_CAPACITY,
+                LifecycleStatus.ActionCode.USER_ACTION
+        );
     }
 
     private String getTopicsUrl(Project project) {

@@ -32,7 +32,7 @@ public class PulsarProducerFactoryTest {
                 "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
-        topic = PulsarStorageTopic.of("testTopic", 1, Constants.DefaultTopicCapacity);
+        topic = PulsarStorageTopic.of("testTopic", 1, Constants.DEFAULT_TOPIC_CAPACITY);
         pClient = mock(PulsarClient.class);
         builder = mock(ProducerBuilder.class);
         org.apache.pulsar.client.api.Producer producer = mock(org.apache.pulsar.client.api.Producer.class);

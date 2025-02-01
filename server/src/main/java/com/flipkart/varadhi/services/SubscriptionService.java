@@ -1,7 +1,15 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.ConsumptionPolicy;
+import com.flipkart.varadhi.entities.Endpoint;
+import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.RetryPolicy;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -42,12 +50,13 @@ public class SubscriptionService {
      * Retrieves the list of subscription names for a given project.
      *
      * @param projectName the name of the project
+     * @param includeInactive flag to include inactive or soft-deleted subscriptions
      *
      * @return the list of subscription names
      */
-    public List<String> getSubscriptionList(String projectName) {
+    public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
         return metaStore.getSubscriptionNames(projectName).stream()
-                .filter(this::isActiveOrWellProvisionedByName)
+                .filter(subscriptionName -> includeInactive || isActiveOrWellProvisionedByName(subscriptionName))
                 .toList();
     }
 
@@ -157,16 +166,19 @@ public class SubscriptionService {
     /**
      * Deletes a subscription.
      *
-     * @param subscriptionName the name of the subscription
+     * @param subscriptionName the name of the subscription to delete
      * @param subProject       the project associated with the subscription
      * @param requestedBy      the user requesting the deletion
      * @param deletionType     the type of deletion (soft or hard)
+     * @param actionRequest    the request containing the action code and message for the deletion
      *
      * @return a CompletableFuture representing the deletion operation
+     *
+     * @throws IllegalArgumentException if the subscription cannot be deleted in its current state
      */
     public CompletableFuture<Void> deleteSubscription(
             String subscriptionName, Project subProject, String requestedBy,
-            ResourceDeletionType deletionType
+            ResourceDeletionType deletionType, ResourceActionRequest actionRequest
     ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
@@ -178,9 +190,9 @@ public class SubscriptionService {
                     }
 
                     if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
-                        handleHardDelete(subscription, subProject);
+                        handleHardDelete(subscription, subProject, actionRequest);
                     } else {
-                        handleSoftDelete(subscription);
+                        handleSoftDelete(subscription, actionRequest);
                     }
                 });
     }
@@ -188,12 +200,16 @@ public class SubscriptionService {
     /**
      * Restores a subscription.
      *
-     * @param subscriptionName the name of the subscription
+     * @param subscriptionName the name of the subscription to restore
      * @param requestedBy      the user requesting the restoration
+     * @param actionRequest    the request containing the action code and message for the restoration
      *
      * @return a CompletableFuture representing the restored subscription
+     *
+     * @throws InvalidOperationForResourceException if the subscription is already active or if the restoration is not allowed
      */
-    public CompletableFuture<VaradhiSubscription> restoreSubscription(String subscriptionName, String requestedBy) {
+    public CompletableFuture<VaradhiSubscription> restoreSubscription(
+            String subscriptionName, String requestedBy, ResourceActionRequest actionRequest) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
         if (subscription.isActive()) {
@@ -201,9 +217,19 @@ public class SubscriptionService {
                     "Subscription '%s' is already active.".formatted(subscriptionName));
         }
 
+        LifecycleStatus.ActionCode lastAction = subscription.getStatus().getActionCode();
+        boolean isVaradhiAdmin = actionRequest.actionCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION ||
+                actionRequest.actionCode() == LifecycleStatus.ActionCode.ADMIN_ACTION;
+
+        if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
+            throw new InvalidOperationForResourceException(
+                    "Restoration denied. Only Varadhi Admin can restore this subscription."
+            );
+        }
+
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
                 .thenApply(state -> {
-                    subscription.restore();
+                    subscription.restore(actionRequest.actionCode(), actionRequest.message());
                     metaStore.updateSubscription(subscription);
                     log.info("Subscription '{}' restored successfully.", subscriptionName);
                     return subscription;
@@ -305,11 +331,15 @@ public class SubscriptionService {
     /**
      * Handles the hard deletion of a subscription.
      *
-     * @param subscription the subscription to delete
-     * @param subProject   the project associated with the subscription
+     * @param subscription  the subscription to be hard-deleted
+     * @param subProject    the project associated with the subscription
+     * @param actionRequest the request containing the action code and message for the deletion
      */
-    private void handleHardDelete(VaradhiSubscription subscription, Project subProject) {
-        subscription.markDeleting();
+    private void handleHardDelete(
+            VaradhiSubscription subscription,
+            Project subProject, ResourceActionRequest actionRequest
+    ) {
+        subscription.markDeleting(actionRequest.actionCode(), actionRequest.message());
         metaStore.updateSubscription(subscription);
 
         try {
@@ -327,10 +357,11 @@ public class SubscriptionService {
     /**
      * Handles the soft deletion of a subscription.
      *
-     * @param subscription the subscription to delete
+     * @param subscription  the subscription to be soft-deleted
+     * @param actionRequest the request containing the action code and message for the deletion
      */
-    private void handleSoftDelete(VaradhiSubscription subscription) {
-        subscription.markInactive();
+    private void handleSoftDelete(VaradhiSubscription subscription, ResourceActionRequest actionRequest) {
+        subscription.markInactive(actionRequest.actionCode(), actionRequest.message());
         metaStore.updateSubscription(subscription);
         log.info("Subscription '{}' marked inactive successfully.", subscription.getName());
     }

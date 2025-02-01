@@ -1,8 +1,11 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -69,30 +72,32 @@ public class VaradhiTopicService {
     /**
      * Deletes a Varadhi topic by its name.
      *
-     * @param topicName    the name of the topic
-     * @param deletionType the type of deletion (hard or soft)
+     * @param topicName     the name of the topic to delete
+     * @param deletionType  the type of deletion (hard or soft)
+     * @param actionRequest the request containing the action code and message for the deletion
      */
-    public void delete(String topicName, ResourceDeletionType deletionType) {
+    public void delete(String topicName, ResourceDeletionType deletionType, ResourceActionRequest actionRequest) {
         log.info("Deleting Varadhi topic: {}", topicName);
         // TODO: If the only topic in a namespace, also delete the namespace and tenant. Perform cleanup independently of the delete operation.
         VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
-        validateTopicForDeletion(topicName);
+        validateTopicForDeletion(topicName, deletionType);
 
         if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
             handleHardDelete(varadhiTopic);
         } else {
-            handleSoftDelete(varadhiTopic);
+            handleSoftDelete(varadhiTopic, actionRequest);
         }
     }
 
     /**
      * Handles the soft deletion of a Varadhi topic.
      *
-     * @param varadhiTopic the Varadhi topic to soft-delete
+     * @param varadhiTopic  the Varadhi topic to be soft-deleted
+     * @param actionRequest the request containing the action code and message for the soft deletion
      */
-    public void handleSoftDelete(VaradhiTopic varadhiTopic) {
+    public void handleSoftDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Soft deleting Varadhi topic: {}", varadhiTopic.getName());
-        varadhiTopic.updateStatus(VaradhiTopic.Status.INACTIVE);
+        varadhiTopic.markInactive(actionRequest.actionCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 
@@ -117,11 +122,12 @@ public class VaradhiTopicService {
     /**
      * Restores a deleted Varadhi topic.
      *
-     * @param topicName the name of the topic to restore
+     * @param topicName     the name of the topic to restore
+     * @param actionRequest the request containing the action code and message for the restoration
      *
-     * @throws InvalidOperationForResourceException if the topic is not deleted
+     * @throws InvalidOperationForResourceException if the topic is not deleted or if the restoration is not allowed
      */
-    public void restore(String topicName) {
+    public void restore(String topicName, ResourceActionRequest actionRequest) {
         log.info("Restoring Varadhi topic: {}", topicName);
 
         VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
@@ -129,28 +135,50 @@ public class VaradhiTopicService {
         if (varadhiTopic.isActive()) {
             throw new InvalidOperationForResourceException("Topic %s is not deleted.".formatted(topicName));
         }
-        varadhiTopic.updateStatus(VaradhiTopic.Status.ACTIVE);
+
+        LifecycleStatus.ActionCode lastAction = varadhiTopic.getStatus().getActionCode();
+        boolean isVaradhiAdmin = actionRequest.actionCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION ||
+                actionRequest.actionCode() == LifecycleStatus.ActionCode.ADMIN_ACTION;
+
+        if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
+            throw new InvalidOperationForResourceException(
+                    "Restoration denied. Only Varadhi Admin can restore this topic."
+            );
+        }
+
+        varadhiTopic.markActive(actionRequest.actionCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 
     /**
-     * Validates if a topic can be deleted.
+     * Validates if a topic can be deleted based on the deletion type.
      *
-     * @param topicName the name of the topic to validate
+     * @param topicName    the name of the topic to validate
+     * @param deletionType the type of deletion (SOFT_DELETE or HARD_DELETE)
      *
-     * @throws InvalidOperationForResourceException if the topic is being used by a subscription
+     * @throws InvalidOperationForResourceException if the topic cannot be deleted
      */
-    private void validateTopicForDeletion(String topicName) {
+    private void validateTopicForDeletion(String topicName, ResourceDeletionType deletionType) {
         // TODO: Improve efficiency by avoiding a full scan of all subscriptions across projects.
-        List<String> subscriptions = metaStore.getAllSubscriptionNames();
-        boolean isTopicInUse = subscriptions.stream()
+        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames().stream()
                 .map(metaStore::getSubscription)
-                .anyMatch(subscription -> subscription.getTopic().equals(topicName));
+                .filter(subscription -> subscription.getTopic().equals(topicName))
+                .toList();
 
-        if (isTopicInUse) {
-            throw new InvalidOperationForResourceException(
-                    "Cannot delete topic as it is being used by a subscription."
-            );
+        if (subscriptions.isEmpty()) {
+            return;
+        }
+
+        boolean hasActiveSubscriptions = subscriptions.stream()
+                .anyMatch(subscription ->
+                        subscription.getStatus().getState() == LifecycleStatus.State.CREATED);
+
+        if (deletionType == ResourceDeletionType.SOFT_DELETE && hasActiveSubscriptions) {
+            throw new InvalidOperationForResourceException("Cannot delete topic as it has active subscriptions.");
+        }
+
+        if (deletionType == ResourceDeletionType.HARD_DELETE) {
+            throw new InvalidOperationForResourceException("Cannot delete topic as it has existing subscriptions.");
         }
     }
 
@@ -165,14 +193,16 @@ public class VaradhiTopicService {
     }
 
     /**
-     * Retrieves a list of active Varadhi topics for a project.
+     * Retrieves a list of Varadhi topic names for a given project.
      *
      * @param projectName the name of the project
-     * @return a list of active Varadhi topic names
+     * @param includeInactive flag to include inactive or soft-deleted topics
+     *
+     * @return a list of Varadhi topic names
      */
-    public List<String> getVaradhiTopics(String projectName) {
+    public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
         return metaStore.getTopicNames(projectName).stream()
-                .filter(topicName -> metaStore.getTopic(topicName).isActive())
+                .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
                 .toList();
     }
 }

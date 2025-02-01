@@ -21,7 +21,7 @@ public class Constants {
     public static final String USER_ID_HEADER = "x_user_id";
 
     // Default topic capacity policy
-    public static final TopicCapacityPolicy DefaultTopicCapacity = new TopicCapacityPolicy(100, 400, 2);
+    public static final TopicCapacityPolicy DEFAULT_TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2);
     // System identity constant
     public static final String SYSTEM_IDENTITY = "System";
 
@@ -52,6 +52,8 @@ public class Constants {
     public static class QueryParams {
         public static final String QUERY_PARAM_DELETION_TYPE = "deletionType";
         public static final String QUERY_PARAM_IGNORE_CONSTRAINTS = "ignoreConstraints";
+        public static final String QUERY_PARAM_INCLUDE_INACTIVE = "includeInactive";
+        public static final String QUERY_PARAM_MESSAGE = "message";
 
         private QueryParams() {
             // Private constructor to prevent instantiation

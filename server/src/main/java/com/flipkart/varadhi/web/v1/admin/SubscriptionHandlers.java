@@ -1,7 +1,15 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Hierarchies;
+import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.RetryPolicy;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -20,17 +28,26 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
+import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_RESTORE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CONSUME;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
@@ -114,9 +131,9 @@ public class SubscriptionHandlers implements RouteProvider {
                                 .authorize(SUBSCRIPTION_DELETE)
                                 .build(this::getHierarchies, this::delete),
                         RouteDefinition
-                                .post("RestoreSubscription", "/:subscription/restore")
+                                .patch("RestoreSubscription", "/:subscription/restore")
                                 .nonBlocking()
-                                .authorize(SUBSCRIPTION_UPDATE)
+                                .authorize(SUBSCRIPTION_RESTORE)
                                 .build(this::getHierarchies, this::restore),
                         RouteDefinition
                                 .post("StartSubscription", "/:subscription/start")
@@ -139,6 +156,10 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     public void setSubscription(RoutingContext ctx) {
         SubscriptionResource subscriptionResource = ctx.body().asValidatedPojo(SubscriptionResource.class);
+        String requestedBy = ctx.getIdentityOrDefault();
+        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
+                : LifecycleStatus.ActionCode.USER_ACTION;
+        subscriptionResource.setActionCode(actionCode);
         ctx.put(CONTEXT_KEY_BODY, subscriptionResource);
     }
 
@@ -183,10 +204,16 @@ public class SubscriptionHandlers implements RouteProvider {
      * Lists all subscriptions for a given project.
      *
      * @param ctx the routing context
+     *             - includeInactive: query parameter to include inactive or soft-deleted subscriptions
      */
     public void list(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName);
+        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE).stream()
+                .findFirst()
+                .map(Boolean::parseBoolean)
+                .orElse(false);
+
+        List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName, includeInactive);
         ctx.endApiWithResponse(subscriptionNames);
     }
 
@@ -252,13 +279,15 @@ public class SubscriptionHandlers implements RouteProvider {
                 .map(ResourceDeletionType::fromValue)
                 .findFirst()
                 .orElse(ResourceDeletionType.SOFT_DELETE);
+        ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
 
         ctx.handleResponse(
                 subscriptionService.deleteSubscription(
                         getSubscriptionFqn(ctx),
                         projectService.getCachedProject(ctx.pathParam(PATH_PARAM_PROJECT)),
                         ctx.getIdentityOrDefault(),
-                        deletionType
+                        deletionType,
+                        actionRequest
                 )
         );
     }
@@ -269,8 +298,11 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void restore(RoutingContext ctx) {
+        ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
+
         ctx.handleResponse(
-                subscriptionService.restoreSubscription(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
+                subscriptionService.restoreSubscription(
+                        getSubscriptionFqn(ctx), ctx.getIdentityOrDefault(), actionRequest));
     }
 
     /**
@@ -416,5 +448,32 @@ public class SubscriptionHandlers implements RouteProvider {
                 throw new IllegalArgumentException("Invalid value for property: " + key);
             }
         });
+    }
+
+    /**
+     * Creates a resource action request from the routing context.
+     *
+     * @param ctx the routing context
+     *
+     * @return the resource action request
+     */
+    private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
+        String requestedBy = ctx.getIdentityOrDefault();
+        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
+                : LifecycleStatus.ActionCode.USER_ACTION;
+        String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
+        return new ResourceActionRequest(actionCode, message);
+    }
+
+    /**
+     * Checks if the identity is a Varadhi admin.
+     * TODO: Replace with a call to isVaradhiAdmin(requestedBy) when authorization is implemented.
+     *
+     * @param identity the identity to check
+     *
+     * @return true if the identity is a Varadhi admin, false otherwise
+     */
+    private boolean isVaradhiAdmin(String identity) {
+        return Objects.equals(identity, "varadhi-admin");
     }
 }

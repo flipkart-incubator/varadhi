@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -21,16 +23,23 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
+import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Hierarchies.ProjectHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_LIST;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_RESTORE;
 
 /**
  * Handler class for managing topics in the Varadhi.
@@ -84,8 +93,8 @@ public class TopicHandlers implements RouteProvider {
                         RouteDefinition.get("ListTopics", "")
                                 .authorize(TOPIC_LIST)
                                 .build(this::getHierarchies, this::listTopics),
-                        RouteDefinition.post("RestoreTopic", "/:topic/restore")
-                                .authorize(TOPIC_UPDATE)
+                        RouteDefinition.patch("RestoreTopic", "/:topic/restore")
+                                .authorize(TOPIC_RESTORE)
                                 .build(this::getHierarchies, this::restore)
                 )
         ).get();
@@ -146,6 +155,10 @@ public class TopicHandlers implements RouteProvider {
         // TODO: Consider implementing rollback mechanisms for failure scenarios and ≠≠ kind of semantics for all operations.
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
+        String requestedBy = ctx.getIdentityOrDefault();
+        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
+                : LifecycleStatus.ActionCode.USER_ACTION;
+        topicResource.setActionCode(actionCode);
 
         validateProjectName(projectName, topicResource);
 
@@ -171,8 +184,9 @@ public class TopicHandlers implements RouteProvider {
                 .map(ResourceDeletionType::fromValue)
                 .findFirst()
                 .orElse(ResourceDeletionType.SOFT_DELETE);
+        ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
 
-        varadhiTopicService.delete(getVaradhiTopicName(ctx), deletionType);
+        varadhiTopicService.delete(getVaradhiTopicName(ctx), deletionType, actionRequest);
         ctx.endApi();
     }
 
@@ -182,7 +196,9 @@ public class TopicHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void restore(RoutingContext ctx) {
-        varadhiTopicService.restore(getVaradhiTopicName(ctx));
+        ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
+
+        varadhiTopicService.restore(getVaradhiTopicName(ctx), actionRequest);
         ctx.endApi();
     }
 
@@ -190,10 +206,16 @@ public class TopicHandlers implements RouteProvider {
      * Handles the GET request to list topics for a project.
      *
      * @param ctx the routing context
+     *            - includeInactive: query parameter to include inactive or soft-deleted topics
      */
     public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName).stream()
+        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE).stream()
+                .findFirst()
+                .map(Boolean::parseBoolean)
+                .orElse(false);
+
+        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive).stream()
                 .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
                 .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
                 .toList();
@@ -238,5 +260,32 @@ public class TopicHandlers implements RouteProvider {
      */
     private String buildTopicName(String projectName, String topicName) {
         return String.join(NAME_SEPARATOR, projectName, topicName);
+    }
+
+    /**
+     * Creates a resource action request from the routing context.
+     *
+     * @param ctx the routing context
+     *
+     * @return the resource action request
+     */
+    private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
+        String requestedBy = ctx.getIdentityOrDefault();
+        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
+                : LifecycleStatus.ActionCode.USER_ACTION;
+        String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
+        return new ResourceActionRequest(actionCode, message);
+    }
+
+    /**
+     * Checks if the identity is a Varadhi admin.
+     * TODO: Replace with a call to isVaradhiAdmin(requestedBy) when authorization is implemented.
+     *
+     * @param identity the identity to check
+     *
+     * @return true if the identity is a Varadhi admin, false otherwise
+     */
+    private boolean isVaradhiAdmin(String identity) {
+        return Objects.equals(identity, "varadhi-admin");
     }
 }

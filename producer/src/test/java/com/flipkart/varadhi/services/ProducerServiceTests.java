@@ -252,7 +252,10 @@ public class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(project.getName(), name, false, null);
+        VaradhiTopic topic = VaradhiTopic.of(
+                project.getName(), name, false, null,
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);
@@ -319,7 +322,7 @@ public class ProducerServiceTests {
 
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
-            super(name, version, Constants.DefaultTopicCapacity);
+            super(name, version, Constants.DEFAULT_TOPIC_CAPACITY);
         }
     }
 }

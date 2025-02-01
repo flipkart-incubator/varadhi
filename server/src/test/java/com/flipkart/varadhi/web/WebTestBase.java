@@ -25,10 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static io.vertx.core.http.HttpMethod.DELETE;
-import static io.vertx.core.http.HttpMethod.GET;
-import static io.vertx.core.http.HttpMethod.POST;
-import static io.vertx.core.http.HttpMethod.PUT;
+import static io.vertx.core.http.HttpMethod.*;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -106,6 +103,8 @@ public class WebTestBase {
             return webClient.delete(DEFAULT_PORT, DEFAULT_HOST, path);
         } else if (PUT == method) {
             return webClient.put(DEFAULT_PORT, DEFAULT_HOST, path);
+        } else if (PATCH == method) {
+            return webClient.patch(DEFAULT_PORT, DEFAULT_HOST, path);
         } else {
             throw new UnsupportedOperationException("Unsupported HTTP method");
         }
@@ -115,7 +114,11 @@ public class WebTestBase {
             throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, payload);
         assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
-        return JsonMapper.jsonDeserialize(response.bodyAsString(), responseClass);
+        String responseBody = response.bodyAsString();
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+        return JsonMapper.jsonDeserialize(responseBody, responseClass);
     }
 
     public <R> R sendRequestWithPayload(

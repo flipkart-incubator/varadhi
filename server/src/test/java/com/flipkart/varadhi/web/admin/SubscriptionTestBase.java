@@ -1,18 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.CodeRange;
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.DlqMessage;
-import com.flipkart.varadhi.entities.Endpoint;
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.SubscriptionShards;
-import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -67,7 +56,7 @@ public class SubscriptionTestBase extends WebTestBase {
     protected static final Project PROJECT = Project.of(
             "project1", "", "team1", "org1");
     protected static final TopicResource TOPIC_RESOURCE = TopicResource.unGrouped(
-            "topic1", "project1", null);
+            "topic1", "project1", null, LifecycleStatus.ActionCode.SYSTEM_ACTION);
 
     @Mock
     protected SubscriptionService subscriptionService;
@@ -120,7 +109,8 @@ public class SubscriptionTestBase extends WebTestBase {
                 DEFAULT_RETRY_POLICY,
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
-                DEFAULT_SUBSCRIPTION_PROPERTIES
+                DEFAULT_SUBSCRIPTION_PROPERTIES,
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
     }
 
@@ -143,7 +133,8 @@ public class SubscriptionTestBase extends WebTestBase {
                 DEFAULT_ENDPOINT,
                 retryPolicy,
                 DEFAULT_CONSUMPTION_POLICY,
-                new HashMap<>()
+                new HashMap<>(),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
     }
 

@@ -49,7 +49,7 @@ public class PulsarProducerTest {
         messageBuilder = spy(new TypedMessageBuilderImpl(producer, Schema.BYTES));
         doReturn(messageBuilder).when(producer).newMessage();
 
-        policy = Constants.DefaultTopicCapacity;
+        policy = Constants.DEFAULT_TOPIC_CAPACITY;
         topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 

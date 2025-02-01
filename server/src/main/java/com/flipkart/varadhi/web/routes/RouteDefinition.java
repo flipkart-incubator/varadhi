@@ -68,6 +68,10 @@ public class RouteDefinition {
         return new Builder(name, HttpMethod.DELETE, path);
     }
 
+    public static Builder patch(String name, String path) {
+        return new Builder(name, HttpMethod.PATCH, path);
+    }
+
     @RequiredArgsConstructor
     public static class Builder {
         private final String name;

@@ -1,10 +1,8 @@
 package com.flipkart.varadhi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.web.entities.SubscriptionResource;
-import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import jakarta.ws.rs.client.Client;
@@ -21,18 +19,19 @@ import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
 
+import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 
 public class E2EBase {
 
-    protected static final String VaradhiBaseUri = "http://localhost:18488";
-    private static final int ConnectTimeoutMs = 10 * 1000;
-    private static final int ReadTimeoutMs = 60 * 1000;
+    protected static final String VARADHI_BASE_URI = "http://localhost:18488";
+    private static final int CONNECT_TIMEOUT_MS = 10 * 1000;
+    private static final int READ_TIMEOUT_MS = 60 * 1000;
     public static final String SUPER_USER = "thanos";
 
     static String getOrgsUri() {
-        return String.format("%s/v1/orgs", VaradhiBaseUri);
+        return String.format("%s/v1/orgs", VARADHI_BASE_URI);
     }
 
     static String getOrgUri(Org org) {
@@ -52,13 +51,12 @@ public class E2EBase {
     }
 
     static String getProjectCreateUri() {
-        return String.join("/", VaradhiBaseUri, "v1", "projects");
+        return String.join("/", VARADHI_BASE_URI, "v1", "projects");
     }
 
     static String getProjectUri(Project project) {
         return String.join("/", getProjectCreateUri(), project.getName());
     }
-
 
     static String getTopicsUri(Project project) {
         return String.join("/", getProjectUri(project), "topics");
@@ -134,7 +132,7 @@ public class E2EBase {
     }
 
     static void cleanupTopic(String topicName, Project project) {
-        makeDeleteRequest(getTopicsUri(project, topicName), "HARD_DELETE", 200);
+        makeDeleteRequest(getTopicsUri(project, topicName), ResourceDeletionType.HARD_DELETE.toString(), 200);
     }
 
     // this method traverses the resource hierarchy and clean-ups all subscriptions on the matching topics
@@ -153,7 +151,10 @@ public class E2EBase {
                         SubscriptionResource res =
                                 makeGetRequest(getSubscriptionsUri(project, sub), SubscriptionResource.class, 200);
                         if (topicNames.contains(res.getTopic()) && projectName.equals(res.getTopicProject())) {
-                            makeDeleteRequest(getSubscriptionsUri(project, sub), "HARD_DELETE", 200);
+                            makeDeleteRequest(
+                                    getSubscriptionsUri(project, sub), ResourceDeletionType.HARD_DELETE.toString(),
+                                    200
+                            );
                         }
                     });
                 });
@@ -164,14 +165,16 @@ public class E2EBase {
     static void cleanupSubscriptionsOnProject(Project project) {
         getSubscriptions(makeListRequest(getSubscriptionsUri(project), 200)).forEach(
                 s -> makeDeleteRequest(
-                        getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]), "HARD_DELETE", 200));
+                        getSubscriptionsUri(project, s.split(NAME_SEPARATOR_REGEX)[1]),
+                        ResourceDeletionType.HARD_DELETE.toString(), 200
+                ));
     }
 
     static Client getClient() {
         ClientConfig clientConfig = new ClientConfig().register(new ObjectMapperContextResolver());
         Client client = ClientBuilder.newClient(clientConfig);
-        client.property(ClientProperties.CONNECT_TIMEOUT, ConnectTimeoutMs);
-        client.property(ClientProperties.READ_TIMEOUT, ReadTimeoutMs);
+        client.property(ClientProperties.CONNECT_TIMEOUT, CONNECT_TIMEOUT_MS);
+        client.property(ClientProperties.READ_TIMEOUT, READ_TIMEOUT_MS);
         return client;
     }
 
@@ -302,7 +305,7 @@ public class E2EBase {
     static Response makeHttpDeleteRequest(String targetUrl, String deletionType) {
         return getClient()
                 .target(targetUrl)
-                .queryParam("deletionType", deletionType)
+                .queryParam(QUERY_PARAM_DELETION_TYPE, deletionType)
                 .request(MediaType.APPLICATION_JSON_TYPE)
                 .header(USER_ID_HEADER, SUPER_USER)
                 .delete();
