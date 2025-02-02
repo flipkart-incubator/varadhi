@@ -86,3 +86,13 @@ messageHeaderConfiguration:
   msgHeaderPrefix: ["X_", "X-"]
   msgIdHeader: "X_RESTBUS_MESSAGE_ID"
   groupIdHeader: "X_RESTBUS_GROUP_ID"
+  callbackCodes: "X_CALLBACK_CODES"
+  requestTimeout: "X_RESTBUS_REQUEST_TIMEOUT"
+  replyToHttpUriHeader: "X_RESTBUS_REPLY_TO_HTTP_URI"
+  replyToHttpMethodHeader: "X_RESTBUS_REPLY_TO_HTTP_METHOD"
+  replyToHeader: "X_RESTBUS_REPLY_TO"
+  httpUriHeader: "X_RESTBUS_HTTP_URI"
+  httpMethodHeader: "X_RESTBUS_HTTP_METHOD"
+  httpContentType: "X_RESTBUS_CONTENT_TYPE"
+  exchangeNameHeader: "X_EXCHANGE_NAME"
+  originalTopicName: "X_RESTBUS_ORIGINAL_TOPIC_NAME"

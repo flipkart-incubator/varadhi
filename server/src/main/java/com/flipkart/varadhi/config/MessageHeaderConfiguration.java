@@ -60,36 +60,28 @@ public class MessageHeaderConfiguration {
             }
         }
 
-        return MessageHeaderConfiguration.builder()
-                .msgHeaderPrefix(providedConfig.getMsgHeaderPrefix())
-                .callbackCodes(providedConfig.getCallbackCodes())
-                .exchangeNameHeader(providedConfig.getExchangeNameHeader())
-                .originalTopicName(providedConfig.getOriginalTopicName())
-                .requestTimeout(providedConfig.getRequestTimeout())
-                .replyToHttpUriHeader(providedConfig.getReplyToHttpUriHeader())
-                .replyToHttpMethodHeader(providedConfig.getReplyToHttpMethodHeader())
-                .replyToHeader(providedConfig.getReplyToHeader())
-                .httpUriHeader(providedConfig.getHttpUriHeader())
-                .httpMethodHeader(providedConfig.getHttpMethodHeader())
-                .httpContentType(providedConfig.getHttpContentType())
-                .groupIdHeader(providedConfig.getGroupIdHeader())
-                .msgIdHeader(providedConfig.getMsgIdHeader())
-                .build();
-    }
-
-    private static <T> T getOrDefault(T providedValue, T defaultValue) {
-        return providedValue != null ? providedValue : defaultValue;
+        return providedConfig;
     }
 
     public static boolean validateHeaderMapping(MessageHeaderConfiguration messageHeaderConfiguration)
             throws IllegalAccessException {
+        if (messageHeaderConfiguration == null || messageHeaderConfiguration.getMsgHeaderPrefix() == null
+                || messageHeaderConfiguration.getMsgHeaderPrefix().isEmpty()) {
+            throw new IllegalArgumentException("Message header configuration or prefix list cannot be null or empty");
+        }
         for (Field field : MessageHeaderConfiguration.class.getDeclaredFields()) {
             if (field.getName().equals("msgHeaderPrefix")) {
                 continue;
             }
             Object value = field.get(messageHeaderConfiguration);
+            if (value == null) {
+                throw new IllegalArgumentException("Header value cannot be null: " + field.getName());
+            }
             if (!startsWithValidPrefix(messageHeaderConfiguration.getMsgHeaderPrefix(), (String) value)) {
-                return false;
+                throw new IllegalArgumentException(
+                        String.format("Header '%s' with value '%s' doesn't start with any valid prefix",
+                                field.getName(), value
+                        ));
             }
         }
         return true;

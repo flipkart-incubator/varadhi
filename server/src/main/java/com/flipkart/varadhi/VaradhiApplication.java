@@ -64,8 +64,10 @@ public class VaradhiApplication {
             MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderConfiguration.buildFromConfig(
                     configuration.getMessageHeaderConfiguration());
             if (!MessageHeaderConfiguration.validateHeaderMapping(messageHeaderConfiguration)) {
-                log.error("Header validation failed");
-                System.exit(-1);
+                     String error = "Message header validation failed. Please ensure all headers use valid prefixes: " +
+                             messageHeaderConfiguration.getMsgHeaderPrefix();
+                        log.error(error);
+                        throw new InvalidConfigException(error);
             }
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,11 +45,20 @@ class MessageHeaderConfigurationTest {
             "'VARADHI_', 'VARADHI-', true",
             "'', 'VARADHI-', true",
             "'VARADHI_', '', true",
-            "'T_', 'T-', false"
+            "'T_', 'T-', false",
+            "'VARADHI_', null, true",
+            "'varadhi_', 'VARADHI-', false"  // Case sensitivity
     })
     void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) throws IllegalAccessException {
         DEFAULT_CONFIG.setMsgHeaderPrefix(Arrays.asList(prefix1, prefix2));
-        assertEquals(expectedResult, MessageHeaderConfiguration.validateHeaderMapping(DEFAULT_CONFIG));
+        if(!expectedResult){
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                MessageHeaderConfiguration.validateHeaderMapping(DEFAULT_CONFIG);
+            });
+            assertEquals(IllegalArgumentException.class, exception.getClass());
+        }else {
+            assertEquals(expectedResult, MessageHeaderConfiguration.validateHeaderMapping(DEFAULT_CONFIG));
+        }
     }
 
     @Test
