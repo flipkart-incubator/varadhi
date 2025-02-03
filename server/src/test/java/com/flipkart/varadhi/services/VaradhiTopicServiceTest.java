@@ -189,6 +189,7 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore, never()).deleteTopic(varadhiTopic.getName());
         assertEquals(InvalidOperationForResourceException.class, exception.getClass());
+        assertEquals("Cannot delete topic as it has existing subscriptions.", exception.getMessage());
     }
 
     @Test
@@ -359,6 +360,24 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
+    void restoreVaradhiTopic_NonExistentTopic_ThrowsException() {
+        String nonExistentTopicName = "nonExistentTopic";
+        ResourceActionRequest actionRequest = new ResourceActionRequest(
+                LifecycleStatus.ActionCode.SYSTEM_ACTION, "message"
+        );
+
+        when(metaStore.getTopic(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
+
+        Exception exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> varadhiTopicService.restore(nonExistentTopicName, actionRequest)
+        );
+
+        assertEquals(ResourceNotFoundException.class, exception.getClass());
+        assertEquals("Topic not found", exception.getMessage());
+    }
+
+    @Test
     void checkVaradhiTopicExists_TopicExists_ReturnsTrue() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         when(metaStore.checkTopicExists(varadhiTopic.getName())).thenReturn(true);
@@ -467,6 +486,9 @@ class VaradhiTopicServiceTest {
     }
 
     private void setupMockTopics(String projectName, List<String> topicNames, List<Boolean> topicStatuses) {
+        if (topicNames.size() != topicStatuses.size()) {
+            throw new IllegalArgumentException("Topic names and statuses lists must have the same size");
+        }
         when(metaStore.getTopicNames(projectName)).thenReturn(topicNames);
         for (int i = 0; i < topicNames.size(); i++) {
             VaradhiTopic topic = mock(VaradhiTopic.class);

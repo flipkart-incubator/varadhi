@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.MockitoAnnotations;
 
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,6 +45,9 @@ import static org.mockito.Mockito.when;
 
 @ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 class SubscriptionHandlersTest extends SubscriptionTestBase {
+
+    private static final String BASE_PATH = "/projects/:project/subscriptions";
+    private static final String SUBSCRIPTION_PATH = BASE_PATH + "/:subscription";
 
     private SubscriptionHandlers subscriptionHandlers;
 
@@ -65,35 +69,35 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
     private void configureRoutes() {
         createRoute(
-                HttpMethod.POST, "/projects/:project/subscriptions",
+                HttpMethod.POST, BASE_PATH,
                 subscriptionHandlers::create, true
         );
         createRoute(
-                HttpMethod.GET, "/projects/:project/subscriptions/:subscription",
+                HttpMethod.GET, SUBSCRIPTION_PATH,
                 subscriptionHandlers::get, false
         );
         createRoute(
-                HttpMethod.GET, "/projects/:project/subscriptions",
+                HttpMethod.GET, BASE_PATH,
                 subscriptionHandlers::list, false
         );
         createRoute(
-                HttpMethod.DELETE, "/projects/:project/subscriptions/:subscription",
+                HttpMethod.DELETE, SUBSCRIPTION_PATH,
                 subscriptionHandlers::delete, false
         );
         createRoute(
-                HttpMethod.PUT, "/projects/:project/subscriptions/:subscription",
+                HttpMethod.PUT, SUBSCRIPTION_PATH,
                 subscriptionHandlers::update, true
         );
         createRoute(
-                HttpMethod.PATCH, "/projects/:project/subscriptions/:subscription/restore",
+                HttpMethod.PATCH, SUBSCRIPTION_PATH + "/restore",
                 subscriptionHandlers::restore, false
         );
         createRoute(
-                HttpMethod.POST, "/projects/:project/subscriptions/:subscription/start",
+                HttpMethod.POST, SUBSCRIPTION_PATH + "/start",
                 subscriptionHandlers::start, false
         );
         createRoute(
-                HttpMethod.POST, "/projects/:project/subscriptions/:subscription/stop",
+                HttpMethod.POST, SUBSCRIPTION_PATH + "/stop",
                 subscriptionHandlers::stop, false
         );
     }

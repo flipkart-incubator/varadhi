@@ -19,10 +19,10 @@ public enum ResourceDeletionType {
         if (value == null || value.isBlank()) {
             return DEFAULT;
         }
-        return switch (value.trim().toUpperCase()) {
-            case "SOFT_DELETE" -> SOFT_DELETE;
-            case "HARD_DELETE" -> HARD_DELETE;
-            default -> DEFAULT;
-        };
+        try {
+            return valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return DEFAULT;
+        }
     }
 }

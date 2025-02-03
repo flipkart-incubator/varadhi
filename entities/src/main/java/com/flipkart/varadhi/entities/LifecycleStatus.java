@@ -47,6 +47,9 @@ public class LifecycleStatus {
      * @param actionCode the new action code indicating the reason for the state
      */
     public void update(State state, String message, ActionCode actionCode) {
+        if (this.state == state) {
+            throw new IllegalArgumentException("Resource is already in " + state + " state");
+        }
         this.state = state;
         this.message = message != null ? message : state.getDefaultMessage();
         this.actionCode = actionCode;

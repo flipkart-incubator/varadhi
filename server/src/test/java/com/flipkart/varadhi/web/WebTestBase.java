@@ -221,7 +221,7 @@ public class WebTestBase {
     }
 
     private static class PostResponseCapture<T> {
-        private T response;
-        private Throwable throwable;
+        private volatile T response;
+        private volatile Throwable throwable;
     }
 }

@@ -64,6 +64,7 @@ import org.mockito.ArgumentCaptor;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
@@ -108,6 +109,12 @@ class SubscriptionServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        setupInfrastructure();
+        setupTestData();
+        setupMocks();
+    }
+
+    private void setupInfrastructure() throws Exception {
         JsonMapper.getMapper().registerSubtypes(
                 new NamedType(PulsarStorageTopic.class, "PulsarTopic"),
                 new NamedType(PulsarSubscription.class, "PulsarSubscription")
@@ -125,7 +132,9 @@ class SubscriptionServiceTest {
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
+    }
 
+    private void setupTestData() {
         org = Org.of("Org");
         team = Team.of("Team", org.getName());
         project1 = Project.of("Project1", "", team.getName(), team.getOrg());
@@ -146,7 +155,9 @@ class SubscriptionServiceTest {
         teamService.createTeam(team);
         projectService.createProject(project1);
         projectService.createProject(project2);
+    }
 
+    private void setupMocks() {
         shardProvisioner = mock(ShardProvisioner.class);
         doNothing().when(shardProvisioner).provision(any(), any());
 
@@ -217,17 +228,7 @@ class SubscriptionServiceTest {
         VaradhiSubscription deserializedSubscription =
                 JsonMapper.jsonDeserialize(subscriptionJson, VaradhiSubscription.class);
 
-        assertEquals(subscription.getName(), deserializedSubscription.getName());
-        assertEquals(subscription.getProject(), deserializedSubscription.getProject());
-        assertEquals(subscription.getTopic(), deserializedSubscription.getTopic());
-        assertEquals(subscription.getDescription(), deserializedSubscription.getDescription());
-        assertEquals(subscription.isGrouped(), deserializedSubscription.isGrouped());
-        assertEquals(subscription.getEndpoint().getProtocol(), deserializedSubscription.getEndpoint().getProtocol());
-        assertEquals(subscription.getRetryPolicy(), deserializedSubscription.getRetryPolicy());
-        assertEquals(subscription.getConsumptionPolicy(), deserializedSubscription.getConsumptionPolicy());
-        assertEquals(subscription.getShards().getShardCount(), deserializedSubscription.getShards().getShardCount());
-        assertEquals(subscription.getStatus().getState(), deserializedSubscription.getStatus().getState());
-        assertEquals(subscription.getProperties(), deserializedSubscription.getProperties());
+        assertSubscriptionsEqual(subscription, deserializedSubscription);
     }
 
     @Test
@@ -725,6 +726,64 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void deleteSubscription_AlreadySoftDeleted_ThrowsException() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
+
+        CompletableFuture<SubscriptionState> stoppedState =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
+
+        ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
+                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Soft delete"
+        );
+        subscriptionService.deleteSubscription(
+                subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.SOFT_DELETE, softDeleteRequest
+        ).join();
+
+        CompletionException exception = assertThrows(
+                CompletionException.class,
+                () -> subscriptionService.deleteSubscription(
+                        subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.SOFT_DELETE,
+                        softDeleteRequest
+                ).join()
+        );
+
+        assertEquals(IllegalArgumentException.class, exception.getCause().getClass());
+        assertEquals(
+                "Resource is already in INACTIVE state",
+                exception.getCause().getMessage()
+        );
+    }
+
+    @Test
+    void deleteSubscription_HardDeleteAfterSoftDelete_Success() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
+
+        CompletableFuture<SubscriptionState> stoppedState =
+                CompletableFuture.completedFuture(SubscriptionState.forStopped());
+        doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
+
+        ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
+                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Soft delete"
+        );
+        subscriptionService.deleteSubscription(
+                subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.SOFT_DELETE, softDeleteRequest
+        ).join();
+
+        ResourceActionRequest hardDeleteRequest = new ResourceActionRequest(
+                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Hard delete"
+        );
+        CompletableFuture<Void> result = subscriptionService.deleteSubscription(
+                subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.HARD_DELETE, hardDeleteRequest
+        );
+
+        assertDoesNotThrow(result::join);
+        verify(varadhiMetaStore, times(1)).deleteSubscription(subscription1.getName());
+    }
+
+    @Test
     void startSubscription_SuccessfulStart() {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
@@ -895,9 +954,16 @@ class SubscriptionServiceTest {
 
     private void assertSubscriptionsEqual(VaradhiSubscription expected, VaradhiSubscription actual) {
         assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getProject(), actual.getProject());
         assertEquals(expected.getTopic(), actual.getTopic());
-        assertEquals(expected.isGrouped(), actual.isGrouped());
         assertEquals(expected.getDescription(), actual.getDescription());
+        assertEquals(expected.isGrouped(), actual.isGrouped());
+        assertEquals(expected.getEndpoint().getProtocol(), actual.getEndpoint().getProtocol());
+        assertEquals(expected.getRetryPolicy(), actual.getRetryPolicy());
+        assertEquals(expected.getConsumptionPolicy(), actual.getConsumptionPolicy());
+        assertEquals(expected.getShards().getShardCount(), actual.getShards().getShardCount());
+        assertEquals(expected.getStatus().getState(), actual.getStatus().getState());
+        assertEquals(expected.getProperties(), actual.getProperties());
     }
 
     private CompletableFuture<VaradhiSubscription> updateSubscription(VaradhiSubscription to) {

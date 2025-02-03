@@ -119,6 +119,21 @@ class VaradhiSubscriptionTest {
     }
 
     @Test
+    void createSubscription_EmptyProperties_ThrowsException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class, () -> {
+                    VaradhiSubscription.of(
+                            "sub1", "project1", "topic1", "description", true,
+                            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
+                            DEFAULT_SHARDS, Map.of(), LifecycleStatus.ActionCode.SYSTEM_ACTION
+                    );
+                }
+        );
+
+        assertEquals("Properties cannot be null or empty", exception.getMessage());
+    }
+
+    @Test
     void markCreateFailed_ChangesStateToCreateFailed() {
         VaradhiSubscription subscription = VaradhiSubscription.of(
                 "sub1", "project1", "topic1", "description", true,
@@ -252,5 +267,16 @@ class VaradhiSubscriptionTest {
         );
 
         assertEquals("For input string: \"invalid\"", exception.getMessage());
+    }
+
+    @Test
+    void getIntProperty_IntegerOverflow_ThrowsException() {
+        VaradhiSubscription subscription = VaradhiSubscription.of(
+                "sub1", "project1", "topic1", "description", true,
+                DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS, Map.of("key", "999999999999999999999999"), LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+
+        assertThrows(NumberFormatException.class, () -> subscription.getIntProperty("key"));
     }
 }

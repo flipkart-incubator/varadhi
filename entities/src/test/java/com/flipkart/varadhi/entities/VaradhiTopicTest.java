@@ -112,6 +112,7 @@ class VaradhiTopicTest {
     void markActive_ChangesStatusToActive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
+        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deactivated");
         varadhiTopic.markActive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Activated");
 
         assertAll(

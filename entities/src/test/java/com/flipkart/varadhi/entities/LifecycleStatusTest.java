@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LifecycleStatusTest {
@@ -56,6 +57,19 @@ class LifecycleStatusTest {
                 () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
                 () -> assertEquals("Successfully created.", status.getMessage()),
                 () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, status.getActionCode())
+        );
+    }
+
+    @Test
+    void update_SameState_ThrowsIllegalArgumentException() {
+        LifecycleStatus status =
+                new LifecycleStatus(LifecycleStatus.State.CREATED, LifecycleStatus.ActionCode.SYSTEM_ACTION);
+        assertThrows(
+                IllegalArgumentException.class, () ->
+                        status.update(
+                                LifecycleStatus.State.CREATED, "Already created",
+                                LifecycleStatus.ActionCode.USER_ACTION
+                        )
         );
     }
 
