@@ -8,6 +8,7 @@ import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
+import com.flipkart.varadhi.entities.Validator;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.spi.ConfigFile;
@@ -36,6 +37,7 @@ import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.logging.log4j.util.Strings;
 
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
@@ -159,7 +161,12 @@ public class VaradhiApplication {
 
         try {
             JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
-            return content.mapTo(AppConfiguration.class);
+            AppConfiguration configuration = content.mapTo(AppConfiguration.class);
+            var errors = Validator.validate(configuration);
+            if (errors.isEmpty()) {
+                return configuration;
+            }
+            throw new InvalidConfigException("Invalid Configuration: \n" + Strings.join(errors, '\n'));
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to load Application Configuration", e);
         } finally {
