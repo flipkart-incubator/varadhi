@@ -1,15 +1,14 @@
 package com.flipkart.varadhi.entities.utils;
 
+import lombok.Data;
+
 import java.net.URI;
 import java.util.Map;
 
-public interface RequestContext {
-
-    URI getURI();
-
-    Map<String, String> getParams();
-
-    Map<String, String> getHeaders();
-
-    Map<String, Object> getContext();
+@Data
+public class RequestContext {
+    private URI getURI;
+    private Map<String, String> params;
+    private Map<String, String> headers;
+    private Map<String, Object> gontext;
 }
