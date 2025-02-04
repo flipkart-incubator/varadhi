@@ -1,19 +1,25 @@
 package com.flipkart.varadhi.config;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Arrays;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MessageHeaderConfigurationTest {
-    private MessageHeaderConfiguration defaultConfig;
+public class MessageHeaderConfigurationTest {
+
+    private Validator validator;
+
     @BeforeEach
-    public void beforeTestMethod() {
-        defaultConfig = getDefaultMessageHeaderConfig();
+    public void setUp() {
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
     }
 
     private MessageHeaderConfiguration getDefaultMessageHeaderConfig() {
@@ -31,25 +37,27 @@ class MessageHeaderConfigurationTest {
                 .msgIdHeader("VARADHI_MSG_ID")
                 .build();
     }
+
     @ParameterizedTest
     @CsvSource({
-            "'VARADHI_', 'VARADHI-', true",
-            "'', 'VARADHI-', true",
-            "'VARADHI_', '', true",
-            "'T_', 'T-', false",
-            "'VARADHI_', null, true",
-            "'varadhi_', 'VARADHI-', false"  // Case sensitivity
+            "'VARADHI_', 'VARADHI-', true",            // Valid case
+            "'', 'VARADHI-', false",                   // Empty prefix
+            "'VARADHI_', '', false",                   // Empty second prefix
+            "'T_', 'T-', false",                       // Invalid prefix not matching
+            "'VARADHI_', null, true",                  // Null second prefix, valid first
+            "'varadhi_', 'VARADHI-', false",           // Case sensitivity issue
+            "'VARADHI_', 'VARADHI\u00A9', true",       // Unicode characters
     })
-    void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) throws IllegalAccessException {
-        defaultConfig.setAllowedPrefix(Arrays.asList(prefix1, prefix2));
-        if(!expectedResult){
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                MessageHeaderConfiguration.validateHeaderMapping(defaultConfig);
-            });
-            assertEquals(IllegalArgumentException.class, exception.getClass());
-        }else {
-            assertEquals(expectedResult, MessageHeaderConfiguration.validateHeaderMapping(defaultConfig));
+    void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) {
+        MessageHeaderConfiguration config = getDefaultMessageHeaderConfig();
+        config.setAllowedPrefix(Arrays.asList(prefix1, prefix2));
+
+        Set<jakarta.validation.ConstraintViolation<MessageHeaderConfiguration>> violations = validator.validate(config);
+
+        if (expectedResult) {
+            assertTrue(violations.isEmpty(), "Validation failed but it should have passed.");
+        } else {
+            assertFalse(violations.isEmpty(), "Validation passed but it should have failed.");
         }
     }
-
 }

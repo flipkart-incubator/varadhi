@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.config;
 
+import com.flipkart.varadhi.utils.ValidateHeaderPrefix;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -7,7 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 
@@ -16,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Valid
+@ValidateHeaderPrefix
 public class MessageHeaderConfiguration {
     @NotNull
     private List<String> allowedPrefix;
@@ -53,30 +54,5 @@ public class MessageHeaderConfiguration {
 
     @NotNull
     private String msgIdHeader;
-    public static boolean validateHeaderMapping(MessageHeaderConfiguration messageHeaderConfiguration)
-            throws IllegalAccessException {
-        for (Field field : MessageHeaderConfiguration.class.getDeclaredFields()) {
-            if (field.getName().equals("allowedPrefix")) {
-                continue;
-            }
-            Object value = field.get(messageHeaderConfiguration);
-            if (!startsWithValidPrefix(messageHeaderConfiguration.getAllowedPrefix(), (String) value)) {
-                throw new IllegalArgumentException(
-                        String.format("Header '%s' with value '%s' doesn't start with any valid prefix",
-                                field.getName(), value
-                        ));
-            }
-        }
-        return true;
-    }
-
-    private static boolean startsWithValidPrefix(List<String> prefixList, String value) {
-        for (String prefix : prefixList) {
-            if (value.startsWith(prefix)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
 }
