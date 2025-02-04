@@ -359,12 +359,12 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                 .deleteSubscription(
-                        anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.DEFAULT), any());
+                        anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
 
         sendRequestWithoutPayload(request, null);
 
         verify(subscriptionService, times(1)).deleteSubscription(
-                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.DEFAULT), any());
+                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
     }
 
     @Test

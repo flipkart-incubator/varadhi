@@ -243,7 +243,7 @@ class TopicHandlersTest extends WebTestBase {
 
     @Test
     void deleteTopic_WithInvalidDeletionType_ShouldDefaultToDefault() throws InterruptedException {
-        verifyDeleteRequest("INVALID_TYPE", ResourceDeletionType.DEFAULT);
+        verifyDeleteRequest("INVALID_TYPE", ResourceDeletionType.SOFT_DELETE);
     }
 
     @Test

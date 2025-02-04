@@ -189,7 +189,8 @@ public class SubscriptionHandlers implements RouteProvider {
             return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(subscriptionProject));
         }
 
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription =
+                subscriptionService.getSubscriptionWithoutValidation(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];

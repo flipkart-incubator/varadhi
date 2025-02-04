@@ -252,13 +252,15 @@ public class SubscriptionTests extends E2EBase {
         subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1) + "?includeInactive=true", 200));
         assertTrue(subs.contains("default." + subName));
 
-//        makePatchRequest(getSubscriptionsUri(o1t1p1, subName) + "/restore", 200);
-//
-//        SubscriptionResource restoredSub =
-//                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
-//        assertSubscriptionEquals(sub, restoredSub);
-//
-//        subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));
-//        assertTrue(subs.contains("default." + subName));
+        makePatchRequest(getSubscriptionsUri(o1t1p1, subName) + "/restore", 200);
+
+        SubscriptionResource restoredSub =
+                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        assertSubscriptionEquals(sub, restoredSub);
+
+        subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));
+        assertTrue(subs.contains("default." + subName));
+
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 200);
     }
 }

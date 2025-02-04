@@ -71,6 +71,17 @@ public class SubscriptionService {
     }
 
     /**
+     * Retrieves a subscription by its name without checking if it is active.
+     *
+     * @param subscriptionName the name of the subscription
+     *
+     * @return the subscription
+     */
+    public VaradhiSubscription getSubscriptionWithoutValidation(String subscriptionName) {
+        return metaStore.getSubscription(subscriptionName);
+    }
+
+    /**
      * Creates a new subscription.
      *
      * @param subscribedTopic the subscribed topic
