@@ -28,17 +28,17 @@ public class TopicResource extends VersionedEntity implements Validatable {
     private TopicCapacityPolicy capacity;
 
     @Setter
-    private LifecycleStatus.ActionCode actionCode;
+    private LifecycleStatus.ActorCode actorCode;
 
     /**
      * Constructs a new TopicResource instance.
      *
-     * @param name       the name of the topic
-     * @param version    the version of the topic
-     * @param project    the project associated with the topic
-     * @param grouped    whether the topic is grouped
-     * @param capacity   the capacity policy of the topic
-     * @param actionCode the action code indicating reason behind the action performed on the topic
+     * @param name      the name of the topic
+     * @param version   the version of the topic
+     * @param project   the project associated with the topic
+     * @param grouped   whether the topic is grouped
+     * @param capacity  the capacity policy of the topic
+     * @param actorCode the actor code indicating reason behind the action performed on the topic
      */
     private TopicResource(
             String name,
@@ -46,43 +46,43 @@ public class TopicResource extends VersionedEntity implements Validatable {
             String project,
             boolean grouped,
             TopicCapacityPolicy capacity,
-            LifecycleStatus.ActionCode actionCode
+            LifecycleStatus.ActorCode actorCode
     ) {
         super(name, version);
         this.project = project;
         this.grouped = grouped;
         this.capacity = capacity;
-        this.actionCode = actionCode;
+        this.actorCode = actorCode;
     }
 
     /**
      * Creates a new grouped TopicResource instance.
      *
-     * @param name       the name of the topic
-     * @param project    the project associated with the topic
-     * @param capacity   the capacity policy of the topic
-     * @param actionCode the action code indicating reason behind the action performed on the topic
+     * @param name      the name of the topic
+     * @param project   the project associated with the topic
+     * @param capacity  the capacity policy of the topic
+     * @param actorCode the actor code indicating reason behind the action performed on the topic
      *
      * @return a new grouped TopicResource instance
      */
     public static TopicResource grouped(
-            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActionCode actionCode) {
-        return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actionCode);
+            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActorCode actorCode) {
+        return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actorCode);
     }
 
     /**
      * Creates a new ungrouped TopicResource instance.
      *
-     * @param name       the name of the topic
-     * @param project    the project associated with the topic
-     * @param capacity   the capacity policy of the topic
-     * @param actionCode the action code indicating reason behind the action performed on the topic
+     * @param name      the name of the topic
+     * @param project   the project associated with the topic
+     * @param capacity  the capacity policy of the topic
+     * @param actorCode the actor code indicating reason behind the action performed on the topic
      *
      * @return a new ungrouped TopicResource instance
      */
     public static TopicResource unGrouped(
-            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActionCode actionCode) {
-        return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actionCode);
+            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActorCode actorCode) {
+        return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actorCode);
     }
 
     /**
@@ -101,7 +101,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
                 topicResourceInfo[0],
                 varadhiTopic.isGrouped(),
                 varadhiTopic.getCapacity(),
-                varadhiTopic.getStatus().getActionCode()
+                varadhiTopic.getStatus().getActorCode()
         );
     }
 
@@ -111,6 +111,6 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actionCode);
+        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode);
     }
 }

@@ -85,7 +85,7 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @param consumptionPolicy the consumption policy of the subscription
      * @param shards            the shards of the subscription
      * @param properties        the properties of the subscription
-     * @param actionCode        the action code indicating the reason for the state
+     * @param actorCode         the actor code indicating the reason for the state
      *
      * @return a new VaradhiSubscription instance
      */
@@ -100,11 +100,11 @@ public class VaradhiSubscription extends MetaStoreEntity {
             ConsumptionPolicy consumptionPolicy,
             SubscriptionShards shards,
             Map<String, String> properties,
-            LifecycleStatus.ActionCode actionCode
+            LifecycleStatus.ActorCode actorCode
     ) {
         return new VaradhiSubscription(
                 name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode), properties
+                shards, new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode), properties
         );
     }
 
@@ -156,31 +156,31 @@ public class VaradhiSubscription extends MetaStoreEntity {
     /**
      * Marks the subscription as deleting.
      *
-     * @param actionCode the action code indicating why it's being deleted
-     * @param message    the message for the action
+     * @param actorCode the actor code indicating why it's being deleted
+     * @param message   the message for the action
      */
-    public void markDeleting(LifecycleStatus.ActionCode actionCode, String message) {
-        this.status.update(LifecycleStatus.State.DELETING, message, actionCode);
+    public void markDeleting(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.DELETING, message, actorCode);
     }
 
     /**
      * Marks the subscription as inactive.
      *
-     * @param actionCode the action code indicating why it's inactive
-     * @param message    the message for the action
+     * @param actorCode the actor code indicating why it's inactive
+     * @param message   the message for the action
      */
-    public void markInactive(LifecycleStatus.ActionCode actionCode, String message) {
-        this.status.update(LifecycleStatus.State.INACTIVE, message, actionCode);
+    public void markInactive(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.INACTIVE, message, actorCode);
     }
 
     /**
      * Restores the subscription to the created state.
      *
-     * @param actionCode the action code indicating why it's restored
-     * @param message    the message for the action
+     * @param actorCode the actor code indicating why it's restored
+     * @param message   the message for the action
      */
-    public void restore(LifecycleStatus.ActionCode actionCode, String message) {
-        this.status.update(LifecycleStatus.State.CREATED, message, actionCode);
+    public void restore(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.CREATED, message, actorCode);
     }
 
     /**

@@ -56,7 +56,7 @@ public class SubscriptionTestBase extends WebTestBase {
     protected static final Project PROJECT = Project.of(
             "project1", "", "team1", "org1");
     protected static final TopicResource TOPIC_RESOURCE = TopicResource.unGrouped(
-            "topic1", "project1", null, LifecycleStatus.ActionCode.SYSTEM_ACTION);
+            "topic1", "project1", null, LifecycleStatus.ActorCode.SYSTEM_ACTION);
 
     @Mock
     protected SubscriptionService subscriptionService;
@@ -110,7 +110,7 @@ public class SubscriptionTestBase extends WebTestBase {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 DEFAULT_SUBSCRIPTION_PROPERTIES,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
     }
 
@@ -134,7 +134,7 @@ public class SubscriptionTestBase extends WebTestBase {
                 retryPolicy,
                 DEFAULT_CONSUMPTION_POLICY,
                 new HashMap<>(),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
     }
 

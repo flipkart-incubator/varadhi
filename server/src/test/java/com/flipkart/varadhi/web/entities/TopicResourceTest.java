@@ -18,14 +18,14 @@ class TopicResourceTest {
     void grouped_CreatesGroupedTopicResource() {
         TopicResource topicResource = TopicResource.grouped(
                 "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         assertAll(
                 () -> assertEquals("topicName", topicResource.getName()),
                 () -> assertEquals("projectName", topicResource.getProject()),
                 () -> assertTrue(topicResource.isGrouped()),
                 () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, topicResource.getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
         );
     }
 
@@ -33,14 +33,14 @@ class TopicResourceTest {
     void unGrouped_CreatesUngroupedTopicResource() {
         TopicResource topicResource = TopicResource.unGrouped(
                 "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActionCode.USER_ACTION
+                LifecycleStatus.ActorCode.USER_ACTION
         );
         assertAll(
                 () -> assertEquals("topicName", topicResource.getName()),
                 () -> assertEquals("projectName", topicResource.getProject()),
                 () -> assertFalse(topicResource.isGrouped()),
                 () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActionCode.USER_ACTION, topicResource.getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.USER_ACTION, topicResource.getActorCode())
         );
     }
 
@@ -48,7 +48,7 @@ class TopicResourceTest {
     void from_CreatesTopicResourceFromVaradhiTopic() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(
                 "projectName", "topicName", true, new TopicCapacityPolicy(),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertAll(
@@ -56,7 +56,7 @@ class TopicResourceTest {
                 () -> assertEquals("projectName", topicResource.getProject()),
                 () -> assertTrue(topicResource.isGrouped()),
                 () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, topicResource.getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
         );
     }
 
@@ -64,7 +64,7 @@ class TopicResourceTest {
     void toVaradhiTopic_ConvertsToVaradhiTopic() {
         TopicResource topicResource = TopicResource.grouped(
                 "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
         assertAll(
@@ -72,7 +72,7 @@ class TopicResourceTest {
                 () -> assertEquals("projectName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[0]),
                 () -> assertTrue(varadhiTopic.isGrouped()),
                 () -> assertNotNull(varadhiTopic.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode())
         );
     }
 }

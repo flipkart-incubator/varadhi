@@ -43,21 +43,21 @@ public class VaradhiTopic extends AbstractTopic {
     /**
      * Creates a new VaradhiTopic instance.
      *
-     * @param project    the project associated with the topic
-     * @param name       the name of the topic
-     * @param grouped    whether the topic is grouped
-     * @param capacity   the capacity policy of the topic
-     * @param actionCode the action code indicating the reason for the state
+     * @param project   the project associated with the topic
+     * @param name      the name of the topic
+     * @param grouped   whether the topic is grouped
+     * @param capacity  the capacity policy of the topic
+     * @param actorCode the actor code indicating the reason for the state
      *
      * @return a new VaradhiTopic instance
      */
     public static VaradhiTopic of(
             String project, String name, boolean grouped, TopicCapacityPolicy capacity,
-            LifecycleStatus.ActionCode actionCode
+            LifecycleStatus.ActorCode actorCode
     ) {
         return new VaradhiTopic(
                 buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(),
-                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actionCode)
+                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actorCode)
         );
     }
 
@@ -107,21 +107,21 @@ public class VaradhiTopic extends AbstractTopic {
     /**
      * Marks the topic as active.
      *
-     * @param actionCode the action code indicating why the topic is being marked as active
-     * @param message    the message for the action
+     * @param actorCode the actor code indicating why the topic is being marked as active
+     * @param message   the message for the action
      */
-    public void markActive(LifecycleStatus.ActionCode actionCode, String message) {
-        this.status.update(LifecycleStatus.State.ACTIVE, message, actionCode);
+    public void markActive(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.ACTIVE, message, actorCode);
     }
 
     /**
      * Marks the topic as inactive.
      *
-     * @param actionCode the action code indicating why the topic is being marked as inactive
-     * @param message    the message for the action
+     * @param actorCode the actor code indicating why the topic is being marked as inactive
+     * @param message   the message for the action
      */
-    public void markInactive(LifecycleStatus.ActionCode actionCode, String message) {
-        this.status.update(LifecycleStatus.State.INACTIVE, message, actionCode);
+    public void markInactive(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.INACTIVE, message, actorCode);
     }
 
     /**

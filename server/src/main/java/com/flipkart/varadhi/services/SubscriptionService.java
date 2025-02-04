@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -202,7 +202,7 @@ public class SubscriptionService {
      *
      * @param subscriptionName the name of the subscription to restore
      * @param requestedBy      the user requesting the restoration
-     * @param actionRequest    the request containing the action code and message for the restoration
+     * @param actionRequest    the request containing the actor code and message for the restoration
      *
      * @return a CompletableFuture representing the restored subscription
      *
@@ -217,9 +217,9 @@ public class SubscriptionService {
                     "Subscription '%s' is already active.".formatted(subscriptionName));
         }
 
-        LifecycleStatus.ActionCode lastAction = subscription.getStatus().getActionCode();
-        boolean isVaradhiAdmin = actionRequest.actionCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION ||
-                actionRequest.actionCode() == LifecycleStatus.ActionCode.ADMIN_ACTION;
+        LifecycleStatus.ActorCode lastAction = subscription.getStatus().getActorCode();
+        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
+                actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
@@ -229,7 +229,7 @@ public class SubscriptionService {
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
                 .thenApply(state -> {
-                    subscription.restore(actionRequest.actionCode(), actionRequest.message());
+                    subscription.restore(actionRequest.actorCode(), actionRequest.message());
                     metaStore.updateSubscription(subscription);
                     log.info("Subscription '{}' restored successfully.", subscriptionName);
                     return subscription;
@@ -333,13 +333,13 @@ public class SubscriptionService {
      *
      * @param subscription  the subscription to be hard-deleted
      * @param subProject    the project associated with the subscription
-     * @param actionRequest the request containing the action code and message for the deletion
+     * @param actionRequest the request containing the actor code and message for the deletion
      */
     private void handleHardDelete(
             VaradhiSubscription subscription,
             Project subProject, ResourceActionRequest actionRequest
     ) {
-        subscription.markDeleting(actionRequest.actionCode(), actionRequest.message());
+        subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateSubscription(subscription);
 
         try {
@@ -358,10 +358,10 @@ public class SubscriptionService {
      * Handles the soft deletion of a subscription.
      *
      * @param subscription  the subscription to be soft-deleted
-     * @param actionRequest the request containing the action code and message for the deletion
+     * @param actionRequest the request containing the actor code and message for the deletion
      */
     private void handleSoftDelete(VaradhiSubscription subscription, ResourceActionRequest actionRequest) {
-        subscription.markInactive(actionRequest.actionCode(), actionRequest.message());
+        subscription.markInactive(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateSubscription(subscription);
         log.info("Subscription '{}' marked inactive successfully.", subscription.getName());
     }

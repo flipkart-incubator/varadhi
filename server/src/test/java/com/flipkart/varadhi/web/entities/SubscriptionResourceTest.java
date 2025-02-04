@@ -30,7 +30,7 @@ class SubscriptionResourceTest extends SubscriptionTestBase {
                 () -> assertNotNull(subscriptionResource.getRetryPolicy()),
                 () -> assertNotNull(subscriptionResource.getConsumptionPolicy()),
                 () -> assertNotNull(subscriptionResource.getProperties()),
-                () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, subscriptionResource.getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, subscriptionResource.getActorCode())
         );
     }
 
@@ -39,7 +39,7 @@ class SubscriptionResourceTest extends SubscriptionTestBase {
         VaradhiSubscription varadhiSubscription = createUngroupedSubscription(
                 "subscriptionName", PROJECT, VaradhiTopic.of(
                         "project1.topic1", "topic1", false, Constants.DEFAULT_TOPIC_CAPACITY,
-                        LifecycleStatus.ActionCode.SYSTEM_ACTION
+                        LifecycleStatus.ActorCode.SYSTEM_ACTION
                 )
         );
         SubscriptionResource subscriptionResource = SubscriptionResource.from(varadhiSubscription);
@@ -54,7 +54,7 @@ class SubscriptionResourceTest extends SubscriptionTestBase {
                 () -> assertNotNull(subscriptionResource.getRetryPolicy()),
                 () -> assertNotNull(subscriptionResource.getConsumptionPolicy()),
                 () -> assertNotNull(subscriptionResource.getProperties()),
-                () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, subscriptionResource.getActionCode())
+                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, subscriptionResource.getActorCode())
         );
     }
 

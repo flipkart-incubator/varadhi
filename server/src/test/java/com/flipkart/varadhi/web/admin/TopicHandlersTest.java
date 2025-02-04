@@ -279,7 +279,7 @@ class TopicHandlersTest extends WebTestBase {
     private TopicResource getTopicResource(Project project) {
         return TopicResource.grouped(
                 TOPIC_NAME, project.getName(), Constants.DEFAULT_TOPIC_CAPACITY,
-                LifecycleStatus.ActionCode.USER_ACTION
+                LifecycleStatus.ActorCode.USER_ACTION
         );
     }
 

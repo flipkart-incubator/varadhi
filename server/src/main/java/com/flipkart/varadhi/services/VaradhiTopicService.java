@@ -2,7 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -93,11 +93,11 @@ public class VaradhiTopicService {
      * Handles the soft deletion of a Varadhi topic.
      *
      * @param varadhiTopic  the Varadhi topic to be soft-deleted
-     * @param actionRequest the request containing the action code and message for the soft deletion
+     * @param actionRequest the request containing the actor code and message for the soft deletion
      */
     public void handleSoftDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Soft deleting Varadhi topic: {}", varadhiTopic.getName());
-        varadhiTopic.markInactive(actionRequest.actionCode(), actionRequest.message());
+        varadhiTopic.markInactive(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 
@@ -123,7 +123,7 @@ public class VaradhiTopicService {
      * Restores a deleted Varadhi topic.
      *
      * @param topicName     the name of the topic to restore
-     * @param actionRequest the request containing the action code and message for the restoration
+     * @param actionRequest the request containing the actor code and message for the restoration
      *
      * @throws InvalidOperationForResourceException if the topic is not deleted or if the restoration is not allowed
      */
@@ -136,9 +136,9 @@ public class VaradhiTopicService {
             throw new InvalidOperationForResourceException("Topic %s is not deleted.".formatted(topicName));
         }
 
-        LifecycleStatus.ActionCode lastAction = varadhiTopic.getStatus().getActionCode();
-        boolean isVaradhiAdmin = actionRequest.actionCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION ||
-                actionRequest.actionCode() == LifecycleStatus.ActionCode.ADMIN_ACTION;
+        LifecycleStatus.ActorCode lastAction = varadhiTopic.getStatus().getActorCode();
+        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
+                actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
@@ -146,7 +146,7 @@ public class VaradhiTopicService {
             );
         }
 
-        varadhiTopic.markActive(actionRequest.actionCode(), actionRequest.message());
+        varadhiTopic.markActive(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 

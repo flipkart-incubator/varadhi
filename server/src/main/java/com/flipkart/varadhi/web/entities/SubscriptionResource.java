@@ -53,7 +53,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
     private final Map<String, String> properties;
 
     @Setter
-    private LifecycleStatus.ActionCode actionCode;
+    private LifecycleStatus.ActorCode actorCode;
 
     /**
      * Constructs a new SubscriptionResource.
@@ -69,7 +69,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
-     * @param actionCode        The action code associated with the subscription.
+     * @param actorCode         The actor code associated with the subscription.
      */
     private SubscriptionResource(
             String name,
@@ -83,7 +83,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             Map<String, String> properties,
-            LifecycleStatus.ActionCode actionCode
+            LifecycleStatus.ActorCode actorCode
     ) {
         super(name, version);
         this.project = project;
@@ -95,7 +95,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
         this.properties = properties == null ? new HashMap<>() : properties;
-        this.actionCode = actionCode;
+        this.actorCode = actorCode;
     }
 
     /**
@@ -111,7 +111,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
-     * @param actionCode        The action code associated with the subscription.
+     * @param actorCode         The actor code associated with the subscription.
      *
      * @return A new SubscriptionResource instance.
      */
@@ -126,11 +126,11 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
             RetryPolicy retryPolicy,
             ConsumptionPolicy consumptionPolicy,
             Map<String, String> properties,
-            LifecycleStatus.ActionCode actionCode
+            LifecycleStatus.ActorCode actorCode
     ) {
         return new SubscriptionResource(
                 name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
-                consumptionPolicy, properties, actionCode
+                consumptionPolicy, properties, actorCode
         );
     }
 
@@ -173,7 +173,7 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy(),
                 subscription.getProperties(),
-                subscription.getStatus().getActionCode()
+                subscription.getStatus().getActorCode()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;

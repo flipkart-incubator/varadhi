@@ -1,6 +1,10 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -49,7 +53,7 @@ public class TopicTests extends E2EBase {
         String topicName = "test-topic-1";
         TopicResource topic = TopicResource.unGrouped(
                 topicName, o1t1Project1.getName(), null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
         Assertions.assertEquals(topic.getVersion(), r.getVersion());
@@ -73,7 +77,7 @@ public class TopicTests extends E2EBase {
         String topicName = "ab";
         TopicResource topic = TopicResource.unGrouped(
                 topicName, o1t1Project1.getName(), null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
 
@@ -88,11 +92,11 @@ public class TopicTests extends E2EBase {
         String topicName = "test-topic-2";
         TopicResource topic1 = TopicResource.unGrouped(
                 topicName, o1t1Project1.getName(), null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         TopicResource topic2 = TopicResource.unGrouped(
                 topicName, o2t1Project1.getName(), null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
 
         TopicResource r1 = makeCreateRequest(getTopicsUri(o1t1Project1), topic1, 200);
@@ -110,5 +114,33 @@ public class TopicTests extends E2EBase {
                 getTopicsUri(o1t1Project1, topic1.getName()), ResourceDeletionType.HARD_DELETE.toString(), 200);
         makeDeleteRequest(
                 getTopicsUri(o2t1Project1, topic2.getName()), ResourceDeletionType.HARD_DELETE.toString(), 200);
+    }
+
+    @Test
+    public void softDeleteTopic() {
+        String topicName = "test-topic-3";
+        TopicResource topic = TopicResource.unGrouped(
+                topicName, o1t1Project1.getName(), null,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
+        makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
+
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), ResourceDeletionType.SOFT_DELETE.toString(), 200);
+
+        List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
+        Assertions.assertFalse(topics.contains(topicName));
+
+        makeGetRequest(getTopicsUri(o1t1Project1, topicName), 404, "Topic default.test-topic-3 not found.", true);
+
+        topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1) + "?includeInactive=true", 200));
+        Assertions.assertTrue(topics.contains(topicName));
+
+        makePatchRequest(getTopicsUri(o1t1Project1, topicName) + "/restore", 200);
+
+        TopicResource restoredTopic = makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
+        Assertions.assertEquals(topicName, restoredTopic.getName());
+
+        topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
+        Assertions.assertTrue(topics.contains(topicName));
     }
 }

@@ -4,7 +4,7 @@ import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -157,9 +157,9 @@ public class SubscriptionHandlers implements RouteProvider {
     public void setSubscription(RoutingContext ctx) {
         SubscriptionResource subscriptionResource = ctx.body().asValidatedPojo(SubscriptionResource.class);
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
-                : LifecycleStatus.ActionCode.USER_ACTION;
-        subscriptionResource.setActionCode(actionCode);
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
+                : LifecycleStatus.ActorCode.USER_ACTION;
+        subscriptionResource.setActorCode(actorCode);
         ctx.put(CONTEXT_KEY_BODY, subscriptionResource);
     }
 
@@ -459,10 +459,10 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
-                : LifecycleStatus.ActionCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
+                : LifecycleStatus.ActorCode.USER_ACTION;
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
-        return new ResourceActionRequest(actionCode, message);
+        return new ResourceActionRequest(actorCode, message);
     }
 
     /**

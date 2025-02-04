@@ -4,7 +4,7 @@ import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -196,7 +196,7 @@ class VaradhiTopicServiceTest {
     void softDeleteVaradhiTopic_MetaStoreSuccess_UpdatesTopicStatus() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "message"
         );
 
@@ -210,7 +210,7 @@ class VaradhiTopicServiceTest {
     void softDeleteVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION, "message"
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
         );
         doThrow(new VaradhiException("MetaStore update failed")).when(metaStore).updateTopic(varadhiTopic);
 
@@ -309,10 +309,10 @@ class VaradhiTopicServiceTest {
     @Test
     void restoreVaradhiTopic_SuccessfulRestore() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
+        varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "message"
         );
 
@@ -327,7 +327,7 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "message"
         );
 
@@ -344,10 +344,10 @@ class VaradhiTopicServiceTest {
     @Test
     void restoreVaradhiTopic_InvalidUser_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
+        varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.USER_ACTION, "message");
+                LifecycleStatus.ActorCode.USER_ACTION, "message");
 
         Exception exception = assertThrows(
                 InvalidOperationForResourceException.class,
@@ -363,7 +363,7 @@ class VaradhiTopicServiceTest {
     void restoreVaradhiTopic_NonExistentTopic_ThrowsException() {
         String nonExistentTopicName = "nonExistentTopic";
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION, "message"
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
         );
 
         when(metaStore.getTopic(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
@@ -472,7 +472,7 @@ class VaradhiTopicServiceTest {
     private VaradhiTopic createVaradhiTopicMock() {
         TopicResource topicResource = TopicResource.grouped(
                 TOPIC_NAME, project.getName(), DEFAULT_CAPACITY_POLICY,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         return varadhiTopicFactory.get(project, topicResource);
     }

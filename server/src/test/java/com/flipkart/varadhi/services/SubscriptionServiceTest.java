@@ -15,7 +15,7 @@ import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.RetrySubscription;
@@ -141,11 +141,11 @@ class SubscriptionServiceTest {
         project2 = Project.of("Project2", "", team.getName(), team.getOrg());
         unGroupedTopic = VaradhiTopic.of(
                 "UngroupedTopic", project1.getName(), false, null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         groupedTopic = VaradhiTopic.of(
                 "GroupedTopic", project2.getName(), true, null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
 
         subscription1 = createUngroupedSubscription("Sub1", project1, unGroupedTopic);
@@ -200,7 +200,7 @@ class SubscriptionServiceTest {
 
         VaradhiTopic topic = VaradhiTopic.of(
                 "GroupedTopic", project2.getName(), true, capacity,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         StorageTopic storageTopic =
                 topicFactory.getTopic(topic.getName(), project2, capacity, InternalQueueCategory.MAIN);
@@ -217,7 +217,7 @@ class SubscriptionServiceTest {
                 retryPolicy,
                 consumptionPolicy,
                 SubscriptionPropertyValidator.createPropertyDefaultValueProviders(new RestOptions()),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
 
         VaradhiSubscriptionFactory varadhiFactory =
@@ -305,7 +305,7 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
 
-        subscription2.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription2.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription2);
 
         when(varadhiMetaStore.getSubscriptionNames(project1.getName()))
@@ -327,7 +327,7 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
 
-        subscription2.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription2.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription2);
 
         when(varadhiMetaStore.getSubscriptionNames(project1.getName()))
@@ -364,7 +364,7 @@ class SubscriptionServiceTest {
     @Test
     void getSubscription_InactiveSubscription_ThrowsException() {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
-        subscription1.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription1);
 
         when(varadhiMetaStore.getSubscription(subscription1.getName())).thenReturn(subscription1);
@@ -592,7 +592,7 @@ class SubscriptionServiceTest {
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscriptionName, REQUESTED_BY);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Delete"
         );
 
@@ -621,7 +621,7 @@ class SubscriptionServiceTest {
         doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Delete"
         );
 
@@ -645,7 +645,7 @@ class SubscriptionServiceTest {
         doReturn(activeState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Delete"
         );
 
@@ -675,7 +675,7 @@ class SubscriptionServiceTest {
                 .deleteSubscription(subscription1.getName());
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Delete"
         );
 
@@ -704,7 +704,7 @@ class SubscriptionServiceTest {
         doThrow(new RuntimeException("DeProvision failed")).when(shardProvisioner).deProvision(any(), any());
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Delete"
         );
 
@@ -735,7 +735,7 @@ class SubscriptionServiceTest {
         doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Soft delete"
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "Soft delete"
         );
         subscriptionService.deleteSubscription(
                 subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.SOFT_DELETE, softDeleteRequest
@@ -766,14 +766,14 @@ class SubscriptionServiceTest {
         doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Soft delete"
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "Soft delete"
         );
         subscriptionService.deleteSubscription(
                 subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.SOFT_DELETE, softDeleteRequest
         ).join();
 
         ResourceActionRequest hardDeleteRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION, "Hard delete"
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "Hard delete"
         );
         CompletableFuture<Void> result = subscriptionService.deleteSubscription(
                 subscription1.getName(), project1, REQUESTED_BY, ResourceDeletionType.HARD_DELETE, hardDeleteRequest
@@ -856,14 +856,14 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        subscription1.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Restore"
         );
 
@@ -882,14 +882,14 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        subscription1.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.USER_ACTION,
+                LifecycleStatus.ActorCode.USER_ACTION,
                 "Restore"
         );
 
@@ -909,7 +909,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        subscription1.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive subscription");
+        subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
@@ -917,7 +917,7 @@ class SubscriptionServiceTest {
         doThrow(new RuntimeException("MetaStore update failed")).when(varadhiMetaStore).updateSubscription(any());
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Restore"
         );
 
@@ -937,7 +937,7 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "Restore"
         );
 

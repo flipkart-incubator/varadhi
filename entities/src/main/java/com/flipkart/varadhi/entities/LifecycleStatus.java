@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Represents the lifecycle status of an entity with its state, message, and action code.
+ * Represents the lifecycle status of an entity with its state, message, and actor code.
  * This class ensures consistency across different entity types such as topics and subscriptions.
  */
 @Getter
@@ -24,46 +24,46 @@ public class LifecycleStatus {
     private String message;
 
     /**
-     * The action code indicating the reason for the current state.
+     * The actor code indicating the reason for the current state.
      */
-    private ActionCode actionCode;
+    private ActorCode actorCode;
 
     /**
-     * Constructs a new LifecycleStatus instance with the specified state and action code.
+     * Constructs a new LifecycleStatus instance with the specified state and actor code.
      * The message is set to the default message of the state.
      *
-     * @param state      the state of the entity
-     * @param actionCode the action code indicating the reason for the state
+     * @param state     the state of the entity
+     * @param actorCode the actor code indicating the reason for the state
      */
-    public LifecycleStatus(State state, ActionCode actionCode) {
-        this(state, state.getDefaultMessage(), actionCode);
+    public LifecycleStatus(State state, ActorCode actorCode) {
+        this(state, state.getDefaultMessage(), actorCode);
     }
 
     /**
-     * Updates the lifecycle status with the specified state, message, and action code.
+     * Updates the lifecycle status with the specified state, message, and actor code.
      *
-     * @param state      the new state of the entity
-     * @param message    the new message associated with the state
-     * @param actionCode the new action code indicating the reason for the state
+     * @param state     the new state of the entity
+     * @param message   the new message associated with the state
+     * @param actorCode the new actor code indicating the reason for the state
      */
-    public void update(State state, String message, ActionCode actionCode) {
+    public void update(State state, String message, ActorCode actorCode) {
         if (this.state == state) {
             throw new IllegalArgumentException("Resource is already in " + state + " state");
         }
         this.state = state;
-        this.message = message != null ? message : state.getDefaultMessage();
-        this.actionCode = actionCode;
+        this.message = (message != null && !message.isEmpty()) ? message : state.getDefaultMessage();
+        this.actorCode = actorCode;
     }
 
     /**
      * Updates the lifecycle status with the specified state and message.
-     * The action code remains unchanged.
+     * The actor code remains unchanged.
      *
      * @param state   the new state of the entity
      * @param message the new message associated with the state
      */
     public void update(State state, String message) {
-        update(state, message, this.actionCode);
+        update(state, message, this.actorCode);
     }
 
     /**
@@ -94,9 +94,9 @@ public class LifecycleStatus {
     }
 
     /**
-     * Enum representing the action codes for entity actions.
+     * Enum representing the actor codes for entity actions.
      */
-    public enum ActionCode {
+    public enum ActorCode {
 //        USER_INITIATED_ACTION,  // Action initiated directly by the user.
 //        USER_REQUESTED_ADMIN_ACTION,  // Action requested by the user to be performed by an admin.
 //        ADMIN_FORCED_ACTION, // Action intentionally performed by an admin.

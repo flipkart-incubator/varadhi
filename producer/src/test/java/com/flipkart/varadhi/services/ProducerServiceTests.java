@@ -254,7 +254,7 @@ public class ProducerServiceTests {
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
         VaradhiTopic topic = VaradhiTopic.of(
                 project.getName(), name, false, null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);

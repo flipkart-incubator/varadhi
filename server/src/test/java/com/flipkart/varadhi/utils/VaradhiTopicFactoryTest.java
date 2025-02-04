@@ -58,7 +58,7 @@ class VaradhiTopicFactoryTest {
     @Test
     void get_WithValidTopicResource_ShouldReturnValidVaradhiTopic() {
         TopicResource topicResource = TopicResource.grouped(
-                TOPIC_NAME, project.getName(), CAPACITY_POLICY, LifecycleStatus.ActionCode.SYSTEM_ACTION
+                TOPIC_NAME, project.getName(), CAPACITY_POLICY, LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
 
@@ -75,7 +75,7 @@ class VaradhiTopicFactoryTest {
     void get_WhenNoCapacityPolicyProvided_ShouldUseDefaultCapacity() {
         TopicResource topicResource =
                 TopicResource.grouped(
-                        TOPIC_NAME, project.getName(), null, LifecycleStatus.ActionCode.SYSTEM_ACTION
+                        TOPIC_NAME, project.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION
                 );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
@@ -92,7 +92,7 @@ class VaradhiTopicFactoryTest {
         TopicResource topicResource =
                 TopicResource.grouped(
                         TOPIC_NAME, project.getName(), Constants.DEFAULT_TOPIC_CAPACITY,
-                        LifecycleStatus.ActionCode.SYSTEM_ACTION
+                        LifecycleStatus.ActorCode.SYSTEM_ACTION
                 );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
 

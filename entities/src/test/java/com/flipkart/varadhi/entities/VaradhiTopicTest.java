@@ -26,7 +26,7 @@ class VaradhiTopicTest {
     private VaradhiTopic createDefaultVaradhiTopic(boolean grouped) {
         return VaradhiTopic.of(
                 PROJECT_NAME, TOPIC_NAME, grouped, TOPIC_CAPACITY,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
     }
 
@@ -112,8 +112,8 @@ class VaradhiTopicTest {
     void markActive_ChangesStatusToActive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deactivated");
-        varadhiTopic.markActive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Activated");
+        varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
+        varadhiTopic.markActive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
 
         assertAll(
                 () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
@@ -122,7 +122,7 @@ class VaradhiTopicTest {
                         "Status state mismatch"
                 ),
                 () -> assertEquals(
-                        LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode(),
+                        LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode(),
                         "Action code mismatch"
                 )
         );
@@ -132,7 +132,7 @@ class VaradhiTopicTest {
     void markInactive_ChangesStatusToInactive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deactivated");
+        varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
 
         assertAll(
                 () -> assertFalse(varadhiTopic.isActive(), "Inactive status update failed"),
@@ -141,7 +141,7 @@ class VaradhiTopicTest {
                         "Status state mismatch"
                 ),
                 () -> assertEquals(
-                        LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode(),
+                        LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode(),
                         "Action code mismatch"
                 )
         );

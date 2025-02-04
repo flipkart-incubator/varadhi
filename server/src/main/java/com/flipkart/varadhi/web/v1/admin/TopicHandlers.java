@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceActionRequest;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -156,9 +156,9 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
-                : LifecycleStatus.ActionCode.USER_ACTION;
-        topicResource.setActionCode(actionCode);
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
+                : LifecycleStatus.ActorCode.USER_ACTION;
+        topicResource.setActorCode(actorCode);
 
         validateProjectName(projectName, topicResource);
 
@@ -271,10 +271,10 @@ public class TopicHandlers implements RouteProvider {
      */
     private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION
-                : LifecycleStatus.ActionCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
+                : LifecycleStatus.ActorCode.USER_ACTION;
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
-        return new ResourceActionRequest(actionCode, message);
+        return new ResourceActionRequest(actorCode, message);
     }
 
     /**
