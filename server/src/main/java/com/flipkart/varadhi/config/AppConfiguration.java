@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
+import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
@@ -9,13 +10,14 @@ import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 import java.util.Map;
 
 @Getter
-public class AppConfiguration {
+public class AppConfiguration implements Validatable {
     @NotNull
     private VertxOptions vertxOptions;
 
@@ -70,4 +72,14 @@ public class AppConfiguration {
     private ControllerConfig controller;
 
     private Map<String, String> otelOptions;
+
+    @NotNull
+    @Valid
+    private MessageHeaderConfiguration messageHeaderConfiguration;
+
+    @Override
+    public void validate(){
+        Validatable.super.validate();
+        messageHeaderConfiguration.validate();
+    }
 }
