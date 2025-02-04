@@ -4,11 +4,9 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
-import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.entities.Validator;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.spi.ConfigFile;
@@ -37,7 +35,6 @@ import io.vertx.tracing.opentelemetry.OpenTelemetryOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.logging.log4j.util.Strings;
 
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
@@ -63,7 +60,6 @@ public class VaradhiApplication {
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
-            MessageHeaderConfiguration messageHeaderConfiguration = configuration.getMessageHeaderConfiguration();
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
                             Future.all(verticles.entrySet().stream()
                                     .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
