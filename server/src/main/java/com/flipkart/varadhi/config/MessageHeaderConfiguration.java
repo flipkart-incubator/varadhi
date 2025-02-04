@@ -15,7 +15,6 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Valid
 @ValidateHeaderPrefix
 public class MessageHeaderConfiguration {
     @NotNull
