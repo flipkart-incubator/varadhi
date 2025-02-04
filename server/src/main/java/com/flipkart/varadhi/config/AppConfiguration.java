@@ -9,6 +9,7 @@ import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
@@ -72,6 +73,7 @@ public class AppConfiguration {
     private Map<String, String> otelOptions;
 
     @NotNull
+    @Valid
     private MessageHeaderConfiguration messageHeaderConfiguration;
 
 }

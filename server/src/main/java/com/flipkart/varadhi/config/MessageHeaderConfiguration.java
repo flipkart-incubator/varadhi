@@ -1,83 +1,66 @@
 package com.flipkart.varadhi.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.List;
+
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Valid
 public class MessageHeaderConfiguration {
-    private List<String> msgHeaderPrefix;
+    @NotNull
+    private List<String> allowedPrefix;
 
     // Callback codes header
+    @NotNull
     private String callbackCodes;
 
     // Consumer timeout header (indefinite message consumer timeout)
+    @NotNull
     private String requestTimeout;
 
     // HTTP related headers
+    @NotNull
     private String replyToHttpUriHeader;
+
+    @NotNull
     private String replyToHttpMethodHeader;
+
+    @NotNull
     private String replyToHeader;
+
+    @NotNull
     private String httpUriHeader;
+
+    @NotNull
     private String httpMethodHeader;
+
+    @NotNull
     private String httpContentType;
 
     // Group ID & Msg ID header used to correlate messages
+    @NotNull
     private String groupIdHeader;
+
+    @NotNull
     private String msgIdHeader;
-
-
-    //removal candidates
-
-    // Used in group flow
-    private String exchangeNameHeader;
-    // Original topic name (maintains original queue name during changes)
-    private String originalTopicName;
-
-    public static MessageHeaderConfiguration buildFromConfig(MessageHeaderConfiguration providedConfig) {
-        if (providedConfig == null) {
-            throw new IllegalArgumentException("Provided configuration cannot be null");
-        }
-
-        for (Method method : providedConfig.getClass().getMethods()) {
-            if (method.getName().startsWith("get") && method.getParameterCount() == 0) {
-                try {
-                    Object value = method.invoke(providedConfig);
-                    if (value == null) {
-                        throw new IllegalArgumentException(method.getName() + " cannot be null");
-                    }
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Error invoking getter method: " + method.getName(), e);
-                }
-            }
-        }
-
-        return providedConfig;
-    }
-
     public static boolean validateHeaderMapping(MessageHeaderConfiguration messageHeaderConfiguration)
             throws IllegalAccessException {
-        if (messageHeaderConfiguration == null || messageHeaderConfiguration.getMsgHeaderPrefix() == null
-                || messageHeaderConfiguration.getMsgHeaderPrefix().isEmpty()) {
-            throw new IllegalArgumentException("Message header configuration or prefix list cannot be null or empty");
-        }
         for (Field field : MessageHeaderConfiguration.class.getDeclaredFields()) {
-            if (field.getName().equals("msgHeaderPrefix")) {
+            if (field.getName().equals("allowedPrefix")) {
                 continue;
             }
             Object value = field.get(messageHeaderConfiguration);
-            if (value == null) {
-                throw new IllegalArgumentException("Header value cannot be null: " + field.getName());
-            }
-            if (!startsWithValidPrefix(messageHeaderConfiguration.getMsgHeaderPrefix(), (String) value)) {
+            if (!startsWithValidPrefix(messageHeaderConfiguration.getAllowedPrefix(), (String) value)) {
                 throw new IllegalArgumentException(
                         String.format("Header '%s' with value '%s' doesn't start with any valid prefix",
                                 field.getName(), value
@@ -88,17 +71,12 @@ public class MessageHeaderConfiguration {
     }
 
     private static boolean startsWithValidPrefix(List<String> prefixList, String value) {
-        if (prefixList == null || value == null) {
-            return false;
-        }
         for (String prefix : prefixList) {
-            if (prefix == null) {
-                continue;
-            }
             if (value.startsWith(prefix)) {
                 return true;
             }
         }
         return false;
     }
+
 }

@@ -63,12 +63,10 @@ public class VaradhiApplication {
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
             Map<ComponentKind, Verticle> verticles =
                     getComponentVerticles(configuration, services, clusterManager, memberInfo);
-            MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderConfiguration.buildFromConfig(
-                    configuration.getMessageHeaderConfiguration());
+            MessageHeaderConfiguration messageHeaderConfiguration = configuration.getMessageHeaderConfiguration();
             if (!MessageHeaderConfiguration.validateHeaderMapping(messageHeaderConfiguration)) {
                      String error = "Message header validation failed. Please ensure all headers use valid prefixes: " +
-                             messageHeaderConfiguration.getMsgHeaderPrefix();
-                        log.error(error);
+                             messageHeaderConfiguration.getAllowedPrefix();
                         throw new InvalidConfigException(error);
             }
             createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
