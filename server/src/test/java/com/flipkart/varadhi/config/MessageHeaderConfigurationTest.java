@@ -1,26 +1,14 @@
 package com.flipkart.varadhi.config;
 
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Arrays;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MessageHeaderConfigurationTest {
-
-    private Validator validator;
-
-    @BeforeEach
-    public void setUp() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
 
     private MessageHeaderConfiguration getDefaultMessageHeaderConfig() {
         return MessageHeaderConfiguration.builder()
@@ -52,12 +40,13 @@ public class MessageHeaderConfigurationTest {
         MessageHeaderConfiguration config = getDefaultMessageHeaderConfig();
         config.setAllowedPrefix(Arrays.asList(prefix1, prefix2));
 
-        Set<jakarta.validation.ConstraintViolation<MessageHeaderConfiguration>> violations = validator.validate(config);
+        Executable validationAction = config::validate;
 
         if (expectedResult) {
-            assertTrue(violations.isEmpty(), "Validation failed but it should have passed.");
+            assertDoesNotThrow(validationAction, "Expected validation to pass but it failed.");
         } else {
-            assertFalse(violations.isEmpty(), "Validation passed but it should have failed.");
+            // If expected result is false, it should throw an IllegalArgumentException
+            assertThrows(IllegalArgumentException.class, validationAction, "Expected validation to throw an exception.");
         }
     }
 }

@@ -1,13 +1,10 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.utils.ValidateHeaderPrefix;
-import jakarta.validation.Valid;
+import com.flipkart.varadhi.entities.Validatable;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 
@@ -15,8 +12,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ValidateHeaderPrefix
-public class MessageHeaderConfiguration {
+public class MessageHeaderConfiguration implements Validatable {
     @NotNull
     private List<String> allowedPrefix;
 
@@ -53,5 +49,50 @@ public class MessageHeaderConfiguration {
 
     @NotNull
     private String msgIdHeader;
+
+    /**
+     * We use reflection to dynamically invoke getter methods for all fields in the
+     * `MessageHeaderConfiguration` class, allowing us to validate them without
+     * explicitly coding checks for each field. This makes the validation process
+     * scalable and easier to maintain, as any new fields with getters will be
+     * automatically validated. The `allowedPrefix` field is skipped as it is handled separately.
+     */
+    @SneakyThrows
+    @Override
+    public void validate() {
+        List<String> allowedPrefixList = getAllowedPrefix();
+        for (String prefix : allowedPrefixList) {
+            if (prefix.isEmpty() || prefix.isBlank()) {
+                throw new IllegalArgumentException("Header prefix cannot be blank");
+            }
+        }
+
+        for (Method method : MessageHeaderConfiguration.class.getDeclaredMethods()) {
+            if (isGetterMethod(method)) {
+                    if ("getAllowedPrefix".equals(method.getName())) {
+                        continue;
+                    }
+                    Object value = method.invoke(this);
+                    if (value instanceof String stringValue) {
+                        if (!startsWithValidPrefix(allowedPrefixList, stringValue)) {
+                            throw new IllegalArgumentException(method.getName() + " does not have a valid header value : " + stringValue);
+                        }
+                    }
+            }
+        }
+    }
+
+    private boolean isGetterMethod(Method method) {
+        return method.getName().startsWith("get") && method.getReturnType() != void.class;
+    }
+
+    private boolean startsWithValidPrefix(List<String> allowedPrefixes, String value) {
+        for (String prefix : allowedPrefixes) {
+            if (value.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

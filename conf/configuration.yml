@@ -84,7 +84,7 @@ otelOptions:
 
 messageHeaderConfiguration:
   allowedPrefix: ["X_"]
-  msgIdHeader: "X_GROUP_ID"
+  msgIdHeader: "X_MESSAGE_ID"
   groupIdHeader: "X_GROUP_ID"
   callbackCodes: "X_CALLBACK_CODES"
   requestTimeout: "X_REQUEST_TIMEOUT"

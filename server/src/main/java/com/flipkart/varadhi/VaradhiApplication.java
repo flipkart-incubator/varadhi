@@ -155,11 +155,8 @@ public class VaradhiApplication {
         try {
             JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
             AppConfiguration configuration = content.mapTo(AppConfiguration.class);
-            var errors = Validator.validate(configuration);
-            if (errors.isEmpty()) {
-                return configuration;
-            }
-            throw new InvalidConfigException("Invalid Configuration: \n" + Strings.join(errors, '\n'));
+            configuration.validate();
+            return configuration;
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to load Application Configuration", e);
         } finally {
