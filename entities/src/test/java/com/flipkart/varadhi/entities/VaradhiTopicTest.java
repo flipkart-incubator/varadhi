@@ -109,16 +109,16 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void markActive_ChangesStatusToActive() {
+    void markCreated_ChangesStatusToCreated() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
-        varadhiTopic.markActive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
+        varadhiTopic.markCreated(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
 
         assertAll(
                 () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
                 () -> assertEquals(
-                        LifecycleStatus.State.ACTIVE, varadhiTopic.getStatus().getState(),
+                        LifecycleStatus.State.CREATED, varadhiTopic.getStatus().getState(),
                         "Status state mismatch"
                 ),
                 () -> assertEquals(

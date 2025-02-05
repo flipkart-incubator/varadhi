@@ -56,6 +56,17 @@ public class LifecycleStatus {
     }
 
     /**
+     * Updates the lifecycle status with the specified state.
+     * The message is set to the default message of the state.
+     * The actor code remains unchanged.
+     *
+     * @param state the new state of the entity
+     */
+    public void update(State state) {
+        update(state, state.getDefaultMessage(), this.actorCode);
+    }
+
+    /**
      * Updates the lifecycle status with the specified state and message.
      * The actor code remains unchanged.
      *
@@ -76,21 +87,33 @@ public class LifecycleStatus {
         CREATED("Successfully created."),
         CREATE_FAILED("Creation failed."),
 
-        UPDATING("Update in progress."),
-        UPDATED("Successfully updated."),
-        UPDATE_FAILED("Update failed."),
-
         DELETING("Deletion in progress."),
-        DELETED("Successfully deleted."),
         DELETE_FAILED("Deletion failed."),
 
-        ACTIVE("Currently active."),
         INACTIVE("Currently inactive.");
 
         /**
          * The default message associated with the state.
          */
         private final String defaultMessage;
+
+        /**
+         * Checks if the state is retriable.
+         *
+         * @return true if the state is CREATE_FAILED or DELETE_FAILED, false otherwise.
+         */
+        public boolean isRetriable() {
+            return this == CREATE_FAILED || this == DELETE_FAILED;
+        }
+
+        /**
+         * Checks if the state is terminal.
+         *
+         * @return true if the state is CREATED or INACTIVE, false otherwise.
+         */
+        public boolean isTerminal() {
+            return this == CREATED || this == INACTIVE;
+        }
     }
 
     /**
