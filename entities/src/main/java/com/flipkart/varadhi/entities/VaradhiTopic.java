@@ -57,7 +57,7 @@ public class VaradhiTopic extends AbstractTopic {
     ) {
         return new VaradhiTopic(
                 buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(),
-                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actorCode)
+                new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode)
         );
     }
 
@@ -105,13 +105,48 @@ public class VaradhiTopic extends AbstractTopic {
     }
 
     /**
-     * Marks the topic as active.
-     *
-     * @param actorCode the actor code indicating why the topic is being marked as active
-     * @param message   the message for the action
+     * Marks the topic as created.
      */
-    public void markActive(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.ACTIVE, message, actorCode);
+    public void markCreated() {
+        this.status.update(LifecycleStatus.State.CREATED);
+    }
+
+    /**
+     * Marks the topic as created with the specified actor code and message.
+     *
+     * @param actorCode the actor code indicating the reason for the state
+     * @param message   the message associated with the state
+     */
+    public void markCreated(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.CREATED, message, actorCode);
+    }
+
+    /**
+     * Marks the topic creation as failed with the specified message.
+     *
+     * @param message the message associated with the failure
+     */
+    public void markCreateFailed(String message) {
+        this.status.update(LifecycleStatus.State.CREATE_FAILED, message);
+    }
+
+    /**
+     * Marks the topic as deleting with the specified actor code and message.
+     *
+     * @param actorCode the actor code indicating the reason for the state
+     * @param message   the message associated with the state
+     */
+    public void markDeleting(LifecycleStatus.ActorCode actorCode, String message) {
+        this.status.update(LifecycleStatus.State.DELETING, message, actorCode);
+    }
+
+    /**
+     * Marks the topic deletion as failed with the specified message.
+     *
+     * @param message the message associated with the failure
+     */
+    public void markDeleteFailed(String message) {
+        this.status.update(LifecycleStatus.State.DELETE_FAILED, message);
     }
 
     /**
@@ -127,10 +162,21 @@ public class VaradhiTopic extends AbstractTopic {
     /**
      * Checks if the topic is active.
      *
-     * @return true if the topic is active, false otherwise
+     * @return true if the topic is in CREATED state, false otherwise
      */
     @JsonIgnore
     public boolean isActive() {
-        return this.status.getState() == LifecycleStatus.State.ACTIVE;
+        return this.status.getState() == LifecycleStatus.State.CREATED;
+    }
+
+    /**
+     * Checks if the topic's current state is retriable.
+     * A state is considered retriable if it is either CREATE_FAILED or DELETE_FAILED.
+     *
+     * @return true if the topic's state is retriable, false otherwise
+     */
+    @JsonIgnore
+    public boolean isRetriable() {
+        return this.status.getState().isRetriable();
     }
 }

@@ -2,12 +2,14 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,36 @@ public class VaradhiTopicService {
      */
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
+        try {
+            if (!exists(varadhiTopic.getName())) {
+                metaStore.createTopic(varadhiTopic);
+            } else {
+                VaradhiTopic existingTopic = getTopicIgnoringState(varadhiTopic.getName());
+                if (!existingTopic.isRetriable()) {
+                    throw new DuplicateResourceException(
+                            String.format("Topic '%s' already exists.", varadhiTopic.getName())
+                    );
+                }
+                metaStore.updateTopic(varadhiTopic);
+            }
+
+            createStorageTopics(varadhiTopic, project);
+            varadhiTopic.markCreated();
+        } catch (Exception e) {
+            varadhiTopic.markCreateFailed(e.getMessage());
+            throw e;
+        } finally {
+            updateTopicState(varadhiTopic);
+        }
+    }
+
+    /**
+     * Creates storage topics for a Varadhi topic.
+     *
+     * @param varadhiTopic the Varadhi topic
+     * @param project      the project associated with the topic
+     */
+    private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
                 internalTopic.getActiveTopics().forEach(storageTopic ->
@@ -63,6 +95,19 @@ public class VaradhiTopicService {
     }
 
     /**
+     * Retrieves a Varadhi topic by its name, ignoring its state.
+     *
+     * @param topicName the name of the topic
+     *
+     * @return the Varadhi topic
+     *
+     * @throws ResourceNotFoundException if the topic is not found
+     */
+    public VaradhiTopic getTopicIgnoringState(String topicName) {
+        return metaStore.getTopic(topicName);
+    }
+
+    /**
      * Deletes a Varadhi topic by its name.
      *
      * @param topicName     the name of the topic to delete
@@ -75,10 +120,19 @@ public class VaradhiTopicService {
         VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
         validateTopicForDeletion(topicName, deletionType);
 
-        if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
-            handleHardDelete(varadhiTopic);
-        } else {
-            handleSoftDelete(varadhiTopic, actionRequest);
+        try {
+            varadhiTopic.markDeleting(varadhiTopic.getStatus().getActorCode(), "Starting Topic Deletion");
+            metaStore.updateTopic(varadhiTopic);
+
+            if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
+                handleHardDelete(varadhiTopic);
+            } else {
+                handleSoftDelete(varadhiTopic, actionRequest);
+            }
+        } catch (Exception e) {
+            varadhiTopic.markDeleteFailed(e.getMessage());
+            updateTopicState(varadhiTopic);
+            throw e;
         }
     }
 
@@ -139,7 +193,7 @@ public class VaradhiTopicService {
             );
         }
 
-        varadhiTopic.markActive(actionRequest.actorCode(), actionRequest.message());
+        varadhiTopic.markCreated(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 
@@ -198,5 +252,13 @@ public class VaradhiTopicService {
         return metaStore.getTopicNames(projectName).stream()
                 .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
                 .toList();
+    }
+
+    private void updateTopicState(VaradhiTopic varadhiTopic) {
+        try {
+            metaStore.updateTopic(varadhiTopic);
+        } catch (Exception e) {
+            log.error("Failed to update topic state: {}", varadhiTopic.getName(), e);
+        }
     }
 }

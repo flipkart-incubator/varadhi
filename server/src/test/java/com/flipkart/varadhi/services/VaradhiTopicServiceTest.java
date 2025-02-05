@@ -110,7 +110,6 @@ class VaradhiTopicServiceTest {
         );
 
         verify(metaStore, times(1)).createTopic(varadhiTopic);
-        verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("MetaStore error", exception.getMessage());
     }
@@ -126,10 +125,27 @@ class VaradhiTopicServiceTest {
                         varadhiTopicService.create(varadhiTopic, project)
         );
 
-        verify(metaStore, never()).createTopic(varadhiTopic);
+        verify(metaStore, times(1)).createTopic(varadhiTopic);
+        verify(metaStore, times(1)).updateTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("StorageTopicService error", exception.getMessage());
+        assertEquals(LifecycleStatus.State.CREATE_FAILED, varadhiTopic.getStatus().getState());
+    }
+
+    @Test
+    void createVaradhiTopic_ExistingRetriableTopic_UpdatesTopic() {
+        VaradhiTopic varadhiTopic = createVaradhiTopicMock();
+        VaradhiTopic existingTopic = spy(varadhiTopic);
+        doReturn(true).when(existingTopic).isRetriable();
+        when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(existingTopic);
+        when(metaStore.checkTopicExists(varadhiTopic.getName())).thenReturn(true);
+
+        varadhiTopicService.create(varadhiTopic, project);
+
+        verify(metaStore, never()).createTopic(varadhiTopic);
+        verify(metaStore, times(2)).updateTopic(varadhiTopic);
+        verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
     }
 
     @Test
@@ -193,6 +209,20 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
+    void deleteVaradhiTopic_NonExistentTopic_ThrowsException() {
+        String nonExistentTopicName = "nonExistentTopic";
+        when(metaStore.getTopic(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
+
+        Exception exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> varadhiTopicService.delete(nonExistentTopicName, ResourceDeletionType.HARD_DELETE, null)
+        );
+
+        assertEquals(ResourceNotFoundException.class, exception.getClass());
+        assertEquals("Topic not found", exception.getMessage());
+    }
+
+    @Test
     void softDeleteVaradhiTopic_MetaStoreSuccess_UpdatesTopicStatus() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
@@ -202,7 +232,7 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest);
 
-        verify(metaStore, times(1)).updateTopic(varadhiTopic);
+        verify(metaStore, times(2)).updateTopic(varadhiTopic);
         assertFalse(varadhiTopic.isActive());
     }
 
@@ -220,9 +250,10 @@ class VaradhiTopicServiceTest {
                         varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest)
         );
 
-        verify(metaStore, times(1)).updateTopic(varadhiTopic);
+        verify(metaStore, times(2)).updateTopic(varadhiTopic);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("MetaStore update failed", exception.getMessage());
+        assertEquals(LifecycleStatus.State.DELETE_FAILED, varadhiTopic.getStatus().getState());
     }
 
     @Test
@@ -324,8 +355,9 @@ class VaradhiTopicServiceTest {
 
     @Test
     void restoreVaradhiTopic_AlreadyActive_ThrowsException() {
-        VaradhiTopic varadhiTopic = createVaradhiTopicMock();
+        VaradhiTopic varadhiTopic = spy(createVaradhiTopicMock());
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        doReturn(true).when(varadhiTopic).isActive();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
                 LifecycleStatus.ActorCode.SYSTEM_ACTION,
                 "message"
@@ -401,8 +433,9 @@ class VaradhiTopicServiceTest {
 
     @Test
     void getVaradhiTopic_TopicExists_ReturnsTopic() {
-        VaradhiTopic varadhiTopic = createVaradhiTopicMock();
+        VaradhiTopic varadhiTopic = spy(createVaradhiTopicMock());
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        doReturn(true).when(varadhiTopic).isActive();
 
         VaradhiTopic retrievedTopic = varadhiTopicService.get(varadhiTopic.getName());
 

@@ -79,4 +79,20 @@ class LifecycleStatusTest {
         assertFalse(LifecycleStatus.ActorCode.ADMIN_ACTION.isUserAllowed());
         assertFalse(LifecycleStatus.ActorCode.SYSTEM_ACTION.isUserAllowed());
     }
+
+    @Test
+    void isRetriable_ReturnsCorrectValue() {
+        assertTrue(LifecycleStatus.State.CREATE_FAILED.isRetriable());
+        assertTrue(LifecycleStatus.State.DELETE_FAILED.isRetriable());
+        assertFalse(LifecycleStatus.State.CREATED.isRetriable());
+        assertFalse(LifecycleStatus.State.CREATING.isRetriable());
+    }
+
+    @Test
+    void isTerminal_ReturnsCorrectValue() {
+        assertTrue(LifecycleStatus.State.CREATED.isTerminal());
+        assertTrue(LifecycleStatus.State.INACTIVE.isTerminal());
+        assertFalse(LifecycleStatus.State.CREATE_FAILED.isTerminal());
+        assertFalse(LifecycleStatus.State.CREATING.isTerminal());
+    }
 }
