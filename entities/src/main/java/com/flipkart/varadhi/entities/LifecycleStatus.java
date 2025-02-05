@@ -76,12 +76,7 @@ public class LifecycleStatus {
         CREATED("Successfully created."),
         CREATE_FAILED("Creation failed."),
 
-        UPDATING("Update in progress."),
-        UPDATED("Successfully updated."),
-        UPDATE_FAILED("Update failed."),
-
         DELETING("Deletion in progress."),
-        DELETED("Successfully deleted."),
         DELETE_FAILED("Deletion failed."),
 
         ACTIVE("Currently active."),
