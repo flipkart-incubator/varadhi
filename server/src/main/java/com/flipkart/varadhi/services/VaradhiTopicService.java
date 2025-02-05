@@ -193,7 +193,7 @@ public class VaradhiTopicService {
             );
         }
 
-        varadhiTopic.markCreated(actionRequest.actorCode(), actionRequest.message());
+        varadhiTopic.restore(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 

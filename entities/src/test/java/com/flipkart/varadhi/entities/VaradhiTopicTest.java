@@ -33,6 +33,7 @@ class VaradhiTopicTest {
     @Test
     void of_WithValidInputs_CreatesVaradhiTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.markCreated();
 
         assertAll(
                 () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
@@ -46,6 +47,7 @@ class VaradhiTopicTest {
     @Test
     void of_WithGroupedFlag_CreatesGroupedVaradhiTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(true);
+        varadhiTopic.markCreated();
 
         assertAll(
                 () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
@@ -109,11 +111,11 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void markCreated_ChangesStatusToCreated() {
+    void restore_ChangeStateToCreated() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
-        varadhiTopic.markCreated(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
+        varadhiTopic.restore(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
 
         assertAll(
                 () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
