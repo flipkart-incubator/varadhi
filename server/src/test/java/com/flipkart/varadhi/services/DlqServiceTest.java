@@ -51,7 +51,7 @@ class DlqServiceTest extends SubscriptionTestBase {
         SubscriptionOperation operation =
                 SubscriptionOperation.unsidelineOp(subscription.getName(), unsidelineRequest, requestedBy);
 
-        when(subscription.isWellProvisioned()).thenReturn(true);
+        when(subscription.isActive()).thenReturn(true);
         when(controllerClient.unsideline(anyString(), any(UnsidelineRequest.class), anyString()))
                 .thenReturn(CompletableFuture.completedFuture(operation));
 
@@ -66,7 +66,7 @@ class DlqServiceTest extends SubscriptionTestBase {
     void testUnsidelineInvalidState() {
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
-        when(subscription.isWellProvisioned()).thenReturn(false);
+        when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
                 InvalidOperationForResourceException.class,
                 () -> dlqService.unsideline(subscription, UnsidelineRequest.ofFailedAt(100), "testUser")
@@ -136,7 +136,7 @@ class DlqServiceTest extends SubscriptionTestBase {
     void testGetMessagesInvalidState() {
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
-        when(subscription.isWellProvisioned()).thenReturn(false);
+        when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
                 InvalidOperationForResourceException.class,
                 () -> dlqService.getMessages(
@@ -187,7 +187,7 @@ class DlqServiceTest extends SubscriptionTestBase {
             assignments.add(new Assignment(subscription.getName(), i, consumerId));
         }
         String subscriptionId = subscription.getName();
-        when(subscription.isWellProvisioned()).thenReturn(true);
+        when(subscription.isActive()).thenReturn(true);
         doReturn(CompletableFuture.completedFuture(new ShardAssignments(assignments))).when(controllerClient)
                 .getShardAssignments(subscriptionId);
         doReturn(consumerClient).when(consumerFactory).getInstance(consumerId);

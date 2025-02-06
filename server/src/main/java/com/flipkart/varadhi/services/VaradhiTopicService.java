@@ -79,7 +79,6 @@ public class VaradhiTopicService {
                         storageTopicService.create(storageTopic, project)
                 )
         );
-        metaStore.createTopic(varadhiTopic);
     }
 
     /**
@@ -106,19 +105,10 @@ public class VaradhiTopicService {
         VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
         validateTopicForDeletion(topicName, deletionType);
 
-        try {
-            varadhiTopic.markDeleting(varadhiTopic.getStatus().getActorCode(), "Starting Topic Deletion");
-            metaStore.updateTopic(varadhiTopic);
-
-            if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
-                handleHardDelete(varadhiTopic);
-            } else {
-                handleSoftDelete(varadhiTopic, actionRequest);
-            }
-        } catch (Exception e) {
-            varadhiTopic.markDeleteFailed(e.getMessage());
-            updateTopicState(varadhiTopic);
-            throw e;
+        if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
+            handleHardDelete(varadhiTopic, actionRequest);
+        } else {
+            handleSoftDelete(varadhiTopic, actionRequest);
         }
     }
 
@@ -137,19 +127,29 @@ public class VaradhiTopicService {
     /**
      * Handles the hard deletion of a Varadhi topic.
      *
-     * @param varadhiTopic the Varadhi topic to hard delete
+     * @param varadhiTopic  the Varadhi topic to hard delete
+     * @param actionRequest the request containing the actor code and message for the deletion
      */
-    public void handleHardDelete(VaradhiTopic varadhiTopic) {
+    public void handleHardDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Hard deleting Varadhi topic: {}", varadhiTopic.getName());
 
         Project project = metaStore.getProject(varadhiTopic.getProjectName());
 
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                internalTopic.getActiveTopics().forEach(storageTopic ->
-                        storageTopicService.delete(storageTopic.getName(), project)
-                )
-        );
-        metaStore.deleteTopic(varadhiTopic.getName());
+        try {
+            varadhiTopic.markDeleting(actionRequest.actorCode(), "Starting Topic Deletion");
+            metaStore.updateTopic(varadhiTopic);
+
+            varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
+                    internalTopic.getActiveTopics().forEach(storageTopic ->
+                            storageTopicService.delete(storageTopic.getName(), project)
+                    )
+            );
+            metaStore.deleteTopic(varadhiTopic.getName());
+        } catch (Exception e) {
+            varadhiTopic.markDeleteFailed(e.getMessage());
+            updateTopicState(varadhiTopic);
+            throw e;
+        }
     }
 
     /**
@@ -167,6 +167,10 @@ public class VaradhiTopicService {
 
         if (varadhiTopic.isActive()) {
             throw new InvalidOperationForResourceException("Topic %s is not deleted.".formatted(topicName));
+        }
+
+        if (!varadhiTopic.isInactive()) {
+            throw new InvalidOperationForResourceException("Only inactive topics can be restored.");
         }
 
         LifecycleStatus.ActorCode lastAction = varadhiTopic.getStatus().getActorCode();
@@ -240,6 +244,11 @@ public class VaradhiTopicService {
                 .toList();
     }
 
+    /**
+     * Updates the state of the given Varadhi topic in the meta store.
+     *
+     * @param varadhiTopic the Varadhi topic whose state is to be updated
+     */
     private void updateTopicState(VaradhiTopic varadhiTopic) {
         try {
             metaStore.updateTopic(varadhiTopic);

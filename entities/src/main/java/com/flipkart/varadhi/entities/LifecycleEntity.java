@@ -91,6 +91,16 @@ public abstract class LifecycleEntity extends MetaStoreEntity {
     }
 
     /**
+     * Checks if the entity is inactive.
+     *
+     * @return true if the entity is in the inactive state, false otherwise
+     */
+    @JsonIgnore
+    public boolean isInactive() {
+        return this.status.getState() == LifecycleStatus.State.INACTIVE;
+    }
+
+    /**
      * Checks if the entity's state is retriable.
      *
      * @return true if the entity's state is retriable, false otherwise

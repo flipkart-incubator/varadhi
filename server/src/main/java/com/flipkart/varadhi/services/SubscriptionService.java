@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -57,7 +58,7 @@ public class SubscriptionService {
     public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
         return metaStore.getSubscriptionNames(projectName).stream()
                 .filter(subscriptionName ->
-                        includeInactive || metaStore.getSubscription(subscriptionName).isWellProvisioned())
+                        includeInactive || metaStore.getSubscription(subscriptionName).isActive())
                 .toList();
     }
 
@@ -82,21 +83,32 @@ public class SubscriptionService {
      * @return the created subscription
      */
     public VaradhiSubscription createSubscription(
-            VaradhiTopic subscribedTopic, VaradhiSubscription subscription,
-            Project subProject
+            VaradhiTopic subscribedTopic, VaradhiSubscription subscription, Project subProject
     ) {
         validateGroupedSubscription(subscribedTopic, subscription);
-        metaStore.createSubscription(subscription);
 
         try {
+            if (!exists(subscription.getName())) {
+                metaStore.createSubscription(subscription);
+            } else {
+                VaradhiSubscription existingSubscription = getSubscription(subscription.getName());
+                if (!existingSubscription.isRetriable()) {
+                    throw new DuplicateResourceException(
+                            String.format("Subscription '%s' already exists.", subscription.getName())
+                    );
+                }
+                shardProvisioner.deProvision(subscription, subProject);
+                metaStore.updateSubscription(subscription);
+            }
+
             shardProvisioner.provision(subscription, subProject);
             subscription.markCreated();
         } catch (Exception e) {
-            log.error("Failed to create subscription", e);
+            log.error("Failed to create subscription: ", e);
             subscription.markCreateFailed(e.getMessage());
             throw e;
         } finally {
-            metaStore.updateSubscription(subscription);
+            updateSubscriptionState(subscription);
         }
         return subscription;
     }
@@ -211,14 +223,13 @@ public class SubscriptionService {
             String subscriptionName, String requestedBy, ResourceActionRequest actionRequest) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
-        if (subscription.isWellProvisioned()) {
+        if (subscription.isActive()) {
             throw new InvalidOperationForResourceException(
                     "Subscription '%s' is already active.".formatted(subscriptionName));
         }
 
         if (!subscription.isInactive()) {
-            throw new InvalidOperationForResourceException(
-                    "Only inactive subscriptions can be restored.");
+            throw new InvalidOperationForResourceException("Only inactive subscriptions can be restored.");
         }
 
         LifecycleStatus.ActorCode lastAction = subscription.getStatus().getActorCode();
@@ -251,7 +262,7 @@ public class SubscriptionService {
      */
     private VaradhiSubscription getValidatedSubscription(String subscriptionName) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new ResourceNotFoundException(String.format(
                     "Subscription '%s' not found or in invalid state.", subscriptionName));
         }
@@ -303,7 +314,7 @@ public class SubscriptionService {
             BiFunction<String, String, CompletableFuture<SubscriptionOperation>> operation
     ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Subscription '%s' is not well-provisioned for this operation.", subscription.getName()));
         }
@@ -321,17 +332,17 @@ public class SubscriptionService {
             VaradhiSubscription subscription,
             Project subProject, ResourceActionRequest actionRequest
     ) {
-        subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());
-        metaStore.updateSubscription(subscription);
-
         try {
+            subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());
+            metaStore.updateSubscription(subscription);
+
             shardProvisioner.deProvision(subscription, subProject);
             metaStore.deleteSubscription(subscription.getName());
             log.info("Subscription '{}' deleted successfully.", subscription.getName());
         } catch (Exception e) {
             log.error("Failed to hard delete subscription '{}'.", subscription.getName(), e);
             subscription.markDeleteFailed(e.getMessage());
-            metaStore.updateSubscription(subscription);
+            updateSubscriptionState(subscription);
             throw e;
         }
     }
@@ -346,5 +357,29 @@ public class SubscriptionService {
         subscription.markInactive(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateSubscription(subscription);
         log.info("Subscription '{}' marked inactive successfully.", subscription.getName());
+    }
+
+    /**
+     * Updates the state of the given Varadhi subscription in the meta store.
+     *
+     * @param varadhiSubscription the Varadhi subscription whose state is to be updated
+     */
+    private void updateSubscriptionState(VaradhiSubscription varadhiSubscription) {
+        try {
+            metaStore.updateSubscription(varadhiSubscription);
+        } catch (Exception e) {
+            log.error("Failed to update subscription state: {}", varadhiSubscription.getName(), e);
+        }
+    }
+
+    /**
+     * Checks if a subscription exists.
+     *
+     * @param subscriptionName the name of the subscription
+     *
+     * @return true if the subscription exists, false otherwise
+     */
+    public boolean exists(String subscriptionName) {
+        return metaStore.checkSubscriptionExists(subscriptionName);
     }
 }
