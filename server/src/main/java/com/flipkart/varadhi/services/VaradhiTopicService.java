@@ -48,7 +48,7 @@ public class VaradhiTopicService {
             if (!exists(varadhiTopic.getName())) {
                 metaStore.createTopic(varadhiTopic);
             } else {
-                VaradhiTopic existingTopic = getTopicIgnoringState(varadhiTopic.getName());
+                VaradhiTopic existingTopic = get(varadhiTopic.getName());
                 if (!existingTopic.isRetriable()) {
                     throw new DuplicateResourceException(
                             String.format("Topic '%s' already exists.", varadhiTopic.getName())
@@ -91,19 +91,6 @@ public class VaradhiTopicService {
      * @return the Varadhi topic
      */
     public VaradhiTopic get(String topicName) {
-        return metaStore.getTopic(topicName);
-    }
-
-    /**
-     * Retrieves a Varadhi topic by its name, ignoring its state.
-     *
-     * @param topicName the name of the topic
-     *
-     * @return the Varadhi topic
-     *
-     * @throws ResourceNotFoundException if the topic is not found
-     */
-    public VaradhiTopic getTopicIgnoringState(String topicName) {
         return metaStore.getTopic(topicName);
     }
 
