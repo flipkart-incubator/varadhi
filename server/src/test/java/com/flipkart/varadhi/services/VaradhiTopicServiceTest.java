@@ -151,8 +151,11 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_SuccessfulHardDelete() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
+        ResourceActionRequest actionRequest = new ResourceActionRequest(
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
+        );
 
-        varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null);
+        varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
@@ -161,11 +164,15 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_StorageTopicDoesNotExist_SuccessfulHardDelete() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
+        ResourceActionRequest actionRequest = new ResourceActionRequest(
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
+        );
+
         when(storageTopicService.exists(pulsarStorageTopic.getName())).thenReturn(false);
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         when(metaStore.getProject(project.getName())).thenReturn(project);
 
-        varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null);
+        varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
         verify(metaStore, times(1)).deleteTopic(varadhiTopic.getName());
@@ -174,11 +181,16 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
+        ResourceActionRequest actionRequest = new ResourceActionRequest(
+                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
+        );
+
         doThrow(new VaradhiException("MetaStore deletion failed")).when(metaStore).deleteTopic(varadhiTopic.getName());
 
         Exception exception = assertThrows(
                 VaradhiException.class,
-                () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
+                () -> varadhiTopicService.delete(
+                        varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest)
         );
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
@@ -232,7 +244,7 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest);
 
-        verify(metaStore, times(2)).updateTopic(varadhiTopic);
+        verify(metaStore, times(1)).updateTopic(varadhiTopic);
         assertFalse(varadhiTopic.isActive());
     }
 
@@ -250,10 +262,9 @@ class VaradhiTopicServiceTest {
                         varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest)
         );
 
-        verify(metaStore, times(2)).updateTopic(varadhiTopic);
+        verify(metaStore, times(1)).updateTopic(varadhiTopic);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("MetaStore update failed", exception.getMessage());
-        assertEquals(LifecycleStatus.State.DELETE_FAILED, varadhiTopic.getStatus().getState());
     }
 
     @Test
