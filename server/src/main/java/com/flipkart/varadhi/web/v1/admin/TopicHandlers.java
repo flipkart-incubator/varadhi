@@ -39,7 +39,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_RESTORE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 
 /**
  * Handler class for managing topics in the Varadhi.
@@ -94,7 +94,7 @@ public class TopicHandlers implements RouteProvider {
                                 .authorize(TOPIC_LIST)
                                 .build(this::getHierarchies, this::listTopics),
                         RouteDefinition.patch("RestoreTopic", "/:topic/restore")
-                                .authorize(TOPIC_RESTORE)
+                                .authorize(TOPIC_UPDATE)
                                 .build(this::getHierarchies, this::restore)
                 )
         ).get();

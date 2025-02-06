@@ -46,7 +46,6 @@ public enum ResourceAction {
     TOPIC_DELETE(ResourceType.TOPIC, Action.DELETE),
     TOPIC_GET(ResourceType.TOPIC, Action.GET),
     TOPIC_LIST(ResourceType.PROJECT, Action.LIST),
-    TOPIC_RESTORE(ResourceType.TOPIC, Action.RESTORE),
     TOPIC_CONSUME(ResourceType.TOPIC, Action.CONSUME),
     TOPIC_PRODUCE(ResourceType.TOPIC, Action.PRODUCE),
 
@@ -58,7 +57,6 @@ public enum ResourceAction {
     SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, Action.DELETE),
     SUBSCRIPTION_GET(ResourceType.SUBSCRIPTION, Action.GET),
     SUBSCRIPTION_LIST(ResourceType.PROJECT, Action.LIST),
-    SUBSCRIPTION_RESTORE(ResourceType.SUBSCRIPTION, Action.RESTORE),
     SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, Action.SEEK),
 
     /**
@@ -100,7 +98,6 @@ public enum ResourceAction {
         GET("get"),
         LIST("list"),
         MIGRATE("migrate"),
-        RESTORE("restore"),
         CONSUME("consume"),
         PRODUCE("produce"),
         SEEK("seek"),

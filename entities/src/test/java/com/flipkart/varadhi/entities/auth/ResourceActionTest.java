@@ -28,7 +28,6 @@ class ResourceActionTest {
                 () -> assertEquals("get", ResourceAction.Action.GET.toString()),
                 () -> assertEquals("list", ResourceAction.Action.LIST.toString()),
                 () -> assertEquals("migrate", ResourceAction.Action.MIGRATE.toString()),
-                () -> assertEquals("restore", ResourceAction.Action.RESTORE.toString()),
                 () -> assertEquals("consume", ResourceAction.Action.CONSUME.toString()),
                 () -> assertEquals("produce", ResourceAction.Action.PRODUCE.toString()),
                 () -> assertEquals("seek", ResourceAction.Action.SEEK.toString()),

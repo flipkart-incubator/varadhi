@@ -8,7 +8,6 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,7 @@ public class VaradhiTopicService {
      * Creates a new Varadhi topic.
      *
      * @param varadhiTopic the Varadhi topic to create
-     * @param project the project associated with the topic
+     * @param project      the project associated with the topic
      */
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
@@ -56,17 +55,11 @@ public class VaradhiTopicService {
      * Retrieves a Varadhi topic by its name.
      *
      * @param topicName the name of the topic
+     *
      * @return the Varadhi topic
-     * @throws ResourceNotFoundException if the topic is not found or inactive
      */
     public VaradhiTopic get(String topicName) {
-        VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
-
-        if (!varadhiTopic.isActive()) {
-            throw new ResourceNotFoundException("Topic %s not found.".formatted(topicName));
-        }
-
-        return varadhiTopic;
+        return metaStore.getTopic(topicName);
     }
 
     /**
@@ -186,6 +179,7 @@ public class VaradhiTopicService {
      * Checks if a topic exists.
      *
      * @param topicName the name of the topic
+     *
      * @return true if the topic exists, false otherwise
      */
     public boolean exists(String topicName) {
@@ -195,7 +189,7 @@ public class VaradhiTopicService {
     /**
      * Retrieves a list of Varadhi topic names for a given project.
      *
-     * @param projectName the name of the project
+     * @param projectName     the name of the project
      * @param includeInactive flag to include inactive or soft-deleted topics
      *
      * @return a list of Varadhi topic names

@@ -241,11 +241,6 @@ public class SubscriptionTests extends E2EBase {
 
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.SOFT_DELETE.toString(), 200);
 
-        makeGetRequest(
-                getSubscriptionsUri(o1t1p1, subName), 404, "Subscription 'default.sub3' not found or in invalid state.",
-                true
-        );
-
         List<String> subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));
         assertFalse(subs.contains(subName));
 

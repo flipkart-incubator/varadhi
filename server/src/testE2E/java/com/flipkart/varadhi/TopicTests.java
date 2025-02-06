@@ -130,8 +130,6 @@ public class TopicTests extends E2EBase {
         List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
         Assertions.assertFalse(topics.contains(topicName));
 
-        makeGetRequest(getTopicsUri(o1t1Project1, topicName), 404, "Topic default.test-topic-3 not found.", true);
-
         topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1) + "?includeInactive=true", 200));
         Assertions.assertTrue(topics.contains(topicName));
 

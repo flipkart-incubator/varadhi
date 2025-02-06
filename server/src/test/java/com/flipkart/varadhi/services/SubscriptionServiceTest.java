@@ -362,23 +362,16 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void getSubscription_InactiveSubscription_ThrowsException() {
+    void getSubscription_InactiveSubscription_ReturnsCorrectSubscription() {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
         varadhiMetaStore.updateSubscription(subscription1);
 
         when(varadhiMetaStore.getSubscription(subscription1.getName())).thenReturn(subscription1);
 
-        Exception exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> subscriptionService.getSubscription(subscription1.getName())
-        );
+        VaradhiSubscription actualSubscription = subscriptionService.getSubscription(subscription1.getName());
 
-        assertEquals(
-                "Subscription '%s' not found or in invalid state.".formatted(subscription1.getName()),
-                exception.getMessage()
-        );
-        verify(varadhiMetaStore, times(1)).getSubscription(subscription1.getName());
+        assertSubscriptionsEqual(subscription1, actualSubscription);
     }
 
     @Test

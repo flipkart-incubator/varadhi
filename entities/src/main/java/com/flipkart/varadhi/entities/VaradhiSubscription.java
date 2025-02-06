@@ -119,13 +119,13 @@ public class VaradhiSubscription extends MetaStoreEntity {
     }
 
     /**
-     * Checks if the subscription is active.
+     * Checks if the subscription is inactive.
      *
-     * @return true if the subscription not inactive, false otherwise
+     * @return true if the subscription is inactive, false otherwise
      */
     @JsonIgnore
-    public boolean isActive() {
-        return !LifecycleStatus.State.INACTIVE.equals(status.getState());
+    public boolean isInactive() {
+        return LifecycleStatus.State.INACTIVE.equals(status.getState());
     }
 
     /**

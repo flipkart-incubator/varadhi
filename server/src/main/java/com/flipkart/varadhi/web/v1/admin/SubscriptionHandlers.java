@@ -45,7 +45,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CRE
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_RESTORE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CONSUME;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
@@ -133,7 +132,7 @@ public class SubscriptionHandlers implements RouteProvider {
                         RouteDefinition
                                 .patch("RestoreSubscription", "/:subscription/restore")
                                 .nonBlocking()
-                                .authorize(SUBSCRIPTION_RESTORE)
+                                .authorize(SUBSCRIPTION_UPDATE)
                                 .build(this::getHierarchies, this::restore),
                         RouteDefinition
                                 .post("StartSubscription", "/:subscription/start")
@@ -190,7 +189,7 @@ public class SubscriptionHandlers implements RouteProvider {
         }
 
         VaradhiSubscription subscription =
-                subscriptionService.getSubscriptionWithoutValidation(getSubscriptionFqn(ctx));
+                subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];

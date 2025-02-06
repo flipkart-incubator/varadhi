@@ -78,7 +78,7 @@ public class DlqHandlers implements RouteProvider {
         Project project = projectService.getCachedProject(projectName);
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription =
-                subscriptionService.getSubscriptionWithoutValidation(getSubscriptionFqn(ctx));
+                subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];

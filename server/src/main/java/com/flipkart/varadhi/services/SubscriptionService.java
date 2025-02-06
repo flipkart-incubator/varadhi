@@ -49,14 +49,15 @@ public class SubscriptionService {
     /**
      * Retrieves the list of subscription names for a given project.
      *
-     * @param projectName the name of the project
+     * @param projectName     the name of the project
      * @param includeInactive flag to include inactive or soft-deleted subscriptions
      *
      * @return the list of subscription names
      */
     public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
         return metaStore.getSubscriptionNames(projectName).stream()
-                .filter(subscriptionName -> includeInactive || isActiveOrWellProvisionedByName(subscriptionName))
+                .filter(subscriptionName ->
+                        includeInactive || metaStore.getSubscription(subscriptionName).isWellProvisioned())
                 .toList();
     }
 
@@ -64,20 +65,10 @@ public class SubscriptionService {
      * Retrieves a subscription by its name.
      *
      * @param subscriptionName the name of the subscription
+     *
      * @return the subscription
      */
     public VaradhiSubscription getSubscription(String subscriptionName) {
-        return getValidatedSubscription(subscriptionName);
-    }
-
-    /**
-     * Retrieves a subscription by its name without checking if it is active.
-     *
-     * @param subscriptionName the name of the subscription
-     *
-     * @return the subscription
-     */
-    public VaradhiSubscription getSubscriptionWithoutValidation(String subscriptionName) {
         return metaStore.getSubscription(subscriptionName);
     }
 
@@ -114,7 +105,8 @@ public class SubscriptionService {
      * Starts a subscription.
      *
      * @param subscriptionName the name of the subscription
-     * @param requestedBy the user requesting the operation
+     * @param requestedBy      the user requesting the operation
+     *
      * @return a CompletableFuture representing the subscription operation
      */
     public CompletableFuture<SubscriptionOperation> start(String subscriptionName, String requestedBy) {
@@ -154,12 +146,8 @@ public class SubscriptionService {
         VaradhiSubscription subscription = getValidatedSubscription(subscriptionName);
         validateVersionForUpdate(fromVersion, subscription.getVersion());
 
-        boolean originalGrouped = subscription.isGrouped();
-
         subscription.setGrouped(grouped);
         validateGroupedSubscription(metaStore.getTopic(subscription.getTopic()), subscription);
-
-        subscription.setGrouped(originalGrouped);
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
                 .thenApply(state -> {
@@ -223,9 +211,14 @@ public class SubscriptionService {
             String subscriptionName, String requestedBy, ResourceActionRequest actionRequest) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
-        if (subscription.isActive()) {
+        if (subscription.isWellProvisioned()) {
             throw new InvalidOperationForResourceException(
                     "Subscription '%s' is already active.".formatted(subscriptionName));
+        }
+
+        if (!subscription.isInactive()) {
+            throw new InvalidOperationForResourceException(
+                    "Only inactive subscriptions can be restored.");
         }
 
         LifecycleStatus.ActorCode lastAction = subscription.getStatus().getActorCode();
@@ -248,28 +241,6 @@ public class SubscriptionService {
     }
 
     /**
-     * Checks if a subscription is active or well-provisioned.
-     *
-     * @param subscription the subscription to check
-     *
-     * @return true if the subscription is active or well-provisioned, false otherwise
-     */
-    private boolean isActiveOrWellProvisioned(VaradhiSubscription subscription) {
-        return subscription.isActive() || subscription.isWellProvisioned();
-    }
-
-    /**
-     * Checks if a subscription is active or well-provisioned by its name.
-     *
-     * @param subscriptionName the name of the subscription
-     *
-     * @return true if the subscription is active or well-provisioned, false otherwise
-     */
-    private boolean isActiveOrWellProvisionedByName(String subscriptionName) {
-        return isActiveOrWellProvisioned(metaStore.getSubscription(subscriptionName));
-    }
-
-    /**
      * Retrieves and validates a subscription by its name.
      *
      * @param subscriptionName the name of the subscription
@@ -280,7 +251,7 @@ public class SubscriptionService {
      */
     private VaradhiSubscription getValidatedSubscription(String subscriptionName) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
-        if (!isActiveOrWellProvisioned(subscription)) {
+        if (!subscription.isWellProvisioned()) {
             throw new ResourceNotFoundException(String.format(
                     "Subscription '%s' not found or in invalid state.", subscriptionName));
         }
@@ -331,7 +302,7 @@ public class SubscriptionService {
             String requestedBy,
             BiFunction<String, String, CompletableFuture<SubscriptionOperation>> operation
     ) {
-        VaradhiSubscription subscription = getValidatedSubscription(subscriptionName);
+        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
         if (!subscription.isWellProvisioned()) {
             throw new InvalidOperationForResourceException(String.format(
                     "Subscription '%s' is not well-provisioned for this operation.", subscription.getName()));
