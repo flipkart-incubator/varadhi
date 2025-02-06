@@ -97,7 +97,7 @@ public class SubscriptionTests extends E2EBase {
         assertSubscriptionEquals(sub, got);
 
         makeCreateRequest(
-                getSubscriptionsUri(o1t1p1), sub, 409, "Subscription(default.sub1) already exists.", true);
+                getSubscriptionsUri(o1t1p1), sub, 409, "Subscription 'default.sub1' already exists.", true);
         makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 200);
     }
 
