@@ -150,7 +150,9 @@ public class VaradhiApplication {
 
         try {
             JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
-            return content.mapTo(AppConfiguration.class);
+            AppConfiguration configuration = content.mapTo(AppConfiguration.class);
+            configuration.validate();
+            return configuration;
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to load Application Configuration", e);
         } finally {

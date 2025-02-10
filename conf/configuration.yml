@@ -81,3 +81,17 @@ otelOptions:
   otlp.aggregationTemporality: "CUMULATIVE"
   otlp.resourceAttributes:
   otlp.headers:
+
+messageHeaderConfiguration:
+  allowedPrefix: ["X_"]
+  msgIdHeader: "X_MESSAGE_ID"
+  groupIdHeader: "X_GROUP_ID"
+  callbackCodes: "X_CALLBACK_CODES"
+  requestTimeout: "X_REQUEST_TIMEOUT"
+  replyToHttpUriHeader: "X_REPLY_TO_HTTP_URI"
+  replyToHttpMethodHeader: "X_REPLY_TO_HTTP_METHOD"
+  replyToHeader: "X_REPLY_TO"
+  httpUriHeader: "X_HTTP_URI"
+  httpMethodHeader: "X_HTTP_METHOD"
+  httpContentType: "X_CONTENT_TYPE"
+

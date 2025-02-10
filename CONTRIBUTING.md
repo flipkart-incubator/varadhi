@@ -27,6 +27,13 @@
 - DO NOT use sleep or other timing assumptions in tests. It is wrong and will fail intermittently on any test server
   with other things going on that causes delays.
 
+### Follow these practices while writing UTs:
+- Create Mock implementations. 
+- Create Useful methods to generate variety of data.
+- Use real db, if the test is supposed to validate db interaction.
+- Mockito usage should be very minimal and careful. Mocking static method is big NO NO.
+- Assert as much as you can. Make least amount of assumptions in the tests.
+
 # Raising Pull Request
 - Fork the repository.
 - Make changes for your issue.
