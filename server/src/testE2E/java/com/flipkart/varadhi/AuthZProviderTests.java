@@ -1,6 +1,7 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -52,7 +53,10 @@ public class AuthZProviderTests extends E2EBase {
         fkTeamRocket = Team.of("team_rocket",  oPublic.getName());
         fkTeamAsh = Team.of("team_ash", oPublic.getName());
         fkDefault = Project.of("default", "", fkTeamRocket.getName(), oPublic.getName());
-        fkTopic001 = TopicResource.unGrouped("topic001",fkDefault.getName(), null);
+        fkTopic001 = TopicResource.unGrouped(
+                "topic001", fkDefault.getName(), null,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         makeCreateRequest(getOrgsUri(), oPublic, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamAsh, 200);
@@ -117,7 +121,7 @@ public class AuthZProviderTests extends E2EBase {
     private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();
 
     private static String getIamPolicyUri(String resourceUri) {
-        return String.join("/", VaradhiBaseUri, "v1", resourceUri, "policy");
+        return String.join("/", VARADHI_BASE_URI, "v1", resourceUri, "policy");
     }
 
     private static void bootstrapRoleBindings() {

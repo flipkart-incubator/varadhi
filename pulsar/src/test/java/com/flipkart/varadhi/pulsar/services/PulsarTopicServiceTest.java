@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
@@ -14,16 +13,9 @@ import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import org.apache.pulsar.client.admin.*;
-import org.apache.pulsar.client.api.MessageId;
-import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -58,7 +50,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
                 topics).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
@@ -68,7 +60,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_PulsarAdminException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
                 topics).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
@@ -78,7 +70,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_ConflictException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
                 topics).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
@@ -98,7 +90,7 @@ public class PulsarTopicServiceTest {
         String newTenant = "testTenantNew";
         Project projectNew = Project.of("projectNew", "", "public", newTenant);
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
                 topics).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));

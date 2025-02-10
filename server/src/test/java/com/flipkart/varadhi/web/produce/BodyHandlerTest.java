@@ -49,25 +49,25 @@ public class BodyHandlerTest extends ProduceTestBase {
         request.putHeader(MESSAGE_ID, messageId);
         request.putHeader(FORWARDED_FOR, "host1, host2");
         payload = "0123456789".getBytes();
-        String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "0123456789012345678".getBytes();
-        messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "01234567890123456789".getBytes();
-        messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "012345678901234567890".getBytes();
-        sendRequestWithByteBufferBody(
+        sendRequestWithPayload(
                 request, payload, 413, "Entity too large.",
                 ErrorResponse.class
         );
 
         payload = "012345678901234567890123456789".getBytes();
-        sendRequestWithByteBufferBody(
+        sendRequestWithPayload(
                 request, payload, 413, "Entity too large.",
                 ErrorResponse.class
         );

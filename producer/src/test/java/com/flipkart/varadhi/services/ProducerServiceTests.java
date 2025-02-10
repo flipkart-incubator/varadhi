@@ -252,7 +252,10 @@ public class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(project.getName(), name, false, null);
+        VaradhiTopic topic = VaradhiTopic.of(
+                project.getName(), name, false, null,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);
@@ -284,7 +287,7 @@ public class ProducerServiceTests {
         produceAttributes.put(TAG_PROJECT, project.getName());
         produceAttributes.put(TAG_TOPIC, topic);
         produceAttributes.put(TAG_IDENTITY, ANONYMOUS_IDENTITY);
-        produceAttributes.put(TAG_REMOTEHOST, "remoteHost");
+        produceAttributes.put(TAG_REMOTE_HOST, "remoteHost");
         return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
     }
 
@@ -319,7 +322,7 @@ public class ProducerServiceTests {
 
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name, int version) {
-            super(name, version, Constants.DefaultTopicCapacity);
+            super(name, version, Constants.DEFAULT_TOPIC_CAPACITY);
         }
     }
 }

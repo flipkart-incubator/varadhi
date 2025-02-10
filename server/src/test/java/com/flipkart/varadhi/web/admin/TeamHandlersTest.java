@@ -82,24 +82,24 @@ public class TeamHandlersTest extends WebTestBase {
         Team team1 = Team.of("team1", o1.getName());
 
         doReturn(team1).when(teamService).createTeam(eq(team1));
-        Team team1Created = sendRequestWithBody(request, team1, Team.class);
+        Team team1Created = sendRequestWithEntity(request, team1, Team.class);
         Assertions.assertEquals(team1, team1Created);
         verify(teamService, times(1)).createTeam(eq(team1));
 
         String orgNotFoundError = String.format("Org(%s) not found.", team1.getOrg());
         doThrow(new ResourceNotFoundException(orgNotFoundError)).when(teamService).createTeam(team1);
-        ErrorResponse response = sendRequestWithBody(request, team1, 404, orgNotFoundError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, team1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
         String duplicateOrgError =
                 String.format("Team(%s) already exists. Team is unique with in Org.", team1.getName());
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(teamService).createTeam(team1);
-        response = sendRequestWithBody(request, team1, 409, duplicateOrgError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, team1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
         doThrow(new MetaStoreException(someInternalError)).when(teamService).createTeam(team1);
-        response = sendRequestWithBody(request, team1, 500, someInternalError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, team1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }
 
@@ -111,14 +111,14 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamUrl(team1));
         doReturn(team1).when(teamService).getTeam(team1.getName(), team1.getOrg());
 
-        Team team1Get = sendRequestWithoutBody(request, Team.class);
+        Team team1Get = sendRequestWithoutPayload(request, Team.class);
         Assertions.assertEquals(team1, team1Get);
         verify(teamService, times(1)).getTeam(team1.getName(), team1.getOrg());
 
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
                 .getTeam(team1.getName(), team1.getOrg());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
 
@@ -171,18 +171,18 @@ public class TeamHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getTeamUrl(team1));
         doNothing().when(teamService).deleteTeam(team1.getName(), team1.getOrg());
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
         verify(teamService, times(1)).deleteTeam(team1.getName(), team1.getOrg());
 
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
                 .deleteTeam(team1.getName(), team1.getOrg());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
 
         String invalidOpError =
                 String.format("Can not delete Team(%s) as it has associated Project(s).", team1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(teamService)
                 .deleteTeam(team1.getName(), team1.getOrg());
-        sendRequestWithoutBody(request, 409, invalidOpError);
+        sendRequestWithoutPayload(request, 409, invalidOpError);
     }
 }

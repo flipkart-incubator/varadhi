@@ -34,7 +34,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
     }
@@ -42,7 +42,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithSameConfigAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, project);
         topicService.create(pt, project);
     }
@@ -50,8 +50,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithDifferentConfigNotAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt1 = PulsarStorageTopic.of(topicFQDN, 2, Constants.DefaultTopicCapacity);
-        PulsarStorageTopic pt2 = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt1 = PulsarStorageTopic.of(topicFQDN, 2, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt2 = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt1, project);
         MessagingException m =
                 Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt2, project));
@@ -65,7 +65,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         String topicFQDN = getRandomTopicFQDN();
 
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, projectNew);
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);

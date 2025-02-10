@@ -1,64 +1,116 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.RetryPolicy;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.entities.SubscriptionResource;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.handler.HttpException;
+import lombok.experimental.ExtensionMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.MockitoAnnotations;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class SubscriptionHandlersTest extends SubscriptionTestBase {
+@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+class SubscriptionHandlersTest extends SubscriptionTestBase {
+
+    private static final String BASE_PATH = "/projects/:project/subscriptions";
+    private static final String SUBSCRIPTION_PATH = BASE_PATH + "/:subscription";
+
     private SubscriptionHandlers subscriptionHandlers;
 
+    @Captor
+    private ArgumentCaptor<String> stringCaptor;
+
+    @Captor
+    private ArgumentCaptor<Integer> integerCaptor;
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
+        MockitoAnnotations.openMocks(this);
         subscriptionHandlers =
                 new SubscriptionHandlers(
                         subscriptionService, projectService, topicService, subscriptionFactory, new RestOptions());
+        configureRoutes();
+    }
 
-        Route routeCreate = router.post("/projects/:project/subscriptions").handler(bodyHandler).handler(ctx -> {
-                    subscriptionHandlers.setSubscription(ctx);
-                    ctx.next();
-                })
-                .handler(wrapBlocking(subscriptionHandlers::create));
-        setupFailureHandler(routeCreate);
+    private void configureRoutes() {
+        createRoute(
+                HttpMethod.POST, BASE_PATH,
+                subscriptionHandlers::create, true
+        );
+        createRoute(
+                HttpMethod.GET, SUBSCRIPTION_PATH,
+                subscriptionHandlers::get, false
+        );
+        createRoute(
+                HttpMethod.GET, BASE_PATH,
+                subscriptionHandlers::list, false
+        );
+        createRoute(
+                HttpMethod.DELETE, SUBSCRIPTION_PATH,
+                subscriptionHandlers::delete, false
+        );
+        createRoute(
+                HttpMethod.PUT, SUBSCRIPTION_PATH,
+                subscriptionHandlers::update, true
+        );
+        createRoute(
+                HttpMethod.PATCH, SUBSCRIPTION_PATH + "/restore",
+                subscriptionHandlers::restore, false
+        );
+        createRoute(
+                HttpMethod.POST, SUBSCRIPTION_PATH + "/start",
+                subscriptionHandlers::start, false
+        );
+        createRoute(
+                HttpMethod.POST, SUBSCRIPTION_PATH + "/stop",
+                subscriptionHandlers::stop, false
+        );
+    }
 
-        Route routeGet = router.get("/projects/:project/subscriptions/:subscription")
-                .handler(wrapBlocking(subscriptionHandlers::get));
-        setupFailureHandler(routeGet);
-
-        Route routeListAll =
-                router.get("/projects/:project/subscriptions").handler(wrapBlocking(subscriptionHandlers::list));
-        setupFailureHandler(routeListAll);
-
-        Route routeDelete = router.delete("/projects/:project/subscriptions/:subscription")
-                .handler(wrapBlocking(subscriptionHandlers::delete));
-        setupFailureHandler(routeDelete);
-
-        Route routeUpdate = router.put("/projects/:project/subscriptions/:subscription").handler(bodyHandler)
-                .handler(ctx -> {
-                    subscriptionHandlers.setSubscription(ctx);
-                    ctx.next();
-                })
-                .handler(wrapBlocking(subscriptionHandlers::update));
-        setupFailureHandler(routeUpdate);
+    private void createRoute(HttpMethod method, String path, Handler<RoutingContext> handler, boolean requiresBody) {
+        Route route = router.route(method, path);
+        if (requiresBody) {
+            route.handler(bodyHandler).handler(ctx -> {
+                subscriptionHandlers.setSubscription(ctx);
+                ctx.next();
+            });
+        }
+        route.handler(wrapBlocking(handler));
+        setupFailureHandler(route);
     }
 
     @AfterEach
@@ -67,133 +119,409 @@ public class SubscriptionHandlersTest extends SubscriptionTestBase {
     }
 
     @Test
-    void testSubscriptionCreate() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiTopic vTopic =  topicResource.toVaradhiTopic();
-        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
+    void createSubscription_ValidInput_CreatesSubscriptionSuccessfully() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
 
-        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
+        doReturn(vTopic).when(topicService).get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
-        SubscriptionResource created = sendRequestWithBody(request, resource, SubscriptionResource.class);
-        assertEquals(subscription.getName(), created.getSubscriptionInternalName());
+
+        SubscriptionResource createdResource = sendRequestWithEntity(request, resource, SubscriptionResource.class);
+
+        assertEquals(subscription.getName(), createdResource.getSubscriptionInternalName());
     }
 
     @Test
-    void testCreateSubscriptionWithNonExistentProject() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
+    void createSubscription_NonSuperUserWithIgnoreConstraints_ThrowsUnauthorizedException()
+            throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT) + "?ignoreConstraints=true");
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        String errorMessage = "ignoreConstraints is restricted to super admins only.";
 
-        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
-        doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
-        String errMsg = "Project not found.";
-        doThrow(new ResourceNotFoundException(errMsg)).when(projectService).getCachedProject(project.getName());
+        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(subscriptionService)
+                .createSubscription(any(), any(), any());
 
-        ErrorResponse resp = sendRequestWithBody(request, resource, 404, errMsg, ErrorResponse.class);
-        assertEquals(errMsg, resp.reason());
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 401, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
     }
 
     @Test
-    void testCreateSubscriptionWithNonExistentTopic() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
-        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, vTopic);
+    void createSubscription_NonExistentProject_ThrowsNotFoundException() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        String errorMessage = "Project not found.";
 
-        doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
-        doReturn(project).when(projectService).getCachedProject(project.getName());
-        String errMsg = "Topic not found.";
-        doThrow(new ResourceNotFoundException(errMsg)).when(topicService)
-                .get(topicResource.getProject() + "." + topicResource.getName());
+        doThrow(new ResourceNotFoundException(errorMessage)).when(projectService)
+                .getCachedProject(PROJECT.getName());
 
-        ErrorResponse resp = sendRequestWithBody(request, resource, 404, errMsg, ErrorResponse.class);
-        assertEquals(errMsg, resp.reason());
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 404, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
     }
 
     @Test
-    void testSubscriptionCreateInconsistentProjectNameFailure() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getSubscriptionsUrl(project));
+    void createSubscription_NonExistentTopic_ThrowsNotFoundException() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        String errorMessage = "Topic not found.";
+
+        doThrow(new ResourceNotFoundException(errorMessage)).when(topicService)
+                .get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 404, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void createSubscription_MismatchedProjectName_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
         SubscriptionResource resource =
-                getSubscriptionResource("sub1", Project.of("project2", "", "team1", "org1"), topicResource);
+                createSubscriptionResource(
+                        "sub1",
+                        Project.of("project2", "", "team1", "org1"), TOPIC_RESOURCE
+                );
+        String errorMessage = "Project name mismatch between URL and request body.";
 
-        String errMsg = "Specified Project name is different from Project name in url";
-        ErrorResponse resp = sendRequestWithBody(request, resource, 400, errMsg, ErrorResponse.class);
-        assertEquals(errMsg, resp.reason());
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
     }
 
     @Test
-    void testSubscriptionGet() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionUrl("sub12", project));
-        SubscriptionResource resource = getSubscriptionResource("sub12", project, topicResource);
+    void createSubscription_ExceedingRetryLimit_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        RetryPolicy retryPolicy = createCustomRetryPolicy(4);
+        SubscriptionResource resource =
+                createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE, retryPolicy);
+        String errorMessage = "Only 3 retries are supported.";
 
-        VaradhiSubscription subscription = getUngroupedSubscription("sub12", project, topicResource.toVaradhiTopic());
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        when(subscriptionService.getSubscription(captor.capture())).thenReturn(subscription);
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
 
-        SubscriptionResource got = sendRequestWithoutBody(request, SubscriptionResource.class);
-        assertEquals(got.getName(), resource.getName());
-        assertEquals(captor.getValue(), resource.getSubscriptionInternalName());
+        assertEquals(errorMessage, response.reason());
     }
 
     @Test
-    void testListSubscription() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getSubscriptionsUrl(project));
+    void createSubscription_UnsupportedProperties_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        resource.getProperties().put("unsupportedProperty", "value");
+        String errorMessage = "Unsupported properties: unsupportedProperty";
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        when(subscriptionService.getSubscriptionList(captor.capture()))
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void createSubscription_InvalidPropertyValues_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        resource.getProperties().put("unsideline.api.message_count", "-10");
+        String errorMessage = "Invalid value for property: unsideline.api.message_count";
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void getSubscription_ValidSubscription_ReturnsSubscription() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, buildSubscriptionUrl("sub12", PROJECT));
+        SubscriptionResource expectedResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        VaradhiSubscription subscription =
+                createUngroupedSubscription("sub12", PROJECT, TOPIC_RESOURCE.toVaradhiTopic());
+
+        when(subscriptionService.getSubscription(anyString())).thenReturn(subscription);
+
+        SubscriptionResource actualResource = sendRequestWithoutPayload(request, SubscriptionResource.class);
+
+        assertEquals(actualResource.getName(), expectedResource.getName());
+        verify(subscriptionService).getSubscription("project1.sub12");
+    }
+
+    @Test
+    void listSubscriptions_ValidProject_ReturnsSubscriptionList() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, buildSubscriptionsUrl(PROJECT));
+
+        when(subscriptionService.getSubscriptionList(PROJECT.getName(), false))
                 .thenReturn(List.of("sub1", "sub2"))
                 .thenReturn(List.of());
 
-        List<String> got = sendRequestWithoutBody(request, List.class);
-        assertEquals(List.of("sub1", "sub2"), got);
-        assertEquals(project.getName(), captor.getValue());
+        List<String> subscriptions = sendRequestWithoutPayload(request, List.class);
+        List<String> subscriptions2 = sendRequestWithoutPayload(request, List.class);
 
-        List<String> got2 = sendRequestWithoutBody(request, List.class);
-        assertEquals(List.of(), got2);
+        assertEquals(List.of("sub1", "sub2"), subscriptions);
+        assertEquals(List.of(), subscriptions2);
+        verify(subscriptionService, times(2))
+                .getSubscriptionList(PROJECT.getName(), false);
     }
 
     @Test
-    void testSubscriptionDelete() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getSubscriptionUrl("sub1", project));
-        SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+    void listSubscriptions_IncludingInactive_ReturnsAllSubscriptions() throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(HttpMethod.GET, buildSubscriptionsUrl(PROJECT) + "?includeInactive=true");
 
-        doReturn(project).when(projectService).getCachedProject(project.getName());
-        ArgumentCaptor<String> captorSubName = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Project> captorProject = ArgumentCaptor.forClass(Project.class);
+        when(subscriptionService.getSubscriptionList(PROJECT.getName(), true))
+                .thenReturn(List.of("sub1", "sub2", "sub3"));
+
+        List<String> subscriptions = sendRequestWithoutPayload(request, List.class);
+
+        assertEquals(List.of("sub1", "sub2", "sub3"), subscriptions);
+        verify(subscriptionService, times(1))
+                .getSubscriptionList(PROJECT.getName(), true);
+    }
+
+    @Test
+    void deleteSubscription_SoftDelete_Success() throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(
+                        HttpMethod.DELETE,
+                        buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=SOFT_DELETE"
+                );
+
+        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
-                .deleteSubscription(captorSubName.capture(), captorProject.capture(), any());
+                .deleteSubscription(anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
 
-        sendRequestWithoutBody(request, null);
-        assertEquals(captorSubName.getValue(), resource.getSubscriptionInternalName());
-        assertEquals(captorProject.getValue().getName(), project.getName());
-        verify(subscriptionService, times(1)).deleteSubscription(any(), any(), any());
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).deleteSubscription(
+                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
     }
 
     @Test
-    void testSubscriptionUpdate() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getSubscriptionUrl("sub1", project));
-        SubscriptionResource resource = getSubscriptionResource("sub1", project, topicResource);
+    void deleteSubscription_HardDelete_Success() throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(
+                        HttpMethod.DELETE,
+                        buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=HARD_DELETE"
+                );
 
-        VaradhiTopic vTopic = topicResource.toVaradhiTopic();
-        doReturn(vTopic).when(topicService).get(topicResource.getProject() + "." + topicResource.getName());
+        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+                .deleteSubscription(anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.HARD_DELETE), any());
 
-        VaradhiSubscription subscription = getUngroupedSubscription("sub1", project, vTopic);
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).deleteSubscription(
+                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.HARD_DELETE), any());
+    }
+
+    @Test
+    void deleteSubscription_NoDeletionType_UsesSoftDelete() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, buildSubscriptionUrl("sub1", PROJECT));
+
+        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+                .deleteSubscription(
+                        anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
+
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).deleteSubscription(
+                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
+    }
+
+    @Test
+    void deleteSubscription_InvalidDeletionType_UsesDefaultDeletionType() throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(
+                        HttpMethod.DELETE,
+                        buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=INVALID_TYPE"
+                );
+
+        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+                .deleteSubscription(
+                        anyString(), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
+
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).deleteSubscription(
+                eq("project1.sub1"), eq(PROJECT), any(), eq(ResourceDeletionType.SOFT_DELETE), any());
+    }
+
+    @Test
+    void updateSubscription_ValidRequest_ReturnsUpdatedSubscription() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub1", PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub1", PROJECT, TOPIC_RESOURCE);
+
+        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
+        doReturn(vTopic).when(topicService).get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
+
+        VaradhiSubscription subscription = createUngroupedSubscription("sub1", PROJECT, vTopic);
         subscription.setVersion(2);
         doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
-        ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Integer> versionCaptor = ArgumentCaptor.forClass(Integer.class);
+
         when(subscriptionService.updateSubscription(
-                nameCaptor.capture(), versionCaptor.capture(), anyString(), anyBoolean(), any(), any(), any(),
+                stringCaptor.capture(), integerCaptor.capture(), anyString(), anyBoolean(), any(), any(), any(),
                 any()
         )).thenReturn(
                 CompletableFuture.completedFuture(subscription));
 
-        SubscriptionResource updated = sendRequestWithBody(request, resource, SubscriptionResource.class);
+        SubscriptionResource updated = sendRequestWithEntity(request, resource, SubscriptionResource.class);
+
         assertEquals(resource.getName(), updated.getName());
-        assertEquals(resource.getSubscriptionInternalName(), nameCaptor.getValue());
-        assertEquals(0, versionCaptor.getValue());
+        assertEquals(resource.getSubscriptionInternalName(), stringCaptor.getValue());
+        assertEquals(0, integerCaptor.getValue());
     }
 
+    @Test
+    void updateSubscription_ExceedingRetryLimit_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub12", PROJECT));
+        RetryPolicy retryPolicy = createCustomRetryPolicy(4); // Exceeding retry attempts
+        SubscriptionResource resource =
+                createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE, retryPolicy);
+
+        String errorMessage = "Only 3 retries are supported.";
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void updateSubscription_MismatchedProjectName_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub12", PROJECT));
+        SubscriptionResource resource =
+                createSubscriptionResource(
+                        "sub12",
+                        Project.of("project2", "", "team1", "org1"), TOPIC_RESOURCE
+                );
+
+        String errorMessage = "Project name mismatch between URL and request body.";
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void updateSubscription_NonSuperUserWithIgnoreConstraints_ThrowsUnauthorizedException()
+            throws InterruptedException {
+        HttpRequest<Buffer> request =
+                createRequest(
+                        HttpMethod.PUT,
+                        buildSubscriptionUrl("sub12", PROJECT) + "?ignoreConstraints=true"
+                );
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+
+        String errorMessage = "ignoreConstraints is restricted to super admins only.";
+        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(subscriptionService)
+                .updateSubscription(any(), anyInt(), anyString(), anyBoolean(), any(), any(), any(), any());
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 401, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void updateSubscription_UnsupportedProperties_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub12", PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        resource.getProperties().put("unsupportedProperty", "value");
+
+        String errorMessage = "Unsupported properties: unsupportedProperty";
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void updateSubscription_InvalidPropertyValues_ThrowsBadRequest() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub12", PROJECT));
+        SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
+        resource.getProperties().put("unsideline.api.message_count", "-10");
+
+        String errorMessage = "Invalid value for property: unsideline.api.message_count";
+
+        ErrorResponse response = sendRequestWithEntity(
+                request, resource, 400, errorMessage,
+                ErrorResponse.class
+        );
+
+        assertEquals(errorMessage, response.reason());
+    }
+
+    @Test
+    void restoreSubscription_ValidRequest_ReturnsRestoredSubscription() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(
+                HttpMethod.PATCH,
+                buildSubscriptionUrl("sub1", PROJECT) + "/restore"
+        );
+
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+                .restoreSubscription(any(), any(), any());
+
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).restoreSubscription(any(), any(), any());
+    }
+
+    @Test
+    void startSubscription_ValidRequest_TriggersStart() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(
+                HttpMethod.POST,
+                buildSubscriptionUrl("sub1", PROJECT) + "/start"
+        );
+
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).start(any(), any());
+
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).start(any(), any());
+    }
+
+    @Test
+    void stopSubscription_ValidRequest_TriggersStop() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(
+                HttpMethod.POST,
+                buildSubscriptionUrl("sub1", PROJECT) + "/stop"
+        );
+
+        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).stop(any(), any());
+
+        sendRequestWithoutPayload(request, null);
+
+        verify(subscriptionService, times(1)).stop(any(), any());
+    }
 }

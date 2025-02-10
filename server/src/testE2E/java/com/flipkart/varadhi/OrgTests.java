@@ -13,7 +13,6 @@ public class OrgTests extends E2EBase {
     Org org1;
     Org org2;
 
-
     @BeforeEach
     public void setup() {
         org1 = Org.of("org10");
@@ -44,8 +43,7 @@ public class OrgTests extends E2EBase {
         makeDeleteRequest(getOrgUri(org1), 200);
         makeGetRequest(getOrgUri(org1), 404, String.format("Org(%s) not found.", org1.getName()), true);
         List<Org> orgList2 = getOrgs(makeListRequest(getOrgsUri(), 200));
-        Assertions.assertTrue(!orgList2.contains(org1));
+        Assertions.assertFalse(orgList2.contains(org1));
         Assertions.assertTrue(orgList2.contains(org2));
     }
-
 }
