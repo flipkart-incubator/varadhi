@@ -7,7 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public enum RouteBehaviour {
     telemetry(0),
+    parseOrg(50),
     authenticated(100),
+    post_authentication(101),
     hasBody(200),
     parseBody(300),
     addHierarchy(400),

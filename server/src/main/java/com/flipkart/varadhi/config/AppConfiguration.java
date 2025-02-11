@@ -33,9 +33,7 @@ public class AppConfiguration implements Validatable {
     @NotNull
     private HttpServerOptions httpServerOptions;
 
-    private boolean authenticationEnabled;
-
-    private AuthenticationOptions authentication;
+    private AuthenticationConfig authentication;
 
     private boolean authorizationEnabled;
 
