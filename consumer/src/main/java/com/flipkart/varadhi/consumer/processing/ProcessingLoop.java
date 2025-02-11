@@ -5,7 +5,6 @@ import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
-import com.flipkart.varadhi.entities.StandardHeaders;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

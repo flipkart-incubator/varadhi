@@ -4,6 +4,7 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -227,7 +228,8 @@ public class WebServerVerticle extends AbstractVerticle {
     @SuppressWarnings("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getRestOptions());
+        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration();
+        HeaderValidationHandler headerValidator = new HeaderValidationHandler(messageHeaderConfiguration, deployedRegion);
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
@@ -237,7 +239,7 @@ public class WebServerVerticle extends AbstractVerticle {
         ProducerMetricHandler producerMetricsHandler =
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
-                new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
+                new ProduceHandlers(deployedRegion, ctx -> headerValidator.validate(ctx,messageHeaderConfiguration), producerService, projectService,
                         producerMetricsHandler
                 ).get());
     }
