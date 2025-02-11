@@ -10,10 +10,10 @@ public class HeaderUtils {
     public static Multimap<String, String> copyVaradhiHeaders(MultiMap headers, List<String> allowedPrefix) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         headers.entries().forEach(entry -> {
-            String lowerCaseKey = entry.getKey().toLowerCase();
-            boolean validPrefix = allowedPrefix.stream().anyMatch(lowerCaseKey::startsWith);
+            String key = entry.getKey();
+            boolean validPrefix = allowedPrefix.stream().anyMatch(key::startsWith);
             if (validPrefix) {
-                varadhiHeaders.put(lowerCaseKey, entry.getValue());
+                varadhiHeaders.put(key, entry.getValue());
             }
         });
         return varadhiHeaders;

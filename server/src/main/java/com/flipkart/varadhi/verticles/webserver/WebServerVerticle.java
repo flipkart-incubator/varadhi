@@ -228,8 +228,7 @@ public class WebServerVerticle extends AbstractVerticle {
     @SuppressWarnings("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration();
-        HeaderValidationHandler headerValidator = new HeaderValidationHandler(messageHeaderConfiguration, deployedRegion);
+        HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getMessageHeaderConfiguration(), deployedRegion);
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
@@ -239,7 +238,7 @@ public class WebServerVerticle extends AbstractVerticle {
         ProducerMetricHandler producerMetricsHandler =
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
-                new ProduceHandlers(deployedRegion, ctx -> headerValidator.validate(ctx,messageHeaderConfiguration), producerService, projectService,
+                new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
                         producerMetricsHandler
                 ).get());
     }

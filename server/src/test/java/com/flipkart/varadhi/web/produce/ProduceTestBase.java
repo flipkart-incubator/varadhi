@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.produce;
 
+import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Project;
@@ -47,11 +48,12 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
+        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration();
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        HeaderValidationHandler headerHandler = new HeaderValidationHandler(options);
+        HeaderValidationHandler headerHandler = new HeaderValidationHandler(messageHeaderConfiguration, deployedRegion);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
-        produceHandlers = new ProduceHandlers(deployedRegion, ctx -> headerHandler.validate(ctx,messageHeaderConfiguration), producerService, projectService,
+        produceHandlers = new ProduceHandlers(deployedRegion, headerHandler::validate, producerService, projectService,
                 metricHandler
         );
         route = router.post("/projects/:project/topics/:topic/produce");

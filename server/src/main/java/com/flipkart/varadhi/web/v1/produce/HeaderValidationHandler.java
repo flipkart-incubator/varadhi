@@ -1,17 +1,13 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.utils.HeaderUtils;
 import com.google.common.collect.Multimap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
-
-import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
 
 @AllArgsConstructor
 public class HeaderValidationHandler {
@@ -20,35 +16,50 @@ public class HeaderValidationHandler {
     private static final int MAX_ID_LIMIT = 100;
     public static final String VALIDATED_HEADERS = "validatedHeaders";
     private static final String ANONYMOUS_IDENTITY = "Anonymous";
-    public void validate(RoutingContext ctx, MessageHeaderConfiguration config) {
+    public void validate(RoutingContext ctx) {
         Multimap<String, String> headers = HeaderUtils.copyVaradhiHeaders(ctx.request().headers(), messageHeaderConfiguration.getAllowedPrefix());
         String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
         headers.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
         headers.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
         headers.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
-        validateHeaders(headers);
+        ensureHeaderSemanticsAndSize(headers, ctx.body().buffer().getBytes());
         ctx.put(VALIDATED_HEADERS, headers);
+        ctx.next();
     }
 
-
-    private void validateHeaders(Multimap<String, String> headers) {
+    private void ensureHeaderSemanticsAndSize(Multimap<String, String> headers, byte[] body) {
         MessageHeaderConfiguration.ensureRequiredHeaders(messageHeaderConfiguration, headers);
+        long headersAndBodySize = 0;
+
         for (Map.Entry<String, String> entry : headers.entries()) {
-            String key = entry.getKey().toLowerCase();
-            String value = entry.getValue().toLowerCase();
+            String key = entry.getKey();
+            String value = entry.getValue();
 
-            if (key.equals(messageHeaderConfiguration.getMsgIdHeader())) {
+            // Check if the key matches either message ID or group ID header
+            if (isIdHeader(key)) {
                 if (value.length() > MAX_ID_LIMIT) {
-                    throw new IllegalArgumentException(String.format("Message id %s exceeds allowed size of %d.", value, MAX_ID_LIMIT));
+                    throw new IllegalArgumentException(String.format("%s %s exceeds allowed size of %d.",
+                            key.equals(messageHeaderConfiguration.getMsgIdHeader()) ? "Message id" : "Group id", value,
+                            MAX_ID_LIMIT
+                    ));
                 }
             }
 
-            if (key.equals(messageHeaderConfiguration.getGroupIdHeader())) {
-                if (value.length() > MAX_ID_LIMIT) {
-                    throw new IllegalArgumentException(String.format("Group id %s exceeds allowed size of %d.", value, MAX_ID_LIMIT));
-                }
-            }
+            // Calculate the size of each header and its value
+            headersAndBodySize += key.getBytes(StandardCharsets.UTF_8).length + value.getBytes(StandardCharsets.UTF_8).length;
         }
+
+        headersAndBodySize+= body.length;
+
+        // If the total size of the headers and body exceeds the allowed limit, throw an exception
+        if (headersAndBodySize > messageHeaderConfiguration.getMaxRequestSize()) {
+            throw new IllegalArgumentException(String.format("Request size exceeds allowed limit of %d bytes.", messageHeaderConfiguration.getMaxRequestSize()));
+        }
+    }
+
+    private boolean isIdHeader(String key) {
+        return key.equals(messageHeaderConfiguration.getMsgIdHeader()) ||
+                key.equals(messageHeaderConfiguration.getGroupIdHeader());
     }
 
 }

@@ -6,7 +6,9 @@ import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 public class HeaderUtilsTest {
 
@@ -28,7 +30,7 @@ public class HeaderUtilsTest {
         headers.add("x-header4", "value4");
         headers.add("x_Restbus_identity", "value5");
 
-        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers, List.of("x_","X_"));
 
         Assertions.assertEquals(10, copiedHeaders.size());
         Assertions.assertEquals("value5", copiedHeaders.get("x_restbus_identity").toArray()[0]);
@@ -63,7 +65,7 @@ public class HeaderUtilsTest {
         headers.add("x_Multi_Value2", "multi_value2_1");
         headers.add("x_multi_value2", "multi_Value2_1");
         headers.add("x_multi_value1", "multi_value1_3");
-        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers, List.of("x_","X_"));
         String[] values = copiedHeaders.get("x_multi_value1").toArray(new String[]{});
         Assertions.assertEquals(3, values.length);
         Assertions.assertEquals("multi_value1_2", values[0]);

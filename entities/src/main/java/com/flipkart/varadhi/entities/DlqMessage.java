@@ -43,7 +43,7 @@ public class DlqMessage implements Message {
     @Override
     public String getHeader(String key) {
         return !requestHeaders.containsKey(key) || requestHeaders.get(key).isEmpty() ? null :
-                requestHeaders.get(key).getFirst();
+                requestHeaders.get(key).get(0);
     }
 
     @JsonIgnore

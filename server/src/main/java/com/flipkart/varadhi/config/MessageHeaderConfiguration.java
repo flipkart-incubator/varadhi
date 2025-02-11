@@ -63,6 +63,9 @@ public class MessageHeaderConfiguration implements Validatable {
     @NotNull
     private String produceIdentity;
 
+    @NotNull
+    private Integer maxRequestSize;
+
 
     /**
      * We use reflection to dynamically invoke getter methods for all fields in the
