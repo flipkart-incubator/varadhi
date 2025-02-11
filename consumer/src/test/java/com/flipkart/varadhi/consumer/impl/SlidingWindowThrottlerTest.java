@@ -92,14 +92,16 @@ class SlidingWindowThrottlerTest {
 
     @Test
     public void testRateLimitBehaviourAndPriorityOverMultipleWindow() throws Exception {
-        try (var throttler = new SlidingWindowThrottler<Integer>(
-            defaultScheduler,
-            Ticker.systemTicker(),
-            10,
-            1000,
-            10,
-            priority
-        )) {
+        try (
+            var throttler = new SlidingWindowThrottler<Integer>(
+                defaultScheduler,
+                Ticker.systemTicker(),
+                10,
+                1000,
+                10,
+                priority
+            )
+        ) {
             long start = System.currentTimeMillis();
             CountDownLatch latch = new CountDownLatch(21);
             List<Integer> taskTypeCompleted = new ArrayList<>();

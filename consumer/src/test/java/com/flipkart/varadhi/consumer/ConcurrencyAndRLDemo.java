@@ -87,13 +87,14 @@ public class ConcurrencyAndRLDemo {
             ctx.updateCurrentThreadContext();
 
             ConcurrencyControl<Boolean> cc = new ConcurrencyControlImpl<>(ctx, 10, new InternalQueueType[] {mainQ});
-            try (SlidingWindowThresholdProvider dynamicThreshold = new SlidingWindowThresholdProvider(
-                scheduler,
-                Ticker.systemTicker(),
-                2_000,
-                1_000,
-                errorPctThreshold
-            );
+            try (
+                SlidingWindowThresholdProvider dynamicThreshold = new SlidingWindowThresholdProvider(
+                    scheduler,
+                    Ticker.systemTicker(),
+                    2_000,
+                    1_000,
+                    errorPctThreshold
+                );
                 SlidingWindowThrottler<Boolean> throttler = new SlidingWindowThrottler<>(
                     scheduler,
                     Ticker.systemTicker(),
@@ -103,7 +104,8 @@ public class ConcurrencyAndRLDemo {
                     new InternalQueueType[] {mainQ}
                 );
                 var metricsFile = new PrintStream(Files.newOutputStream(Path.of("/tmp/demo_metrics")));
-                ConsoleReporter reporter = ConsoleReporter.forRegistry(registry).outputTo(metricsFile).build();) {
+                ConsoleReporter reporter = ConsoleReporter.forRegistry(registry).outputTo(metricsFile).build();
+            ) {
                 dynamicThreshold.addListener(newThreshold -> {
                     log.debug("threshold changed to : {}", newThreshold);
                     throttler.onThresholdChange(Math.max(newThreshold, minErrorThreshold));
