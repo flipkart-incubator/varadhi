@@ -1,6 +1,8 @@
 package com.flipkart.varadhi;
 
 
+import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
+
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
@@ -8,6 +10,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.utils.JsonMapper;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -23,7 +26,6 @@ import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.semconv.ServiceAttributes;
 import lombok.AccessLevel;
@@ -31,14 +33,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
-
 @Slf4j
 @Getter
 public class CoreServices {
 
     private final ConfigFileResolver configResolver;
-    @Getter(AccessLevel.PRIVATE)
+    @Getter (AccessLevel.PRIVATE)
     private final ObservabilityStack observabilityStack;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStoreProvider metaStoreProvider;
@@ -82,24 +82,34 @@ public class CoreServices {
     }
 
     private ObservabilityStack setupObservabilityStack(AppConfiguration configuration) {
-
         Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, "com.flipkart.varadhi")));
+                                    .merge(
+                                        Resource.create(
+                                            Attributes.of(ServiceAttributes.SERVICE_NAME, "com.flipkart.varadhi")
+                                        )
+                                    );
 
         // TODO: make tracing togglable and configurable.
         float sampleRatio = 1.0f;
 
         // exporting spans as logs, but can be replaced with otlp exporter.
         SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
-//                .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
-                .setResource(resource)
-                .setSampler(Sampler.parentBased(Sampler.traceIdRatioBased(sampleRatio)))
-                .build();
+                                                               .setResource(resource)
+                                                               .setSampler(
+                                                                   Sampler.parentBased(
+                                                                       Sampler.traceIdRatioBased(sampleRatio)
+                                                                   )
+                                                               )
+                                                               .build();
 
         OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
-                .setTracerProvider(sdkTracerProvider)
-                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
+                                                      .setTracerProvider(sdkTracerProvider)
+                                                      .setPropagators(
+                                                          ContextPropagators.create(
+                                                              W3CTraceContextPropagator.getInstance()
+                                                          )
+                                                      )
+                                                      .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
         String meterExporter = "otlp";

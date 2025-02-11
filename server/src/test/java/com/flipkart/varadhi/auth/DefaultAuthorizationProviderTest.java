@@ -29,7 +29,7 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(VertxExtension.class)
+@ExtendWith (VertxExtension.class)
 class DefaultAuthorizationProviderTest {
 
     private static final ConfigFileResolver ID = p -> p;
@@ -49,49 +49,47 @@ class DefaultAuthorizationProviderTest {
         authorizationOptions.setConfigFile("testAuthorizationConfig.yml");
 
         provider = spy(new DefaultAuthorizationProvider());
-        iamPolicyService =
-                mock(IamPolicyService.class, new ThrowsException(new ResourceNotFoundException("resource not found")));
+        iamPolicyService = mock(
+            IamPolicyService.class,
+            new ThrowsException(new ResourceNotFoundException("resource not found"))
+        );
     }
 
     @Test
     void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }));
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }));
     }
 
     @Test
     void testInitNotImplIamPolicyMetaStoreShouldThrow() throws IOException {
         Path configFile = tempDir.resolve("config.yaml");
-        String yamlContent =
-                """
-                                metaStoreOptions:
-                                  providerClassName: "com.flipkart.varadhi.utils.InvalidMetaStoreProvider"
-                                  configFile: ""
-                                roleDefinitions:
-                                  org.admin:
-                                    roleId: org.admin
-                                    permissions:
-                                        - ORG_CREATE
-                        """;
+        String yamlContent = """
+                    metaStoreOptions:
+                      providerClassName: "com.flipkart.varadhi.utils.InvalidMetaStoreProvider"
+                      configFile: ""
+                    roleDefinitions:
+                      org.admin:
+                        roleId: org.admin
+                        permissions:
+                            - ORG_CREATE
+            """;
         Files.write(configFile, yamlContent.getBytes());
 
         AuthorizationOptions opts = new AuthorizationOptions();
         opts.setConfigFile(configFile.toString());
-        Assertions.assertThrows(
-                IllegalStateException.class,
-                () -> provider.init(ID, opts)
-        );
+        Assertions.assertThrows(IllegalStateException.class, () -> provider.init(ID, opts));
     }
 
     @Test
     void testNotInit() {
-        Assertions.assertThrows(IllegalStateException.class, () ->
-                provider.isAuthorized(
-                        testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart"));
+        Assertions.assertThrows(
+            IllegalStateException.class,
+            () -> provider.isAuthorized(testUser("abc", false), ResourceAction.ORG_UPDATE, "flipkart")
+        );
     }
 
     @Test
@@ -102,19 +100,19 @@ class DefaultAuthorizationProviderTest {
         var resourceTypeCaptor = ArgumentCaptor.forClass(ResourceType.class);
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.ORG, resourceId),
-                1, Map.of(userName, Set.of("org.admin"))
-        )).when(iamPolicyService).getIamPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture());
+                1,
+                Map.of(userName, Set.of("org.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture());
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.ORG_UPDATE, resourceId)
-                )
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(t -> provider.isAuthorized(testUser(userName, false), ResourceAction.ORG_UPDATE, resourceId))
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     assertEquals(ResourceType.ORG, resourceTypeCaptor.getValue());
@@ -128,14 +126,11 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.ORG_UPDATE, "")
-                )
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(t -> provider.isAuthorized(testUser(userName, false), ResourceAction.ORG_UPDATE, ""))
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     verifyNoInteractions(iamPolicyService);
@@ -148,14 +143,11 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.ORG_UPDATE, null)
-                )
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(t -> provider.isAuthorized(testUser(userName, false), ResourceAction.ORG_UPDATE, null))
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     verifyNoInteractions(iamPolicyService);
@@ -171,18 +163,21 @@ class DefaultAuthorizationProviderTest {
         String resourcePath = "flipkart/team_a";
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
 
-        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.TEAM, resourceId), 1,
+        doReturn(
+            new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TEAM, resourceId),
+                1,
                 Map.of(userName, Set.of("team.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TEAM_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TEAM_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -202,26 +197,29 @@ class DefaultAuthorizationProviderTest {
         String resourcePath = "flipkart/team_a";
 
         doReturn(
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.TEAM, resourceId),
-                        1, Map.of(userName, Set.of("team.reader"))
-                )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
+            new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.TEAM, resourceId),
+                1,
+                Map.of(userName, Set.of("team.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
         doReturn(
-                new IamPolicyRecord(
-                        getAuthResourceFQN(ResourceType.ORG, "flipkart"),
-                        1, Map.of(userName, Set.of("org.admin"))
-                )).when(iamPolicyService).getIamPolicy(eq(ResourceType.ORG), anyString());
+            new IamPolicyRecord(
+                getAuthResourceFQN(ResourceType.ORG, "flipkart"),
+                1,
+                Map.of(userName, Set.of("org.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.ORG), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TEAM_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TEAM_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -236,23 +234,26 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
-                1, Map.of(userName, Set.of("team.reader"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
+                1,
+                Map.of(userName, Set.of("team.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
-        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.PROJECT, "proj_a"), 1, Map.of()))
-                .when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
+        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.PROJECT, "proj_a"), 1, Map.of())).when(
+            iamPolicyService
+        ).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.PROJECT_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.PROJECT_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -266,20 +267,22 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
-                1, Map.of(userName, Set.of("team.reader", "project.writer"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
+                1,
+                Map.of(userName, Set.of("team.reader", "project.writer"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.PROJECT_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.PROJECT_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -293,20 +296,22 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
-                1, Map.of(userName, Set.of("project.writer", "topic.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
+                1,
+                Map.of(userName, Set.of("project.writer", "topic.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TOPIC_DELETE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TOPIC_DELETE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -320,28 +325,36 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
-                1, Map.of(userName, Set.of("project.writer", "topic.reader"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), eq("proj_a"));
-        doReturn(new IamPolicyRecord(
+                1,
+                Map.of(userName, Set.of("project.writer", "topic.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), eq("proj_a"));
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
-                1, Map.of(userName, Set.of("topic.reader"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
-        doReturn(new IamPolicyRecord(
+                1,
+                Map.of(userName, Set.of("topic.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_b"),
-                1, Map.of(userName, Set.of("topic.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b"));
+                1,
+                Map.of(userName, Set.of("topic.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TOPIC_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TOPIC_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -355,20 +368,26 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.SUBSCRIPTION, "sub_a"),
-                1, Map.of(userName, Set.of("project.writer", "subscription.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), anyString());
+                1,
+                Map.of(userName, Set.of("project.writer", "subscription.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.SUBSCRIPTION_DELETE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(
+                        testUser(userName, false),
+                        ResourceAction.SUBSCRIPTION_DELETE,
+                        resourcePath
+                    )
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -382,28 +401,40 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/sub_a";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
-                1, Map.of(userName, Set.of("project.writer", "subscription.reader"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
-        doReturn(new IamPolicyRecord(
+                1,
+                Map.of(userName, Set.of("project.writer", "subscription.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
-                1, Map.of(userName, Set.of("subscription.reader"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a"));
-        doReturn(new IamPolicyRecord(
+                1,
+                Map.of(userName, Set.of("subscription.reader"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a"));
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
-                1, Map.of(userName, Set.of("subscription.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b"));
+                1,
+                Map.of(userName, Set.of("subscription.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.SUBSCRIPTION_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(
+                        testUser(userName, false),
+                        ResourceAction.SUBSCRIPTION_UPDATE,
+                        resourcePath
+                    )
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
@@ -417,20 +448,22 @@ class DefaultAuthorizationProviderTest {
         String userName = "abc";
         String resourcePath = "flipkart/team_a/proj_a/topic_a/wut?";
 
-        doReturn(new IamPolicyRecord(
+        doReturn(
+            new IamPolicyRecord(
                 getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
-                1, Map.of(userName, Set.of("topic.admin"))
-        )).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
+                1,
+                Map.of(userName, Set.of("topic.admin"))
+            )
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TOPIC_UPDATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TOPIC_UPDATE, resourcePath)
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
@@ -446,13 +479,12 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions)
-                .onComplete(testContext.succeeding(t -> {
-                    Assertions.assertTrue(t);
-                    checkpoint.flag();
-                }))
-                .compose(t -> provider.isAuthorized(
-                        testUser(userName, false), ResourceAction.TEAM_CREATE, resourcePath)
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }))
+                .compose(
+                    t -> provider.isAuthorized(testUser(userName, false), ResourceAction.TEAM_CREATE, resourcePath)
                 )
                 .onComplete(testContext.failing(t -> {
                     Assertions.assertInstanceOf(IllegalArgumentException.class, t);

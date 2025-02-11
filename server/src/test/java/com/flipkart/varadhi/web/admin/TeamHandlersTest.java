@@ -40,18 +40,17 @@ public class TeamHandlersTest extends WebTestBase {
         teamService = mock(TeamService.class);
         teamHandlers = new TeamHandlers(teamService);
 
-        Route routeCreate =
-                router.post("/orgs/:org/teams").handler(bodyHandler).handler(ctx -> {
-                    teamHandlers.setTeam(ctx);
-                    ctx.next();
-                }).handler(wrapBlocking(teamHandlers::create));
+        Route routeCreate = router.post("/orgs/:org/teams").handler(bodyHandler).handler(ctx -> {
+            teamHandlers.setTeam(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(teamHandlers::create));
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org/teams/:team").handler(wrapBlocking(teamHandlers::get));
         setupFailureHandler(routeGet);
         Route routeList = router.get("/orgs/:org/teams").handler(wrapBlocking(teamHandlers::listTeams));
         setupFailureHandler(routeList);
-        Route routeProjectList =
-                router.get("/orgs/:org/teams/:team/projects").handler(wrapBlocking(teamHandlers::listProjects));
+        Route routeProjectList = router.get("/orgs/:org/teams/:team/projects")
+                                       .handler(wrapBlocking(teamHandlers::listProjects));
         setupFailureHandler(routeProjectList);
         Route routeDelete = router.delete("/orgs/:org/teams/:team").handler(wrapBlocking(teamHandlers::delete));
         setupFailureHandler(routeDelete);
@@ -91,8 +90,10 @@ public class TeamHandlersTest extends WebTestBase {
         ErrorResponse response = sendRequestWithEntity(request, team1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
-        String duplicateOrgError =
-                String.format("Team(%s) already exists. Team is unique with in Org.", team1.getName());
+        String duplicateOrgError = String.format(
+            "Team(%s) already exists. Team is unique with in Org.",
+            team1.getName()
+        );
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(teamService).createTeam(team1);
         response = sendRequestWithEntity(request, team1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
@@ -117,7 +118,7 @@ public class TeamHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
-                .getTeam(team1.getName(), team1.getOrg());
+                                                             .getTeam(team1.getName(), team1.getOrg());
         sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
@@ -176,13 +177,15 @@ public class TeamHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("Team(%s) not found.", team1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(teamService)
-                .deleteTeam(team1.getName(), team1.getOrg());
+                                                             .deleteTeam(team1.getName(), team1.getOrg());
         sendRequestWithoutPayload(request, 404, notFoundError);
 
-        String invalidOpError =
-                String.format("Can not delete Team(%s) as it has associated Project(s).", team1.getName());
+        String invalidOpError = String.format(
+            "Can not delete Team(%s) as it has associated Project(s).",
+            team1.getName()
+        );
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(teamService)
-                .deleteTeam(team1.getName(), team1.getOrg());
+                                                                         .deleteTeam(team1.getName(), team1.getOrg());
         sendRequestWithoutPayload(request, 409, invalidOpError);
     }
 }

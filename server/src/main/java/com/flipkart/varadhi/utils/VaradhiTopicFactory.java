@@ -35,9 +35,9 @@ public class VaradhiTopicFactory {
      * @param defaultTopicCapacityPolicy the default capacity policy for the topic
      */
     public VaradhiTopicFactory(
-            StorageTopicFactory<StorageTopic> topicFactory,
-            String deploymentRegion,
-            TopicCapacityPolicy defaultTopicCapacityPolicy
+        StorageTopicFactory<StorageTopic> topicFactory,
+        String deploymentRegion,
+        TopicCapacityPolicy defaultTopicCapacityPolicy
     ) {
         this.topicFactory = topicFactory;
         this.defaultTopicCapacityPolicy = defaultTopicCapacityPolicy;
@@ -53,9 +53,7 @@ public class VaradhiTopicFactory {
      * @return the created VaradhiTopic instance
      */
     public VaradhiTopic get(Project project, TopicResource topicResource) {
-        topicResource.setCapacity(
-                Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy)
-        );
+        topicResource.setCapacity(Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy));
 
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
         planDeployment(project, varadhiTopic);
@@ -69,9 +67,12 @@ public class VaradhiTopicFactory {
      * @param varadhiTopic the VaradhiTopic instance to be deployed
      */
     private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
-        StorageTopic storageTopic =
-                topicFactory.getTopic(
-                        varadhiTopic.getName(), project, varadhiTopic.getCapacity(), InternalQueueCategory.MAIN);
+        StorageTopic storageTopic = topicFactory.getTopic(
+            varadhiTopic.getName(),
+            project,
+            varadhiTopic.getCapacity(),
+            InternalQueueCategory.MAIN
+        );
 
         varadhiTopic.addInternalTopic(deploymentRegion, InternalCompositeTopic.of(storageTopic));
     }

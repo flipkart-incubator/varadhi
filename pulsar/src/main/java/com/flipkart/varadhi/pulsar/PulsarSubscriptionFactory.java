@@ -10,7 +10,9 @@ public class PulsarSubscriptionFactory implements StorageSubscriptionFactory<Pul
 
     @Override
     public PulsarSubscription get(
-            String subName, TopicPartitions<PulsarStorageTopic> topicPartitions, Project project
+        String subName,
+        TopicPartitions<PulsarStorageTopic> topicPartitions,
+        Project project
     ) {
         return new PulsarSubscription(subName, topicPartitions);
     }

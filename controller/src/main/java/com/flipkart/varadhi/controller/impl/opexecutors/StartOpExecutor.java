@@ -22,15 +22,18 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class StartOpExecutor extends SubscriptionStartShardExecutor {
     public StartOpExecutor(
-            VaradhiSubscription subscription, ConsumerClientFactory clientFactory, OperationMgr operationMgr,
-            AssignmentManager assignmentManager, MetaStore metaStore
+        VaradhiSubscription subscription,
+        ConsumerClientFactory clientFactory,
+        OperationMgr operationMgr,
+        AssignmentManager assignmentManager,
+        MetaStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
 
     @Override
     public CompletableFuture<Void> execute(OrderedOperation operation) {
-        return startShards((SubscriptionOperation) operation, subscription);
+        return startShards((SubscriptionOperation)operation, subscription);
     }
 
     private CompletableFuture<Void> startShards(SubscriptionOperation subOp, VaradhiSubscription subscription) {
@@ -38,8 +41,10 @@ public class StartOpExecutor extends SubscriptionStartShardExecutor {
         return getOrCreateShardAssignment(subscription).thenCompose(assignments -> {
             List<CompletableFuture<Boolean>> shardFutures = scheduleStartOnShards(subscription, subOp, assignments);
             log.info(
-                    "Executed Start on {} shards for SubOp({}), Scheduled ShardOperations {}.", shards.getShardCount(),
-                    subOp.getData(), shardFutures.size()
+                "Executed Start on {} shards for SubOp({}), Scheduled ShardOperations {}.",
+                shards.getShardCount(),
+                subOp.getData(),
+                shardFutures.size()
             );
             return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0])).thenApply(ignore -> {
                 if (allShardsSkipped(shardFutures)) {
@@ -66,7 +71,9 @@ public class StartOpExecutor extends SubscriptionStartShardExecutor {
     }
 
     private List<CompletableFuture<Boolean>> scheduleStartOnShards(
-            VaradhiSubscription subscription, SubscriptionOperation subOp, List<Assignment> assignments
+        VaradhiSubscription subscription,
+        SubscriptionOperation subOp,
+        List<Assignment> assignments
     ) {
         SubscriptionShards shards = subscription.getShards();
         String subOpId = subOp.getData().getOperationId();
@@ -75,8 +82,8 @@ public class StartOpExecutor extends SubscriptionStartShardExecutor {
             ConsumerApi consumer = getAssignedConsumer(assignment);
             SubscriptionUnitShard shard = shards.getShard(assignment.getShardId());
             ShardOperation shardOp = shardOps.computeIfAbsent(
-                    assignment.getShardId(),
-                    shardId -> ShardOperation.startOp(subOpId, shard, subscription)
+                assignment.getShardId(),
+                shardId -> ShardOperation.startOp(subOpId, shard, subscription)
             );
             return startShard(shardOp, subOp.isInRetry(), consumer);
         }).toList();

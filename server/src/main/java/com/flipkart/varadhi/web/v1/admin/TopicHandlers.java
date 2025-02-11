@@ -45,7 +45,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
  * Handler class for managing topics in the Varadhi.
  */
 @Slf4j
-@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
+@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
@@ -60,9 +60,9 @@ public class TopicHandlers implements RouteProvider {
      * @param projectService      the service for managing projects
      */
     public TopicHandlers(
-            VaradhiTopicFactory varadhiTopicFactory,
-            VaradhiTopicService varadhiTopicService,
-            ProjectService projectService
+        VaradhiTopicFactory varadhiTopicFactory,
+        VaradhiTopicService varadhiTopicService,
+        ProjectService projectService
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
@@ -77,26 +77,24 @@ public class TopicHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/projects/:project/topics",
-                List.of(
-                        RouteDefinition.get("GetTopic", "/:topic")
-                                .authorize(TOPIC_GET)
-                                .build(this::getHierarchies, this::get),
-                        RouteDefinition.post("CreateTopic", "")
-                                .hasBody()
-                                .bodyParser(this::setRequestBody)
-                                .authorize(TOPIC_CREATE)
-                                .build(this::getHierarchies, this::create),
-                        RouteDefinition.delete("DeleteTopic", "/:topic")
-                                .authorize(TOPIC_DELETE)
-                                .build(this::getHierarchies, this::delete),
-                        RouteDefinition.get("ListTopics", "")
-                                .authorize(TOPIC_LIST)
-                                .build(this::getHierarchies, this::listTopics),
-                        RouteDefinition.patch("RestoreTopic", "/:topic/restore")
-                                .authorize(TOPIC_UPDATE)
-                                .build(this::getHierarchies, this::restore)
-                )
+            "/v1/projects/:project/topics",
+            List.of(
+                RouteDefinition.get("GetTopic", "/:topic").authorize(TOPIC_GET).build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateTopic", "")
+                               .hasBody()
+                               .bodyParser(this::setRequestBody)
+                               .authorize(TOPIC_CREATE)
+                               .build(this::getHierarchies, this::create),
+                RouteDefinition.delete("DeleteTopic", "/:topic")
+                               .authorize(TOPIC_DELETE)
+                               .build(this::getHierarchies, this::delete),
+                RouteDefinition.get("ListTopics", "")
+                               .authorize(TOPIC_LIST)
+                               .build(this::getHierarchies, this::listTopics),
+                RouteDefinition.patch("RestoreTopic", "/:topic/restore")
+                               .authorize(TOPIC_UPDATE)
+                               .build(this::getHierarchies, this::restore)
+            )
         ).get();
     }
 
@@ -156,8 +154,9 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActorCode.ADMIN_ACTION :
+            LifecycleStatus.ActorCode.USER_ACTION;
         topicResource.setActorCode(actorCode);
 
         validateProjectName(projectName, topicResource);
@@ -180,10 +179,11 @@ public class TopicHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void delete(RoutingContext ctx) {
-        ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE).stream()
-                .map(ResourceDeletionType::fromValue)
-                .findFirst()
-                .orElse(ResourceDeletionType.SOFT_DELETE);
+        ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE)
+                                               .stream()
+                                               .map(ResourceDeletionType::fromValue)
+                                               .findFirst()
+                                               .orElse(ResourceDeletionType.SOFT_DELETE);
         ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
 
         varadhiTopicService.delete(getVaradhiTopicName(ctx), deletionType, actionRequest);
@@ -210,15 +210,17 @@ public class TopicHandlers implements RouteProvider {
      */
     public void listTopics(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE).stream()
-                .findFirst()
-                .map(Boolean::parseBoolean)
-                .orElse(false);
+        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE)
+                                     .stream()
+                                     .findFirst()
+                                     .map(Boolean::parseBoolean)
+                                     .orElse(false);
 
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive).stream()
-                .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
-                .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
-                .toList();
+        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+                                                 .stream()
+                                                 .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
+                                                 .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
+                                                 .toList();
 
         ctx.endApiWithResponse(topics);
     }
@@ -271,8 +273,9 @@ public class TopicHandlers implements RouteProvider {
      */
     private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActorCode.ADMIN_ACTION :
+            LifecycleStatus.ActorCode.USER_ACTION;
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
         return new ResourceActionRequest(actorCode, message);
     }

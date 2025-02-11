@@ -24,7 +24,7 @@ public class BodyHandlerTest extends ProduceTestBase {
 
     HttpRequest<Buffer> request;
 
-    @BeforeEach()
+    @BeforeEach ()
     public void PreTest() throws InterruptedException {
         super.setUp();
         bodyHandler.setBodyLimit(20);
@@ -61,15 +61,9 @@ public class BodyHandlerTest extends ProduceTestBase {
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "012345678901234567890".getBytes();
-        sendRequestWithPayload(
-                request, payload, 413, "Entity too large.",
-                ErrorResponse.class
-        );
+        sendRequestWithPayload(request, payload, 413, "Entity too large.", ErrorResponse.class);
 
         payload = "012345678901234567890123456789".getBytes();
-        sendRequestWithPayload(
-                request, payload, 413, "Entity too large.",
-                ErrorResponse.class
-        );
+        sendRequestWithPayload(request, payload, 413, "Entity too large.", ErrorResponse.class);
     }
 }

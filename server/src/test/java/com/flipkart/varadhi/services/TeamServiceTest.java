@@ -37,14 +37,21 @@ public class TeamServiceTest {
     @BeforeEach
     public void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
-        zkCurator = spy(CuratorFrameworkFactory.newClient(
-                zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCurator = spy(
+            CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+            )
+        );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService =
-                new ProjectService(varadhiMetaStore, "", new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
+        projectService = new ProjectService(
+            varadhiMetaStore,
+            "",
+            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
+        );
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         org1Team1 = Team.of("TestTeam1", org1.getName());
@@ -60,12 +67,11 @@ public class TeamServiceTest {
         Assertions.assertEquals(org1Team1, teamCreated);
         Assertions.assertEquals(org1Team1, teamGet);
 
-        DuplicateResourceException e =
-                Assertions.assertThrows(DuplicateResourceException.class, () -> teamService.createTeam(org1Team1));
-        Assertions.assertEquals(
-                String.format("Team(%s) already exists.", org1Team1.getName()),
-                e.getMessage()
+        DuplicateResourceException e = Assertions.assertThrows(
+            DuplicateResourceException.class,
+            () -> teamService.createTeam(org1Team1)
         );
+        Assertions.assertEquals(String.format("Team(%s) already exists.", org1Team1.getName()), e.getMessage());
         validateOrgNotFound(teamDummy, () -> teamService.createTeam(teamDummy));
     }
 
@@ -107,12 +113,12 @@ public class TeamServiceTest {
         Project p1 = Project.of("Project1", "", org2Team1.getName(), org2Team1.getOrg());
         projectService.createProject(p1);
         InvalidOperationForResourceException eOp = Assertions.assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> teamService.deleteTeam(org2Team1.getName(), org2Team1.getOrg())
+            InvalidOperationForResourceException.class,
+            () -> teamService.deleteTeam(org2Team1.getName(), org2Team1.getOrg())
         );
         Assertions.assertEquals(
-                String.format("Can not delete Team(%s) as it has associated Project(s).", org2Team1.getName()),
-                eOp.getMessage()
+            String.format("Can not delete Team(%s) as it has associated Project(s).", org2Team1.getName()),
+            eOp.getMessage()
         );
     }
 
@@ -129,25 +135,22 @@ public class TeamServiceTest {
         validateOrgNotFound(teamDummy, () -> teamService.getProjects(teamDummy.getName(), teamDummy.getOrg()));
 
         teamDummy.setOrg(org1Team1.getOrg());
-        ResourceNotFoundException eResource =
-                Assertions.assertThrows(
-                        ResourceNotFoundException.class,
-                        () -> teamService.getProjects(teamDummy.getName(), teamDummy.getOrg())
-                );
+        ResourceNotFoundException eResource = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> teamService.getProjects(teamDummy.getName(), teamDummy.getOrg())
+        );
         Assertions.assertEquals(
-                String.format("Team(%s) does not exists in the Org(%s).", teamDummy.getName(), teamDummy.getOrg()),
-                eResource.getMessage()
+            String.format("Team(%s) does not exists in the Org(%s).", teamDummy.getName(), teamDummy.getOrg()),
+            eResource.getMessage()
         );
     }
 
     private void validateOrgNotFound(Team team, MethodCaller caller) {
-        ResourceNotFoundException eResource =
-                Assertions.assertThrows(
-                        ResourceNotFoundException.class,
-                        () -> caller.call()
-                );
-        Assertions.assertEquals(
-                String.format("Org(%s) not found.", team.getOrg()), eResource.getMessage());
+        ResourceNotFoundException eResource = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> caller.call()
+        );
+        Assertions.assertEquals(String.format("Org(%s) not found.", team.getOrg()), eResource.getMessage());
     }
 
     interface MethodCaller {

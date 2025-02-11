@@ -38,8 +38,7 @@ public class ZNode {
     private ZNode(ZNodeKind znodeKind, String parent, String entityName) {
         this.name = entityName;
         this.kind = znodeKind.getKind();
-        this.path = String.join(
-                ZK_PATH_SEPARATOR, BASE_PATH, znodeKind.getKind(), getResourceFQDN(parent, entityName));
+        this.path = String.join(ZK_PATH_SEPARATOR, BASE_PATH, znodeKind.getKind(), getResourceFQDN(parent, entityName));
     }
 
     public static String getResourceFQDN(String parentName, String resourceName) {

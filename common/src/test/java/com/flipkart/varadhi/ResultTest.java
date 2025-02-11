@@ -38,8 +38,10 @@ public class ResultTest {
         Assertions.assertFalse(r.hasFailed());
         Assertions.assertNull(r.result());
         Assertions.assertNull(r.cause());
-        IllegalArgumentException ee =
-                Assertions.assertThrows(IllegalArgumentException.class, () -> Result.of("some data", e));
+        IllegalArgumentException ee = Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> Result.of("some data", e)
+        );
         Assertions.assertEquals("Both result and cause can't be non null.", ee.getMessage());
     }
 }

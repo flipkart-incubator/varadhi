@@ -2,7 +2,6 @@ package com.flipkart.varadhi.spi.services;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageSubscription;
-import com.flipkart.varadhi.entities.StorageTopic;
 
 public interface StorageSubscriptionService<S extends StorageSubscription> {
 

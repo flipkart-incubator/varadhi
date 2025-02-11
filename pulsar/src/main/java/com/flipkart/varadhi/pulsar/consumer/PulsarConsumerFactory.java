@@ -31,10 +31,10 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
 
     @Override
     public Consumer<PulsarOffset> newConsumer(
-            Collection<TopicPartitions<PulsarStorageTopic>> topics,
-            String subscriptionName,
-            String consumerName,
-            Map<String, Object> properties
+        Collection<TopicPartitions<PulsarStorageTopic>> topics,
+        String subscriptionName,
+        String consumerName,
+        Map<String, Object> properties
     ) throws MessagingException {
 
         try {
@@ -46,8 +46,8 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
                     topicNames.add(topic.getTopic().getName());
                 } else {
                     for (int partition : topic.getPartitions()) {
-                        String partitionName =
-                                topic.getTopic().getName() + TopicName.PARTITIONED_TOPIC_SUFFIX + partition;
+                        String partitionName = topic.getTopic().getName() + TopicName.PARTITIONED_TOPIC_SUFFIX
+                                               + partition;
                         topicNames.add(TopicName.get(partitionName).toString());
                     }
                 }
@@ -56,19 +56,22 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
             Map<String, Object> consumerProperties = new HashMap<>(defaultConsumerProperties);
             consumerProperties.putAll(properties);
             return new PulsarConsumer(
-                    pulsarClient.newConsumer(Schema.BYTES)
+                pulsarClient.newConsumer(Schema.BYTES)
                             .loadConf(consumerProperties)
                             .topics(new ArrayList<>(topicNames))
                             .subscriptionName(subscriptionName)
                             .consumerName(consumerName)
                             .poolMessages(true)
-                            .batchReceivePolicy(BatchReceivePolicy.builder()
-                                    .maxNumMessages(2000)
-                                    .maxNumBytes(5 * 1024 * 1024)
-                                    .timeout(200, TimeUnit.MILLISECONDS)
-                                    .build())
+                            .batchReceivePolicy(
+                                BatchReceivePolicy.builder()
+                                                  .maxNumMessages(2000)
+                                                  .maxNumBytes(5 * 1024 * 1024)
+                                                  .timeout(200, TimeUnit.MILLISECONDS)
+                                                  .build()
+                            )
                             .acknowledgmentGroupTime(1, TimeUnit.SECONDS)
-                            .subscribe());
+                            .subscribe()
+            );
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);
         }

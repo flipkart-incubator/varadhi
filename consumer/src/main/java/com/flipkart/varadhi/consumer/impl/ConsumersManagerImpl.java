@@ -26,8 +26,9 @@ public class ConsumersManagerImpl implements ConsumersManager {
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
     public ConsumersManagerImpl(
-            ProducerFactory<StorageTopic> producerFactory, ConsumerFactory<StorageTopic, Offset> consumerFactory,
-            MeterRegistry meterRegistry
+        ProducerFactory<StorageTopic> producerFactory,
+        ConsumerFactory<StorageTopic, Offset> consumerFactory,
+        MeterRegistry meterRegistry
     ) {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.executor = new EventExecutor(this.scheduler, CustomThread::new, new LinkedBlockingQueue<>());
@@ -37,9 +38,15 @@ public class ConsumersManagerImpl implements ConsumersManager {
 
     @Override
     public CompletableFuture<Void> startSubscription(
-            String project, String subscription, int shardId, StorageSubscription<StorageTopic> storageSubscription,
-            boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
-            ConsumptionFailurePolicy failurePolicy, TopicCapacityPolicy capacityPolicy
+        String project,
+        String subscription,
+        int shardId,
+        StorageSubscription<StorageTopic> storageSubscription,
+        boolean grouped,
+        Endpoint endpoint,
+        ConsumptionPolicy consumptionPolicy,
+        ConsumptionFailurePolicy failurePolicy,
+        TopicCapacityPolicy capacityPolicy
     ) {
         ShardId id = new ShardId(subscription, shardId);
         ConsumerHolder prev = consumers.putIfAbsent(id, new ConsumerHolder());
@@ -47,12 +54,20 @@ public class ConsumersManagerImpl implements ConsumersManager {
             throw new IllegalArgumentException("Consumer already exists for " + id);
         }
         ConsumerHolder newConsumer = consumers.get(id);
-        newConsumer.consumer =
-                new VaradhiConsumerImpl(
-                        env, project, subscription, shardId, storageSubscription, grouped,
-                        endpoint, consumptionPolicy, failurePolicy, new Context(executor), scheduler,
-                        (s, sid, iqs) -> new ConsumerMetrics(env.getMeterRegistry(), s, sid, iqs)
-                );
+        newConsumer.consumer = new VaradhiConsumerImpl(
+            env,
+            project,
+            subscription,
+            shardId,
+            storageSubscription,
+            grouped,
+            endpoint,
+            consumptionPolicy,
+            failurePolicy,
+            new Context(executor),
+            scheduler,
+            (s, sid, iqs) -> new ConsumerMetrics(env.getMeterRegistry(), s, sid, iqs)
+        );
         newConsumer.capacityPolicy = capacityPolicy;
 
         return CompletableFuture.supplyAsync(() -> {
@@ -98,15 +113,22 @@ public class ConsumersManagerImpl implements ConsumersManager {
     @Override
     public Optional<ConsumerState> getConsumerState(String subscription, int shardId) {
         return Optional.ofNullable(consumers.get(new ShardId(subscription, shardId)))
-                .map(holder -> holder.consumer.getState());
+                       .map(holder -> holder.consumer.getState());
     }
 
     @Override
     public Iterable<Info> getConsumersInfo() {
-        return () -> consumers.values().stream().map(holder -> new Info(
-                holder.consumer.getSubscriptionName(), holder.consumer.getShardId(), holder.consumer.getState(),
-                holder.capacityPolicy
-        )).iterator();
+        return () -> consumers.values()
+                              .stream()
+                              .map(
+                                  holder -> new Info(
+                                      holder.consumer.getSubscriptionName(),
+                                      holder.consumer.getShardId(),
+                                      holder.consumer.getState(),
+                                      holder.capacityPolicy
+                                  )
+                              )
+                              .iterator();
     }
 
     static class ConsumerHolder {

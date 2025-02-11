@@ -7,13 +7,23 @@ import java.util.function.BiFunction;
 
 public class RecursiveFieldUpdater {
 
-    public static <T, V> void visit(T object, Class<? extends Annotation> annotationClass, BiFunction<String, V, V> updateFunction) {
+    public static <T, V> void visit(
+        T object,
+        Class<? extends Annotation> annotationClass,
+        BiFunction<String, V, V> updateFunction
+    ) {
         Objects.requireNonNull(object, "Object cannot be null");
         traverseObject(object, annotationClass, updateFunction, "");
     }
 
-    private static <T, V> void traverseObject(T obj, Class<? extends Annotation> annotationClass, BiFunction<String, V, V> updateFunction, String path) {
-        if (obj == null) return;
+    private static <T, V> void traverseObject(
+        T obj,
+        Class<? extends Annotation> annotationClass,
+        BiFunction<String, V, V> updateFunction,
+        String path
+    ) {
+        if (obj == null)
+            return;
 
         Class<?> clazz = obj.getClass();
         for (Field field : clazz.getDeclaredFields()) {
@@ -28,7 +38,9 @@ public class RecursiveFieldUpdater {
                     // Apply the update function to get the new value
                     V newValue = updateFunction.apply(fieldPath, (V)fieldValue);
                     setFieldValue(obj, field, newValue);
-                } else if (!field.getType().isPrimitive() && field.getType().getName().startsWith("com.flipkart.varadhi.")) {
+                } else if (!field.getType().isPrimitive() && field.getType()
+                                                                  .getName()
+                                                                  .startsWith("com.flipkart.varadhi.")) {
                     // Recursively visit nested POJOs
                     traverseObject(fieldValue, annotationClass, updateFunction, fieldPath);
                 }

@@ -19,9 +19,15 @@ public interface ConsumersManager {
      * @return Future that will be completed when the consumer is started & ready to consume messages.
      */
     CompletableFuture<Void> startSubscription(
-            String project, String subscription, int shardId, StorageSubscription<StorageTopic> mainSubscription,
-            boolean grouped, Endpoint endpoint, ConsumptionPolicy consumptionPolicy,
-            ConsumptionFailurePolicy failurePolicy, TopicCapacityPolicy capacityPolicy
+        String project,
+        String subscription,
+        int shardId,
+        StorageSubscription<StorageTopic> mainSubscription,
+        boolean grouped,
+        Endpoint endpoint,
+        ConsumptionPolicy consumptionPolicy,
+        ConsumptionFailurePolicy failurePolicy,
+        TopicCapacityPolicy capacityPolicy
     );
 
     CompletableFuture<Void> stopSubscription(String subscription, int shardId);

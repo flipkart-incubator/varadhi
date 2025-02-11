@@ -21,16 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class ConcurrencyControlImplTest {
 
     private static final InternalQueueType mainQ = new InternalQueueType.Main();
-    private static final InternalQueueType[] priority = new InternalQueueType[]{
-            new InternalQueueType.Retry(3),
-            new InternalQueueType.Retry(2),
-            new InternalQueueType.Retry(1),
-            mainQ
-    };
+    private static final InternalQueueType[] priority = new InternalQueueType[] {new InternalQueueType.Retry(3),
+        new InternalQueueType.Retry(2), new InternalQueueType.Retry(1), mainQ};
 
 
-    private static final EventExecutor executor =
-            new EventExecutor(null, CustomThread::new, new LinkedBlockingQueue<>());
+    private static final EventExecutor executor = new EventExecutor(
+        null,
+        CustomThread::new,
+        new LinkedBlockingQueue<>()
+    );
 
     @AfterAll
     public static void shutdown() {
@@ -38,7 +37,7 @@ class ConcurrencyControlImplTest {
     }
 
     @Test
-    @Timeout(5)
+    @Timeout (5)
     public void testPriorityOrderingAndConcurrencyIsFollowed() {
         Context ctx = new Context(executor);
         ctx.updateCurrentThreadContext();
@@ -58,8 +57,11 @@ class ConcurrencyControlImplTest {
 
         types.forEach(t -> {
             // create 3 tasks
-            List<Supplier<CompletableFuture<Integer>>> tasks =
-                    Arrays.asList(taskSupplier(t, executed), taskSupplier(t, executed), taskSupplier(t, executed));
+            List<Supplier<CompletableFuture<Integer>>> tasks = Arrays.asList(
+                taskSupplier(t, executed),
+                taskSupplier(t, executed),
+                taskSupplier(t, executed)
+            );
 
             // we need to enqueue tasks from the context thread, as that is the requirement of the CC.
             CompletableFuture<?> enqueueFuture = new CompletableFuture<>();
@@ -79,8 +81,7 @@ class ConcurrencyControlImplTest {
         assertTrue(executed.stream().allMatch(t -> t.type == mainQ));
 
         // lets complete the 2 executed tasks, then next 2 tasks should be from rq3.
-        IntStream.range(0, 2).forEach(_i ->
-        {
+        IntStream.range(0, 2).forEach(_i -> {
             executed.remove(0).task.complete(0);
             enqueued.get(mainQ).remove(0).join();
         });
@@ -99,14 +100,12 @@ class ConcurrencyControlImplTest {
                 pendingCompletion--;
                 int _p = pendingCompletion;
                 await().pollInterval(Duration.ofMillis(1))
-                        .untilAsserted(() -> assertEquals(Math.min(2, _p), executed.size()));
+                       .untilAsserted(() -> assertEquals(Math.min(2, _p), executed.size()));
             }
         }
     }
 
-    private static Supplier<CompletableFuture<Integer>> taskSupplier(
-            InternalQueueType t, List<TaskWithType> executed
-    ) {
+    private static Supplier<CompletableFuture<Integer>> taskSupplier(InternalQueueType t, List<TaskWithType> executed) {
         return () -> {
             CompletableFuture<Integer> task = new CompletableFuture<>();
             executed.add(new TaskWithType(t, task));

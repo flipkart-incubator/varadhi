@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.Data;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -18,9 +17,11 @@ public class UnsidelineRequest {
         this.groupIds = groupIds;
         this.messageIds = messageIds;
     }
+
     public static UnsidelineRequest ofFailedAt(long latestFailedAt) {
         return new UnsidelineRequest(latestFailedAt, new ArrayList<>(), new ArrayList<>());
     }
+
     public static UnsidelineRequest ofGroupIds(List<String> groupIds) {
         return new UnsidelineRequest(UNSPECIFIED_TS, groupIds, new ArrayList<>());
     }
@@ -33,19 +34,22 @@ public class UnsidelineRequest {
         if (latestFailedAt == UNSPECIFIED_TS && messageIds.isEmpty() && groupIds.isEmpty()) {
             throw new IllegalArgumentException("At least one unsideline criteria needs to be specified.");
         }
-        if ((latestFailedAt != UNSPECIFIED_TS && (!groupIds.isEmpty() || !messageIds.isEmpty()))
-                || (latestFailedAt == UNSPECIFIED_TS && (!groupIds.isEmpty() && !messageIds.isEmpty()))) {
-            throw new IllegalArgumentException(
-                    "Only one of the unsideline criteria should be specified.");
+        if ((latestFailedAt != UNSPECIFIED_TS && (!groupIds.isEmpty() || !messageIds.isEmpty())) || (latestFailedAt
+                                                                                                     == UNSPECIFIED_TS
+                                                                                                     && (!groupIds.isEmpty()
+                                                                                                         && !messageIds.isEmpty()))) {
+            throw new IllegalArgumentException("Only one of the unsideline criteria should be specified.");
         }
 
         if (groupIds.size() > maxGroupIds) {
             throw new IllegalArgumentException(
-                    "Number of groupIds in one API call cannot be more than " + maxGroupIds + ".");
+                "Number of groupIds in one API call cannot be more than " + maxGroupIds + "."
+            );
         }
         if (messageIds.size() > maxMessageIds) {
             throw new IllegalArgumentException(
-                    "Number of messageIds in one API call cannot be more than " + maxMessageIds + ".");
+                "Number of messageIds in one API call cannot be more than " + maxMessageIds + "."
+            );
         }
     }
 }

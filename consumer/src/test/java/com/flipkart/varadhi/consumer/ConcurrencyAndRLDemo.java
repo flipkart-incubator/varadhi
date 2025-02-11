@@ -60,7 +60,7 @@ public class ConcurrencyAndRLDemo {
             latch.countDown();
         }));
 
-//        latch.await();
+        //        latch.await();
 
         Simulation.doSimulation(1000, 90.0f, 50, 20.0f, 10, 0, socketVerticle::send);
     }
@@ -68,8 +68,13 @@ public class ConcurrencyAndRLDemo {
     public static class Simulation {
 
         public static void doSimulation(
-                int loadGenRate, float errorPctThreshold, int minErrorThreshold, float errorPctSimulate,
-                long latencySimulate, long errorProduceLatency, Consumer<Map<String, Double>> metricListener
+            int loadGenRate,
+            float errorPctThreshold,
+            int minErrorThreshold,
+            float errorPctSimulate,
+            long latencySimulate,
+            long errorProduceLatency,
+            Consumer<Map<String, Double>> metricListener
         ) throws Exception {
             InternalQueueType mainQ = new InternalQueueType.Main();
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -77,49 +82,54 @@ public class ConcurrencyAndRLDemo {
             ScheduledExecutorService websocketScheduler = Executors.newSingleThreadScheduledExecutor();
 
 
-            EventExecutor executor =
-                    new EventExecutor(null, CustomThread::new, new LinkedBlockingQueue<>());
+            EventExecutor executor = new EventExecutor(null, CustomThread::new, new LinkedBlockingQueue<>());
             Context ctx = new Context(executor);
             ctx.updateCurrentThreadContext();
 
-            ConcurrencyControl<Boolean> cc =
-                    new ConcurrencyControlImpl<>(ctx, 10, new InternalQueueType[]{mainQ});
-            try (
-                    SlidingWindowThresholdProvider dynamicThreshold =
-                            new SlidingWindowThresholdProvider(
-                                    scheduler, Ticker.systemTicker(), 2_000, 1_000, errorPctThreshold);
-                    SlidingWindowThrottler<Boolean> throttler =
-                            new SlidingWindowThrottler<>(scheduler, Ticker.systemTicker(), minErrorThreshold, 1_000, 10,
-                                    new InternalQueueType[]{mainQ}
-                            );
-                    var metricsFile = new PrintStream(Files.newOutputStream(Path.of("/tmp/demo_metrics")));
-                    ConsoleReporter reporter = ConsoleReporter.forRegistry(registry).outputTo(metricsFile).build();
-            ) {
+            ConcurrencyControl<Boolean> cc = new ConcurrencyControlImpl<>(ctx, 10, new InternalQueueType[] {mainQ});
+            try (SlidingWindowThresholdProvider dynamicThreshold = new SlidingWindowThresholdProvider(
+                scheduler,
+                Ticker.systemTicker(),
+                2_000,
+                1_000,
+                errorPctThreshold
+            );
+                SlidingWindowThrottler<Boolean> throttler = new SlidingWindowThrottler<>(
+                    scheduler,
+                    Ticker.systemTicker(),
+                    minErrorThreshold,
+                    1_000,
+                    10,
+                    new InternalQueueType[] {mainQ}
+                );
+                var metricsFile = new PrintStream(Files.newOutputStream(Path.of("/tmp/demo_metrics")));
+                ConsoleReporter reporter = ConsoleReporter.forRegistry(registry).outputTo(metricsFile).build();) {
                 dynamicThreshold.addListener(newThreshold -> {
                     log.debug("threshold changed to : {}", newThreshold);
                     throttler.onThresholdChange(Math.max(newThreshold, minErrorThreshold));
                 });
 
                 RateLimiter loadGenRL = RateLimiter.create(loadGenRate);
-                Meter loadGenMeter =
-                        registry.register("load.gen.rate", new Meter());
+                Meter loadGenMeter = registry.register("load.gen.rate", new Meter());
                 Meter errorExpMeter = registry.register("task.error.experienced.rate", new Meter());
                 Timer completionLatency = registry.register(
-                        "task.completion.latency",
-                        new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
+                    "task.completion.latency",
+                    new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
                 );
                 Timer throttlerAcquireLatency = registry.register(
-                        "throttler.acquire.latency",
-                        new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
+                    "throttler.acquire.latency",
+                    new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS))
                 );
-                Gauge<Float> errorThresholdGuage =
-                        registry.registerGauge("error.threshold.value", dynamicThreshold::getThreshold);
+                Gauge<Float> errorThresholdGuage = registry.registerGauge(
+                    "error.threshold.value",
+                    dynamicThreshold::getThreshold
+                );
                 if (metricListener != null) {
                     websocketScheduler.scheduleAtFixedRate(() -> {
                         Map<String, Double> datapoints = new HashMap<>();
                         datapoints.put("error.experienced.rate", errorExpMeter.getOneMinuteRate());
                         datapoints.put("task.completion.rate", completionLatency.getOneMinuteRate());
-                        datapoints.put("error.threshold.value", (double) errorThresholdGuage.getValue());
+                        datapoints.put("error.threshold.value", (double)errorThresholdGuage.getValue());
                         metricListener.accept(datapoints);
                     }, 1_000, 2_000, TimeUnit.MILLISECONDS);
                 }
@@ -197,8 +207,7 @@ public class ConcurrencyAndRLDemo {
                     inFlightTasks.addAndGet(batchSz);
                     CompletableFuture<Void> taskCreationDone = new CompletableFuture<>();
                     ctx.runOnContext(() -> {
-                        for (CompletableFuture<Boolean> task : cc.enqueueTasks(
-                                mainQ, repeat(SS::new, batchSz))) {
+                        for (CompletableFuture<Boolean> task : cc.enqueueTasks(mainQ, repeat(SS::new, batchSz))) {
                             // when http call is done.
                             task.whenComplete((r, e) -> {
                                 inFlightTasks.decrementAndGet();
@@ -210,7 +219,7 @@ public class ConcurrencyAndRLDemo {
 
                     // limiting the task creation.
                     while (inFlightTasks.get() > 50_000) {
-//                        log.info("inflight tasks: {}. waiting", inFlightTasks.get());
+                        //                        log.info("inflight tasks: {}. waiting", inFlightTasks.get());
                         Thread.sleep(1_000);
                     }
                 }
@@ -218,20 +227,17 @@ public class ConcurrencyAndRLDemo {
         }
     }
 
-    public record ClientConnection(String writeHandlerID,
-                                   SockJSSocket socket,
-                                   EventBus eventBus) {
+
+    public record ClientConnection(String writeHandlerID, SockJSSocket socket, EventBus eventBus) {
         public void start() {
-            socket.handler(
-                    buffer -> {
-                        String message = buffer.toString();
-                        log.info("connection: {}, recieved: {}", writeHandlerID, message);
-                        msgHandler(message).ifPresent(m -> {
-                            log.info("connection: {}, sending: {}", writeHandlerID, m);
-                            socket.write(m);
-                        });
-                    }
-            );
+            socket.handler(buffer -> {
+                String message = buffer.toString();
+                log.info("connection: {}, recieved: {}", writeHandlerID, message);
+                msgHandler(message).ifPresent(m -> {
+                    log.info("connection: {}, sending: {}", writeHandlerID, m);
+                    socket.write(m);
+                });
+            });
         }
 
         public void send(String message) {
@@ -257,6 +263,7 @@ public class ConcurrencyAndRLDemo {
         }
     }
 
+
     static class WebSocketVerticle extends AbstractVerticle {
 
         private Map<String, ClientConnection> connections = new ConcurrentHashMap<>();
@@ -268,22 +275,25 @@ public class ConcurrencyAndRLDemo {
 
         private void startServer(Vertx vertx) {
             HttpServer server = vertx.createHttpServer();
-            SockJSHandlerOptions options = new SockJSHandlerOptions()
-                    .setHeartbeatInterval(2000)
-                    .setRegisterWriteHandler(true);
+            SockJSHandlerOptions options = new SockJSHandlerOptions().setHeartbeatInterval(2000)
+                                                                     .setRegisterWriteHandler(true);
             SockJSHandler ebHandler = SockJSHandler.create(vertx, options);
 
             Router router = Router.router(vertx);
 
-            router.route().handler(CorsHandler.create("http://localhost:3000")
-                            .allowedMethod(io.vertx.core.http.HttpMethod.GET)
-                            .allowedMethod(io.vertx.core.http.HttpMethod.POST)
-                            .allowedMethod(io.vertx.core.http.HttpMethod.OPTIONS)
-                            .allowedHeader("Access-Control-Request-Method")
-                            .allowedHeader("Access-Control-Allow-Origin")
-                            .allowedHeader("Access-Control-Allow-Credentials")
-                            .allowedHeader("Content-Type").allowCredentials(true))
-                    .handler(BodyHandler.create());
+            router.route()
+                  .handler(
+                      CorsHandler.create("http://localhost:3000")
+                                 .allowedMethod(io.vertx.core.http.HttpMethod.GET)
+                                 .allowedMethod(io.vertx.core.http.HttpMethod.POST)
+                                 .allowedMethod(io.vertx.core.http.HttpMethod.OPTIONS)
+                                 .allowedHeader("Access-Control-Request-Method")
+                                 .allowedHeader("Access-Control-Allow-Origin")
+                                 .allowedHeader("Access-Control-Allow-Credentials")
+                                 .allowedHeader("Content-Type")
+                                 .allowCredentials(true)
+                  )
+                  .handler(BodyHandler.create());
             router.route("/eventbus/*").subRouter(ebHandler.socketHandler(socket -> {
                 final String id = socket.writeHandlerID();
                 log.info("Client connected with id: " + id);
@@ -296,22 +306,24 @@ public class ConcurrencyAndRLDemo {
                 connection.start();
             }));
 
-            server.requestHandler(router)
-                    .listen(5000, (ah) -> {
-                        if (ah.succeeded()) {
-                            log.info("server started.");
-                        } else {
-                            log.error("failed to start WebSocket server", ah.cause());
-                        }
-                    });
+            server.requestHandler(router).listen(5000, (ah) -> {
+                if (ah.succeeded()) {
+                    log.info("server started.");
+                } else {
+                    log.error("failed to start WebSocket server", ah.cause());
+                }
+            });
         }
 
         public void send(Map<String, Double> datapoints) {
             long ms = System.currentTimeMillis();
             StringBuilder sb = new StringBuilder("datapoint=" + "time," + ms + ",");
-            sb.append(datapoints.entrySet().stream().flatMap(kv -> Stream.of(kv.getKey(), kv.getValue().toString()))
-                    .collect(
-                            Collectors.joining(",")));
+            sb.append(
+                datapoints.entrySet()
+                          .stream()
+                          .flatMap(kv -> Stream.of(kv.getKey(), kv.getValue().toString()))
+                          .collect(Collectors.joining(","))
+            );
             String msg = sb.toString();
             for (var conn : connections.values()) {
                 conn.send(msg);

@@ -26,7 +26,7 @@ public abstract class SubscriptionOpExecutor implements OpExecutor<OrderedOperat
     final AssignmentManager assignmentManager;
     final MetaStore metaStore;
 
-    abstract public CompletableFuture<Void> execute(OrderedOperation operation);
+    public abstract CompletableFuture<Void> execute(OrderedOperation operation);
 
     ConsumerApi getAssignedConsumer(Assignment assignment) {
         return consumerClientFactory.getInstance(assignment.getConsumerId());
@@ -55,7 +55,10 @@ public abstract class SubscriptionOpExecutor implements OpExecutor<OrderedOperat
                 return f.isDone() && !f.get();
             } catch (Exception e) {
                 // this is not expected.
-                log.error("Unexpected error while retrieving the shard operation scheduling status {}.", e.getMessage());
+                log.error(
+                    "Unexpected error while retrieving the shard operation scheduling status {}.",
+                    e.getMessage()
+                );
                 throw new RuntimeException(e);
             }
         }).count();

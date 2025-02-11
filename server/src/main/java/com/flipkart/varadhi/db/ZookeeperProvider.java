@@ -21,10 +21,13 @@ public class ZookeeperProvider implements MetaStoreProvider {
         if (!initialised) {
             synchronized (this) {
                 if (!initialised) {
-                    ZKMetaStoreConfig zkMetaStoreConfig =
-                            YamlLoader.loadConfig(MetaStoreOptions.getConfigFile(), ZKMetaStoreConfig.class);
-                    CuratorFramework zkCurator =
-                            CuratorFrameworkCreator.create(zkMetaStoreConfig.getZookeeperOptions());
+                    ZKMetaStoreConfig zkMetaStoreConfig = YamlLoader.loadConfig(
+                        MetaStoreOptions.getConfigFile(),
+                        ZKMetaStoreConfig.class
+                    );
+                    CuratorFramework zkCurator = CuratorFrameworkCreator.create(
+                        zkMetaStoreConfig.getZookeeperOptions()
+                    );
                     varadhiMetaStore = new VaradhiMetaStore(zkCurator);
                     opStore = new OpStoreImpl(zkCurator);
                     assignmentStore = new AssignmentStoreImpl(zkCurator);
@@ -58,5 +61,3 @@ public class ZookeeperProvider implements MetaStoreProvider {
         return assignmentStore;
     }
 }
-
-

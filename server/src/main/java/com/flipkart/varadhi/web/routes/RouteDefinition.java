@@ -34,12 +34,19 @@ public class RouteDefinition {
     private final HierarchyFunction hierarchyFunction;
     private final TelemetryType telemetryType;
 
-    RouteDefinition(String name, HttpMethod method, String path, Set<RouteBehaviour> behaviours,
-                    LinkedHashSet<Handler<RoutingContext>> preHandlers,
-                    Handler<RoutingContext> endReqHandler,
-                    boolean blockingEndHandler, Consumer<RoutingContext> bodyParser,
-                    HierarchyFunction function, List<ResourceAction> authorizeOnActions,
-                    TelemetryType telemetryType) {
+    RouteDefinition(
+        String name,
+        HttpMethod method,
+        String path,
+        Set<RouteBehaviour> behaviours,
+        LinkedHashSet<Handler<RoutingContext>> preHandlers,
+        Handler<RoutingContext> endReqHandler,
+        boolean blockingEndHandler,
+        Consumer<RoutingContext> bodyParser,
+        HierarchyFunction function,
+        List<ResourceAction> authorizeOnActions,
+        TelemetryType telemetryType
+    ) {
         this.name = name;
         this.method = method;
         this.path = path;
@@ -52,6 +59,7 @@ public class RouteDefinition {
         this.authorizeOnActions = authorizeOnActions;
         this.telemetryType = telemetryType;
     }
+
     public static Builder get(String name, String path) {
         return new Builder(name, HttpMethod.GET, path);
     }
@@ -128,6 +136,7 @@ public class RouteDefinition {
             this.authorizeOnActions.addLast(action);
             return this;
         }
+
         public Builder preHandler(Handler<RoutingContext> preHandler) {
             if (null != preHandler) {
                 this.preHandlers.add(preHandler);
@@ -156,17 +165,17 @@ public class RouteDefinition {
             }
 
             return new RouteDefinition(
-                    name,
-                    method,
-                    path,
-                    behaviours,
-                    preHandlers,
-                    reqHandler,
-                    !nonBlocking,
-                    bodyParser,
-                    function,
-                    authorizeOnActions,
-                    new TelemetryType(metricsEnabled, !logsDisabled, !tracingDisabled)
+                name,
+                method,
+                path,
+                behaviours,
+                preHandlers,
+                reqHandler,
+                !nonBlocking,
+                bodyParser,
+                function,
+                authorizeOnActions,
+                new TelemetryType(metricsEnabled, !logsDisabled, !tracingDisabled)
             );
         }
     }

@@ -35,11 +35,14 @@ public class JsonMapperTest {
         assertNotNull(deserialized);
         assertEquals(car.getManufacturer(), deserialized.getManufacturer());
     }
+
     @Test
     public void testJsonDeserialize_InvalidPolymorphicData() {
         String invalidJson = "{\"manufacturer\":\"Honda\",\"@vehicleType\":\"InvalidType\"}";
-        Exception exception =
-                assertThrows(VaradhiException.class, () -> JsonMapper.jsonDeserialize(invalidJson, Vehicle.class));
+        Exception exception = assertThrows(
+            VaradhiException.class,
+            () -> JsonMapper.jsonDeserialize(invalidJson, Vehicle.class)
+        );
         assertTrue(exception.getMessage().contains("Could not resolve type id 'InvalidType'"));
     }
 
@@ -50,7 +53,7 @@ public class JsonMapperTest {
         Assertions.assertEquals(InvalidDefinitionException.class, exception.getCause().getClass());
     }
 
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@vehicleType")
+    @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@vehicleType")
     @EqualsAndHashCode
     private abstract static class Vehicle {
         private String manufacturer;
@@ -64,7 +67,8 @@ public class JsonMapperTest {
         }
     }
 
-    @EqualsAndHashCode(callSuper = true)
+
+    @EqualsAndHashCode (callSuper = true)
     @Getter
     private static class Car extends Vehicle {
         private final String model;
@@ -77,6 +81,7 @@ public class JsonMapperTest {
         }
     }
 
+
     private static class CantSerialize {
         private int foobar;
 
@@ -84,4 +89,4 @@ public class JsonMapperTest {
 
         }
     }
- }
+}

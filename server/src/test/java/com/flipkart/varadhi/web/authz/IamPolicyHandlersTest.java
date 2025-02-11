@@ -41,18 +41,22 @@ public class IamPolicyHandlersTest extends WebTestBase {
         iamPolicyService = mock(IamPolicyService.class);
         projectService = mock(ProjectService.class);
 
-        iamPolicyHandlers = new IamPolicyHandlers(projectService,  iamPolicyService);
+        iamPolicyHandlers = new IamPolicyHandlers(projectService, iamPolicyService);
 
         Route routeGetIamPolicy = router.get(AUTHZ_ORG_POLICY)
-                .handler(wrapBlocking(iamPolicyHandlers.getIamPolicyHandler(ResourceType.ORG)));
+                                        .handler(wrapBlocking(iamPolicyHandlers.getIamPolicyHandler(ResourceType.ORG)));
         setupFailureHandler(routeGetIamPolicy);
 
-        Route routeSetIamPolicy = router.put(AUTHZ_ORG_POLICY).handler(bodyHandler)
-                .handler(wrapBlocking(iamPolicyHandlers.setIamPolicyHandler(ResourceType.ORG)));
+        Route routeSetIamPolicy = router.put(AUTHZ_ORG_POLICY)
+                                        .handler(bodyHandler)
+                                        .handler(wrapBlocking(iamPolicyHandlers.setIamPolicyHandler(ResourceType.ORG)));
         setupFailureHandler(routeSetIamPolicy);
 
-        Route routeDelIamPolicy = router.delete(AUTHZ_ORG_POLICY).handler(bodyHandler)
-                .handler(wrapBlocking(iamPolicyHandlers.deleteIamPolicyHandler(ResourceType.ORG)));
+        Route routeDelIamPolicy = router.delete(AUTHZ_ORG_POLICY)
+                                        .handler(bodyHandler)
+                                        .handler(
+                                            wrapBlocking(iamPolicyHandlers.deleteIamPolicyHandler(ResourceType.ORG))
+                                        );
         setupFailureHandler(routeDelIamPolicy);
     }
 
@@ -81,8 +85,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
     void testDeleteIamPolicyRecord() throws Exception {
         String resourceId = "testNode";
 
-        HttpRequest<Buffer> request =
-                createRequest(HttpMethod.DELETE, getOrgIamPolicyUrl(resourceId));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getOrgIamPolicyUrl(resourceId));
         doNothing().when(iamPolicyService).deleteIamPolicy(eq(ResourceType.ORG), eq(resourceId));
 
         sendRequestWithoutPayload(request, null);
@@ -90,7 +93,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
 
         String notFoundError = String.format("IamPolicyRecord on resource(%s) not found.", resourceId);
         doThrow(new ResourceNotFoundException(notFoundError)).when(iamPolicyService)
-                .deleteIamPolicy(ResourceType.ORG, resourceId);
+                                                             .deleteIamPolicy(ResourceType.ORG, resourceId);
         sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
@@ -100,16 +103,17 @@ public class IamPolicyHandlersTest extends WebTestBase {
         String user = "user.a";
         Set<String> roles = Set.of("role1", "role2");
 
-        IamPolicyRecord policyRecord =
-                new IamPolicyRecord(getAuthResourceFQN(ResourceType.ORG, orgName), 0, Map.of(user, roles));
-        IamPolicyResponse expected =
-                new IamPolicyResponse(
-                        policyRecord.getName(), policyRecord.getRoleBindings(), 0);
+        IamPolicyRecord policyRecord = new IamPolicyRecord(
+            getAuthResourceFQN(ResourceType.ORG, orgName),
+            0,
+            Map.of(user, roles)
+        );
+        IamPolicyResponse expected = new IamPolicyResponse(policyRecord.getName(), policyRecord.getRoleBindings(), 0);
         IamPolicyRequest assignmentUpdate = new IamPolicyRequest(user, roles);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getOrgIamPolicyUrl(orgName));
         doReturn(policyRecord).when(iamPolicyService)
-                .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
+                              .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
 
         IamPolicyResponse response = sendRequestWithEntity(request, assignmentUpdate, IamPolicyResponse.class);
         assertEquals(expected, response);
@@ -117,9 +121,18 @@ public class IamPolicyHandlersTest extends WebTestBase {
 
         String someInternalError = "Some internal error";
         doThrow(new MetaStoreException(someInternalError)).when(iamPolicyService)
-                .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
-        ErrorResponse errResponse =
-                sendRequestWithEntity(request, assignmentUpdate, 500, someInternalError, ErrorResponse.class);
+                                                          .setIamPolicy(
+                                                              eq(ResourceType.ORG),
+                                                              eq(orgName),
+                                                              eq(assignmentUpdate)
+                                                          );
+        ErrorResponse errResponse = sendRequestWithEntity(
+            request,
+            assignmentUpdate,
+            500,
+            someInternalError,
+            ErrorResponse.class
+        );
         assertEquals(someInternalError, errResponse.reason());
     }
 }

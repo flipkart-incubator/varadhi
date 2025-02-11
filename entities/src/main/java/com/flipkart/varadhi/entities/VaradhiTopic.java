@@ -11,7 +11,7 @@ import java.util.Map;
  * Represents a topic in the Varadhi.
  */
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class VaradhiTopic extends AbstractTopic {
 
     private final Map<String, InternalCompositeTopic> internalTopics;
@@ -30,8 +30,12 @@ public class VaradhiTopic extends AbstractTopic {
      * @param status         the status of the topic
      */
     private VaradhiTopic(
-            String name, int version, boolean grouped, TopicCapacityPolicy capacity,
-            Map<String, InternalCompositeTopic> internalTopics, LifecycleStatus status
+        String name,
+        int version,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        Map<String, InternalCompositeTopic> internalTopics,
+        LifecycleStatus status
     ) {
         super(name, version);
         this.grouped = grouped;
@@ -52,12 +56,19 @@ public class VaradhiTopic extends AbstractTopic {
      * @return a new VaradhiTopic instance
      */
     public static VaradhiTopic of(
-            String project, String name, boolean grouped, TopicCapacityPolicy capacity,
-            LifecycleStatus.ActorCode actorCode
+        String project,
+        String name,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActorCode actorCode
     ) {
         return new VaradhiTopic(
-                buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(),
-                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actorCode)
+            buildTopicName(project, name),
+            INITIAL_VERSION,
+            grouped,
+            capacity,
+            new HashMap<>(),
+            new LifecycleStatus(LifecycleStatus.State.ACTIVE, actorCode)
         );
     }
 

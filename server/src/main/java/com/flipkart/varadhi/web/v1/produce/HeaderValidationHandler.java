@@ -29,10 +29,11 @@ public class HeaderValidationHandler {
                 headers.add(key); // multi-value headers are considered one.
                 if (headers.size() >= headersAllowedMax) {
                     throw new IllegalArgumentException(
-                            String.format(
-                                    "More Varadhi specific headers specified than allowed max(%d).",
-                                    headersAllowedMax
-                            ));
+                        String.format(
+                            "More Varadhi specific headers specified than allowed max(%d).",
+                            headersAllowedMax
+                        )
+                    );
                 }
             }
         });
@@ -47,7 +48,8 @@ public class HeaderValidationHandler {
         }
         if (entry.getValue().length() > headerValueSizeMax) {
             throw new IllegalArgumentException(
-                    String.format("Value of Header %s exceeds allowed size.", entry.getKey()));
+                String.format("Value of Header %s exceeds allowed size.", entry.getKey())
+            );
         }
     }
 }

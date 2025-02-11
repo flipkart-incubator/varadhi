@@ -51,8 +51,12 @@ public class LeanDeploymentValidatorTest {
     public void setup() throws Exception {
         vertx = Vertx.vertx();
         zkCuratorTestingServer = new TestingServer();
-        zkCurator = spy(CuratorFrameworkFactory.newClient(
-                zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCurator = spy(
+            CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+            )
+        );
         zkCurator.start();
         varadhiMetaStore = new VaradhiMetaStore(zkCurator);
 
@@ -63,18 +67,15 @@ public class LeanDeploymentValidatorTest {
         when(metaStoreProvider.getMetaStore()).thenReturn(varadhiMetaStore);
         when(messagingStackProvider.getProducerFactory()).thenReturn(mock(ProducerFactory.class));
 
-        appConfiguration = YamlLoader.loadConfig(
-                "test/configuration.yml",
-                AppConfiguration.class
-        );
+        appConfiguration = YamlLoader.loadConfig("test/configuration.yml", AppConfiguration.class);
 
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
-                varadhiMetaStore,
-                appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
-                meterRegistry
+            varadhiMetaStore,
+            appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
+            meterRegistry
         );
 
         deploymentValidator = new LeanDeploymentValidator(orgService, teamService, projectService);
@@ -106,11 +107,11 @@ public class LeanDeploymentValidatorTest {
         Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
         Project project = Project.of(
-                appConfiguration.getRestOptions().getDefaultProject(),
+            appConfiguration.getRestOptions().getDefaultProject(),
 
-                "",
-                team.getName(),
-                org.getName()
+            "",
+            team.getName(),
+            org.getName()
         );
         projectService.createProject(project);
 
@@ -129,10 +130,9 @@ public class LeanDeploymentValidatorTest {
     public void testDifferentOrgPresent_Failure() {
         Org org = Org.of(TEST_ORG);
         orgService.createOrg(org);
-        validateDeployment(String.format(
-                "Lean deployment can not be enabled as org with %s name is present.",
-                TEST_ORG
-        ));
+        validateDeployment(
+            String.format("Lean deployment can not be enabled as org with %s name is present.", TEST_ORG)
+        );
     }
 
     @Test
@@ -150,10 +150,9 @@ public class LeanDeploymentValidatorTest {
         orgService.createOrg(org);
         Team team = Team.of(TEST_TEAM, org.getName());
         teamService.createTeam(team);
-        validateDeployment(String.format(
-                "Lean deployment can not be enabled as team with %s name is present.",
-                TEST_TEAM
-        ));
+        validateDeployment(
+            String.format("Lean deployment can not be enabled as team with %s name is present.", TEST_TEAM)
+        );
     }
 
     @Test
@@ -176,7 +175,8 @@ public class LeanDeploymentValidatorTest {
         Project project = Project.of(TEST_PROJECT, "", team.getName(), org.getName());
         projectService.createProject(project);
         validateDeployment(
-                String.format("Lean deployment can not be enabled as project with %s name is present.", TEST_PROJECT));
+            String.format("Lean deployment can not be enabled as project with %s name is present.", TEST_PROJECT)
+        );
     }
 
     @Test
@@ -194,8 +194,8 @@ public class LeanDeploymentValidatorTest {
 
     private void validateDeployment(String failureMsg) {
         InvalidConfigException ie = assertThrows(
-                InvalidConfigException.class,
-                () -> deploymentValidator.validate(appConfiguration.getRestOptions())
+            InvalidConfigException.class,
+            () -> deploymentValidator.validate(appConfiguration.getRestOptions())
         );
         assertEquals(failureMsg, ie.getMessage());
     }

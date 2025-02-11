@@ -115,47 +115,47 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         metrics = metricsProvider.build(subscriptionName, shardId, iqPriority);
 
         internalConsumers.put(
-                InternalQueueType.mainType(),
-                createConsumerHolder(
-                        createConsumer(storageSubscription, InternalQueueType.mainType()),
-                        InternalQueueType.mainType()
-                )
+            InternalQueueType.mainType(),
+            createConsumerHolder(
+                createConsumer(storageSubscription, InternalQueueType.mainType()),
+                InternalQueueType.mainType()
+            )
         );
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             StorageSubscription<StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
-                    .getSubscriptionForRetry(r).getSubscriptionForConsume();
+                                                                               .getSubscriptionForRetry(r)
+                                                                               .getSubscriptionForConsume();
             // TODO: the retry delay should be configurable.
             internalConsumers.put(
-                    InternalQueueType.retryType(r),
-                    createConsumerHolder(
-                            createDelayedConsumer(
-                                    createConsumer(retrySubscription, InternalQueueType.retryType(r)),
-                                    5000
-                            ),
-                            InternalQueueType.retryType(r)
-                    )
+                InternalQueueType.retryType(r),
+                createConsumerHolder(
+                    createDelayedConsumer(createConsumer(retrySubscription, InternalQueueType.retryType(r)), 5000),
+                    InternalQueueType.retryType(r)
+                )
             );
         }
 
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
             internalProducers.put(
-                    InternalQueueType.retryType(r),
-                    createFailedMsgProducer(
-                            failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce()
-                    )
+                InternalQueueType.retryType(r),
+                createFailedMsgProducer(
+                    failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce()
+                )
             );
         }
         internalProducers.put(
-                InternalQueueType.deadLetterType(),
-                createFailedMsgProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
+            InternalQueueType.deadLetterType(),
+            createFailedMsgProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
         );
 
-        concurrencyControl =
-                new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), iqPriority);
+        concurrencyControl = new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), iqPriority);
 
         dynamicThreshold = new SlidingWindowThresholdProvider(
-                scheduler, Ticker.systemTicker(), 2_000, 1_000,
-                consumptionPolicy.getMaxErrorThreshold()
+            scheduler,
+            Ticker.systemTicker(),
+            2_000,
+            1_000,
+            consumptionPolicy.getMaxErrorThreshold()
         );
         throttler = new SlidingWindowThrottler<>(scheduler, Ticker.systemTicker(), 1, 1_000, 10, getPriority());
 
@@ -173,11 +173,17 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         if (grouped) {
             throw new UnsupportedOperationException("not implemented");
         } else {
-            processingLoop =
-                    new UngroupedProcessingLoop(
-                            context, createMessageSrcSelector(64), concurrencyControl, dynamicThreshold, throttler,
-                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages()
-                    );
+            processingLoop = new UngroupedProcessingLoop(
+                context,
+                createMessageSrcSelector(64),
+                concurrencyControl,
+                dynamicThreshold,
+                throttler,
+                deliveryClient,
+                internalProducers,
+                failurePolicy,
+                consumptionPolicy.getMaxInFlightMessages()
+            );
         }
 
         connected = true;
@@ -187,7 +193,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     public synchronized void start() {
         if (!connected || stopRequested) {
             throw new IllegalStateException(
-                    "connected: " + connected + ", current state: " + state + ", stopRequested: " + stopRequested);
+                "connected: " + connected + ", current state: " + state + ", stopRequested: " + stopRequested
+            );
         }
 
         state = ConsumerState.CONSUMING;
@@ -228,14 +235,13 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             }
         }
 
-        Stream.concat(internalConsumers.values().stream(), internalProducers.values().stream())
-                .forEach(closeable -> {
-                    try {
-                        closeable.close();
-                    } catch (Exception e) {
-                        log.error("Error closing producer/consumer", e);
-                    }
-                });
+        Stream.concat(internalConsumers.values().stream(), internalProducers.values().stream()).forEach(closeable -> {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                log.error("Error closing producer/consumer", e);
+            }
+        });
         internalConsumers.clear();
         internalProducers.clear();
 
@@ -262,14 +268,17 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     Consumer<Offset> createConsumer(
-            StorageSubscription<StorageTopic> storageSubscription, InternalQueueType queueType) {
+        StorageSubscription<StorageTopic> storageSubscription,
+        InternalQueueType queueType
+    ) {
         String consumerName = String.format("%s/%s/%s/%s", project, subscriptionName, shardId, queueType.toString());
-        Consumer<Offset> consumer =
-                env.getConsumerFactory()
-                        .newConsumer(
-                                List.of(storageSubscription.getTopicPartitions()), storageSubscription.getName(),
-                                consumerName, Map.of()
-                        );
+        Consumer<Offset> consumer = env.getConsumerFactory()
+                                       .newConsumer(
+                                           List.of(storageSubscription.getTopicPartitions()),
+                                           storageSubscription.getName(),
+                                           consumerName,
+                                           Map.of()
+                                       );
         return consumer;
     }
 
@@ -279,9 +288,9 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
 
     ConsumerHolder createConsumerHolder(Consumer<Offset> consumer, InternalQueueType queueType) {
         // TODO: configurable unacked messages.
-        MessageSrc messageSrc =
-                grouped ? new GroupedMessageSrc<>(consumer, 1000, metrics) :
-                        new UnGroupedMessageSrc<>(queueType, consumer, metrics);
+        MessageSrc messageSrc = grouped ?
+            new GroupedMessageSrc<>(consumer, 1000, metrics) :
+            new UnGroupedMessageSrc<>(queueType, consumer, metrics);
         return new ConsumerHolder(consumer, messageSrc);
     }
 

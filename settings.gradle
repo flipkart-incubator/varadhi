@@ -9,4 +9,3 @@
 
 rootProject.name = 'varadhi'
 include('entities', 'spi', 'common', 'core', 'producer', 'pulsar', 'consumer', 'controller', 'authz', 'server')
-

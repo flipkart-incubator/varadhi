@@ -121,8 +121,8 @@ public class E2EBase {
 
     public static void cleanupOrgs(List<Org> orgs) {
         getOrgs(makeListRequest(getOrgsUri(), EXPECTED_STATUS_OK)).stream()
-                .filter(orgs::contains)
-                .forEach(E2EBase::cleanupOrg);
+                                                                  .filter(orgs::contains)
+                                                                  .forEach(E2EBase::cleanupOrg);
     }
 
     public static void cleanupOrg(Org org) {
@@ -131,8 +131,9 @@ public class E2EBase {
     }
 
     public static void cleanupTeam(Team team) {
-        getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK))
-                .forEach(E2EBase::cleanupProject);
+        getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK)).forEach(
+            E2EBase::cleanupProject
+        );
         makeDeleteRequest(getTeamUri(team), EXPECTED_STATUS_OK);
     }
 
@@ -148,48 +149,71 @@ public class E2EBase {
 
     public static void cleanupTopic(String topicName, Project project) {
         makeDeleteRequest(
-                getTopicsUri(project, topicName), ResourceDeletionType.HARD_DELETE.toString(), EXPECTED_STATUS_OK);
+            getTopicsUri(project, topicName),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            EXPECTED_STATUS_OK
+        );
     }
 
     public static void cleanupSubscriptionsOnTopics(List<String> topicNames, String projectName) {
-        getOrgs(makeListRequest(getOrgsUri(), EXPECTED_STATUS_OK)).forEach(org ->
-                getTeams(makeListRequest(getTeamsUri(org.getName()), EXPECTED_STATUS_OK)).forEach(team ->
-                        getProjects(makeListRequest(
-                                getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK))
-                                .forEach(project ->
-                                        getSubscriptions(
-                                                makeListRequest(getSubscriptionsUri(project), EXPECTED_STATUS_OK))
-                                                .forEach(sub -> {
-                                                    SubscriptionResource res =
-                                                            makeGetRequest(
-                                                                    getSubscriptionsUri(project, sub),
-                                                                    SubscriptionResource.class, EXPECTED_STATUS_OK
-                                                            );
-                                                    if (topicNames.contains(res.getTopic()) &&
-                                                            projectName.equals(res.getTopicProject())) {
-                                                        makeDeleteRequest(
-                                                                getSubscriptionsUri(project, sub),
-                                                                ResourceDeletionType.HARD_DELETE.toString(),
-                                                                EXPECTED_STATUS_OK
-                                                        );
-                                                    }
-                                                }))));
+        getOrgs(makeListRequest(getOrgsUri(), EXPECTED_STATUS_OK)).forEach(
+            org -> getTeams(makeListRequest(getTeamsUri(org.getName()), EXPECTED_STATUS_OK)).forEach(
+                team -> getProjects(
+                    makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK)
+                ).forEach(
+                    project -> getSubscriptions(makeListRequest(getSubscriptionsUri(project), EXPECTED_STATUS_OK))
+                                                                                                                  .forEach(
+                                                                                                                      sub -> {
+                                                                                                                          SubscriptionResource res =
+                                                                                                                              makeGetRequest(
+                                                                                                                                  getSubscriptionsUri(
+                                                                                                                                      project,
+                                                                                                                                      sub
+                                                                                                                                  ),
+                                                                                                                                  SubscriptionResource.class,
+                                                                                                                                  EXPECTED_STATUS_OK
+                                                                                                                              );
+                                                                                                                          if (topicNames.contains(
+                                                                                                                              res.getTopic()
+                                                                                                                          ) && projectName.equals(
+                                                                                                                              res.getTopicProject()
+                                                                                                                          )) {
+                                                                                                                              makeDeleteRequest(
+                                                                                                                                  getSubscriptionsUri(
+                                                                                                                                      project,
+                                                                                                                                      sub
+                                                                                                                                  ),
+                                                                                                                                  ResourceDeletionType.HARD_DELETE.toString(),
+                                                                                                                                  EXPECTED_STATUS_OK
+                                                                                                                              );
+                                                                                                                          }
+                                                                                                                      }
+                                                                                                                  )
+                )
+            )
+        );
     }
 
     public static void cleanupSubscriptionsOnProject(Project project) {
         getSubscriptions(makeListRequest(getSubscriptionsUri(project), EXPECTED_STATUS_OK)).forEach(
-                sub -> makeDeleteRequest(
-                        getSubscriptionsUri(project, sub.split(NAME_SEPARATOR_REGEX)[1]),
-                        ResourceDeletionType.HARD_DELETE.toString(), EXPECTED_STATUS_OK
-                ));
+            sub -> makeDeleteRequest(
+                getSubscriptionsUri(project, sub.split(NAME_SEPARATOR_REGEX)[1]),
+                ResourceDeletionType.HARD_DELETE.toString(),
+                EXPECTED_STATUS_OK
+            )
+        );
     }
 
     public static <T> T makeCreateRequest(String targetUrl, T entity, int expectedStatus) {
-        return processRequest(makeHttpPostRequest(targetUrl, entity), expectedStatus, (Class<T>) entity.getClass());
+        return processRequest(makeHttpPostRequest(targetUrl, entity), expectedStatus, (Class<T>)entity.getClass());
     }
 
     public static <T> void makeCreateRequest(
-            String targetUrl, T entity, int expectedStatus, String expectedResponse, boolean isErrored
+        String targetUrl,
+        T entity,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
     ) {
         processRequest(makeHttpPostRequest(targetUrl, entity), expectedStatus, expectedResponse, isErrored);
     }
@@ -199,7 +223,11 @@ public class E2EBase {
     }
 
     public static void makeGetRequest(
-            String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored) {
+        String targetUrl,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
         processRequest(makeHttpGetRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
     }
 
@@ -208,16 +236,24 @@ public class E2EBase {
     }
 
     public static void makeListRequest(
-            String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored) {
+        String targetUrl,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
         processRequest(makeHttpGetRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
     }
 
     public static <T> T makeUpdateRequest(String targetUrl, T entity, int expectedStatus) {
-        return processRequest(makeHttpPutRequest(targetUrl, entity), expectedStatus, (Class<T>) entity.getClass());
+        return processRequest(makeHttpPutRequest(targetUrl, entity), expectedStatus, (Class<T>)entity.getClass());
     }
 
     public static <T> void makeUpdateRequest(
-            String targetUrl, T entity, int expectedStatus, String expectedResponse, boolean isErrored
+        String targetUrl,
+        T entity,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
     ) {
         processRequest(makeHttpPutRequest(targetUrl, entity), expectedStatus, expectedResponse, isErrored);
     }
@@ -231,7 +267,11 @@ public class E2EBase {
     }
 
     public static void makeDeleteRequest(
-            String targetUrl, int expectedStatus, String expectedResponse, boolean isErrored) {
+        String targetUrl,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
         processRequest(makeHttpDeleteRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
     }
 
@@ -246,12 +286,16 @@ public class E2EBase {
     }
 
     private static void processRequest(
-            Response response, int expectedStatus, String expectedResponse, boolean isErrored) {
+        Response response,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
         assertEquals(expectedStatus, response.getStatus());
         if (expectedResponse != null) {
-            String responseMsg = isErrored
-                    ? response.readEntity(ErrorResponse.class).reason()
-                    : response.readEntity(String.class);
+            String responseMsg = isErrored ?
+                response.readEntity(ErrorResponse.class).reason() :
+                response.readEntity(String.class);
             assertEquals(expectedResponse, responseMsg);
         }
     }
@@ -262,53 +306,47 @@ public class E2EBase {
     }
 
     public static <T> Response makeHttpPostRequest(String targetUrl, T entityToCreate) {
-        return CLIENT
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .post(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .post(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
     }
 
     public static Response makeHttpGetRequest(String targetUrl) {
-        return CLIENT
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .get();
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .get();
     }
 
     public static <T> Response makeHttpPutRequest(String targetUrl, T entityToCreate) {
-        return CLIENT
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .put(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .put(Entity.entity(entityToCreate, MediaType.APPLICATION_JSON_TYPE));
     }
 
     public static Response makeHttpDeleteRequest(String targetUrl) {
-        return CLIENT
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .delete();
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .delete();
     }
 
     public static Response makeHttpDeleteRequest(String targetUrl, String deletionType) {
-        return CLIENT
-                .target(targetUrl)
-                .queryParam(QUERY_PARAM_DELETION_TYPE, deletionType)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .delete();
+        return CLIENT.target(targetUrl)
+                     .queryParam(QUERY_PARAM_DELETION_TYPE, deletionType)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .delete();
     }
 
     public static Response makeHttpPatchRequest(String targetUrl) {
-        return CLIENT
-                .target(targetUrl)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .header(USER_ID_HEADER, SUPER_USER)
-                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
-                .method("PATCH", Entity.json("{}"));
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                     .method("PATCH", Entity.json("{}"));
     }
 
     @Provider

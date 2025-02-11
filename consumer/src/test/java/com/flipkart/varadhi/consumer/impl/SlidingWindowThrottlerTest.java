@@ -22,12 +22,8 @@ import static org.mockito.Mockito.mock;
 @Slf4j
 class SlidingWindowThrottlerTest {
 
-    private final InternalQueueType[] priority = new InternalQueueType[]{
-            new InternalQueueType.Retry(3),
-            new InternalQueueType.Retry(2),
-            new InternalQueueType.Retry(1),
-            new InternalQueueType.Main()
-    };
+    private final InternalQueueType[] priority = new InternalQueueType[] {new InternalQueueType.Retry(3),
+        new InternalQueueType.Retry(2), new InternalQueueType.Retry(1), new InternalQueueType.Main()};
     private final InternalQueueType mainQ = priority[3];
 
     private final ScheduledExecutorService noopScheduler = mock(ScheduledExecutorService.class);
@@ -49,18 +45,19 @@ class SlidingWindowThrottlerTest {
             Set<Integer> completed = new ConcurrentHashSet<>();
             for (int i = 0; i < 1000; i++) {
                 int id = i;
-                tasks.add(throttler.acquire(mainQ, () -> CompletableFuture.completedFuture(id), 1)
-                        .whenComplete((r, e) -> {
-                            completed.add(r);
-                        }));
+                tasks.add(
+                    throttler.acquire(mainQ, () -> CompletableFuture.completedFuture(id), 1).whenComplete((r, e) -> {
+                        completed.add(r);
+                    })
+                );
             }
 
             Consumer<Integer> assertions = (completedCount) -> {
                 throttler.executePendingTasksInternal();
                 Assertions.assertEquals(completedCount, completed.size());
                 Assertions.assertEquals(
-                        IntStream.range(0, completedCount).boxed().collect(Collectors.toSet()),
-                        new HashSet<>(completed)
+                    IntStream.range(0, completedCount).boxed().collect(Collectors.toSet()),
+                    new HashSet<>(completed)
                 );
             };
 
@@ -95,20 +92,24 @@ class SlidingWindowThrottlerTest {
 
     @Test
     public void testRateLimitBehaviourAndPriorityOverMultipleWindow() throws Exception {
-        try (
-                var throttler = new SlidingWindowThrottler<Integer>(
-                        defaultScheduler, Ticker.systemTicker(), 10, 1000, 10, priority)
-        ) {
+        try (var throttler = new SlidingWindowThrottler<Integer>(
+            defaultScheduler,
+            Ticker.systemTicker(),
+            10,
+            1000,
+            10,
+            priority
+        )) {
             long start = System.currentTimeMillis();
             CountDownLatch latch = new CountDownLatch(21);
             List<Integer> taskTypeCompleted = new ArrayList<>();
             for (int i = 0; i < 21; ++i) {
                 int _i = i;
                 throttler.acquire(priority[i % 4], () -> CompletableFuture.completedFuture(_i % 4), 1)
-                        .whenComplete((r, e) -> {
-                            latch.countDown();
-                            taskTypeCompleted.add(r);
-                        });
+                         .whenComplete((r, e) -> {
+                             latch.countDown();
+                             taskTypeCompleted.add(r);
+                         });
             }
             Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
             long duration = System.currentTimeMillis() - start;

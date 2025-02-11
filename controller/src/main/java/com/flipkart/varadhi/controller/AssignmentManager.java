@@ -24,20 +24,25 @@ public class AssignmentManager {
     private final ExecutorService executor;
 
     public AssignmentManager(
-            AssignmentStrategy strategy, AssignmentStore assignmentStore, MeterRegistry meterRegistry
+        AssignmentStrategy strategy,
+        AssignmentStore assignmentStore,
+        MeterRegistry meterRegistry
     ) {
         this.strategy = strategy;
         this.consumerNodes = new ConcurrentHashMap<>();
         this.assignmentStore = assignmentStore;
         //TODO::ExecutorService should emit the metrics.
-        this.executor =
-                Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("assigner-%d").build());
+        this.executor = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setNameFormat("assigner-%d").build()
+        );
     }
 
 
     // idempotency -- does not re-assign if shard is already assigned, however they are returned.
     public CompletableFuture<List<Assignment>> assignShards(
-            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<String> nodesToExclude
+        List<SubscriptionUnitShard> shards,
+        VaradhiSubscription subscription,
+        List<String> nodesToExclude
     ) {
         return CompletableFuture.supplyAsync(() -> {
             List<Assignment> newAssignments = new ArrayList<>();
@@ -45,9 +50,13 @@ public class AssignmentManager {
                 Map<Integer, Assignment> alreadyAssigned = getExistingAssignments(shards, subscription);
                 log.info("Found {} assignments for {}.", alreadyAssigned.size(), subscription.getName());
 
-                List<SubscriptionUnitShard> unAssignedShards =
-                        shards.stream().filter(s -> !alreadyAssigned.containsKey(s.getShardId()))
-                                .collect(Collectors.toList());
+                List<SubscriptionUnitShard> unAssignedShards = shards.stream()
+                                                                     .filter(
+                                                                         s -> !alreadyAssigned.containsKey(
+                                                                             s.getShardId()
+                                                                         )
+                                                                     )
+                                                                     .collect(Collectors.toList());
                 // create new assignments only for shards which are still un-assigned.
                 newAssignments.addAll(doAssignments(unAssignedShards, subscription, nodesToExclude));
                 assignmentStore.createAssignments(newAssignments);
@@ -61,25 +70,30 @@ public class AssignmentManager {
                 log.error("Failed while creating assignment, freeing up any allocation done. {}.", e.getMessage());
                 SubscriptionShards subShards = subscription.getShards();
                 newAssignments.forEach(
-                        assignment -> freeCapacityFromNode(assignment, subShards.getShard(assignment.getShardId())));
+                    assignment -> freeCapacityFromNode(assignment, subShards.getShard(assignment.getShardId()))
+                );
                 throw e;
             }
         }, executor);
     }
 
     private Map<Integer, Assignment> getExistingAssignments(
-            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription
+        List<SubscriptionUnitShard> shards,
+        VaradhiSubscription subscription
     ) {
-        Map<Integer, Assignment> assigned =
-                assignmentStore.getSubAssignments(subscription.getName()).stream()
-                        .collect(Collectors.toMap(Assignment::getShardId, a -> a));
+        Map<Integer, Assignment> assigned = assignmentStore.getSubAssignments(subscription.getName())
+                                                           .stream()
+                                                           .collect(Collectors.toMap(Assignment::getShardId, a -> a));
 
-        return shards.stream().filter(s -> assigned.containsKey(s.getShardId()))
-                .collect(Collectors.toMap(SubscriptionUnitShard::getShardId, s -> assigned.get(s.getShardId())));
+        return shards.stream()
+                     .filter(s -> assigned.containsKey(s.getShardId()))
+                     .collect(Collectors.toMap(SubscriptionUnitShard::getShardId, s -> assigned.get(s.getShardId())));
     }
 
     private List<Assignment> doAssignments(
-            List<SubscriptionUnitShard> unAssignedShards, VaradhiSubscription subscription, List<String> nodesToExclude
+        List<SubscriptionUnitShard> unAssignedShards,
+        VaradhiSubscription subscription,
+        List<String> nodesToExclude
     ) {
         List<ConsumerNode> activeConsumers = getActiveConsumers(nodesToExclude);
         return strategy.assign(unAssignedShards, subscription, activeConsumers);
@@ -87,9 +101,10 @@ public class AssignmentManager {
 
     private List<ConsumerNode> getActiveConsumers(List<String> nodesToExclude) {
         Set<String> exclusions = new HashSet<>(nodesToExclude);
-        List<ConsumerNode> activeConsumers =
-                consumerNodes.values().stream().filter(c -> !exclusions.contains(c.getConsumerId()))
-                        .collect(Collectors.toList());
+        List<ConsumerNode> activeConsumers = consumerNodes.values()
+                                                          .stream()
+                                                          .filter(c -> !exclusions.contains(c.getConsumerId()))
+                                                          .collect(Collectors.toList());
         log.info("Found {} active consumer nodes of total {}.", activeConsumers.size(), consumerNodes.size());
         return activeConsumers;
     }
@@ -97,15 +112,18 @@ public class AssignmentManager {
 
     // idempotency -- should not fail, if already un-assigned.
     public CompletableFuture<Void> unAssignShards(
-            List<Assignment> assignments, VaradhiSubscription subscription, boolean freeAssignedCapacity
+        List<Assignment> assignments,
+        VaradhiSubscription subscription,
+        boolean freeAssignedCapacity
     ) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 List<Assignment> toDelete = new ArrayList<>();
                 List<Assignment> alreadyDeleted = new ArrayList<>();
 
-                Set<Assignment> existingAssignments =
-                        new HashSet<>(assignmentStore.getSubAssignments(subscription.getName()));
+                Set<Assignment> existingAssignments = new HashSet<>(
+                    assignmentStore.getSubAssignments(subscription.getName())
+                );
 
                 // delete  assignments only for shards which are still assigned.
                 assignments.forEach(a -> {
@@ -117,13 +135,16 @@ public class AssignmentManager {
                 });
 
                 alreadyDeleted.forEach(
-                        a -> log.info("Assignment {} already deleted for shard {}, skipping delete.", a, a.getName()));
+                    a -> log.info("Assignment {} already deleted for shard {}, skipping delete.", a, a.getName())
+                );
 
                 assignmentStore.deleteAssignments(toDelete);
 
                 log.info(
-                        "UnAssign Requested:{}, Already UnAssigned:{}, Newly UnAssigned:{}.", assignments.size(),
-                        alreadyDeleted.size(), toDelete.size()
+                    "UnAssign Requested:{}, Already UnAssigned:{}, Newly UnAssigned:{}.",
+                    assignments.size(),
+                    alreadyDeleted.size(),
+                    toDelete.size()
                 );
 
                 if (freeAssignedCapacity) {
@@ -139,18 +160,21 @@ public class AssignmentManager {
     }
 
     public CompletableFuture<Assignment> reAssignShard(
-            Assignment assignment, VaradhiSubscription subscription, boolean freeAssignedCapacity
+        Assignment assignment,
+        VaradhiSubscription subscription,
+        boolean freeAssignedCapacity
     ) {
         List<String> nodeToExclude = new ArrayList<>();
         ConsumerNode assignedNode = consumerNodes.getOrDefault(assignment.getConsumerId(), null);
         if (null != assignedNode) {
             nodeToExclude.add(assignedNode.getConsumerId());
         }
-        List<SubscriptionUnitShard> shardToReAssign =
-                List.of(subscription.getShards().getShard(assignment.getShardId()));
+        List<SubscriptionUnitShard> shardToReAssign = List.of(
+            subscription.getShards().getShard(assignment.getShardId())
+        );
 
-        return unAssignShards(List.of(assignment), subscription, freeAssignedCapacity).thenCompose(v ->
-                assignShards(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0))
+        return unAssignShards(List.of(assignment), subscription, freeAssignedCapacity).thenCompose(
+            v -> assignShards(shardToReAssign, subscription, nodeToExclude).thenApply(assignments -> assignments.get(0))
         );
     }
 

@@ -29,8 +29,12 @@ public class MessageSrcSelector {
         this.messageSrcs = new Holder[msgSrcs.size()];
         int i = 0;
         for (var entries : msgSrcs.entrySet()) {
-            var holder = new Holder(context, entries.getKey(), entries.getValue(), new MessageTracker[batchSize],
-                    this::tryCompleteRequest
+            var holder = new Holder(
+                context,
+                entries.getKey(),
+                entries.getValue(),
+                new MessageTracker[batchSize],
+                this::tryCompleteRequest
             );
             // simulate the first fetch on the context
             context.executeOnContext(() -> {
@@ -71,11 +75,18 @@ public class MessageSrcSelector {
     private CompletableFuture<PolledMessageTrackers> tryCompleteRequest(Holder holder) {
         CompletableFuture<PolledMessageTrackers> promise = pendingRequest.getAndSet(null);
         if (promise != null) {
-            log.debug("returning messages from message src of type: {}. msgs now: {}", holder.internalQueueType, holder.size);
+            log.debug(
+                "returning messages from message src of type: {}. msgs now: {}",
+                holder.internalQueueType,
+                holder.size
+            );
             promise.complete(new PolledMessageTrackers(holder));
             return promise;
         } else {
-            log.debug("fetched new message for the message src, no pending request to finish: {}", holder.internalQueueType);
+            log.debug(
+                "fetched new message for the message src, no pending request to finish: {}",
+                holder.internalQueueType
+            );
             return null;
         }
     }
@@ -110,6 +121,7 @@ public class MessageSrcSelector {
             });
         }
     }
+
 
     @RequiredArgsConstructor
     public static final class PolledMessageTrackers {

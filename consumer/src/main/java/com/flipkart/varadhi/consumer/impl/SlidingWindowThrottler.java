@@ -18,8 +18,8 @@ import java.util.function.Supplier;
  * @param <T>
  */
 @Slf4j
-public class SlidingWindowThrottler<T>
-        implements Throttler<T>, ThresholdProvider.ThresholdChangeListener, AutoCloseable {
+public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvider.ThresholdChangeListener,
+    AutoCloseable {
 
     /*
         Approach:
@@ -30,8 +30,8 @@ public class SlidingWindowThrottler<T>
         - Tick rate / sub-interval: smaller than window size. If it smaller, than it allows us to approximately track the usage of permits across the whole window at this sub-interval level. And then we use this info, to replinish the permits.
           Basically, the previous utilization will roughly dictate how the permits are going to be replinised.
         - Starting config: window_size = 1 sec, sub-interval = 10ms.
-
-
+    
+    
         what is required?
         - A thread to automatically manage execution whenever permits are "freed".
         - A list of pending tasks per type.
@@ -56,7 +56,8 @@ public class SlidingWindowThrottler<T>
     private final TaskQueue<T>[] queues;
 
     /**
-     * Guards the "only" execution of pending tasks. If the execution is being attempted then this flag will be true, and
+     * Guards the "only" execution of pending tasks. If the execution is being attempted then this flag will be true,
+     * and
      * no one else should attempt parallel execution.
      */
     private final AtomicBoolean executionInProgress = new AtomicBoolean(false);
@@ -64,8 +65,12 @@ public class SlidingWindowThrottler<T>
     private ScheduledFuture<?> throttledTaskExecutor;
 
     public SlidingWindowThrottler(
-            ScheduledExecutorService scheduler, Ticker ticker, float initialThreshold, int windowSizeMs, int tickMs,
-            InternalQueueType[] priorityOrder
+        ScheduledExecutorService scheduler,
+        Ticker ticker,
+        float initialThreshold,
+        int windowSizeMs,
+        int tickMs,
+        InternalQueueType[] priorityOrder
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
@@ -149,12 +154,12 @@ public class SlidingWindowThrottler<T>
                         top.execute();
                         freePermits -= top.pendingPermits;
                         queue.tasks.poll();
-                        permitsPerTick.addAndGet((int) (currentTick % totalTicks), top.pendingPermits);
+                        permitsPerTick.addAndGet((int)(currentTick % totalTicks), top.pendingPermits);
                     } else {
-                        int permitsToConsume = ((int) (freePermits) + 1);
+                        int permitsToConsume = ((int)(freePermits) + 1);
                         freePermits -= permitsToConsume;
                         top.pendingPermits -= permitsToConsume;
-                        permitsPerTick.addAndGet((int) (currentTick % totalTicks), permitsToConsume);
+                        permitsPerTick.addAndGet((int)(currentTick % totalTicks), permitsToConsume);
                     }
                 }
 
@@ -174,8 +179,8 @@ public class SlidingWindowThrottler<T>
             return false;
         }
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
-            int beginIdx = (int) (i % totalTicks);
-            int endIdx = (int) ((i + ticksInWindow) % totalTicks);
+            int beginIdx = (int)(i % totalTicks);
+            int endIdx = (int)((i + ticksInWindow) % totalTicks);
             permitsConsumedInLastWindow += (permitsPerTick.get(endIdx) - permitsPerTick.getAndSet(beginIdx, 0));
         }
 
@@ -184,11 +189,10 @@ public class SlidingWindowThrottler<T>
     }
 
     private float getPermitsConsumedPrecise(long now, long currentTick) {
-        float factor = ((float) (now % tickMs)) / tickMs;
+        float factor = ((float)(now % tickMs)) / tickMs;
         long beginningTick = currentTick - ticksInWindow;
-        return permitsConsumedInLastWindow -
-                (factor * permitsPerTick.get((int) (beginningTick % totalTicks))) +
-                permitsPerTick.get((int) (currentTick % totalTicks));
+        return permitsConsumedInLastWindow - (factor * permitsPerTick.get((int)(beginningTick % totalTicks)))
+               + permitsPerTick.get((int)(currentTick % totalTicks));
     }
 
     private TaskQueue<T> getQueue(InternalQueueType type) {
@@ -202,10 +206,7 @@ public class SlidingWindowThrottler<T>
 
     private ScheduledFuture<?> scheduleTask() {
         // schedule it at double the tick rate, so that we "don't miss" any tick changes.
-        return scheduler.scheduleAtFixedRate(
-                this::executePendingTasksInternal, 0, tickMs / 2,
-                TimeUnit.MILLISECONDS
-        );
+        return scheduler.scheduleAtFixedRate(this::executePendingTasksInternal, 0, tickMs / 2, TimeUnit.MILLISECONDS);
     }
 
     @RequiredArgsConstructor
@@ -213,6 +214,7 @@ public class SlidingWindowThrottler<T>
         private final InternalQueueType type;
         private final ConcurrentLinkedQueue<Holder<T>> tasks = new ConcurrentLinkedQueue<>();
     }
+
 
     static class Holder<T> {
         private final CompletableFuture<T> future;

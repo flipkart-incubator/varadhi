@@ -11,7 +11,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.IllegalArgumentException;
 
 import static java.net.HttpURLConnection.*;
 
@@ -23,15 +22,19 @@ public class FailureHandler implements Handler<RoutingContext> {
         HttpServerResponse response = ctx.response();
 
         if (!response.ended()) {
-            int statusCode =
-                    overrideStatusCode(ctx.statusCode()) ? getStatusCodeFromFailure(ctx.failure()) : ctx.statusCode();
-            String errorMsg =
-                    overWriteErrorMsg(response) ? getErrorFromFailure(ctx.failure(), statusCode) :
-                            response.getStatusMessage();
-            String failureLog =
-                    String.format("%s: %s: Failed. Status:%s, Error:%s", ctx.request().method(), ctx.request().path(),
-                            statusCode, errorMsg
-                    );
+            int statusCode = overrideStatusCode(ctx.statusCode()) ?
+                getStatusCodeFromFailure(ctx.failure()) :
+                ctx.statusCode();
+            String errorMsg = overWriteErrorMsg(response) ?
+                getErrorFromFailure(ctx.failure(), statusCode) :
+                response.getStatusMessage();
+            String failureLog = String.format(
+                "%s: %s: Failed. Status:%s, Error:%s",
+                ctx.request().method(),
+                ctx.request().path(),
+                statusCode,
+                errorMsg
+            );
             if (statusCode == HTTP_INTERNAL_ERROR) {
                 log.error(failureLog, ctx.failure());
             } else {
@@ -50,9 +53,11 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private boolean overWriteErrorMsg(HttpServerResponse response) {
-        return null == response.getStatusMessage()
-                || response.getStatusMessage().isBlank()
-                || response.getStatusMessage().equalsIgnoreCase(HttpResponseStatus.OK.reasonPhrase());
+        return null == response.getStatusMessage() || response.getStatusMessage().isBlank() || response
+                                                                                                       .getStatusMessage()
+                                                                                                       .equalsIgnoreCase(
+                                                                                                           HttpResponseStatus.OK.reasonPhrase()
+                                                                                                       );
     }
 
     private String getErrorFromFailure(Throwable t, int statusCode) {

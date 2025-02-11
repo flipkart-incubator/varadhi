@@ -22,35 +22,27 @@ import java.util.Map;
  * Represents a subscription resource in Varadhi.
  */
 @Getter
-@EqualsAndHashCode(callSuper = true)
-@ValidateResource(message = "Invalid Subscription name. Check naming constraints.", max = 64)
+@EqualsAndHashCode (callSuper = true)
+@ValidateResource (message = "Invalid Subscription name. Check naming constraints.", max = 64)
 public class SubscriptionResource extends VersionedEntity implements Validatable {
 
-    @NotBlank
-    private final String project;
+    @NotBlank private final String project;
 
-    @NotBlank
-    private final String topic;
+    @NotBlank private final String topic;
 
-    @NotBlank
-    private final String topicProject;
+    @NotBlank private final String topicProject;
 
-    @NotBlank
-    private final String description;
+    @NotBlank private final String description;
 
     private final boolean grouped;
 
-    @NotNull
-    private final Endpoint endpoint;
+    @NotNull private final Endpoint endpoint;
 
-    @NotNull
-    private final RetryPolicy retryPolicy;
+    @NotNull private final RetryPolicy retryPolicy;
 
-    @NotNull
-    private final ConsumptionPolicy consumptionPolicy;
+    @NotNull private final ConsumptionPolicy consumptionPolicy;
 
-    @NotNull
-    private final Map<String, String> properties;
+    @NotNull private final Map<String, String> properties;
 
     @Setter
     private LifecycleStatus.ActorCode actorCode;
@@ -72,18 +64,18 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
      * @param actorCode         The actor code associated with the subscription.
      */
     private SubscriptionResource(
-            String name,
-            int version,
-            String project,
-            String topic,
-            String topicProject,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            Map<String, String> properties,
-            LifecycleStatus.ActorCode actorCode
+        String name,
+        int version,
+        String project,
+        String topic,
+        String topicProject,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        Map<String, String> properties,
+        LifecycleStatus.ActorCode actorCode
     ) {
         super(name, version);
         this.project = project;
@@ -116,21 +108,31 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
      * @return A new SubscriptionResource instance.
      */
     public static SubscriptionResource of(
-            String name,
-            String project,
-            String topic,
-            String topicProject,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            Map<String, String> properties,
-            LifecycleStatus.ActorCode actorCode
+        String name,
+        String project,
+        String topic,
+        String topicProject,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        Map<String, String> properties,
+        LifecycleStatus.ActorCode actorCode
     ) {
         return new SubscriptionResource(
-                name, INITIAL_VERSION, project, topic, topicProject, description, grouped, endpoint, retryPolicy,
-                consumptionPolicy, properties, actorCode
+            name,
+            INITIAL_VERSION,
+            project,
+            topic,
+            topicProject,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            properties,
+            actorCode
         );
     }
 
@@ -163,17 +165,17 @@ public class SubscriptionResource extends VersionedEntity implements Validatable
         String topicName = topicSegments[1];
 
         SubscriptionResource subResource = of(
-                subscriptionName,
-                subscriptionProject,
-                topicName,
-                topicProject,
-                subscription.getDescription(),
-                subscription.isGrouped(),
-                subscription.getEndpoint(),
-                subscription.getRetryPolicy(),
-                subscription.getConsumptionPolicy(),
-                subscription.getProperties(),
-                subscription.getStatus().getActorCode()
+            subscriptionName,
+            subscriptionProject,
+            topicName,
+            topicProject,
+            subscription.getDescription(),
+            subscription.isGrouped(),
+            subscription.getEndpoint(),
+            subscription.getRetryPolicy(),
+            subscription.getConsumptionPolicy(),
+            subscription.getProperties(),
+            subscription.getStatus().getActorCode()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;

@@ -12,64 +12,68 @@ class LifecycleStatusTest {
 
     @Test
     void constructor_SetsStateAndActionCode() {
-        LifecycleStatus status =
-                new LifecycleStatus(LifecycleStatus.State.CREATED, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        LifecycleStatus status = new LifecycleStatus(
+            LifecycleStatus.State.CREATED,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         assertAll(
-                () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
-                () -> assertEquals("Successfully created.", status.getMessage()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
+            () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
+            () -> assertEquals("Successfully created.", status.getMessage()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
         );
     }
 
     @Test
     void update_ChangesStateMessageAndActionCode() {
-        LifecycleStatus status =
-                new LifecycleStatus(LifecycleStatus.State.CREATING, LifecycleStatus.ActorCode.SYSTEM_ACTION);
-        status.update(
-                LifecycleStatus.State.CREATED, "Created successfully",
-                LifecycleStatus.ActorCode.USER_ACTION
+        LifecycleStatus status = new LifecycleStatus(
+            LifecycleStatus.State.CREATING,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
+        status.update(LifecycleStatus.State.CREATED, "Created successfully", LifecycleStatus.ActorCode.USER_ACTION);
         assertAll(
-                () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
-                () -> assertEquals("Created successfully", status.getMessage()),
-                () -> assertEquals(LifecycleStatus.ActorCode.USER_ACTION, status.getActorCode())
+            () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
+            () -> assertEquals("Created successfully", status.getMessage()),
+            () -> assertEquals(LifecycleStatus.ActorCode.USER_ACTION, status.getActorCode())
         );
     }
 
     @Test
     void update_ChangesStateAndMessageOnly() {
-        LifecycleStatus status =
-                new LifecycleStatus(LifecycleStatus.State.CREATING, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        LifecycleStatus status = new LifecycleStatus(
+            LifecycleStatus.State.CREATING,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         status.update(LifecycleStatus.State.CREATED, "Created successfully");
         assertAll(
-                () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
-                () -> assertEquals("Created successfully", status.getMessage()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
+            () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
+            () -> assertEquals("Created successfully", status.getMessage()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
         );
     }
 
     @Test
     void update_NullMessageUsesDefaultMessage() {
-        LifecycleStatus status =
-                new LifecycleStatus(LifecycleStatus.State.CREATING, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        LifecycleStatus status = new LifecycleStatus(
+            LifecycleStatus.State.CREATING,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         status.update(LifecycleStatus.State.CREATED, null);
         assertAll(
-                () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
-                () -> assertEquals("Successfully created.", status.getMessage()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
+            () -> assertEquals(LifecycleStatus.State.CREATED, status.getState()),
+            () -> assertEquals("Successfully created.", status.getMessage()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, status.getActorCode())
         );
     }
 
     @Test
     void update_SameState_ThrowsIllegalArgumentException() {
-        LifecycleStatus status =
-                new LifecycleStatus(LifecycleStatus.State.CREATED, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        LifecycleStatus status = new LifecycleStatus(
+            LifecycleStatus.State.CREATED,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         assertThrows(
-                IllegalArgumentException.class, () ->
-                        status.update(
-                                LifecycleStatus.State.CREATED, "Already created",
-                                LifecycleStatus.ActorCode.USER_ACTION
-                        )
+            IllegalArgumentException.class,
+            () -> status.update(LifecycleStatus.State.CREATED, "Already created", LifecycleStatus.ActorCode.USER_ACTION)
         );
     }
 

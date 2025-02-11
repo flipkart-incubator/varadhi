@@ -29,7 +29,7 @@ public class PulsarProducerFactoryTest {
     @BeforeEach
     public void preTest() throws IOException {
         String yamlContent =
-                "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
+            "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
         topic = PulsarStorageTopic.of("testTopic", 1, Constants.DEFAULT_TOPIC_CAPACITY);
@@ -56,8 +56,8 @@ public class PulsarProducerFactoryTest {
         ProduceException pe = Assertions.assertThrows(ProduceException.class, () -> factory.newProducer(topic));
         verify(builder, times(1)).create();
         Assertions.assertEquals(
-                String.format("Failed to create Pulsar producer for %s. %s", topic.getName(), "Topic not found"),
-                pe.getMessage()
+            String.format("Failed to create Pulsar producer for %s. %s", topic.getName(), "Topic not found"),
+            pe.getMessage()
         );
     }
 

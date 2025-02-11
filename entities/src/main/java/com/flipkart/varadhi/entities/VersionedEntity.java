@@ -8,7 +8,7 @@ import lombok.Setter;
  * Base class for all entities in Varadhi. Such entities are versioned and named.
  */
 @Getter
-@EqualsAndHashCode(exclude = "version")
+@EqualsAndHashCode (exclude = "version")
 public abstract class VersionedEntity {
     public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";

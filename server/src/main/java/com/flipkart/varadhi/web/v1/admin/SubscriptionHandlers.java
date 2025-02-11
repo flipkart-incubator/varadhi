@@ -54,7 +54,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
  * starting, and stopping subscriptions.
  */
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
 
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
@@ -76,19 +76,20 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param restOptions         the REST options configuration
      */
     public SubscriptionHandlers(
-            SubscriptionService subscriptionService,
-            ProjectService projectService,
-            VaradhiTopicService topicService,
-            VaradhiSubscriptionFactory subscriptionFactory,
-            RestOptions restOptions
+        SubscriptionService subscriptionService,
+        ProjectService projectService,
+        VaradhiTopicService topicService,
+        VaradhiSubscriptionFactory subscriptionFactory,
+        RestOptions restOptions
     ) {
         this.subscriptionService = subscriptionService;
         this.projectService = projectService;
         this.topicService = topicService;
         this.varadhiSubscriptionFactory = subscriptionFactory;
         this.propertyValidators = SubscriptionPropertyValidator.createPropertyValidators(restOptions);
-        this.propertyDefaultValueProviders =
-                SubscriptionPropertyValidator.createPropertyDefaultValueProviders(restOptions);
+        this.propertyDefaultValueProviders = SubscriptionPropertyValidator.createPropertyDefaultValueProviders(
+            restOptions
+        );
     }
 
     /**
@@ -99,52 +100,44 @@ public class SubscriptionHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/projects/:project/subscriptions",
-                List.of(
-                        RouteDefinition
-                                .get("ListSubscriptions", "")
-                                .authorize(SUBSCRIPTION_LIST)
-                                .build(this::getHierarchies, this::list),
-                        RouteDefinition
-                                .get("GetSubscription", "/:subscription")
-                                .authorize(SUBSCRIPTION_GET)
-                                .build(this::getHierarchies, this::get),
-                        RouteDefinition
-                                .post("CreateSubscription", "")
-                                .hasBody()
-                                .bodyParser(this::setSubscription)
-                                .authorize(SUBSCRIPTION_CREATE)
-                                .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchies, this::create),
-                        RouteDefinition
-                                .put("UpdateSubscription", "/:subscription")
-                                .nonBlocking()
-                                .hasBody()
-                                .bodyParser(this::setSubscription)
-                                .authorize(SUBSCRIPTION_UPDATE)
-                                .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchies, this::update),
-                        RouteDefinition
-                                .delete("DeleteSubscription", "/:subscription")
-                                .nonBlocking()
-                                .authorize(SUBSCRIPTION_DELETE)
-                                .build(this::getHierarchies, this::delete),
-                        RouteDefinition
-                                .patch("RestoreSubscription", "/:subscription/restore")
-                                .nonBlocking()
-                                .authorize(SUBSCRIPTION_UPDATE)
-                                .build(this::getHierarchies, this::restore),
-                        RouteDefinition
-                                .post("StartSubscription", "/:subscription/start")
-                                .nonBlocking()
-                                .authorize(SUBSCRIPTION_UPDATE)
-                                .build(this::getHierarchies, this::start),
-                        RouteDefinition
-                                .post("StopSubscription", "/:subscription/stop")
-                                .nonBlocking()
-                                .authorize(SUBSCRIPTION_UPDATE)
-                                .build(this::getHierarchies, this::stop)
-                )
+            "/v1/projects/:project/subscriptions",
+            List.of(
+                RouteDefinition.get("ListSubscriptions", "")
+                               .authorize(SUBSCRIPTION_LIST)
+                               .build(this::getHierarchies, this::list),
+                RouteDefinition.get("GetSubscription", "/:subscription")
+                               .authorize(SUBSCRIPTION_GET)
+                               .build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateSubscription", "")
+                               .hasBody()
+                               .bodyParser(this::setSubscription)
+                               .authorize(SUBSCRIPTION_CREATE)
+                               .authorize(TOPIC_CONSUME)
+                               .build(this::getHierarchies, this::create),
+                RouteDefinition.put("UpdateSubscription", "/:subscription")
+                               .nonBlocking()
+                               .hasBody()
+                               .bodyParser(this::setSubscription)
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .authorize(TOPIC_CONSUME)
+                               .build(this::getHierarchies, this::update),
+                RouteDefinition.delete("DeleteSubscription", "/:subscription")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_DELETE)
+                               .build(this::getHierarchies, this::delete),
+                RouteDefinition.patch("RestoreSubscription", "/:subscription/restore")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .build(this::getHierarchies, this::restore),
+                RouteDefinition.post("StartSubscription", "/:subscription/start")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .build(this::getHierarchies, this::start),
+                RouteDefinition.post("StopSubscription", "/:subscription/stop")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .build(this::getHierarchies, this::stop)
+            )
         ).get();
     }
 
@@ -156,8 +149,9 @@ public class SubscriptionHandlers implements RouteProvider {
     public void setSubscription(RoutingContext ctx) {
         SubscriptionResource subscriptionResource = ctx.body().asValidatedPojo(SubscriptionResource.class);
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActorCode.ADMIN_ACTION :
+            LifecycleStatus.ActorCode.USER_ACTION;
         subscriptionResource.setActorCode(actorCode);
         ctx.put(CONTEXT_KEY_BODY, subscriptionResource);
     }
@@ -176,11 +170,11 @@ public class SubscriptionHandlers implements RouteProvider {
             SubscriptionResource subscriptionResource = ctx.get(CONTEXT_KEY_BODY);
             Project topicProject = projectService.getProject(subscriptionResource.getTopicProject());
             return Map.ofEntries(
-                    Map.entry(
-                            ResourceType.SUBSCRIPTION,
-                            new SubscriptionHierarchy(subscriptionProject, subscriptionResource.getName())
-                    ),
-                    Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, subscriptionResource.getTopic()))
+                Map.entry(
+                    ResourceType.SUBSCRIPTION,
+                    new SubscriptionHierarchy(subscriptionProject, subscriptionResource.getName())
+                ),
+                Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, subscriptionResource.getTopic()))
             );
         }
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
@@ -188,15 +182,14 @@ public class SubscriptionHandlers implements RouteProvider {
             return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(subscriptionProject));
         }
 
-        VaradhiSubscription subscription =
-                subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];
 
         return Map.ofEntries(
-                Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(subscriptionProject, subscriptionName)),
-                Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
+            Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(subscriptionProject, subscriptionName)),
+            Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
         );
     }
 
@@ -204,14 +197,15 @@ public class SubscriptionHandlers implements RouteProvider {
      * Lists all subscriptions for a given project.
      *
      * @param ctx the routing context
-     *             - includeInactive: query parameter to include inactive or soft-deleted subscriptions
+     *            - includeInactive: query parameter to include inactive or soft-deleted subscriptions
      */
     public void list(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE).stream()
-                .findFirst()
-                .map(Boolean::parseBoolean)
-                .orElse(false);
+        boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE)
+                                     .stream()
+                                     .findFirst()
+                                     .map(Boolean::parseBoolean)
+                                     .orElse(false);
 
         List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName, includeInactive);
         ctx.endApiWithResponse(subscriptionNames);
@@ -224,8 +218,9 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     public void get(RoutingContext ctx) {
         String internalSubscriptionName = getSubscriptionFqn(ctx);
-        SubscriptionResource subscription =
-                SubscriptionResource.from(subscriptionService.getSubscription(internalSubscriptionName));
+        SubscriptionResource subscription = SubscriptionResource.from(
+            subscriptionService.getSubscription(internalSubscriptionName)
+        );
         ctx.endApiWithResponse(subscription);
     }
 
@@ -239,10 +234,16 @@ public class SubscriptionHandlers implements RouteProvider {
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
         Project subProject = projectService.getCachedProject(subscription.getProject());
 
-        VaradhiSubscription varadhiSubscription =
-                varadhiSubscriptionFactory.get(subscription, subProject, subscribedTopic);
-        VaradhiSubscription createdSubscription =
-                subscriptionService.createSubscription(subscribedTopic, varadhiSubscription, subProject);
+        VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
+            subscription,
+            subProject,
+            subscribedTopic
+        );
+        VaradhiSubscription createdSubscription = subscriptionService.createSubscription(
+            subscribedTopic,
+            varadhiSubscription,
+            subProject
+        );
 
         ctx.endApiWithResponse(SubscriptionResource.from(createdSubscription));
     }
@@ -257,16 +258,17 @@ public class SubscriptionHandlers implements RouteProvider {
         // TODO: Consider splitting these into separate update APIs.
         // Note: Updates are currently allowed even if there are no changes to the subscription, which should be avoided.
         ctx.handleResponse(
-                subscriptionService.updateSubscription(
-                        subscription.getSubscriptionInternalName(),
-                        subscription.getVersion(),
-                        subscription.getDescription(),
-                        subscription.isGrouped(),
-                        subscription.getEndpoint(),
-                        subscription.getRetryPolicy(),
-                        subscription.getConsumptionPolicy(),
-                        ctx.getIdentityOrDefault()
-                ).thenApply(SubscriptionResource::from));
+            subscriptionService.updateSubscription(
+                subscription.getSubscriptionInternalName(),
+                subscription.getVersion(),
+                subscription.getDescription(),
+                subscription.isGrouped(),
+                subscription.getEndpoint(),
+                subscription.getRetryPolicy(),
+                subscription.getConsumptionPolicy(),
+                ctx.getIdentityOrDefault()
+            ).thenApply(SubscriptionResource::from)
+        );
     }
 
     /**
@@ -275,20 +277,21 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void delete(RoutingContext ctx) {
-        ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE).stream()
-                .map(ResourceDeletionType::fromValue)
-                .findFirst()
-                .orElse(ResourceDeletionType.SOFT_DELETE);
+        ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE)
+                                               .stream()
+                                               .map(ResourceDeletionType::fromValue)
+                                               .findFirst()
+                                               .orElse(ResourceDeletionType.SOFT_DELETE);
         ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
 
         ctx.handleResponse(
-                subscriptionService.deleteSubscription(
-                        getSubscriptionFqn(ctx),
-                        projectService.getCachedProject(ctx.pathParam(PATH_PARAM_PROJECT)),
-                        ctx.getIdentityOrDefault(),
-                        deletionType,
-                        actionRequest
-                )
+            subscriptionService.deleteSubscription(
+                getSubscriptionFqn(ctx),
+                projectService.getCachedProject(ctx.pathParam(PATH_PARAM_PROJECT)),
+                ctx.getIdentityOrDefault(),
+                deletionType,
+                actionRequest
+            )
         );
     }
 
@@ -301,8 +304,8 @@ public class SubscriptionHandlers implements RouteProvider {
         ResourceActionRequest actionRequest = createResourceActionRequest(ctx);
 
         ctx.handleResponse(
-                subscriptionService.restoreSubscription(
-                        getSubscriptionFqn(ctx), ctx.getIdentityOrDefault(), actionRequest));
+            subscriptionService.restoreSubscription(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault(), actionRequest)
+        );
     }
 
     /**
@@ -332,8 +335,8 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     public static String getSubscriptionFqn(RoutingContext ctx) {
         return SubscriptionResource.buildInternalName(
-                ctx.pathParam(PATH_PARAM_PROJECT),
-                ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
+            ctx.pathParam(PATH_PARAM_PROJECT),
+            ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
         );
     }
 
@@ -376,7 +379,8 @@ public class SubscriptionHandlers implements RouteProvider {
     private void validateRetryPolicy(RetryPolicy retryPolicy) {
         if (retryPolicy.getRetryAttempts() != NUMBER_OF_RETRIES_ALLOWED) {
             throw new IllegalArgumentException(
-                    String.format("Only %d retries are supported.", NUMBER_OF_RETRIES_ALLOWED));
+                String.format("Only %d retries are supported.", NUMBER_OF_RETRIES_ALLOWED)
+            );
         }
     }
 
@@ -412,10 +416,11 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return true if constraints should be ignored, false otherwise
      */
     private boolean ignoreConstraints(RoutingContext ctx) {
-        return ctx.queryParam(QUERY_PARAM_IGNORE_CONSTRAINTS).stream()
-                .map(Boolean::parseBoolean)
-                .findFirst()
-                .orElse(false);
+        return ctx.queryParam(QUERY_PARAM_IGNORE_CONSTRAINTS)
+                  .stream()
+                  .map(Boolean::parseBoolean)
+                  .findFirst()
+                  .orElse(false);
     }
 
     /**
@@ -429,8 +434,10 @@ public class SubscriptionHandlers implements RouteProvider {
      * @throws IllegalArgumentException if there are unsupported properties or invalid values
      */
     private void validateProperties(Map<String, String> properties, boolean usePermissible) {
-        List<String> unsupportedKeys = properties.keySet().stream()
-                .filter(key -> !propertyValidators.containsKey(key)).toList();
+        List<String> unsupportedKeys = properties.keySet()
+                                                 .stream()
+                                                 .filter(key -> !propertyValidators.containsKey(key))
+                                                 .toList();
 
         if (!unsupportedKeys.isEmpty()) {
             throw new IllegalArgumentException("Unsupported properties: " + String.join(", ", unsupportedKeys));
@@ -459,8 +466,9 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     private ResourceActionRequest createResourceActionRequest(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
+        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActorCode.ADMIN_ACTION :
+            LifecycleStatus.ActorCode.USER_ACTION;
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
         return new ResourceActionRequest(actorCode, message);
     }
