@@ -57,7 +57,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
             throw new RuntimeException(e);
         }
         httpContext.setHeaders(getAllHeaders(routingContext.request()));
-        httpContext.setHeaders(getAllParams(routingContext.request()));
+        httpContext.setParams(getAllParams(routingContext.request()));
 
         return httpContext;
     }

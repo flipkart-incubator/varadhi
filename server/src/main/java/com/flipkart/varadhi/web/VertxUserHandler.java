@@ -53,8 +53,9 @@ public class VertxUserHandler implements Handler<RoutingContext> {
 
     private Map<String,String> mapFromJsonObject(JsonObject jsonObject) {
         Map<String,String> map = new HashMap<>();
-        jsonObject.forEach(entry -> map.put(entry.getKey(), entry.getValue().toString()));
+        if (jsonObject != null) {
+            jsonObject.forEach(entry -> map.put(entry.getKey(), entry.getValue().toString()));
+        }
         return map;
-
     }
 }
