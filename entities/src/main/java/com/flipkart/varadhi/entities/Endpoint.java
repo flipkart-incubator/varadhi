@@ -9,8 +9,9 @@ import lombok.EqualsAndHashCode;
 import java.net.URI;
 
 @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "protocol")
-@JsonSubTypes ({@JsonSubTypes.Type (value = Endpoint.HttpEndpoint.class, name = "HTTP1_1"), @JsonSubTypes.Type (
-    value = Endpoint.HttpEndpoint.class, name = "HTTP2"),})
+@JsonSubTypes ({
+    @JsonSubTypes.Type (value = Endpoint.HttpEndpoint.class, name = "HTTP1_1"),
+    @JsonSubTypes.Type (value = Endpoint.HttpEndpoint.class, name = "HTTP2")})
 public abstract sealed class Endpoint {
 
     @JsonIgnore

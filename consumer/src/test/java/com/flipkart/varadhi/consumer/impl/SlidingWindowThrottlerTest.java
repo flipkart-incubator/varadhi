@@ -22,8 +22,11 @@ import static org.mockito.Mockito.mock;
 @Slf4j
 class SlidingWindowThrottlerTest {
 
-    private final InternalQueueType[] priority = new InternalQueueType[] {new InternalQueueType.Retry(3),
-        new InternalQueueType.Retry(2), new InternalQueueType.Retry(1), new InternalQueueType.Main()};
+    private final InternalQueueType[] priority = new InternalQueueType[] {
+        new InternalQueueType.Retry(3),
+        new InternalQueueType.Retry(2),
+        new InternalQueueType.Retry(1),
+        new InternalQueueType.Main()};
     private final InternalQueueType mainQ = priority[3];
 
     private final ScheduledExecutorService noopScheduler = mock(ScheduledExecutorService.class);

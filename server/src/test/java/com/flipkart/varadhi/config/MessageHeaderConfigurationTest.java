@@ -27,7 +27,8 @@ public class MessageHeaderConfigurationTest {
     }
 
     @ParameterizedTest
-    @CsvSource ({"'VARADHI_', 'VARADHI-', true",            // Valid case
+    @CsvSource ({
+        "'VARADHI_', 'VARADHI-', true",            // Valid case
         "'', 'VARADHI-', false",                   // Empty prefix
         "'VARADHI_', '', false",                   // Empty second prefix
         "'T_', 'T-', false",                       // Invalid prefix not matching

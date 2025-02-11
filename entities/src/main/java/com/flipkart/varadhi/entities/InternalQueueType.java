@@ -9,9 +9,10 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@queueType")
-@JsonSubTypes ({@JsonSubTypes.Type (value = InternalQueueType.Main.class, name = "main"), @JsonSubTypes.Type (
-    value = InternalQueueType.Retry.class, name = "retry"), @JsonSubTypes.Type (
-        value = InternalQueueType.DeadLetter.class, name = "dead-letter"),})
+@JsonSubTypes ({
+    @JsonSubTypes.Type (value = InternalQueueType.Main.class, name = "main"),
+    @JsonSubTypes.Type (value = InternalQueueType.Retry.class, name = "retry"),
+    @JsonSubTypes.Type (value = InternalQueueType.DeadLetter.class, name = "dead-letter"),})
 public abstract sealed class InternalQueueType {
 
     @JsonIgnore
@@ -51,8 +52,16 @@ public abstract sealed class InternalQueueType {
     @RequiredArgsConstructor (onConstructor_ = {@JsonCreator})
     public static final class Retry extends InternalQueueType {
 
-        public static final Retry[] RETRY = new Retry[] {new Retry(1), new Retry(2), new Retry(3), new Retry(4),
-            new Retry(5), new Retry(6), new Retry(7), new Retry(8), new Retry(9),};
+        public static final Retry[] RETRY = new Retry[] {
+            new Retry(1),
+            new Retry(2),
+            new Retry(3),
+            new Retry(4),
+            new Retry(5),
+            new Retry(6),
+            new Retry(7),
+            new Retry(8),
+            new Retry(9),};
 
         private final int retryCount;
 

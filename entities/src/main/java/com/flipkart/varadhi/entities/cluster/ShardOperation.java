@@ -122,9 +122,10 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @AllArgsConstructor
     @NoArgsConstructor
     @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@opDataType")
-    @JsonSubTypes ({@JsonSubTypes.Type (value = ShardOperation.StartData.class, name = "startShardData"),
-        @JsonSubTypes.Type (value = ShardOperation.StopData.class, name = "stopShardData"), @JsonSubTypes.Type (
-            value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),})
+    @JsonSubTypes ({
+        @JsonSubTypes.Type (value = ShardOperation.StartData.class, name = "startShardData"),
+        @JsonSubTypes.Type (value = ShardOperation.StopData.class, name = "stopShardData"),
+        @JsonSubTypes.Type (value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),})
     public static class OpData {
         private String operationId;
         private String parentOpId;

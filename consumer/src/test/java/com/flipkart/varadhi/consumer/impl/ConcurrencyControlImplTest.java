@@ -21,8 +21,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class ConcurrencyControlImplTest {
 
     private static final InternalQueueType mainQ = new InternalQueueType.Main();
-    private static final InternalQueueType[] priority = new InternalQueueType[] {new InternalQueueType.Retry(3),
-        new InternalQueueType.Retry(2), new InternalQueueType.Retry(1), mainQ};
+    private static final InternalQueueType[] priority = new InternalQueueType[] {
+        new InternalQueueType.Retry(3),
+        new InternalQueueType.Retry(2),
+        new InternalQueueType.Retry(1),
+        mainQ};
 
 
     private static final EventExecutor executor = new EventExecutor(

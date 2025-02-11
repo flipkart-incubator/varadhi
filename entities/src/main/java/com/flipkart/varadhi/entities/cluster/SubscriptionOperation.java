@@ -244,9 +244,11 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @AllArgsConstructor
     @NoArgsConstructor
     @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@opDataType")
-    @JsonSubTypes ({@JsonSubTypes.Type (value = StartData.class, name = "startSubData"), @JsonSubTypes.Type (
-        value = StopData.class, name = "stopSubData"), @JsonSubTypes.Type (value = ReassignShardData.class,
-            name = "reassignShardData"), @JsonSubTypes.Type (value = UnsidelineData.class, name = "unsidelineData"),})
+    @JsonSubTypes ({
+        @JsonSubTypes.Type (value = StartData.class, name = "startSubData"),
+        @JsonSubTypes.Type (value = StopData.class, name = "stopSubData"),
+        @JsonSubTypes.Type (value = ReassignShardData.class, name = "reassignShardData"),
+        @JsonSubTypes.Type (value = UnsidelineData.class, name = "unsidelineData"),})
     public static class OpData {
         private String operationId;
         private String subscriptionId;
