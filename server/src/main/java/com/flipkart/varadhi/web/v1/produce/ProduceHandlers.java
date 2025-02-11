@@ -7,8 +7,6 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.utils.HeaderUtils;
-import com.flipkart.varadhi.utils.MessageHelper;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.entities.Hierarchies;
@@ -18,7 +16,6 @@ import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
-import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +31,6 @@ import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
 import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
-import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
@@ -99,7 +95,7 @@ public class ProduceHandlers implements RouteProvider {
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
+        Message messageToProduce = buildMessageToProduce(payload, ctx.get(HeaderValidationHandler.VALIDATED_HEADERS));
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->
@@ -144,14 +140,8 @@ public class ProduceHandlers implements RouteProvider {
 
     private Message buildMessageToProduce(
             byte[] payload,
-            MultiMap headers,
-            String produceIdentity
+            Multimap<String, String> headers
     ) {
-        Multimap<String, String> requestHeaders = HeaderUtils.copyVaradhiHeaders(headers);
-        requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(System.currentTimeMillis()));
-        requestHeaders.put(PRODUCE_IDENTITY, produceIdentity);
-        requestHeaders.put(PRODUCE_REGION, produceRegion);
-        MessageHelper.ensureRequiredHeaders(requestHeaders);
-        return new ProducerMessage(payload, requestHeaders);
+        return new ProducerMessage(payload, headers);
     }
 }

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.entities.Validatable;
+import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -50,6 +51,19 @@ public class MessageHeaderConfiguration implements Validatable {
     @NotNull
     private String msgIdHeader;
 
+    @NotNull
+    private Integer headerValueSizeMax;
+
+    @NotNull
+    private String produceTimestamp;
+
+    @NotNull
+    private String produceRegion;
+
+    @NotNull
+    private String produceIdentity;
+
+
     /**
      * We use reflection to dynamically invoke getter methods for all fields in the
      * `MessageHeaderConfiguration` class, allowing us to validate them without
@@ -69,15 +83,16 @@ public class MessageHeaderConfiguration implements Validatable {
 
         for (Method method : MessageHeaderConfiguration.class.getDeclaredMethods()) {
             if (isGetterMethod(method)) {
-                    if ("getAllowedPrefix".equals(method.getName())) {
-                        continue;
+                if ("getAllowedPrefix".equals(method.getName())) {
+                    continue;
+                }
+                Object value = method.invoke(this);
+                if (value instanceof String stringValue) {
+                    if (!startsWithValidPrefix(allowedPrefixList, stringValue)) {
+                        throw new IllegalArgumentException(
+                                method.getName() + " does not have a valid header value : " + stringValue);
                     }
-                    Object value = method.invoke(this);
-                    if (value instanceof String stringValue) {
-                        if (!startsWithValidPrefix(allowedPrefixList, stringValue)) {
-                            throw new IllegalArgumentException(method.getName() + " does not have a valid header value : " + stringValue);
-                        }
-                    }
+                }
             }
         }
     }
@@ -93,6 +108,23 @@ public class MessageHeaderConfiguration implements Validatable {
             }
         }
         return false;
+    }
+
+    public static List<String> getRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration) {
+        return List.of(
+                messageHeaderConfiguration.getMsgIdHeader(),
+                messageHeaderConfiguration.getProduceTimestamp(),
+                messageHeaderConfiguration.getProduceRegion(),
+                messageHeaderConfiguration.getProduceRegion()
+        );
+    }
+
+    public static void ensureRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration, Multimap headers) {
+        getRequiredHeaders(messageHeaderConfiguration).forEach(key -> {
+            if (!headers.containsKey(key)) {
+                throw new IllegalArgumentException(String.format("Missing required header %s", key));
+            }
+        });
     }
 
 }

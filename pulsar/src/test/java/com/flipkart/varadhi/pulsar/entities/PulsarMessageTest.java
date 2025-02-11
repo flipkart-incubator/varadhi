@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.ProducerMessage;
-import com.flipkart.varadhi.entities.StandardHeaders;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;

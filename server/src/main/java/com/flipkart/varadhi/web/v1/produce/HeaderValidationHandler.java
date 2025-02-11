@@ -1,53 +1,54 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.ProducerMessage;
+import com.flipkart.varadhi.utils.HeaderUtils;
+import com.google.common.collect.Multimap;
 import io.vertx.ext.web.RoutingContext;
+import lombok.AllArgsConstructor;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import static com.flipkart.varadhi.entities.StandardHeaders.VARADHI_HEADER_PREFIX;
+import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
 
+@AllArgsConstructor
 public class HeaderValidationHandler {
-    private final int headerNameSizeMax;
-    private final int headerValueSizeMax;
-    private final int headersAllowedMax;
-
-    public HeaderValidationHandler(RestOptions restOptions) {
-        this.headerNameSizeMax = restOptions.getHeaderNameSizeMax();
-        this.headerValueSizeMax = restOptions.getHeaderValueSizeMax();
-        this.headersAllowedMax = restOptions.getHeadersAllowedMax();
+    private MessageHeaderConfiguration messageHeaderConfiguration;
+    private final String produceRegion;
+    private static final int MAX_ID_LIMIT = 100;
+    public static final String VALIDATED_HEADERS = "validatedHeaders";
+    private static final String ANONYMOUS_IDENTITY = "Anonymous";
+    public void validate(RoutingContext ctx, MessageHeaderConfiguration config) {
+        Multimap<String, String> headers = HeaderUtils.copyVaradhiHeaders(ctx.request().headers(), messageHeaderConfiguration.getAllowedPrefix());
+        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+        headers.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
+        headers.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
+        headers.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
+        validateHeaders(headers);
+        ctx.put(VALIDATED_HEADERS, headers);
     }
 
-    public void validate(RoutingContext ctx) {
-        Set<String> headers = new HashSet<>();
-        ctx.request().headers().entries().forEach((entry) -> {
+
+    private void validateHeaders(Multimap<String, String> headers) {
+        MessageHeaderConfiguration.ensureRequiredHeaders(messageHeaderConfiguration, headers);
+        for (Map.Entry<String, String> entry : headers.entries()) {
             String key = entry.getKey().toLowerCase();
-            if (key.startsWith(VARADHI_HEADER_PREFIX)) {
-                validateEntry(entry);
-                headers.add(key); // multi-value headers are considered one.
-                if (headers.size() >= headersAllowedMax) {
-                    throw new IllegalArgumentException(
-                            String.format(
-                                    "More Varadhi specific headers specified than allowed max(%d).",
-                                    headersAllowedMax
-                            ));
+            String value = entry.getValue().toLowerCase();
+
+            if (key.equals(messageHeaderConfiguration.getMsgIdHeader())) {
+                if (value.length() > MAX_ID_LIMIT) {
+                    throw new IllegalArgumentException(String.format("Message id %s exceeds allowed size of %d.", value, MAX_ID_LIMIT));
                 }
             }
-        });
 
-        // TODO:: Discuss, shall ctx.next() be delegated at route setup (pre-handler setup)
-        ctx.next();
-    }
-
-    private void validateEntry(Map.Entry<String, String> entry) {
-        if (entry.getKey().length() > headerNameSizeMax) {
-            throw new IllegalArgumentException(String.format("Header name %s exceeds allowed size.", entry.getKey()));
-        }
-        if (entry.getValue().length() > headerValueSizeMax) {
-            throw new IllegalArgumentException(
-                    String.format("Value of Header %s exceeds allowed size.", entry.getKey()));
+            if (key.equals(messageHeaderConfiguration.getGroupIdHeader())) {
+                if (value.length() > MAX_ID_LIMIT) {
+                    throw new IllegalArgumentException(String.format("Group id %s exceeds allowed size of %d.", value, MAX_ID_LIMIT));
+                }
+            }
         }
     }
+
 }

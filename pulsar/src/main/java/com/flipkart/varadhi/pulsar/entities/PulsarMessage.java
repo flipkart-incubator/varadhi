@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.entities.StandardHeaders;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.google.common.collect.ArrayListMultimap;
