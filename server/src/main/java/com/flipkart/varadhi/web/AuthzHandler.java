@@ -15,7 +15,7 @@ public class AuthzHandler implements RouteConfigurator {
     private final SuperUserHandler superUserHandler;
 
     public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
-        if (configuration.isAuthenticationEnabled() && configuration.isAuthorizationEnabled()) {
+        if (configuration.isAuthorizationEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver);
         } else {
             authorizationHandlerBuilder = null;
