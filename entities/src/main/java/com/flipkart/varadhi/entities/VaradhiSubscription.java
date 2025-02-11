@@ -13,7 +13,7 @@ import java.util.Map;
 @Getter
 @Setter
 @EqualsAndHashCode(callSuper = true)
-public class VaradhiSubscription extends MetaStoreEntity {
+public class VaradhiSubscription extends LifecycleEntity {
 
     private final String project;
     private final String topic;
@@ -23,7 +23,6 @@ public class VaradhiSubscription extends MetaStoreEntity {
     private RetryPolicy retryPolicy;
     private ConsumptionPolicy consumptionPolicy;
     private SubscriptionShards shards;
-    private LifecycleStatus status;
     private Map<String, String> properties;
 
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
@@ -106,81 +105,6 @@ public class VaradhiSubscription extends MetaStoreEntity {
                 name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
                 shards, new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode), properties
         );
-    }
-
-    /**
-     * Checks if the subscription is well provisioned.
-     *
-     * @return true if the subscription is well provisioned, false otherwise
-     */
-    @JsonIgnore
-    public boolean isWellProvisioned() {
-        return LifecycleStatus.State.CREATED.equals(status.getState());
-    }
-
-    /**
-     * Checks if the subscription is inactive.
-     *
-     * @return true if the subscription is inactive, false otherwise
-     */
-    @JsonIgnore
-    public boolean isInactive() {
-        return LifecycleStatus.State.INACTIVE.equals(status.getState());
-    }
-
-    /**
-     * Marks the subscription as failed to create.
-     *
-     * @param message the failure message
-     */
-    public void markCreateFailed(String message) {
-        this.status.update(LifecycleStatus.State.CREATE_FAILED, message);
-    }
-
-    /**
-     * Marks the subscription as created.
-     */
-    public void markCreated() {
-        this.status.update(LifecycleStatus.State.CREATED, null);
-    }
-
-    /**
-     * Marks the subscription as failed to delete.
-     *
-     * @param message the failure message
-     */
-    public void markDeleteFailed(String message) {
-        this.status.update(LifecycleStatus.State.DELETE_FAILED, message);
-    }
-
-    /**
-     * Marks the subscription as deleting.
-     *
-     * @param actorCode the actor code indicating why it's being deleted
-     * @param message   the message for the action
-     */
-    public void markDeleting(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.DELETING, message, actorCode);
-    }
-
-    /**
-     * Marks the subscription as inactive.
-     *
-     * @param actorCode the actor code indicating why it's inactive
-     * @param message   the message for the action
-     */
-    public void markInactive(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.INACTIVE, message, actorCode);
-    }
-
-    /**
-     * Restores the subscription to the created state.
-     *
-     * @param actorCode the actor code indicating why it's restored
-     * @param message   the message for the action
-     */
-    public void restore(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.CREATED, message, actorCode);
     }
 
     /**

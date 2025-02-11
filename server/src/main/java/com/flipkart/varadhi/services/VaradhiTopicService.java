@@ -2,6 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -42,13 +43,42 @@ public class VaradhiTopicService {
      */
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
+        try {
+            if (!exists(varadhiTopic.getName())) {
+                metaStore.createTopic(varadhiTopic);
+            } else {
+                VaradhiTopic existingTopic = get(varadhiTopic.getName());
+                if (!existingTopic.isRetriable()) {
+                    throw new DuplicateResourceException(
+                            String.format("Topic '%s' already exists.", varadhiTopic.getName())
+                    );
+                }
+                metaStore.updateTopic(varadhiTopic);
+            }
+
+            createStorageTopics(varadhiTopic, project);
+            varadhiTopic.markCreated();
+        } catch (Exception e) {
+            varadhiTopic.markCreateFailed(e.getMessage());
+            throw e;
+        } finally {
+            updateTopicState(varadhiTopic);
+        }
+    }
+
+    /**
+     * Creates storage topics for a Varadhi topic.
+     *
+     * @param varadhiTopic the Varadhi topic
+     * @param project      the project associated with the topic
+     */
+    private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
                 internalTopic.getActiveTopics().forEach(storageTopic ->
                         storageTopicService.create(storageTopic, project)
                 )
         );
-        metaStore.createTopic(varadhiTopic);
     }
 
     /**
@@ -76,7 +106,7 @@ public class VaradhiTopicService {
         validateTopicForDeletion(topicName, deletionType);
 
         if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
-            handleHardDelete(varadhiTopic);
+            handleHardDelete(varadhiTopic, actionRequest);
         } else {
             handleSoftDelete(varadhiTopic, actionRequest);
         }
@@ -97,19 +127,29 @@ public class VaradhiTopicService {
     /**
      * Handles the hard deletion of a Varadhi topic.
      *
-     * @param varadhiTopic the Varadhi topic to hard delete
+     * @param varadhiTopic  the Varadhi topic to hard delete
+     * @param actionRequest the request containing the actor code and message for the deletion
      */
-    public void handleHardDelete(VaradhiTopic varadhiTopic) {
+    public void handleHardDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Hard deleting Varadhi topic: {}", varadhiTopic.getName());
 
         Project project = metaStore.getProject(varadhiTopic.getProjectName());
 
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                internalTopic.getActiveTopics().forEach(storageTopic ->
-                        storageTopicService.delete(storageTopic.getName(), project)
-                )
-        );
-        metaStore.deleteTopic(varadhiTopic.getName());
+        try {
+            varadhiTopic.markDeleting(actionRequest.actorCode(), "Starting Topic Deletion");
+            metaStore.updateTopic(varadhiTopic);
+
+            varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
+                    internalTopic.getActiveTopics().forEach(storageTopic ->
+                            storageTopicService.delete(storageTopic.getName(), project)
+                    )
+            );
+            metaStore.deleteTopic(varadhiTopic.getName());
+        } catch (Exception e) {
+            varadhiTopic.markDeleteFailed(e.getMessage());
+            updateTopicState(varadhiTopic);
+            throw e;
+        }
     }
 
     /**
@@ -129,6 +169,10 @@ public class VaradhiTopicService {
             throw new InvalidOperationForResourceException("Topic %s is not deleted.".formatted(topicName));
         }
 
+        if (!varadhiTopic.isInactive()) {
+            throw new InvalidOperationForResourceException("Only inactive topics can be restored.");
+        }
+
         LifecycleStatus.ActorCode lastAction = varadhiTopic.getStatus().getActorCode();
         boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
                 actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
@@ -139,7 +183,7 @@ public class VaradhiTopicService {
             );
         }
 
-        varadhiTopic.markActive(actionRequest.actorCode(), actionRequest.message());
+        varadhiTopic.restore(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
     }
 
@@ -198,5 +242,18 @@ public class VaradhiTopicService {
         return metaStore.getTopicNames(projectName).stream()
                 .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
                 .toList();
+    }
+
+    /**
+     * Updates the state of the given Varadhi topic in the meta store.
+     *
+     * @param varadhiTopic the Varadhi topic whose state is to be updated
+     */
+    private void updateTopicState(VaradhiTopic varadhiTopic) {
+        try {
+            metaStore.updateTopic(varadhiTopic);
+        } catch (Exception e) {
+            log.error("Failed to update topic state: {}", varadhiTopic.getName(), e);
+        }
     }
 }

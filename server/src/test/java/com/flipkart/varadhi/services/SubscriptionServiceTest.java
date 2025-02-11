@@ -450,6 +450,24 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void createSubscription_ExistingRetriableSubscription_UpdatesSubscription() {
+        doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
+        subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
+
+        subscription1.markCreateFailed("Subscription Creation Failed");
+        varadhiMetaStore.updateSubscription(subscription1);
+
+        doReturn(true).when(varadhiMetaStore).checkSubscriptionExists(subscription1.getName());
+        doReturn(subscription1).when(varadhiMetaStore).getSubscription(subscription1.getName());
+
+        assertDoesNotThrow(() -> subscriptionService.createSubscription(unGroupedTopic, subscription1, project1));
+
+        verify(shardProvisioner, times(1)).deProvision(subscription1, project1);
+        verify(varadhiMetaStore, times(4)).updateSubscription(subscription1);
+        verify(shardProvisioner, times(2)).provision(subscription1, project1);
+    }
+
+    @Test
     void createSubscription_MetaStoreFailure_ThrowsException() {
         doReturn(unGroupedTopic).when(varadhiMetaStore).getTopic(unGroupedTopic.getName());
         doThrow(new RuntimeException("MetaStore creation failed")).when(varadhiMetaStore).createSubscription(any());

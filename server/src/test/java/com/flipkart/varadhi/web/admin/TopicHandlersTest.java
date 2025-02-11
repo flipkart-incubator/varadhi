@@ -37,7 +37,6 @@ import java.util.List;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -139,21 +138,6 @@ class TopicHandlersTest extends WebTestBase {
         assertEquals(topicResource.getProject(), createdTopic.getProject());
         verify(spanProvider).addSpan(REQUEST_SPAN_NAME);
         verify(varadhiTopicService).create(any(), eq(project));
-    }
-
-    @Test
-    void createTopic_WithDuplicateResource_ShouldReturnConflict() throws InterruptedException {
-        TopicResource topicResource = getTopicResource(project);
-
-        doReturn(true).when(varadhiTopicService).exists(anyString());
-
-        HttpResponse<Buffer> response = sendRequest(
-                createRequest(HttpMethod.POST, getTopicsUrl(project)),
-                JsonMapper.jsonSerialize(topicResource).getBytes()
-        );
-
-        assertEquals(409, response.statusCode());
-        assertErrorResponse(response, "Topic 'project1.topic1' already exists.");
     }
 
     @Test

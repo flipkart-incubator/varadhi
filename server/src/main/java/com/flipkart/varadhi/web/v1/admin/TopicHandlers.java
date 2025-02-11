@@ -7,7 +7,6 @@ import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
@@ -156,18 +155,12 @@ public class TopicHandlers implements RouteProvider {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActorCode actorCode = isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
-        topicResource.setActorCode(actorCode);
+
+        topicResource.setActorCode(getActorCode(requestedBy));
 
         validateProjectName(projectName, topicResource);
 
         Project project = projectService.getCachedProject(topicResource.getProject());
-        String topicName = buildTopicName(projectName, topicResource.getName());
-
-        if (varadhiTopicService.exists(topicName)) {
-            throw new DuplicateResourceException(String.format("Topic '%s' already exists.", topicName));
-        }
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic, project);
@@ -287,5 +280,17 @@ public class TopicHandlers implements RouteProvider {
      */
     private boolean isVaradhiAdmin(String identity) {
         return Objects.equals(identity, "varadhi-admin");
+    }
+
+    /**
+     * Determines the actor code based on the identity of the requester.
+     *
+     * @param requestedBy the identity of the requester
+     *
+     * @return the actor code, either ADMIN_ACTION if the requester is a Varadhi admin, or USER_ACTION otherwise
+     */
+    private LifecycleStatus.ActorCode getActorCode(String requestedBy) {
+        return isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
+                : LifecycleStatus.ActorCode.USER_ACTION;
     }
 }

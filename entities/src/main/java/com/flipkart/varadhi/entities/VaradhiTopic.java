@@ -12,12 +12,11 @@ import java.util.Map;
  */
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class VaradhiTopic extends AbstractTopic {
+public class VaradhiTopic extends LifecycleEntity {
 
     private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
-    private final LifecycleStatus status;
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -57,7 +56,7 @@ public class VaradhiTopic extends AbstractTopic {
     ) {
         return new VaradhiTopic(
                 buildTopicName(project, name), INITIAL_VERSION, grouped, capacity, new HashMap<>(),
-                new LifecycleStatus(LifecycleStatus.State.ACTIVE, actorCode)
+                new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode)
         );
     }
 
@@ -102,35 +101,5 @@ public class VaradhiTopic extends AbstractTopic {
      */
     public InternalCompositeTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
-    }
-
-    /**
-     * Marks the topic as active.
-     *
-     * @param actorCode the actor code indicating why the topic is being marked as active
-     * @param message   the message for the action
-     */
-    public void markActive(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.ACTIVE, message, actorCode);
-    }
-
-    /**
-     * Marks the topic as inactive.
-     *
-     * @param actorCode the actor code indicating why the topic is being marked as inactive
-     * @param message   the message for the action
-     */
-    public void markInactive(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.INACTIVE, message, actorCode);
-    }
-
-    /**
-     * Checks if the topic is active.
-     *
-     * @return true if the topic is active, false otherwise
-     */
-    @JsonIgnore
-    public boolean isActive() {
-        return this.status.getState() == LifecycleStatus.State.ACTIVE;
     }
 }
