@@ -46,10 +46,12 @@ public class LeanDeploymentValidator {
         }
 
         if (orgs.size() == 1 && !defaultOrg.equals(orgs.get(0).getName())) {
-            throw new InvalidConfigException(String.format(
+            throw new InvalidConfigException(
+                String.format(
                     "Lean deployment can not be enabled as org with %s name is present.",
                     orgs.get(0).getName()
-            ));
+                )
+            );
         }
 
         if (orgs.isEmpty()) {
@@ -66,10 +68,12 @@ public class LeanDeploymentValidator {
             throw new InvalidConfigException("Lean deployment can not be enabled as there are more than one teams.");
         }
         if (teams.size() == 1 && !defaultTeam.equals(teams.get(0).getName())) {
-            throw new InvalidConfigException(String.format(
+            throw new InvalidConfigException(
+                String.format(
                     "Lean deployment can not be enabled as team with %s name is present.",
                     teams.get(0).getName()
-            ));
+                )
+            );
         }
         if (teams.isEmpty()) {
             teamService.createTeam(Team.of(defaultTeam, defaultOrg));
@@ -77,11 +81,7 @@ public class LeanDeploymentValidator {
         }
     }
 
-    private void ensureProjectConstraints(
-            String defaultOrg,
-            String defaultTeam,
-            String defaultProject
-    ) {
+    private void ensureProjectConstraints(String defaultOrg, String defaultTeam, String defaultProject) {
 
         List<Project> projects = teamService.getProjects(defaultTeam, defaultOrg);
 
@@ -89,10 +89,12 @@ public class LeanDeploymentValidator {
             throw new InvalidConfigException("Lean deployment can not be enabled as there are more than one projects.");
         }
         if (projects.size() == 1 && !defaultProject.equals(projects.get(0).getName())) {
-            throw new InvalidConfigException(String.format(
+            throw new InvalidConfigException(
+                String.format(
                     "Lean deployment can not be enabled as project with %s name is present.",
                     projects.get(0).getName()
-            ));
+                )
+            );
         }
         if (projects.isEmpty()) {
             log.debug("Creating default project as no team is present.");

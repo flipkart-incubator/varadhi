@@ -23,10 +23,7 @@ public class SubscriptionUtils {
      * @return the default HTTP endpoint
      */
     public static Endpoint getHttpEndpoint() {
-        return new Endpoint.HttpEndpoint(
-                URI.create("http://localhost:8080"), "GET", "",
-                500, 500, false
-        );
+        return new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
     }
 
     /**
@@ -35,11 +32,7 @@ public class SubscriptionUtils {
      * @return the default retry policy
      */
     public static RetryPolicy getRetryPolicy() {
-        return new RetryPolicy(
-                new CodeRange[]{new CodeRange(500, 502)},
-                RetryPolicy.BackoffType.LINEAR,
-                1, 100, 4, 3
-        );
+        return new RetryPolicy(new CodeRange[] {new CodeRange(500, 502)}, RetryPolicy.BackoffType.LINEAR, 1, 100, 4, 3);
     }
 
     /**
@@ -48,11 +41,16 @@ public class SubscriptionUtils {
      * @return the default subscription properties
      */
     public static Map<String, String> getSubscriptionDefaultProperties() {
-        return new HashMap<>(Map.of(
-                "unsideline.api.message_count", "100",
-                "unsideline.api.group_count", "20",
-                "getmessages.api.messages_limit", "100"
-        ));
+        return new HashMap<>(
+            Map.of(
+                "unsideline.api.message_count",
+                "100",
+                "unsideline.api.group_count",
+                "20",
+                "getmessages.api.messages_limit",
+                "100"
+            )
+        );
     }
 
     /**
@@ -61,10 +59,7 @@ public class SubscriptionUtils {
      * @return the default consumption policy
      */
     public static ConsumptionPolicy getConsumptionPolicy() {
-        return new ConsumptionPolicy(
-                10, 1, 1,
-                false, 1, null
-        );
+        return new ConsumptionPolicy(10, 1, 1, false, 1, null);
     }
 
     /**
@@ -282,24 +277,24 @@ public class SubscriptionUtils {
             }
 
             if (shards == null) {
-                double shardCapacityFactor = (double) 1 / numShards;
+                double shardCapacityFactor = (double)1 / numShards;
                 TopicCapacityPolicy shardCapacity = subCapacity.from(shardCapacityFactor, DEFAULT_READ_FANOUT);
                 shards = getShards(numShards, shardCapacity);
             }
 
             return VaradhiSubscription.of(
-                    name,
-                    subProject,
-                    subscribedTopic,
-                    Optional.ofNullable(description)
-                            .orElse("Test Subscription " + name + " Subscribed to " + subscribedTopic),
-                    isGrouped,
-                    Optional.ofNullable(endpoint).orElse(getHttpEndpoint()),
-                    Optional.ofNullable(retryPolicy).orElse(getRetryPolicy()),
-                    Optional.ofNullable(consumptionPolicy).orElse(getConsumptionPolicy()),
-                    shards,
-                    properties,
-                    LifecycleStatus.ActorCode.SYSTEM_ACTION
+                name,
+                subProject,
+                subscribedTopic,
+                Optional.ofNullable(description)
+                        .orElse("Test Subscription " + name + " Subscribed to " + subscribedTopic),
+                isGrouped,
+                Optional.ofNullable(endpoint).orElse(getHttpEndpoint()),
+                Optional.ofNullable(retryPolicy).orElse(getRetryPolicy()),
+                Optional.ofNullable(consumptionPolicy).orElse(getConsumptionPolicy()),
+                shards,
+                properties,
+                LifecycleStatus.ActorCode.SYSTEM_ACTION
             );
         }
     }

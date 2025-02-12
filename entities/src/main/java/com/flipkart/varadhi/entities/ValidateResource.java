@@ -10,9 +10,9 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-@Constraint(validatedBy = ResourceValidator.class)
-@Target(TYPE)
-@Retention(RUNTIME)
+@Constraint (validatedBy = ResourceValidator.class)
+@Target (TYPE)
+@Retention (RUNTIME)
 public @interface ValidateResource {
 
     String NAME_VALIDATION_PATTERN = "[a-z]{1}[a-z0-9_-]+[a-z0-9]{1}";

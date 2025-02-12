@@ -23,20 +23,27 @@ public class TopicPlanner {
             return 1;
         }
         TopicCapacityPolicy planned = ask.from(config.getGrowthMultiplier(), ask.getReadFanOut());
-        int countFromQps = (int) Math.ceil((double) planned.getQps() / config.getMaxQPSPerPartition());
-        int countFromKBps = (int) Math.ceil((double) planned.getThroughputKBps() / config.getMaxKBpsPerPartition());
+        int countFromQps = (int)Math.ceil((double)planned.getQps() / config.getMaxQPSPerPartition());
+        int countFromKBps = (int)Math.ceil((double)planned.getThroughputKBps() / config.getMaxKBpsPerPartition());
         int partitionCount = Math.max(countFromQps, countFromKBps);
-        int fanOutMultiplier = (int) Math.ceil((double) planned.getReadFanOut() / config.getMaxFanOutPerBroker());
-        partitionCount = partitionCount * fanOutMultiplier;
+        int fanOutMultiplier = (int)Math.ceil((double)planned.getReadFanOut() / config.getMaxFanOutPerBroker());
+        partitionCount *= fanOutMultiplier;
         // need to ensure that partitions are equally distributed across the shards and hence
         // partitionCount will be in multiple of shardCount.
         int shardCount = getShardCount(ask, partitionCount, category);
         int deltaForMultiple = shardCount - (partitionCount % shardCount);
         partitionCount = deltaForMultiple == shardCount ? partitionCount : partitionCount + deltaForMultiple;
-        int boundedPartitionCount =
-                Math.max(config.getMinPartitionPerTopic(), Math.min(partitionCount, config.getMaxPartitionPerTopic()));
+        int boundedPartitionCount = Math.max(
+            config.getMinPartitionPerTopic(),
+            Math.min(partitionCount, config.getMaxPartitionPerTopic())
+        );
         if (0 != boundedPartitionCount % shardCount) {
-            log.error("Capacity ask:{} Suggested Partition(s):{} Suggested Shard(s):{}", ask, boundedPartitionCount, shardCount);
+            log.error(
+                "Capacity ask:{} Suggested Partition(s):{} Suggested Shard(s):{}",
+                ask,
+                boundedPartitionCount,
+                shardCount
+            );
             throw new IllegalArgumentException("Couldn't partition topic equally into shards.");
         }
         log.debug("Suggested PartitionCount:{} for capacity:{}", boundedPartitionCount, ask);
@@ -52,8 +59,8 @@ public class TopicPlanner {
             return 1;
         }
         TopicCapacityPolicy planned = ask.from(config.getGrowthMultiplier(), ask.getReadFanOut());
-        int countFromQps = (int) Math.ceil((double) planned.getQps() / config.getMaxQpsPerShard());
-        int countFromKBps = (int) Math.ceil((double) planned.getThroughputKBps() / config.getMaxKBpsPerShard());
+        int countFromQps = (int)Math.ceil((double)planned.getQps() / config.getMaxQpsPerShard());
+        int countFromKBps = (int)Math.ceil((double)planned.getThroughputKBps() / config.getMaxKBpsPerShard());
         int shardCount = Math.max(countFromQps, countFromKBps);
         int deltaForMultiple = config.getShardMultiples() - (shardCount % config.getShardMultiples());
         shardCount = deltaForMultiple == config.getShardMultiples() ? shardCount : shardCount + deltaForMultiple;

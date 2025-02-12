@@ -14,9 +14,7 @@ public class ProduceResult {
     private final Throwable throwable;
     private final Offset produceOffset;
 
-    private ProduceResult(
-            String messageId, ProduceStatus produceStatus, Offset produceOffset, Throwable throwable
-    ) {
+    private ProduceResult(String messageId, ProduceStatus produceStatus, Offset produceOffset, Throwable throwable) {
         this.messageId = messageId;
         this.produceOffset = produceOffset;
         this.throwable = throwable;
@@ -25,17 +23,18 @@ public class ProduceResult {
 
     public static ProduceResult of(String messageId, Result<Offset> producerResult) {
         return producerResult.hasResult() ?
-                new ProduceResult(messageId, ProduceStatus.Success, producerResult.result(), null) :
-                new ProduceResult(messageId, ProduceStatus.Failed, null, producerResult.cause());
+            new ProduceResult(messageId, ProduceStatus.Success, producerResult.result(), null) :
+            new ProduceResult(messageId, ProduceStatus.Failed, null, producerResult.cause());
     }
 
     public static ProduceResult ofNonProducingTopic(String messageId, TopicState topicState) {
         if (topicState.isProduceAllowed()) {
             throw new IllegalStateException(
-                    String.format(
-                            "Incorrect Topic state handling. Topic can produce message(s) in its current state(%s).",
-                            topicState
-                    ));
+                String.format(
+                    "Incorrect Topic state handling. Topic can produce message(s) in its current state(%s).",
+                    topicState
+                )
+            );
         }
         return new ProduceResult(messageId, topicState.getProduceStatus(), null, null);
     }

@@ -52,7 +52,8 @@ public class PulsarTopicServiceTest {
     public void testCreate() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
-                topics).getPartitionedTopicMetadata(topic.getName());
+            topics
+        ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
         pulsarTopicService.create(topic, project);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
@@ -62,7 +63,8 @@ public class PulsarTopicServiceTest {
     public void testCreate_PulsarAdminException() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
-                topics).getPartitionedTopicMetadata(topic.getName());
+            topics
+        ).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
         assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, project));
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
@@ -72,13 +74,23 @@ public class PulsarTopicServiceTest {
     public void testCreate_ConflictException() throws PulsarAdminException {
         PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
-                topics).getPartitionedTopicMetadata(topic.getName());
+            topics
+        ).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
-        doThrow(new PulsarAdminException.ConflictException(
-                new RuntimeException(""), "duplicate topic error", 409)).when(topics)
-                .createPartitionedTopic(anyString(), eq(1));
-        MessagingException me =
-                Assertions.assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, project));
+        doThrow(new PulsarAdminException.ConflictException(new RuntimeException(""), "duplicate topic error", 409))
+                                                                                                                   .when(
+                                                                                                                       topics
+                                                                                                                   )
+                                                                                                                   .createPartitionedTopic(
+                                                                                                                       anyString(),
+                                                                                                                       eq(
+                                                                                                                           1
+                                                                                                                       )
+                                                                                                                   );
+        MessagingException me = Assertions.assertThrows(
+            MessagingException.class,
+            () -> pulsarTopicService.create(topic, project)
+        );
         Assertions.assertInstanceOf(PulsarAdminException.ConflictException.class, me.getCause());
         Assertions.assertEquals("duplicate topic error", me.getMessage());
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
@@ -92,7 +104,8 @@ public class PulsarTopicServiceTest {
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
-                topics).getPartitionedTopicMetadata(topic.getName());
+            topics
+        ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
         pulsarTopicService.create(topic, projectNew);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));

@@ -32,9 +32,9 @@ public class AuthenticationOptions extends HashMap<AuthenticationOptions.Mechani
     }
 
     public enum Mechanism {
-        jwt,
-        user_header
+        jwt, user_header
     }
+
 
     @Data
     public static class JWTConfig {

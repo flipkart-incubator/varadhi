@@ -47,8 +47,9 @@ public class WebTestBase {
 
     public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz) {
         try {
-            JavaType valueType =
-                    JsonMapper.getMapper().getTypeFactory().constructCollectionType(collectionClass, clazz);
+            JavaType valueType = JsonMapper.getMapper()
+                                           .getTypeFactory()
+                                           .constructCollectionType(collectionClass, clazz);
             return JsonMapper.getMapper().readValue(data, valueType);
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize JSON", e);
@@ -111,7 +112,7 @@ public class WebTestBase {
     }
 
     public <R> R sendRequestWithPayload(HttpRequest<Buffer> request, byte[] payload, Class<R> responseClass)
-            throws InterruptedException {
+        throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, payload);
         assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
         String responseBody = response.bodyAsString();
@@ -122,44 +123,54 @@ public class WebTestBase {
     }
 
     public <R> R sendRequestWithPayload(
-            HttpRequest<Buffer> request, byte[] payload, int expectedStatusCode, String expectedStatusMessage,
-            Class<R> responseClass
+        HttpRequest<Buffer> request,
+        byte[] payload,
+        int expectedStatusCode,
+        String expectedStatusMessage,
+        Class<R> responseClass
     ) throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, payload);
         assertEquals(expectedStatusCode, response.statusCode(), "Unexpected status code");
 
         Optional.ofNullable(expectedStatusMessage)
-                .ifPresent(statusMessage ->
-                        assertEquals(statusMessage, response.statusMessage(), "Unexpected status message"));
+                .ifPresent(
+                    statusMessage -> assertEquals(statusMessage, response.statusMessage(), "Unexpected status message")
+                );
 
         return Optional.ofNullable(responseClass)
-                .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
-                .orElse(null);
+                       .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
+                       .orElse(null);
     }
 
     public <T, R> R sendRequestWithEntity(HttpRequest<Buffer> request, T entity, Class<R> responseClass)
-            throws InterruptedException {
+        throws InterruptedException {
         return sendRequestWithPayload(request, JsonMapper.jsonSerialize(entity).getBytes(), responseClass);
     }
 
     public <T, R> R sendRequestWithEntity(
-            HttpRequest<Buffer> request, T entity, int expectedStatusCode, String expectedStatusMessage,
-            Class<R> responseClass
+        HttpRequest<Buffer> request,
+        T entity,
+        int expectedStatusCode,
+        String expectedStatusMessage,
+        Class<R> responseClass
     ) throws InterruptedException {
         return sendRequestWithPayload(
-                request, JsonMapper.jsonSerialize(entity).getBytes(),
-                expectedStatusCode, expectedStatusMessage, responseClass
+            request,
+            JsonMapper.jsonSerialize(entity).getBytes(),
+            expectedStatusCode,
+            expectedStatusMessage,
+            responseClass
         );
     }
 
     public <R> R sendRequestWithoutPayload(HttpRequest<Buffer> request, Class<R> responseClass)
-            throws InterruptedException {
+        throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, null);
         assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
 
         return Optional.ofNullable(responseClass)
-                .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
-                .orElse(null);
+                       .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
+                       .orElse(null);
     }
 
     public byte[] sendRequestWithoutPayload(HttpRequest<Buffer> request) throws InterruptedException {
@@ -169,26 +180,28 @@ public class WebTestBase {
     }
 
     public void sendRequestWithoutPayload(
-            HttpRequest<Buffer> request, int expectedStatusCode, String expectedStatusMessage
+        HttpRequest<Buffer> request,
+        int expectedStatusCode,
+        String expectedStatusMessage
     ) throws InterruptedException {
         HttpResponse<Buffer> response = sendRequest(request, null);
         assertEquals(expectedStatusCode, response.statusCode(), "Unexpected status code");
 
         Optional.ofNullable(expectedStatusMessage)
-                .ifPresent(statusMessage ->
-                        assertEquals(statusMessage, response.statusMessage(), "Unexpected status message"));
+                .ifPresent(
+                    statusMessage -> assertEquals(statusMessage, response.statusMessage(), "Unexpected status message")
+                );
 
         ErrorResponse error = JsonMapper.jsonDeserialize(response.body().getBytes(), ErrorResponse.class);
         assertEquals(expectedStatusMessage, error.reason());
     }
 
 
-    public HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, byte[] payload)
-            throws InterruptedException {
+    public HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, byte[] payload) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
-        Future<HttpResponse<Buffer>> responseFuture = payload != null
-                ? request.sendBuffer(Buffer.buffer(payload))
-                : request.send();
+        Future<HttpResponse<Buffer>> responseFuture = payload != null ?
+            request.sendBuffer(Buffer.buffer(payload)) :
+            request.send();
 
         PostResponseCapture<HttpResponse<Buffer>> responseCapture = new PostResponseCapture<>();
         responseFuture.onComplete(result -> {

@@ -2,7 +2,6 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -10,6 +9,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -43,11 +43,8 @@ public class VaradhiTopicService {
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                internalTopic.getActiveTopics().forEach(storageTopic ->
-                        storageTopicService.create(storageTopic, project)
-                )
-        );
+        varadhiTopic.getInternalTopics()
+                    .forEach((r, it) -> it.getActiveTopics().forEach(st -> storageTopicService.create(st, project)));
         metaStore.createTopic(varadhiTopic);
     }
 
@@ -55,7 +52,6 @@ public class VaradhiTopicService {
      * Retrieves a Varadhi topic by its name.
      *
      * @param topicName the name of the topic
-     *
      * @return the Varadhi topic
      */
     public VaradhiTopic get(String topicName) {
@@ -104,11 +100,10 @@ public class VaradhiTopicService {
 
         Project project = metaStore.getProject(varadhiTopic.getProjectName());
 
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                internalTopic.getActiveTopics().forEach(storageTopic ->
-                        storageTopicService.delete(storageTopic.getName(), project)
-                )
-        );
+        varadhiTopic.getInternalTopics()
+                    .forEach(
+                        (r, it) -> it.getActiveTopics().forEach(st -> storageTopicService.delete(st.getName(), project))
+                    );
         metaStore.deleteTopic(varadhiTopic.getName());
     }
 
@@ -117,7 +112,6 @@ public class VaradhiTopicService {
      *
      * @param topicName     the name of the topic to restore
      * @param actionRequest the request containing the actor code and message for the restoration
-     *
      * @throws InvalidOperationForResourceException if the topic is not deleted or if the restoration is not allowed
      */
     public void restore(String topicName, ResourceActionRequest actionRequest) {
@@ -130,12 +124,13 @@ public class VaradhiTopicService {
         }
 
         LifecycleStatus.ActorCode lastAction = varadhiTopic.getStatus().getActorCode();
-        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
-                actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
+        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION || actionRequest
+                                                                                                                      .actorCode()
+                                                                                                         == LifecycleStatus.ActorCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
-                    "Restoration denied. Only Varadhi Admin can restore this topic."
+                "Restoration denied. Only Varadhi Admin can restore this topic."
             );
         }
 
@@ -148,23 +143,24 @@ public class VaradhiTopicService {
      *
      * @param topicName    the name of the topic to validate
      * @param deletionType the type of deletion (SOFT_DELETE or HARD_DELETE)
-     *
      * @throws InvalidOperationForResourceException if the topic cannot be deleted
      */
     private void validateTopicForDeletion(String topicName, ResourceDeletionType deletionType) {
         // TODO: Improve efficiency by avoiding a full scan of all subscriptions across projects.
-        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames().stream()
-                .map(metaStore::getSubscription)
-                .filter(subscription -> subscription.getTopic().equals(topicName))
-                .toList();
+        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames()
+                                                           .stream()
+                                                           .map(metaStore::getSubscription)
+                                                           .filter(s -> s.getTopic().equals(topicName))
+                                                           .toList();
 
         if (subscriptions.isEmpty()) {
             return;
         }
 
         boolean hasActiveSubscriptions = subscriptions.stream()
-                .anyMatch(subscription ->
-                        subscription.getStatus().getState() == LifecycleStatus.State.CREATED);
+                                                      .anyMatch(
+                                                          s -> s.getStatus().getState() == LifecycleStatus.State.CREATED
+                                                      );
 
         if (deletionType == ResourceDeletionType.SOFT_DELETE && hasActiveSubscriptions) {
             throw new InvalidOperationForResourceException("Cannot delete topic as it has active subscriptions.");
@@ -179,7 +175,6 @@ public class VaradhiTopicService {
      * Checks if a topic exists.
      *
      * @param topicName the name of the topic
-     *
      * @return true if the topic exists, false otherwise
      */
     public boolean exists(String topicName) {
@@ -191,12 +186,12 @@ public class VaradhiTopicService {
      *
      * @param projectName     the name of the project
      * @param includeInactive flag to include inactive or soft-deleted topics
-     *
      * @return a list of Varadhi topic names
      */
     public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
-        return metaStore.getTopicNames(projectName).stream()
-                .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
-                .toList();
+        return metaStore.getTopicNames(projectName)
+                        .stream()
+                        .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
+                        .toList();
     }
 }

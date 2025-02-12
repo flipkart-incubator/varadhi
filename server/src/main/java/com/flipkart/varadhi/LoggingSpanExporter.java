@@ -1,13 +1,13 @@
 package com.flipkart.varadhi;
 
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 @Slf4j
 public final class LoggingSpanExporter implements SpanExporter {
@@ -37,25 +37,30 @@ public final class LoggingSpanExporter implements SpanExporter {
         for (SpanData span : spans) {
             sb.setLength(0);
             sb.append("'")
-                    .append(span.getName())
-                    .append("' ")
-                    .append(": traceId=")
-                    .append(span.getTraceId())
-                    .append(", spanId=")
-                    .append(span.getSpanId())
-                    .append(", parentSpanId=")
-                    .append(span.getParentSpanId())
-                    .append(", kind=")
-                    .append(span.getKind())
-                    .append(", attr='")
-                    .append(span.getAttributes().asMap().entrySet().stream().map(Object::toString)
-                            .collect(Collectors.joining(",")))
-                    .append("', events='")
-                    .append(span.getEvents().stream().map(Object::toString).collect(Collectors.joining(",")))
-                    .append("', time=")
-                    .append((span.getEndEpochNanos() - span.getStartEpochNanos()) / 1000L)
-                    .append(" μs")
-            ;
+              .append(span.getName())
+              .append("' ")
+              .append(": traceId=")
+              .append(span.getTraceId())
+              .append(", spanId=")
+              .append(span.getSpanId())
+              .append(", parentSpanId=")
+              .append(span.getParentSpanId())
+              .append(", kind=")
+              .append(span.getKind())
+              .append(", attr='")
+              .append(
+                  span.getAttributes()
+                      .asMap()
+                      .entrySet()
+                      .stream()
+                      .map(Object::toString)
+                      .collect(Collectors.joining(","))
+              )
+              .append("', events='")
+              .append(span.getEvents().stream().map(Object::toString).collect(Collectors.joining(",")))
+              .append("', time=")
+              .append((span.getEndEpochNanos() - span.getStartEpochNanos()) / 1000L)
+              .append(" μs");
             log.info(sb.toString());
         }
         return CompletableResultCode.ofSuccess();
@@ -81,4 +86,3 @@ public final class LoggingSpanExporter implements SpanExporter {
         return flush();
     }
 }
-

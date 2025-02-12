@@ -9,7 +9,13 @@
 
 - Enable annotation processing. Enable `Obtain processors from project classpath`.
 - Configure Project JDK to JDK 17, if not configured automatically.
-- Code Style will be picked up automatically from the .editorconfig file.
+- Install `Adapter for Eclipse Code Formatter` plugin for code formatting. Configure it via `Settings | Adapter for Eclipse Code Formatter`. Check `Use Eclipse's Code Formatter`. Check `Eclipse workspace/project folder or config file` and choose `varadhi/codestyle.xml`. Choose `VaradhiStyle` as the formatter profile.
+
+## VSCode
+
+- Install `Java Extension Pack`.
+- Configure formatter. `ctrl+shift+p | Java: Open Java Formatter Settings` and choose `varadhi/codestyle.xml` file.
+
 
 ## Development
 
@@ -20,6 +26,7 @@
 - TODOs should be associated to at least one issue.
 - Always format the contributed code. In Intellij, it is recommended to enable "Reformat Code" & "Optimize Imports"
   via "Tools > Actions on Save".
+- For code style enforcement, we are using eclipse jdt formatter. Spotless is already configured in gradlew to validate the code style. `./gradlew spotlessApply` can be used to format the code.
 
 ## Unit tests
 

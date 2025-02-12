@@ -17,7 +17,9 @@ public class TestHelper {
     }
 
     public static <T extends Exception, V> T assertException(
-            CompletableFuture<V> future, Class<T> expectedExceptionClazz, String expectedFailureMsg
+        CompletableFuture<V> future,
+        Class<T> expectedExceptionClazz,
+        String expectedFailureMsg
     ) {
         T actual = assertThrows(expectedExceptionClazz, () -> {
             try {
@@ -32,7 +34,7 @@ public class TestHelper {
         return actual;
     }
 
-    public  static <T> void assertValue(T expectedValue, CompletableFuture<T> future) {
+    public static <T> void assertValue(T expectedValue, CompletableFuture<T> future) {
         try {
             assertEquals(expectedValue, future.get());
         } catch (Exception e) {
@@ -40,7 +42,7 @@ public class TestHelper {
         }
     }
 
-    public  static <T> T awaitAsyncAndGetValue(CompletableFuture<T> future) {
+    public static <T> T awaitAsyncAndGetValue(CompletableFuture<T> future) {
         try {
             await().atMost(100, TimeUnit.SECONDS).until(future::isDone);
             return future.get();

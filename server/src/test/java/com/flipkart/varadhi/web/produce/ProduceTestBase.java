@@ -51,8 +51,12 @@ public class ProduceTestBase extends WebTestBase {
         HeaderValidationHandler headerHandler = new HeaderValidationHandler(options);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
-        produceHandlers = new ProduceHandlers(deployedRegion, headerHandler::validate, producerService, projectService,
-                metricHandler
+        produceHandlers = new ProduceHandlers(
+            deployedRegion,
+            headerHandler::validate,
+            producerService,
+            projectService,
+            metricHandler
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

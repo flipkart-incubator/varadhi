@@ -20,7 +20,9 @@ public class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter {
     private final int messageSize;
 
     public ProducerMetricsEmitterImpl(
-            MeterRegistry meterRegistry, int messageSize, Map<String, String> produceAttributes
+        MeterRegistry meterRegistry,
+        int messageSize,
+        Map<String, String> produceAttributes
     ) {
         this.meterRegistry = meterRegistry;
         this.messageSize = messageSize;
@@ -49,8 +51,10 @@ public class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter {
 
     private Timer getLatencyTimer(List<Tag> tags) {
         // meter name - "produce.latency"
-        return Timer.builder(LATENCY_METER).tags(tags).publishPercentiles(0.5, 0.95, 0.99, 0.999)
-                .publishPercentileHistogram().register(meterRegistry);
+        return Timer.builder(LATENCY_METER)
+                    .tags(tags)
+                    .publishPercentiles(0.5, 0.95, 0.99, 0.999)
+                    .publishPercentileHistogram()
+                    .register(meterRegistry);
     }
 }
-

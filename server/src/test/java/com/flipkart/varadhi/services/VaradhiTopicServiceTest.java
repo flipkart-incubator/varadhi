@@ -85,7 +85,7 @@ class VaradhiTopicServiceTest {
 
         pulsarStorageTopic = PulsarStorageTopic.of(pTopicName, 1, DEFAULT_CAPACITY_POLICY);
         doReturn(pulsarStorageTopic).when(storageTopicFactory)
-                .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
+                                    .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
     }
 
     @Test
@@ -95,8 +95,12 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore, times(1)).createTopic(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
-        verify(storageTopicFactory, times(1))
-                .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
+        verify(storageTopicFactory, times(1)).getTopic(
+            vTopicName,
+            project,
+            DEFAULT_CAPACITY_POLICY,
+            InternalQueueCategory.MAIN
+        );
     }
 
     @Test
@@ -105,8 +109,8 @@ class VaradhiTopicServiceTest {
         doThrow(new VaradhiException("MetaStore error")).when(metaStore).createTopic(varadhiTopic);
 
         Exception exception = assertThrows(
-                VaradhiException.class, () ->
-                        varadhiTopicService.create(varadhiTopic, project)
+            VaradhiException.class,
+            () -> varadhiTopicService.create(varadhiTopic, project)
         );
 
         verify(metaStore, times(1)).createTopic(varadhiTopic);
@@ -119,11 +123,11 @@ class VaradhiTopicServiceTest {
     void createVaradhiTopic_StorageTopicServiceFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         doThrow(new VaradhiException("StorageTopicService error")).when(storageTopicService)
-                .create(pulsarStorageTopic, project);
+                                                                  .create(pulsarStorageTopic, project);
 
         Exception exception = assertThrows(
-                VaradhiException.class, () ->
-                        varadhiTopicService.create(varadhiTopic, project)
+            VaradhiException.class,
+            () -> varadhiTopicService.create(varadhiTopic, project)
         );
 
         verify(metaStore, never()).createTopic(varadhiTopic);
@@ -161,8 +165,8 @@ class VaradhiTopicServiceTest {
         doThrow(new VaradhiException("MetaStore deletion failed")).when(metaStore).deleteTopic(varadhiTopic.getName());
 
         Exception exception = assertThrows(
-                VaradhiException.class,
-                () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
+            VaradhiException.class,
+            () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
         );
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
@@ -183,8 +187,8 @@ class VaradhiTopicServiceTest {
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
 
         Exception exception = assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
+            InvalidOperationForResourceException.class,
+            () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
         );
 
         verify(metaStore, never()).deleteTopic(varadhiTopic.getName());
@@ -196,8 +200,8 @@ class VaradhiTopicServiceTest {
     void softDeleteVaradhiTopic_MetaStoreSuccess_UpdatesTopicStatus() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION,
-                "message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "message"
         );
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest);
@@ -210,14 +214,14 @@ class VaradhiTopicServiceTest {
     void softDeleteVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "message"
         );
         doThrow(new VaradhiException("MetaStore update failed")).when(metaStore).updateTopic(varadhiTopic);
 
         Exception exception = assertThrows(
-                VaradhiException.class,
-                () -> varadhiTopicService.delete(
-                        varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest)
+            VaradhiException.class,
+            () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest)
         );
 
         verify(metaStore, times(1)).updateTopic(varadhiTopic);
@@ -236,8 +240,9 @@ class VaradhiTopicServiceTest {
         when(status.getState()).thenReturn(LifecycleStatus.State.INACTIVE);
 
         Method method = VaradhiTopicService.class.getDeclaredMethod(
-                "validateTopicForDeletion", String.class,
-                ResourceDeletionType.class
+            "validateTopicForDeletion",
+            String.class,
+            ResourceDeletionType.class
         );
         method.setAccessible(true);
 
@@ -255,14 +260,15 @@ class VaradhiTopicServiceTest {
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
 
         Method method = VaradhiTopicService.class.getDeclaredMethod(
-                "validateTopicForDeletion", String.class,
-                ResourceDeletionType.class
+            "validateTopicForDeletion",
+            String.class,
+            ResourceDeletionType.class
         );
         method.setAccessible(true);
 
         Exception exception = assertThrows(
-                InvocationTargetException.class, () ->
-                        method.invoke(varadhiTopicService, topicName, ResourceDeletionType.SOFT_DELETE)
+            InvocationTargetException.class,
+            () -> method.invoke(varadhiTopicService, topicName, ResourceDeletionType.SOFT_DELETE)
         );
         assertInstanceOf(InvalidOperationForResourceException.class, exception.getCause());
         assertEquals("Cannot delete topic as it has active subscriptions.", exception.getCause().getMessage());
@@ -279,14 +285,15 @@ class VaradhiTopicServiceTest {
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
 
         Method method = VaradhiTopicService.class.getDeclaredMethod(
-                "validateTopicForDeletion", String.class,
-                ResourceDeletionType.class
+            "validateTopicForDeletion",
+            String.class,
+            ResourceDeletionType.class
         );
         method.setAccessible(true);
 
         Exception exception = assertThrows(
-                InvocationTargetException.class, () ->
-                        method.invoke(varadhiTopicService, topicName, ResourceDeletionType.HARD_DELETE)
+            InvocationTargetException.class,
+            () -> method.invoke(varadhiTopicService, topicName, ResourceDeletionType.HARD_DELETE)
         );
         assertInstanceOf(InvalidOperationForResourceException.class, exception.getCause());
         assertEquals("Cannot delete topic as it has existing subscriptions.", exception.getCause().getMessage());
@@ -297,8 +304,9 @@ class VaradhiTopicServiceTest {
         when(metaStore.getAllSubscriptionNames()).thenReturn(List.of());
 
         Method method = VaradhiTopicService.class.getDeclaredMethod(
-                "validateTopicForDeletion", String.class,
-                ResourceDeletionType.class
+            "validateTopicForDeletion",
+            String.class,
+            ResourceDeletionType.class
         );
         method.setAccessible(true);
 
@@ -312,8 +320,8 @@ class VaradhiTopicServiceTest {
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION,
-                "message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "message"
         );
 
         varadhiTopicService.restore(varadhiTopic.getName(), actionRequest);
@@ -327,13 +335,13 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION,
-                "message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "message"
         );
 
         Exception exception = assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
+            InvalidOperationForResourceException.class,
+            () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
         );
 
         verify(metaStore, never()).updateTopic(varadhiTopic);
@@ -347,11 +355,13 @@ class VaradhiTopicServiceTest {
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
         when(metaStore.getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.USER_ACTION, "message");
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "message"
+        );
 
         Exception exception = assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
+            InvalidOperationForResourceException.class,
+            () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
         );
 
         verify(metaStore, never()).updateTopic(varadhiTopic);
@@ -363,14 +373,15 @@ class VaradhiTopicServiceTest {
     void restoreVaradhiTopic_NonExistentTopic_ThrowsException() {
         String nonExistentTopicName = "nonExistentTopic";
         ResourceActionRequest actionRequest = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION, "message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "message"
         );
 
         when(metaStore.getTopic(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
 
         Exception exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> varadhiTopicService.restore(nonExistentTopicName, actionRequest)
+            ResourceNotFoundException.class,
+            () -> varadhiTopicService.restore(nonExistentTopicName, actionRequest)
         );
 
         assertEquals(ResourceNotFoundException.class, exception.getClass());
@@ -416,8 +427,8 @@ class VaradhiTopicServiceTest {
         when(metaStore.getTopic(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
 
         Exception exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> varadhiTopicService.get(nonExistentTopicName)
+            ResourceNotFoundException.class,
+            () -> varadhiTopicService.get(nonExistentTopicName)
         );
 
         assertEquals(ResourceNotFoundException.class, exception.getClass());
@@ -471,8 +482,10 @@ class VaradhiTopicServiceTest {
 
     private VaradhiTopic createVaradhiTopicMock() {
         TopicResource topicResource = TopicResource.grouped(
-                TOPIC_NAME, project.getName(), DEFAULT_CAPACITY_POLICY,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            TOPIC_NAME,
+            project.getName(),
+            DEFAULT_CAPACITY_POLICY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         return varadhiTopicFactory.get(project, topicResource);
     }

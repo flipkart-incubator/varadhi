@@ -29,8 +29,9 @@ public class PulsarProducerFactory implements ProducerFactory<PulsarStorageTopic
             return new PulsarProducer(pulsarClient, storageTopic, producerOptions, hostName);
         } catch (PulsarClientException e) {
             throw new ProduceException(
-                    String.format(
-                            "Failed to create Pulsar producer for %s. %s", storageTopic.getName(), e.getMessage()), e);
+                String.format("Failed to create Pulsar producer for %s. %s", storageTopic.getName(), e.getMessage()),
+                e
+            );
         }
     }
 }

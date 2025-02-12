@@ -32,7 +32,7 @@ import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class DlqHandlers implements RouteProvider {
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
@@ -48,23 +48,21 @@ public class DlqHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/projects/:project/subscriptions/:subscription/dlq/messages",
-                List.of(
-                        RouteDefinition
-                                .post("Unsideline", "/unsideline")
-                                .nonBlocking()
-                                .hasBody()
-                                .bodyParser(this::setUnsidelineRequest)
-                                .authorize(SUBSCRIPTION_GET)
-                                .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchies, this::enqueueUnsideline),
-                        RouteDefinition
-                                .get("GetMessages", "")
-                                .nonBlocking()
-                                .authorize(SUBSCRIPTION_GET)
-                                .authorize(TOPIC_CONSUME)
-                                .build(this::getHierarchies, this::getMessages)
-                )
+            "/v1/projects/:project/subscriptions/:subscription/dlq/messages",
+            List.of(
+                RouteDefinition.post("Unsideline", "/unsideline")
+                               .nonBlocking()
+                               .hasBody()
+                               .bodyParser(this::setUnsidelineRequest)
+                               .authorize(SUBSCRIPTION_GET)
+                               .authorize(TOPIC_CONSUME)
+                               .build(this::getHierarchies, this::enqueueUnsideline),
+                RouteDefinition.get("GetMessages", "")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_GET)
+                               .authorize(TOPIC_CONSUME)
+                               .build(this::getHierarchies, this::getMessages)
+            )
         ).get();
     }
 
@@ -77,14 +75,13 @@ public class DlqHandlers implements RouteProvider {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectService.getCachedProject(projectName);
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
-        VaradhiSubscription subscription =
-                subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectService.getProject(topicNameSegments[0]);
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
-                Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
-                Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
+            Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
+            Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
         );
     }
 
@@ -99,30 +96,37 @@ public class DlqHandlers implements RouteProvider {
     public void getMessages(RoutingContext ctx) {
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String limitStr = ctx.request().getParam("limit");
-        int limit = limitStr == null ? subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT) :
-                Integer.parseInt(limitStr);
-        long earliestFailedAt =
-                Long.parseLong(ctx.request().getParam("earliestFailedAt", String.valueOf(UNSPECIFIED_TS)));
+        int limit = limitStr == null ?
+            subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT) :
+            Integer.parseInt(limitStr);
+        long earliestFailedAt = Long.parseLong(
+            ctx.request().getParam("earliestFailedAt", String.valueOf(UNSPECIFIED_TS))
+        );
         String nextPageParam = ctx.request().getParam("nextPage", "");
         DlqPageMarker dlqPageMarker = DlqPageMarker.fromString(nextPageParam);
         validateGetMessageCriteria(subscription, earliestFailedAt, dlqPageMarker, limit);
         ctx.handleChunkedResponse(
-                (Function<Consumer<DlqMessagesResponse>, CompletableFuture<Void>>) (
-                        responseWriter -> dlqService.getMessages(
-                                subscription, earliestFailedAt, dlqPageMarker, limit, responseWriter)
-                ));
+            (Function<Consumer<DlqMessagesResponse>, CompletableFuture<Void>>)(responseWriter -> dlqService.getMessages(
+                subscription,
+                earliestFailedAt,
+                dlqPageMarker,
+                limit,
+                responseWriter
+            ))
+        );
     }
 
     private void validateGetMessageCriteria(
-            VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker dlqPageMarker,
-            int limit
+        VaradhiSubscription subscription,
+        long earliestFailedAt,
+        DlqPageMarker dlqPageMarker,
+        int limit
     ) {
         if (earliestFailedAt == UNSPECIFIED_TS && !dlqPageMarker.hasMarkers()) {
             throw new IllegalArgumentException("At least one get messages criteria needs to be specified.");
         }
         if (earliestFailedAt != UNSPECIFIED_TS && dlqPageMarker.hasMarkers()) {
-            throw new IllegalArgumentException(
-                    "Only one of the get messages criteria should be specified.");
+            throw new IllegalArgumentException("Only one of the get messages criteria should be specified.");
         }
         int max_limit = subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT);
         if (limit > max_limit) {

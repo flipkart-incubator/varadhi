@@ -23,15 +23,18 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class StopOpExecutor extends SubscriptionOpExecutor {
     public StopOpExecutor(
-            VaradhiSubscription subscription, ConsumerClientFactory clientFactory, OperationMgr operationMgr,
-            AssignmentManager assignmentManager, MetaStore metaStore
+        VaradhiSubscription subscription,
+        ConsumerClientFactory clientFactory,
+        OperationMgr operationMgr,
+        AssignmentManager assignmentManager,
+        MetaStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
 
     @Override
     public CompletableFuture<Void> execute(OrderedOperation operation) {
-        return stopShards((SubscriptionOperation) operation, subscription);
+        return stopShards((SubscriptionOperation)operation, subscription);
     }
 
     private CompletableFuture<Void> stopShards(SubscriptionOperation subOp, VaradhiSubscription subscription) {
@@ -39,16 +42,24 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = assignmentManager.getSubAssignments(subId);
         log.info(
-                "Found {} assigned Shards for the Subscription:{} with total {} Shards.", assignments.size(), subId,
-                shards.getShardCount()
+            "Found {} assigned Shards for the Subscription:{} with total {} Shards.",
+            assignments.size(),
+            subId,
+            shards.getShardCount()
         );
 
         List<Assignment> stopsFailed = new ArrayList<>();
-        List<CompletableFuture<Boolean>> shardFutures =
-                scheduleStopOnShards(subscription, subOp, assignments, stopsFailed);
+        List<CompletableFuture<Boolean>> shardFutures = scheduleStopOnShards(
+            subscription,
+            subOp,
+            assignments,
+            stopsFailed
+        );
         log.info(
-                "Executed Stop on {} shards for SubOp({}), Scheduled ShardOperations {}.", shards.getShardCount(),
-                subOp.getData(), shardFutures.size()
+            "Executed Stop on {} shards for SubOp({}), Scheduled ShardOperations {}.",
+            shards.getShardCount(),
+            subOp.getData(),
+            shardFutures.size()
         );
 
         // in case assignments is empty i.e. no assignment exists for this subscription.
@@ -67,8 +78,10 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
     }
 
     private List<CompletableFuture<Boolean>> scheduleStopOnShards(
-            VaradhiSubscription subscription, SubscriptionOperation subOp, List<Assignment> assignments,
-            List<Assignment> stopsFailed
+        VaradhiSubscription subscription,
+        SubscriptionOperation subOp,
+        List<Assignment> assignments,
+        List<Assignment> stopsFailed
     ) {
         SubscriptionShards shards = subscription.getShards();
         String subOpId = subOp.getData().getOperationId();
@@ -77,8 +90,8 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
             ConsumerApi consumer = getAssignedConsumer(assignment);
             SubscriptionUnitShard shard = shards.getShard(assignment.getShardId());
             ShardOperation shardOp = shardOps.computeIfAbsent(
-                    assignment.getShardId(),
-                    shardId -> ShardOperation.stopOp(subOpId, shard, subscription)
+                assignment.getShardId(),
+                shardId -> ShardOperation.stopOp(subOpId, shard, subscription)
             );
             return stopShard(shardOp, subOp.isInRetry(), consumer).whenComplete((scheduled, throwable) -> {
                 if (shardOp.hasFailed()) {
@@ -100,7 +113,7 @@ public class StopOpExecutor extends SubscriptionOpExecutor {
                 return CompletableFuture.completedFuture(false);
             }
             operationMgr.submitShardOp(stopOp, isRetry);
-            CompletableFuture<Void> stopFuture = consumer.stop((ShardOperation.StopData) stopOp.getOpData());
+            CompletableFuture<Void> stopFuture = consumer.stop((ShardOperation.StopData)stopOp.getOpData());
             log.info("Scheduled shard stop({}).", stopOp);
             return stopFuture.thenApply(v -> true);
         }).exceptionally(t -> {

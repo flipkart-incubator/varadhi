@@ -15,7 +15,7 @@ import java.util.UUID;
 import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class SubscriptionOperation extends MetaStoreEntity implements OrderedOperation {
     private final String requestedBy;
     private final long startTime;
@@ -27,8 +27,14 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
     @JsonCreator
     SubscriptionOperation(
-            String operationId, int version, String requestedBy, long startTime, long endTime, OpData data,
-            int retryAttempt, List<OpResult> results
+        String operationId,
+        int version,
+        String requestedBy,
+        long startTime,
+        long endTime,
+        OpData data,
+        int retryAttempt,
+        List<OpResult> results
     ) {
         super(operationId, version);
         this.requestedBy = requestedBy;
@@ -63,7 +69,9 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     }
 
     public static SubscriptionOperation unsidelineOp(
-            String subscriptionId, UnsidelineRequest request, String requestedBy
+        String subscriptionId,
+        UnsidelineRequest request,
+        String requestedBy
     ) {
         return new SubscriptionOperation(new UnsidelineData(subscriptionId, request), requestedBy);
     }
@@ -73,7 +81,14 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         int attempt = retryAttempt + 1;
         results.add(0, OpResult.of(attempt));
         return new SubscriptionOperation(
-                getId(), getVersion(), requestedBy, startTime, endTime, data, attempt, results
+            getId(),
+            getVersion(),
+            requestedBy,
+            startTime,
+            endTime,
+            data,
+            attempt,
+            results
         );
     }
 
@@ -166,8 +181,12 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     @Override
     public String toString() {
         return String.format(
-                "{data=%s retryAttempt=%d, requestedBy=%s, startTime=%d, endTime=%d}", data, retryAttempt, requestedBy,
-                startTime, endTime
+            "{data=%s retryAttempt=%d, requestedBy=%s, startTime=%d, endTime=%d}",
+            data,
+            retryAttempt,
+            requestedBy,
+            startTime,
+            endTime
         );
     }
 
@@ -220,31 +239,30 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         }
     }
 
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@opDataType")
-    @JsonSubTypes({
-            @JsonSubTypes.Type(value = StartData.class, name = "startSubData"),
-            @JsonSubTypes.Type(value = StopData.class, name = "stopSubData"),
-            @JsonSubTypes.Type(value = ReassignShardData.class, name = "reassignShardData"),
-            @JsonSubTypes.Type(value = UnsidelineData.class, name = "unsidelineData"),
-    })
+    @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@opDataType")
+    @JsonSubTypes ({
+        @JsonSubTypes.Type (value = StartData.class, name = "startSubData"),
+        @JsonSubTypes.Type (value = StopData.class, name = "stopSubData"),
+        @JsonSubTypes.Type (value = ReassignShardData.class, name = "reassignShardData"),
+        @JsonSubTypes.Type (value = UnsidelineData.class, name = "unsidelineData"),})
     public static class OpData {
         private String operationId;
         private String subscriptionId;
 
         @Override
         public String toString() {
-            return String.format(
-                    "Id=%s, subscriptionId=%s", operationId, subscriptionId
-            );
+            return String.format("Id=%s, subscriptionId=%s", operationId, subscriptionId);
         }
     }
 
+
     @Data
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class StartData extends OpData {
         StartData(String subscriptionId) {
             super(UUID.randomUUID().toString(), subscriptionId);
@@ -256,9 +274,10 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         }
     }
 
+
     @Data
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class StopData extends OpData {
         StopData(String subscriptionId) {
             super(UUID.randomUUID().toString(), subscriptionId);
@@ -270,9 +289,10 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         }
     }
 
+
     @Data
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class ReassignShardData extends OpData {
         private Assignment assignment;
 
@@ -290,7 +310,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
 
     @Data
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class UnsidelineData extends OpData {
         private UnsidelineRequest request;
 

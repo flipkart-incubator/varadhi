@@ -1,11 +1,8 @@
 package com.flipkart.varadhi.utils;
 
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.vertx.core.MultiMap;
 
-import java.util.Arrays;
-import java.util.List;
 
 import static com.flipkart.varadhi.Constants.Tags.*;
 

@@ -40,8 +40,7 @@ class ZKMetaStore {
     void createZNode(ZNode znode) {
         try {
             if (!zkPathExist(znode)) {
-                zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
-                        .forPath(znode.getPath());
+                zkCurator.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath(znode.getPath());
                 log.debug("Created zk node {}", znode);
             }
         } catch (Exception e) {
@@ -52,44 +51,57 @@ class ZKMetaStore {
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
-            zkCurator.create().withMode(CreateMode.PERSISTENT)
-                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
+            zkCurator.create()
+                     .withMode(CreateMode.PERSISTENT)
+                     .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
             log.debug("Created zk node {} with data: {}", znode, jsonData);
             dataObject.setVersion(0);
         } catch (KeeperException.NodeExistsException e) {
             throw new DuplicateResourceException(
-                    String.format("%s(%s) already exists.", znode.getKind(), znode.getName()), e);
+                String.format("%s(%s) already exists.", znode.getKind(), znode.getName()),
+                e
+            );
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to create %s(%s) at %s.", znode.getKind(), znode.getName(),
-                            znode.getPath()
-                    ), e);
+                String.format("Failed to create %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+            );
         }
     }
 
     <T extends MetaStoreEntity> void updateZNodeWithData(ZNode znode, T dataObject) {
         try {
             String jsonData = JsonMapper.jsonSerialize(dataObject);
-            Stat stat = zkCurator.setData().withVersion(dataObject.getVersion())
-                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
-            log.debug("Updated {}({}) in at {}: New Version{}.", znode.getKind(), znode.getName(), znode.getPath(),
-                    stat.getVersion()
+            Stat stat = zkCurator.setData()
+                                 .withVersion(dataObject.getVersion())
+                                 .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
+            log.debug(
+                "Updated {}({}) in at {}: New Version{}.",
+                znode.getKind(),
+                znode.getName(),
+                znode.getPath(),
+                stat.getVersion()
             );
             dataObject.setVersion(stat.getVersion());
         } catch (KeeperException.NoNodeException e) {
             throw new ResourceNotFoundException(
-                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()), e);
+                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                e
+            );
         } catch (KeeperException.BadVersionException e) {
             throw new InvalidOperationForResourceException(
-                    String.format(
-                            "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
-                            znode.getKind(), znode.getName()
-                    ), e);
+                String.format(
+                    "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
+                    znode.getKind(),
+                    znode.getName()
+                ),
+                e
+            );
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to update %s(%s) at %s.", znode.getKind(), znode.getName(),
-                            znode.getPath()
-                    ), e);
+                String.format("Failed to update %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+            );
         }
     }
 
@@ -101,13 +113,13 @@ class ZKMetaStore {
             jsonData = zkCurator.getData().storingStatIn(stat).forPath(znode.getPath());
         } catch (KeeperException.NoNodeException e) {
             throw new ResourceNotFoundException(
-                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
-                    e
+                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                e
             );
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to find %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
-                    e
+                String.format("Failed to find %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
             );
         }
         T resource = JsonMapper.jsonDeserialize(new String(jsonData), pojoClazz);
@@ -120,7 +132,9 @@ class ZKMetaStore {
             return null != zkCurator.checkExists().forPath(znode.getPath());
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to check if %s(%s) exists.", znode.getName(), znode.getPath()), e);
+                String.format("Failed to check if %s(%s) exists.", znode.getName(), znode.getPath()),
+                e
+            );
         }
     }
 
@@ -129,27 +143,34 @@ class ZKMetaStore {
             zkCurator.delete().forPath(znode.getPath());
         } catch (KeeperException.NoNodeException e) {
             throw new ResourceNotFoundException(
-                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()), e);
+                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                e
+            );
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to delete %s(%s) at %s.", znode.getKind(), znode.getName(),
-                            znode.getPath()
-                    ), e);
+                String.format("Failed to delete %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+            );
         }
     }
 
     List<String> listChildren(ZNode znode) {
         if (!zkPathExist(znode)) {
             throw new ResourceNotFoundException(
-                    String.format("Path(%s) not found for entity %s.", znode.getPath(), znode.getName()));
+                String.format("Path(%s) not found for entity %s.", znode.getPath(), znode.getName())
+            );
         }
         try {
             return zkCurator.getChildren().forPath(znode.getPath());
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to list children for entity type %s at path %s.", znode.getName(),
-                            znode.getPath()
-                    ), e);
+                String.format(
+                    "Failed to list children for entity type %s at path %s.",
+                    znode.getName(),
+                    znode.getPath()
+                ),
+                e
+            );
         }
     }
 
@@ -164,8 +185,11 @@ class ZKMetaStore {
                 results.forEach(r -> {
                     if (r.getError() != 0) {
                         log.error(
-                                "Operation({}, {}) failed: code-{},{}", r.getType(), r.getForPath(), r.getError(),
-                                r.getResultPath()
+                            "Operation({}, {}) failed: code-{},{}",
+                            r.getType(),
+                            r.getForPath(),
+                            r.getError(),
+                            r.getResultPath()
                         );
                     }
                 });
@@ -174,16 +198,23 @@ class ZKMetaStore {
                     Op op = ops.get(e.getResults().indexOf(r)).get();
                     if (r instanceof OpResult.ErrorResult er) {
                         log.error(
-                                "Operation({}, {}, {}) failed: {}.", op.getKind(), op.getType(), op.getPath(),
-                                er.getErr()
+                            "Operation({}, {}, {}) failed: {}.",
+                            op.getKind(),
+                            op.getType(),
+                            op.getPath(),
+                            er.getErr()
                         );
                     }
                 });
                 throw new MetaStoreException(
-                        String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+                    String.format("Failed to execute a batch operation %s.", e.getMessage()),
+                    e
+                );
             } catch (Exception e) {
                 throw new MetaStoreException(
-                        String.format("Failed to execute a batch operation %s.", e.getMessage()), e);
+                    String.format("Failed to execute a batch operation %s.", e.getMessage()),
+                    e
+                );
             }
         }
     }
@@ -193,7 +224,9 @@ class ZKMetaStore {
             return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(zNode.getPath());
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to create Create Operation for path %s.", zNode.getPath()), e);
+                String.format("Failed to create Create Operation for path %s.", zNode.getPath()),
+                e
+            );
         }
     }
 
@@ -202,7 +235,9 @@ class ZKMetaStore {
             return zkCurator.transactionOp().delete().forPath(zNode.getPath());
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to create Delete operation for path %s.", zNode.getPath()), e);
+                String.format("Failed to create Delete operation for path %s.", zNode.getPath()),
+                e
+            );
         }
     }
 }

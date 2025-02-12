@@ -22,10 +22,10 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
 
     @Override
     public PulsarStorageTopic getTopic(
-            String topicName,
-            Project project,
-            TopicCapacityPolicy capacity,
-            InternalQueueCategory queueCategory
+        String topicName,
+        Project project,
+        TopicCapacityPolicy capacity,
+        InternalQueueCategory queueCategory
     ) {
         String pulsarTopicName = getPulsarTopicName(topicName, project);
         int partitionCount = partitioner.getPartitionCount(capacity, queueCategory);

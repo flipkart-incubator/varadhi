@@ -71,12 +71,11 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         // This filters out incorrectly format entries too, but that should be ok.
         ZNode znode = ZNode.OfEntityType(TEAM);
         zkMetaStore.listChildren(znode).forEach(teamName -> {
-                    if (teamName.startsWith(orgPrefixOfTeamName)) {
-                        String[] splits = teamName.split(RESOURCE_NAME_SEPARATOR);
-                        teamNames.add(splits[1]);
-                    }
-                }
-        );
+            if (teamName.startsWith(orgPrefixOfTeamName)) {
+                String[] splits = teamName.split(RESOURCE_NAME_SEPARATOR);
+                teamNames.add(splits[1]);
+            }
+        });
         return teamNames;
     }
 
@@ -161,9 +160,9 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(TOPIC);
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .filter(name -> name.contains(projectPrefixOfTopicName))
-                .toList();
+                          .stream()
+                          .filter(name -> name.contains(projectPrefixOfTopicName))
+                          .toList();
     }
 
     @Override
@@ -199,19 +198,14 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public List<String> getAllSubscriptionNames() {
         ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
-        return zkMetaStore.listChildren(znode)
-                .stream()
-                .toList();
+        return zkMetaStore.listChildren(znode).stream().toList();
     }
 
     @Override
     public List<String> getSubscriptionNames(String projectName) {
         String projectPrefix = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
-        return zkMetaStore.listChildren(znode)
-                .stream()
-                .filter(name -> name.contains(projectPrefix))
-                .toList();
+        return zkMetaStore.listChildren(znode).stream().filter(name -> name.contains(projectPrefix)).toList();
     }
 
     @Override

@@ -12,8 +12,8 @@ import org.apache.pulsar.client.impl.MessageIdImpl;
 
 @Getter
 public class PulsarOffset implements Offset {
-    @JsonSerialize(using = MessageIdSerializer.class)
-    @JsonDeserialize(using = MessageIdDeserializer.class)
+    @JsonSerialize (using = MessageIdSerializer.class)
+    @JsonDeserialize (using = MessageIdDeserializer.class)
     private final MessageId messageId;
 
     public PulsarOffset(MessageId messageId) {
@@ -46,12 +46,15 @@ public class PulsarOffset implements Offset {
             throw new IllegalArgumentException("Can not compare null Offset.");
         }
         if (o instanceof PulsarOffset) {
-            return messageId.compareTo(((PulsarOffset) o).messageId);
+            return messageId.compareTo(((PulsarOffset)o).messageId);
         } else {
-            throw new IllegalArgumentException(String.format(
+            throw new IllegalArgumentException(
+                String.format(
                     "Can not compare different Offset types. Expected Offset is %s, given  %s.",
-                    PulsarOffset.class.getName(), o.getClass().getName()
-            ));
+                    PulsarOffset.class.getName(),
+                    o.getClass().getName()
+                )
+            );
         }
     }
 

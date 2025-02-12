@@ -52,13 +52,16 @@ class VaradhiTopicFactoryTest {
         PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, CAPACITY_POLICY);
 
         doReturn(pTopic).when(storageTopicFactory)
-                .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
+                        .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
     }
 
     @Test
     void get_WithValidTopicResource_ShouldReturnValidVaradhiTopic() {
         TopicResource topicResource = TopicResource.grouped(
-                TOPIC_NAME, project.getName(), CAPACITY_POLICY, LifecycleStatus.ActorCode.SYSTEM_ACTION
+            TOPIC_NAME,
+            project.getName(),
+            CAPACITY_POLICY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
 
@@ -68,18 +71,24 @@ class VaradhiTopicFactoryTest {
         assertNotNull(internalTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
-                vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
+            vTopicName,
+            project,
+            CAPACITY_POLICY,
+            InternalQueueCategory.MAIN
+        );
     }
 
     @Test
     void get_WhenNoCapacityPolicyProvided_ShouldUseDefaultCapacity() {
-        TopicResource topicResource =
-                TopicResource.grouped(
-                        TOPIC_NAME, project.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION
-                );
+        TopicResource topicResource = TopicResource.grouped(
+            TOPIC_NAME,
+            project.getName(),
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
-        PulsarStorageTopic storageTopic = (PulsarStorageTopic) internalTopic.getTopicToProduce();
+        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
 
         assertNotNull(storageTopic);
         assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
@@ -89,15 +98,19 @@ class VaradhiTopicFactoryTest {
 
     @Test
     void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() throws Exception {
-        TopicResource topicResource =
-                TopicResource.grouped(
-                        TOPIC_NAME, project.getName(), Constants.DEFAULT_TOPIC_CAPACITY,
-                        LifecycleStatus.ActorCode.SYSTEM_ACTION
-                );
+        TopicResource topicResource = TopicResource.grouped(
+            TOPIC_NAME,
+            project.getName(),
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
 
-        Method planDeploymentMethod =
-                VaradhiTopicFactory.class.getDeclaredMethod("planDeployment", Project.class, VaradhiTopic.class);
+        Method planDeploymentMethod = VaradhiTopicFactory.class.getDeclaredMethod(
+            "planDeployment",
+            Project.class,
+            VaradhiTopic.class
+        );
         planDeploymentMethod.setAccessible(true);
 
         planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
@@ -108,6 +121,10 @@ class VaradhiTopicFactoryTest {
         assertNotNull(internalCompositeTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
-                vTopicName, project, Constants.DEFAULT_TOPIC_CAPACITY, InternalQueueCategory.MAIN);
+            vTopicName,
+            project,
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            InternalQueueCategory.MAIN
+        );
     }
 }

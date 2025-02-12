@@ -10,10 +10,9 @@ import java.util.Objects;
  * Represents a request for an action on a resource, containing an action code and an optional message.
  *
  * @param actorCode the action code indicating the action to be performed, must not be null
- * @param message    an optional message associated with the action
+ * @param message   an optional message associated with the action
  */
-public record ResourceActionRequest(@NotNull LifecycleStatus.ActorCode actorCode, String message)
-        implements Validatable {
+public record ResourceActionRequest(@NotNull LifecycleStatus.ActorCode actorCode, String message) implements Validatable {
 
     public ResourceActionRequest {
         Objects.requireNonNull(actorCode, "actorCode must not be null");

@@ -44,29 +44,30 @@ public class ConsumerClient implements ConsumerApi {
     @Override
     public CompletableFuture<Optional<ConsumerState>> getConsumerState(String subscriptionId, int shardId) {
         return exchange.request(
-                        consumerId, "status", ClusterMessage.of(new ShardStatusRequest(subscriptionId, shardId)))
-                .thenApply(rm -> Optional.ofNullable(rm.getResponse(ConsumerState.class)));
+            consumerId,
+            "status",
+            ClusterMessage.of(new ShardStatusRequest(subscriptionId, shardId))
+        ).thenApply(rm -> Optional.ofNullable(rm.getResponse(ConsumerState.class)));
     }
 
     @Override
     public CompletableFuture<ConsumerInfo> getConsumerInfo() {
         ClusterMessage message = ClusterMessage.of();
         log.debug("Sending info request:{} {}", consumerId, message);
-        return exchange.request(consumerId, "info", message)
-                .thenApply(rm -> rm.getResponse(ConsumerInfo.class));
+        return exchange.request(consumerId, "info", message).thenApply(rm -> rm.getResponse(ConsumerInfo.class));
     }
 
     @Override
     public CompletableFuture<ShardDlqMessageResponse> getMessagesByTimestamp(long earliestFailedAt, int max_limit) {
         ClusterMessage message = ClusterMessage.of(new ShardDlqMessageRequest(earliestFailedAt, max_limit));
         return exchange.request(consumerId, "getMessagesByTimestamp", message)
-                .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
+                       .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
     }
 
     @Override
     public CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarker, int max_limit) {
         ClusterMessage message = ClusterMessage.of(new ShardDlqMessageRequest(pageMarker, max_limit));
         return exchange.request(consumerId, "getMessagesByOffset", message)
-                .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
+                       .thenApply(rm -> rm.getResponse(ShardDlqMessageResponse.class));
     }
 }

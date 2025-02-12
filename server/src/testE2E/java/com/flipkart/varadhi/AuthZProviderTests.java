@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 
-@ExtendWith(VertxExtension.class)
+@ExtendWith (VertxExtension.class)
 public class AuthZProviderTests extends E2EBase {
 
     public static Org oPublic;
@@ -50,12 +50,14 @@ public class AuthZProviderTests extends E2EBase {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
         oPublic = Org.of("public");
-        fkTeamRocket = Team.of("team_rocket",  oPublic.getName());
+        fkTeamRocket = Team.of("team_rocket", oPublic.getName());
         fkTeamAsh = Team.of("team_ash", oPublic.getName());
         fkDefault = Project.of("default", "", fkTeamRocket.getName(), oPublic.getName());
         fkTopic001 = TopicResource.unGrouped(
-                "topic001", fkDefault.getName(), null,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "topic001",
+            fkDefault.getName(),
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(getOrgsUri(), oPublic, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
@@ -72,44 +74,43 @@ public class AuthZProviderTests extends E2EBase {
     }
 
     private static void setupProvider(Checkpoint checkpoint) throws IOException {
-        String configContent =
-                """
-                        ---
-                        metaStoreOptions:
-                          providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
-                          configFile: "metastore.yml"
+        String configContent = """
+            ---
+            metaStoreOptions:
+              providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
+              configFile: "metastore.yml"
 
-                        roleDefinitions:
-                          org.admin:
-                            roleId: org.admin
-                            permissions:
-                                - ORG_CREATE
-                                - ORG_UPDATE
-                                - ORG_GET
-                                - ORG_DELETE
-                                - TEAM_CREATE
-                                - TEAM_GET
-                                - TEAM_UPDATE
-                                - PROJECT_GET
-                                - TOPIC_GET
-                          team.admin:
-                            roleId: team.admin
-                            permissions:
-                                - TEAM_CREATE
-                                - TEAM_GET
-                                - TEAM_UPDATE
-                                - PROJECT_GET
-                                - TOPIC_GET
-                          project.read:
-                            roleId: project.read
-                            permissions:
-                                - PROJECT_GET
-                                - TOPIC_GET
-                          topic.read:
-                            roleId: topic.read
-                            permissions:
-                                - TOPIC_GET
-                        """;
+            roleDefinitions:
+              org.admin:
+                roleId: org.admin
+                permissions:
+                    - ORG_CREATE
+                    - ORG_UPDATE
+                    - ORG_GET
+                    - ORG_DELETE
+                    - TEAM_CREATE
+                    - TEAM_GET
+                    - TEAM_UPDATE
+                    - PROJECT_GET
+                    - TOPIC_GET
+              team.admin:
+                roleId: team.admin
+                permissions:
+                    - TEAM_CREATE
+                    - TEAM_GET
+                    - TEAM_UPDATE
+                    - PROJECT_GET
+                    - TOPIC_GET
+              project.read:
+                roleId: project.read
+                permissions:
+                    - PROJECT_GET
+                    - TOPIC_GET
+              topic.read:
+                roleId: topic.read
+                permissions:
+                    - TOPIC_GET
+            """;
         Path configFile = tempDir.resolve("authorizationConfig.yml");
         Files.write(configFile, configContent.getBytes());
 
@@ -125,33 +126,21 @@ public class AuthZProviderTests extends E2EBase {
     }
 
     private static void bootstrapRoleBindings() {
+        setIamPolicy(getIamPolicyUri("orgs/public"), new IamPolicyRequest("abc", Set.of("team.admin")));
+        setIamPolicy(getIamPolicyUri("orgs/public"), new IamPolicyRequest("xyz", Set.of("org.admin")));
         setIamPolicy(
-                getIamPolicyUri("orgs/public"),
-                new IamPolicyRequest("abc", Set.of("team.admin"))
+            getIamPolicyUri("orgs/public/teams/team_rocket"),
+            new IamPolicyRequest("team_user1", Set.of("team.admin"))
         );
         setIamPolicy(
-                getIamPolicyUri("orgs/public"),
-                new IamPolicyRequest("xyz", Set.of("org.admin"))
+            getIamPolicyUri("orgs/public/teams/team_ash"),
+            new IamPolicyRequest("brock", Set.of("team.admin"))
         );
+        setIamPolicy(getIamPolicyUri("projects/default"), new IamPolicyRequest("proj_user1", Set.of("project.read")));
+        setIamPolicy(getIamPolicyUri("projects/default"), new IamPolicyRequest("proj_user2", Set.of("topic.read")));
         setIamPolicy(
-                getIamPolicyUri("orgs/public/teams/team_rocket"),
-                new IamPolicyRequest("team_user1", Set.of("team.admin"))
-        );
-        setIamPolicy(
-                getIamPolicyUri("orgs/public/teams/team_ash"),
-                new IamPolicyRequest("brock", Set.of("team.admin"))
-        );
-        setIamPolicy(
-                getIamPolicyUri("projects/default"),
-                new IamPolicyRequest("proj_user1", Set.of("project.read"))
-        );
-        setIamPolicy(
-                getIamPolicyUri("projects/default"),
-                new IamPolicyRequest("proj_user2", Set.of("topic.read"))
-        );
-        setIamPolicy(
-                getIamPolicyUri("projects/default/topics/topic001"),
-                new IamPolicyRequest("proj_user3", Set.of("topic.read"))
+            getIamPolicyUri("projects/default/topics/topic001"),
+            new IamPolicyRequest("proj_user3", Set.of("topic.read"))
         );
     }
 
@@ -185,10 +174,7 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserNotAuthorizedOnResource(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("abc", false),
-                        ResourceAction.ORG_CREATE, "public"
-                )
+        provider.isAuthorized(testUser("abc", false), ResourceAction.ORG_CREATE, "public")
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -199,10 +185,7 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserAuthorisedOnResource(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("xyz", false),
-                        ResourceAction.ORG_CREATE, "public"
-                )
+        provider.isAuthorized(testUser("xyz", false), ResourceAction.ORG_CREATE, "public")
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -213,10 +196,7 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserNoNodeRoles(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("xyz", false),
-                        ResourceAction.ORG_CREATE, ""
-                ) // xyz has org.admin but not at root level
+        provider.isAuthorized(testUser("xyz", false), ResourceAction.ORG_CREATE, "") // xyz has org.admin but not at root level
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -227,10 +207,11 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserTopicAccess(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("proj_user3", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                ) // checking if user role at the leaf node resolves
+        provider.isAuthorized(
+            testUser("proj_user3", false),
+            ResourceAction.TOPIC_GET,
+            "public/team_rocket/default/topic001"
+        ) // checking if user role at the leaf node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -241,10 +222,11 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserTopicAccess2(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                )// checking if user role at the parent node resolves
+        provider.isAuthorized(
+            testUser("proj_user2", false),
+            ResourceAction.TOPIC_GET,
+            "public/team_rocket/default/topic001"
+        )// checking if user role at the parent node resolves
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -255,10 +237,7 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserTopicAccess3(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("abc", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                ) // checking since abc is team.admin, they should be able to read the topic
+        provider.isAuthorized(testUser("abc", false), ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001") // checking since abc is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -269,10 +248,11 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserTopicAccess4(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("team_user1", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                ) // checking since team_user1 is team.admin, they should be able to read the topic
+        provider.isAuthorized(
+            testUser("team_user1", false),
+            ResourceAction.TOPIC_GET,
+            "public/team_rocket/default/topic001"
+        ) // checking since team_user1 is team.admin, they should be able to read the topic
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -283,10 +263,7 @@ public class AuthZProviderTests extends E2EBase {
     public void testIsAuthorized_UserTopicAccess5(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
-        provider
-                .isAuthorized(testUser("brock", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001"
-                ) // brock is team admin for different team, should not be able to access
+        provider.isAuthorized(testUser("brock", false), ResourceAction.TOPIC_GET, "public/team_rocket/default/topic001") // brock is team admin for different team, should not be able to access
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -296,10 +273,7 @@ public class AuthZProviderTests extends E2EBase {
     @Test
     public void testIsAuthorized_UserProjectAccess(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider
-                .isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.PROJECT_GET, "public/team_rocket/default"
-                ) // proj_user2 only has topic read access, so should fail
+        provider.isAuthorized(testUser("proj_user2", false), ResourceAction.PROJECT_GET, "public/team_rocket/default") // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertFalse(t);
                     checkpoint.flag();
@@ -309,10 +283,7 @@ public class AuthZProviderTests extends E2EBase {
     @Test
     public void testIsAuthorized_UserProjectAccess2(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider
-                .isAuthorized(testUser("proj_user2", false),
-                        ResourceAction.TOPIC_GET, "public/team_rocket/default"
-                ) // proj_user2 only has topic read access, so should fail
+        provider.isAuthorized(testUser("proj_user2", false), ResourceAction.TOPIC_GET, "public/team_rocket/default") // proj_user2 only has topic read access, so should fail
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();
@@ -322,10 +293,7 @@ public class AuthZProviderTests extends E2EBase {
     @Test
     public void testIsAuthorized_UserProjectAccess3(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider
-                .isAuthorized(testUser("proj_user1", false),
-                        ResourceAction.PROJECT_GET, "public/team_rocket/default"
-                ) // proj_user1 is project.read so should work
+        provider.isAuthorized(testUser("proj_user1", false), ResourceAction.PROJECT_GET, "public/team_rocket/default") // proj_user1 is project.read so should work
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
                     checkpoint.flag();

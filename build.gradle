@@ -1,5 +1,6 @@
 plugins {
     id "com.flipkart.varadhi.java-common-conventions"
+    id "com.diffplug.spotless" version "7.0.2"
 }
 
 tasks.register('version') {

@@ -4,8 +4,7 @@ package com.flipkart.varadhi.entities;
  * Enum representing the types of resource deletion.
  */
 public enum ResourceDeletionType {
-    SOFT_DELETE,
-    HARD_DELETE;
+    SOFT_DELETE, HARD_DELETE;
 
     /**
      * Converts a string value to a ResourceDeletionType.

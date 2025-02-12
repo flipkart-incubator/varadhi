@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class VaradhiSubscription extends MetaStoreEntity {
 
     private final String project;
@@ -46,18 +46,18 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @param properties        the properties of the subscription
      */
     private VaradhiSubscription(
-            String name,
-            int version,
-            String project,
-            String topic,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards,
-            LifecycleStatus status,
-            Map<String, String> properties
+        String name,
+        int version,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        LifecycleStatus status,
+        Map<String, String> properties
     ) {
         super(name, version);
         this.project = validateNotNullOrEmpty(project, "Project");
@@ -90,21 +90,31 @@ public class VaradhiSubscription extends MetaStoreEntity {
      * @return a new VaradhiSubscription instance
      */
     public static VaradhiSubscription of(
-            String name,
-            String project,
-            String topic,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards,
-            Map<String, String> properties,
-            LifecycleStatus.ActorCode actorCode
+        String name,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        Map<String, String> properties,
+        LifecycleStatus.ActorCode actorCode
     ) {
         return new VaradhiSubscription(
-                name, INITIAL_VERSION, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode), properties
+            name,
+            INITIAL_VERSION,
+            project,
+            topic,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            shards,
+            new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode),
+            properties
         );
     }
 

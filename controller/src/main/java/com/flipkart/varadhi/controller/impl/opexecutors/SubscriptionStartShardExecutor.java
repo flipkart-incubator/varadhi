@@ -15,11 +15,15 @@ import java.util.concurrent.CompletableFuture;
 public abstract class SubscriptionStartShardExecutor extends SubscriptionOpExecutor {
 
     public SubscriptionStartShardExecutor(
-            VaradhiSubscription subscription, ConsumerClientFactory clientFactory, OperationMgr operationMgr,
-            AssignmentManager assignmentManager, MetaStore metaStore
+        VaradhiSubscription subscription,
+        ConsumerClientFactory clientFactory,
+        OperationMgr operationMgr,
+        AssignmentManager assignmentManager,
+        MetaStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
+
     CompletableFuture<Boolean> startShard(ShardOperation startOp, boolean isRetry, ConsumerApi consumer) {
         String subId = startOp.getOpData().getSubscriptionId();
         int shardId = startOp.getOpData().getShardId();
@@ -31,8 +35,8 @@ public abstract class SubscriptionStartShardExecutor extends SubscriptionOpExecu
                 return CompletableFuture.completedFuture(false);
             }
             operationMgr.submitShardOp(startOp, isRetry);
-            CompletableFuture<Boolean> startFuture =
-                    consumer.start((ShardOperation.StartData) startOp.getOpData()).thenApply(v -> true);
+            CompletableFuture<Boolean> startFuture = consumer.start((ShardOperation.StartData)startOp.getOpData())
+                                                             .thenApply(v -> true);
             log.info("Scheduled shard start({}).", startOp);
             return startFuture;
         }).exceptionally(t -> {

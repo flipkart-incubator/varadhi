@@ -35,11 +35,17 @@ public class VaradhiCacheTests {
         String cacheSpec = "expireAfterWrite=3600s";
         entityProvider = spy(this);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        testCache =
-                new VaradhiCache<>(cacheSpec, ticker, entityProvider::getData, (key, failure) -> new CustomException(
-                        String.format("Failed to get data (%s): %s", key, failure.getMessage()), failure),
-                        "test", meterRegistry
-                );
+        testCache = new VaradhiCache<>(
+            cacheSpec,
+            ticker,
+            entityProvider::getData,
+            (key, failure) -> new CustomException(
+                String.format("Failed to get data (%s): %s", key, failure.getMessage()),
+                failure
+            ),
+            "test",
+            meterRegistry
+        );
         getCounter = meterRegistry.counter("varadhi.cache.test.gets");
         loadCounter = meterRegistry.counter("varadhi.cache.test.loads");
         cacheSize = meterRegistry.find("varadhi.cache.test.size").gauge();
@@ -47,16 +53,16 @@ public class VaradhiCacheTests {
     }
 
     private void validateCounters(int get, int load, int loadFailures, int size) {
-        Assertions.assertEquals(get, (int) getCounter.count());
-        Assertions.assertEquals(load, (int) loadCounter.count());
-        Assertions.assertEquals(loadFailures, (int) loadFailureCounter.count());
-        Assertions.assertEquals(size, (int) cacheSize.value());
+        Assertions.assertEquals(get, (int)getCounter.count());
+        Assertions.assertEquals(load, (int)loadCounter.count());
+        Assertions.assertEquals(loadFailures, (int)loadFailureCounter.count());
+        Assertions.assertEquals(size, (int)cacheSize.value());
     }
 
     @Test
     public void testGetData() {
         DummyData data1 = testCache.get("key1");
-        Assertions.assertEquals(1, (int) cacheSize.value());
+        Assertions.assertEquals(1, (int)cacheSize.value());
         DummyData data2 = testCache.get("key2");
         Assertions.assertEquals(data1, testCache.get("key1"));
         Assertions.assertEquals(data2, testCache.get("key2"));
@@ -71,8 +77,10 @@ public class VaradhiCacheTests {
     @Test
     public void testGetDataKnownException() {
         doThrow(new ResourceNotFoundException("Data not found.")).when(entityProvider).getData("key1");
-        ResourceNotFoundException re =
-                Assertions.assertThrows(ResourceNotFoundException.class, () -> testCache.get("key1"));
+        ResourceNotFoundException re = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> testCache.get("key1")
+        );
         Assertions.assertEquals("Data not found.", re.getMessage());
         validateCounters(1, 0, 1, 0);
     }
@@ -80,8 +88,7 @@ public class VaradhiCacheTests {
     @Test
     public void testGetDataUnKnownException() {
         doThrow(new RuntimeException("Load failure.")).when(entityProvider).getData("key1");
-        CustomException ce =
-                Assertions.assertThrows(CustomException.class, () -> testCache.get("key1"));
+        CustomException ce = Assertions.assertThrows(CustomException.class, () -> testCache.get("key1"));
         Assertions.assertEquals("Failed to get data (key1): Load failure.", ce.getMessage());
         Throwable realFailure = ce.getCause();
         Assertions.assertEquals("Load failure.", realFailure.getMessage());
@@ -105,8 +112,10 @@ public class VaradhiCacheTests {
         ticker.advance(3601, TimeUnit.SECONDS);
         Thread.sleep(1); // to ensure new version of DummyData().
         doThrow(new ResourceNotFoundException("Data not found.")).when(entityProvider).getData("key1");
-        ResourceNotFoundException re =
-                Assertions.assertThrows(ResourceNotFoundException.class, () -> testCache.get("key1"));
+        ResourceNotFoundException re = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> testCache.get("key1")
+        );
         validateCounters(2, 1, 1, 0);
     }
 
@@ -124,6 +133,7 @@ public class VaradhiCacheTests {
             this.value = System.nanoTime();
         }
     }
+
 
     @StandardException
     public static class CustomException extends VaradhiException {

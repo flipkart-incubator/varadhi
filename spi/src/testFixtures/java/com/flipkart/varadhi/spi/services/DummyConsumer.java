@@ -17,8 +17,9 @@ public class DummyConsumer implements Consumer<DummyOffset> {
     private boolean isCalled = false;
 
     public DummyConsumer(List<String> messages) {
-        this.messages = messages.stream().map(message -> Map.entry(message, false))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        this.messages = messages.stream()
+                                .map(message -> Map.entry(message, false))
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override

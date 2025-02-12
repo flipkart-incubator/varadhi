@@ -8,12 +8,11 @@ public class MessageConstants {
     public static String ANONYMOUS_IDENTITY = "Anonymous";
 
     public static class Headers {
-        public static List<String> REQUIRED_HEADERS =
-                List.of(
-                        StandardHeaders.MESSAGE_ID,
-                        StandardHeaders.PRODUCE_IDENTITY,
-                        StandardHeaders.PRODUCE_REGION,
-                        StandardHeaders.PRODUCE_TIMESTAMP
-                );
+        public static List<String> REQUIRED_HEADERS = List.of(
+            StandardHeaders.MESSAGE_ID,
+            StandardHeaders.PRODUCE_IDENTITY,
+            StandardHeaders.PRODUCE_REGION,
+            StandardHeaders.PRODUCE_TIMESTAMP
+        );
     }
 }

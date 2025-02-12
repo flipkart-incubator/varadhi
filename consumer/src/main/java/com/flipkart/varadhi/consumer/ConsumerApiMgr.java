@@ -30,32 +30,30 @@ public class ConsumerApiMgr implements ConsumerApi {
         SubscriptionUnitShard shard = operation.getShard();
 
         StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
-        ConsumptionFailurePolicy failurePolicy =
-                new ConsumptionFailurePolicy(operation.getRetryPolicy(), shard.getRetrySubscription(),
-                        shard.getDeadLetterSubscription()
-                );
+        ConsumptionFailurePolicy failurePolicy = new ConsumptionFailurePolicy(
+            operation.getRetryPolicy(),
+            shard.getRetrySubscription(),
+            shard.getDeadLetterSubscription()
+        );
 
         //TODO::Re-evaluate interface w.r.to shardId object/record instead of project+subId+shardId.
         return consumersManager.startSubscription(
-                operation.getProject(),
-                operation.getSubscriptionId(),
-                operation.getShardId(),
-                mainSub,
-                operation.isGrouped(),
-                operation.getEndpoint(),
-                operation.getConsumptionPolicy(),
-                failurePolicy,
-                shard.getCapacityRequest()
+            operation.getProject(),
+            operation.getSubscriptionId(),
+            operation.getShardId(),
+            mainSub,
+            operation.isGrouped(),
+            operation.getEndpoint(),
+            operation.getConsumptionPolicy(),
+            failurePolicy,
+            shard.getCapacityRequest()
         );
     }
 
     @Override
     public CompletableFuture<Void> stop(ShardOperation.StopData operation) {
         log.info("Consumer: Stopping shard {}", operation);
-        return consumersManager.stopSubscription(
-                operation.getSubscriptionId(),
-                operation.getShardId()
-        );
+        return consumersManager.stopSubscription(operation.getSubscriptionId(), operation.getShardId());
     }
 
     @Override
@@ -82,14 +80,14 @@ public class ConsumerApiMgr implements ConsumerApi {
     @Override
     public CompletableFuture<ShardDlqMessageResponse> getMessagesByTimestamp(long earliestFailedAt, int max_limit) {
         //TODO::Message serialization should be byte arrasdy
-        log.info("Polled from earliestFailedAt: {}",  earliestFailedAt);
+        log.info("Polled from earliestFailedAt: {}", earliestFailedAt);
         return CompletableFuture.supplyAsync(() -> new ShardDlqMessageResponse(new ArrayList<>(), null));
     }
+
     @Override
-    public CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarkers, int max_limit
-    ) {
+    public CompletableFuture<ShardDlqMessageResponse> getMessagesByOffset(String pageMarkers, int max_limit) {
         //TODO::Message serialization should be byte array
-        log.info("Polled from pagerMarkers: {}",  pageMarkers);
+        log.info("Polled from pagerMarkers: {}", pageMarkers);
         return CompletableFuture.supplyAsync(() -> new ShardDlqMessageResponse(new ArrayList<>(), null));
     }
 }

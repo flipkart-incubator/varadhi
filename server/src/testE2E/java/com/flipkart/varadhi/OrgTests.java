@@ -29,12 +29,7 @@ public class OrgTests extends E2EBase {
         Org org1Created = makeCreateRequest(getOrgsUri(), org1, 200);
         Assertions.assertEquals(org1, org1Created);
         makeCreateRequest(getOrgsUri(), org2, 200);
-        makeCreateRequest(
-                getOrgsUri(),
-                org2,
-                409,
-                String.format("Org(%s) already exists.", org2.getName()), true
-        );
+        makeCreateRequest(getOrgsUri(), org2, 409, String.format("Org(%s) already exists.", org2.getName()), true);
         Org orgGet = makeGetRequest(getOrgUri(org1), Org.class, 200);
         Assertions.assertEquals(org1, orgGet);
         List<Org> orgList1 = getOrgs(makeListRequest(getOrgsUri(), 200));

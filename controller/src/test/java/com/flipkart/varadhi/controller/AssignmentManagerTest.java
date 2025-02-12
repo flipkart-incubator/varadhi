@@ -48,8 +48,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testAssignShards() throws Exception {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -84,8 +85,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testAssignShards_StoreThrows() {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -95,7 +97,7 @@ public class AssignmentManagerTest {
         List<String> idsToExclude = List.of(nodes.get(1).getConsumerId());
 
         doThrow(new MetaStoreException("failed to get assignments.")).when(assignmentStore)
-                .getSubAssignments(sub1.getName());
+                                                                     .getSubAssignments(sub1.getName());
         CompletableFuture<List<Assignment>> aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         assertException(aFuture, MetaStoreException.class, "failed to get assignments.");
@@ -105,7 +107,7 @@ public class AssignmentManagerTest {
 
         doReturn(new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to create assignments.")).when(assignmentStore)
-                .createAssignments(anyList());
+                                                                        .createAssignments(anyList());
         aFuture = assignmentManager.assignShards(shards, sub1, idsToExclude);
         await().atMost(100, TimeUnit.SECONDS).until(aFuture::isDone);
         assertException(aFuture, MetaStoreException.class, "failed to create assignments.");
@@ -122,8 +124,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testUnAssignShards() throws Exception {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -182,8 +185,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testUnAssignShards_Throws() throws Exception {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -197,7 +201,7 @@ public class AssignmentManagerTest {
         NodeCapacity c2 = nodes.get(2).getAvailable().clone();
 
         doThrow(new MetaStoreException("failed to get assignments.")).when(assignmentStore)
-                .getSubAssignments(sub1.getName());
+                                                                     .getSubAssignments(sub1.getName());
         doNothing().when(assignmentStore).deleteAssignments(anyList());
 
         //validate capacity is not freed in case of exception and delete is not called
@@ -211,7 +215,7 @@ public class AssignmentManagerTest {
         //validate capacity is not freed in case delete throws
         doReturn(assignments).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to delete assignments.")).when(assignmentStore)
-                .deleteAssignments(anyList());
+                                                                        .deleteAssignments(anyList());
         vFuture = assignmentManager.unAssignShards(assignments, sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(vFuture::isDone);
         validateCapacity(c0, c1, c2, nodes);
@@ -219,8 +223,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testReAssign() throws Exception {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -240,8 +245,9 @@ public class AssignmentManagerTest {
 
     @Test
     public void testReAssign_Throws() throws Exception {
-        VaradhiSubscription sub1 =
-                SubscriptionUtils.builder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
         nodes.forEach(this::addConsumerNode);
@@ -256,7 +262,7 @@ public class AssignmentManagerTest {
         c2.allocate(shards.get(0).getCapacityRequest());
 
         doThrow(new MetaStoreException("failed to get subscription assignments.")).when(assignmentStore)
-                .getSubAssignments(sub1.getName());
+                                                                                  .getSubAssignments(sub1.getName());
         CompletableFuture<Assignment> rFuture = assignmentManager.reAssignShard(assignments.get(0), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(rFuture::isDone);
         assertException(rFuture, MetaStoreException.class, "failed to get subscription assignments.");
@@ -265,7 +271,7 @@ public class AssignmentManagerTest {
 
         doReturn(assignments, new ArrayList<>()).when(assignmentStore).getSubAssignments(sub1.getName());
         doThrow(new MetaStoreException("failed to create assignments.")).when(assignmentStore)
-                .createAssignments(anyList());
+                                                                        .createAssignments(anyList());
         rFuture = assignmentManager.reAssignShard(assignments.get(0), sub1, true);
         await().atMost(100, TimeUnit.SECONDS).until(rFuture::isDone);
         assertException(rFuture, MetaStoreException.class, "failed to create assignments.");
@@ -325,6 +331,7 @@ public class AssignmentManagerTest {
         await().atMost(1, TimeUnit.SECONDS).until(nFuture::isDone);
         assertFalse(nFuture.isCompletedExceptionally());
     }
+
     private static void validateCapacity(NodeCapacity c0, NodeCapacity c1, NodeCapacity c2, List<ConsumerNode> nodes) {
         assertEquals(c0, nodes.get(0).getAvailable());
         assertEquals(c1, nodes.get(1).getAvailable());

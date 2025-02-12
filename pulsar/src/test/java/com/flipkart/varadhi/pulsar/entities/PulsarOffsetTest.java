@@ -55,9 +55,13 @@ public class PulsarOffsetTest {
         DummyProducer.DummyOffset dp1 = new DummyProducer.DummyOffset(1);
         IllegalArgumentException ae = Assertions.assertThrows(IllegalArgumentException.class, () -> p1.compareTo(dp1));
         Assertions.assertEquals(
-                String.format("Can not compare different Offset types. Expected Offset is %s, given  %s.",
-                        p1.getClass().getName(), dp1.getClass().getName()
-                ), ae.getMessage());
+            String.format(
+                "Can not compare different Offset types. Expected Offset is %s, given  %s.",
+                p1.getClass().getName(),
+                dp1.getClass().getName()
+            ),
+            ae.getMessage()
+        );
     }
 
     @Test

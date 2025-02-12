@@ -63,15 +63,15 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
         ongoingIterator = null;
         if (pendingAsyncFetch.compareAndSet(false, true)) {
             log.debug("IQ: [{}]. fetching messages from consumer", queueType);
-            return consumer.receiveAsync()
-                    .thenApply(polledMessages -> {
-                        int processedCount = processPolledMessages(polledMessages, result);
-                        pendingAsyncFetch.set(false);
-                        return processedCount;
-                    });
+            return consumer.receiveAsync().thenApply(polledMessages -> {
+                int processedCount = processPolledMessages(polledMessages, result);
+                pendingAsyncFetch.set(false);
+                return processedCount;
+            });
         } else {
             throw new IllegalStateException(
-                    "nextMessages method is not supposed to be called concurrently. There seems to be an ongoing consumer.receiveAsync() operation.");
+                "nextMessages method is not supposed to be called concurrently. There seems to be an ongoing consumer.receiveAsync() operation."
+            );
         }
     }
 
@@ -79,8 +79,10 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
         Iterator<PolledMessage<O>> polledMessagesIterator = polledMessages.iterator();
         int count = fetchFromIterator(messages, polledMessagesIterator);
         log.debug(
-                "IQ: [{}]. received {} messages from consumer. returning {} msgs.", queueType,
-                polledMessages.getCount(), count
+            "IQ: [{}]. received {} messages from consumer. returning {} msgs.",
+            queueType,
+            polledMessages.getCount(),
+            count
         );
         if (polledMessagesIterator.hasNext()) {
             ongoingIterator = polledMessagesIterator;
@@ -94,12 +96,11 @@ public class UnGroupedMessageSrc<O extends Offset> implements MessageSrc {
      * @param iterator Iterator of messages to fetch from.
      * @param messages Array of message trackers to populate.
      *
-     * @return Index into the messages array where the next message should be stored. (will be equal to the length if completely full)
+     * @return Index into the messages array where the next message should be stored. (will be equal to the length if
+     *         completely full)
      */
 
-    int fetchFromIterator(
-            MessageTracker[] messages, Iterator<PolledMessage<O>> iterator
-    ) {
+    int fetchFromIterator(MessageTracker[] messages, Iterator<PolledMessage<O>> iterator) {
         if (iterator == null || !iterator.hasNext()) {
             return 0;
         }

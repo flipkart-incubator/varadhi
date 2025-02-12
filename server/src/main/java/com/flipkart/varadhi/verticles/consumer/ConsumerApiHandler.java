@@ -45,18 +45,20 @@ public class ConsumerApiHandler {
 
     public CompletableFuture<ResponseMessage> getMessagesByTimestamp(ClusterMessage message) {
         ShardDlqMessageRequest request = message.getData(ShardDlqMessageRequest.class);
-        return consumerApiMgr.getMessagesByTimestamp(request.getEarliestFailedAt(), request.getLimit()).thenApply(message::getResponseMessage);
+        return consumerApiMgr.getMessagesByTimestamp(request.getEarliestFailedAt(), request.getLimit())
+                             .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> getMessagesByOffset(ClusterMessage message) {
         ShardDlqMessageRequest request = message.getData(ShardDlqMessageRequest.class);
-        return consumerApiMgr.getMessagesByOffset(request.getPageMarker(), request.getLimit()).thenApply(message::getResponseMessage);
+        return consumerApiMgr.getMessagesByOffset(request.getPageMarker(), request.getLimit())
+                             .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> status(ClusterMessage message) {
         ShardStatusRequest request = message.getRequest(ShardStatusRequest.class);
         return consumerApiMgr.getConsumerState(request.getSubscriptionId(), request.getShardId())
-                .thenApply(message::getResponseMessage);
+                             .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> info(ClusterMessage message) {
