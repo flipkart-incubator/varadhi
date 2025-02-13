@@ -16,17 +16,20 @@ class VaradhiTopicTest {
     private static final String TOPIC_NAME = "topic1";
     private static final TopicCapacityPolicy TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2);
 
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
-        public DummyStorageTopic(String name, int version) {
-            super(name, version, TOPIC_CAPACITY);
+        public DummyStorageTopic(String name) {
+            super(name, TOPIC_CAPACITY);
         }
     }
 
     private VaradhiTopic createDefaultVaradhiTopic(boolean grouped) {
         return VaradhiTopic.of(
-                PROJECT_NAME, TOPIC_NAME, grouped, TOPIC_CAPACITY,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            PROJECT_NAME,
+            TOPIC_NAME,
+            grouped,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
     }
 
@@ -36,11 +39,11 @@ class VaradhiTopicTest {
         varadhiTopic.markCreated();
 
         assertAll(
-                () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
-                () -> assertEquals(VaradhiTopic.INITIAL_VERSION, varadhiTopic.getVersion(), "Version mismatch"),
-                () -> assertFalse(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
-                () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
-                () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch")
+            () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
+            () -> assertEquals(VaradhiTopic.INITIAL_VERSION, varadhiTopic.getVersion(), "Version mismatch"),
+            () -> assertFalse(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
+            () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
+            () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch")
         );
     }
 
@@ -50,10 +53,10 @@ class VaradhiTopicTest {
         varadhiTopic.markCreated();
 
         assertAll(
-                () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
-                () -> assertTrue(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
-                () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
-                () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch")
+            () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
+            () -> assertTrue(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
+            () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
+            () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch")
         );
     }
 
@@ -68,14 +71,14 @@ class VaradhiTopicTest {
     @Test
     void addInternalTopic_AddsTopicSuccessfully() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName(), 0);
+        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
 
         assertEquals(
-                storageTopic.getName(),
-                varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
-                "Internal topic addition failed"
+            storageTopic.getName(),
+            varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+            "Internal topic addition failed"
         );
     }
 
@@ -89,17 +92,17 @@ class VaradhiTopicTest {
     @Test
     void getProduceTopicForRegion_WithValidRegion_ReturnsCorrectTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName(), 0);
+        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
 
         assertAll(
-                () -> assertNotNull(varadhiTopic.getProduceTopicForRegion("region1"), "Region topic not found"),
-                () -> assertEquals(
-                        storageTopic.getName(),
-                        varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
-                        "Region topic name mismatch"
-                )
+            () -> assertNotNull(varadhiTopic.getProduceTopicForRegion("region1"), "Region topic not found"),
+            () -> assertEquals(
+                storageTopic.getName(),
+                varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+                "Region topic name mismatch"
+            )
         );
     }
 
@@ -118,15 +121,17 @@ class VaradhiTopicTest {
         varadhiTopic.restore(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
 
         assertAll(
-                () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
-                () -> assertEquals(
-                        LifecycleStatus.State.CREATED, varadhiTopic.getStatus().getState(),
-                        "Status state mismatch"
-                ),
-                () -> assertEquals(
-                        LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode(),
-                        "Action code mismatch"
-                )
+            () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
+            () -> assertEquals(
+                LifecycleStatus.State.CREATED,
+                varadhiTopic.getStatus().getState(),
+                "Status state mismatch"
+            ),
+            () -> assertEquals(
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
+                varadhiTopic.getStatus().getActorCode(),
+                "Action code mismatch"
+            )
         );
     }
 
@@ -137,15 +142,17 @@ class VaradhiTopicTest {
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
 
         assertAll(
-                () -> assertFalse(varadhiTopic.isActive(), "Inactive status update failed"),
-                () -> assertEquals(
-                        LifecycleStatus.State.INACTIVE, varadhiTopic.getStatus().getState(),
-                        "Status state mismatch"
-                ),
-                () -> assertEquals(
-                        LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode(),
-                        "Action code mismatch"
-                )
+            () -> assertFalse(varadhiTopic.isActive(), "Inactive status update failed"),
+            () -> assertEquals(
+                LifecycleStatus.State.INACTIVE,
+                varadhiTopic.getStatus().getState(),
+                "Status state mismatch"
+            ),
+            () -> assertEquals(
+                LifecycleStatus.ActorCode.SYSTEM_ACTION,
+                varadhiTopic.getStatus().getActorCode(),
+                "Action code mismatch"
+            )
         );
     }
 }
