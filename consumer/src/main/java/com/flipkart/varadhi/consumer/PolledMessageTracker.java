@@ -16,8 +16,10 @@ public class PolledMessageTracker<O extends Offset> implements MessageTracker {
     private final Function<InternalQueueType, ConsumerMetrics.Tracker> metricTracker;
     private ConsumerMetrics.Tracker tracker;
 
-    public PolledMessageTracker(Consumer<O> committer, PolledMessage<O> message,
-                                Function<InternalQueueType, ConsumerMetrics.Tracker> metricTracker
+    public PolledMessageTracker(
+        Consumer<O> committer,
+        PolledMessage<O> message,
+        Function<InternalQueueType, ConsumerMetrics.Tracker> metricTracker
     ) {
         this.message = message;
         this.committer = committer;

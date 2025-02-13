@@ -24,7 +24,7 @@ public class ControllerRestClient implements ControllerRestApi {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
         return exchange.request(ROUTE_CONTROLLER, "state", message)
-                .thenApply(rm -> rm.getResponse(SubscriptionState.class));
+                       .thenApply(rm -> rm.getResponse(SubscriptionState.class));
     }
 
     @Override
@@ -32,7 +32,7 @@ public class ControllerRestClient implements ControllerRestApi {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
         return exchange.request(ROUTE_CONTROLLER, "start", message)
-                .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
+                       .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override
@@ -40,21 +40,25 @@ public class ControllerRestClient implements ControllerRestApi {
         SubscriptionOpRequest opRequest = new SubscriptionOpRequest(subscriptionId, requestedBy);
         ClusterMessage message = ClusterMessage.of(opRequest);
         return exchange.request(ROUTE_CONTROLLER, "stop", message)
-                .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
+                       .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override
-    public CompletableFuture<SubscriptionOperation> unsideline(String subscriptionId, UnsidelineRequest request, String requestedBy) {
+    public CompletableFuture<SubscriptionOperation> unsideline(
+        String subscriptionId,
+        UnsidelineRequest request,
+        String requestedBy
+    ) {
         ClusterMessage message = ClusterMessage.of(new UnsidelineOpRequest(subscriptionId, requestedBy, request));
         return exchange.request(ROUTE_CONTROLLER, "unsideline", message)
-                .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
+                       .thenApply(rm -> rm.getResponse(SubscriptionOperation.class));
     }
 
     @Override
     public CompletableFuture<ShardAssignments> getShardAssignments(String subscriptionId) {
         ClusterMessage message = ClusterMessage.of(subscriptionId);
         return exchange.request(ROUTE_CONTROLLER, "getShards", message)
-                .thenApply(rm -> rm.getResponse(ShardAssignments.class));
+                       .thenApply(rm -> rm.getResponse(ShardAssignments.class));
     }
 
 }

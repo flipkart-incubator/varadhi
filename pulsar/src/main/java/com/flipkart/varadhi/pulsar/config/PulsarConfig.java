@@ -6,10 +6,8 @@ import lombok.Data;
 
 @Data
 public class PulsarConfig {
-    @NotNull
-    private PulsarAdminOptions pulsarAdminOptions;
-    @NotNull
-    private PulsarClientOptions pulsarClientOptions;
+    @NotNull private PulsarAdminOptions pulsarAdminOptions;
+    @NotNull private PulsarClientOptions pulsarClientOptions;
     private ProducerOptions producerOptions;
     private int maxQPSPerPartition = 1000;
     private int maxKBpsPerPartition = 4000;

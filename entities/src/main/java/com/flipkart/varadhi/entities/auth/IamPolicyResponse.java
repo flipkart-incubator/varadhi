@@ -10,17 +10,15 @@ import java.util.Map;
 import java.util.Set;
 
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class IamPolicyResponse extends VersionedEntity {
     private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator
-    public IamPolicyResponse(
-            @JsonProperty("name") String name,
-            @JsonProperty("roleBindings")
-            Map<String, Set<String>> roleBindings,
-            @JsonProperty("version") int version
-    ) {
+    public IamPolicyResponse(@JsonProperty ("name")
+    String name, @JsonProperty ("roleBindings")
+    Map<String, Set<String>> roleBindings, @JsonProperty ("version")
+    int version) {
         super(name, version);
         this.roleBindings = roleBindings;
     }

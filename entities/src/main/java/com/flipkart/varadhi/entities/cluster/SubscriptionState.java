@@ -35,21 +35,22 @@ public class SubscriptionState {
      *
      * Will be populated only when the assignmentState is ASSIGNED.
      */
-    @Nullable
-    private final ConsumerState consumerState;
+    @Nullable private final ConsumerState consumerState;
 
     public static SubscriptionState mergeShardStates(List<SubscriptionState> states) {
         int totalShards = states.size();
 
-        long partial =
-                states.stream().filter(state -> state.assignmentState == AssignmentState.PARTIALLY_ASSIGNED).count();
+        long partial = states.stream()
+                             .filter(state -> state.assignmentState == AssignmentState.PARTIALLY_ASSIGNED)
+                             .count();
         if (partial > 0) {
             throw new IllegalStateException("Invalid state. A single shard cannot be in partial state");
         }
 
         long assigned = states.stream().filter(state -> state.assignmentState == AssignmentState.ASSIGNED).count();
-        long unassigned =
-                states.stream().filter(state -> state.assignmentState == AssignmentState.NOT_ASSIGNED).count();
+        long unassigned = states.stream()
+                                .filter(state -> state.assignmentState == AssignmentState.NOT_ASSIGNED)
+                                .count();
 
         if (assigned > 0 && unassigned > 0) {
             return new SubscriptionState(AssignmentState.PARTIALLY_ASSIGNED, null);
@@ -61,23 +62,26 @@ public class SubscriptionState {
                 return new SubscriptionState(AssignmentState.ASSIGNED, null);
             }
 
-            Optional<ConsumerState> erroredState =
-                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.ERRORED)
-                            .findAny();
+            Optional<ConsumerState> erroredState = states.stream()
+                                                         .map(state -> state.consumerState)
+                                                         .filter(state -> state == ConsumerState.ERRORED)
+                                                         .findAny();
             if (erroredState.isPresent()) {
                 return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.ERRORED);
             }
 
-            Optional<ConsumerState> pausedState =
-                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.PAUSED)
-                            .findAny();
+            Optional<ConsumerState> pausedState = states.stream()
+                                                        .map(state -> state.consumerState)
+                                                        .filter(state -> state == ConsumerState.PAUSED)
+                                                        .findAny();
             if (pausedState.isPresent()) {
                 return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.PAUSED);
             }
 
-            Optional<ConsumerState> throttledState =
-                    states.stream().map(state -> state.consumerState).filter(state -> state == ConsumerState.THROTTLED)
-                            .findAny();
+            Optional<ConsumerState> throttledState = states.stream()
+                                                           .map(state -> state.consumerState)
+                                                           .filter(state -> state == ConsumerState.THROTTLED)
+                                                           .findAny();
             if (throttledState.isPresent()) {
                 return new SubscriptionState(AssignmentState.ASSIGNED, ConsumerState.THROTTLED);
             }

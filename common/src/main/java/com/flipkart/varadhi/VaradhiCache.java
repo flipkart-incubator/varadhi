@@ -32,23 +32,23 @@ public class VaradhiCache<K, V> {
 
     // cacheSpec - Guava cache spec as defined at com.google.common.cache.CacheBuilderSpec.
     public VaradhiCache(
-            String cacheSpec,
-            Function<K, V> entityProvider,
-            BiFunction<K, Throwable, VaradhiException> exceptionWrapper,
-            String meterPrefix,
-            MeterRegistry meterRegistry
+        String cacheSpec,
+        Function<K, V> entityProvider,
+        BiFunction<K, Throwable, VaradhiException> exceptionWrapper,
+        String meterPrefix,
+        MeterRegistry meterRegistry
     ) {
         this(cacheSpec, Ticker.systemTicker(), entityProvider, exceptionWrapper, meterPrefix, meterRegistry);
     }
 
 
     public VaradhiCache(
-            String cacheSpec,
-            Ticker ticker,
-            Function<K, V> entityProvider,
-            BiFunction<K, Throwable, VaradhiException> exceptionWrapper,
-            String meterPrefix,
-            MeterRegistry meterRegistry
+        String cacheSpec,
+        Ticker ticker,
+        Function<K, V> entityProvider,
+        BiFunction<K, Throwable, VaradhiException> exceptionWrapper,
+        String meterPrefix,
+        MeterRegistry meterRegistry
     ) {
         this.entityCache = CacheBuilder.from(cacheSpec).ticker(ticker).build();
         this.entityProvider = entityProvider;
@@ -71,7 +71,7 @@ public class VaradhiCache<K, V> {
             loadFailureCounter.increment();
             Throwable realFailure = e.getCause();
             if (realFailure instanceof VaradhiException) {
-                throw (VaradhiException) realFailure;
+                throw (VaradhiException)realFailure;
             }
             throw unExpectedExceptionWrapper.apply(key, realFailure);
         }

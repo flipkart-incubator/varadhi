@@ -41,9 +41,10 @@ public class DlqPageMarker {
 
     @Override
     public String toString() {
-        List<String> markers =
-                shardPageMarkers.entrySet().stream().map(e -> String.format("%d=%s", e.getKey(), e.getValue()))
-                        .toList();
+        List<String> markers = shardPageMarkers.entrySet()
+                                               .stream()
+                                               .map(e -> String.format("%d=%s", e.getKey(), e.getValue()))
+                                               .toList();
         return Strings.join(markers, '~');
     }
 

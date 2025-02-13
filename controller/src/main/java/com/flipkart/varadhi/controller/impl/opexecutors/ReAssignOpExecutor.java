@@ -20,8 +20,11 @@ import java.util.concurrent.CompletableFuture;
 public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
 
     public ReAssignOpExecutor(
-            VaradhiSubscription subscription, ConsumerClientFactory clientFactory, OperationMgr operationMgr,
-            AssignmentManager assignmentManager, MetaStore metaStore
+        VaradhiSubscription subscription,
+        ConsumerClientFactory clientFactory,
+        OperationMgr operationMgr,
+        AssignmentManager assignmentManager,
+        MetaStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
@@ -29,7 +32,7 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
 
     @Override
     public CompletableFuture<Void> execute(OrderedOperation operation) {
-        return reAssignShard((SubscriptionOperation) operation);
+        return reAssignShard((SubscriptionOperation)operation);
     }
 
     /**
@@ -39,7 +42,7 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
      * -- Retry (Auto or manual) of failed Re-Assign operation or start of the subscription should fix this.
      */
     private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
-        SubscriptionOperation.ReassignShardData data = (SubscriptionOperation.ReassignShardData) subOp.getData();
+        SubscriptionOperation.ReassignShardData data = (SubscriptionOperation.ReassignShardData)subOp.getData();
         Assignment currentAssignment = data.getAssignment();
         VaradhiSubscription subscription = metaStore.getSubscription(currentAssignment.getSubscriptionId());
         Map<Integer, ShardOperation> shardOps = operationMgr.getShardOps(subOp.getId());
@@ -47,8 +50,8 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
             ConsumerApi consumer = getAssignedConsumer(a);
             SubscriptionUnitShard shard = subscription.getShards().getShard(currentAssignment.getShardId());
             ShardOperation shardOp = shardOps.computeIfAbsent(
-                    a.getShardId(),
-                    shardId -> ShardOperation.startOp(subOp.getId(), shard, subscription)
+                a.getShardId(),
+                shardId -> ShardOperation.startOp(subOp.getId(), shard, subscription)
             );
             return startShard(shardOp, subOp.isInRetry(), consumer).thenApply(startScheduled -> {
                 if (!startScheduled) {

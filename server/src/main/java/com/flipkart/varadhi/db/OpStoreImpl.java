@@ -76,8 +76,10 @@ public class OpStoreImpl implements OpStore {
         List<String> subOpIds = zkMetaStore.listChildren(ZNode.OfEntityType(SUB_OP));
         List<SubscriptionOperation> subOps = new ArrayList<>();
         subOpIds.forEach(id -> {
-            SubscriptionOperation subOp =
-                    zkMetaStore.getZNodeDataAsPojo(ZNode.OfSubOperation(id), SubscriptionOperation.class);
+            SubscriptionOperation subOp = zkMetaStore.getZNodeDataAsPojo(
+                ZNode.OfSubOperation(id),
+                SubscriptionOperation.class
+            );
             if (!subOp.isDone()) {
                 subOps.add(subOp);
             }

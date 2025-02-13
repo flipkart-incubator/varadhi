@@ -11,7 +11,7 @@ import java.util.List;
 
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgService {
     private final MetaStore metaStore;
 
@@ -37,7 +37,8 @@ public class OrgService {
         List<String> teamsInOrg = metaStore.getTeamNames(orgName);
         if (teamsInOrg.size() > 0) {
             throw new InvalidOperationForResourceException(
-                    String.format("Can not delete Org(%s) as it has associated Team(s).", orgName));
+                String.format("Can not delete Org(%s) as it has associated Team(s).", orgName)
+            );
         }
         metaStore.deleteOrg(orgName);
     }

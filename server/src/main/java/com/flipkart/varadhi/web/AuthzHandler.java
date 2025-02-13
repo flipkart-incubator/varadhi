@@ -31,23 +31,32 @@ public class AuthzHandler implements RouteConfigurator {
         superUserHandler.configure(route, routeDef);
     }
 
-    AuthorizationHandlerBuilder createAuthorizationHandler(AppConfiguration configuration, ConfigFileResolver resolver) {
+    AuthorizationHandlerBuilder createAuthorizationHandler(
+        AppConfiguration configuration,
+        ConfigFileResolver resolver
+    ) {
         if (configuration.isAuthorizationEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
-            return new AuthorizationHandlerBuilder(configuration.getAuthorization()
-                    .getSuperUsers(), authorizationProvider);
+            return new AuthorizationHandlerBuilder(
+                configuration.getAuthorization().getSuperUsers(),
+                authorizationProvider
+            );
         } else {
             return null;
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private AuthorizationProvider getAuthorizationProvider(AppConfiguration configuration, ConfigFileResolver resolver) {
+    @SuppressWarnings ("unchecked")
+    private AuthorizationProvider getAuthorizationProvider(
+        AppConfiguration configuration,
+        ConfigFileResolver resolver
+    ) {
         String providerClassName = configuration.getAuthorization().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
-                Class<? extends AuthorizationProvider> clazz =
-                        (Class<? extends AuthorizationProvider>) Class.forName(providerClassName);
+                Class<? extends AuthorizationProvider> clazz = (Class<? extends AuthorizationProvider>)Class.forName(
+                    providerClassName
+                );
                 return createAuthorizationProvider(clazz, configuration.getAuthorization(), resolver);
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new InvalidConfigException(e);
@@ -57,7 +66,9 @@ public class AuthzHandler implements RouteConfigurator {
     }
 
     AuthorizationProvider createAuthorizationProvider(
-            Class<? extends AuthorizationProvider> clazz, AuthorizationOptions options, ConfigFileResolver resolver
+        Class<? extends AuthorizationProvider> clazz,
+        AuthorizationOptions options,
+        ConfigFileResolver resolver
     ) throws InvalidConfigException {
         try {
             AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();

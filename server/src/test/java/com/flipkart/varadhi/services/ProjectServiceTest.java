@@ -42,8 +42,12 @@ public class ProjectServiceTest {
     @BeforeEach
     public void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
-        zkCurator = spy(CuratorFrameworkFactory.newClient(
-                zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCurator = spy(
+            CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+            )
+        );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
@@ -70,17 +74,23 @@ public class ProjectServiceTest {
         Assertions.assertEquals(o1t1p1, o1t1p1Get);
 
         Project dummyP1 = Project.of("dummyP", "", o1t1.getName(), "dummyOrg");
-        validateResourceNotFound(String.format(
+        validateResourceNotFound(
+            String.format(
                 "Org(%s) not found. For Project creation, associated Org and Team should exist.",
                 dummyP1.getOrg()
-        ), () -> projectService.createProject(dummyP1));
+            ),
+            () -> projectService.createProject(dummyP1)
+        );
 
 
         Project dummyP2 = Project.of("dummyP", "", "dummyTeam", o1t1.getOrg());
-        validateResourceNotFound(String.format(
+        validateResourceNotFound(
+            String.format(
                 "Team(%s) not found. For Project creation, associated Org and Team should exist.",
                 dummyP2.getTeam()
-        ), () -> projectService.createProject(dummyP2));
+            ),
+            () -> projectService.createProject(dummyP2)
+        );
 
 
         validateDuplicateProject(o1t1p1, () -> projectService.createProject(o1t1p1));
@@ -96,8 +106,7 @@ public class ProjectServiceTest {
     }
 
     private void validateDuplicateProject(Project project, MethodCaller caller) {
-        String errorMsg =
-                String.format("Project(%s) already exists.", project.getName());
+        String errorMsg = String.format("Project(%s) already exists.", project.getName());
         validateException(errorMsg, DuplicateResourceException.class, caller);
     }
 
@@ -115,8 +124,8 @@ public class ProjectServiceTest {
     public void testGetProject() {
         Project dummyP1 = Project.of("dummyP", "", o1t1.getName(), "dummyOrg");
         validateResourceNotFound(
-                String.format("Project(%s) not found.", dummyP1.getName()),
-                () -> projectService.getProject(dummyP1.getName())
+            String.format("Project(%s) not found.", dummyP1.getName()),
+            () -> projectService.getProject(dummyP1.getName())
         );
     }
 
@@ -139,43 +148,38 @@ public class ProjectServiceTest {
         Assertions.assertEquals(updatedProject, o1t1p1);
 
         String conflictingUpdate = String.format(
-                "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
-                o1t1p1.getName()
+            "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
+            o1t1p1.getName()
         );
         o1t1p1.setVersion(o1t1p1.getVersion() - 1);
         o1t1p1.setTeam(o1t2.getName());
         validateException(
-                conflictingUpdate, InvalidOperationForResourceException.class,
-                () -> projectService.updateProject(o1t1p1)
+            conflictingUpdate,
+            InvalidOperationForResourceException.class,
+            () -> projectService.updateProject(o1t1p1)
         );
 
         o1t1p1.setVersion(o1t1p1.getVersion() + 10);
         o1t1p1.setTeam(o1t2.getName());
         validateException(
-                conflictingUpdate, InvalidOperationForResourceException.class,
-                () -> projectService.updateProject(o1t1p1)
+            conflictingUpdate,
+            InvalidOperationForResourceException.class,
+            () -> projectService.updateProject(o1t1p1)
         );
 
         Project pLatest = projectService.getProject(o1t1p1.getName());
 
-        String argumentErr =
-                String.format("Project(%s) has same team name and description. Nothing to update.", pLatest.getName());
-        validateException(
-                argumentErr, IllegalArgumentException.class,
-                () -> projectService.updateProject(pLatest)
+        String argumentErr = String.format(
+            "Project(%s) has same team name and description. Nothing to update.",
+            pLatest.getName()
         );
+        validateException(argumentErr, IllegalArgumentException.class, () -> projectService.updateProject(pLatest));
 
         orgService.createOrg(org2);
-        Project orgUpdate =
-                Project.of(o1t1p1.getName(), o1t1p1.getDescription(), o1t1p1.getTeam(),
-                        org2.getName()
-                );
+        Project orgUpdate = Project.of(o1t1p1.getName(), o1t1p1.getDescription(), o1t1p1.getTeam(), org2.getName());
 
         argumentErr = String.format("Project(%s) can not be moved across organisation.", orgUpdate.getName());
-        validateException(
-                argumentErr, IllegalArgumentException.class,
-                () -> projectService.updateProject(orgUpdate)
-        );
+        validateException(argumentErr, IllegalArgumentException.class, () -> projectService.updateProject(orgUpdate));
     }
 
     @Test
@@ -186,13 +190,13 @@ public class ProjectServiceTest {
 
         doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
         InvalidOperationForResourceException e = Assertions.assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> projectService.deleteProject(o1t1p2.getName())
+            InvalidOperationForResourceException.class,
+            () -> projectService.deleteProject(o1t1p2.getName())
         );
 
         Assertions.assertEquals(
-                String.format("Can not delete Project(%s), it has associated entities.", o1t1p2.getName()),
-                e.getMessage()
+            String.format("Can not delete Project(%s), it has associated entities.", o1t1p2.getName()),
+            e.getMessage()
         );
     }
 
@@ -206,8 +210,8 @@ public class ProjectServiceTest {
             projectService.getCachedProject(o1t1p1.getName());
             projectService.getCachedProject(o1t1p2.getName());
         }
-        Assertions.assertEquals(200, (int) getCounter.count());
-        Assertions.assertEquals(2, (int) loadCounter.count());
+        Assertions.assertEquals(200, (int)getCounter.count());
+        Assertions.assertEquals(2, (int)loadCounter.count());
     }
 
     interface MethodCaller {

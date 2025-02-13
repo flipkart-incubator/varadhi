@@ -13,7 +13,6 @@ public class RetryPolicy {
     private final int retryAttempts;
 
     public enum BackoffType {
-        LINEAR,
-        EXPONENTIAL
+        LINEAR, EXPONENTIAL
     }
 }

@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 import static com.flipkart.varadhi.entities.StandardHeaders.GROUP_ID;
 import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 
-@Slf4j(topic = "RequestLogs")
-@ExtensionMethod({Extensions.RoutingContextExtension.class})
+@Slf4j (topic = "RequestLogs")
+@ExtensionMethod ({Extensions.RoutingContextExtension.class})
 public class RequestTelemetryConfigurator implements RouteConfigurator {
     public static final String REQUEST_SPAN_NAME = "server.request";
     private final SpanProvider spanProvider;
@@ -52,9 +52,10 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
             long latencyMs = System.currentTimeMillis() - start;
             Map<String, String> requestAttributes = ctx.getRequestAttributes();
             requestAttributes.put("user_id", ctx.getIdentityOrDefault());
-            List<Tag> requestTags =
-                    requestAttributes.entrySet().stream().map(es -> Tag.of(es.getKey(), es.getValue()))
-                            .collect(Collectors.toList());
+            List<Tag> requestTags = requestAttributes.entrySet()
+                                                     .stream()
+                                                     .map(es -> Tag.of(es.getKey(), es.getValue()))
+                                                     .collect(Collectors.toList());
 
             if (telemetryType.metrics()) {
                 timeRequest(apiName, requestTags, latencyMs);
@@ -71,27 +72,22 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
     }
 
     private void timeRequest(String apiName, List<Tag> tags, long latencyMs) {
-        Timer.builder(apiName + ".latency")
-                .tags(tags)
-                .register(meterRegistry)
-                .record(latencyMs, TimeUnit.MILLISECONDS);
+        Timer.builder(apiName + ".latency").tags(tags).register(meterRegistry).record(latencyMs, TimeUnit.MILLISECONDS);
     }
 
     private void countRequestStatusCode(String apiName, List<Tag> tags, int responseCode) {
         Counter.builder(apiName + ".status_code")
-                .tag("category", responseCode / 100 + "xx")
-                .tags(tags)
-                .register(meterRegistry)
-                .increment();
+               .tag("category", responseCode / 100 + "xx")
+               .tags(tags)
+               .register(meterRegistry)
+               .increment();
     }
 
     private Span addRequestSpan(String apiName) {
         return spanProvider.addSpan(REQUEST_SPAN_NAME).setAttribute("api", apiName);
     }
 
-    private void closeRequestSpan(
-            Span span, String apiPath, int responseCode, long latencyMs, List<Tag> requestTags
-    ) {
+    private void closeRequestSpan(Span span, String apiPath, int responseCode, long latencyMs, List<Tag> requestTags) {
         // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/attributes.md#general-identity-attributes
         span.setAttribute(AttributeKey.stringKey("http.path"), apiPath);
         span.setAttribute(AttributeKey.longKey("http.status_code"), responseCode);
@@ -102,7 +98,11 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
     }
 
     private void logRequestInfo(
-            String apiPath, int responseCode, long latencyMs, String apiName, List<Tag> requestTags
+        String apiPath,
+        int responseCode,
+        long latencyMs,
+        String apiName,
+        List<Tag> requestTags
     ) {
         StringBuilder sb = new StringBuilder("server.request");
         sb.append(" apiPath=%s".formatted(apiPath));

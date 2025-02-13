@@ -30,7 +30,11 @@ class SlidingWindowThresholdProviderTest {
                 ticker.advance(1, TimeUnit.SECONDS);
                 rt.moveWindow();
                 Assertions.assertEquals(
-                        50.0f * (0.1f * (i + 1)), rt.getThreshold(), 0.01f, "unexpected rate in iteration: " + i);
+                    50.0f * (0.1f * (i + 1)),
+                    rt.getThreshold(),
+                    0.01f,
+                    "unexpected rate in iteration: " + i
+                );
             }
 
             // now, any more marks at the same rate should just say 50.
@@ -46,7 +50,12 @@ class SlidingWindowThresholdProviderTest {
     @Test
     public void testRateComputationIsCorrect() throws Exception {
         try (var rt = new SlidingWindowThresholdProvider(defaultScheduler, Ticker.systemTicker(), 1_000, 10, 10.0f)) {
-            ScheduledFuture<?> eventEmitter = defaultScheduler.scheduleAtFixedRate(rt::mark, 0, 1, TimeUnit.MILLISECONDS);
+            ScheduledFuture<?> eventEmitter = defaultScheduler.scheduleAtFixedRate(
+                rt::mark,
+                0,
+                1,
+                TimeUnit.MILLISECONDS
+            );
 
             Thread.sleep(1000);
             eventEmitter.cancel(true);

@@ -23,7 +23,9 @@ public interface ControllerRestApi {
     CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy);
 
     CompletableFuture<SubscriptionOperation> unsideline(
-            String subscriptionId, UnsidelineRequest request, String requestedBy
+        String subscriptionId,
+        UnsidelineRequest request,
+        String requestedBy
     );
 
     CompletableFuture<ShardAssignments> getShardAssignments(String subscriptionId);

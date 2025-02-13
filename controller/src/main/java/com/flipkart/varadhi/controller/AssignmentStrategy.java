@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface AssignmentStrategy {
     List<Assignment> assign(
-            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<ConsumerNode> consumerNodes
+        List<SubscriptionUnitShard> shards,
+        VaradhiSubscription subscription,
+        List<ConsumerNode> consumerNodes
     );
 }

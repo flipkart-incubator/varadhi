@@ -15,13 +15,12 @@ import java.util.function.Supplier;
 public interface MessageDelivery {
     static MessageDelivery of(Endpoint endpoint, Supplier<HttpClient> httpClientSupplier) {
         return switch (endpoint.getProtocol()) {
-            case HTTP1_1, HTTP2 -> new HttpMessageDelivery((Endpoint.HttpEndpoint) endpoint, httpClientSupplier.get());
+            case HTTP1_1, HTTP2 -> new HttpMessageDelivery((Endpoint.HttpEndpoint)endpoint, httpClientSupplier.get());
             default -> throw new IllegalArgumentException("Unsupported protocol: " + endpoint.getProtocol());
         };
     }
 
-    CompletableFuture<DeliveryResponse> deliver(Message message)
-            throws Exception;
+    CompletableFuture<DeliveryResponse> deliver(Message message) throws Exception;
 
     class HttpMessageDelivery implements MessageDelivery {
         private final Endpoint.HttpEndpoint endpoint;
@@ -35,14 +34,17 @@ public interface MessageDelivery {
         @Override
         public CompletableFuture<DeliveryResponse> deliver(Message message) throws Exception {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(endpoint.getUri())
-                    .timeout(Duration.ofMillis(endpoint.getRequestTimeoutMs()))
-                    .header("Content-Type", endpoint.getContentType())
-                    .method(
-                            endpoint.getMethod(),
-                            ArrayUtils.isEmpty(message.getPayload()) ? HttpRequest.BodyPublishers.noBody() :
-                                    HttpRequest.BodyPublishers.ofByteArray(message.getPayload())
-                    );
+                                                            .uri(endpoint.getUri())
+                                                            .timeout(Duration.ofMillis(endpoint.getRequestTimeoutMs()))
+                                                            .header("Content-Type", endpoint.getContentType())
+                                                            .method(
+                                                                endpoint.getMethod(),
+                                                                ArrayUtils.isEmpty(message.getPayload()) ?
+                                                                    HttpRequest.BodyPublishers.noBody() :
+                                                                    HttpRequest.BodyPublishers.ofByteArray(
+                                                                        message.getPayload()
+                                                                    )
+                                                            );
 
             // apply request headers from message
             Multimap<String, String> requestHeaders = message.getHeaders();
@@ -53,11 +55,14 @@ public interface MessageDelivery {
             HttpRequest request = requestBuilder.build();
 
             // TODO: can response body handlers be pooled?
-            return httpClient
-                    .sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
-                    .thenApply(response -> new DeliveryResponse(response.statusCode(), endpoint.getProtocol(),
-                            response.body()
-                    ));
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
+                             .thenApply(
+                                 response -> new DeliveryResponse(
+                                     response.statusCode(),
+                                     endpoint.getProtocol(),
+                                     response.body()
+                                 )
+                             );
         }
     }
 }

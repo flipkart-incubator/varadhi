@@ -47,7 +47,7 @@ import java.util.function.Function;
 
 
 @Slf4j
-@ExtensionMethod({Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RoutingContextExtension.class})
 public class WebServerVerticle extends AbstractVerticle {
     private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
     private final AppConfiguration configuration;
@@ -66,7 +66,9 @@ public class WebServerVerticle extends AbstractVerticle {
     private HttpServer httpServer;
 
     public WebServerVerticle(
-            AppConfiguration configuration, CoreServices services, VaradhiClusterManager clusterManager
+        AppConfiguration configuration,
+        CoreServices services,
+        VaradhiClusterManager clusterManager
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -123,8 +125,8 @@ public class WebServerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
-                messagingStackProvider.getStorageSubscriptionService(),
-                messagingStackProvider.getStorageTopicService()
+            messagingStackProvider.getStorageSubscriptionService(),
+            messagingStackProvider.getStorageTopicService()
         );
         subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
         dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
@@ -165,8 +167,9 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private List<RouteDefinition> getIamPolicyRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
-        String authProviderName = configuration.getAuthorization() == null ? null :
-                configuration.getAuthorization().getProviderClassName();
+        String authProviderName = configuration.getAuthorization() == null ?
+            null :
+            configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
         boolean isIamPolicyStore = metaStore instanceof IamPolicyMetaStore;
         //TODO::Validate below specifically w.r.to lean deployment.
@@ -176,13 +179,16 @@ public class WebServerVerticle extends AbstractVerticle {
         // This is independent of Authorization is enabled or not
         if (isDefaultProvider) {
             if (isIamPolicyStore) {
-                routes.addAll(new IamPolicyHandlers(projectService,
-                        new IamPolicyService(metaStore, (IamPolicyMetaStore) metaStore)
-                ).get());
+                routes.addAll(
+                    new IamPolicyHandlers(
+                        projectService,
+                        new IamPolicyService(metaStore, (IamPolicyMetaStore)metaStore)
+                    ).get()
+                );
             } else {
                 log.error(
-                        "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
-                        metaStore.getClass().getName()
+                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
+                    metaStore.getClass().getName()
                 );
             }
         } else {
@@ -191,24 +197,33 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
         TopicCapacityPolicy defaultTopicCapacity = configuration.getRestOptions().getDefaultTopicCapacity();
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        VaradhiTopicFactory varadhiTopicFactory =
-                new VaradhiTopicFactory(
-                        messagingStackProvider.getStorageTopicFactory(), deployedRegion, defaultTopicCapacity);
-        VaradhiSubscriptionFactory subscriptionFactory =
-                new VaradhiSubscriptionFactory(messagingStackProvider.getStorageTopicService(),
-                        messagingStackProvider.getSubscriptionFactory(),
-                        messagingStackProvider.getStorageTopicFactory(), deployedRegion
-                );
+        VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
+            messagingStackProvider.getStorageTopicFactory(),
+            deployedRegion,
+            defaultTopicCapacity
+        );
+        VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(
+            messagingStackProvider.getStorageTopicService(),
+            messagingStackProvider.getSubscriptionFactory(),
+            messagingStackProvider.getStorageTopicFactory(),
+            deployedRegion
+        );
         routes.addAll(getManagementEntitiesApiRoutes());
         routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
-        routes.addAll(new SubscriptionHandlers(subscriptionService, projectService, varadhiTopicService,
-                subscriptionFactory, configuration.getRestOptions()
-        ).get());
+        routes.addAll(
+            new SubscriptionHandlers(
+                subscriptionService,
+                projectService,
+                varadhiTopicService,
+                subscriptionFactory,
+                configuration.getRestOptions()
+            ).get()
+        );
         routes.addAll(new DlqHandlers(dlqService, subscriptionService, projectService).get());
         routes.addAll(new HealthCheckHandler().get());
         return routes;
@@ -224,35 +239,49 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getRestOptions());
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
-        ProducerService producerService = new ProducerService(deployedRegion, configuration.getProducerOptions(),
-                producerProvider, topicProvider, meterRegistry
+        ProducerService producerService = new ProducerService(
+            deployedRegion,
+            configuration.getProducerOptions(),
+            producerProvider,
+            topicProvider,
+            meterRegistry
         );
-        ProducerMetricHandler producerMetricsHandler =
-                new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
+        ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
+            configuration.getProducerOptions().isMetricEnabled(),
+            meterRegistry
+        );
         return new ArrayList<>(
-                new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
-                ).get());
+            new ProduceHandlers(
+                deployedRegion,
+                headerValidator::validate,
+                producerService,
+                projectService,
+                producerMetricsHandler
+            ).get()
+        );
     }
 
     private void setupRouteConfigurators() {
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
         AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
-
         VertxUserHandler vertxUserHandler = new VertxUserHandler(vertx, configuration);
 
-        RequestTelemetryConfigurator requestTelemetryConfigurator =
-                new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry);
+        RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
+            new SpanProvider(tracer),
+            meterRegistry
+        );
+
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
-        RequestBodyHandler requestBodyHandler =
-                new RequestBodyHandler(configuration.getRestOptions().getPayloadSizeMax());
+        RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
+            configuration.getRestOptions().getPayloadSizeMax()
+        );
         RequestBodyParser bodyParser = new RequestBodyParser();
         HierarchyHandler hierarchyHandler = new HierarchyHandler();
         routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
@@ -264,10 +293,7 @@ public class WebServerVerticle extends AbstractVerticle {
         routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzHandler);
     }
 
-    private void configureApiRoutes(
-            Router router,
-            List<RouteDefinition> apiRoutes
-    ) {
+    private void configureApiRoutes(Router router, List<RouteDefinition> apiRoutes) {
         log.info("Configuring API routes.");
         FailureHandler defaultFailureHandler = new FailureHandler();
         for (RouteDefinition def : apiRoutes) {

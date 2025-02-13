@@ -7,8 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter
-@EqualsAndHashCode(callSuper = true)
-@ValidateResource(message = "Invalid Project name. Check naming constraints.")
+@EqualsAndHashCode (callSuper = true)
+@ValidateResource (message = "Invalid Project name. Check naming constraints.")
 public class Project extends MetaStoreEntity implements Validatable {
 
     private String org;
@@ -16,28 +16,17 @@ public class Project extends MetaStoreEntity implements Validatable {
     private String team;
 
     @Setter
-    @Size(max = 100)
+    @Size (max = 100)
     private String description;
 
-    private Project(
-            String name,
-            int version,
-            String description,
-            String team,
-            String org
-    ) {
+    private Project(String name, int version, String description, String team, String org) {
         super(name, version);
         this.description = description;
         this.team = team;
         this.org = org;
     }
 
-    public static Project of(
-            String name,
-            String description,
-            String team,
-            String org
-    ) {
+    public static Project of(String name, String description, String team, String org) {
         return new Project(name, INITIAL_VERSION, description, team, org);
     }
 }

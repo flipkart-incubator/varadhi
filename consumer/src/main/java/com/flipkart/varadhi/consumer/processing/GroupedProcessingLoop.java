@@ -24,17 +24,25 @@ public class GroupedProcessingLoop extends ProcessingLoop {
     private final ConsumptionFailurePolicy failurePolicy;
 
     public GroupedProcessingLoop(
-            Context context,
-            MessageSrcSelector msgSrcSelector, ConcurrencyControl<DeliveryResult> concurrencyControl,
-            ThresholdProvider.Dynamic throttleThresholdProvider, Throttler<DeliveryResponse> throttler,
-            MessageDelivery deliveryClient,
-            SubscriptionGroupsState subscriptionGroupsState,
-            Map<InternalQueueType, FailedMsgProducer> internalProducers,
-            ConsumptionFailurePolicy failurePolicy, int maxInFlightMessages
+        Context context,
+        MessageSrcSelector msgSrcSelector,
+        ConcurrencyControl<DeliveryResult> concurrencyControl,
+        ThresholdProvider.Dynamic throttleThresholdProvider,
+        Throttler<DeliveryResponse> throttler,
+        MessageDelivery deliveryClient,
+        SubscriptionGroupsState subscriptionGroupsState,
+        Map<InternalQueueType, FailedMsgProducer> internalProducers,
+        ConsumptionFailurePolicy failurePolicy,
+        int maxInFlightMessages
     ) {
         super(
-                context, msgSrcSelector, concurrencyControl, throttleThresholdProvider, throttler, deliveryClient,
-                maxInFlightMessages
+            context,
+            msgSrcSelector,
+            concurrencyControl,
+            throttleThresholdProvider,
+            throttler,
+            deliveryClient,
+            maxInFlightMessages
         );
         this.groupPointers = new GroupPointer[msgSrcSelector.getBatchSize()];
         this.subscriptionGroupsState = subscriptionGroupsState;
@@ -62,8 +70,10 @@ public class GroupedProcessingLoop extends ProcessingLoop {
         }
 
         if (!forPush.isEmpty()) {
-            Collection<CompletableFuture<DeliveryResult>> asyncResponses =
-                    deliverMessages(polled.getInternalQueueType(), forPush);
+            Collection<CompletableFuture<DeliveryResult>> asyncResponses = deliverMessages(
+                polled.getInternalQueueType(),
+                forPush
+            );
             // Some of the push will have succeeded, for which we can begin the post processing.
             // For others we start the failure management.
             asyncResponses.forEach(fut -> fut.whenComplete((response, ex) -> {
@@ -85,12 +95,14 @@ public class GroupedProcessingLoop extends ProcessingLoop {
     }
 
     void onFailure(
-            InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message,
-            MessageConsumptionStatus status
+        InternalQueueType type,
+        InternalQueueType failedMsgInQueue,
+        MessageTracker message,
+        MessageConsumptionStatus status
     ) {
         // failed msgs are present in failedMsgInQueue, so produce this msg there
-        CompletableFuture<Offset> asyncProduce =
-                internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
+        CompletableFuture<Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
+                                                                  .produceAsync(message.getMessage());
 
         asyncProduce.thenCompose(offset -> {
             // TODO: add all other info. fix the internal topic idx
@@ -98,7 +110,12 @@ public class GroupedProcessingLoop extends ProcessingLoop {
             MessagePointer producedTo = new MessagePointer(1, offset);
 
             return subscriptionGroupsState.messageTransitioned(
-                    message.getGroupId(), type, consumedFrom, failedMsgInQueue, producedTo);
+                message.getGroupId(),
+                type,
+                consumedFrom,
+                failedMsgInQueue,
+                producedTo
+            );
         }).whenComplete((r, e) -> onComplete(message, status));
     }
 

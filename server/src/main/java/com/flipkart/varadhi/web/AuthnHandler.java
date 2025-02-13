@@ -26,7 +26,6 @@ public class AuthnHandler implements RouteConfigurator {
                     default ->  new AnonymousAuthenticationHandler().provideHandler(vertx, authenticationConfig);
                 }
         );
-
     }
 
     public void configure(Route route, RouteDefinition routeDef) {

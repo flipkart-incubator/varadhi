@@ -60,15 +60,19 @@ public class AssignmentStoreImpl implements AssignmentStore {
     }
 
     private List<Assignment> getAssignments(String subscriptionName, String consumerNodeId) {
-        Pattern filter =
-                Pattern.compile(String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId));
-        return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT)).stream()
-                .filter(m -> filter.matcher(m).matches()).map(this::getAssignment).collect(Collectors.toList());
+        Pattern filter = Pattern.compile(
+            String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId)
+        );
+        return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT))
+                          .stream()
+                          .filter(m -> filter.matcher(m).matches())
+                          .map(this::getAssignment)
+                          .collect(Collectors.toList());
     }
 
     private String getAssignmentMapping(Assignment assignment) {
-        return assignment.getSubscriptionId() + separator + assignment.getShardId() +
-                separator + assignment.getConsumerId();
+        return assignment.getSubscriptionId() + separator + assignment.getShardId() + separator + assignment
+                                                                                                            .getConsumerId();
     }
 
     private Assignment getAssignment(String mapping) {

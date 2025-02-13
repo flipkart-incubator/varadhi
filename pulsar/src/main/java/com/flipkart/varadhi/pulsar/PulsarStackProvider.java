@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.consumer.PulsarConsumerFactory;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
@@ -15,12 +14,11 @@ import com.flipkart.varadhi.utils.HostUtils;
 import com.flipkart.varadhi.utils.YamlLoader;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.UnknownHostException;
 import java.util.HashMap;
 
 @Slf4j
-public class PulsarStackProvider
-        implements MessagingStackProvider<PulsarStorageTopic, PulsarOffset, PulsarSubscription> {
+public class PulsarStackProvider implements
+    MessagingStackProvider<PulsarStorageTopic, PulsarOffset, PulsarSubscription> {
     private PulsarTopicService topicService;
     private PulsarTopicFactory topicFactory;
     private PulsarProducerFactory producerFactory;
@@ -44,9 +42,11 @@ public class PulsarStackProvider
         topicFactory = new PulsarTopicFactory(planner);
         ClientProvider clientProvider = new ClientProvider(pulsarConfig);
         topicService = new PulsarTopicService(clientProvider, planner);
-        producerFactory =
-                new PulsarProducerFactory(
-                        clientProvider.getPulsarClient(), pulsarConfig.getProducerOptions(), hostName);
+        producerFactory = new PulsarProducerFactory(
+            clientProvider.getPulsarClient(),
+            pulsarConfig.getProducerOptions(),
+            hostName
+        );
         consumerFactory = new PulsarConsumerFactory(clientProvider.getPulsarClient(), new HashMap<>());
         subscriptionFactory = new PulsarSubscriptionFactory();
         subscriptionService = new PulsarSubscriptionService(clientProvider);

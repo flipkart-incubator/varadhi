@@ -40,20 +40,19 @@ public class AuthorizationHandlerBuilder {
     }
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
-        return provider.isAuthorized(userContext, action, resourcePath)
-                .compose(authorized -> {
-                    if (Boolean.FALSE.equals(authorized)) {
-                        return Future.failedFuture(new HttpException(
-                                HTTP_FORBIDDEN,
-                                "user is not authorized to perform action '" + action.toString() +
-                                        "' on resource '" +
-                                        resourcePath + "'"
-                        ));
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                }, t -> Future.failedFuture(
-                        new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
+        return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
+            if (Boolean.FALSE.equals(authorized)) {
+                return Future.failedFuture(
+                    new HttpException(
+                        HTTP_FORBIDDEN,
+                        "user is not authorized to perform action '" + action.toString() + "' on resource '"
+                                        + resourcePath + "'"
+                    )
+                );
+            } else {
+                return Future.succeededFuture();
+            }
+        }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
     }
 
     @AllArgsConstructor
@@ -74,9 +73,7 @@ public class AuthorizationHandlerBuilder {
         }
 
 
-        Future<Void> authorize(
-                UserContext userContext, ResourceHierarchy resourceHierarchy
-        ) {
+        Future<Void> authorize(UserContext userContext, ResourceHierarchy resourceHierarchy) {
 
             if (userContext == null) {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "the request is not authenticated"));

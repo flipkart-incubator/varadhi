@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 
-@ExtendWith(VertxExtension.class)
+@ExtendWith (VertxExtension.class)
 public class MessageRouterImplTest {
 
     private TestingServer zkCuratorTestingServer;
@@ -29,8 +29,9 @@ public class MessageRouterImplTest {
     @BeforeEach
     public void setup() throws Exception {
         zkCuratorTestingServer = new TestingServer();
-        zkCuratorFramework = CuratorFrameworkFactory.newClient(zkCuratorTestingServer.getConnectString(),
-                new ExponentialBackoffRetry(1000, 1)
+        zkCuratorFramework = CuratorFrameworkFactory.newClient(
+            zkCuratorTestingServer.getConnectString(),
+            new ExponentialBackoffRetry(1000, 1)
         );
         zkCuratorFramework.start();
         vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost");
@@ -43,18 +44,22 @@ public class MessageRouterImplTest {
     }
 
     private Vertx createClusteredVertx() throws Exception {
-        return Vertx.builder().withClusterManager(vZkCm).buildClustered().toCompletionStage().toCompletableFuture()
-                .get();
+        return Vertx.builder()
+                    .withClusterManager(vZkCm)
+                    .buildClustered()
+                    .toCompletionStage()
+                    .toCompletableFuture()
+                    .get();
     }
 
-//    @Test
-//    public void sendMessageNoConsumer(VertxTestContext testContext) throws Exception {
-//        Checkpoint checkpoint = testContext.checkpoint(1);
-//        Vertx vertx = createClusteredVertx();
-//        MessageExchange me = vZkCm.getExchange(vertx);
-//        ClusterMessage cm = getClusterMessage("foo");
-//        Future.fromCompletionStage(me.send("foo", "start", cm)).onComplete(testContext.failing(v -> checkpoint.flag()));
-//    }
+    //    @Test
+    //    public void sendMessageNoConsumer(VertxTestContext testContext) throws Exception {
+    //        Checkpoint checkpoint = testContext.checkpoint(1);
+    //        Vertx vertx = createClusteredVertx();
+    //        MessageExchange me = vZkCm.getExchange(vertx);
+    //        ClusterMessage cm = getClusterMessage("foo");
+    //        Future.fromCompletionStage(me.send("foo", "start", cm)).onComplete(testContext.failing(v -> checkpoint.flag()));
+    //    }
 
     @Test
     public void testSendMessageConsumerCollocated(VertxTestContext testContext) throws Exception {
@@ -65,7 +70,7 @@ public class MessageRouterImplTest {
         mr.sendHandler("testAddress", "customApi", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
         Future.fromCompletionStage(me.send("testAddress", "customApi", cm))
-                .onComplete(testContext.succeeding(v -> checkpoint.flag()));
+              .onComplete(testContext.succeeding(v -> checkpoint.flag()));
     }
 
     ClusterMessage getClusterMessage(String data) {

@@ -39,7 +39,7 @@ public class PulsarStackProviderTest {
     @BeforeEach
     public void setUp() throws IOException {
         String yamlContent =
-                "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
+            "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
         PulsarConfig pulsarConfig = YamlLoader.loadConfig(configFile.toString(), PulsarConfig.class);
@@ -74,17 +74,17 @@ public class PulsarStackProviderTest {
     @Test
     public void testGetStorageTopicFactory_Initialized() {
         String topicName = "foobar";
-        TopicCapacityPolicy capacity = Constants.DefaultTopicCapacity;
+        TopicCapacityPolicy capacity = Constants.DEFAULT_TOPIC_CAPACITY;
         InternalQueueCategory topicCategory = InternalQueueCategory.MAIN;
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactory = pulsarStackProvider.getStorageTopicFactory();
-        StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond =
-                pulsarStackProvider.getStorageTopicFactory();
+        StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond = pulsarStackProvider
+                                                                                               .getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
         PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, capacity, topicCategory);
         Assertions.assertEquals(
-                String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
-                topic.getName()
+            String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
+            topic.getName()
         );
         Assertions.assertEquals(planner.getPartitionCount(capacity, topicCategory), topic.getPartitionCount());
     }
@@ -98,8 +98,8 @@ public class PulsarStackProviderTest {
     public void testGetStorageTopicService_Initialized() {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
         StorageTopicService<PulsarStorageTopic> storageTopicService = pulsarStackProvider.getStorageTopicService();
-        StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond =
-                pulsarStackProvider.getStorageTopicService();
+        StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond = pulsarStackProvider
+                                                                                               .getStorageTopicService();
         Assertions.assertEquals(storageTopicService, storageTopicServiceSecond);
     }
 
@@ -116,4 +116,3 @@ public class PulsarStackProviderTest {
         Assertions.assertEquals(producerFactory1, producerFactory2);
     }
 }
-

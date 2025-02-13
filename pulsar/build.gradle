@@ -20,4 +20,3 @@ dependencies {
 tasks.withType(ProcessResources).configureEach {
     duplicatesStrategy = DuplicatesStrategy.WARN
 }
-

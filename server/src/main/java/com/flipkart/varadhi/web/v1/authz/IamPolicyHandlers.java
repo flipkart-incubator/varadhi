@@ -27,7 +27,7 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPA
 import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class IamPolicyHandlers implements RouteProvider {
 
     private static final String ORG_POLICY_PATH = "orgs/:org/policy";
@@ -46,17 +46,24 @@ public class IamPolicyHandlers implements RouteProvider {
     private static String getResourceIdFromPath(RoutingContext ctx, ResourceType resourceType) {
         return switch (resourceType) {
             case ROOT -> throw new IllegalArgumentException(
-                    "ROOT is implicit resource type. No Iam policies supported on it.");
+                "ROOT is implicit resource type. No Iam policies supported on it."
+            );
             case ORG -> ctx.pathParam(PATH_PARAM_ORG);
-            case TEAM -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_ORG),
-                    ctx.pathParam(PATH_PARAM_TEAM)
+            case TEAM -> String.join(
+                AUTH_RESOURCE_NAME_SEPARATOR,
+                ctx.pathParam(PATH_PARAM_ORG),
+                ctx.pathParam(PATH_PARAM_TEAM)
             );
             case PROJECT -> ctx.pathParam(PATH_PARAM_PROJECT);
-            case TOPIC -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_PROJECT),
-                    ctx.pathParam(PATH_PARAM_TOPIC)
+            case TOPIC -> String.join(
+                AUTH_RESOURCE_NAME_SEPARATOR,
+                ctx.pathParam(PATH_PARAM_PROJECT),
+                ctx.pathParam(PATH_PARAM_TOPIC)
             );
-            case SUBSCRIPTION -> String.join(AUTH_RESOURCE_NAME_SEPARATOR, ctx.pathParam(PATH_PARAM_PROJECT),
-                    ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
+            case SUBSCRIPTION -> String.join(
+                AUTH_RESOURCE_NAME_SEPARATOR,
+                ctx.pathParam(PATH_PARAM_PROJECT),
+                ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
             );
             case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
         };
@@ -64,12 +71,16 @@ public class IamPolicyHandlers implements RouteProvider {
 
     private List<RouteDefinition> getHandlersFor(String path, ResourceType resourceType) {
         return List.of(
-                RouteDefinition.get("GetIAMPolicy", path).authorize(IAM_POLICY_GET)
-                        .build(this::getHierarchies, this.getIamPolicyHandler(resourceType)),
-                RouteDefinition.put("SetIAMPolicy", path).hasBody().authorize(IAM_POLICY_SET)
-                        .build(this::getHierarchies, this.setIamPolicyHandler(resourceType)),
-                RouteDefinition.delete("DeleteIAMPolicy", path).authorize(IAM_POLICY_DELETE)
-                        .build(this::getHierarchies, this.deleteIamPolicyHandler(resourceType))
+            RouteDefinition.get("GetIAMPolicy", path)
+                           .authorize(IAM_POLICY_GET)
+                           .build(this::getHierarchies, this.getIamPolicyHandler(resourceType)),
+            RouteDefinition.put("SetIAMPolicy", path)
+                           .hasBody()
+                           .authorize(IAM_POLICY_SET)
+                           .build(this::getHierarchies, this.setIamPolicyHandler(resourceType)),
+            RouteDefinition.delete("DeleteIAMPolicy", path)
+                           .authorize(IAM_POLICY_DELETE)
+                           .build(this::getHierarchies, this.deleteIamPolicyHandler(resourceType))
         );
     }
 
@@ -81,14 +92,20 @@ public class IamPolicyHandlers implements RouteProvider {
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         if (subscriptionName != null) {
             Project project = projectService.getProject(projectName);
-            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new SubscriptionHierarchy(project, subscriptionName)));
+            return Map.of(
+                ResourceType.IAM_POLICY,
+                new IamPolicyHierarchy(new SubscriptionHierarchy(project, subscriptionName))
+            );
         }
         if (topicName != null) {
             Project project = projectService.getProject(projectName);
             return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new TopicHierarchy(project, topicName)));
         }
         if (projectName != null) {
-            return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new ProjectHierarchy(projectService.getProject(projectName))));
+            return Map.of(
+                ResourceType.IAM_POLICY,
+                new IamPolicyHierarchy(new ProjectHierarchy(projectService.getProject(projectName)))
+            );
         }
         if (teamName != null) {
             return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new TeamHierarchy(orgName, teamName)));
@@ -111,8 +128,9 @@ public class IamPolicyHandlers implements RouteProvider {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IamPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IamPolicyRequest.class);
-            IamPolicyResponse updated =
-                    toResponse(iamPolicyService.setIamPolicy(resourceType, resourceId, policyForSubject));
+            IamPolicyResponse updated = toResponse(
+                iamPolicyService.setIamPolicy(resourceType, resourceId, policyForSubject)
+            );
             routingContext.endApiWithResponse(updated);
         };
     }
@@ -128,14 +146,14 @@ public class IamPolicyHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/",
-                Stream.of(
-                        getHandlersFor(ORG_POLICY_PATH, ResourceType.ORG),
-                        getHandlersFor(TEAM_POLICY_PATH, ResourceType.TEAM),
-                        getHandlersFor(PROJECT_POLICY_PATH, ResourceType.PROJECT),
-                        getHandlersFor(TOPIC_POLICY_PATH, ResourceType.TOPIC),
-                        getHandlersFor(SUBSCRIPTION_POLICY_PATH, ResourceType.SUBSCRIPTION)
-                ).flatMap(List::stream).toList()
+            "/v1/",
+            Stream.of(
+                getHandlersFor(ORG_POLICY_PATH, ResourceType.ORG),
+                getHandlersFor(TEAM_POLICY_PATH, ResourceType.TEAM),
+                getHandlersFor(PROJECT_POLICY_PATH, ResourceType.PROJECT),
+                getHandlersFor(TOPIC_POLICY_PATH, ResourceType.TOPIC),
+                getHandlersFor(SUBSCRIPTION_POLICY_PATH, ResourceType.SUBSCRIPTION)
+            ).flatMap(List::stream).toList()
         ).get();
     }
 }

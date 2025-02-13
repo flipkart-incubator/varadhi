@@ -13,42 +13,31 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MessageHeaderConfiguration implements Validatable {
-    @NotNull
-    private List<String> allowedPrefix;
+    @NotNull private List<String> allowedPrefix;
 
     // Callback codes header
-    @NotNull
-    private String callbackCodes;
+    @NotNull private String callbackCodes;
 
     // Consumer timeout header (indefinite message consumer timeout)
-    @NotNull
-    private String requestTimeout;
+    @NotNull private String requestTimeout;
 
     // HTTP related headers
-    @NotNull
-    private String replyToHttpUriHeader;
+    @NotNull private String replyToHttpUriHeader;
 
-    @NotNull
-    private String replyToHttpMethodHeader;
+    @NotNull private String replyToHttpMethodHeader;
 
-    @NotNull
-    private String replyToHeader;
+    @NotNull private String replyToHeader;
 
-    @NotNull
-    private String httpUriHeader;
+    @NotNull private String httpUriHeader;
 
-    @NotNull
-    private String httpMethodHeader;
+    @NotNull private String httpMethodHeader;
 
-    @NotNull
-    private String httpContentType;
+    @NotNull private String httpContentType;
 
     // Group ID & Msg ID header used to correlate messages
-    @NotNull
-    private String groupIdHeader;
+    @NotNull private String groupIdHeader;
 
-    @NotNull
-    private String msgIdHeader;
+    @NotNull private String msgIdHeader;
 
     /**
      * We use reflection to dynamically invoke getter methods for all fields in the
@@ -69,15 +58,17 @@ public class MessageHeaderConfiguration implements Validatable {
 
         for (Method method : MessageHeaderConfiguration.class.getDeclaredMethods()) {
             if (isGetterMethod(method)) {
-                    if ("getAllowedPrefix".equals(method.getName())) {
-                        continue;
+                if ("getAllowedPrefix".equals(method.getName())) {
+                    continue;
+                }
+                Object value = method.invoke(this);
+                if (value instanceof String stringValue) {
+                    if (!startsWithValidPrefix(allowedPrefixList, stringValue)) {
+                        throw new IllegalArgumentException(
+                            method.getName() + " does not have a valid header value : " + stringValue
+                        );
                     }
-                    Object value = method.invoke(this);
-                    if (value instanceof String stringValue) {
-                        if (!startsWithValidPrefix(allowedPrefixList, stringValue)) {
-                            throw new IllegalArgumentException(method.getName() + " does not have a valid header value : " + stringValue);
-                        }
-                    }
+                }
             }
         }
     }

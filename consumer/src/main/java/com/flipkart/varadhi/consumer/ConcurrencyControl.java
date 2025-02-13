@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.entities.InternalQueueType;
 
 import java.util.Collection;
@@ -11,6 +10,7 @@ public interface ConcurrencyControl<T> {
 
     // TODO: maybe evaluate per task enqueue for CC as well.
     Collection<CompletableFuture<T>> enqueueTasks(
-            InternalQueueType type, Iterable<Supplier<CompletableFuture<T>>> tasks
+        InternalQueueType type,
+        Iterable<Supplier<CompletableFuture<T>>> tasks
     );
 }

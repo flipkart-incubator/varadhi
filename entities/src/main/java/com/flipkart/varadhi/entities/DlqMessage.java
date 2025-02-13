@@ -3,9 +3,6 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.StandardHeaders;
 import com.flipkart.varadhi.entities.utils.HeadersDeserializer;
 import com.flipkart.varadhi.entities.utils.HeadersSerializer;
 import com.google.common.collect.ArrayListMultimap;
@@ -18,8 +15,8 @@ import java.util.List;
 @Data
 public class DlqMessage implements Message {
     private final byte[] payload;
-    @JsonSerialize(using = HeadersSerializer.class)
-    @JsonDeserialize(using = HeadersDeserializer.class)
+    @JsonSerialize (using = HeadersSerializer.class)
+    @JsonDeserialize (using = HeadersDeserializer.class)
     private final ArrayListMultimap<String, String> requestHeaders;
     private final Offset offset;
     private final int partitionIndex;
@@ -45,8 +42,9 @@ public class DlqMessage implements Message {
     @JsonIgnore
     @Override
     public String getHeader(String key) {
-        return !requestHeaders.containsKey(key) || requestHeaders.get(key).isEmpty() ? null :
-                requestHeaders.get(key).getFirst();
+        return !requestHeaders.containsKey(key) || requestHeaders.get(key).isEmpty() ?
+            null :
+            requestHeaders.get(key).getFirst();
     }
 
     @JsonIgnore

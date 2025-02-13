@@ -22,7 +22,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgHandlers implements RouteProvider {
     private final OrgService orgService;
 
@@ -33,23 +33,21 @@ public class OrgHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/orgs",
-                List.of(
-                        RouteDefinition.get("GetOrgs", "")
-                                .authorize(ORG_LIST)
-                                .build(this::getHierarchies, this::getOrganizations),
-                        RouteDefinition.get("GetOrg", "/:org")
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::get),
-                        RouteDefinition.post("CreateOrg", "")
-                                .hasBody()
-                                .bodyParser(this::setOrg)
-                                .authorize(ORG_CREATE)
-                                .build(this::getHierarchies, this::create),
-                        RouteDefinition.delete("DeleteOrg", "/:org")
-                                .authorize(ORG_DELETE)
-                                .build(this::getHierarchies, this::delete)
-                )
+            "/v1/orgs",
+            List.of(
+                RouteDefinition.get("GetOrgs", "")
+                               .authorize(ORG_LIST)
+                               .build(this::getHierarchies, this::getOrganizations),
+                RouteDefinition.get("GetOrg", "/:org").authorize(ORG_GET).build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateOrg", "")
+                               .hasBody()
+                               .bodyParser(this::setOrg)
+                               .authorize(ORG_CREATE)
+                               .build(this::getHierarchies, this::create),
+                RouteDefinition.delete("DeleteOrg", "/:org")
+                               .authorize(ORG_DELETE)
+                               .build(this::getHierarchies, this::delete)
+            )
         ).get();
     }
 

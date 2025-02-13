@@ -28,9 +28,9 @@ import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 
 public class Extensions {
     private enum ContentKind {
-        APPLICATION_JSON(HttpHeaderValues.APPLICATION_JSON.toString()),
-        APPLICATION_JSON_SEQ("application/json-seq"),
-        NONE("");
+        APPLICATION_JSON(HttpHeaderValues.APPLICATION_JSON.toString()), APPLICATION_JSON_SEQ(
+            "application/json-seq"
+        ), NONE("");
 
         private final String value;
 
@@ -39,13 +39,14 @@ public class Extensions {
         }
     }
 
+
     public static class RequestBodyExtension {
 
         /*
         Extension method for vertx RequestBody.
         builtin asPojo() method is not working because of jackson issues i.e.
         it needs default constructor and none final fields.
-
+        
         Extending RequestBody to have asPojo() custom deserializer to convert requestBody to appropriate Pojo.
          */
         public static <T extends Validatable> T asValidatedPojo(RequestBody body, Class<T> clazz) {
@@ -58,6 +59,7 @@ public class Extensions {
             return JsonMapper.jsonDeserialize(body.asString(), clazz);
         }
     }
+
 
     @Slf4j
     public static class RoutingContextExtension {
@@ -76,22 +78,22 @@ public class Extensions {
         }
 
         public static <T> void handleChunkedResponse(
-                RoutingContext ctx, Function<Consumer<T>, CompletableFuture<Void>> executor
+            RoutingContext ctx,
+            Function<Consumer<T>, CompletableFuture<Void>> executor
         ) {
             JsonSeqStream seqStream = new JsonSeqStream();
             ctx.response().setChunked(true);
             addResponseHeaders(ctx, ContentKind.APPLICATION_JSON_SEQ);
             ctx.response().send(seqStream);
-            executor.apply(seqStream::send)
-                    .whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
-                        if (error != null) {
-                            log.error("Completing chunked request response failure: {}", error.getMessage());
-                            seqStream.end(error);
-                        } else {
-                            log.info("Completing chunked request response");
-                            seqStream.end();
-                        }
-                    }));
+            executor.apply(seqStream::send).whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
+                if (error != null) {
+                    log.error("Completing chunked request response failure: {}", error.getMessage());
+                    seqStream.end(error);
+                } else {
+                    log.info("Completing chunked request response");
+                    seqStream.end();
+                }
+            }));
         }
 
         private static Throwable unwrapExecutionException(Throwable t) {
@@ -179,8 +181,9 @@ public class Extensions {
         public static Map<String, String> getRequestAttributes(RoutingContext ctx) {
             Map<String, String> requestAttributes = new HashMap<>();
             Map<ResourceType, ResourceHierarchy> empty = Map.of();
-            ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY, empty).values()
-                    .forEach(h -> requestAttributes.putAll(h.getAttributes()));
+            ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY, empty)
+               .values()
+               .forEach(h -> requestAttributes.putAll(h.getAttributes()));
             return requestAttributes;
         }
     }

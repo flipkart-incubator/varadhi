@@ -101,3 +101,8 @@ run {
             "-Dlog4j.configurationFile=$buildDir/resources/main/log4j2.xml"
     ]
 }
+
+testE2E {
+    useJUnitPlatform()
+    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}

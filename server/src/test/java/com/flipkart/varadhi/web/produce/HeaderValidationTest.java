@@ -27,7 +27,7 @@ public class HeaderValidationTest extends ProduceTestBase {
     HeaderValidationHandler validationHandler;
     HttpRequest<Buffer> request;
 
-    @BeforeEach()
+    @BeforeEach ()
     public void PreTest() throws InterruptedException {
         super.setUp();
         RestOptions options = new RestOptions();
@@ -37,13 +37,10 @@ public class HeaderValidationTest extends ProduceTestBase {
         options.setHeaderNameSizeMax(20);
         options.setHeaderValueSizeMax(20);
         validationHandler = new HeaderValidationHandler(options);
-        route.handler(bodyHandler)
-                .handler(ctx -> {
-                    ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
-                    ctx.next();
-                })
-                .handler(validationHandler::validate)
-                .handler(produceHandlers::produce);
+        route.handler(bodyHandler).handler(ctx -> {
+            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
+            ctx.next();
+        }).handler(validationHandler::validate).handler(produceHandlers::produce);
         setupFailureHandler(route);
 
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
@@ -62,11 +59,11 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader(MESSAGE_ID, messageId);
         request.putHeader(FORWARDED_FOR, "host1, host2");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
-        String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
 
         request.putHeader("x_header2", "h2v1");
-        messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
     }
 
@@ -75,9 +72,12 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader(MESSAGE_ID, messageId);
         request.putHeader(FORWARDED_FOR, "host1, host2");
         request.putHeader("x_header1_morethantwentycharsintotal", "value1");
-        sendRequestWithByteBufferBody(
-                request, payload, 400, "Header name x_header1_morethantwentycharsintotal exceeds allowed size.",
-                ErrorResponse.class
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "Header name x_header1_morethantwentycharsintotal exceeds allowed size.",
+            ErrorResponse.class
         );
     }
 
@@ -86,9 +86,12 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader(MESSAGE_ID, messageId);
         request.putHeader(FORWARDED_FOR, "host1, host2");
         request.putHeader("x_header1", "morethantwentycharsintotal");
-        sendRequestWithByteBufferBody(
-                request, payload, 400, "Value of Header x_header1 exceeds allowed size.",
-                ErrorResponse.class
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "Value of Header x_header1 exceeds allowed size.",
+            ErrorResponse.class
         );
     }
 
@@ -99,9 +102,12 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader("x_header1", "value1");
         request.putHeader("x_header2", "value2");
         request.putHeader("x_header3", "value3");
-        sendRequestWithByteBufferBody(
-                request, payload, 400, "More Varadhi specific headers specified than allowed max(4).",
-                ErrorResponse.class
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "More Varadhi specific headers specified than allowed max(4).",
+            ErrorResponse.class
         );
     }
 
@@ -111,7 +117,7 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader(FORWARDED_FOR, "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
-        String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
     }
 }

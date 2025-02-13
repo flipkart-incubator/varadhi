@@ -58,24 +58,27 @@ public class VaradhiApplication {
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration, configResolver);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
-            Map<ComponentKind, Verticle> verticles =
-                    getComponentVerticles(configuration, services, clusterManager, memberInfo);
-            createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(vertx ->
-                            Future.all(verticles.entrySet().stream()
-                                    .map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
-                                        if (ar.succeeded()) {
-                                            log.info("component: {} started.", es.getKey());
-                                        } else {
-                                            log.error("component: {} failed to start.", es.getKey(), ar.cause());
-                                        }
-                                    })).collect(Collectors.toList()))
-                    )
-                    .onSuccess(ar -> log.info("VaradhiApplication Started on {}.", memberInfo.hostname()))
-                    .onFailure(t -> {
-                        log.error("VaradhiApplication on host {} failed to start. {} ", memberInfo.hostname(), t);
-                        log.error("Closing the application.");
-                        System.exit(-1);
-                    });
+            Map<ComponentKind, Verticle> verticles = getComponentVerticles(
+                configuration,
+                services,
+                clusterManager,
+                memberInfo
+            );
+            createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(
+                vertx -> Future.all(
+                    verticles.entrySet().stream().map(es -> vertx.deployVerticle(es.getValue()).onComplete(ar -> {
+                        if (ar.succeeded()) {
+                            log.info("component: {} started.", es.getKey());
+                        } else {
+                            log.error("component: {} failed to start.", es.getKey(), ar.cause());
+                        }
+                    })).collect(Collectors.toList())
+                )
+            ).onSuccess(ar -> log.info("VaradhiApplication Started on {}.", memberInfo.hostname())).onFailure(t -> {
+                log.error("VaradhiApplication on host {} failed to start. {} ", memberInfo.hostname(), t);
+                log.error("Closing the application.");
+                System.exit(-1);
+            });
         } catch (Exception e) {
             log.error("Failed to initialise the VaradhiApplication.", e);
             log.error("Closing the application.");
@@ -89,7 +92,13 @@ public class VaradhiApplication {
         String hostAddress = HostUtils.getHostAddress();
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
         NodeCapacity provisionedCapacity = new NodeCapacity(memberConfig.getMaxQps(), networkKBps);
-        return new MemberInfo(hostName, hostAddress, memberConfig.getClusterPort(), memberConfig.getRoles(), provisionedCapacity);
+        return new MemberInfo(
+            hostName,
+            hostAddress,
+            memberConfig.getClusterPort(),
+            memberConfig.getRoles(),
+            provisionedCapacity
+        );
     }
 
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
@@ -101,26 +110,29 @@ public class VaradhiApplication {
     }
 
     private static Future<Vertx> createClusteredVertx(
-            AppConfiguration config, ClusterManager clusterManager, CoreServices services, MemberInfo memberInfo
+        AppConfiguration config,
+        ClusterManager clusterManager,
+        CoreServices services,
+        MemberInfo memberInfo
     ) {
         int port = 0;
         JsonObject memberInfoJson = new JsonObject(JsonMapper.jsonSerialize(memberInfo));
-        EventBusOptions eventBusOptions = new EventBusOptions()
-                .setHost(memberInfo.hostname())
-                .setPort(port)
-                .setClusterPublicHost(memberInfo.address())
-                .setClusterNodeMetadata(memberInfoJson);
+        EventBusOptions eventBusOptions = new EventBusOptions().setHost(memberInfo.hostname())
+                                                               .setPort(port)
+                                                               .setClusterPublicHost(memberInfo.address())
+                                                               .setClusterNodeMetadata(memberInfoJson);
+
+        var metricsOptions = new MicrometerMetricsOptions().setMicrometerRegistry(services.getMeterRegistry())
+                                                           .setMetricsNaming(MetricsNaming.v4Names())
+                                                           .setRegistryName("default")
+                                                           .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
+                                                           .setJvmMetricsEnabled(true)
+                                                           .setEnabled(true);
 
         VertxOptions vertxOptions = config.getVertxOptions()
-                .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
-                .setMetricsOptions(new MicrometerMetricsOptions()
-                        .setMicrometerRegistry(services.getMeterRegistry())
-                        .setMetricsNaming(MetricsNaming.v4Names())
-                        .setRegistryName("default")
-                        .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
-                        .setJvmMetricsEnabled(true)
-                        .setEnabled(true))
-                .setEventBusOptions(eventBusOptions);
+                                          .setTracingOptions(new OpenTelemetryOptions(services.getOpenTelemetry()))
+                                          .setMetricsOptions(metricsOptions)
+                                          .setEventBusOptions(eventBusOptions);
 
         return Vertx.builder().with(vertxOptions).withClusterManager(clusterManager).buildClustered();
     }
@@ -139,11 +151,10 @@ public class VaradhiApplication {
         log.info("Loading Configuration.");
         Vertx vertx = Vertx.vertx();
 
-        ConfigStoreOptions fileStore = new ConfigStoreOptions()
-                .setType("file")
-                .setOptional(false)
-                .setFormat("yaml")
-                .setConfig(new JsonObject().put("path", filePath));
+        ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file")
+                                                               .setOptional(false)
+                                                               .setFormat("yaml")
+                                                               .setConfig(new JsonObject().put("path", filePath));
 
         ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore);
         ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
@@ -161,7 +172,10 @@ public class VaradhiApplication {
         }
     }
 
-    public static AppConfiguration resolveLinkedConfigFiles(ConfigFileResolver configResolver, AppConfiguration config) {
+    public static AppConfiguration resolveLinkedConfigFiles(
+        ConfigFileResolver configResolver,
+        AppConfiguration config
+    ) {
         RecursiveFieldUpdater.visit(config, ConfigFile.class, (field, value) -> {
             if (value instanceof String path) {
                 if (path.endsWith(".yml")) {
@@ -170,7 +184,7 @@ public class VaradhiApplication {
                     if (!resolvedPath.equals(path)) {
                         log.info("Resolved the config file at {} to {}", field, resolvedPath);
                     }
-                    return resolvedPath.toString();
+                    return resolvedPath;
                 }
                 throw new InvalidConfigException("config : " + field + " is not a yml file path");
             } else {
@@ -181,14 +195,21 @@ public class VaradhiApplication {
     }
 
     private static Map<ComponentKind, Verticle> getComponentVerticles(
-            AppConfiguration config, CoreServices coreServices, VaradhiClusterManager clusterManager,
-            MemberInfo memberInfo
+        AppConfiguration config,
+        CoreServices coreServices,
+        VaradhiClusterManager clusterManager,
+        MemberInfo memberInfo
     ) {
-        return Arrays.stream(memberInfo.roles()).distinct()
-                .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                    case Server -> new WebServerVerticle(config, coreServices, clusterManager);
-                    case Controller -> new ControllerVerticle(config.getController(), coreServices, clusterManager);
-                    case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
-                }));
+        return Arrays.stream(memberInfo.roles())
+                     .distinct()
+                     .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
+                         case Server -> new WebServerVerticle(config, coreServices, clusterManager);
+                         case Controller -> new ControllerVerticle(
+                             config.getController(),
+                             coreServices,
+                             clusterManager
+                         );
+                         case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
+                     }));
     }
 }

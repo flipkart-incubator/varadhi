@@ -31,10 +31,12 @@ public class ShardDlqMsgResponseCollector {
             response.setError(t.getMessage());
         }
         if (!errors.isEmpty()) {
-            response.setError(Strings.join(
+            response.setError(
+                Strings.join(
                     errors.entrySet().stream().map(e -> String.format("%d:%s", e.getKey(), e.getValue())).toList(),
                     ','
-            ));
+                )
+            );
         } else if (pageMarker.hasMarkers()) {
             response.setNextPage(pageMarker.toString());
         }

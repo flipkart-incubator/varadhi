@@ -14,10 +14,10 @@ public class HostUtils {
     private static String hostAddress;
 
     public static void initHostUtils() throws UnknownHostException {
-        if(hostName == null) {
+        if (hostName == null) {
             hostName = InetAddress.getLocalHost().getHostName();
         }
-        if(hostAddress == null) {
+        if (hostAddress == null) {
             hostAddress = InetAddress.getLocalHost().getHostAddress();
         }
     }

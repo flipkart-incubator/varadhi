@@ -28,21 +28,27 @@ public class YamlLoader {
                 config = mapper.readValue(new File(configFile), clazz);
             } else {
                 String fileName = Paths.get(configFile).getFileName().toString();
-                URL url = Collections.list(clazz.getClassLoader().getResources(fileName)).stream()
-                        .filter(e -> e.toString().endsWith(configFile))
-                        .findFirst()
-                        .orElseThrow(() -> new InvalidConfigException("Config file not found: " + configFile));
+                URL url = Collections.list(clazz.getClassLoader().getResources(fileName))
+                                     .stream()
+                                     .filter(e -> e.toString().endsWith(configFile))
+                                     .findFirst()
+                                     .orElseThrow(
+                                         () -> new InvalidConfigException("Config file not found: " + configFile)
+                                     );
                 config = mapper.readValue(url, clazz);
             }
         } catch (Exception e) {
             throw new InvalidConfigException(
-                    String.format("Failed to load config file: %s as %s.", configFile, clazz), e);
+                String.format("Failed to load config file: %s as %s.", configFile, clazz),
+                e
+            );
         }
         List<String> failures = Validator.validate(config);
         if (failures.isEmpty()) {
             return config;
         }
         throw new InvalidConfigException(
-                String.format("Failed to load config file: %s. %s", configFile, String.join(",", failures)));
+            String.format("Failed to load config file: %s. %s", configFile, String.join(",", failures))
+        );
     }
 }

@@ -21,33 +21,37 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class UnsidelinepOpExecutor extends SubscriptionOpExecutor {
     public UnsidelinepOpExecutor(
-            VaradhiSubscription subscription, ConsumerClientFactory clientFactory, OperationMgr operationMgr,
-            AssignmentManager assignmentManager, MetaStore metaStore
+        VaradhiSubscription subscription,
+        ConsumerClientFactory clientFactory,
+        OperationMgr operationMgr,
+        AssignmentManager assignmentManager,
+        MetaStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
 
     @Override
     public CompletableFuture<Void> execute(OrderedOperation operation) {
-        return unsidelineShards((SubscriptionOperation) operation, subscription);
+        return unsidelineShards((SubscriptionOperation)operation, subscription);
     }
 
-    private CompletableFuture<Void> unsidelineShards(
-            SubscriptionOperation subOp, VaradhiSubscription subscription
-    ) {
+    private CompletableFuture<Void> unsidelineShards(SubscriptionOperation subOp, VaradhiSubscription subscription) {
         String subId = subscription.getName();
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = assignmentManager.getSubAssignments(subId);
         log.info(
-                "Found {} assigned Shards for the Subscription:{} with total {} Shards.", assignments.size(), subId,
-                shards.getShardCount()
+            "Found {} assigned Shards for the Subscription:{} with total {} Shards.",
+            assignments.size(),
+            subId,
+            shards.getShardCount()
         );
 
-        List<CompletableFuture<Boolean>> shardFutures =
-                scheduleUnsidelineOnShards(subscription, subOp, assignments);
+        List<CompletableFuture<Boolean>> shardFutures = scheduleUnsidelineOnShards(subscription, subOp, assignments);
         log.info(
-                "Executed Un-sideline on {} shards for SubOp({}), Scheduled ShardOperations {}.",
-                shards.getShardCount(), subOp.getData(), shardFutures.size()
+            "Executed Un-sideline on {} shards for SubOp({}), Scheduled ShardOperations {}.",
+            shards.getShardCount(),
+            subOp.getData(),
+            shardFutures.size()
         );
 
         return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0])).thenApply(ignore -> {
@@ -60,27 +64,31 @@ public class UnsidelinepOpExecutor extends SubscriptionOpExecutor {
     }
 
     private List<CompletableFuture<Boolean>> scheduleUnsidelineOnShards(
-            VaradhiSubscription subscription, SubscriptionOperation subOp, List<Assignment> assignments
+        VaradhiSubscription subscription,
+        SubscriptionOperation subOp,
+        List<Assignment> assignments
     ) {
         SubscriptionShards shards = subscription.getShards();
-        SubscriptionOperation.UnsidelineData opData = (SubscriptionOperation.UnsidelineData) subOp.getData();
+        SubscriptionOperation.UnsidelineData opData = (SubscriptionOperation.UnsidelineData)subOp.getData();
         String subOpId = opData.getOperationId();
         Map<Integer, ShardOperation> shardOps = operationMgr.getShardOps(subOpId);
         return assignments.stream().map(assignment -> {
             ConsumerApi consumer = getAssignedConsumer(assignment);
             SubscriptionUnitShard shard = shards.getShard(assignment.getShardId());
             ShardOperation shardOp = shardOps.computeIfAbsent(
-                    assignment.getShardId(),
-                    shardId -> ShardOperation.unsidelineOp(subOpId, shard, subscription, opData.getRequest())
+                assignment.getShardId(),
+                shardId -> ShardOperation.unsidelineOp(subOpId, shard, subscription, opData.getRequest())
             );
             return unsidelineShard(shardOp, subOp.isInRetry(), consumer);
         }).toList();
     }
 
     private CompletableFuture<Boolean> unsidelineShard(
-            ShardOperation unsidelineOp, boolean isRetry, ConsumerApi consumer
+        ShardOperation unsidelineOp,
+        boolean isRetry,
+        ConsumerApi consumer
     ) {
-        ShardOperation.UnsidelineData opData = (ShardOperation.UnsidelineData) unsidelineOp.getOpData();
+        ShardOperation.UnsidelineData opData = (ShardOperation.UnsidelineData)unsidelineOp.getOpData();
         String subId = opData.getSubscriptionId();
         int shardId = opData.getShardId();
         // TOOD: why is state check even required? why not assume "happy path" and then handle errors?

@@ -12,9 +12,9 @@ import java.util.Iterator;
 
 
 public class HeadersDeserializer extends StdDeserializer<ArrayListMultimap<String, String>> {
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     public HeadersDeserializer() {
-        this((Class<ArrayListMultimap<String, String>>) (Class<?>) ArrayListMultimap.class);
+        this((Class<ArrayListMultimap<String, String>>)(Class<?>)ArrayListMultimap.class);
     }
 
     public HeadersDeserializer(Class<ArrayListMultimap<String, String>> clazz) {
@@ -23,9 +23,9 @@ public class HeadersDeserializer extends StdDeserializer<ArrayListMultimap<Strin
 
     @Override
     public ArrayListMultimap<String, String> deserialize(
-            JsonParser jsonParser, DeserializationContext deserializationContext
-    )
-            throws IOException {
+        JsonParser jsonParser,
+        DeserializationContext deserializationContext
+    ) throws IOException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         ArrayListMultimap<String, String> multiMap = ArrayListMultimap.create();
 
@@ -46,7 +46,9 @@ public class HeadersDeserializer extends StdDeserializer<ArrayListMultimap<Strin
 
     @Override
     public ArrayListMultimap<String, String> deserializeWithType(
-            JsonParser p, DeserializationContext deserializationContext, TypeDeserializer typeDeserializer
+        JsonParser p,
+        DeserializationContext deserializationContext,
+        TypeDeserializer typeDeserializer
     ) throws IOException {
         return deserialize(p, deserializationContext);
     }

@@ -16,9 +16,10 @@ public class InternalCompositeSubscription {
     private int consumeIndex;
 
     public static InternalCompositeSubscription of(
-            StorageSubscription<StorageTopic> storageSubscription, InternalQueueType queueType
+        StorageSubscription<StorageTopic> storageSubscription,
+        InternalQueueType queueType
     ) {
-        return new InternalCompositeSubscription(queueType, new StorageSubscription[]{storageSubscription}, 0, 0);
+        return new InternalCompositeSubscription(queueType, new StorageSubscription[] {storageSubscription}, 0, 0);
     }
 
     @JsonIgnore

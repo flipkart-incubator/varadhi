@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class PulsarSubscription extends StorageSubscription<PulsarStorageTopic> {
     public PulsarSubscription(String name, TopicPartitions<PulsarStorageTopic> topicPartitions) {
         super(name, topicPartitions);

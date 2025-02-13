@@ -47,7 +47,7 @@ public class DummyProducer implements Producer {
 
     private RuntimeException loadClass(String className) {
         try {
-            Class<RuntimeException> pluginClass = (Class<RuntimeException>) Class.forName(className);
+            Class<RuntimeException> pluginClass = (Class<RuntimeException>)Class.forName(className);
             return pluginClass.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
             throw new RuntimeException(String.format("Fail to load class %s.", className), e);
@@ -56,6 +56,7 @@ public class DummyProducer implements Producer {
 
     public record DummyMessage(int sleepMillis, int offSet, String exceptionClass, byte[] randomData) {
     }
+
 
     public static class DummyOffset implements Offset {
         int offset;
@@ -66,7 +67,7 @@ public class DummyProducer implements Producer {
 
         @Override
         public int compareTo(Offset o) {
-            return offset - ((DummyOffset) o).offset;
+            return offset - ((DummyOffset)o).offset;
         }
     }
 
