@@ -41,9 +41,9 @@ producerOptions:
   topicCacheBuilderSpec: ""
   metricEnabled: true
 
-authenticationEnabled: true
 authentication:
-  user_header:
+  mechanism: anonymous
+  configFile: authn.yaml
 
 authorizationEnabled: true
 

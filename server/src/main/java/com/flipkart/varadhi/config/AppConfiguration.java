@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
@@ -30,9 +29,7 @@ public class AppConfiguration implements Validatable {
 
     @NotNull private HttpServerOptions httpServerOptions;
 
-    private boolean authenticationEnabled;
-
-    private AuthenticationOptions authentication;
+    private AuthenticationConfig authentication;
 
     private boolean authorizationEnabled;
 
