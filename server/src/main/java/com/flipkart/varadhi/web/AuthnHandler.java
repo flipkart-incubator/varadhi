@@ -21,10 +21,10 @@ public class AuthnHandler implements RouteConfigurator {
         AuthenticationConfig authenticationConfig = configuration.getAuthentication();
         authenticationHandler = new AuthenticationHandlerWrapper(
 
-                switch (configuration.getAuthentication().getMechanism()) {
-                    case custom -> new CustomAuthenticationHandler().provideHandler(vertx, authenticationConfig);
-                    default ->  new AnonymousAuthenticationHandler().provideHandler(vertx, authenticationConfig);
-                }
+            switch (configuration.getAuthentication().getMechanism()) {
+                case custom -> new CustomAuthenticationHandler().provideHandler(vertx, authenticationConfig);
+                default -> new AnonymousAuthenticationHandler().provideHandler(vertx, authenticationConfig);
+            }
         );
     }
 

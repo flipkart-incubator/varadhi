@@ -26,24 +26,22 @@ public class VertxUserHandler implements Handler<RoutingContext> {
         if (authenticationMechanism != AuthenticationMechanism.custom) {
             User user = routingContext.user();
             if (user != null) {
-                routingContext.put(
-                        "userContext", new UserContext() {
-                            @Override
-                            public String getSubject() {
-                                return user.subject();
-                            }
+                routingContext.put("userContext", new UserContext() {
+                    @Override
+                    public String getSubject() {
+                        return user.subject();
+                    }
 
-                            @Override
-                            public boolean isExpired() {
-                                return user.expired();
-                            }
+                    @Override
+                    public boolean isExpired() {
+                        return user.expired();
+                    }
 
-                            @Override
-                            public Map<String, String> getAttributes() {
-                                return mapFromJsonObject(user.attributes());
-                            }
-                        }
-                );
+                    @Override
+                    public Map<String, String> getAttributes() {
+                        return mapFromJsonObject(user.attributes());
+                    }
+                });
             } else {
                 routingContext.fail(401);
             }
@@ -51,8 +49,8 @@ public class VertxUserHandler implements Handler<RoutingContext> {
         routingContext.next();
     }
 
-    private Map<String,String> mapFromJsonObject(JsonObject jsonObject) {
-        Map<String,String> map = new HashMap<>();
+    protected Map<String, String> mapFromJsonObject(JsonObject jsonObject) {
+        Map<String, String> map = new HashMap<>();
         if (jsonObject != null) {
             jsonObject.forEach(entry -> map.put(entry.getKey(), entry.getValue().toString()));
         }

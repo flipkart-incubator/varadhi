@@ -17,7 +17,7 @@ public class AnonymousAuthenticationHandler {
      * SECURITY WARNING: This handler grants access without authentication.
      * Use only in controlled environments where anonymous access is explicitly required.
      *
-     * @param vertx Vertx instance
+     * @param vertx                Vertx instance
      * @param authenticationConfig Configuration for authentication
      * @return AuthenticationHandler that allows anonymous access
      */

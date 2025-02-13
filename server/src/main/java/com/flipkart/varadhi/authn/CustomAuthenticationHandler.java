@@ -25,7 +25,9 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
 
     public AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
-            authenticationProvider = (AuthenticationProvider) Class.forName(authenticationConfig.getProviderClassName()).getDeclaredConstructor().newInstance();
+            authenticationProvider = (AuthenticationProvider)Class.forName(authenticationConfig.getProviderClassName())
+                                                                  .getDeclaredConstructor()
+                                                                  .newInstance();
             authenticationProvider.init(authenticationConfig);
         } catch (Exception e) {
             throw new RuntimeException("Failed to create authenticationConfig provider", e);
@@ -35,9 +37,12 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
 
     @Override
     public void handle(RoutingContext routingContext) {
-        Org org = (Org) routingContext.get("org");
+        Org org = (Org)routingContext.get("org");
 
-        Future<UserContext> userContext = authenticationProvider.authenticate(org, createRequestContext(routingContext));
+        Future<UserContext> userContext = authenticationProvider.authenticate(
+            org,
+            createRequestContext(routingContext)
+        );
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
@@ -63,7 +68,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
     }
 
     private Map<String, String> getAllHeaders(HttpServerRequest request) {
-        Map<String,String> headers = new HashMap<>();
+        Map<String, String> headers = new HashMap<>();
         request.headers().forEach(entry -> headers.put(entry.getKey().toLowerCase(), entry.getValue()));
         return headers;
     }
