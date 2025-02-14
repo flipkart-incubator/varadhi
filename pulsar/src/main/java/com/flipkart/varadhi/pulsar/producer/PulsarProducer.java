@@ -65,10 +65,12 @@ public class PulsarProducer implements Producer {
     public CompletableFuture<Offset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
-
+        //check what is this ?
         TypedMessageBuilder<byte[]> messageBuilder =
                 pulsarProducer.newMessage().key(partitioningKey).value(message.getPayload());
 
+        //header name normalized or config
+        //consumer rev map (in consume side to back to user)
         message.getHeaders().asMap()
                 .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 

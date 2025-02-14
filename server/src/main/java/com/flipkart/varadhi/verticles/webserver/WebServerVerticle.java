@@ -4,7 +4,6 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -31,7 +30,7 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.*;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
-import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
+import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
@@ -228,7 +227,8 @@ public class WebServerVerticle extends AbstractVerticle {
     @SuppressWarnings("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getMessageHeaderConfiguration(), deployedRegion);
+        PreProduceHandler
+                preProduceHandler = new PreProduceHandler(configuration.getMessageHeaderConfiguration(), deployedRegion);
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
@@ -238,8 +238,8 @@ public class WebServerVerticle extends AbstractVerticle {
         ProducerMetricHandler producerMetricsHandler =
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
-                new ProduceHandlers(deployedRegion, headerValidator::validate, producerService, projectService,
-                        producerMetricsHandler
+                new ProduceHandlers(producerService, preProduceHandler::validate, projectService, producerMetricsHandler,
+                        deployedRegion, configuration.getMessageHeaderConfiguration()
                 ).get());
     }
 

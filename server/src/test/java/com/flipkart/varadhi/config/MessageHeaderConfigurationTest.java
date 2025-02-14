@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.config;
 
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class MessageHeaderConfigurationTest {
 
-    private MessageHeaderConfiguration getDefaultMessageHeaderConfig() {
+    private MessageHeaderConfiguration getDefaultMessageHeaderConfig(String prefix1, String prefix2) {
         return MessageHeaderConfiguration.builder()
-                .allowedPrefix(Arrays.asList("VARADHI_", "VARADHI-"))
+                .allowedPrefix(Arrays.asList(prefix1, prefix2))
                 .callbackCodes("VARADHI_CALLBACK_CODES")
                 .requestTimeout("VARADHI_REQUEST_TIMEOUT")
                 .replyToHttpUriHeader("VARADHI_REPLY_TO_HTTP_URI")
@@ -23,6 +24,11 @@ public class MessageHeaderConfigurationTest {
                 .httpContentType("VARADHI_CONTENT_TYPE")
                 .groupIdHeader("VARADHI_GROUP_ID")
                 .msgIdHeader("VARADHI_MSG_ID")
+                .produceIdentity("VARADHI_PRODUCE_IDENTITY")
+                .produceRegion("VARADHI_PRODUCE_REGION")
+                .produceTimestamp("VARADHI_PRODUCE_TIMESTAMP")
+                .maxRequestSize(5 * 1024 * 1024)
+                .headerValueSizeMax(100)
                 .build();
     }
 
@@ -37,8 +43,7 @@ public class MessageHeaderConfigurationTest {
             "'VARADHI_', 'VARADHI\u00A9', true",       // Unicode characters
     })
     void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) {
-        MessageHeaderConfiguration config = getDefaultMessageHeaderConfig();
-        config.setAllowedPrefix(Arrays.asList(prefix1, prefix2));
+        MessageHeaderConfiguration config = getDefaultMessageHeaderConfig(prefix1, prefix2);
 
         Executable validationAction = config::validate;
 

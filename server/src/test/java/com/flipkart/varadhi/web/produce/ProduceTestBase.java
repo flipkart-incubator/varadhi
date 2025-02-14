@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Project;
@@ -11,11 +11,13 @@ import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
-import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
+import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -48,13 +50,30 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration();
+        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration(
+                List.of("X_","x_"),
+                "X_CALLBACK_CODES",
+                "X_REQUEST_TIMEOUT",
+                "X_REPLY_TO_HTTP_URI",
+                "X_REPLY_TO_HTTP_METHOD",
+                "X_REPLY_TO",
+                "X_HTTP_URI",
+                "X_HTTP_METHOD",
+                "X_CONTENT_TYPE",
+                "X_GROUP_ID",
+                "X_MESSAGE_ID",
+                100,
+                "X_PRODUCE_TIMESTAMP",
+                "X_PRODUCE_REGION",
+                "X_PRODUCE_IDENTITY",
+                (5 * 1024 * 1024)
+        );
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        HeaderValidationHandler headerHandler = new HeaderValidationHandler(messageHeaderConfiguration, deployedRegion);
+        PreProduceHandler headerHandler = new PreProduceHandler(messageHeaderConfiguration, deployedRegion);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
-        produceHandlers = new ProduceHandlers(deployedRegion, headerHandler::validate, producerService, projectService,
-                metricHandler
+        produceHandlers = new ProduceHandlers(producerService, headerHandler::validate, projectService, metricHandler,
+                deployedRegion, messageHeaderConfiguration
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

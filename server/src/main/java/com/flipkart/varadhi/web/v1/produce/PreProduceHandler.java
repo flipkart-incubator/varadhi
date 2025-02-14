@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.utils.HeaderUtils;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.Headers;
 import com.google.common.collect.Multimap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
@@ -10,21 +10,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @AllArgsConstructor
-public class HeaderValidationHandler {
+public class PreProduceHandler {
+    //rename to generic
     private MessageHeaderConfiguration messageHeaderConfiguration;
     private final String produceRegion;
     private static final int MAX_ID_LIMIT = 100;
     public static final String VALIDATED_HEADERS = "validatedHeaders";
     private static final String ANONYMOUS_IDENTITY = "Anonymous";
     public void validate(RoutingContext ctx) {
-        Multimap<String, String> headers = HeaderUtils.copyVaradhiHeaders(ctx.request().headers(), messageHeaderConfiguration.getAllowedPrefix());
+        validateHeadersAndBodyForMessage(ctx);
+        ctx.next();
+    }
+
+    public void validateHeadersAndBodyForMessage(RoutingContext ctx){
+        Multimap<String, String> headers = MessageHeaderConfiguration.copyVaradhiHeaders((Multimap<String, String>) ctx.request().headers(), messageHeaderConfiguration.getAllowedPrefix());
         String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
         headers.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
         headers.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
         headers.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
         ensureHeaderSemanticsAndSize(headers, ctx.body().buffer().getBytes());
-        ctx.put(VALIDATED_HEADERS, headers);
-        ctx.next();
+        Headers recognizedAndValidatedHeaders = new Headers(headers);
+        ctx.put(PreProduceHandler.VALIDATED_HEADERS, recognizedAndValidatedHeaders);
     }
 
     private void ensureHeaderSemanticsAndSize(Multimap<String, String> headers, byte[] body) {
@@ -35,7 +41,6 @@ public class HeaderValidationHandler {
             String key = entry.getKey();
             String value = entry.getValue();
 
-            // Check if the key matches either message ID or group ID header
             if (isIdHeader(key)) {
                 if (value.length() > MAX_ID_LIMIT) {
                     throw new IllegalArgumentException(String.format("%s %s exceeds allowed size of %d.",

@@ -2,6 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -43,6 +44,7 @@ public class ProducerServiceTests {
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
     String region = "region1";
+    MessageHeaderConfiguration messageHeaderConfiguration;
 
     @BeforeEach
     public void preTest() {
@@ -55,6 +57,7 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
+        messageHeaderConfiguration = MessageHeaderConfiguration.fetchDummyHeaderConfiguration();
 
     }
 
@@ -273,7 +276,7 @@ public class ProducerServiceTests {
         }
         DummyProducer.DummyMessage message =
                 new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
-        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
+        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers, messageHeaderConfiguration);
     }
 
     public ProducerMetricsEmitter getMetricEmitter(String topic, Project project, String region) {

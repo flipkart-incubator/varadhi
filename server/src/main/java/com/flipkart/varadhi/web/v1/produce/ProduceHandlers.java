@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1.produce;
 
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -17,6 +18,7 @@ import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
+import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,23 +39,14 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
+@AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> headerValidationHandler;
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
-
-    public ProduceHandlers(
-            String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
-            ProjectService projectService, ProducerMetricHandler metricHandler
-    ) {
-        this.produceRegion = produceRegion;
-        this.producerService = producerService;
-        this.headerValidationHandler = headerValidationHandler;
-        this.projectService = projectService;
-        this.metricHandler = metricHandler;
-    }
+    private final MessageHeaderConfiguration messageHeaderConfiguration;
 
     @Override
     public List<RouteDefinition> get() {
@@ -95,7 +88,7 @@ public class ProduceHandlers implements RouteProvider {
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.get(HeaderValidationHandler.VALIDATED_HEADERS));
+        Message messageToProduce = buildMessageToProduce(payload, ctx.get(PreProduceHandler.VALIDATED_HEADERS), messageHeaderConfiguration);
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->
@@ -140,8 +133,9 @@ public class ProduceHandlers implements RouteProvider {
 
     private Message buildMessageToProduce(
             byte[] payload,
-            Multimap<String, String> headers
+            Multimap<String, String> headers,
+            MessageHeaderConfiguration messageHeaderConfiguration
     ) {
-        return new ProducerMessage(payload, headers);
+        return new ProducerMessage(payload, headers, messageHeaderConfiguration);
     }
 }

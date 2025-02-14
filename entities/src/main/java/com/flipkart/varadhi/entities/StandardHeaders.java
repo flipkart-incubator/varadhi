@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 public class StandardHeaders {
-    public static String VARADHI_HEADER_PREFIX = "x_";
+//    public static String VARADHI_HEADER_PREFIX = "x_";
     public static String PRODUCE_TIMESTAMP = "x_restbus_produce_timestamp";
     public static String PRODUCE_REGION = "x_restbus_produce_region";
     public static String PRODUCE_IDENTITY = "x_restbus_produce_identity";

@@ -1,12 +1,11 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
+import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
@@ -21,24 +20,36 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
-import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
 public class HeaderValidationTest extends ProduceTestBase {
-    HeaderValidationHandler validationHandler;
+    PreProduceHandler validationHandler;
     HttpRequest<Buffer> request;
 
     @BeforeEach()
     public void PreTest() throws InterruptedException {
         super.setUp();
-        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration();
-        messageHeaderConfiguration.setAllowedPrefix(List.of("X_","x_"));
-        messageHeaderConfiguration.setMsgIdHeader("X_MESSAGE_ID");
-        messageHeaderConfiguration.setProduceIdentity("X_PRODUCE_IDENTITY");
-        messageHeaderConfiguration.setProduceRegion("X_PRODUCE_REGION");
-        messageHeaderConfiguration.setProduceTimestamp("X_PRODUCE_TIMESTAMP");
-        validationHandler = new HeaderValidationHandler(messageHeaderConfiguration, "region1");
+        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration(
+                List.of("X_","x_"),
+                "X_CALLBACK_CODES",
+                "X_REQUEST_TIMEOUT",
+                "X_REPLY_TO_HTTP_URI",
+                "X_REPLY_TO_HTTP_METHOD",
+                "X_REPLY_TO",
+                "X_HTTP_URI",
+                "X_HTTP_METHOD",
+                "X_CONTENT_TYPE",
+                "X_GROUP_ID",
+                "X_MESSAGE_ID",
+                100,
+                "X_PRODUCE_TIMESTAMP",
+                "X_PRODUCE_REGION",
+                "X_PRODUCE_IDENTITY",
+                (5 * 1024 * 1024)
+
+        );
+        validationHandler = new PreProduceHandler(messageHeaderConfiguration, "region1");
         route.handler(bodyHandler)
                 .handler(ctx -> {
                     ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
