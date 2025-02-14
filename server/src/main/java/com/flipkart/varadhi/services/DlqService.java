@@ -34,7 +34,7 @@ public class DlqService {
         UnsidelineRequest unsidelineRequest,
         String requestedBy
     ) {
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(
                 "Subscription is in state %s. Unsideline not allowed.".formatted(subscription.getStatus().getState())
             );
@@ -50,7 +50,7 @@ public class DlqService {
         int limit,
         Consumer<DlqMessagesResponse> recordWriter
     ) {
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(
                 "Dlq messages can't be queried in Subscription's current state %s.".formatted(
                     subscription.getStatus().getState()

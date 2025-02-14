@@ -18,8 +18,8 @@ class VaradhiTopicTest {
 
     @EqualsAndHashCode (callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
-        public DummyStorageTopic(String name, int version) {
-            super(name, version, TOPIC_CAPACITY);
+        public DummyStorageTopic(String name) {
+            super(name, TOPIC_CAPACITY);
         }
     }
 
@@ -36,6 +36,7 @@ class VaradhiTopicTest {
     @Test
     void of_WithValidInputs_CreatesVaradhiTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.markCreated();
 
         assertAll(
             () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
@@ -49,6 +50,7 @@ class VaradhiTopicTest {
     @Test
     void of_WithGroupedFlag_CreatesGroupedVaradhiTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(true);
+        varadhiTopic.markCreated();
 
         assertAll(
             () -> assertEquals("project1.topic1", varadhiTopic.getName(), "Topic name mismatch"),
@@ -69,7 +71,7 @@ class VaradhiTopicTest {
     @Test
     void addInternalTopic_AddsTopicSuccessfully() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName(), 0);
+        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
 
@@ -90,7 +92,7 @@ class VaradhiTopicTest {
     @Test
     void getProduceTopicForRegion_WithValidRegion_ReturnsCorrectTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName(), 0);
+        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
         varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
 
@@ -112,16 +114,16 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void markActive_ChangesStatusToActive() {
+    void restore_ChangeStateToCreated() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deactivated");
-        varadhiTopic.markActive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
+        varadhiTopic.restore(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Activated");
 
         assertAll(
             () -> assertTrue(varadhiTopic.isActive(), "Active status update failed"),
             () -> assertEquals(
-                LifecycleStatus.State.ACTIVE,
+                LifecycleStatus.State.CREATED,
                 varadhiTopic.getStatus().getState(),
                 "Status state mismatch"
             ),

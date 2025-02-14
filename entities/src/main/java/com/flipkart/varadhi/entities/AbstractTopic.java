@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.entities;
 
-public abstract class AbstractTopic extends MetaStoreEntity {
-
-    public AbstractTopic(String name, int version) {
-        super(name, version);
-    }
+/**
+ * Abstract class representing a topic entity.
+ */
+public interface AbstractTopic {
+    String getName();
 }
