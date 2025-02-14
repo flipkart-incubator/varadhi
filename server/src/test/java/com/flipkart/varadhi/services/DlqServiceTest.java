@@ -55,8 +55,9 @@ class DlqServiceTest extends SubscriptionTestBase {
         );
 
         when(subscription.isActive()).thenReturn(true);
-        when(controllerClient.unsideline(anyString(), any(UnsidelineRequest.class), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(operation));
+        when(controllerClient.unsideline(anyString(), any(UnsidelineRequest.class), anyString())).thenReturn(
+            CompletableFuture.completedFuture(operation)
+        );
 
         CompletableFuture<SubscriptionOperation> result = dlqService.unsideline(
             subscription,

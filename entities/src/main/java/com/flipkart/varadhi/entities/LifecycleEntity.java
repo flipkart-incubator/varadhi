@@ -11,7 +11,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public abstract class LifecycleEntity extends MetaStoreEntity {
     protected LifecycleStatus status;
 

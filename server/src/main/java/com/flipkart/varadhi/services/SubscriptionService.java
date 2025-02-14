@@ -60,8 +60,8 @@ public class SubscriptionService {
         return metaStore.getSubscriptionNames(projectName)
                         .stream()
                         .filter(
-                                subscriptionName -> includeInactive ||
-                                        metaStore.getSubscription(subscriptionName).isActive()
+                            subscriptionName -> includeInactive || metaStore.getSubscription(subscriptionName)
+                                                                            .isActive()
                         )
                         .toList();
     }
@@ -100,7 +100,7 @@ public class SubscriptionService {
                 VaradhiSubscription existingSubscription = getSubscription(subscription.getName());
                 if (!existingSubscription.isRetriable()) {
                     throw new DuplicateResourceException(
-                            String.format("Subscription '%s' already exists.", subscription.getName())
+                        String.format("Subscription '%s' already exists.", subscription.getName())
                     );
                 }
                 shardProvisioner.deProvision(subscription, subProject);
@@ -250,8 +250,9 @@ public class SubscriptionService {
         }
 
         LifecycleStatus.ActorCode lastAction = subscription.getStatus().getActorCode();
-        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
-                actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
+        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION || actionRequest
+                                                                                                                      .actorCode()
+                                                                                                         == LifecycleStatus.ActorCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(

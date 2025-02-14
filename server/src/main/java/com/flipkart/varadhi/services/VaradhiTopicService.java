@@ -50,7 +50,7 @@ public class VaradhiTopicService {
                 VaradhiTopic existingTopic = get(varadhiTopic.getName());
                 if (!existingTopic.isRetriable()) {
                     throw new DuplicateResourceException(
-                            String.format("Topic '%s' already exists.", varadhiTopic.getName())
+                        String.format("Topic '%s' already exists.", varadhiTopic.getName())
                     );
                 }
                 metaStore.updateTopic(varadhiTopic);
@@ -74,11 +74,16 @@ public class VaradhiTopicService {
      */
     private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
-        varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                internalTopic.getActiveTopics().forEach(storageTopic ->
-                        storageTopicService.create(storageTopic, project)
-                )
-        );
+        varadhiTopic.getInternalTopics()
+                    .forEach(
+                        (region, internalTopic) -> internalTopic.getActiveTopics()
+                                                                .forEach(
+                                                                    storageTopic -> storageTopicService.create(
+                                                                        storageTopic,
+                                                                        project
+                                                                    )
+                                                                )
+                    );
     }
 
     /**
@@ -139,11 +144,16 @@ public class VaradhiTopicService {
             varadhiTopic.markDeleting(actionRequest.actorCode(), "Starting Topic Deletion");
             metaStore.updateTopic(varadhiTopic);
 
-            varadhiTopic.getInternalTopics().forEach((region, internalTopic) ->
-                    internalTopic.getActiveTopics().forEach(storageTopic ->
-                            storageTopicService.delete(storageTopic.getName(), project)
-                    )
-            );
+            varadhiTopic.getInternalTopics()
+                        .forEach(
+                            (region, internalTopic) -> internalTopic.getActiveTopics()
+                                                                    .forEach(
+                                                                        storageTopic -> storageTopicService.delete(
+                                                                            storageTopic.getName(),
+                                                                            project
+                                                                        )
+                                                                    )
+                        );
             metaStore.deleteTopic(varadhiTopic.getName());
         } catch (Exception e) {
             varadhiTopic.markDeleteFailed(e.getMessage());
@@ -174,8 +184,9 @@ public class VaradhiTopicService {
         }
 
         LifecycleStatus.ActorCode lastAction = varadhiTopic.getStatus().getActorCode();
-        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION ||
-                actionRequest.actorCode() == LifecycleStatus.ActorCode.ADMIN_ACTION;
+        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActorCode.SYSTEM_ACTION || actionRequest
+                                                                                                                      .actorCode()
+                                                                                                         == LifecycleStatus.ActorCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(

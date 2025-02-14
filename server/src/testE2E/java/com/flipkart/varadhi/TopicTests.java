@@ -155,6 +155,9 @@ public class TopicTests extends E2EBase {
         Assertions.assertTrue(topics.contains(topicName));
 
         makeDeleteRequest(
-                getTopicsUri(o1t1Project1, topic.getName()), ResourceDeletionType.HARD_DELETE.toString(), 200);
+            getTopicsUri(o1t1Project1, topic.getName()),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            200
+        );
     }
 }

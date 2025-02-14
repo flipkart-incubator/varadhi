@@ -70,9 +70,9 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
-                msg1,
-                VaradhiTopic.buildTopicName(project.getName(), topic),
-                emitter
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
         );
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
@@ -164,7 +164,7 @@ public class ProducerServiceTests {
     }
 
     public void produceNotAllowedTopicState(TopicState topicState, ProduceStatus produceStatus, String message)
-            throws InterruptedException {
+        throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
@@ -235,10 +235,7 @@ public class ProducerServiceTests {
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        Assertions.assertEquals(
-            ProduceStatus.Failed,
-            rc.produceResult.getProduceStatus()
-        );
+        Assertions.assertEquals(ProduceStatus.Failed, rc.produceResult.getProduceStatus());
         Assertions.assertEquals(
             "Produce failure from messaging stack for Topic/Queue. null",
             rc.produceResult.getFailureReason()
@@ -298,8 +295,7 @@ public class ProducerServiceTests {
             payload = new byte[payloadSize];
             random.nextBytes(payload);
         }
-        DummyProducer.DummyMessage message =
-            new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
+        DummyProducer.DummyMessage message = new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
         return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 

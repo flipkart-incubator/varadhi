@@ -14,7 +14,7 @@ public abstract class StorageTopic implements AbstractTopic {
     String name;
     TopicCapacityPolicy capacity;
 
-    public StorageTopic(String name, TopicCapacityPolicy capacity) {
+    protected StorageTopic(String name, TopicCapacityPolicy capacity) {
         this.name = name;
         this.capacity = capacity;
     }

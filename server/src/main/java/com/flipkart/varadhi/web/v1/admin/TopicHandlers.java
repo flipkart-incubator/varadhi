@@ -292,7 +292,8 @@ public class TopicHandlers implements RouteProvider {
      * @return the actor code, either ADMIN_ACTION if the requester is a Varadhi admin, or USER_ACTION otherwise
      */
     private LifecycleStatus.ActorCode getActorCode(String requestedBy) {
-        return isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActorCode.ADMIN_ACTION
-                : LifecycleStatus.ActorCode.USER_ACTION;
+        return isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActorCode.ADMIN_ACTION :
+            LifecycleStatus.ActorCode.USER_ACTION;
     }
 }
