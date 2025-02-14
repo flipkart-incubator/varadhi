@@ -48,15 +48,21 @@ class DlqServiceTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(System.currentTimeMillis());
         String requestedBy = "testUser";
-        SubscriptionOperation operation =
-                SubscriptionOperation.unsidelineOp(subscription.getName(), unsidelineRequest, requestedBy);
+        SubscriptionOperation operation = SubscriptionOperation.unsidelineOp(
+            subscription.getName(),
+            unsidelineRequest,
+            requestedBy
+        );
 
         when(subscription.isActive()).thenReturn(true);
         when(controllerClient.unsideline(anyString(), any(UnsidelineRequest.class), anyString()))
                 .thenReturn(CompletableFuture.completedFuture(operation));
 
-        CompletableFuture<SubscriptionOperation> result =
-                dlqService.unsideline(subscription, unsidelineRequest, requestedBy);
+        CompletableFuture<SubscriptionOperation> result = dlqService.unsideline(
+            subscription,
+            unsidelineRequest,
+            requestedBy
+        );
 
         assertEquals(operation, result.join());
         verify(controllerClient).unsideline(subscription.getName(), unsidelineRequest, requestedBy);
@@ -68,8 +74,8 @@ class DlqServiceTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> dlqService.unsideline(subscription, UnsidelineRequest.ofFailedAt(100), "testUser")
+            InvalidOperationForResourceException.class,
+            () -> dlqService.unsideline(subscription, UnsidelineRequest.ofFailedAt(100), "testUser")
         );
         assertTrue(exception.getMessage().contains("Unsideline not allowed"));
     }
@@ -81,16 +87,23 @@ class DlqServiceTest extends SubscriptionTestBase {
 
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
         List<DlqMessage> shard1Messages = List.of(createDlqMessage(1), createDlqMessage(2), createDlqMessage(1));
-        String shard1NextPage =
-                shard1Messages.get(1).getOffset().toString() + "," + shard1Messages.get(2).getOffset().toString();
+        String shard1NextPage = shard1Messages.get(1).getOffset().toString() + "," + shard1Messages.get(2)
+                                                                                                   .getOffset()
+                                                                                                   .toString();
         doReturn(CompletableFuture.completedFuture(new ShardDlqMessageResponse(shard1Messages, shard1NextPage))).when(
-                consumerClient).getMessagesByTimestamp(anyLong(), anyInt());
+            consumerClient
+        ).getMessagesByTimestamp(anyLong(), anyInt());
         List<DlqMessagesResponse> msgRespones = new ArrayList<>();
 
         Consumer<DlqMessagesResponse> recordWriter = msgRespones::add;
         DlqPageMarker pageMarkers = DlqPageMarker.fromString("");
-        CompletableFuture<Void> result =
-                dlqService.getMessages(subscription, earliestFailedAt, pageMarkers, limit, recordWriter);
+        CompletableFuture<Void> result = dlqService.getMessages(
+            subscription,
+            earliestFailedAt,
+            pageMarkers,
+            limit,
+            recordWriter
+        );
         result.join();
         assertEquals(subscription.getShards().getShardCount() + 1, msgRespones.size());
         assertEquals(3, msgRespones.get(0).getMessages().size());
@@ -105,12 +118,18 @@ class DlqServiceTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
 
         doReturn(CompletableFuture.completedFuture(new ShardDlqMessageResponse(new ArrayList<>(), null))).when(
-                consumerClient).getMessagesByTimestamp(anyLong(), anyInt());
+            consumerClient
+        ).getMessagesByTimestamp(anyLong(), anyInt());
         List<DlqMessagesResponse> msgRespones = new ArrayList<>();
         Consumer<DlqMessagesResponse> recordWriter = msgRespones::add;
         DlqPageMarker pageMarkers = DlqPageMarker.fromString("");
-        CompletableFuture<Void> result =
-                dlqService.getMessages(subscription, earliestFailedAt, pageMarkers, limit, recordWriter);
+        CompletableFuture<Void> result = dlqService.getMessages(
+            subscription,
+            earliestFailedAt,
+            pageMarkers,
+            limit,
+            recordWriter
+        );
         assertValue(null, result);
         assertEquals(1, msgRespones.size());
         assertTrue(msgRespones.getFirst().getMessages().isEmpty());
@@ -121,12 +140,19 @@ class DlqServiceTest extends SubscriptionTestBase {
         long earliestFailedAt = System.currentTimeMillis();
         int limit = 10;
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
-        doReturn(CompletableFuture.failedFuture(new IllegalArgumentException("Consumer not found for"))).when(consumerClient).getMessagesByTimestamp(anyLong(), anyInt());
+        doReturn(CompletableFuture.failedFuture(new IllegalArgumentException("Consumer not found for"))).when(
+            consumerClient
+        ).getMessagesByTimestamp(anyLong(), anyInt());
         List<DlqMessagesResponse> msgRespones = new ArrayList<>();
         Consumer<DlqMessagesResponse> recordWriter = msgRespones::add;
         DlqPageMarker pageMarkers = DlqPageMarker.fromString("");
-        CompletableFuture<Void> result =
-                dlqService.getMessages(subscription, earliestFailedAt, pageMarkers, limit, recordWriter);
+        CompletableFuture<Void> result = dlqService.getMessages(
+            subscription,
+            earliestFailedAt,
+            pageMarkers,
+            limit,
+            recordWriter
+        );
         assertException(result, IllegalArgumentException.class, "Consumer not found for");
         assertEquals(1, msgRespones.size());
         assertTrue(msgRespones.getFirst().getError().contains("Consumer not found for"));
@@ -138,11 +164,14 @@ class DlqServiceTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = spy(createUngroupedSubscription("sub12", PROJECT, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> dlqService.getMessages(
-                        subscription, System.currentTimeMillis(), DlqPageMarker.fromString(""), 10,
-                        mock(Consumer.class)
-                )
+            InvalidOperationForResourceException.class,
+            () -> dlqService.getMessages(
+                subscription,
+                System.currentTimeMillis(),
+                DlqPageMarker.fromString(""),
+                10,
+                mock(Consumer.class)
+            )
         );
         assertTrue(exception.getMessage().contains("Dlq messages can't be queried"));
     }
@@ -150,12 +179,19 @@ class DlqServiceTest extends SubscriptionTestBase {
     @Test
     void testGetMessageGetSubAssignmentFails() {
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
-        doReturn(CompletableFuture.failedFuture(new IllegalArgumentException("Subscription not found"))).when(controllerClient).getShardAssignments(anyString());
+        doReturn(CompletableFuture.failedFuture(new IllegalArgumentException("Subscription not found"))).when(
+            controllerClient
+        ).getShardAssignments(anyString());
         List<DlqMessagesResponse> msgRespones = new ArrayList<>();
         Consumer<DlqMessagesResponse> recordWriter = msgRespones::add;
         DlqPageMarker pageMarkers = DlqPageMarker.fromString("");
-        CompletableFuture<Void> result =
-                dlqService.getMessages(subscription, System.currentTimeMillis(), pageMarkers, 10, recordWriter);
+        CompletableFuture<Void> result = dlqService.getMessages(
+            subscription,
+            System.currentTimeMillis(),
+            pageMarkers,
+            10,
+            recordWriter
+        );
         assertException(result, IllegalArgumentException.class, "Subscription not found");
         assertEquals(1, msgRespones.size());
         assertTrue(msgRespones.getFirst().getError().contains("Subscription not found"));
@@ -164,12 +200,20 @@ class DlqServiceTest extends SubscriptionTestBase {
     @Test
     void testGetMessageSubWithNoAssignments() {
         VaradhiSubscription subscription = setupSubscriptionForGetMessages();
-        doReturn(CompletableFuture.completedFuture(new ShardAssignments(new ArrayList<>()))).when(controllerClient).getShardAssignments(anyString());
+        doReturn(CompletableFuture.completedFuture(new ShardAssignments(new ArrayList<>()))).when(controllerClient)
+                                                                                            .getShardAssignments(
+                                                                                                anyString()
+                                                                                            );
         List<DlqMessagesResponse> msgRespones = new ArrayList<>();
         Consumer<DlqMessagesResponse> recordWriter = msgRespones::add;
         DlqPageMarker pageMarkers = DlqPageMarker.fromString("");
-        CompletableFuture<Void> result =
-                dlqService.getMessages(subscription, System.currentTimeMillis(), pageMarkers, 10, recordWriter);
+        CompletableFuture<Void> result = dlqService.getMessages(
+            subscription,
+            System.currentTimeMillis(),
+            pageMarkers,
+            10,
+            recordWriter
+        );
         assertValue(null, result);
         assertEquals(1, msgRespones.size());
         assertTrue(msgRespones.getFirst().getMessages().isEmpty());
@@ -189,7 +233,9 @@ class DlqServiceTest extends SubscriptionTestBase {
         String subscriptionId = subscription.getName();
         when(subscription.isActive()).thenReturn(true);
         doReturn(CompletableFuture.completedFuture(new ShardAssignments(assignments))).when(controllerClient)
-                .getShardAssignments(subscriptionId);
+                                                                                      .getShardAssignments(
+                                                                                          subscriptionId
+                                                                                      );
         doReturn(consumerClient).when(consumerFactory).getInstance(consumerId);
         return subscription;
     }

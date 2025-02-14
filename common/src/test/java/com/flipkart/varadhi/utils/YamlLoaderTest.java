@@ -45,14 +45,16 @@ public class YamlLoaderTest {
 
         // Load the config using YamlLoader
         InvalidConfigException e = Assertions.assertThrows(
-                InvalidConfigException.class,
-                () -> YamlLoader.loadConfig(configFile.toString(), Config.class)
+            InvalidConfigException.class,
+            () -> YamlLoader.loadConfig(configFile.toString(), Config.class)
         );
         Assertions.assertEquals(
-                String.format(
-                        "Failed to load config file: %s. message: length must be between 0 and 15",
-                        configFile.toString()
-                ), e.getMessage());
+            String.format(
+                "Failed to load config file: %s. message: length must be between 0 and 15",
+                configFile.toString()
+            ),
+            e.getMessage()
+        );
     }
 
     @Test
@@ -83,15 +85,15 @@ public class YamlLoaderTest {
     public void testLoadConfig_GenericConfig() throws IOException {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent = """
-                ---
-                nestedGenericConf:
-                  k1:
-                  - ABC
-                  - XYZ
-                genericConf:
-                - ABC
-                - XYZ
-                """;
+            ---
+            nestedGenericConf:
+              k1:
+              - ABC
+              - XYZ
+            genericConf:
+            - ABC
+            - XYZ
+            """;
         Files.write(configFile, yamlContent.getBytes());
 
         // Load the config using YamlLoader
@@ -108,8 +110,7 @@ public class YamlLoaderTest {
     }
 
     public enum MyEnum {
-        ABC("abc"),
-        XYZ("xyz");
+        ABC("abc"), XYZ("xyz");
 
         private final String field;
 
@@ -122,9 +123,10 @@ public class YamlLoaderTest {
         }
     }
 
+
     // Sample config class for testing
     public static class Config {
-        @Length(max = 15)
+        @Length (max = 15)
         private String message;
 
         public String getMessage() {
@@ -135,6 +137,7 @@ public class YamlLoaderTest {
             this.message = message;
         }
     }
+
 
     @Getter
     @Setter

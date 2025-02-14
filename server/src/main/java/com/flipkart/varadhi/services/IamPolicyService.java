@@ -24,10 +24,14 @@ public class IamPolicyService {
     private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
         if (!isResourceValid(resourceId, resourceType)) {
             throw new IllegalArgumentException(
-                    "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType));
+                "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType)
+            );
         }
-        IamPolicyRecord policyRecord =
-                new IamPolicyRecord(getAuthResourceFQN(resourceType, resourceId), 0, new HashMap<>());
+        IamPolicyRecord policyRecord = new IamPolicyRecord(
+            getAuthResourceFQN(resourceType, resourceId),
+            0,
+            new HashMap<>()
+        );
         iamPolicyMetaStore.createIamPolicyRecord(policyRecord);
         return policyRecord;
     }
@@ -55,13 +59,14 @@ public class IamPolicyService {
     }
 
     private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
-        IamPolicyRecord existingNode =
-                iamPolicyMetaStore.getIamPolicyRecord(iamPolicyRecord.getName());
+        IamPolicyRecord existingNode = iamPolicyMetaStore.getIamPolicyRecord(iamPolicyRecord.getName());
         if (iamPolicyRecord.getVersion() != existingNode.getVersion()) {
-            throw new InvalidOperationForResourceException(String.format(
+            throw new InvalidOperationForResourceException(
+                String.format(
                     "Conflicting update, IamPolicyRecord(%s) has been modified. Fetch latest and try again.",
                     iamPolicyRecord.getName()
-            ));
+                )
+            );
         }
         iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
         return iamPolicyRecord;
@@ -70,7 +75,8 @@ public class IamPolicyService {
     private boolean isResourceValid(String resourceId, ResourceType resourceType) {
         return switch (resourceType) {
             case ROOT -> throw new IllegalArgumentException(
-                    "ROOT is implicit resource type. No Iam policies supported on it.");
+                "ROOT is implicit resource type. No Iam policies supported on it."
+            );
             case ORG -> metaStore.checkOrgExists(resourceId);
             case TEAM -> {
                 // org:team

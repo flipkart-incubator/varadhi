@@ -34,13 +34,17 @@ public class Assignment extends MetaStoreEntity {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        Assignment that = (Assignment) o;
-        return shardId == that.shardId &&
-                Objects.equals(subscriptionId, that.subscriptionId) &&
-                Objects.equals(consumerId, that.consumerId);
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        if (!super.equals(o))
+            return false;
+        Assignment that = (Assignment)o;
+        return shardId == that.shardId && Objects.equals(subscriptionId, that.subscriptionId) && Objects.equals(
+            consumerId,
+            that.consumerId
+        );
     }
 
     @Override

@@ -69,8 +69,11 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-            service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+                msg1,
+                VaradhiTopic.buildTopicName(project.getName(), topic),
+                emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -129,10 +132,7 @@ public class ProducerServiceTests {
             ProduceException.class,
             () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
-        Assertions.assertEquals(
-            "Failed to get produce Topic(project1.topic1). Unknown error.",
-            e.getMessage()
-        );
+        Assertions.assertEquals("Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
         verify(producer, never()).produceAsync(any());
     }
 
@@ -163,18 +163,18 @@ public class ProducerServiceTests {
         );
     }
 
-    public void produceNotAllowedTopicState(
-        TopicState topicState,
-        ProduceStatus produceStatus,
-        String message
-    ) throws InterruptedException {
+    public void produceNotAllowedTopicState(TopicState topicState, ProduceStatus produceStatus, String message)
+            throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-            service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -226,8 +226,11 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
 
-        CompletableFuture<ProduceResult> result =
-            service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
 
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
@@ -251,8 +254,11 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-            service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);

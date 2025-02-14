@@ -6,9 +6,9 @@ import java.util.stream.Collectors;
 public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
-        return
-                subRoutes.stream()
-                        .map(r -> new RouteDefinition(
+        return subRoutes.stream()
+                        .map(
+                            r -> new RouteDefinition(
                                 r.getName(),
                                 r.getMethod(),
                                 basePath + r.getPath(),
@@ -20,7 +20,8 @@ public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implem
                                 r.getHierarchyFunction(),
                                 r.getAuthorizeOnActions(),
                                 r.getTelemetryType()
-                        ))
+                            )
+                        )
                         .collect(Collectors.toList());
     }
 }

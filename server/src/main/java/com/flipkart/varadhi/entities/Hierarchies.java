@@ -18,6 +18,7 @@ public class Hierarchies {
         }
     }
 
+
     public record OrgHierarchy(String org) implements ResourceHierarchy {
 
         @Override
@@ -32,6 +33,7 @@ public class Hierarchies {
             return attributes;
         }
     }
+
 
     public record TeamHierarchy(String org, String team) implements ResourceHierarchy {
 
@@ -49,6 +51,7 @@ public class Hierarchies {
         }
     }
 
+
     public record ProjectHierarchy(Project project) implements ResourceHierarchy {
 
         @Override
@@ -65,6 +68,7 @@ public class Hierarchies {
             return attributes;
         }
     }
+
 
     public record TopicHierarchy(Project project, String topic) implements ResourceHierarchy {
 
@@ -84,6 +88,7 @@ public class Hierarchies {
         }
     }
 
+
     public record SubscriptionHierarchy(Project project, String subscription) implements ResourceHierarchy {
 
         @Override
@@ -101,6 +106,7 @@ public class Hierarchies {
             return attributes;
         }
     }
+
 
     public record IamPolicyHierarchy(ResourceHierarchy hierarchy) implements ResourceHierarchy {
         @Override

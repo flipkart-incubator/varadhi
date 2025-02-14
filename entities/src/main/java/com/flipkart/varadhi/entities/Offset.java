@@ -9,6 +9,6 @@ import java.io.Serializable;
  * Details are messaging stack specific.
  */
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@offsetType")
+@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@offsetType")
 public interface Offset extends Comparable<Offset>, Serializable {
 }

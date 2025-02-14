@@ -25,8 +25,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
-    private static final Endpoint endpoint =
-            new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
+    private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
+        URI.create("http://localhost:8080"),
+        "GET",
+        "",
+        500,
+        500,
+        false
+    );
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
@@ -34,9 +40,12 @@ public class SubscriptionTests extends E2EBase {
     private static TopicResource p1t2;
 
     private final RetryPolicy retryPolicy = new RetryPolicy(
-            new CodeRange[]{new CodeRange(500, 502)},
-            RetryPolicy.BackoffType.LINEAR,
-            1, 1, 1, 3
+        new CodeRange[] {new CodeRange(500, 502)},
+        RetryPolicy.BackoffType.LINEAR,
+        1,
+        1,
+        1,
+        3
     );
     private final ConsumptionPolicy consumptionPolicy = new ConsumptionPolicy(10, 1, 1, false, 1, null);
 
@@ -45,14 +54,8 @@ public class SubscriptionTests extends E2EBase {
         o1 = Org.of("public");
         o1t1 = Team.of("team1", o1.getName());
         o1t1p1 = Project.of("default", "", o1t1.getName(), o1t1.getOrg());
-        p1t1 = TopicResource.unGrouped(
-                "topic1", o1t1p1.getName(), null,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
-        );
-        p1t2 = TopicResource.grouped(
-                "topic2", o1t1p1.getName(), null,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
-        );
+        p1t1 = TopicResource.unGrouped("topic1", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        p1t2 = TopicResource.grouped("topic2", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION);
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
@@ -77,23 +80,26 @@ public class SubscriptionTests extends E2EBase {
     void createSubscription() {
         String subName = "sub1";
         SubscriptionResource sub = SubscriptionResource.of(
-                subName,
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            subName,
+            o1t1p1.getName(),
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, r);
 
-        SubscriptionResource got =
-                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        SubscriptionResource got = makeGetRequest(
+            getSubscriptionsUri(o1t1p1, subName),
+            SubscriptionResource.class,
+            200
+        );
         assertSubscriptionEquals(sub, got);
 
         makeCreateRequest(
@@ -105,33 +111,36 @@ public class SubscriptionTests extends E2EBase {
     void updateSubscription() {
         String subName = "sub2";
         SubscriptionResource sub = SubscriptionResource.of(
-                subName,
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            subName,
+            o1t1p1.getName(),
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
-        SubscriptionResource created =
-                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        SubscriptionResource created = makeGetRequest(
+            getSubscriptionsUri(o1t1p1, subName),
+            SubscriptionResource.class,
+            200
+        );
         SubscriptionResource update = SubscriptionResource.of(
-                created.getName(),
-                created.getProject(),
-                created.getTopic(),
-                created.getTopicProject(),
-                "desc updated",
-                created.isGrouped(),
-                created.getEndpoint(),
-                created.getRetryPolicy(),
-                created.getConsumptionPolicy(),
-                created.getProperties(),
-                created.getActorCode()
+            created.getName(),
+            created.getProject(),
+            created.getTopic(),
+            created.getTopicProject(),
+            "desc updated",
+            created.isGrouped(),
+            created.getEndpoint(),
+            created.getRetryPolicy(),
+            created.getConsumptionPolicy(),
+            created.getProperties(),
+            created.getActorCode()
         );
         //create subscription executes update internally.
         update.setVersion(1);
@@ -147,75 +156,87 @@ public class SubscriptionTests extends E2EBase {
     @Test
     void createSubscriptionWithValidationFailure() {
         SubscriptionResource shortName = SubscriptionResource.of(
-                "ab",
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "ab",
+            o1t1p1.getName(),
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(
-                getSubscriptionsUri(o1t1p1), shortName, 400, "Invalid Subscription name. Check naming constraints.",
-                true
+            getSubscriptionsUri(o1t1p1),
+            shortName,
+            400,
+            "Invalid Subscription name. Check naming constraints.",
+            true
         );
 
         SubscriptionResource projectNotExist = SubscriptionResource.of(
-                "sub12",
-                "some_proj",
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "sub12",
+            "some_proj",
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(
-                getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")), projectNotExist, 404,
-                "Project(some_proj) not found.", true
+            getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")),
+            projectNotExist,
+            404,
+            "Project(some_proj) not found.",
+            true
         );
 
         SubscriptionResource topicNotExist = SubscriptionResource.of(
-                "sub12",
-                o1t1p1.getName(),
-                "some_topic",
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "sub12",
+            o1t1p1.getName(),
+            "some_topic",
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(
-                getSubscriptionsUri(o1t1p1), topicNotExist, 404,
-                "Topic(default.some_topic) not found.", true
+            getSubscriptionsUri(o1t1p1),
+            topicNotExist,
+            404,
+            "Topic(default.some_topic) not found.",
+            true
         );
 
         SubscriptionResource groupedOnUnGroupTopic = SubscriptionResource.of(
-                "sub12",
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                true,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "sub12",
+            o1t1p1.getName(),
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            true,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         makeCreateRequest(
-                getSubscriptionsUri(o1t1p1), groupedOnUnGroupTopic, 400,
-                "Grouped subscription cannot be created or updated for a non-grouped topic 'default.topic1'", true
+            getSubscriptionsUri(o1t1p1),
+            groupedOnUnGroupTopic,
+            400,
+            "Grouped subscription cannot be created or updated for a non-grouped topic 'default.topic1'",
+            true
         );
     }
 
@@ -223,17 +244,17 @@ public class SubscriptionTests extends E2EBase {
     void softDeleteAndRestoreSubscription() {
         String subName = "sub3";
         SubscriptionResource sub = SubscriptionResource.of(
-                subName,
-                o1t1p1.getName(),
-                p1t1.getName(),
-                p1t1.getProject(),
-                "desc",
-                false,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                new HashMap<>(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            subName,
+            o1t1p1.getName(),
+            p1t1.getName(),
+            p1t1.getProject(),
+            "desc",
+            false,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            new HashMap<>(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
 
         SubscriptionResource createdSub = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
@@ -249,8 +270,11 @@ public class SubscriptionTests extends E2EBase {
 
         makePatchRequest(getSubscriptionsUri(o1t1p1, subName) + "/restore", 200);
 
-        SubscriptionResource restoredSub =
-                makeGetRequest(getSubscriptionsUri(o1t1p1, subName), SubscriptionResource.class, 200);
+        SubscriptionResource restoredSub = makeGetRequest(
+            getSubscriptionsUri(o1t1p1, subName),
+            SubscriptionResource.class,
+            200
+        );
         assertSubscriptionEquals(sub, restoredSub);
 
         subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));

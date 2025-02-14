@@ -2,9 +2,8 @@ package com.flipkart.varadhi.cluster;
 
 public enum RouteMethod {
 
-    SEND("send"),
-    REQUEST("request"),
-    PUBLISH("publish");
+    SEND("send"), REQUEST("request"), PUBLISH("publish");
+
     private final String name;
 
     RouteMethod(String name) {

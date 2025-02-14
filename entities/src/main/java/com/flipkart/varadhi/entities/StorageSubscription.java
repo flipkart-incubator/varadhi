@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
 
 @Getter
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@storageType")
+@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@storageType")
 public abstract class StorageSubscription<T extends StorageTopic> {
     private final String name;
     private final TopicPartitions<T> topicPartitions;

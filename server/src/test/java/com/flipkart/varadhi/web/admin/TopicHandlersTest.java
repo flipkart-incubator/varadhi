@@ -43,7 +43,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 class TopicHandlersTest extends WebTestBase {
 
     private static final String TOPIC_NAME = "topic1";
@@ -85,30 +85,21 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     private void setupRoutes() {
-        router.post("/projects/:project/topics")
-                .handler(bodyHandler)
-                .handler(ctx -> {
-                    topicHandlers.setRequestBody(ctx);
-                    ctx.next();
-                })
-                .handler(ctx -> {
-                    requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "CreateTopic", TelemetryType.ALL);
-                    ctx.next();
-                })
-                .handler(wrapBlocking(topicHandlers::create));
+        router.post("/projects/:project/topics").handler(bodyHandler).handler(ctx -> {
+            topicHandlers.setRequestBody(ctx);
+            ctx.next();
+        }).handler(ctx -> {
+            requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "CreateTopic", TelemetryType.ALL);
+            ctx.next();
+        }).handler(wrapBlocking(topicHandlers::create));
 
-        router.get("/projects/:project/topics/:topic")
-                .handler(wrapBlocking(topicHandlers::get));
+        router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
 
-        router.get("/projects/:project/topics")
-                .handler(bodyHandler)
-                .handler(wrapBlocking(topicHandlers::listTopics));
+        router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
 
-        router.delete("/projects/:project/topics/:topic")
-                .handler(wrapBlocking(topicHandlers::delete));
+        router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
 
-        router.patch("/projects/:project/topics/:topic/restore")
-                .handler(wrapBlocking(topicHandlers::restore));
+        router.patch("/projects/:project/topics/:topic/restore").handler(wrapBlocking(topicHandlers::restore));
 
         setupFailureHandlers();
     }
@@ -130,9 +121,9 @@ class TopicHandlersTest extends WebTestBase {
         doReturn(varadhiTopic).when(varadhiTopicFactory).get(project, topicResource);
 
         TopicResource createdTopic = sendRequestWithEntity(
-                createRequest(HttpMethod.POST, getTopicsUrl(project)),
-                topicResource,
-                TopicResource.class
+            createRequest(HttpMethod.POST, getTopicsUrl(project)),
+            topicResource,
+            TopicResource.class
         );
 
         assertEquals(topicResource.getProject(), createdTopic.getProject());
@@ -142,12 +133,11 @@ class TopicHandlersTest extends WebTestBase {
 
     @Test
     void createTopic_WithMismatchedProjectName_ShouldReturnBadRequest() throws InterruptedException {
-        TopicResource topicResource =
-                getTopicResource(Project.of("differentProject", "", TEAM_NAME, ORG_NAME));
+        TopicResource topicResource = getTopicResource(Project.of("differentProject", "", TEAM_NAME, ORG_NAME));
 
         HttpResponse<Buffer> response = sendRequest(
-                createRequest(HttpMethod.POST, getTopicsUrl(project)),
-                JsonMapper.jsonSerialize(topicResource).getBytes()
+            createRequest(HttpMethod.POST, getTopicsUrl(project)),
+            JsonMapper.jsonSerialize(topicResource).getBytes()
         );
 
         assertEquals(400, response.statusCode());
@@ -163,8 +153,8 @@ class TopicHandlersTest extends WebTestBase {
         doReturn(varadhiTopic).when(varadhiTopicService).get(varadhiTopicName);
 
         TopicResource retrievedTopic = sendRequestWithoutPayload(
-                createRequest(HttpMethod.GET, getTopicUrl(project)),
-                TopicResource.class
+            createRequest(HttpMethod.GET, getTopicUrl(project)),
+            TopicResource.class
         );
 
         assertEquals(topicResource.getProject(), retrievedTopic.getProject());
@@ -177,8 +167,8 @@ class TopicHandlersTest extends WebTestBase {
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
-                createRequest(HttpMethod.GET, getTopicsUrl(project)),
-                List.class
+            createRequest(HttpMethod.GET, getTopicsUrl(project)),
+            List.class
         );
 
         assertEquals(topics.size(), retrievedTopics.size());
@@ -191,8 +181,8 @@ class TopicHandlersTest extends WebTestBase {
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), true);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
-                createRequest(HttpMethod.GET, getTopicsUrl(project) + "?includeInactive=true"),
-                List.class
+            createRequest(HttpMethod.GET, getTopicsUrl(project) + "?includeInactive=true"),
+            List.class
         );
 
         assertEquals(topics.size(), retrievedTopics.size());
@@ -203,8 +193,8 @@ class TopicHandlersTest extends WebTestBase {
         doReturn(Collections.emptyList()).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
-                createRequest(HttpMethod.GET, getTopicsUrl(project)),
-                List.class
+            createRequest(HttpMethod.GET, getTopicsUrl(project)),
+            List.class
         );
 
         assertTrue(retrievedTopics.isEmpty());
@@ -241,7 +231,7 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     private void verifyDeleteRequest(String deletionType, ResourceDeletionType expectedDeletionType)
-            throws InterruptedException {
+        throws InterruptedException {
         String url = getTopicUrl(project);
         if (deletionType != null) {
             url += "?deletionType=" + deletionType;
@@ -262,8 +252,10 @@ class TopicHandlersTest extends WebTestBase {
 
     private TopicResource getTopicResource(Project project) {
         return TopicResource.grouped(
-                TOPIC_NAME, project.getName(), Constants.DEFAULT_TOPIC_CAPACITY,
-                LifecycleStatus.ActorCode.USER_ACTION
+            TOPIC_NAME,
+            project.getName(),
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            LifecycleStatus.ActorCode.USER_ACTION
         );
     }
 

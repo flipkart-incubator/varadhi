@@ -12,7 +12,8 @@ import java.util.concurrent.CompletableFuture;
 /**
  * This is a subset of similar methods from vertx.EventBus for messages exchange between nodes.
  * Supported methods are
- * send(): dispatch message to one of handler registered at <routeName>.<apiName>.send, delivery can be tracked using the future.
+ * send(): dispatch message to one of handler registered at <routeName>.<apiName>.send, delivery can be tracked using
+ * the future.
  * request(): dispatch message to one of handler registered at <routeName>.<apiName>.request and wait for a response.
  * publish(): would dispatch message to all handler registered at <routeName>.<apiName>.publish
  */
@@ -57,8 +58,10 @@ public class MessageExchange {
             vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
                 if (ar.succeeded()) {
                     log.debug("request({}, {}) delivered. {}.", apiPath, msg.getId(), ar.result().body());
-                    ResponseMessage response =
-                            JsonMapper.jsonDeserialize((String) ar.result().body(), ResponseMessage.class);
+                    ResponseMessage response = JsonMapper.jsonDeserialize(
+                        (String)ar.result().body(),
+                        ResponseMessage.class
+                    );
                     if (response.getException() != null) {
                         future.completeExceptionally(response.getException());
                     } else {

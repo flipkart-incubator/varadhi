@@ -34,12 +34,14 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     @Override
     public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
         if (!this.initialised) {
-            this.configuration =
-                    YamlLoader.loadConfig(
-                            authorizationOptions.getConfigFile(), DefaultAuthorizationConfig.class);
-            this.configuration.getMetaStoreOptions().setConfigFile(
-                    resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
+            this.configuration = YamlLoader.loadConfig(
+                authorizationOptions.getConfigFile(),
+                DefaultAuthorizationConfig.class
             );
+            this.configuration.getMetaStoreOptions()
+                              .setConfigFile(
+                                  resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
+                              );
             getAuthZService();
             this.initialised = true;
         }
@@ -81,15 +83,22 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
         if (!initialised) {
             throw new IllegalStateException("Default Authorization Provider is not initialised.");
         }
-        List<Pair<ResourceType, ResourceContext>> leafToRootResourceIds =
-                generateResourceContextHierarchy(action, resource);
+        List<Pair<ResourceType, ResourceContext>> leafToRootResourceIds = generateResourceContextHierarchy(
+            action,
+            resource
+        );
         if (leafToRootResourceIds.isEmpty()) {
             return Future.succeededFuture(false);
         }
 
-        boolean result =
-                leafToRootResourceIds.stream()
-                        .anyMatch(pair -> isAuthorizedInternal(userContext.getSubject(), action, pair.getValue()));
+        boolean result = leafToRootResourceIds.stream()
+                                              .anyMatch(
+                                                  pair -> isAuthorizedInternal(
+                                                      userContext.getSubject(),
+                                                      action,
+                                                      pair.getValue()
+                                                  )
+                                              );
         return Future.succeededFuture(result);
     }
 
@@ -98,10 +107,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      *
      * @param resourcePath uri of the resource
      *
-     * @return List of pairs having resource type to its context. List is used so that we can impose ordering from leaf to root nodes.
+     * @return List of pairs having resource type to its context. List is used so that we can impose ordering from leaf
+     *         to root nodes.
      */
     private List<Pair<ResourceType, ResourceContext>> generateResourceContextHierarchy(
-            ResourceAction action, String resourcePath
+        ResourceAction action,
+        String resourcePath
     ) {
         if (StringUtils.isBlank(resourcePath)) {
             return List.of();
@@ -132,17 +143,19 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
      *
      * @return {@code boolean} return whether the user is authorized or not
      */
-    private boolean isAuthorizedInternal(
-            String subject, ResourceAction action, ResourceContext resourceContext
-    ) {
-        return getRolesForSubject(subject, resourceContext)
-                .stream().anyMatch(role -> doesActionBelongToRole(subject, role, action));
+    private boolean isAuthorizedInternal(String subject, ResourceAction action, ResourceContext resourceContext) {
+        return getRolesForSubject(subject, resourceContext).stream()
+                                                           .anyMatch(
+                                                               role -> doesActionBelongToRole(subject, role, action)
+                                                           );
     }
 
     private Set<String> getRolesForSubject(String subject, ResourceContext resourceContext) {
         try {
-            IamPolicyRecord policyRecord =
-                    getAuthZService().getIamPolicy(resourceContext.resourceType(), resourceContext.resourceId());
+            IamPolicyRecord policyRecord = getAuthZService().getIamPolicy(
+                resourceContext.resourceType(),
+                resourceContext.resourceId()
+            );
             return policyRecord.getRoleBindings().getOrDefault(subject, Set.of());
         } catch (ResourceNotFoundException e) {
             // IAM Policy is not created for the resource. So, no roles are assigned for the given context.
@@ -151,8 +164,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private boolean doesActionBelongToRole(String subject, String roleId, ResourceAction action) {
-        boolean matching =
-                configuration.getRoleDefinitions().getOrDefault(roleId, EMPTY_ROLE).getPermissions().contains(action);
+        boolean matching = configuration.getRoleDefinitions()
+                                        .getOrDefault(roleId, EMPTY_ROLE)
+                                        .getPermissions()
+                                        .contains(action);
         if (matching) {
             log.debug("Successfully matched action [{}] for subject [{}] against role [{}]", action, subject, roleId);
         }
@@ -160,63 +175,81 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private void addResourceContextForOrgNode(
-            List<Pair<ResourceType, ResourceContext>> resourceIdTuples, String[] segments
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        String[] segments
     ) {
-        resourceIdTuples.add(Pair.of(
+        resourceIdTuples.add(
+            Pair.of(
                 ResourceType.ORG,
                 new ResourceContext(ResourceType.ORG, segments[0], "/orgs/%s".formatted(segments[0]))
-        ));
+            )
+        );
     }
 
     private void addResourceContextForTeamNode(
-            List<Pair<ResourceType, ResourceContext>> resourceIdTuples, String[] segments
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        String[] segments
     ) {
         if (segments.length > 1) {
             // /orgs/:org/teams/:team
             resourceIdTuples.add(
-                    Pair.of(
-                            ResourceType.TEAM,
-                            new ResourceContext(
-                                    ResourceType.TEAM, "%s:%s".formatted(segments[0], segments[1]),
-                                    "/orgs/%s/teams/%s".formatted(segments[0], segments[1])
-                            )
-                    ));
+                Pair.of(
+                    ResourceType.TEAM,
+                    new ResourceContext(
+                        ResourceType.TEAM,
+                        "%s:%s".formatted(segments[0], segments[1]),
+                        "/orgs/%s/teams/%s".formatted(segments[0], segments[1])
+                    )
+                )
+            );
         }
     }
 
     private void addResourceContextForProjectNode(
-            List<Pair<ResourceType, ResourceContext>> resourceIdTuples, String[] segments
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        String[] segments
     ) {
         if (segments.length > 2) {
-            resourceIdTuples.add(Pair.of(
+            resourceIdTuples.add(
+                Pair.of(
                     ResourceType.PROJECT,
                     new ResourceContext(ResourceType.PROJECT, segments[2], "/projects/%s".formatted(segments[2]))
-            ));
+                )
+            );
         }
     }
 
     private void addResourceContextForLeafNode(
-            List<Pair<ResourceType, ResourceContext>> resourceIdTuples, ResourceAction action, String[] segments
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        ResourceAction action,
+        String[] segments
     ) {
         if (segments.length > 3) {
             // /projects/:project/[topics|subs]/:[topic|sub]
             switch (action.getResourceType()) {
-                case TOPIC -> resourceIdTuples.add(Pair.of(
+                case TOPIC -> resourceIdTuples.add(
+                    Pair.of(
                         ResourceType.TOPIC,
                         new ResourceContext(
-                                ResourceType.TOPIC, "%s:%s".formatted(segments[2], segments[3]),
-                                "/projects/%s/topics/%s".formatted(segments[2], segments[3])
+                            ResourceType.TOPIC,
+                            "%s:%s".formatted(segments[2], segments[3]),
+                            "/projects/%s/topics/%s".formatted(segments[2], segments[3])
                         )
-                ));
-                case SUBSCRIPTION -> resourceIdTuples.add(Pair.of(
+                    )
+                );
+                case SUBSCRIPTION -> resourceIdTuples.add(
+                    Pair.of(
                         ResourceType.SUBSCRIPTION,
                         new ResourceContext(
-                                ResourceType.SUBSCRIPTION, "%s:%s".formatted(segments[2], segments[3]),
-                                "/projects/%s/subscriptions/%s".formatted(segments[2], segments[3])
+                            ResourceType.SUBSCRIPTION,
+                            "%s:%s".formatted(segments[2], segments[3]),
+                            "/projects/%s/subscriptions/%s".formatted(segments[2], segments[3])
                         )
-                ));
+                    )
+                );
                 default -> throw new IllegalArgumentException(
-                        "Invalid resource type under project : " + action.getResourceType());
+                    "Invalid resource type under project : " + action.getResourceType()
+                );
             }
         }
     }

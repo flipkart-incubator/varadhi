@@ -42,21 +42,24 @@ class VaradhiSubscriptionFactoryTest extends SubscriptionTestBase {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        varadhiSubscriptionFactory =
-                new VaradhiSubscriptionFactory(topicService, subscriptionFactory, topicFactory, REGION);
+        varadhiSubscriptionFactory = new VaradhiSubscriptionFactory(
+            topicService,
+            subscriptionFactory,
+            topicFactory,
+            REGION
+        );
     }
 
     @Test
     void getShardCapacity_ValidInput_ReturnsCorrectCapacity() throws Exception {
-        Method method =
-                VaradhiSubscriptionFactory.class.getDeclaredMethod(
-                        "getShardCapacity", TopicCapacityPolicy.class,
-                        int.class
-                );
+        Method method = VaradhiSubscriptionFactory.class.getDeclaredMethod(
+            "getShardCapacity",
+            TopicCapacityPolicy.class,
+            int.class
+        );
         method.setAccessible(true);
 
-        TopicCapacityPolicy result =
-                (TopicCapacityPolicy) method.invoke(varadhiSubscriptionFactory, CAPACITY_POLICY, 2);
+        TopicCapacityPolicy result = (TopicCapacityPolicy)method.invoke(varadhiSubscriptionFactory, CAPACITY_POLICY, 2);
 
         assertNotNull(result);
         assertEquals(CAPACITY_POLICY.getReadFanOut(), result.getReadFanOut());
@@ -64,47 +67,58 @@ class VaradhiSubscriptionFactoryTest extends SubscriptionTestBase {
 
     @Test
     void getShardMainSubName_ValidInput_ReturnsCorrectName() throws Exception {
-        Method method =
-                VaradhiSubscriptionFactory.class.getDeclaredMethod("getShardMainSubName", String.class, int.class);
+        Method method = VaradhiSubscriptionFactory.class.getDeclaredMethod(
+            "getShardMainSubName",
+            String.class,
+            int.class
+        );
         method.setAccessible(true);
 
-        String result = (String) method.invoke(varadhiSubscriptionFactory, SUBSCRIPTION_NAME, 0);
+        String result = (String)method.invoke(varadhiSubscriptionFactory, SUBSCRIPTION_NAME, 0);
 
         assertEquals("testSubscription.shard.0.MAIN", result);
     }
 
     @Test
     void getInternalSubName_ValidInput_ReturnsCorrectName() throws Exception {
-        Method method =
-                VaradhiSubscriptionFactory.class.getDeclaredMethod(
-                        "getInternalSubName", String.class, int.class,
-                        InternalQueueCategory.class, int.class
-                );
+        Method method = VaradhiSubscriptionFactory.class.getDeclaredMethod(
+            "getInternalSubName",
+            String.class,
+            int.class,
+            InternalQueueCategory.class,
+            int.class
+        );
         method.setAccessible(true);
 
-        String result =
-                (String) method.invoke(
-                        varadhiSubscriptionFactory, SUBSCRIPTION_NAME, 0,
-                        InternalQueueCategory.MAIN, 0
-                );
+        String result = (String)method.invoke(
+            varadhiSubscriptionFactory,
+            SUBSCRIPTION_NAME,
+            0,
+            InternalQueueCategory.MAIN,
+            0
+        );
 
         assertEquals("is-testSubscription.shard-0.MAIN-0", result);
     }
 
     @Test
     void getInternalTopicName_ValidInput_ReturnsCorrectName() throws Exception {
-        Method method =
-                VaradhiSubscriptionFactory.class.getDeclaredMethod(
-                        "getInternalTopicName", String.class, int.class,
-                        InternalQueueCategory.class, int.class
-                );
+        Method method = VaradhiSubscriptionFactory.class.getDeclaredMethod(
+            "getInternalTopicName",
+            String.class,
+            int.class,
+            InternalQueueCategory.class,
+            int.class
+        );
         method.setAccessible(true);
 
-        String result =
-                (String) method.invoke(
-                        varadhiSubscriptionFactory, SUBSCRIPTION_NAME, 0,
-                        InternalQueueCategory.MAIN, 0
-                );
+        String result = (String)method.invoke(
+            varadhiSubscriptionFactory,
+            SUBSCRIPTION_NAME,
+            0,
+            InternalQueueCategory.MAIN,
+            0
+        );
 
         assertEquals("it-testSubscription.shard-0.MAIN-0", result);
     }

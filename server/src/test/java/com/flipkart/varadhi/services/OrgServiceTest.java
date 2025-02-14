@@ -31,8 +31,12 @@ public class OrgServiceTest {
     @BeforeEach
     public void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
-        zkCurator = spy(CuratorFrameworkFactory.newClient(
-                zkCuratorTestingServer.getConnectString(), new ExponentialBackoffRetry(1000, 1)));
+        zkCurator = spy(
+            CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+            )
+        );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
         orgService = new OrgService(varadhiMetaStore);
@@ -46,10 +50,11 @@ public class OrgServiceTest {
         Org orgGet = orgService.getOrg(org.getName());
         Assertions.assertEquals(org, orgCreated);
         Assertions.assertEquals(org, orgGet);
-        DuplicateResourceException e =
-                Assertions.assertThrows(DuplicateResourceException.class, () -> orgService.createOrg(org));
-        Assertions.assertEquals(
-                String.format("Org(%s) already exists.", org.getName()), e.getMessage());
+        DuplicateResourceException e = Assertions.assertThrows(
+            DuplicateResourceException.class,
+            () -> orgService.createOrg(org)
+        );
+        Assertions.assertEquals(String.format("Org(%s) already exists.", org.getName()), e.getMessage());
     }
 
     @Test
@@ -58,10 +63,11 @@ public class OrgServiceTest {
         CreateBuilder builder = spy(zkCurator.create());
         doReturn(builder).when(zkCurator).create();
         doThrow(new KeeperException.NodeExistsException()).when(builder).forPath(any(), any());
-        DuplicateResourceException e =
-                Assertions.assertThrows(DuplicateResourceException.class, () -> orgService.createOrg(org));
-        Assertions.assertEquals(
-                String.format("Org(%s) already exists.", org.getName()), e.getMessage());
+        DuplicateResourceException e = Assertions.assertThrows(
+            DuplicateResourceException.class,
+            () -> orgService.createOrg(org)
+        );
+        Assertions.assertEquals(String.format("Org(%s) already exists.", org.getName()), e.getMessage());
     }
 
     @Test
@@ -70,8 +76,7 @@ public class OrgServiceTest {
         CreateBuilder builder = spy(zkCurator.create());
         doReturn(builder).when(zkCurator).create();
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any(), any());
-        MetaStoreException e =
-                Assertions.assertThrows(MetaStoreException.class, () -> orgService.createOrg(org));
+        MetaStoreException e = Assertions.assertThrows(MetaStoreException.class, () -> orgService.createOrg(org));
     }
 
     @Test
@@ -79,8 +84,10 @@ public class OrgServiceTest {
         Org org = Org.of("name1");
         orgService.createOrg(org);
         orgService.deleteOrg(org.getName());
-        ResourceNotFoundException e =
-                Assertions.assertThrows(ResourceNotFoundException.class, () -> orgService.getOrg(org.getName()));
+        ResourceNotFoundException e = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> orgService.getOrg(org.getName())
+        );
         Assertions.assertEquals(String.format("Org(%s) not found.", org.getName()), e.getMessage());
     }
 
@@ -94,11 +101,14 @@ public class OrgServiceTest {
         orgService.createOrg(org2);
         teamService.createTeam(team1);
         teamService.createTeam(team2);
-        InvalidOperationForResourceException e =
-                Assertions.assertThrows(
-                        InvalidOperationForResourceException.class, () -> orgService.deleteOrg(org1.getName()));
+        InvalidOperationForResourceException e = Assertions.assertThrows(
+            InvalidOperationForResourceException.class,
+            () -> orgService.deleteOrg(org1.getName())
+        );
         Assertions.assertEquals(
-                String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName()), e.getMessage());
+            String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName()),
+            e.getMessage()
+        );
         teamService.deleteTeam(team1.getName(), team1.getOrg());
         teamService.deleteTeam(team2.getName(), team2.getOrg());
         orgService.deleteOrg(org1.getName());

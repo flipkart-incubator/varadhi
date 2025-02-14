@@ -49,7 +49,8 @@ public class TeamService {
         boolean teamExists = metaStore.checkTeamExists(teamName, orgName);
         if (!teamExists) {
             throw new ResourceNotFoundException(
-                    String.format("Team(%s) does not exists in the Org(%s).", teamName, orgName));
+                String.format("Team(%s) does not exists in the Org(%s).", teamName, orgName)
+            );
         }
         return metaStore.getProjects(teamName, orgName);
     }
@@ -63,7 +64,8 @@ public class TeamService {
         List<Project> projectsInTeam = metaStore.getProjects(teamName, orgName);
         if (projectsInTeam.size() > 0) {
             throw new InvalidOperationForResourceException(
-                    String.format("Can not delete Team(%s) as it has associated Project(s).", teamName));
+                String.format("Can not delete Team(%s) as it has associated Project(s).", teamName)
+            );
         }
         metaStore.deleteTeam(teamName, orgName);
     }

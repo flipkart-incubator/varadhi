@@ -14,15 +14,12 @@ public interface AuthorizationProvider {
     class NoAuthorizationProvider implements AuthorizationProvider {
 
         @Override
-        public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions
-        ) {
+        public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture(true);
         }
 
         @Override
-        public Future<Boolean> isAuthorized(
-                UserContext userContext, ResourceAction action, String resource
-        ) {
+        public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
             return Future.succeededFuture(false);
         }
     }

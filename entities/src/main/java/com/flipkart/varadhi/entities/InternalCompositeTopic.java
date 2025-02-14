@@ -24,7 +24,7 @@ public class InternalCompositeTopic {
     private TopicState topicState;
 
     public static InternalCompositeTopic of(StorageTopic storageTopic) {
-        return new InternalCompositeTopic(new StorageTopic[]{storageTopic}, 0, TopicState.Producing);
+        return new InternalCompositeTopic(new StorageTopic[] {storageTopic}, 0, TopicState.Producing);
     }
 
     @JsonIgnore

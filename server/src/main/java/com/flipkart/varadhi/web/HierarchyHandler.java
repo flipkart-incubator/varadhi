@@ -22,8 +22,8 @@ public class HierarchyHandler implements RouteConfigurator {
     public void configure(Route route, RouteDefinition routeDef) {
         route.handler(ctx -> {
             boolean hasParsedBody = routeDef.getBehaviours().contains(RouteBehaviour.parseBody);
-            Map<ResourceType, ResourceHierarchy>
-                    hierarchies = routeDef.getHierarchyFunction().getHierarchies(ctx, hasParsedBody);
+            Map<ResourceType, ResourceHierarchy> hierarchies = routeDef.getHierarchyFunction()
+                                                                       .getHierarchies(ctx, hasParsedBody);
             ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchies);
             ctx.next();
         });

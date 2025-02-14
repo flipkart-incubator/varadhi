@@ -52,9 +52,10 @@ public final class VaradhiSubscriptionFactory {
      * @param deployedRegion      The region where the subscription is deployed.
      */
     public VaradhiSubscriptionFactory(
-            StorageTopicService<StorageTopic> topicService,
-            StorageSubscriptionFactory<StorageSubscription<StorageTopic>, StorageTopic> subscriptionFactory,
-            StorageTopicFactory<StorageTopic> topicFactory, String deployedRegion
+        StorageTopicService<StorageTopic> topicService,
+        StorageSubscriptionFactory<StorageSubscription<StorageTopic>, StorageTopic> subscriptionFactory,
+        StorageTopicFactory<StorageTopic> topicFactory,
+        String deployedRegion
     ) {
         this.topicService = topicService;
         this.subscriptionFactory = subscriptionFactory;
@@ -73,23 +74,25 @@ public final class VaradhiSubscriptionFactory {
      */
     public VaradhiSubscription get(SubscriptionResource subscriptionResource, Project subProject, VaradhiTopic topic) {
         String subName = subscriptionResource.getSubscriptionInternalName();
-        SubscriptionShards shards =
-                getSubscriptionShards(
-                        subName, topic, subProject, subscriptionResource.getConsumptionPolicy(),
-                        subscriptionResource.getRetryPolicy()
-                );
+        SubscriptionShards shards = getSubscriptionShards(
+            subName,
+            topic,
+            subProject,
+            subscriptionResource.getConsumptionPolicy(),
+            subscriptionResource.getRetryPolicy()
+        );
         return VaradhiSubscription.of(
-                subName,
-                subscriptionResource.getProject(),
-                topic.getName(),
-                subscriptionResource.getDescription(),
-                subscriptionResource.isGrouped(),
-                subscriptionResource.getEndpoint(),
-                subscriptionResource.getRetryPolicy(),
-                subscriptionResource.getConsumptionPolicy(),
-                shards,
-                subscriptionResource.getProperties(),
-                subscriptionResource.getActorCode()
+            subName,
+            subscriptionResource.getProject(),
+            topic.getName(),
+            subscriptionResource.getDescription(),
+            subscriptionResource.isGrouped(),
+            subscriptionResource.getEndpoint(),
+            subscriptionResource.getRetryPolicy(),
+            subscriptionResource.getConsumptionPolicy(),
+            shards,
+            subscriptionResource.getProperties(),
+            subscriptionResource.getActorCode()
         );
     }
 
@@ -105,24 +108,33 @@ public final class VaradhiSubscriptionFactory {
      * @return A SubscriptionShards instance.
      */
     private SubscriptionShards getSubscriptionShards(
-            String subName, VaradhiTopic topic, Project subProject, ConsumptionPolicy consumptionPolicy,
-            RetryPolicy retryPolicy
+        String subName,
+        VaradhiTopic topic,
+        Project subProject,
+        ConsumptionPolicy consumptionPolicy,
+        RetryPolicy retryPolicy
     ) {
         StorageTopic subscribedStorageTopic = topic.getProduceTopicForRegion(deployedRegion).getTopicToProduce();
-        List<TopicPartitions<StorageTopic>> topicPartitions =
-                topicService.shardTopic(subscribedStorageTopic, InternalQueueCategory.MAIN);
+        List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(
+            subscribedStorageTopic,
+            InternalQueueCategory.MAIN
+        );
         int numShards = topicPartitions.size();
         log.info("Planning {} shards for subscription {}.", topicPartitions.size(), subName);
 
         TopicCapacityPolicy shardCapacity = getShardCapacity(topic.getCapacity(), numShards);
         if (numShards == 1) {
             return getSingleShard(
-                    subName, 0, topicPartitions.getFirst(), shardCapacity, subProject,
-                    consumptionPolicy, retryPolicy
+                subName,
+                0,
+                topicPartitions.getFirst(),
+                shardCapacity,
+                subProject,
+                consumptionPolicy,
+                retryPolicy
             );
         } else {
-            return getMultiShard(
-                    subName, topicPartitions, shardCapacity, subProject, consumptionPolicy, retryPolicy);
+            return getMultiShard(subName, topicPartitions, shardCapacity, subProject, consumptionPolicy, retryPolicy);
         }
     }
 
@@ -140,17 +152,26 @@ public final class VaradhiSubscriptionFactory {
      * @return A SubscriptionUnitShard instance.
      */
     private SubscriptionUnitShard getSingleShard(
-            String subName, int shardId, TopicPartitions<StorageTopic> shardTopicPartition,
-            TopicCapacityPolicy capacity, Project subProject, ConsumptionPolicy consumptionPolicy,
-            RetryPolicy retryPolicy
+        String subName,
+        int shardId,
+        TopicPartitions<StorageTopic> shardTopicPartition,
+        TopicCapacityPolicy capacity,
+        Project subProject,
+        ConsumptionPolicy consumptionPolicy,
+        RetryPolicy retryPolicy
     ) {
         // TODO: Handle region-specific logic.
         // TODO: Ensure that storage topic and subscription names are indexed within composite topics/subscriptions.
         InternalCompositeSubscription shardMainSub = getShardMainSub(subName, shardId, shardTopicPartition, subProject);
-        RetrySubscription retrySub =
-                getRetrySub(subName, shardId, subProject, capacity, consumptionPolicy, retryPolicy);
-        InternalCompositeSubscription dltSub =
-                getDltSub(subName, shardId, subProject, capacity, consumptionPolicy);
+        RetrySubscription retrySub = getRetrySub(
+            subName,
+            shardId,
+            subProject,
+            capacity,
+            consumptionPolicy,
+            retryPolicy
+        );
+        InternalCompositeSubscription dltSub = getDltSub(subName, shardId, subProject, capacity, consumptionPolicy);
         return new SubscriptionUnitShard(shardId, capacity, shardMainSub, retrySub, dltSub);
     }
 
@@ -167,17 +188,26 @@ public final class VaradhiSubscriptionFactory {
      * @return A SubscriptionMultiShard instance.
      */
     private SubscriptionMultiShard getMultiShard(
-            String subName, List<TopicPartitions<StorageTopic>> partitions,
-            TopicCapacityPolicy capacity, Project subProject, ConsumptionPolicy consumptionPolicy,
-            RetryPolicy retryPolicy
+        String subName,
+        List<TopicPartitions<StorageTopic>> partitions,
+        TopicCapacityPolicy capacity,
+        Project subProject,
+        ConsumptionPolicy consumptionPolicy,
+        RetryPolicy retryPolicy
     ) {
         Map<Integer, SubscriptionUnitShard> subShards = new HashMap<>();
         for (int shardId = 0; shardId < partitions.size(); shardId++) {
             subShards.put(
-                    shardId, getSingleShard(
-                            subName, shardId, partitions.get(shardId), capacity, subProject,
-                            consumptionPolicy, retryPolicy
-                    )
+                shardId,
+                getSingleShard(
+                    subName,
+                    shardId,
+                    partitions.get(shardId),
+                    capacity,
+                    subProject,
+                    consumptionPolicy,
+                    retryPolicy
+                )
             );
         }
         return new SubscriptionMultiShard(subShards);
@@ -192,7 +222,7 @@ public final class VaradhiSubscriptionFactory {
      * @return A TopicCapacityPolicy instance.
      */
     private TopicCapacityPolicy getShardCapacity(TopicCapacityPolicy topicCapacity, int shardCount) {
-        return topicCapacity.from((double) 1 / shardCount, topicCapacity.getReadFanOut());
+        return topicCapacity.from((double)1 / shardCount, topicCapacity.getReadFanOut());
     }
 
     /**
@@ -206,7 +236,10 @@ public final class VaradhiSubscriptionFactory {
      * @return An InternalCompositeSubscription instance.
      */
     private InternalCompositeSubscription getShardMainSub(
-            String subscriptionName, int shardId, TopicPartitions<StorageTopic> shardTopicPartition, Project project
+        String subscriptionName,
+        int shardId,
+        TopicPartitions<StorageTopic> shardTopicPartition,
+        Project project
     ) {
         String shardSubName = getShardMainSubName(subscriptionName, shardId);
         StorageSubscription<StorageTopic> ss = subscriptionFactory.get(shardSubName, shardTopicPartition, project);
@@ -223,36 +256,43 @@ public final class VaradhiSubscriptionFactory {
      */
     private String getShardMainSubName(String subscriptionName, int shardId) {
         return String.join(
-                NAME_SEPARATOR, subscriptionName, SHARD_QUALIFIER, String.valueOf(shardId),
-                InternalQueueCategory.MAIN.toString()
+            NAME_SEPARATOR,
+            subscriptionName,
+            SHARD_QUALIFIER,
+            String.valueOf(shardId),
+            InternalQueueCategory.MAIN.toString()
         );
     }
 
     /**
      * Gets the retry subscription for a shard.
      *
-     * @param subscriptionName The name of the subscription.
-     * @param shardId The ID of the shard.
-     * @param project The project associated with the subscription.
-     * @param capacity The capacity policy for the shard.
+     * @param subscriptionName  The name of the subscription.
+     * @param shardId           The ID of the shard.
+     * @param project           The project associated with the subscription.
+     * @param capacity          The capacity policy for the shard.
      * @param consumptionPolicy The consumption policy for the subscription.
-     * @param retryPolicy The retry policy for the subscription.
+     * @param retryPolicy       The retry policy for the subscription.
      * @return A RetrySubscription instance.
      */
     private RetrySubscription getRetrySub(
-            String subscriptionName, int shardId, Project project, TopicCapacityPolicy capacity,
-            ConsumptionPolicy consumptionPolicy, RetryPolicy retryPolicy
+        String subscriptionName,
+        int shardId,
+        Project project,
+        TopicCapacityPolicy capacity,
+        ConsumptionPolicy consumptionPolicy,
+        RetryPolicy retryPolicy
     ) {
         InternalCompositeSubscription[] retrySubs = new InternalCompositeSubscription[retryPolicy.getRetryAttempts()];
         for (int retryIndex = 0; retryIndex < retryPolicy.getRetryAttempts(); retryIndex++) {
             retrySubs[retryIndex] = getInternalSub(
-                    subscriptionName,
-                    shardId,
-                    new InternalQueueType.Retry(retryIndex + 1),
-                    retryIndex,
-                    project,
-                    capacity,
-                    consumptionPolicy
+                subscriptionName,
+                shardId,
+                new InternalQueueType.Retry(retryIndex + 1),
+                retryIndex,
+                project,
+                capacity,
+                consumptionPolicy
             );
         }
         return new RetrySubscription(retrySubs);
@@ -261,49 +301,59 @@ public final class VaradhiSubscriptionFactory {
     /**
      * Gets the dead letter subscription for a shard.
      *
-     * @param subscriptionName The name of the subscription.
-     * @param shardId The ID of the shard.
-     * @param project The project associated with the subscription.
-     * @param capacity The capacity policy for the shard.
+     * @param subscriptionName  The name of the subscription.
+     * @param shardId           The ID of the shard.
+     * @param project           The project associated with the subscription.
+     * @param capacity          The capacity policy for the shard.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @return An InternalCompositeSubscription instance.
      */
     private InternalCompositeSubscription getDltSub(
-            String subscriptionName, int shardId, Project project, TopicCapacityPolicy capacity,
-            ConsumptionPolicy consumptionPolicy
+        String subscriptionName,
+        int shardId,
+        Project project,
+        TopicCapacityPolicy capacity,
+        ConsumptionPolicy consumptionPolicy
     ) {
         return getInternalSub(
-                subscriptionName,
-                shardId,
-                new InternalQueueType.DeadLetter(),
-                0,
-                project,
-                capacity,
-                consumptionPolicy
+            subscriptionName,
+            shardId,
+            new InternalQueueType.DeadLetter(),
+            0,
+            project,
+            capacity,
+            consumptionPolicy
         );
     }
 
     /**
      * Gets an internal subscription for a shard.
      *
-     * @param subscriptionName The name of the subscription.
-     * @param shardId The ID of the shard.
-     * @param queueType The type of the internal queue.
-     * @param queueIndex The index of the internal queue.
-     * @param project The project associated with the subscription.
-     * @param capacity The capacity policy for the shard.
+     * @param subscriptionName  The name of the subscription.
+     * @param shardId           The ID of the shard.
+     * @param queueType         The type of the internal queue.
+     * @param queueIndex        The index of the internal queue.
+     * @param project           The project associated with the subscription.
+     * @param capacity          The capacity policy for the shard.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @return An InternalCompositeSubscription instance.
      */
     private InternalCompositeSubscription getInternalSub(
-            String subscriptionName, int shardId, InternalQueueType queueType, int queueIndex, Project project,
-            TopicCapacityPolicy capacity, ConsumptionPolicy consumptionPolicy
+        String subscriptionName,
+        int shardId,
+        InternalQueueType queueType,
+        int queueIndex,
+        Project project,
+        TopicCapacityPolicy capacity,
+        ConsumptionPolicy consumptionPolicy
     ) {
         // TODO: Address scenarios where Retry and DLT topics might belong to different projects.
         String itSubName = getInternalSubName(subscriptionName, shardId, queueType.getCategory(), queueIndex);
         String itTopicName = getInternalTopicName(subscriptionName, shardId, queueType.getCategory(), queueIndex);
-        TopicCapacityPolicy errCapacity =
-                capacity.from(consumptionPolicy.getMaxErrorThreshold(), READ_FAN_OUT_FOR_INTERNAL_QUEUE);
+        TopicCapacityPolicy errCapacity = capacity.from(
+            consumptionPolicy.getMaxErrorThreshold(),
+            READ_FAN_OUT_FOR_INTERNAL_QUEUE
+        );
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
         List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(st, queueType.getCategory());
         if (topicPartitions.size() != 1) {
@@ -317,20 +367,23 @@ public final class VaradhiSubscriptionFactory {
      * Gets the name of an internal subscription for a shard.
      *
      * @param subscriptionName The name of the subscription.
-     * @param shardId The ID of the shard.
-     * @param queueCategory The category of the internal queue.
-     * @param index The index of the internal queue.
+     * @param shardId          The ID of the shard.
+     * @param queueCategory    The category of the internal queue.
+     * @param index            The index of the internal queue.
      * @return The name of the internal subscription for the shard.
      */
     private String getInternalSubName(
-            String subscriptionName, int shardId, InternalQueueCategory queueCategory, int index
+        String subscriptionName,
+        int shardId,
+        InternalQueueCategory queueCategory,
+        int index
     ) {
         // Format: is-<subscriptionName>.shard-<shardId>.<queueType>-<queueIndex>
         return String.join(
-                NAME_SEPARATOR,
-                String.join(PART_SEPARATOR, SUB_QUALIFIER, subscriptionName),
-                String.join(PART_SEPARATOR, SHARD_QUALIFIER, String.valueOf(shardId)),
-                String.join(PART_SEPARATOR, queueCategory.toString(), String.valueOf(index))
+            NAME_SEPARATOR,
+            String.join(PART_SEPARATOR, SUB_QUALIFIER, subscriptionName),
+            String.join(PART_SEPARATOR, SHARD_QUALIFIER, String.valueOf(shardId)),
+            String.join(PART_SEPARATOR, queueCategory.toString(), String.valueOf(index))
         );
     }
 
@@ -338,20 +391,23 @@ public final class VaradhiSubscriptionFactory {
      * Gets the name of an internal topic for a shard.
      *
      * @param subscriptionName The name of the subscription.
-     * @param shardId The ID of the shard.
-     * @param queueCategory The category of the internal queue.
-     * @param index The index of the internal queue.
+     * @param shardId          The ID of the shard.
+     * @param queueCategory    The category of the internal queue.
+     * @param index            The index of the internal queue.
      * @return The name of the internal topic for the shard.
      */
     private String getInternalTopicName(
-            String subscriptionName, int shardId, InternalQueueCategory queueCategory, int index
+        String subscriptionName,
+        int shardId,
+        InternalQueueCategory queueCategory,
+        int index
     ) {
         // Format: it-<subscriptionName>.shard-<shardId>.<queueType>-<queueIndex>
         return String.join(
-                NAME_SEPARATOR,
-                String.join(PART_SEPARATOR, TOPIC_QUALIFIER, subscriptionName),
-                String.join(PART_SEPARATOR, SHARD_QUALIFIER, String.valueOf(shardId)),
-                String.join(PART_SEPARATOR, queueCategory.toString(), String.valueOf(index))
+            NAME_SEPARATOR,
+            String.join(PART_SEPARATOR, TOPIC_QUALIFIER, subscriptionName),
+            String.join(PART_SEPARATOR, SHARD_QUALIFIER, String.valueOf(shardId)),
+            String.join(PART_SEPARATOR, queueCategory.toString(), String.valueOf(index))
         );
     }
 }

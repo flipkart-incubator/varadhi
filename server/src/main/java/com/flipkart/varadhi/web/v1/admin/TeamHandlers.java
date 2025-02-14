@@ -23,7 +23,7 @@ import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class TeamHandlers implements RouteProvider {
     private final TeamService teamService;
 
@@ -34,26 +34,22 @@ public class TeamHandlers implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/orgs/:org/teams",
-                List.of(
-                        RouteDefinition.get("ListTeams", "")
-                                .authorize(TEAM_LIST)
-                                .build(this::getHierarchies, this::listTeams),
-                        RouteDefinition.get("ListProjects", "/:team/projects")
-                                .authorize(PROJECT_LIST)
-                                .build(this::getHierarchies, this::listProjects),
-                        RouteDefinition.get("GetTeam", "/:team")
-                                .authorize(TEAM_GET)
-                                .build(this::getHierarchies, this::get),
-                        RouteDefinition.post("CreateTeam", "")
-                                .hasBody()
-                                .bodyParser(this::setTeam)
-                                .authorize(TEAM_CREATE)
-                                .build(this::getHierarchies, this::create),
-                        RouteDefinition.delete("DeleteTeam", "/:team")
-                                .authorize(TEAM_DELETE)
-                                .build(this::getHierarchies, this::delete)
-                )
+            "/v1/orgs/:org/teams",
+            List.of(
+                RouteDefinition.get("ListTeams", "").authorize(TEAM_LIST).build(this::getHierarchies, this::listTeams),
+                RouteDefinition.get("ListProjects", "/:team/projects")
+                               .authorize(PROJECT_LIST)
+                               .build(this::getHierarchies, this::listProjects),
+                RouteDefinition.get("GetTeam", "/:team").authorize(TEAM_GET).build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateTeam", "")
+                               .hasBody()
+                               .bodyParser(this::setTeam)
+                               .authorize(TEAM_CREATE)
+                               .build(this::getHierarchies, this::create),
+                RouteDefinition.delete("DeleteTeam", "/:team")
+                               .authorize(TEAM_DELETE)
+                               .build(this::getHierarchies, this::delete)
+            )
         ).get();
     }
 

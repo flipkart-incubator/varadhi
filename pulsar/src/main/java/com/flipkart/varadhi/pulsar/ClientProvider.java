@@ -34,14 +34,16 @@ public class ClientProvider {
     PulsarAdmin buildPulsarAdminClient(PulsarAdminOptions options) {
         try {
             return PulsarAdmin.builder()
-                    .serviceHttpUrl(options.getServiceHttpUrl())
-                    .connectionTimeout(options.getConnectionTimeoutMs(), TimeUnitMillis)
-                    .requestTimeout(options.getRequestTimeoutMs(), TimeUnitMillis)
-                    .readTimeout(options.getReadTimeoutMs(), TimeUnitMillis)
-                    .build();
+                              .serviceHttpUrl(options.getServiceHttpUrl())
+                              .connectionTimeout(options.getConnectionTimeoutMs(), TimeUnitMillis)
+                              .requestTimeout(options.getRequestTimeoutMs(), TimeUnitMillis)
+                              .readTimeout(options.getReadTimeoutMs(), TimeUnitMillis)
+                              .build();
         } catch (PulsarClientException e) {
             throw new MessagingException(
-                    String.format("Failed to create PulsarAdminClient. Error: %s.", e.getMessage()), e);
+                String.format("Failed to create PulsarAdminClient. Error: %s.", e.getMessage()),
+                e
+            );
         }
     }
 

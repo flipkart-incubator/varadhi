@@ -89,8 +89,10 @@ public class ProjectHandlersTest extends WebTestBase {
         ErrorResponse response = sendRequestWithEntity(request, p1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
-        String duplicateOrgError =
-                String.format("Project(%s) already exists.  Projects are globally unique.", p1.getName());
+        String duplicateOrgError = String.format(
+            "Project(%s) already exists.  Projects are globally unique.",
+            p1.getName()
+        );
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(projectService).createProject(p1);
         response = sendRequestWithEntity(request, p1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
@@ -132,11 +134,10 @@ public class ProjectHandlersTest extends WebTestBase {
         ErrorResponse response = sendRequestWithEntity(request, p1, 400, argumentError, ErrorResponse.class);
         Assertions.assertEquals(argumentError, response.reason());
 
-        String invalidOpError =
-                String.format(
-                        "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
-                        p1.getName()
-                );
+        String invalidOpError = String.format(
+            "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
+            p1.getName()
+        );
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService).updateProject(p1);
         response = sendRequestWithEntity(request, p1, 409, invalidOpError, ErrorResponse.class);
         Assertions.assertEquals(invalidOpError, response.reason());
@@ -152,14 +153,12 @@ public class ProjectHandlersTest extends WebTestBase {
         verify(projectService, times(1)).deleteProject(p1.getName());
 
         String notFoundError = String.format("Project(%s) not found.", p1.getName());
-        doThrow(new ResourceNotFoundException(notFoundError)).when(projectService)
-                .deleteProject(p1.getName());
+        doThrow(new ResourceNotFoundException(notFoundError)).when(projectService).deleteProject(p1.getName());
         sendRequestWithoutPayload(request, 404, notFoundError);
 
-        String invalidOpError =
-                String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
+        String invalidOpError = String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService)
-                .deleteProject(p1.getName());
+                                                                         .deleteProject(p1.getName());
         sendRequestWithoutPayload(request, 409, invalidOpError);
     }
 }

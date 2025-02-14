@@ -15,12 +15,11 @@ import lombok.Setter;
  * Represents a topic resource in the Varadhi system.
  */
 @Getter
-@EqualsAndHashCode(callSuper = true)
-@ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
+@EqualsAndHashCode (callSuper = true)
+@ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
 public class TopicResource extends VersionedEntity implements Validatable {
 
-    @NotBlank
-    private final String project;
+    @NotBlank private final String project;
 
     private final boolean grouped;
 
@@ -41,12 +40,12 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @param actorCode the actor code indicating reason behind the action performed on the topic
      */
     private TopicResource(
-            String name,
-            int version,
-            String project,
-            boolean grouped,
-            TopicCapacityPolicy capacity,
-            LifecycleStatus.ActorCode actorCode
+        String name,
+        int version,
+        String project,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActorCode actorCode
     ) {
         super(name, version);
         this.project = project;
@@ -66,7 +65,11 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new grouped TopicResource instance
      */
     public static TopicResource grouped(
-            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActorCode actorCode) {
+        String name,
+        String project,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActorCode actorCode
+    ) {
         return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actorCode);
     }
 
@@ -81,7 +84,11 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new ungrouped TopicResource instance
      */
     public static TopicResource unGrouped(
-            String name, String project, TopicCapacityPolicy capacity, LifecycleStatus.ActorCode actorCode) {
+        String name,
+        String project,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActorCode actorCode
+    ) {
         return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actorCode);
     }
 
@@ -96,12 +103,12 @@ public class TopicResource extends VersionedEntity implements Validatable {
         String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
 
         return new TopicResource(
-                topicResourceInfo[1],
-                varadhiTopic.getVersion(),
-                topicResourceInfo[0],
-                varadhiTopic.isGrouped(),
-                varadhiTopic.getCapacity(),
-                varadhiTopic.getStatus().getActorCode()
+            topicResourceInfo[1],
+            varadhiTopic.getVersion(),
+            topicResourceInfo[0],
+            varadhiTopic.isGrouped(),
+            varadhiTopic.getCapacity(),
+            varadhiTopic.getStatus().getActorCode()
         );
     }
 

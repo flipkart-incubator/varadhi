@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
  * This class ensures consistency across different entity types such as topics and subscriptions.
  */
 @Getter
-@AllArgsConstructor(onConstructor = @__(@JsonCreator))
+@AllArgsConstructor (onConstructor = @__ (@JsonCreator))
 public class LifecycleStatus {
 
     /**
@@ -83,12 +83,9 @@ public class LifecycleStatus {
     @Getter
     @RequiredArgsConstructor
     public enum State {
-        CREATING("Creation in progress."),
-        CREATED("Successfully created."),
-        CREATE_FAILED("Creation failed."),
+        CREATING("Creation in progress."), CREATED("Successfully created."), CREATE_FAILED("Creation failed."),
 
-        DELETING("Deletion in progress."),
-        DELETE_FAILED("Deletion failed."),
+        DELETING("Deletion in progress."), DELETE_FAILED("Deletion failed."),
 
         INACTIVE("Currently inactive.");
 
@@ -116,18 +113,17 @@ public class LifecycleStatus {
         }
     }
 
+
     /**
      * Enum representing the actor codes for entity actions.
      */
     public enum ActorCode {
-//        USER_INITIATED_ACTION,  // Action initiated directly by the user.
-//        USER_REQUESTED_ADMIN_ACTION,  // Action requested by the user to be performed by an admin.
-//        ADMIN_FORCED_ACTION, // Action intentionally performed by an admin.
-//        SYSTEM_ACTION; // Action performed by the system due to policy.
+        //        USER_INITIATED_ACTION,  // Action initiated directly by the user.
+        //        USER_REQUESTED_ADMIN_ACTION,  // Action requested by the user to be performed by an admin.
+        //        ADMIN_FORCED_ACTION, // Action intentionally performed by an admin.
+        //        SYSTEM_ACTION; // Action performed by the system due to policy.
 
-        USER_ACTION,
-        ADMIN_ACTION,
-        SYSTEM_ACTION;
+        USER_ACTION, ADMIN_ACTION, SYSTEM_ACTION;
 
         /**
          * Checks if the action is allowed to be performed by the user.

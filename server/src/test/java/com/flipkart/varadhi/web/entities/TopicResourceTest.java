@@ -17,62 +17,71 @@ class TopicResourceTest {
     @Test
     void grouped_CreatesGroupedTopicResource() {
         TopicResource topicResource = TopicResource.grouped(
-                "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         assertAll(
-                () -> assertEquals("topicName", topicResource.getName()),
-                () -> assertEquals("projectName", topicResource.getProject()),
-                () -> assertTrue(topicResource.isGrouped()),
-                () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
+            () -> assertEquals("topicName", topicResource.getName()),
+            () -> assertEquals("projectName", topicResource.getProject()),
+            () -> assertTrue(topicResource.isGrouped()),
+            () -> assertNotNull(topicResource.getCapacity()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
         );
     }
 
     @Test
     void unGrouped_CreatesUngroupedTopicResource() {
         TopicResource topicResource = TopicResource.unGrouped(
-                "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActorCode.USER_ACTION
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActorCode.USER_ACTION
         );
         assertAll(
-                () -> assertEquals("topicName", topicResource.getName()),
-                () -> assertEquals("projectName", topicResource.getProject()),
-                () -> assertFalse(topicResource.isGrouped()),
-                () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActorCode.USER_ACTION, topicResource.getActorCode())
+            () -> assertEquals("topicName", topicResource.getName()),
+            () -> assertEquals("projectName", topicResource.getProject()),
+            () -> assertFalse(topicResource.isGrouped()),
+            () -> assertNotNull(topicResource.getCapacity()),
+            () -> assertEquals(LifecycleStatus.ActorCode.USER_ACTION, topicResource.getActorCode())
         );
     }
 
     @Test
     void from_CreatesTopicResourceFromVaradhiTopic() {
         VaradhiTopic varadhiTopic = VaradhiTopic.of(
-                "projectName", "topicName", true, new TopicCapacityPolicy(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "projectName",
+            "topicName",
+            true,
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertAll(
-                () -> assertEquals("topicName", topicResource.getName()),
-                () -> assertEquals("projectName", topicResource.getProject()),
-                () -> assertTrue(topicResource.isGrouped()),
-                () -> assertNotNull(topicResource.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
+            () -> assertEquals("topicName", topicResource.getName()),
+            () -> assertEquals("projectName", topicResource.getProject()),
+            () -> assertTrue(topicResource.isGrouped()),
+            () -> assertNotNull(topicResource.getCapacity()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, topicResource.getActorCode())
         );
     }
 
     @Test
     void toVaradhiTopic_ConvertsToVaradhiTopic() {
         TopicResource topicResource = TopicResource.grouped(
-                "topicName", "projectName", new TopicCapacityPolicy(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
         assertAll(
-                () -> assertEquals("topicName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[1]),
-                () -> assertEquals("projectName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[0]),
-                () -> assertTrue(varadhiTopic.isGrouped()),
-                () -> assertNotNull(varadhiTopic.getCapacity()),
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode())
+            () -> assertEquals("topicName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[1]),
+            () -> assertEquals("projectName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[0]),
+            () -> assertTrue(varadhiTopic.isGrouped()),
+            () -> assertNotNull(varadhiTopic.getCapacity()),
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActorCode())
         );
     }
 }

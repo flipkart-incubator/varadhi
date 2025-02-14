@@ -32,8 +32,8 @@ public class OperationMgr {
         this.retryPolicy = retryPolicy;
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
-                maxConcurrentOps,
-                new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
+            maxConcurrentOps,
+            new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
         );
         this.delayedScheduler = Executors.newSingleThreadScheduledExecutor();
     }
@@ -41,12 +41,14 @@ public class OperationMgr {
     /**
      * Operation Execution
      * - Task may embed a Subscription|ConsumerNode|Shard operation to be executed
-     * - Task are keyed by orderingKey -- which is unique for the given entity (derived from its unique id). An entity can
+     * - Task are keyed by orderingKey -- which is unique for the given entity (derived from its unique id). An entity
+     * can
      * have multiple tasks waiting be executed. However only one will be executing at any given instance.
      * - Tasks for different entities can be executed in parallel. Parallelism is controlled via number of threads
      * in the executor service.
      * - Task at the head of the Task queue will be in progress and rest will be waiting.
-     * enqueueOpTask -- adds the operation to the queue. If it is only task, it will be immediately scheduled for execution.
+     * enqueueOpTask -- adds the operation to the queue. If it is only task, it will be immediately scheduled for
+     * execution.
      * processOpTaskForOpUpdate -- Removes the tasks from the queue, if finished. If current task is finished, schedule
      * next task for execution if available.
      * TODO:: Implementation can be enhanced for below
@@ -68,8 +70,10 @@ public class OperationMgr {
                 // it means already some operations are scheduled, add this to queue.
                 int waitingCount = scheduledTasks.size();
                 log.info(
-                        "{} waiting operations for key {}, Task({}) queued.", waitingCount,
-                        pendingTask.getOrderingKey(), pendingTask
+                    "{} waiting operations for key {}, Task({}) queued.",
+                    waitingCount,
+                    pendingTask.getOrderingKey(),
+                    pendingTask
                 );
 
                 // When retry and new operation are competing together -- retry scheduled execution and new operation
@@ -78,8 +82,9 @@ public class OperationMgr {
                 if (pendingTask.operation.getRetryAttempt() > 0) {
                     pendingTask.markPreempted("Retry aborted, as more recent operation makes it invalid.");
                     log.info(
-                            "Ignoring Retry {} enqueue when a another operation {} is in execution, as retry is invalid now.",
-                            pendingTask, scheduledTasks.peekFirst()
+                        "Ignoring Retry {} enqueue when a another operation {} is in execution, as retry is invalid now.",
+                        pendingTask,
+                        scheduledTasks.peekFirst()
                     );
                     return scheduledTasks;
                 }
@@ -105,7 +110,8 @@ public class OperationMgr {
     // Sequential execution is needed, to ensure parallel updates to tasks do not override each other.
     // Synchronous execution in updateHandler is assumed.
     private void processOpTaskForOpUpdate(
-            OrderedOperation operation, Function<OrderedOperation, OrderedOperation> updateHandler
+        OrderedOperation operation,
+        Function<OrderedOperation, OrderedOperation> updateHandler
     ) {
         opTasks.compute(operation.getOrderingKey(), (orderingKey, scheduledTasks) -> {
             if (null != scheduledTasks && !scheduledTasks.isEmpty()) {
@@ -113,10 +119,7 @@ public class OperationMgr {
                 OpTask opTask = scheduledTasks.peekFirst();
                 if (!operation.getId().equals(opTask.getId())) {
                     // This shouldn't happen as only operation at the head of group is scheduled for execution.
-                    log.error(
-                            "Obtained update for waiting Operation, Updated({}), InProgress({}).", operation,
-                            opTask
-                    );
+                    log.error("Obtained update for waiting Operation, Updated({}), InProgress({}).", operation, opTask);
                     return scheduledTasks;
                 }
 
@@ -182,8 +185,9 @@ public class OperationMgr {
                 opTask.operation = updateHandler.apply(opTask.operation);
             } catch (Exception e) {
                 log.error(
-                        "Operation ({}) had an unexpected failure ({}) during update.", opTask.operation,
-                        e.getMessage()
+                    "Operation ({}) had an unexpected failure ({}) during update.",
+                    opTask.operation,
+                    e.getMessage()
                 );
                 opTask.saveFailure(e.getMessage());
             }
@@ -191,7 +195,7 @@ public class OperationMgr {
     }
 
     void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
-        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation) op), subOp);
+        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation)op), subOp);
         enqueueOpTask(opTask);
     }
 
@@ -212,14 +216,16 @@ public class OperationMgr {
     public void updateSubOp(SubscriptionOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
             // updating DB status in handler, to avoid version conflict.
-            return saveSubOpUpdateToStore((SubscriptionOperation) op);
+            return saveSubOpUpdateToStore((SubscriptionOperation)op);
         });
     }
 
     public void updateShardOp(ShardOperation operation) {
         updateShardOp(
-                operation.getOpData().getParentOpId(), operation.getId(), operation.getState(),
-                operation.getErrorMsg()
+            operation.getOpData().getParentOpId(),
+            operation.getId(),
+            operation.getState(),
+            operation.getErrorMsg()
         );
     }
 
@@ -227,8 +233,8 @@ public class OperationMgr {
         SubscriptionOperation subscriptionOp = opStore.getSubOp(subOpId);
         // updating DB status in handler for both Shard and Subscription op, to avoid version conflict.
         processOpTaskForOpUpdate(
-                subscriptionOp,
-                subOp -> updateShardAndSubOp((SubscriptionOperation) subOp, shardOpId, state, errorMsg)
+            subscriptionOp,
+            subOp -> updateShardAndSubOp((SubscriptionOperation)subOp, shardOpId, state, errorMsg)
         );
     }
 
@@ -242,7 +248,10 @@ public class OperationMgr {
     }
 
     private SubscriptionOperation updateShardAndSubOp(
-            SubscriptionOperation subOp, String shardOpId, ShardOperation.State state, String errorMsg
+        SubscriptionOperation subOp,
+        String shardOpId,
+        ShardOperation.State state,
+        String errorMsg
     ) {
         ShardOperation shardOpLatest = opStore.getShardOp(shardOpId);
         shardOpLatest.update(state, errorMsg);
@@ -278,8 +287,9 @@ public class OperationMgr {
                     //  Any subsequent operation enqueue should remove pending retries if any.
                     // For unknown case, log the error and cancel previous retry.
                     log.error(
-                            "Retry task {} already scheduled for key {}. Cancelling previous task", pendingRetry.opTask,
-                            orderingKey
+                        "Retry task {} already scheduled for key {}. Cancelling previous task",
+                        pendingRetry.opTask,
+                        orderingKey
                     );
                     pendingRetry.cancel();
                 }
@@ -296,12 +306,15 @@ public class OperationMgr {
                 opTask.markPreempted("Retry cancelled, as more recent operation makes it invalid.");
             } else {
                 log.info(
-                        "Retry task failed to cancel. Completed={} Cancelled={} completed for operation {}",
-                        scheduledFuture.isDone(), scheduledFuture.isCancelled(), opTask
+                    "Retry task failed to cancel. Completed={} Cancelled={} completed for operation {}",
+                    scheduledFuture.isDone(),
+                    scheduledFuture.isCancelled(),
+                    opTask
                 );
             }
         }
     }
+
 
     @AllArgsConstructor
     class OpTask {

@@ -13,12 +13,12 @@ class ResourceActionRequestTest {
     @Test
     void constructor_SetsActionCodeAndMessage() {
         ResourceActionRequest request = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.SYSTEM_ACTION,
-                "Test message"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "Test message"
         );
         assertAll(
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, request.actorCode()),
-                () -> assertEquals("Test message", request.message())
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, request.actorCode()),
+            () -> assertEquals("Test message", request.message())
         );
     }
 
@@ -26,25 +26,23 @@ class ResourceActionRequestTest {
     void constructor_NullMessage_SetsActionCodeOnly() {
         ResourceActionRequest request = new ResourceActionRequest(LifecycleStatus.ActorCode.SYSTEM_ACTION, null);
         assertAll(
-                () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, request.actorCode()),
-                () -> assertNull(request.message())
+            () -> assertEquals(LifecycleStatus.ActorCode.SYSTEM_ACTION, request.actorCode()),
+            () -> assertNull(request.message())
         );
     }
 
     @Test
     void constructor_NullActionCode_ThrowsException() {
-        assertThrows(
-                NullPointerException.class, () -> {
-                    new ResourceActionRequest(null, "Test message");
-                }
-        );
+        assertThrows(NullPointerException.class, () -> {
+            new ResourceActionRequest(null, "Test message");
+        });
     }
 
     @Test
     void actionCode_ReturnsCorrectActionCode() {
         ResourceActionRequest request = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.USER_ACTION,
-                "Test message"
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "Test message"
         );
         assertEquals(LifecycleStatus.ActorCode.USER_ACTION, request.actorCode());
     }
@@ -52,8 +50,8 @@ class ResourceActionRequestTest {
     @Test
     void message_ReturnsCorrectMessage() {
         ResourceActionRequest request = new ResourceActionRequest(
-                LifecycleStatus.ActorCode.USER_ACTION,
-                "Test message"
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "Test message"
         );
         assertEquals("Test message", request.message());
     }

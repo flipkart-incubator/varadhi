@@ -49,10 +49,9 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
     @Override
     public int getPartition() {
         if (msg.getMessageId() instanceof MessageIdImpl) {
-            return ((MessageIdImpl) msg.getMessageId()).getPartitionIndex();
+            return ((MessageIdImpl)msg.getMessageId()).getPartitionIndex();
         } else if (msg.getMessageId() instanceof TopicMessageIdImpl) {
-            MessageIdImpl innerMessageId =
-                    (MessageIdImpl) ((TopicMessageIdImpl) msg.getMessageId()).getInnerMessageId();
+            MessageIdImpl innerMessageId = (MessageIdImpl)((TopicMessageIdImpl)msg.getMessageId()).getInnerMessageId();
             return innerMessageId.getPartitionIndex();
         } else {
             throw new IllegalStateException("Unknown message id type: " + msg.getMessageId().getClass());

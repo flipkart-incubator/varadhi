@@ -8,25 +8,21 @@ import lombok.EqualsAndHashCode;
 
 import java.net.URI;
 
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        property = "protocol"
-)
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = Endpoint.HttpEndpoint.class, name = "HTTP1_1"),
-        @JsonSubTypes.Type(value = Endpoint.HttpEndpoint.class, name = "HTTP2"),
-})
+@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "protocol")
+@JsonSubTypes ({
+    @JsonSubTypes.Type (value = Endpoint.HttpEndpoint.class, name = "HTTP1_1"),
+    @JsonSubTypes.Type (value = Endpoint.HttpEndpoint.class, name = "HTTP2")})
 public abstract sealed class Endpoint {
 
     @JsonIgnore
     public abstract Protocol getProtocol();
 
     public enum Protocol {
-        HTTP1_1,
-        HTTP2,
+        HTTP1_1, HTTP2,
     }
 
-    @EqualsAndHashCode(callSuper = true)
+
+    @EqualsAndHashCode (callSuper = true)
     @Data
     public static final class HttpEndpoint extends Endpoint {
         private final URI uri;

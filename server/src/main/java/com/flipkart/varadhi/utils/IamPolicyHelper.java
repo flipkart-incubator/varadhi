@@ -11,11 +11,7 @@ public final class IamPolicyHelper {
     public static final String AUTH_RESOURCE_NAME_SEPARATOR = ":";
 
     public static IamPolicyResponse toResponse(IamPolicyRecord policy) {
-        return new IamPolicyResponse(
-                policy.getName(),
-                policy.getRoleBindings(),
-                policy.getVersion()
-        );
+        return new IamPolicyResponse(policy.getName(), policy.getRoleBindings(), policy.getVersion());
     }
 
     public static String getAuthResourceFQN(ResourceType resourceType, String resourceId) {

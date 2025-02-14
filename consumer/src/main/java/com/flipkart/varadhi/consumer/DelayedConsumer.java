@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * @param <O>
  */
 @Slf4j
-@ExtensionMethod({FutureExtensions.class})
+@ExtensionMethod ({FutureExtensions.class})
 public class DelayedConsumer<O extends Offset> implements Consumer<O> {
 
     private final Consumer<O> delegate;
@@ -121,9 +121,9 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         } else {
             log.debug("dont have messages to consume just yet. delay : {}ms", timeLeft);
             context.scheduleOnContext(
-                    () -> promise.complete(polledMessages.getConsumableMsgs(delayMs)),
-                    timeLeft,
-                    TimeUnit.MILLISECONDS
+                () -> promise.complete(polledMessages.getConsumableMsgs(delayMs)),
+                timeLeft,
+                TimeUnit.MILLISECONDS
             );
         }
     }
@@ -154,6 +154,7 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
             return offset - prevOffset;
         }
     }
+
 
     /**
      * Batch of messages per partition.
@@ -196,10 +197,11 @@ public class DelayedConsumer<O extends Offset> implements Consumer<O> {
         }
 
         long earliestMessageTimestamp() {
-            return delayedMsgs.values().stream()
-                    .mapToLong(DelayedMessages::earliestMessageTimestamp)
-                    .min()
-                    .orElse(Long.MAX_VALUE);
+            return delayedMsgs.values()
+                              .stream()
+                              .mapToLong(DelayedMessages::earliestMessageTimestamp)
+                              .min()
+                              .orElse(Long.MAX_VALUE);
         }
 
         PolledMessages<O> getConsumableMsgs(long delayMillis) {

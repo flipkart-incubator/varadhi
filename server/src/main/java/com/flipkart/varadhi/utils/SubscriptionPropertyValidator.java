@@ -13,36 +13,42 @@ public record SubscriptionPropertyValidator(Function<String, Boolean> restrictiv
     public static Map<String, String> createPropertyDefaultValueProviders(RestOptions restOptions) {
         Map<String, String> propertyDefaultValueProviders = new HashMap<>();
         propertyDefaultValueProviders.put(
-                UNSIDELINE_API_MESSAGE_COUNT, String.valueOf(restOptions.getUnsidelineApiMsgCountDefault()));
+            UNSIDELINE_API_MESSAGE_COUNT,
+            String.valueOf(restOptions.getUnsidelineApiMsgCountDefault())
+        );
         propertyDefaultValueProviders.put(
-                UNSIDELINE_API_GROUP_COUNT, String.valueOf(restOptions.getUnsidelineApiGroupCountDefault()));
+            UNSIDELINE_API_GROUP_COUNT,
+            String.valueOf(restOptions.getUnsidelineApiGroupCountDefault())
+        );
         propertyDefaultValueProviders.put(
-                GETMESSAGES_API_MESSAGES_LIMIT, String.valueOf(restOptions.getGetMessagesApiMessagesLimitDefault()));
+            GETMESSAGES_API_MESSAGES_LIMIT,
+            String.valueOf(restOptions.getGetMessagesApiMessagesLimitDefault())
+        );
         return propertyDefaultValueProviders;
     }
 
     public static Map<String, SubscriptionPropertyValidator> createPropertyValidators(RestOptions restOptions) {
         Map<String, SubscriptionPropertyValidator> validators = new HashMap<>();
         validators.put(
-                UNSIDELINE_API_MESSAGE_COUNT,
-                new SubscriptionPropertyValidator(
-                        isInRange(0, restOptions.getUnsidelineApiMsgCountMax()),
-                        isEqualOrHigher(0)
-                )
+            UNSIDELINE_API_MESSAGE_COUNT,
+            new SubscriptionPropertyValidator(
+                isInRange(0, restOptions.getUnsidelineApiMsgCountMax()),
+                isEqualOrHigher(0)
+            )
         );
         validators.put(
-                UNSIDELINE_API_GROUP_COUNT,
-                new SubscriptionPropertyValidator(
-                        isInRange(0, restOptions.getUnsidelineApiGroupCountMax()),
-                        isEqualOrHigher(0)
-                )
+            UNSIDELINE_API_GROUP_COUNT,
+            new SubscriptionPropertyValidator(
+                isInRange(0, restOptions.getUnsidelineApiGroupCountMax()),
+                isEqualOrHigher(0)
+            )
         );
         validators.put(
-                GETMESSAGES_API_MESSAGES_LIMIT,
-                new SubscriptionPropertyValidator(
-                        isInRange(0, restOptions.getGetMessagesApiMessagesLimitMax()),
-                        isEqualOrHigher(0)
-                )
+            GETMESSAGES_API_MESSAGES_LIMIT,
+            new SubscriptionPropertyValidator(
+                isInRange(0, restOptions.getGetMessagesApiMessagesLimitMax()),
+                isEqualOrHigher(0)
+            )
         );
         return validators;
     }

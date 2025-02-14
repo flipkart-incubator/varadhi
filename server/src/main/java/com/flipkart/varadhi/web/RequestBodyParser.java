@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class RequestBodyParser implements RouteConfigurator {
 
     @Override

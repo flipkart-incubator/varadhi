@@ -38,7 +38,9 @@ public class ControllerVerticle extends AbstractVerticle {
     private final ControllerConfig controllerConfig;
 
     public ControllerVerticle(
-            ControllerConfig config, CoreServices coreServices, VaradhiClusterManager clusterManager
+        ControllerConfig config,
+        CoreServices coreServices,
+        VaradhiClusterManager clusterManager
     ) {
         this.controllerConfig = config;
         this.clusterManager = clusterManager;
@@ -65,51 +67,73 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-        OperationMgr operationMgr =
-                new OperationMgr(controllerConfig.getMaxConcurrentOps(), metaStoreProvider.getOpStore(),
-                        getRetryPolicy()
-                );
-        AssignmentManager assigner =
-                new AssignmentManager(
-                        new LeastAssignedStrategy(), metaStoreProvider.getAssignmentStore(), meterRegistry);
+        OperationMgr operationMgr = new OperationMgr(
+            controllerConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
+            getRetryPolicy()
+        );
+        AssignmentManager assigner = new AssignmentManager(
+            new LeastAssignedStrategy(),
+            metaStoreProvider.getAssignmentStore(),
+            meterRegistry
+        );
         return new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
     }
 
     private RetryPolicy getRetryPolicy() {
         return new RetryPolicy(
-                controllerConfig.getMaxRetryAllowed(), controllerConfig.getRetryIntervalInSeconds(),
-                controllerConfig.getRetryMinBackoffInSeconds(), controllerConfig.getRetryMaxBackOffInSeconds()
+            controllerConfig.getMaxRetryAllowed(),
+            controllerConfig.getRetryIntervalInSeconds(),
+            controllerConfig.getRetryMinBackoffInSeconds(),
+            controllerConfig.getRetryMaxBackOffInSeconds()
         );
     }
 
     private Future<Void> onLeaderElected(
-            ControllerApiMgr controllerApiMgr, ControllerApiHandler handler, MessageRouter messageRouter
+        ControllerApiMgr controllerApiMgr,
+        ControllerApiHandler handler,
+        MessageRouter messageRouter
     ) {
         // any failures should give up the leadership.
         //TODO:: check what happens when membership changes post listener setup but prior to bootstrap completion.
         setupMembershipListener(controllerApiMgr);
 
         return clusterManager.getAllMembers().compose(allMembers -> {
-            List<ConsumerNode> consumerNodes =
-                    allMembers.stream().filter(memberInfo -> memberInfo.hasRole(ComponentKind.Consumer))
-                            .map(ConsumerNode::new).toList();
+            List<ConsumerNode> consumerNodes = allMembers.stream()
+                                                         .filter(
+                                                             memberInfo -> memberInfo.hasRole(ComponentKind.Consumer)
+                                                         )
+                                                         .map(ConsumerNode::new)
+                                                         .toList();
             log.info("Available Consumer Nodes {}", consumerNodes.size());
-            CompletableFuture<String>[] nodeFutures =
-                    consumerNodes.stream().map(controllerApiMgr::addConsumerNode).toArray(CompletableFuture[]::new);
+            CompletableFuture<String>[] nodeFutures = consumerNodes.stream()
+                                                                   .map(controllerApiMgr::addConsumerNode)
+                                                                   .toArray(CompletableFuture[]::new);
 
             List<String> addedConsumers = new ArrayList<>();
             CompletableFuture<Void> future = CompletableFuture.allOf(nodeFutures)
-                    .whenComplete((v, t) -> Arrays.stream(nodeFutures).forEach(nodeFuture -> {
-                        try {
-                            String consumerId = nodeFuture.join();
-                            addedConsumers.add(consumerId);
-                        } catch (CompletionException ce) {
-                            log.error("ConsumerNode:{} failed to join the cluster {}.", "", ce.getCause().getMessage());
-                        }
-                    })).thenAccept(v -> {
-                        setupApiHandlers(messageRouter, handler);
-                        restoreController(controllerApiMgr, addedConsumers);
-                    });
+                                                              .whenComplete(
+                                                                  (v, t) -> Arrays.stream(nodeFutures)
+                                                                                  .forEach(nodeFuture -> {
+                                                                                      try {
+                                                                                          String consumerId = nodeFuture
+                                                                                                                        .join();
+                                                                                          addedConsumers.add(
+                                                                                              consumerId
+                                                                                          );
+                                                                                      } catch (CompletionException ce) {
+                                                                                          log.error(
+                                                                                              "ConsumerNode:{} failed to join the cluster {}.",
+                                                                                              "",
+                                                                                              ce.getCause().getMessage()
+                                                                                          );
+                                                                                      }
+                                                                                  })
+                                                              )
+                                                              .thenAccept(v -> {
+                                                                  setupApiHandlers(messageRouter, handler);
+                                                                  restoreController(controllerApiMgr, addedConsumers);
+                                                              });
             return Future.fromCompletionStage(future);
         }).onComplete(ar -> {
             if (ar.failed()) {
@@ -144,11 +168,14 @@ public class ControllerVerticle extends AbstractVerticle {
     private List<String> getUnavailableConsumers(ControllerApiMgr controllerApiMgr, List<String> consumerIds) {
         List<Assignment> allAssignments = controllerApiMgr.getAllAssignments();
         log.info("Found {} assignments", allAssignments.size());
-        List<Assignment> zombieAssignments =
-                allAssignments.stream().filter(a -> !consumerIds.contains(a.getConsumerId())).toList();
+        List<Assignment> zombieAssignments = allAssignments.stream()
+                                                           .filter(a -> !consumerIds.contains(a.getConsumerId()))
+                                                           .toList();
         log.info("Found {} assignments without consumers.", zombieAssignments.size());
-        List<String> unavailableConsumers =
-                zombieAssignments.stream().map(Assignment::getConsumerId).distinct().collect(Collectors.toList());
+        List<String> unavailableConsumers = zombieAssignments.stream()
+                                                             .map(Assignment::getConsumerId)
+                                                             .distinct()
+                                                             .collect(Collectors.toList());
         log.info("Found {} unavailable Consumers.", unavailableConsumers.size());
         return unavailableConsumers;
     }

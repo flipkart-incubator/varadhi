@@ -45,6 +45,7 @@ public class Constants {
         }
     }
 
+
     /**
      * QueryParams class contains constants for various query parameters.
      * This class is not meant to be instantiated.
@@ -59,6 +60,7 @@ public class Constants {
             // Private constructor to prevent instantiation
         }
     }
+
 
     /**
      * Tags class contains constants for various tags used in the application.
@@ -82,6 +84,7 @@ public class Constants {
         }
     }
 
+
     /**
      * HttpCodes class contains constants for various HTTP status codes.
      * This class is not meant to be instantiated.
@@ -94,6 +97,7 @@ public class Constants {
             // Private constructor to prevent instantiation
         }
     }
+
 
     /**
      * Meters class contains constants for various meters used in the application.
@@ -118,6 +122,7 @@ public class Constants {
             // Private constructor to prevent instantiation
         }
     }
+
 
     /**
      * RestDefaults class contains default values for REST configurations.

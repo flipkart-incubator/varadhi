@@ -8,12 +8,12 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@shardsStrategy")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = SubscriptionUnitShard.class, name = "unit"),
-        @JsonSubTypes.Type(value = SubscriptionMultiShard.class, name = "multi")
-})
+@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@shardsStrategy")
+@JsonSubTypes ({
+    @JsonSubTypes.Type (value = SubscriptionUnitShard.class, name = "unit"),
+    @JsonSubTypes.Type (value = SubscriptionMultiShard.class, name = "multi")})
 public abstract class SubscriptionShards {
     private final int shardCount;
+
     public abstract SubscriptionUnitShard getShard(int shardId);
 }

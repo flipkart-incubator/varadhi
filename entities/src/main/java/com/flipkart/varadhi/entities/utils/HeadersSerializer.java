@@ -11,9 +11,9 @@ import java.util.Collection;
 import java.util.Map;
 
 public class HeadersSerializer extends StdSerializer<ArrayListMultimap<String, String>> {
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     public HeadersSerializer() {
-        this((Class<ArrayListMultimap<String, String>>) (Class<?>) ArrayListMultimap.class);
+        this((Class<ArrayListMultimap<String, String>>)(Class<?>)ArrayListMultimap.class);
     }
 
     public HeadersSerializer(Class<ArrayListMultimap<String, String>> clazz) {
@@ -22,18 +22,20 @@ public class HeadersSerializer extends StdSerializer<ArrayListMultimap<String, S
 
     @Override
     public void serialize(
-            ArrayListMultimap<String, String> headers, JsonGenerator jsonGenerator,
-            SerializerProvider serializerProvider
-    )
-            throws IOException {
+        ArrayListMultimap<String, String> headers,
+        JsonGenerator jsonGenerator,
+        SerializerProvider serializerProvider
+    ) throws IOException {
         Map<String, Collection<String>> map = headers.asMap();
         jsonGenerator.writeObject(map);
     }
 
     @Override
     public void serializeWithType(
-            ArrayListMultimap<String, String> map, JsonGenerator gen, SerializerProvider provider,
-            TypeSerializer typeSer
+        ArrayListMultimap<String, String> map,
+        JsonGenerator gen,
+        SerializerProvider provider,
+        TypeSerializer typeSer
     ) throws IOException {
         this.serialize(map, gen, provider);
     }

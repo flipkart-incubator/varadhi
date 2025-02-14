@@ -2,15 +2,12 @@ package com.flipkart.varadhi.core.cluster.entities;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.flipkart.varadhi.entities.Offset;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
-@AllArgsConstructor(onConstructor = @__(@JsonCreator))
+@AllArgsConstructor (onConstructor = @__ (@JsonCreator))
 public class ShardDlqMessageRequest {
     private final long earliestFailedAt;
     private final String pageMarker;

@@ -40,7 +40,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 
 @Slf4j
-@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
+@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> headerValidationHandler;
@@ -49,8 +49,11 @@ public class ProduceHandlers implements RouteProvider {
     private final String produceRegion;
 
     public ProduceHandlers(
-            String produceRegion, Handler<RoutingContext> headerValidationHandler, ProducerService producerService,
-            ProjectService projectService, ProducerMetricHandler metricHandler
+        String produceRegion,
+        Handler<RoutingContext> headerValidationHandler,
+        ProducerService producerService,
+        ProjectService projectService,
+        ProducerMetricHandler metricHandler
     ) {
         this.produceRegion = produceRegion;
         this.producerService = producerService;
@@ -63,23 +66,25 @@ public class ProduceHandlers implements RouteProvider {
     public List<RouteDefinition> get() {
 
         return new SubRoutes(
-                "/v1/projects/:project",
-                List.of(
-                        RouteDefinition.post("Produce", "/topics/:topic/produce")
-                                .hasBody()
-                                .nonBlocking()
-                                .metricsEnabled()
-                                .preHandler(headerValidationHandler)
-                                .authorize(TOPIC_PRODUCE)
-                                .build(this::getHierarchies, this::produce)
-                )
+            "/v1/projects/:project",
+            List.of(
+                RouteDefinition.post("Produce", "/topics/:topic/produce")
+                               .hasBody()
+                               .nonBlocking()
+                               .metricsEnabled()
+                               .preHandler(headerValidationHandler)
+                               .authorize(TOPIC_PRODUCE)
+                               .build(this::getHierarchies, this::produce)
+            )
         ).get();
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(
-                ResourceType.TOPIC, new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC)));
+            ResourceType.TOPIC,
+            new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))
+        );
     }
 
     public void produce(RoutingContext ctx) {
@@ -100,33 +105,33 @@ public class ProduceHandlers implements RouteProvider {
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
-        CompletableFuture<ProduceResult> produceFuture =
-                producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
-        produceFuture.whenComplete((produceResult, failure) ->
-                ctx.vertx().runOnContext((Void) -> {
-                            if (null != produceResult) {
-                                if (produceResult.isSuccess()) {
-                                    ctx.endRequestWithResponse(produceResult.getMessageId());
-                                } else {
-                                    ctx.endRequestWithStatusAndErrorMsg(
-                                            getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
-                                            produceResult.getFailureReason()
-                                    );
-                                }
-                            } else {
-                                log.error(
-                                        String.format(
-                                                "produceToTopic(%s, %s) failed unexpectedly.",
-                                                messageToProduce.getMessageId(),
-                                                varadhiTopicName
-                                        ),
-                                        failure
-                                );
-                                ctx.endRequestWithException(failure);
-                            }
-                        }
-                )
+        CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
+            messageToProduce,
+            varadhiTopicName,
+            metricsEmitter
         );
+        produceFuture.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
+            if (null != produceResult) {
+                if (produceResult.isSuccess()) {
+                    ctx.endRequestWithResponse(produceResult.getMessageId());
+                } else {
+                    ctx.endRequestWithStatusAndErrorMsg(
+                        getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
+                        produceResult.getFailureReason()
+                    );
+                }
+            } else {
+                log.error(
+                    String.format(
+                        "produceToTopic(%s, %s) failed unexpectedly.",
+                        messageToProduce.getMessageId(),
+                        varadhiTopicName
+                    ),
+                    failure
+                );
+                ctx.endRequestWithException(failure);
+            }
+        }));
     }
 
     private int getHttpStatusForProduceStatus(ProduceStatus produceStatus) {
@@ -142,11 +147,7 @@ public class ProduceHandlers implements RouteProvider {
     }
 
 
-    private Message buildMessageToProduce(
-            byte[] payload,
-            MultiMap headers,
-            String produceIdentity
-    ) {
+    private Message buildMessageToProduce(byte[] payload, MultiMap headers, String produceIdentity) {
         Multimap<String, String> requestHeaders = HeaderUtils.copyVaradhiHeaders(headers);
         requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(System.currentTimeMillis()));
         requestHeaders.put(PRODUCE_IDENTITY, produceIdentity);

@@ -30,6 +30,7 @@ public class PulsarSubscriptionService implements StorageSubscriptionService<Pul
             throw new MessagingException(e);
         }
     }
+
     @Override
     public void delete(PulsarSubscription subscription, Project project) {
         try {

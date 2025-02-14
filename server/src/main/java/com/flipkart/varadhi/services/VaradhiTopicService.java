@@ -3,7 +3,6 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -11,6 +10,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -179,7 +179,7 @@ public class VaradhiTopicService {
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
-                    "Restoration denied. Only Varadhi Admin can restore this topic."
+                "Restoration denied. Only Varadhi Admin can restore this topic."
             );
         }
 
@@ -197,18 +197,20 @@ public class VaradhiTopicService {
      */
     private void validateTopicForDeletion(String topicName, ResourceDeletionType deletionType) {
         // TODO: Improve efficiency by avoiding a full scan of all subscriptions across projects.
-        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames().stream()
-                .map(metaStore::getSubscription)
-                .filter(subscription -> subscription.getTopic().equals(topicName))
-                .toList();
+        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames()
+                                                           .stream()
+                                                           .map(metaStore::getSubscription)
+                                                           .filter(s -> s.getTopic().equals(topicName))
+                                                           .toList();
 
         if (subscriptions.isEmpty()) {
             return;
         }
 
         boolean hasActiveSubscriptions = subscriptions.stream()
-                .anyMatch(subscription ->
-                        subscription.getStatus().getState() == LifecycleStatus.State.CREATED);
+                                                      .anyMatch(
+                                                          s -> s.getStatus().getState() == LifecycleStatus.State.CREATED
+                                                      );
 
         if (deletionType == ResourceDeletionType.SOFT_DELETE && hasActiveSubscriptions) {
             throw new InvalidOperationForResourceException("Cannot delete topic as it has active subscriptions.");
@@ -239,9 +241,10 @@ public class VaradhiTopicService {
      * @return a list of Varadhi topic names
      */
     public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
-        return metaStore.getTopicNames(projectName).stream()
-                .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
-                .toList();
+        return metaStore.getTopicNames(projectName)
+                        .stream()
+                        .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
+                        .toList();
     }
 
     /**

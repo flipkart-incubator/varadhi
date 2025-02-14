@@ -39,8 +39,9 @@ public class SubscriptionService {
      * @param metaStore        the meta store
      */
     public SubscriptionService(
-            ShardProvisioner shardProvisioner, ControllerRestApi controllerClient,
-            MetaStore metaStore
+        ShardProvisioner shardProvisioner,
+        ControllerRestApi controllerClient,
+        MetaStore metaStore
     ) {
         this.shardProvisioner = shardProvisioner;
         this.metaStore = metaStore;
@@ -56,10 +57,13 @@ public class SubscriptionService {
      * @return the list of subscription names
      */
     public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
-        return metaStore.getSubscriptionNames(projectName).stream()
-                .filter(subscriptionName ->
-                        includeInactive || metaStore.getSubscription(subscriptionName).isActive())
-                .toList();
+        return metaStore.getSubscriptionNames(projectName)
+                        .stream()
+                        .filter(
+                                subscriptionName -> includeInactive ||
+                                        metaStore.getSubscription(subscriptionName).isActive()
+                        )
+                        .toList();
     }
 
     /**
@@ -83,7 +87,9 @@ public class SubscriptionService {
      * @return the created subscription
      */
     public VaradhiSubscription createSubscription(
-            VaradhiTopic subscribedTopic, VaradhiSubscription subscription, Project subProject
+        VaradhiTopic subscribedTopic,
+        VaradhiSubscription subscription,
+        Project subProject
     ) {
         validateGroupedSubscription(subscribedTopic, subscription);
 
@@ -152,8 +158,14 @@ public class SubscriptionService {
      * @return a CompletableFuture representing the updated subscription
      */
     public CompletableFuture<VaradhiSubscription> updateSubscription(
-            String subscriptionName, int fromVersion, String description, boolean grouped, Endpoint endpoint,
-            RetryPolicy retryPolicy, ConsumptionPolicy consumptionPolicy, String requestedBy
+        String subscriptionName,
+        int fromVersion,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        String requestedBy
     ) {
         VaradhiSubscription subscription = getValidatedSubscription(subscriptionName);
         validateVersionForUpdate(fromVersion, subscription.getVersion());
@@ -161,17 +173,16 @@ public class SubscriptionService {
         subscription.setGrouped(grouped);
         validateGroupedSubscription(metaStore.getTopic(subscription.getTopic()), subscription);
 
-        return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
-                .thenApply(state -> {
-                    subscription.setGrouped(grouped);
-                    subscription.setDescription(description);
-                    subscription.setEndpoint(endpoint);
-                    subscription.setRetryPolicy(retryPolicy);
-                    subscription.setConsumptionPolicy(consumptionPolicy);
+        return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(state -> {
+            subscription.setGrouped(grouped);
+            subscription.setDescription(description);
+            subscription.setEndpoint(endpoint);
+            subscription.setRetryPolicy(retryPolicy);
+            subscription.setConsumptionPolicy(consumptionPolicy);
 
-                    metaStore.updateSubscription(subscription);
-                    return subscription;
-                });
+            metaStore.updateSubscription(subscription);
+            return subscription;
+        });
     }
 
     /**
@@ -188,24 +199,25 @@ public class SubscriptionService {
      * @throws IllegalArgumentException if the subscription cannot be deleted in its current state
      */
     public CompletableFuture<Void> deleteSubscription(
-            String subscriptionName, Project subProject, String requestedBy,
-            ResourceDeletionType deletionType, ResourceActionRequest actionRequest
+        String subscriptionName,
+        Project subProject,
+        String requestedBy,
+        ResourceDeletionType deletionType,
+        ResourceActionRequest actionRequest
     ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
-        return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
-                .thenAccept(state -> {
-                    if (!state.isStoppedSuccessfully()) {
-                        throw new IllegalArgumentException(
-                                String.format("Cannot delete subscription in state: %s", state));
-                    }
+        return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenAccept(state -> {
+            if (!state.isStoppedSuccessfully()) {
+                throw new IllegalArgumentException(String.format("Cannot delete subscription in state: %s", state));
+            }
 
-                    if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
-                        handleHardDelete(subscription, subProject, actionRequest);
-                    } else {
-                        handleSoftDelete(subscription, actionRequest);
-                    }
-                });
+            if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
+                handleHardDelete(subscription, subProject, actionRequest);
+            } else {
+                handleSoftDelete(subscription, actionRequest);
+            }
+        });
     }
 
     /**
@@ -217,15 +229,20 @@ public class SubscriptionService {
      *
      * @return a CompletableFuture representing the restored subscription
      *
-     * @throws InvalidOperationForResourceException if the subscription is already active or if the restoration is not allowed
+     * @throws InvalidOperationForResourceException if the subscription is already active or if the restoration is not
+     *                                              allowed
      */
     public CompletableFuture<VaradhiSubscription> restoreSubscription(
-            String subscriptionName, String requestedBy, ResourceActionRequest actionRequest) {
+        String subscriptionName,
+        String requestedBy,
+        ResourceActionRequest actionRequest
+    ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
 
         if (subscription.isActive()) {
             throw new InvalidOperationForResourceException(
-                    "Subscription '%s' is already active.".formatted(subscriptionName));
+                "Subscription '%s' is already active.".formatted(subscriptionName)
+            );
         }
 
         if (!subscription.isInactive()) {
@@ -238,17 +255,16 @@ public class SubscriptionService {
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
-                    "Restoration denied. Only Varadhi Admin can restore this subscription."
+                "Restoration denied. Only Varadhi Admin can restore this subscription."
             );
         }
 
-        return controllerClient.getSubscriptionState(subscriptionName, requestedBy)
-                .thenApply(state -> {
-                    subscription.restore(actionRequest.actorCode(), actionRequest.message());
-                    metaStore.updateSubscription(subscription);
-                    log.info("Subscription '{}' restored successfully.", subscriptionName);
-                    return subscription;
-                });
+        return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(state -> {
+            subscription.restore(actionRequest.actorCode(), actionRequest.message());
+            metaStore.updateSubscription(subscription);
+            log.info("Subscription '{}' restored successfully.", subscriptionName);
+            return subscription;
+        });
     }
 
     /**
@@ -263,8 +279,9 @@ public class SubscriptionService {
     private VaradhiSubscription getValidatedSubscription(String subscriptionName) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
         if (!subscription.isActive()) {
-            throw new ResourceNotFoundException(String.format(
-                    "Subscription '%s' not found or in invalid state.", subscriptionName));
+            throw new ResourceNotFoundException(
+                String.format("Subscription '%s' not found or in invalid state.", subscriptionName)
+            );
         }
         return subscription;
     }
@@ -279,8 +296,12 @@ public class SubscriptionService {
      */
     private void validateGroupedSubscription(VaradhiTopic topic, VaradhiSubscription subscription) {
         if (subscription.isGrouped() && !topic.isGrouped()) {
-            throw new IllegalArgumentException(String.format(
-                    "Grouped subscription cannot be created or updated for a non-grouped topic '%s'", topic.getName()));
+            throw new IllegalArgumentException(
+                String.format(
+                    "Grouped subscription cannot be created or updated for a non-grouped topic '%s'",
+                    topic.getName()
+                )
+            );
         }
     }
 
@@ -295,7 +316,8 @@ public class SubscriptionService {
     private void validateVersionForUpdate(int fromVersion, int latestVersion) {
         if (fromVersion != latestVersion) {
             throw new InvalidOperationForResourceException(
-                    "Conflicting update detected. Fetch the latest version and try again.");
+                "Conflicting update detected. Fetch the latest version and try again."
+            );
         }
     }
 
@@ -309,14 +331,15 @@ public class SubscriptionService {
      * @return a CompletableFuture representing the subscription operation
      */
     private CompletableFuture<SubscriptionOperation> performSubscriptionOperation(
-            String subscriptionName,
-            String requestedBy,
-            BiFunction<String, String, CompletableFuture<SubscriptionOperation>> operation
+        String subscriptionName,
+        String requestedBy,
+        BiFunction<String, String, CompletableFuture<SubscriptionOperation>> operation
     ) {
         VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
         if (!subscription.isActive()) {
-            throw new InvalidOperationForResourceException(String.format(
-                    "Subscription '%s' is not well-provisioned for this operation.", subscription.getName()));
+            throw new InvalidOperationForResourceException(
+                String.format("Subscription '%s' is not well-provisioned for this operation.", subscription.getName())
+            );
         }
         return operation.apply(subscriptionName, requestedBy);
     }
@@ -329,8 +352,9 @@ public class SubscriptionService {
      * @param actionRequest the request containing the actor code and message for the deletion
      */
     private void handleHardDelete(
-            VaradhiSubscription subscription,
-            Project subProject, ResourceActionRequest actionRequest
+        VaradhiSubscription subscription,
+        Project subProject,
+        ResourceActionRequest actionRequest
     ) {
         try {
             subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());

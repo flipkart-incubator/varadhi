@@ -38,7 +38,8 @@ public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic
     private long windowBeginTick;
 
     /**
-     * total data points from the last window. It is the summation of the values in the ticks array between windowBeginIdx and windowEndIdx.
+     * total data points from the last window. It is the summation of the values in the ticks array between
+     * windowBeginIdx and windowEndIdx.
      * Changing windowBeginIdx and windowEndIdx should change the total data points.
      */
     private int totalDatapoints;
@@ -49,7 +50,11 @@ public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic
     private ScheduledFuture<?> thresholdUpdater;
 
     public SlidingWindowThresholdProvider(
-            ScheduledExecutorService scheduler, Ticker ticker, int windowSizeMs, int tickMs, float pctErrorThreshold
+        ScheduledExecutorService scheduler,
+        Ticker ticker,
+        int windowSizeMs,
+        int tickMs,
+        float pctErrorThreshold
     ) {
         this.scheduler = scheduler;
         this.ticker = ticker;
@@ -70,14 +75,15 @@ public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic
     }
 
     /**
-     * Add a new datapoint to the current tick. If the tick has changed, then move the window adjusting the total data points.
+     * Add a new datapoint to the current tick. If the tick has changed, then move the window adjusting the total data
+     * points.
      * Can be called by arbitrary threads.
      */
     @Override
     public void mark() {
         long currentTick = currentTick();
         // mark
-        int idx = (int) (currentTick % totalTicks);
+        int idx = (int)(currentTick % totalTicks);
         ticks.incrementAndGet(idx);
     }
 
@@ -134,8 +140,8 @@ public class SlidingWindowThresholdProvider implements ThresholdProvider.Dynamic
         }
 
         for (long i = windowBeginTick; i < newWindowBeginTick; ++i) {
-            int beginIdx = (int) (i % totalTicks);
-            int endIdx = (int) ((i + ticksInWindow) % totalTicks);
+            int beginIdx = (int)(i % totalTicks);
+            int endIdx = (int)((i + ticksInWindow) % totalTicks);
             totalDatapoints += (ticks.get(endIdx) - ticks.getAndSet(beginIdx, 0));
         }
 

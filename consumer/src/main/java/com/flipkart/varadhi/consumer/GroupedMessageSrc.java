@@ -76,7 +76,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
         NextMsgsRequest request = new NextMsgsRequest(new CompletableFuture<>(), messages);
         if (!pendingRequest.compareAndSet(null, request)) {
             throw new IllegalStateException(
-                    "nextMessages method is not supposed to be called concurrently. There seems to be a pending nextMessage call");
+                "nextMessages method is not supposed to be called concurrently. There seems to be a pending nextMessage call"
+            );
         }
 
         // incomplete result is saved. trigger new message fetch.
@@ -108,7 +109,8 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
                 } else {
                     log.error("Error while fetching messages from consumer", ex);
                     throw new IllegalStateException(
-                            "should be unreachable. consumer.receiveAsync() should not throw exception.");
+                        "should be unreachable. consumer.receiveAsync() should not throw exception."
+                    );
                 }
             });
         }
@@ -188,11 +190,13 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
         IN_FLIGHT
     }
 
+
     static class GroupTracker {
         GroupStatus status = GroupStatus.FREE;
 
         LinkedList<MessageBatch> messages = new LinkedList<>();
     }
+
 
     @AllArgsConstructor
     private class GroupedMessageTracker implements MessageTracker {
@@ -240,6 +244,7 @@ public class GroupedMessageSrc<O extends Offset> implements MessageSrc {
             }
         }
     }
+
 
     record NextMsgsRequest(CompletableFuture<Integer> result, MessageTracker[] messages) {
     }
