@@ -6,7 +6,8 @@ import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.StandardHeaders;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -68,7 +69,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
                     "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue,
                     offset,
                     message.getMessage().getHeader(
-                            StandardHeaders.MESSAGE_ID)
+                            StandardHeaders.msgIdHeader)
             );
             onComplete(message, status);
         });

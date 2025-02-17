@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.entities.StandardHeaders;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.google.common.collect.ArrayListMultimap;
@@ -66,12 +67,12 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public String getMessageId() {
-        return getHeader(StandardHeaders.MESSAGE_ID);
+        return getHeader(StandardHeaders.msgIdHeader);
     }
 
     @Override
     public String getGroupId() {
-        return getHeader(StandardHeaders.GROUP_ID);
+        return getHeader(StandardHeaders.groupIdHeader);
     }
 
     @Override

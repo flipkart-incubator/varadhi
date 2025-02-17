@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -61,6 +61,7 @@ public class HeaderValidationTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
+        StandardHeaders.initialize(messageHeaderConfiguration);
     }
 
     @AfterEach
@@ -86,7 +87,7 @@ public class HeaderValidationTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(FORWARDED_FOR, "host1, host2");
+        request.putHeader(StandardHeaders.httpUriHeader, "host1, host2");
         sendRequestWithByteBufferBody(
                 request, payload, 400, "Message id " + randomString +  " exceeds allowed size of 100.",
                 ErrorResponse.class

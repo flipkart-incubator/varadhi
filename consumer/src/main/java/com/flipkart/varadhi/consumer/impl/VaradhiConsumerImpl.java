@@ -8,6 +8,7 @@ import com.flipkart.varadhi.consumer.processing.ProcessingLoop;
 import com.flipkart.varadhi.consumer.processing.UngroupedProcessingLoop;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.google.common.base.Ticker;
 import lombok.Getter;
@@ -176,8 +177,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             processingLoop =
                     new UngroupedProcessingLoop(
                             context, createMessageSrcSelector(64), concurrencyControl, dynamicThreshold, throttler,
-                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages()
-                    );
+                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages());
         }
 
         connected = true;

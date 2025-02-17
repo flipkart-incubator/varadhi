@@ -3,6 +3,7 @@ package com.flipkart.varadhi.config;
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.Validatable;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
@@ -82,5 +83,6 @@ public class AppConfiguration implements Validatable {
     public void validate(){
         Validatable.super.validate();
         messageHeaderConfiguration.validate();
+        StandardHeaders.initialize(messageHeaderConfiguration);
     }
 }

@@ -8,6 +8,7 @@ import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.verticles.controller.ControllerConsumerClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;

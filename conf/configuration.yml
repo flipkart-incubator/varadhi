@@ -94,4 +94,9 @@ messageHeaderConfiguration:
   httpUriHeader: "X_HTTP_URI"
   httpMethodHeader: "X_HTTP_METHOD"
   httpContentType: "X_CONTENT_TYPE"
+  headerValueSizeMax: 100
+  produceIdentity: "X_PRODUCE_IDENTITY"
+  produceRegion: "X_PRODUCE_REGION"
+  produceTimestamp: "VARADHI_PRODUCE_TIMESTAMP"
+  maxRequestSize: 5242880
 

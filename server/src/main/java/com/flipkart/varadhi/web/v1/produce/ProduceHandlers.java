@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1.produce;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -15,8 +16,10 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
@@ -88,7 +91,7 @@ public class ProduceHandlers implements RouteProvider {
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.get(PreProduceHandler.VALIDATED_HEADERS), messageHeaderConfiguration);
+        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), messageHeaderConfiguration, ctx);
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->
@@ -133,9 +136,24 @@ public class ProduceHandlers implements RouteProvider {
 
     private Message buildMessageToProduce(
             byte[] payload,
-            Multimap<String, String> headers,
-            MessageHeaderConfiguration messageHeaderConfiguration
+            MultiMap headers,
+            MessageHeaderConfiguration messageHeaderConfiguration,
+            RoutingContext ctx
     ) {
-        return new ProducerMessage(payload, headers, messageHeaderConfiguration);
+        //dropping headers which are not following semantics
+        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
+        headers.entries().forEach(entry -> {
+            String key = entry.getKey();
+            requestHeaders.put(key, entry.getValue());
+        });
+        Multimap<String, String> varadhiHeaders = StandardHeaders.copyVaradhiHeaders(requestHeaders, messageHeaderConfiguration.getAllowedPrefix());
+
+        //enriching headers with custom headers
+        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+
+        varadhiHeaders.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
+        varadhiHeaders.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
+        varadhiHeaders.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
+        return new ProducerMessage(payload, varadhiHeaders);
     }
 }

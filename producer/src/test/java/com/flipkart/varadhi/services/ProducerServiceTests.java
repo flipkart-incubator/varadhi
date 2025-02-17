@@ -3,6 +3,7 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -30,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
 
 import static com.flipkart.varadhi.Constants.Tags.*;
 import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
-import static com.flipkart.varadhi.entities.StandardHeaders.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -57,7 +57,9 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        messageHeaderConfiguration = MessageHeaderConfiguration.fetchDummyHeaderConfiguration();
+        messageHeaderConfiguration = StandardHeaders.fetchDummyHeaderConfiguration();
+        //initialization required
+        StandardHeaders.initialize(messageHeaderConfiguration);
 
     }
 
@@ -265,10 +267,10 @@ public class ProducerServiceTests {
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        headers.put(StandardHeaders.MESSAGE_ID, getMessageId());
-        headers.put(PRODUCE_IDENTITY, ANONYMOUS_IDENTITY);
-        headers.put(PRODUCE_REGION, region);
-        headers.put(PRODUCE_TIMESTAMP, System.currentTimeMillis() + "");
+        headers.put(messageHeaderConfiguration.getMsgIdHeader(), getMessageId());
+        headers.put(messageHeaderConfiguration.getProduceIdentity(), ANONYMOUS_IDENTITY);
+        headers.put(messageHeaderConfiguration.getProduceRegion(), region);
+        headers.put(messageHeaderConfiguration.getProduceTimestamp(), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
@@ -276,7 +278,7 @@ public class ProducerServiceTests {
         }
         DummyProducer.DummyMessage message =
                 new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
-        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers, messageHeaderConfiguration);
+        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
     public ProducerMetricsEmitter getMetricEmitter(String topic, Project project, String region) {

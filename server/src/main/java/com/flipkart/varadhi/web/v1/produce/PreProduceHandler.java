@@ -1,8 +1,10 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.Headers;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
 
@@ -23,18 +25,16 @@ public class PreProduceHandler {
     }
 
     public void validateHeadersAndBodyForMessage(RoutingContext ctx){
-        Multimap<String, String> headers = MessageHeaderConfiguration.copyVaradhiHeaders((Multimap<String, String>) ctx.request().headers(), messageHeaderConfiguration.getAllowedPrefix());
-        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
-        headers.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
-        headers.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
-        headers.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
-        ensureHeaderSemanticsAndSize(headers, ctx.body().buffer().getBytes());
-        Headers recognizedAndValidatedHeaders = new Headers(headers);
-        ctx.put(PreProduceHandler.VALIDATED_HEADERS, recognizedAndValidatedHeaders);
+        ensureHeaderSemanticsAndSize(ctx.request().headers(), ctx.body().buffer().getBytes());
     }
 
-    private void ensureHeaderSemanticsAndSize(Multimap<String, String> headers, byte[] body) {
-        MessageHeaderConfiguration.ensureRequiredHeaders(messageHeaderConfiguration, headers);
+    private void ensureHeaderSemanticsAndSize(MultiMap headers, byte[] body) {
+        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
+        headers.entries().forEach(entry -> {
+            String key = entry.getKey();
+            requestHeaders.put(key, entry.getValue());
+        });
+        StandardHeaders.ensureRequiredHeaders(messageHeaderConfiguration, requestHeaders);
         long headersAndBodySize = 0;
 
         for (Map.Entry<String, String> entry : headers.entries()) {

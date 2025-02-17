@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.entities.config;
 
 import com.flipkart.varadhi.entities.Validatable;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -13,6 +13,7 @@ import java.util.List;
 @Data
 @Builder
 @AllArgsConstructor
+//ExtensionMethod reseatch if it can be done
 public class MessageHeaderConfiguration implements Validatable {
     @NotNull
     private final List<String> allowedPrefix;
@@ -74,6 +75,7 @@ public class MessageHeaderConfiguration implements Validatable {
      * scalable and easier to maintain, as any new fields with getters will be
      * automatically validated. The `allowedPrefix` field is skipped as it is handled separately.
      */
+
     @SneakyThrows
     @Override
     public void validate() {
@@ -112,55 +114,8 @@ public class MessageHeaderConfiguration implements Validatable {
         }
         return false;
     }
-
-    public static List<String> getRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration) {
-        return List.of(
-                messageHeaderConfiguration.getMsgIdHeader(),
-                messageHeaderConfiguration.getProduceTimestamp(),
-                messageHeaderConfiguration.getProduceRegion(),
-                messageHeaderConfiguration.getProduceIdentity()
-        );
-    }
-
-    public static void ensureRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration, Multimap<String, String> headers) {
-        getRequiredHeaders(messageHeaderConfiguration).forEach(key -> {
-            if (!headers.containsKey(key)) {
-                throw new IllegalArgumentException(String.format("Missing required header %s", key));
-            }
-        });
-    }
-
-    public static Multimap<String, String> copyVaradhiHeaders(Multimap<String, String> headers, List<String> allowedPrefix) {
-        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
-        headers.entries().forEach(entry -> {
-            String key = entry.getKey();
-            boolean validPrefix = allowedPrefix.stream().anyMatch(key::startsWith);
-            if (validPrefix) {
-                varadhiHeaders.put(key, entry.getValue());
-            }
-        });
-        return varadhiHeaders;
-    }
-
-    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration(){
-        return new MessageHeaderConfiguration(
-                List.of("X_","x_"),
-                "X_CALLBACK_CODES",
-                "X_REQUEST_TIMEOUT",
-                "X_REPLY_TO_HTTP_URI",
-                "X_REPLY_TO_HTTP_METHOD",
-                "X_REPLY_TO",
-                "X_HTTP_URI",
-                "X_HTTP_METHOD",
-                "X_CONTENT_TYPE",
-                "X_GROUP_ID",
-                "X_MESSAGE_ID",
-                100,
-                "X_PRODUCE_TIMESTAMP",
-                "X_PRODUCE_REGION",
-                "X_PRODUCE_IDENTITY",
-                (5 * 1024 * 1024)
-        );
-    }
-
 }
+
+
+
+

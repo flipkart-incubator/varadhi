@@ -9,6 +9,7 @@ import com.flipkart.varadhi.consumer.ordering.MessagePointer;
 import com.flipkart.varadhi.consumer.ordering.SubscriptionGroupsState;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collection;
