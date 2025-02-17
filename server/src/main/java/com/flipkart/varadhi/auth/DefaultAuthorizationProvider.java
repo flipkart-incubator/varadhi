@@ -1,12 +1,16 @@
 package com.flipkart.varadhi.auth;
 
+import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.Role;
+import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
-import com.flipkart.varadhi.entities.auth.*;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
@@ -23,7 +27,6 @@ import java.util.Set;
 
 import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
-
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider {
     private static final Role EMPTY_ROLE = new Role("", Set.of());
@@ -38,10 +41,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
                 authorizationOptions.getConfigFile(),
                 DefaultAuthorizationConfig.class
             );
-            this.configuration.getMetaStoreOptions()
-                              .setConfigFile(
-                                  resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
-                              );
+            this.configuration.setMetaStoreOptions(
+                this.configuration.getMetaStoreOptions()
+                                  .withConfigFile(
+                                      resolver.resolve(this.configuration.getMetaStoreOptions().configFile())
+                                  )
+            );
             getAuthZService();
             this.initialised = true;
         }
@@ -57,15 +62,18 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private IamPolicyService initAuthZService(MetaStoreOptions options) {
-        MetaStoreProvider provider = loadClass(options.getProviderClassName());
-        provider.init(options);
-        MetaStore store = provider.getMetaStore();
+        try (MetaStoreProvider provider = loadClass(options.providerClassName())) {
+            provider.init(options);
+            MetaStore store = provider.getMetaStore();
 
-        if (store instanceof IamPolicyMetaStore ipm) {
-            return new IamPolicyService(store, ipm);
+            if (store instanceof IamPolicyMetaStore ipm) {
+                return new IamPolicyService(store, ipm);
+            }
+
+            throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to initialize authorization service", e);
         }
-
-        throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
     }
 
     /**

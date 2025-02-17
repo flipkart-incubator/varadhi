@@ -2,6 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.VaradhiCache;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -12,10 +13,17 @@ import java.util.function.Function;
 
 public class ProjectService {
     private final MetaStore metaStore;
+    private final EventService eventService;
     private final VaradhiCache<String, Project> projectCache;
 
-    public ProjectService(MetaStore metaStore, String cacheSpec, MeterRegistry meterRegistry) {
+    public ProjectService(
+        MetaStore metaStore,
+        EventService eventService,
+        String cacheSpec,
+        MeterRegistry meterRegistry
+    ) {
         this.metaStore = metaStore;
+        this.eventService = eventService;
         this.projectCache = buildProjectCache(cacheSpec, this::getProject, meterRegistry);
     }
 
@@ -39,6 +47,7 @@ public class ProjectService {
             );
         }
         metaStore.createProject(project);
+        eventService.createEventMarker(project.getName(), ResourceType.PROJECT);
         return project;
     }
 
@@ -72,12 +81,14 @@ public class ProjectService {
             );
         }
         metaStore.updateProject(project);
+        eventService.createEventMarker(project.getName(), ResourceType.PROJECT);
         return project;
     }
 
     public void deleteProject(String projectName) {
         validateDelete(projectName);
         metaStore.deleteProject(projectName);
+        eventService.createEventMarker(projectName, ResourceType.PROJECT);
     }
 
     private void validateDelete(String projectName) {

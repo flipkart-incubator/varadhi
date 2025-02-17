@@ -1,6 +1,10 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -10,7 +14,13 @@ import org.apache.curator.framework.CuratorFramework;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.flipkart.varadhi.db.ZNode.*;
+import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
+import static com.flipkart.varadhi.db.ZNode.ORG;
+import static com.flipkart.varadhi.db.ZNode.PROJECT;
+import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
+import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
+import static com.flipkart.varadhi.db.ZNode.TEAM;
+import static com.flipkart.varadhi.db.ZNode.TOPIC;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 
@@ -24,42 +34,42 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     }
 
     private void ensureEntityTypePathExists() {
-        zkMetaStore.createZNode(ZNode.OfEntityType(ORG));
-        zkMetaStore.createZNode(ZNode.OfEntityType(TEAM));
-        zkMetaStore.createZNode(ZNode.OfEntityType(PROJECT));
-        zkMetaStore.createZNode(ZNode.OfEntityType(TOPIC));
-        zkMetaStore.createZNode(ZNode.OfEntityType(SUBSCRIPTION));
-        zkMetaStore.createZNode(ZNode.OfEntityType(IAM_POLICY));
+        zkMetaStore.createZNode(ZNode.ofEntityType(ORG));
+        zkMetaStore.createZNode(ZNode.ofEntityType(TEAM));
+        zkMetaStore.createZNode(ZNode.ofEntityType(PROJECT));
+        zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC));
+        zkMetaStore.createZNode(ZNode.ofEntityType(SUBSCRIPTION));
+        zkMetaStore.createZNode(ZNode.ofEntityType(IAM_POLICY));
     }
 
     @Override
     public void createOrg(Org org) {
-        ZNode znode = ZNode.OfOrg(org.getName());
+        ZNode znode = ZNode.ofOrg(org.getName());
         zkMetaStore.createZNodeWithData(znode, org);
     }
 
     @Override
     public Org getOrg(String orgName) {
-        ZNode znode = ZNode.OfOrg(orgName);
+        ZNode znode = ZNode.ofOrg(orgName);
         return zkMetaStore.getZNodeDataAsPojo(znode, Org.class);
     }
 
     @Override
     public boolean checkOrgExists(String orgName) {
-        ZNode znode = ZNode.OfOrg(orgName);
+        ZNode znode = ZNode.ofOrg(orgName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void deleteOrg(String orgName) {
-        ZNode znode = ZNode.OfOrg(orgName);
+        ZNode znode = ZNode.ofOrg(orgName);
         zkMetaStore.deleteZNode(znode);
     }
 
     @Override
     public List<Org> getOrgs() {
         List<Org> orgs = new ArrayList<>();
-        ZNode znode = ZNode.OfEntityType(ORG);
+        ZNode znode = ZNode.ofEntityType(ORG);
         zkMetaStore.listChildren(znode).forEach(orgName -> orgs.add(getOrg(orgName)));
         return orgs;
     }
@@ -69,7 +79,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         List<String> teamNames = new ArrayList<>();
         String orgPrefixOfTeamName = orgName + RESOURCE_NAME_SEPARATOR;
         // This filters out incorrectly format entries too, but that should be ok.
-        ZNode znode = ZNode.OfEntityType(TEAM);
+        ZNode znode = ZNode.ofEntityType(TEAM);
         zkMetaStore.listChildren(znode).forEach(teamName -> {
             if (teamName.startsWith(orgPrefixOfTeamName)) {
                 String[] splits = teamName.split(RESOURCE_NAME_SEPARATOR);
@@ -88,25 +98,25 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public void createTeam(Team team) {
-        ZNode znode = ZNode.OfTeam(team.getOrg(), team.getName());
+        ZNode znode = ZNode.ofTeam(team.getOrg(), team.getName());
         zkMetaStore.createZNodeWithData(znode, team);
     }
 
     @Override
     public Team getTeam(String teamName, String orgName) {
-        ZNode znode = ZNode.OfTeam(orgName, teamName);
+        ZNode znode = ZNode.ofTeam(orgName, teamName);
         return zkMetaStore.getZNodeDataAsPojo(znode, Team.class);
     }
 
     @Override
     public boolean checkTeamExists(String teamName, String orgName) {
-        ZNode znode = ZNode.OfTeam(orgName, teamName);
+        ZNode znode = ZNode.ofTeam(orgName, teamName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void deleteTeam(String teamName, String orgName) {
-        ZNode znode = ZNode.OfTeam(orgName, teamName);
+        ZNode znode = ZNode.ofTeam(orgName, teamName);
         zkMetaStore.deleteZNode(znode);
     }
 
@@ -114,7 +124,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     public List<Project> getProjects(String teamName, String orgName) {
         List<Project> projects = new ArrayList<>();
         // This filters out incorrectly format entries too, but that should be ok.
-        ZNode znode = ZNode.OfEntityType(PROJECT);
+        ZNode znode = ZNode.ofEntityType(PROJECT);
         zkMetaStore.listChildren(znode).forEach(projectName -> {
             Project project = getProject(projectName);
             if (project.getOrg().equals(orgName) && project.getTeam().equals(teamName)) {
@@ -126,31 +136,31 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public void createProject(Project project) {
-        ZNode znode = ZNode.OfProject(project.getName());
+        ZNode znode = ZNode.ofProject(project.getName());
         zkMetaStore.createZNodeWithData(znode, project);
     }
 
     @Override
     public Project getProject(String projectName) {
-        ZNode znode = ZNode.OfProject(projectName);
+        ZNode znode = ZNode.ofProject(projectName);
         return zkMetaStore.getZNodeDataAsPojo(znode, Project.class);
     }
 
     @Override
     public boolean checkProjectExists(String projectName) {
-        ZNode znode = ZNode.OfProject(projectName);
+        ZNode znode = ZNode.ofProject(projectName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void deleteProject(String projectName) {
-        ZNode znode = ZNode.OfProject(projectName);
+        ZNode znode = ZNode.ofProject(projectName);
         zkMetaStore.deleteZNode(znode);
     }
 
     @Override
     public void updateProject(Project project) {
-        ZNode znode = ZNode.OfProject(project.getName());
+        ZNode znode = ZNode.ofProject(project.getName());
         zkMetaStore.updateZNodeWithData(znode, project);
     }
 
@@ -158,7 +168,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public List<String> getTopicNames(String projectName) {
         String projectPrefixOfTopicName = projectName + NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(TOPIC);
+        ZNode znode = ZNode.ofEntityType(TOPIC);
         return zkMetaStore.listChildren(znode)
                           .stream()
                           .filter(name -> name.contains(projectPrefixOfTopicName))
@@ -167,44 +177,44 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public void createTopic(VaradhiTopic topic) {
-        ZNode znode = ZNode.OfTopic(topic.getName());
+        ZNode znode = ZNode.ofTopic(topic.getName());
         zkMetaStore.createZNodeWithData(znode, topic);
     }
 
     @Override
     public boolean checkTopicExists(String topicName) {
-        ZNode znode = ZNode.OfTopic(topicName);
+        ZNode znode = ZNode.ofTopic(topicName);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public VaradhiTopic getTopic(String topicName) {
-        ZNode znode = ZNode.OfTopic(topicName);
+        ZNode znode = ZNode.ofTopic(topicName);
         return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiTopic.class);
     }
 
     @Override
     public void deleteTopic(String topicName) {
-        ZNode znode = ZNode.OfTopic(topicName);
+        ZNode znode = ZNode.ofTopic(topicName);
         zkMetaStore.deleteZNode(znode);
     }
 
     @Override
     public void updateTopic(VaradhiTopic topic) {
-        ZNode znode = ZNode.OfTopic(topic.getName());
+        ZNode znode = ZNode.ofTopic(topic.getName());
         zkMetaStore.updateZNodeWithData(znode, topic);
     }
 
     @Override
     public List<String> getAllSubscriptionNames() {
-        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
+        ZNode znode = ZNode.ofEntityType(SUBSCRIPTION);
         return zkMetaStore.listChildren(znode).stream().toList();
     }
 
     @Override
     public List<String> getSubscriptionNames(String projectName) {
         String projectPrefix = projectName + NAME_SEPARATOR;
-        ZNode znode = ZNode.OfEntityType(SUBSCRIPTION);
+        ZNode znode = ZNode.ofEntityType(SUBSCRIPTION);
         return zkMetaStore.listChildren(znode).stream().filter(name -> name.contains(projectPrefix)).toList();
     }
 
@@ -240,31 +250,31 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
 
     @Override
     public IamPolicyRecord getIamPolicyRecord(String authResourceId) {
-        ZNode znode = ZNode.OfIamPolicy(authResourceId);
+        ZNode znode = ZNode.ofIamPolicy(authResourceId);
         return zkMetaStore.getZNodeDataAsPojo(znode, IamPolicyRecord.class);
     }
 
     @Override
     public void createIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
-        ZNode znode = ZNode.OfIamPolicy(iamPolicyRecord.getName());
+        ZNode znode = ZNode.ofIamPolicy(iamPolicyRecord.getName());
         zkMetaStore.createZNodeWithData(znode, iamPolicyRecord);
     }
 
     @Override
     public boolean isIamPolicyRecordPresent(String authResourceId) {
-        ZNode znode = ZNode.OfIamPolicy(authResourceId);
+        ZNode znode = ZNode.ofIamPolicy(authResourceId);
         return zkMetaStore.zkPathExist(znode);
     }
 
     @Override
     public void updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
-        ZNode znode = ZNode.OfIamPolicy(iamPolicyRecord.getName());
+        ZNode znode = ZNode.ofIamPolicy(iamPolicyRecord.getName());
         zkMetaStore.updateZNodeWithData(znode, iamPolicyRecord);
     }
 
     @Override
     public void deleteIamPolicyRecord(String authResourceId) {
-        ZNode znode = ZNode.OfIamPolicy(authResourceId);
+        ZNode znode = ZNode.ofIamPolicy(authResourceId);
         zkMetaStore.deleteZNode(znode);
     }
 }

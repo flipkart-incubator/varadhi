@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.flipkart.varadhi.db.ZNode.*;
+import static com.flipkart.varadhi.db.ZNode.ASSIGNMENT;
 
 public class AssignmentStoreImpl implements AssignmentStore {
     private final ZKMetaStore zkMetaStore;
@@ -21,26 +21,26 @@ public class AssignmentStoreImpl implements AssignmentStore {
     }
 
     private void ensureEntityTypePathExists() {
-        zkMetaStore.createZNode(ZNode.OfEntityType(ASSIGNMENT));
+        zkMetaStore.createZNode(ZNode.ofEntityType(ASSIGNMENT));
     }
 
     @Override
     public void createAssignments(List<Assignment> assignments) {
         List<ZNode> nodesToCreate = new ArrayList<>();
-        assignments.forEach(a -> nodesToCreate.add(ZNode.OfAssignment(getAssignmentMapping(a))));
+        assignments.forEach(a -> nodesToCreate.add(ZNode.ofAssignment(getAssignmentMapping(a))));
         zkMetaStore.executeInTransaction(nodesToCreate, new ArrayList<>());
     }
 
     @Override
     public void deleteAssignments(List<Assignment> assignments) {
         List<ZNode> nodesToDelete = new ArrayList<>();
-        assignments.forEach(a -> nodesToDelete.add(ZNode.OfAssignment(getAssignmentMapping(a))));
+        assignments.forEach(a -> nodesToDelete.add(ZNode.ofAssignment(getAssignmentMapping(a))));
         zkMetaStore.executeInTransaction(new ArrayList<>(), nodesToDelete);
     }
 
     @Override
     public boolean exists(Assignment assignment) {
-        ZNode nodeToVerify = ZNode.OfAssignment(getAssignmentMapping(assignment));
+        ZNode nodeToVerify = ZNode.ofAssignment(getAssignmentMapping(assignment));
         return zkMetaStore.zkPathExist(nodeToVerify);
     }
 
@@ -63,7 +63,7 @@ public class AssignmentStoreImpl implements AssignmentStore {
         Pattern filter = Pattern.compile(
             String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId)
         );
-        return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT))
+        return zkMetaStore.listChildren(ZNode.ofEntityType(ZNode.ASSIGNMENT))
                           .stream()
                           .filter(m -> filter.matcher(m).matches())
                           .map(this::getAssignment)
