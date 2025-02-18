@@ -58,7 +58,7 @@ public class TopicTests extends E2EBase {
             LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
-        Assertions.assertEquals(topic.getVersion(), r.getVersion());
+
         Assertions.assertEquals(topic.getName(), r.getName());
         Assertions.assertEquals(topic.getProject(), r.getProject());
         Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
@@ -109,11 +109,9 @@ public class TopicTests extends E2EBase {
         TopicResource r1 = makeCreateRequest(getTopicsUri(o1t1Project1), topic1, 200);
         TopicResource r2 = makeCreateRequest(getTopicsUri(o2t1Project1), topic2, 200);
 
-        Assertions.assertEquals(topic1.getVersion(), r1.getVersion());
         Assertions.assertEquals(topic1.getName(), r1.getName());
         Assertions.assertEquals(topic1.getProject(), r1.getProject());
 
-        Assertions.assertEquals(topic2.getVersion(), r2.getVersion());
         Assertions.assertEquals(topic2.getName(), r2.getName());
         Assertions.assertEquals(topic2.getProject(), r2.getProject());
 
@@ -155,5 +153,11 @@ public class TopicTests extends E2EBase {
 
         topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
         Assertions.assertTrue(topics.contains(topicName));
+
+        makeDeleteRequest(
+            getTopicsUri(o1t1Project1, topic.getName()),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            200
+        );
     }
 }

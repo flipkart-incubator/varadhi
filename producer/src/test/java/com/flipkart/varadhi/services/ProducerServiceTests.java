@@ -277,7 +277,7 @@ public class ProducerServiceTests {
             null,
             LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
-        StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
+        StorageTopic st = new DummyStorageTopic(topic.getName());
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);
         topic.addInternalTopic(region, ict);
@@ -343,8 +343,8 @@ public class ProducerServiceTests {
 
 
     public static class DummyStorageTopic extends StorageTopic {
-        public DummyStorageTopic(String name, int version) {
-            super(name, version, Constants.DEFAULT_TOPIC_CAPACITY);
+        public DummyStorageTopic(String name) {
+            super(name, Constants.DEFAULT_TOPIC_CAPACITY);
         }
     }
 }
