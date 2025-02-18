@@ -45,6 +45,11 @@ public class Constants {
         }
     }
 
+    public static class ContextKeys {
+        public static final String USER_CONTEXT = "userContext";
+        public static final String ORG = "org";
+    }
+
 
     /**
      * QueryParams class contains constants for various query parameters.

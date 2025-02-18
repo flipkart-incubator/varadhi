@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.authn.AuthenticationMechanism;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -26,7 +27,7 @@ public class VertxUserHandler implements Handler<RoutingContext> {
         if (authenticationMechanism != AuthenticationMechanism.CUSTOM) {
             User user = routingContext.user();
             if (user != null) {
-                routingContext.put("userContext", new UserContext() {
+                routingContext.put(Constants.ContextKeys.USER_CONTEXT, new UserContext() {
                     @Override
                     public String getSubject() {
                         return user.subject();

@@ -10,6 +10,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
+import jakarta.ws.rs.BadRequestException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
@@ -18,10 +19,13 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.flipkart.varadhi.Constants.ContextKeys.ORG;
+import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
+
 @AllArgsConstructor
 @NoArgsConstructor
 public class CustomAuthenticationHandler implements AuthenticationHandler {
-    AuthenticationProvider authenticationProvider;
+    private AuthenticationProvider authenticationProvider;
 
     public AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
@@ -37,7 +41,13 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
 
     @Override
     public void handle(RoutingContext routingContext) {
-        Org org = (Org)routingContext.get("org");
+        Org org;
+        try {
+            org = routingContext.get(ORG);
+        } catch (ClassCastException e) {
+            routingContext.fail(400, new BadRequestException("Invalid org"));
+            return;
+        }
 
         Future<UserContext> userContext = authenticationProvider.authenticate(
             org,
@@ -46,7 +56,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
-                routingContext.put("userContext", result.result());
+                routingContext.put(USER_CONTEXT, result.result());
                 routingContext.next();
             } else {
                 routingContext.fail(401);
