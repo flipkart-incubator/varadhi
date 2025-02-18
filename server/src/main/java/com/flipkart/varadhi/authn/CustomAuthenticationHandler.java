@@ -23,6 +23,7 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
+import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -77,7 +78,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
                 routingContext.put(USER_CONTEXT, result.result());
                 routingContext.next();
             } else {
-                routingContext.fail(401);
+                routingContext.fail(UNAUTHORIZED.code(), result.cause());
             }
         });
     }

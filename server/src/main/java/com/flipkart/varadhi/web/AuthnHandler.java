@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.authn.AnonymousAuthenticationHandler;
 import com.flipkart.varadhi.authn.CustomAuthenticationHandler;
+import com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
@@ -23,6 +24,7 @@ public class AuthnHandler implements RouteConfigurator {
 
             switch (configuration.getAuthentication().getMechanism()) {
                 case CUSTOM -> new CustomAuthenticationHandler().provideHandler(vertx, authenticationConfig);
+                case USER_HEADER -> new UserHeaderAuthenticationHandler().provideHandler(vertx, authenticationConfig);
                 default -> new AnonymousAuthenticationHandler().provideHandler(vertx, authenticationConfig);
             }
         );

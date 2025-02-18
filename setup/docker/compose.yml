@@ -96,7 +96,7 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector:0.110.0
-    profiles: [ "otel", "dev-metric"]
+    profiles: [ "test", "otel", "dev-metric"]
     container_name: otel-collector
     networks:
       hostnet:

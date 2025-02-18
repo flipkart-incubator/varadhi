@@ -42,7 +42,7 @@ producerOptions:
   metricEnabled: true
 
 authentication:
-  mechanism: anonymous
+  mechanism: user_header
   configFile: ""
   providerClassName: ""
 

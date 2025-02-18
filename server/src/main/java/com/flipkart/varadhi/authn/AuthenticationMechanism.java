@@ -1,5 +1,5 @@
 package com.flipkart.varadhi.authn;
 
 public enum AuthenticationMechanism {
-    CUSTOM, ANONYMOUS
+    CUSTOM, ANONYMOUS, USER_HEADER
 }
