@@ -1,10 +1,14 @@
 package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.config.AuthenticationConfig;
+import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.entities.utils.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationProvider;
+import com.flipkart.varadhi.web.HierarchyHandler;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
@@ -19,6 +23,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.Constants.ContextKeys.ORG;
 import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
 
@@ -29,25 +34,39 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
 
     public AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
-            authenticationProvider = (AuthenticationProvider)Class.forName(authenticationConfig.getProviderClassName())
-                                                                  .getDeclaredConstructor()
-                                                                  .newInstance();
+            Class<?> providerClass = Class.forName(authenticationConfig.getProviderClassName());
+            if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
+                throw new RuntimeException("Provider class " + providerClass.getName() +
+                        " does not implement AuthenticationProvider interface");
+            }
+            authenticationProvider = (AuthenticationProvider) providerClass.getDeclaredConstructor()
+                    .newInstance();
             authenticationProvider.init(authenticationConfig);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Authentication provider class not found: " +
+                    authenticationConfig.getProviderClassName(), e);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create authenticationConfig provider", e);
+            throw new RuntimeException("Failed to create authentication provider", e);
         }
         return new CustomAuthenticationHandler(authenticationProvider);
     }
 
+    private Org parseOrg(RoutingContext routingContext) {
+        try {
+            Map<ResourceType, ResourceHierarchy> hierarchies = routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+            ResourceHierarchy hf = hierarchies.get(ResourceType.ORG);
+            String orgName = hf.getResourcePath().substring(1);
+
+            return Org.of(orgName);
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid org");
+        }
+    }
+
     @Override
     public void handle(RoutingContext routingContext) {
-        Org org;
-        try {
-            org = routingContext.get(ORG);
-        } catch (ClassCastException e) {
-            routingContext.fail(400, new BadRequestException("Invalid org"));
-            return;
-        }
+
+        Org org = parseOrg(routingContext);
 
         Future<UserContext> userContext = authenticationProvider.authenticate(
             org,
