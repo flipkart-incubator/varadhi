@@ -1,14 +1,12 @@
 package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.config.AuthenticationConfig;
-import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.entities.utils.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationProvider;
-import com.flipkart.varadhi.web.HierarchyHandler;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
@@ -24,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.Constants.ContextKeys.ORG;
 import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
 
 @AllArgsConstructor
@@ -36,15 +33,17 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getProviderClassName());
             if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
-                throw new RuntimeException("Provider class " + providerClass.getName() +
-                        " does not implement AuthenticationProvider interface");
+                throw new RuntimeException(
+                    "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
+                );
             }
-            authenticationProvider = (AuthenticationProvider) providerClass.getDeclaredConstructor()
-                    .newInstance();
+            authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
             authenticationProvider.init(authenticationConfig);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Authentication provider class not found: " +
-                    authenticationConfig.getProviderClassName(), e);
+            throw new RuntimeException(
+                "Authentication provider class not found: " + authenticationConfig.getProviderClassName(),
+                e
+            );
         } catch (Exception e) {
             throw new RuntimeException("Failed to create authentication provider", e);
         }
