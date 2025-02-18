@@ -9,7 +9,8 @@ import java.io.IOException;
 public class AuthenticationMechanismDeserializer extends JsonDeserializer<AuthenticationMechanism> {
 
     @Override
-    public AuthenticationMechanism deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public AuthenticationMechanism deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException {
         String value = jsonParser.getText().toUpperCase();
         return AuthenticationMechanism.valueOf(value);
     }

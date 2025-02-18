@@ -9,6 +9,6 @@ import lombok.Data;
 @Data
 public class AuthenticationConfig extends AuthenticationOptions {
 
-    @JsonDeserialize(using = AuthenticationMechanismDeserializer.class)
+    @JsonDeserialize (using = AuthenticationMechanismDeserializer.class)
     private AuthenticationMechanism mechanism;
 }
