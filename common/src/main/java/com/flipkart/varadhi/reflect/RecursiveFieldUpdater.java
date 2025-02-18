@@ -38,9 +38,11 @@ public class RecursiveFieldUpdater {
                     // Apply the update function to get the new value
                     V newValue = updateFunction.apply(fieldPath, (V)fieldValue);
                     setFieldValue(obj, field, newValue);
-                } else if (!field.getType().isPrimitive() && field.getType()
-                                                                  .getName()
-                                                                  .startsWith("com.flipkart.varadhi.")) {
+                } else if (!field.getType().isEnum() && !field.getType().isPrimitive() && field.getType()
+                                                                                               .getName()
+                                                                                               .startsWith(
+                                                                                                   "com.flipkart.varadhi."
+                                                                                               )) {
                     // Recursively visit nested POJOs
                     traverseObject(fieldValue, annotationClass, updateFunction, fieldPath);
                 }

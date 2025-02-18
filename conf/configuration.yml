@@ -43,7 +43,8 @@ producerOptions:
 
 authentication:
   mechanism: anonymous
-  configFile: authn.yaml
+  configFile: ""
+  providerClassName: ""
 
 authorizationEnabled: true
 

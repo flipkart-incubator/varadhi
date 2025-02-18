@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.util.Map;
 
+import static com.flipkart.varadhi.authn.AuthenticationMechanism.CUSTOM;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -31,7 +32,7 @@ class VertxUserHandlerTest {
     void setUp() {
 
         authenticationConfig = new AuthenticationConfig();
-        authenticationConfig.setMechanism(AuthenticationMechanism.custom);
+        authenticationConfig.setMechanism(CUSTOM);
 
         vertx = Vertx.vertx();
         configuration = mock(AppConfiguration.class);
@@ -45,7 +46,7 @@ class VertxUserHandlerTest {
 
     @Test
     void handle_shouldAddUserContextToRoutingContext_whenUserIsAuthenticated() {
-        authenticationConfig.setMechanism(AuthenticationMechanism.anonymous);
+        authenticationConfig.setMechanism(AuthenticationMechanism.ANONYMOUS);
 
         vertxUserHandler = new VertxUserHandler(vertx, configuration);
 
@@ -69,7 +70,7 @@ class VertxUserHandlerTest {
 
     @Test
     void handle_shouldFailWith401_whenUserIsNotAuthenticated() {
-        authenticationConfig.setMechanism(AuthenticationMechanism.anonymous);
+        authenticationConfig.setMechanism(AuthenticationMechanism.ANONYMOUS);
 
         when(configuration.getAuthentication()).thenReturn(authenticationConfig);
         when(routingContext.user()).thenReturn(null);
@@ -102,7 +103,7 @@ class VertxUserHandlerTest {
 
     @Test
     void handle_custom_authentication_mechanism() {
-        this.authenticationConfig.setMechanism(AuthenticationMechanism.custom);
+        this.authenticationConfig.setMechanism(CUSTOM);
         when(configuration.getAuthentication()).thenReturn(this.authenticationConfig);
 
         vertxUserHandler.handle(routingContext);

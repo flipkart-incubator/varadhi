@@ -23,7 +23,7 @@ public class VertxUserHandler implements Handler<RoutingContext> {
     @Override
     public void handle(RoutingContext routingContext) {
 
-        if (authenticationMechanism != AuthenticationMechanism.custom) {
+        if (authenticationMechanism != AuthenticationMechanism.CUSTOM) {
             User user = routingContext.user();
             if (user != null) {
                 routingContext.put("userContext", new UserContext() {
