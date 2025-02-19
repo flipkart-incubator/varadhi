@@ -51,7 +51,7 @@ public class ProduceTestBase extends WebTestBase {
         options.setDeployedRegion(deployedRegion);
         MessageHeaderConfiguration messageHeaderConfiguration = StandardHeaders.fetchDummyHeaderConfiguration();
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry(), messageHeaderConfiguration);
-        PreProduceHandler headerHandler = new PreProduceHandler(messageHeaderConfiguration, deployedRegion);
+        PreProduceHandler headerHandler = new PreProduceHandler(messageHeaderConfiguration);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         produceHandlers = new ProduceHandlers(producerService, headerHandler::validate, projectService, metricHandler,

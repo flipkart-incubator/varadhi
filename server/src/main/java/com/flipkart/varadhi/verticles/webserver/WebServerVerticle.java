@@ -228,7 +228,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         PreProduceHandler
-                preProduceHandler = new PreProduceHandler(configuration.getMessageHeaderConfiguration(), deployedRegion);
+                preProduceHandler = new PreProduceHandler(configuration.getMessageHeaderConfiguration());
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = topic -> messagingStackProvider.getProducerFactory().newProducer(topic);
 

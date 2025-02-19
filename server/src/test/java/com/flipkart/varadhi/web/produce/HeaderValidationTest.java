@@ -49,7 +49,7 @@ public class HeaderValidationTest extends ProduceTestBase {
                 (5 * 1024 * 1024)
 
         );
-        validationHandler = new PreProduceHandler(messageHeaderConfiguration, "region1");
+        validationHandler = new PreProduceHandler(messageHeaderConfiguration);
         route.handler(bodyHandler)
                 .handler(ctx -> {
                     ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
