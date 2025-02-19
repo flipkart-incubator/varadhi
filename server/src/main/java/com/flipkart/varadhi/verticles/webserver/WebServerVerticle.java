@@ -230,7 +230,7 @@ public class WebServerVerticle extends AbstractVerticle {
         PreProduceHandler
                 preProduceHandler = new PreProduceHandler(configuration.getMessageHeaderConfiguration());
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
-        Function<StorageTopic, Producer> producerProvider = topic -> messagingStackProvider.getProducerFactory().newProducer(topic);
+        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
         ProducerService producerService = new ProducerService(deployedRegion, configuration.getProducerOptions(),
                 producerProvider, topicProvider, meterRegistry
@@ -238,8 +238,9 @@ public class WebServerVerticle extends AbstractVerticle {
         ProducerMetricHandler producerMetricsHandler =
                 new ProducerMetricHandler(configuration.getProducerOptions().isMetricEnabled(), meterRegistry);
         return new ArrayList<>(
-                new ProduceHandlers(producerService, preProduceHandler::validate, projectService, producerMetricsHandler,
-                        deployedRegion, configuration.getMessageHeaderConfiguration()
+                new ProduceHandlers(producerService, preProduceHandler::validate, projectService,
+                        producerMetricsHandler,
+                        deployedRegion
                 ).get());
     }
 
@@ -247,7 +248,7 @@ public class WebServerVerticle extends AbstractVerticle {
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
         AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
         RequestTelemetryConfigurator requestTelemetryConfigurator =
-                new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry, configuration.getMessageHeaderConfiguration());
+                new RequestTelemetryConfigurator(new SpanProvider(tracer), meterRegistry);
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         RequestBodyHandler requestBodyHandler =
                 new RequestBodyHandler(configuration.getRestOptions().getPayloadSizeMax());

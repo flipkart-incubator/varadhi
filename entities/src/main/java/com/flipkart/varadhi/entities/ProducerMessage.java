@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -38,7 +37,7 @@ public class ProducerMessage implements Message {
 
     @Override
     public String getHeader(String key) {
-        return requestHeaders.get(key).get(0);
+        return requestHeaders.get(key).getFirst();
     }
 
     @Override

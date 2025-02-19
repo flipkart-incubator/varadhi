@@ -3,7 +3,6 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.entities.utils.HeadersDeserializer;
 import com.flipkart.varadhi.entities.utils.HeadersSerializer;
@@ -45,7 +44,7 @@ public class DlqMessage implements Message {
     @Override
     public String getHeader(String key) {
         return !requestHeaders.containsKey(key) || requestHeaders.get(key).isEmpty() ? null :
-                requestHeaders.get(key).get(0);
+                requestHeaders.get(key).getFirst();
     }
 
     @JsonIgnore

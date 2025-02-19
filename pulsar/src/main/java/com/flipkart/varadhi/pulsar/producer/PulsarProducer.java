@@ -2,14 +2,12 @@ package com.flipkart.varadhi.pulsar.producer;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
-import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.api.ProducerAccessMode;
@@ -67,12 +65,8 @@ public class PulsarProducer implements Producer {
     public CompletableFuture<Offset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
-        //check what is this ?
         TypedMessageBuilder<byte[]> messageBuilder =
                 pulsarProducer.newMessage().key(partitioningKey).value(message.getPayload());
-
-        //header name normalized or config
-        //consumer rev map (in consume side to back to user)
         message.getHeaders().asMap()
                 .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 

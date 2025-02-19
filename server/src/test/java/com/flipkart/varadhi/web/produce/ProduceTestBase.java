@@ -49,13 +49,13 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        MessageHeaderConfiguration messageHeaderConfiguration = StandardHeaders.fetchDummyHeaderConfiguration();
-        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry(), messageHeaderConfiguration);
-        PreProduceHandler headerHandler = new PreProduceHandler(messageHeaderConfiguration);
+        StandardHeaders.initialize(StandardHeaders.fetchDummyHeaderConfiguration());
+        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
+        PreProduceHandler headerHandler = new PreProduceHandler(StandardHeaders.fetchDummyHeaderConfiguration());
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         produceHandlers = new ProduceHandlers(producerService, headerHandler::validate, projectService, metricHandler,
-                deployedRegion, messageHeaderConfiguration
+                deployedRegion
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

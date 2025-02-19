@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web;
 
-
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.TelemetryType;
@@ -27,12 +26,10 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
 
     // TODO: remove explicit dependency on meterRegistry. create a separate class for metrics
     private final MeterRegistry meterRegistry;
-    private final MessageHeaderConfiguration messageHeaderConfiguration;
 
-    public RequestTelemetryConfigurator(SpanProvider spanProvider, MeterRegistry meterRegistry, MessageHeaderConfiguration messageHeaderConfiguration) {
+    public RequestTelemetryConfigurator(SpanProvider spanProvider, MeterRegistry meterRegistry) {
         this.spanProvider = spanProvider;
         this.meterRegistry = meterRegistry;
-        this.messageHeaderConfiguration = messageHeaderConfiguration;
     }
 
     @Override
@@ -115,11 +112,11 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
 
     private List<Tag> getMessageTags(RoutingContext ctx) {
         List<Tag> tags = new ArrayList<>();
-        if (null != ctx.request().getHeader(messageHeaderConfiguration.getMsgIdHeader())) {
-            tags.add(Tag.of("message.id", ctx.request().getHeader(messageHeaderConfiguration.getMsgIdHeader())));
+        if (null != ctx.request().getHeader(StandardHeaders.msgIdHeader)) {
+            tags.add(Tag.of("message.id", ctx.request().getHeader(StandardHeaders.msgIdHeader)));
         }
-        if (null != ctx.request().getHeader(messageHeaderConfiguration.getGroupIdHeader())) {
-            tags.add(Tag.of("group.id", ctx.request().getHeader(messageHeaderConfiguration.getGroupIdHeader())));
+        if (null != ctx.request().getHeader(StandardHeaders.groupIdHeader)) {
+            tags.add(Tag.of("group.id", ctx.request().getHeader(StandardHeaders.groupIdHeader)));
         }
         tags.add(Tag.of("payload.size", String.valueOf(ctx.body() != null ? ctx.body().length() : 0)));
         return tags;

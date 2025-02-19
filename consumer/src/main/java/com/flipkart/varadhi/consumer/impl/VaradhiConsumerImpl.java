@@ -177,7 +177,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             processingLoop =
                     new UngroupedProcessingLoop(
                             context, createMessageSrcSelector(64), concurrencyControl, dynamicThreshold, throttler,
-                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages());
+                            deliveryClient, internalProducers, failurePolicy, consumptionPolicy.getMaxInFlightMessages()
+                    );
         }
 
         connected = true;

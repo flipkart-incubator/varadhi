@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
@@ -49,7 +48,6 @@ public class ProduceHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
-    private final MessageHeaderConfiguration messageHeaderConfiguration;
 
     @Override
     public List<RouteDefinition> get() {
@@ -91,7 +89,7 @@ public class ProduceHandlers implements RouteProvider {
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), messageHeaderConfiguration, ctx);
+        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
         CompletableFuture<ProduceResult> produceFuture =
                 producerService.produceToTopic(messageToProduce, varadhiTopicName, metricsEmitter);
         produceFuture.whenComplete((produceResult, failure) ->
@@ -137,7 +135,6 @@ public class ProduceHandlers implements RouteProvider {
     private Message buildMessageToProduce(
             byte[] payload,
             MultiMap headers,
-            MessageHeaderConfiguration messageHeaderConfiguration,
             RoutingContext ctx
     ) {
         //dropping headers which are not following semantics
@@ -146,14 +143,14 @@ public class ProduceHandlers implements RouteProvider {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        Multimap<String, String> varadhiHeaders = StandardHeaders.copyVaradhiHeaders(requestHeaders, messageHeaderConfiguration.getAllowedPrefix());
+        Multimap<String, String> varadhiHeaders = StandardHeaders.copyVaradhiHeaders(requestHeaders, StandardHeaders.allowedPrefix);
 
         //enriching headers with custom headers
         String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
 
-        varadhiHeaders.put(messageHeaderConfiguration.getProduceRegion(), produceRegion);
-        varadhiHeaders.put(messageHeaderConfiguration.getProduceIdentity(), produceIdentity);
-        varadhiHeaders.put(messageHeaderConfiguration.getProduceTimestamp(), Long.toString(System.currentTimeMillis()));
+        varadhiHeaders.put(StandardHeaders.produceRegion, produceRegion);
+        varadhiHeaders.put(StandardHeaders.produceIdentity, produceIdentity);
+        varadhiHeaders.put(StandardHeaders.produceTimestamp, Long.toString(System.currentTimeMillis()));
         return new ProducerMessage(payload, varadhiHeaders);
     }
 }
