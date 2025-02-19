@@ -3,7 +3,7 @@ package com.flipkart.varadhi.config;
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.produce.config.ProducerOptions;

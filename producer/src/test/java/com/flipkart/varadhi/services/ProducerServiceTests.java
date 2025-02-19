@@ -3,7 +3,7 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;

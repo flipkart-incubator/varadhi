@@ -8,7 +8,6 @@ import com.flipkart.varadhi.consumer.processing.ProcessingLoop;
 import com.flipkart.varadhi.consumer.processing.UngroupedProcessingLoop;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.google.common.base.Ticker;
 import lombok.Getter;

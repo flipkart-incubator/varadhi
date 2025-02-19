@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;

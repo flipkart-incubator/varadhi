@@ -4,7 +4,7 @@ import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -80,7 +80,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         Message capturedMessage = msgCapture.getValue();
-        HeaderUtils.getRequiredHeaders(messageHeaderConfiguration).forEach(s -> Assertions.assertTrue(capturedMessage.hasHeader(s)));
+        HeaderUtils.getRequiredHeaders().forEach(s -> Assertions.assertTrue(capturedMessage.hasHeader(s)));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
 

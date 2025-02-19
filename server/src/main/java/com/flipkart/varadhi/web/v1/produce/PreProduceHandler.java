@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -14,8 +14,6 @@ import java.util.*;
 
 @AllArgsConstructor
 public class PreProduceHandler {
-    //rename to generic
-    private MessageHeaderConfiguration messageHeaderConfiguration;
     public void validate(RoutingContext ctx) {
         validateHeadersAndBodyForMessage(ctx);
         ctx.next();
@@ -31,7 +29,7 @@ public class PreProduceHandler {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        HeaderUtils.ensureRequiredHeaders(messageHeaderConfiguration, requestHeaders);
+        HeaderUtils.ensureRequiredHeaders(requestHeaders);
         long headersAndBodySize = 0;
 
         for (Map.Entry<String, String> entry : headers.entries()) {
@@ -54,8 +52,8 @@ public class PreProduceHandler {
         headersAndBodySize+= body.length;
 
         // If the total size of the headers and body exceeds the allowed limit, throw an exception
-        if (headersAndBodySize > messageHeaderConfiguration.getMaxRequestSize()) {
-            throw new IllegalArgumentException(String.format("Request size exceeds allowed limit of %d bytes.", messageHeaderConfiguration.getMaxRequestSize()));
+        if (headersAndBodySize > HeaderUtils.maxRequestSize) {
+            throw new IllegalArgumentException(String.format("Request size exceeds allowed limit of %d bytes.", HeaderUtils.maxRequestSize));
         }
     }
 

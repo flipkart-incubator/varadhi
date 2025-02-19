@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.produce;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -50,7 +50,7 @@ public class ProduceTestBase extends WebTestBase {
         options.setDeployedRegion(deployedRegion);
         HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        PreProduceHandler headerHandler = new PreProduceHandler(HeaderUtils.fetchDummyHeaderConfiguration());
+        PreProduceHandler headerHandler = new PreProduceHandler();
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         produceHandlers = new ProduceHandlers(producerService, headerHandler::validate, projectService, metricHandler,

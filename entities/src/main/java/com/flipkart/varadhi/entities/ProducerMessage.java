@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;

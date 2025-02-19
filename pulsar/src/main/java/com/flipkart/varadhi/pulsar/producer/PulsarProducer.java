@@ -2,7 +2,7 @@ package com.flipkart.varadhi.pulsar.producer;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;

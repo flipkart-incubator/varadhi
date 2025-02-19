@@ -1,6 +1,7 @@
-package com.flipkart.varadhi.entities.constants;
+package com.flipkart.varadhi.entities.utils;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -24,19 +25,19 @@ public class HeaderUtils {
 
     // Method to check if all fields are initialized
     public static void checkInitialization() {
-
+        if (allowedPrefix == null || mapping == null || headerValueSizeMax == null || maxRequestSize == null) {
+            throw new IllegalStateException("One or more required static fields are not initialized");
+        }
     }
 
-    public static List<String> getRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration) {
+    public static List<String> getRequiredHeaders() {
         return List.of(
-                messageHeaderConfiguration.getMapping().get(StandardHeaders.MSG_ID)
+                HeaderUtils.mapping.get(StandardHeaders.MSG_ID)
         );
     }
 
-    public static void ensureRequiredHeaders(
-            MessageHeaderConfiguration messageHeaderConfiguration, Multimap<String, String> headers
-    ) {
-        getRequiredHeaders(messageHeaderConfiguration).forEach(key -> {
+    public static void ensureRequiredHeaders(Multimap<String, String> headers) {
+        getRequiredHeaders().forEach(key -> {
             if (!headers.containsKey(key)) {
                 throw new IllegalArgumentException(String.format("Missing required header %s", key));
             }

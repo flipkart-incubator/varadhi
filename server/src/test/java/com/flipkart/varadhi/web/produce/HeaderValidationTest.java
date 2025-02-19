@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
@@ -52,7 +52,7 @@ public class HeaderValidationTest extends ProduceTestBase {
                 100,
                 (5 * 1024 * 1024)
         );
-        validationHandler = new PreProduceHandler(messageHeaderConfiguration);
+        validationHandler = new PreProduceHandler();
         route.handler(bodyHandler)
                 .handler(ctx -> {
                     ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;

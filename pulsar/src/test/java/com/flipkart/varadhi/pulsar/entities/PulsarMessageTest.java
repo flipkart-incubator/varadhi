@@ -3,7 +3,7 @@ package com.flipkart.varadhi.pulsar.entities;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.google.common.collect.ArrayListMultimap;

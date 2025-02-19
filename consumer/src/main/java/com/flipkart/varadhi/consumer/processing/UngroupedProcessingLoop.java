@@ -6,7 +6,7 @@ import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.constants.HeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import lombok.extern.slf4j.Slf4j;
 
