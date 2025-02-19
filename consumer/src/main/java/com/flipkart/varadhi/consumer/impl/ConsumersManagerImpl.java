@@ -6,7 +6,6 @@ import com.flipkart.varadhi.consumer.concurrent.CustomThread;
 import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;

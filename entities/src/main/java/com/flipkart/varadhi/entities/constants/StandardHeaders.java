@@ -3,41 +3,27 @@ package com.flipkart.varadhi.entities.constants;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
+
 public class StandardHeaders {
     //Assuming it's initialized at the time of bootstrapping
-    @NotNull
     public static List<String> allowedPrefix;
-    @NotNull
     public static String callbackCodes;
-    @NotNull
     public static String requestTimeout;
-    @NotNull
     public static String replyToHttpUriHeader;
-    @NotNull
     public static String replyToHttpMethodHeader;
-    @NotNull
     public static String replyToHeader;
-    @NotNull
     public static String httpUriHeader;
-    @NotNull
     public static String httpMethodHeader;
-    @NotNull
     public static String httpContentType;
-    @NotNull
     public static String groupIdHeader;
-    @NotNull
+
     public static String msgIdHeader;
-    @NotNull
     public static Integer headerValueSizeMax;
-    @NotNull
     public static String produceTimestamp;
-    @NotNull
     public static String produceRegion;
-    @NotNull
     public static String produceIdentity;
-    @NotNull
     public static Integer maxRequestSize;
 
     // Static method to initialize fields via constructor-like behavior
@@ -66,7 +52,8 @@ public class StandardHeaders {
                 replyToHttpUriHeader == null || replyToHttpMethodHeader == null || replyToHeader == null ||
                 httpUriHeader == null || httpMethodHeader == null || httpContentType == null ||
                 groupIdHeader == null || msgIdHeader == null || headerValueSizeMax == null ||
-                produceTimestamp == null || produceRegion == null || produceIdentity == null || maxRequestSize == null) {
+                produceTimestamp == null || produceRegion == null || produceIdentity == null ||
+                maxRequestSize == null) {
             throw new IllegalStateException("Standard Headers not properly initialized");
         }
     }
@@ -77,7 +64,9 @@ public class StandardHeaders {
         );
     }
 
-    public static void ensureRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration, Multimap<String, String> headers) {
+    public static void ensureRequiredHeaders(
+            MessageHeaderConfiguration messageHeaderConfiguration, Multimap<String, String> headers
+    ) {
         getRequiredHeaders(messageHeaderConfiguration).forEach(key -> {
             if (!headers.containsKey(key)) {
                 throw new IllegalArgumentException(String.format("Missing required header %s", key));
@@ -85,7 +74,9 @@ public class StandardHeaders {
         });
     }
 
-    public static Multimap<String, String> copyVaradhiHeaders(Multimap<String, String> headers, List<String> allowedPrefix) {
+    public static Multimap<String, String> copyVaradhiHeaders(
+            Multimap<String, String> headers, List<String> allowedPrefix
+    ) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         headers.entries().forEach(entry -> {
             String key = entry.getKey();
@@ -97,9 +88,9 @@ public class StandardHeaders {
         return varadhiHeaders;
     }
 
-    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration(){
+    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration() {
         return new MessageHeaderConfiguration(
-                List.of("X_","x_"),
+                List.of("X_", "x_"),
                 "X_CALLBACK_CODES",
                 "X_REQUEST_TIMEOUT",
                 "X_REPLY_TO_HTTP_URI",

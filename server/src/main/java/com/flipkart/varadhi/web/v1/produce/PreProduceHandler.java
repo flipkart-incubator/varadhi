@@ -15,10 +15,7 @@ import java.util.*;
 public class PreProduceHandler {
     //rename to generic
     private MessageHeaderConfiguration messageHeaderConfiguration;
-    private final String produceRegion;
     private static final int MAX_ID_LIMIT = 100;
-    public static final String VALIDATED_HEADERS = "validatedHeaders";
-    private static final String ANONYMOUS_IDENTITY = "Anonymous";
     public void validate(RoutingContext ctx) {
         validateHeadersAndBodyForMessage(ctx);
         ctx.next();

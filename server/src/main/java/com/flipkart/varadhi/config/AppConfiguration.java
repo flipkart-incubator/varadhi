@@ -84,5 +84,6 @@ public class AppConfiguration implements Validatable {
         Validatable.super.validate();
         messageHeaderConfiguration.validate();
         StandardHeaders.initialize(messageHeaderConfiguration);
+        StandardHeaders.checkInitialization();
     }
 }
