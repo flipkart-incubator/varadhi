@@ -8,6 +8,7 @@ import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.web.admin.SubscriptionTestBase;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
@@ -39,7 +40,7 @@ class DlqServiceTest extends SubscriptionTestBase {
         consumerFactory = mock(ConsumerClientFactory.class);
         consumerClient = mock(ConsumerApi.class);
         dlqService = new DlqService(controllerClient, consumerFactory);
-
+        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @Test

@@ -17,19 +17,19 @@ public class MessageHeaderConfigurationTest {
         return MessageHeaderConfiguration.builder()
                 .allowedPrefix(Arrays.asList(prefix1, prefix2))
                 .mapping(Map.ofEntries(
-                        Map.entry(StandardHeaders.MSG_ID, "X_MESSAGE_ID"),
-                        Map.entry(StandardHeaders.GROUP_ID, "X_GROUP_ID"),
-                        Map.entry(StandardHeaders.CALLBACK_CODE, "X_CALLBACK_CODES"),
-                        Map.entry(StandardHeaders.REQUEST_TIMEOUT, "X_REQUEST_TIMEOUT"),
-                        Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "X_REPLY_TO_HTTP_URI"),
-                        Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "X_REPLY_TO_HTTP_METHOD"),
-                        Map.entry(StandardHeaders.REPLY_TO, "X_REPLY_TO"),
-                        Map.entry(StandardHeaders.HTTP_URI, "X_HTTP_URI"),
-                        Map.entry(StandardHeaders.HTTP_METHOD, "X_HTTP_METHOD"),
-                        Map.entry(StandardHeaders.CONTENT_TYPE, "X_CONTENT_TYPE"),
-                        Map.entry(StandardHeaders.PRODUCE_IDENTITY, "X_PRODUCE_IDENTITY"),
-                        Map.entry(StandardHeaders.PRODUCE_REGION, "X_PRODUCE_REGION"),
-                        Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "X_PRODUCE_TIMESTAMP")
+                        Map.entry(StandardHeaders.MSG_ID, "VARADHI_MESSAGE_ID"),
+                        Map.entry(StandardHeaders.GROUP_ID, "VARADHI_GROUP_ID"),
+                        Map.entry(StandardHeaders.CALLBACK_CODE, "VARADHI_CALLBACK_CODES"),
+                        Map.entry(StandardHeaders.REQUEST_TIMEOUT, "VARADHI_REQUEST_TIMEOUT"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "VARADHI_REPLY_TO_HTTP_URI"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "VARADHI_REPLY_TO_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.REPLY_TO, "VARADHI_REPLY_TO"),
+                        Map.entry(StandardHeaders.HTTP_URI, "VARADHI_HTTP_URI"),
+                        Map.entry(StandardHeaders.HTTP_METHOD, "VARADHI_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.CONTENT_TYPE, "VARADHI_CONTENT_TYPE"),
+                        Map.entry(StandardHeaders.PRODUCE_IDENTITY, "VARADHI_PRODUCE_IDENTITY"),
+                        Map.entry(StandardHeaders.PRODUCE_REGION, "VARADHI_PRODUCE_REGION"),
+                        Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "VARADHI_PRODUCE_TIMESTAMP")
                 ))
                 .maxRequestSize(5 * 1024 * 1024)
                 .headerValueSizeMax(100)
