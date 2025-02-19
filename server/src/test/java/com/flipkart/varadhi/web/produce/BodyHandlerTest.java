@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
@@ -36,7 +37,7 @@ public class BodyHandlerTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
-        StandardHeaders.initialize(StandardHeaders.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach
@@ -46,8 +47,8 @@ public class BodyHandlerTest extends ProduceTestBase {
 
     @Test
     public void testProduceWithForBodySize() throws InterruptedException {
-        request.putHeader(StandardHeaders.msgIdHeader, messageId);
-        request.putHeader(StandardHeaders.callbackCodes, "host1, host2");
+        request.putHeader(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), "host1, host2");
         payload = "0123456789".getBytes();
         String messageIdObtained = sendRequestWithByteBufferBody(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);

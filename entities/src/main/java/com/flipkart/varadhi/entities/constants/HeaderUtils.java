@@ -5,62 +5,31 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
 import java.util.List;
+import java.util.Map;
 
-public class StandardHeaders {
+public class HeaderUtils {
     //Assuming it's initialized at the time of bootstrapping
     public static List<String> allowedPrefix;
-    public static String callbackCodes;
-    public static String requestTimeout;
-    public static String replyToHttpUriHeader;
-    public static String replyToHttpMethodHeader;
-    public static String replyToHeader;
-    public static String httpUriHeader;
-    public static String httpMethodHeader;
-    public static String httpContentType;
-    public static String groupIdHeader;
-
-    public static String msgIdHeader;
+    public static Map<StandardHeaders, String> mapping;
     public static Integer headerValueSizeMax;
-    public static String produceTimestamp;
-    public static String produceRegion;
-    public static String produceIdentity;
     public static Integer maxRequestSize;
 
     // Static method to initialize fields via constructor-like behavior
     public static void initialize(MessageHeaderConfiguration config) {
-        StandardHeaders.allowedPrefix = config.getAllowedPrefix();
-        StandardHeaders.callbackCodes = config.getCallbackCodes();
-        StandardHeaders.requestTimeout = config.getRequestTimeout();
-        StandardHeaders.replyToHttpUriHeader = config.getReplyToHttpUriHeader();
-        StandardHeaders.replyToHttpMethodHeader = config.getReplyToHttpMethodHeader();
-        StandardHeaders.replyToHeader = config.getReplyToHeader();
-        StandardHeaders.httpUriHeader = config.getHttpUriHeader();
-        StandardHeaders.httpMethodHeader = config.getHttpMethodHeader();
-        StandardHeaders.httpContentType = config.getHttpContentType();
-        StandardHeaders.groupIdHeader = config.getGroupIdHeader();
-        StandardHeaders.msgIdHeader = config.getMsgIdHeader();
-        StandardHeaders.headerValueSizeMax = config.getHeaderValueSizeMax();
-        StandardHeaders.produceTimestamp = config.getProduceTimestamp();
-        StandardHeaders.produceRegion = config.getProduceRegion();
-        StandardHeaders.produceIdentity = config.getProduceIdentity();
-        StandardHeaders.maxRequestSize = config.getMaxRequestSize();
+        HeaderUtils.allowedPrefix = config.getAllowedPrefix();
+        HeaderUtils.mapping = config.getMapping();
+        HeaderUtils.headerValueSizeMax = config.getHeaderValueSizeMax();
+        HeaderUtils.maxRequestSize = config.getMaxRequestSize();
     }
 
     // Method to check if all fields are initialized
     public static void checkInitialization() {
-        if (allowedPrefix == null || callbackCodes == null || requestTimeout == null ||
-                replyToHttpUriHeader == null || replyToHttpMethodHeader == null || replyToHeader == null ||
-                httpUriHeader == null || httpMethodHeader == null || httpContentType == null ||
-                groupIdHeader == null || msgIdHeader == null || headerValueSizeMax == null ||
-                produceTimestamp == null || produceRegion == null || produceIdentity == null ||
-                maxRequestSize == null) {
-            throw new IllegalStateException("Standard Headers not properly initialized");
-        }
+
     }
 
     public static List<String> getRequiredHeaders(MessageHeaderConfiguration messageHeaderConfiguration) {
         return List.of(
-                messageHeaderConfiguration.getMsgIdHeader()
+                messageHeaderConfiguration.getMapping().get(StandardHeaders.MSG_ID)
         );
     }
 
@@ -90,21 +59,23 @@ public class StandardHeaders {
 
     public static MessageHeaderConfiguration fetchDummyHeaderConfiguration() {
         return new MessageHeaderConfiguration(
+                Map.ofEntries(
+                        Map.entry(StandardHeaders.MSG_ID, "X_MESSAGE_ID"),
+                        Map.entry(StandardHeaders.GROUP_ID, "X_GROUP_ID"),
+                        Map.entry(StandardHeaders.CALLBACK_CODE, "X_CALLBACK_CODES"),
+                        Map.entry(StandardHeaders.REQUEST_TIMEOUT, "X_REQUEST_TIMEOUT"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "X_REPLY_TO_HTTP_URI"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "X_REPLY_TO_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.REPLY_TO, "X_REPLY_TO"),
+                        Map.entry(StandardHeaders.HTTP_URI, "X_HTTP_URI"),
+                        Map.entry(StandardHeaders.HTTP_METHOD, "X_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.CONTENT_TYPE, "X_CONTENT_TYPE"),
+                        Map.entry(StandardHeaders.PRODUCE_IDENTITY, "X_PRODUCE_IDENTITY"),
+                        Map.entry(StandardHeaders.PRODUCE_REGION, "X_PRODUCE_REGION"),
+                        Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "X_PRODUCE_TIMESTAMP")
+                ),
                 List.of("X_", "x_"),
-                "X_CALLBACK_CODES",
-                "X_REQUEST_TIMEOUT",
-                "X_REPLY_TO_HTTP_URI",
-                "X_REPLY_TO_HTTP_METHOD",
-                "X_REPLY_TO",
-                "X_HTTP_URI",
-                "X_HTTP_METHOD",
-                "X_CONTENT_TYPE",
-                "X_GROUP_ID",
-                "X_MESSAGE_ID",
                 100,
-                "X_PRODUCE_TIMESTAMP",
-                "X_PRODUCE_REGION",
-                "X_PRODUCE_IDENTITY",
                 (5 * 1024 * 1024)
         );
     }

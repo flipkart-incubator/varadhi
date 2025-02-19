@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.*;
@@ -48,7 +48,7 @@ public class TopicHandlersTest extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
-        StandardHeaders.initialize(StandardHeaders.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
 
         varadhiTopicService = mock(VaradhiTopicService.class);

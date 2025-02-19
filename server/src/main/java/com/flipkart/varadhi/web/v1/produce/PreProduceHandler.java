@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -15,7 +16,6 @@ import java.util.*;
 public class PreProduceHandler {
     //rename to generic
     private MessageHeaderConfiguration messageHeaderConfiguration;
-    private static final int MAX_ID_LIMIT = 100;
     public void validate(RoutingContext ctx) {
         validateHeadersAndBodyForMessage(ctx);
         ctx.next();
@@ -31,7 +31,7 @@ public class PreProduceHandler {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        StandardHeaders.ensureRequiredHeaders(messageHeaderConfiguration, requestHeaders);
+        HeaderUtils.ensureRequiredHeaders(messageHeaderConfiguration, requestHeaders);
         long headersAndBodySize = 0;
 
         for (Map.Entry<String, String> entry : headers.entries()) {
@@ -39,10 +39,10 @@ public class PreProduceHandler {
             String value = entry.getValue();
 
             if (isIdHeader(key)) {
-                if (value.length() > MAX_ID_LIMIT) {
+                if (value.length() > HeaderUtils.headerValueSizeMax) {
                     throw new IllegalArgumentException(String.format("%s %s exceeds allowed size of %d.",
-                            key.equals(messageHeaderConfiguration.getMsgIdHeader()) ? "Message id" : "Group id", value,
-                            MAX_ID_LIMIT
+                            key.equals(HeaderUtils.mapping.get(StandardHeaders.MSG_ID)) ? "Message id" : "Group id", value,
+                            HeaderUtils.headerValueSizeMax
                     ));
                 }
             }
@@ -60,8 +60,8 @@ public class PreProduceHandler {
     }
 
     private boolean isIdHeader(String key) {
-        return key.equals(messageHeaderConfiguration.getMsgIdHeader()) ||
-                key.equals(messageHeaderConfiguration.getGroupIdHeader());
+        return key.equals(HeaderUtils.mapping.get(StandardHeaders.MSG_ID)) ||
+                key.equals(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID));
     }
 
 }

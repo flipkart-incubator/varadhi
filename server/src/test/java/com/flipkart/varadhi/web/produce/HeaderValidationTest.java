@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
@@ -31,23 +33,24 @@ public class HeaderValidationTest extends ProduceTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration(
-                List.of("X_","x_"),
-                "X_CALLBACK_CODES",
-                "X_REQUEST_TIMEOUT",
-                "X_REPLY_TO_HTTP_URI",
-                "X_REPLY_TO_HTTP_METHOD",
-                "X_REPLY_TO",
-                "X_HTTP_URI",
-                "X_HTTP_METHOD",
-                "X_CONTENT_TYPE",
-                "X_GROUP_ID",
-                "X_MESSAGE_ID",
+                Map.ofEntries(
+                        Map.entry(StandardHeaders.MSG_ID, "X_MESSAGE_ID"),
+                        Map.entry(StandardHeaders.GROUP_ID, "X_GROUP_ID"),
+                        Map.entry(StandardHeaders.CALLBACK_CODE, "X_CALLBACK_CODES"),
+                        Map.entry(StandardHeaders.REQUEST_TIMEOUT, "X_REQUEST_TIMEOUT"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "X_REPLY_TO_HTTP_URI"),
+                        Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "X_REPLY_TO_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.REPLY_TO, "X_REPLY_TO"),
+                        Map.entry(StandardHeaders.HTTP_URI, "X_HTTP_URI"),
+                        Map.entry(StandardHeaders.HTTP_METHOD, "X_HTTP_METHOD"),
+                        Map.entry(StandardHeaders.CONTENT_TYPE, "X_CONTENT_TYPE"),
+                        Map.entry(StandardHeaders.PRODUCE_IDENTITY, "X_PRODUCE_IDENTITY"),
+                        Map.entry(StandardHeaders.PRODUCE_REGION, "X_PRODUCE_REGION"),
+                        Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "X_PRODUCE_TIMESTAMP")
+                ),
+                List.of("X_", "x_"),
                 100,
-                "X_PRODUCE_TIMESTAMP",
-                "X_PRODUCE_REGION",
-                "X_PRODUCE_IDENTITY",
                 (5 * 1024 * 1024)
-
         );
         validationHandler = new PreProduceHandler(messageHeaderConfiguration);
         route.handler(bodyHandler)
@@ -61,7 +64,7 @@ public class HeaderValidationTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
-        StandardHeaders.initialize(messageHeaderConfiguration);
+        HeaderUtils.initialize(messageHeaderConfiguration);
     }
 
     @AfterEach
@@ -87,7 +90,7 @@ public class HeaderValidationTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StandardHeaders.httpUriHeader, "host1, host2");
+        request.putHeader(HeaderUtils.mapping.get(StandardHeaders.HTTP_URI), "host1, host2");
         sendRequestWithByteBufferBody(
                 request, payload, 400, "Message id " + randomString +  " exceeds allowed size of 100.",
                 ErrorResponse.class

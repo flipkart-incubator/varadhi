@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -14,7 +15,8 @@ public class MessageHelperTest {
 
     @BeforeEach
     public void setup(){
-        messageHeaderConfiguration = StandardHeaders.fetchDummyHeaderConfiguration();
+        messageHeaderConfiguration = HeaderUtils.fetchDummyHeaderConfiguration();
+        HeaderUtils.initialize(messageHeaderConfiguration);
     }
 
     @Test
@@ -25,24 +27,25 @@ public class MessageHelperTest {
         varadhiHeaders.put("X_PRODUCE_TIMESTAMP", "value1");
         varadhiHeaders.put("X_PRODUCE_REGION", "value1");
         varadhiHeaders.put("X_PRODUCE_IDENTITY", "value1");
-        StandardHeaders.getRequiredHeaders(messageHeaderConfiguration).forEach(
+        HeaderUtils.getRequiredHeaders(messageHeaderConfiguration).forEach(
                 key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
-        StandardHeaders.ensureRequiredHeaders(messageHeaderConfiguration, varadhiHeaders);
+        HeaderUtils.ensureRequiredHeaders(messageHeaderConfiguration, varadhiHeaders);
     }
 
     @Test
     public void testMissingRequiredHeaders() {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
-        StandardHeaders.getRequiredHeaders(messageHeaderConfiguration).stream().filter(key -> !key.equals(messageHeaderConfiguration.getMsgIdHeader()) && !key.equals(messageHeaderConfiguration.getProduceRegion()))
+        HeaderUtils.getRequiredHeaders(messageHeaderConfiguration).stream().filter(key -> !key.equals(HeaderUtils.mapping.get(
+                        StandardHeaders.MSG_ID)) && !key.equals(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_REGION)))
                 .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         IllegalArgumentException ae = Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> StandardHeaders.ensureRequiredHeaders(messageHeaderConfiguration, varadhiHeaders)
+                () -> HeaderUtils.ensureRequiredHeaders(messageHeaderConfiguration, varadhiHeaders)
         );
     }
 }

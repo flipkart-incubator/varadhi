@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.entities.utils.HeadersDeserializer;
 import com.flipkart.varadhi.entities.utils.HeadersSerializer;
@@ -25,13 +26,13 @@ public class DlqMessage implements Message {
     @JsonIgnore
     @Override
     public String getMessageId() {
-        return getHeader(StandardHeaders.msgIdHeader);
+        return getHeader(HeaderUtils.mapping.get(StandardHeaders.MSG_ID));
     }
 
     @JsonIgnore
     @Override
     public String getGroupId() {
-        return getHeader(StandardHeaders.groupIdHeader);
+        return getHeader(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID));
     }
 
     @JsonIgnore

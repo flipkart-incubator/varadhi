@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.ProjectService;
@@ -55,7 +56,7 @@ public class SubscriptionTestBase extends WebTestBase {
         projectService = mock(ProjectService.class);
         topicService = mock(VaradhiTopicService.class);
         subscriptionFactory = mock(VaradhiSubscriptionFactory.class);
-        StandardHeaders.initialize(StandardHeaders.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     public static VaradhiSubscription getUngroupedSubscription(
@@ -107,8 +108,8 @@ public class SubscriptionTestBase extends WebTestBase {
 
     protected DlqMessage getDlqMessage(int partitionId) {
         ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
-        requestHeaders.put(StandardHeaders.msgIdHeader, Arrays.toString(getRandomBytes(10)));
-        requestHeaders.put(StandardHeaders.groupIdHeader, Arrays.toString(getRandomBytes(10)));
+        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), Arrays.toString(getRandomBytes(10)));
+        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), Arrays.toString(getRandomBytes(10)));
         int lId = r.nextInt(30) % 5000;
         int eId = r.nextInt(30) % 40000;
         Offset offset = PulsarOffset.of("mId:%d:%d:%d".formatted(lId, eId, partitionId));

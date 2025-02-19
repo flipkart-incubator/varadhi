@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
@@ -143,14 +144,14 @@ public class ProduceHandlers implements RouteProvider {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        Multimap<String, String> varadhiHeaders = StandardHeaders.copyVaradhiHeaders(requestHeaders, StandardHeaders.allowedPrefix);
+        Multimap<String, String> varadhiHeaders = HeaderUtils.copyVaradhiHeaders(requestHeaders, HeaderUtils.allowedPrefix);
 
         //enriching headers with custom headers
         String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
 
-        varadhiHeaders.put(StandardHeaders.produceRegion, produceRegion);
-        varadhiHeaders.put(StandardHeaders.produceIdentity, produceIdentity);
-        varadhiHeaders.put(StandardHeaders.produceTimestamp, Long.toString(System.currentTimeMillis()));
+        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_REGION), produceRegion);
+        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_IDENTITY), produceIdentity);
+        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_TIMESTAMP), Long.toString(System.currentTimeMillis()));
         return new ProducerMessage(payload, varadhiHeaders);
     }
 }

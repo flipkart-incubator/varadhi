@@ -3,6 +3,7 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.constants.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
@@ -57,9 +58,9 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        messageHeaderConfiguration = StandardHeaders.fetchDummyHeaderConfiguration();
+        messageHeaderConfiguration = HeaderUtils.fetchDummyHeaderConfiguration();
         //initialization required
-        StandardHeaders.initialize(messageHeaderConfiguration);
+        HeaderUtils.initialize(messageHeaderConfiguration);
 
     }
 
@@ -267,10 +268,10 @@ public class ProducerServiceTests {
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        headers.put(messageHeaderConfiguration.getMsgIdHeader(), getMessageId());
-        headers.put(messageHeaderConfiguration.getProduceIdentity(), ANONYMOUS_IDENTITY);
-        headers.put(messageHeaderConfiguration.getProduceRegion(), region);
-        headers.put(messageHeaderConfiguration.getProduceTimestamp(), System.currentTimeMillis() + "");
+        headers.put(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), getMessageId());
+        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_IDENTITY), ANONYMOUS_IDENTITY);
+        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_REGION), region);
+        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
