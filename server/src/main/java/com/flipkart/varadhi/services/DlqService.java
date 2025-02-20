@@ -30,25 +30,32 @@ public class DlqService {
     }
 
     public CompletableFuture<SubscriptionOperation> unsideline(
-            VaradhiSubscription subscription, UnsidelineRequest unsidelineRequest, String requestedBy
+        VaradhiSubscription subscription,
+        UnsidelineRequest unsidelineRequest,
+        String requestedBy
     ) {
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(
-                    "Subscription is in state %s. Unsideline not allowed.".formatted(
-                            subscription.getStatus().getState()));
+                "Subscription is in state %s. Unsideline not allowed.".formatted(subscription.getStatus().getState())
+            );
         }
         return controllerClient.unsideline(subscription.getName(), unsidelineRequest, requestedBy);
     }
 
 
     public CompletableFuture<Void> getMessages(
-            VaradhiSubscription subscription, long earliestFailedAt, DlqPageMarker pageMarkers,
-            int limit, Consumer<DlqMessagesResponse> recordWriter
+        VaradhiSubscription subscription,
+        long earliestFailedAt,
+        DlqPageMarker pageMarkers,
+        int limit,
+        Consumer<DlqMessagesResponse> recordWriter
     ) {
-        if (!subscription.isWellProvisioned()) {
+        if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(
-                    "Dlq messages can't be queried in Subscription's current state %s.".formatted(
-                            subscription.getStatus().getState()));
+                "Dlq messages can't be queried in Subscription's current state %s.".formatted(
+                    subscription.getStatus().getState()
+                )
+            );
         }
         // Get subscription shard's consumer
         // call getMessage() for each shard on respective consumers.
@@ -64,22 +71,33 @@ public class DlqService {
                     log.info("Shard {} has no markers, skipping getMessages().", shardId);
                     continue;
                 }
-                shardFutures.add(getMessagesForShard(isRequestByTimeStamp, a.getConsumerId(), earliestFailedAt,
-                        pageMarkers.getShardMarker(shardId), limit
-                ).whenComplete((r, t) -> processShardResponse(shardId, recordWriter, r, t, finalResponse)));
+                shardFutures.add(
+                    getMessagesForShard(
+                        isRequestByTimeStamp,
+                        a.getConsumerId(),
+                        earliestFailedAt,
+                        pageMarkers.getShardMarker(shardId),
+                        limit
+                    ).whenComplete((r, t) -> processShardResponse(shardId, recordWriter, r, t, finalResponse))
+                );
             }
             return CompletableFuture.allOf(shardFutures.toArray(new CompletableFuture[0]));
         }).whenComplete((v, t) -> recordWriter.accept(finalResponse.toAggregatedResponse(t)));
     }
 
     private void processShardResponse(
-            int shardId, Consumer<DlqMessagesResponse> recordWriter, ShardDlqMessageResponse r, Throwable t,
-            ShardDlqMsgResponseCollector finalResponse
+        int shardId,
+        Consumer<DlqMessagesResponse> recordWriter,
+        ShardDlqMessageResponse r,
+        Throwable t,
+        ShardDlqMsgResponseCollector finalResponse
     ) {
         if (r != null && !r.getMessages().isEmpty()) {
             log.info(
-                    "shard {} returned {} messages nextMarker {}.", shardId, r.getMessages().size(),
-                    r.getNextPageMarker()
+                "shard {} returned {} messages nextMarker {}.",
+                shardId,
+                r.getMessages().size(),
+                r.getNextPageMarker()
             );
             recordWriter.accept(DlqMessagesResponse.of(r.getMessages()));
         }
@@ -87,10 +105,15 @@ public class DlqService {
     }
 
     private CompletableFuture<ShardDlqMessageResponse> getMessagesForShard(
-            boolean isRequestByTimeStamp, String consumerId, long earliestFailedAt, String shardPageMarker, int limit
+        boolean isRequestByTimeStamp,
+        String consumerId,
+        long earliestFailedAt,
+        String shardPageMarker,
+        int limit
     ) {
         ConsumerApi consumer = consumerFactory.getInstance(consumerId);
-        return isRequestByTimeStamp ? consumer.getMessagesByTimestamp(earliestFailedAt, limit) :
-                consumer.getMessagesByOffset(shardPageMarker, limit);
+        return isRequestByTimeStamp ?
+            consumer.getMessagesByTimestamp(earliestFailedAt, limit) :
+            consumer.getMessagesByOffset(shardPageMarker, limit);
     }
 }

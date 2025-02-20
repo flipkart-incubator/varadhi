@@ -21,14 +21,17 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
 
     @Override
     public List<Assignment> assign(
-            List<SubscriptionUnitShard> shards, VaradhiSubscription subscription, List<ConsumerNode> consumerNodes
+        List<SubscriptionUnitShard> shards,
+        VaradhiSubscription subscription,
+        List<ConsumerNode> consumerNodes
     ) {
         if (consumerNodes.isEmpty()) {
             throw new CapacityException("No active consumer node for Subscription assignment.");
         }
         List<Assignment> assignments = new ArrayList<>();
-        PriorityQueue<ConsumerNode> consumers =
-                new PriorityQueue<>(Collections.reverseOrder(ConsumerNode.NodeComparator));
+        PriorityQueue<ConsumerNode> consumers = new PriorityQueue<>(
+            Collections.reverseOrder(ConsumerNode.NodeComparator)
+        );
         consumers.addAll(consumerNodes);
         List<ConsumerNode> usedNodes = new ArrayList<>();
         ArrayList<SubscriptionUnitShard> shardsToAssign = new ArrayList<>(shards);
@@ -41,15 +44,20 @@ public class LeastAssignedStrategy implements AssignmentStrategy {
             //TODO::handle for creating required capacity via re-assigning the shards.
             if (!consumerNode.canAllocate(shard.getCapacityRequest())) {
                 log.error(
-                        "Subscription:{} Shard:{} Assignment Failure: ResourcesNeeded:{}  max ResourcesAvailable on any node {}.",
-                        subscription.getName(), shard.getShardId(), shard.getCapacityRequest(),
-                        consumerNode.getAvailable()
+                    "Subscription:{} Shard:{} Assignment Failure: ResourcesNeeded:{}  max ResourcesAvailable on any node {}.",
+                    subscription.getName(),
+                    shard.getShardId(),
+                    shard.getCapacityRequest(),
+                    consumerNode.getAvailable()
                 );
                 throw new CapacityException("Not enough Resources for Subscription assignment.");
             }
 
-            Assignment assignment =
-                    new Assignment(subscription.getName(), shard.getShardId(), consumerNode.getConsumerId());
+            Assignment assignment = new Assignment(
+                subscription.getName(),
+                shard.getShardId(),
+                consumerNode.getConsumerId()
+            );
             consumerNode.allocate(assignment, shard.getCapacityRequest());
             assignments.add(assignment);
 

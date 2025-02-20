@@ -9,11 +9,13 @@ import io.vertx.tracing.opentelemetry.VertxContextStorageProvider;
 public class SpanProvider {
     Tracer tracer;
     ContextStorage contextStorage;
+
     public SpanProvider(Tracer tracer) {
         this.tracer = tracer;
         this.contextStorage = new VertxContextStorageProvider().get();
 
     }
+
     public Span addSpan(String name) {
         return tracer.spanBuilder(name).setParent(contextStorage.current()).startSpan();
     }

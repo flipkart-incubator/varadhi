@@ -15,7 +15,7 @@ public class Context {
 
     private static final FastThreadLocal<Context> currentThreadCtx = new FastThreadLocal<>();
 
-    @Getter(lombok.AccessLevel.PACKAGE)
+    @Getter (lombok.AccessLevel.PACKAGE)
     final EventExecutor executor;
 
     public interface Task extends Runnable {
@@ -29,7 +29,7 @@ public class Context {
     public void updateCurrentThreadContext() {
         Thread currentThread = Thread.currentThread();
         if (currentThread instanceof CustomThread) {
-            ((CustomThread) currentThread).setContext(this);
+            ((CustomThread)currentThread).setContext(this);
         } else {
             currentThreadCtx.set(this);
         }
@@ -38,7 +38,7 @@ public class Context {
     public static Context getCurrentThreadContext() {
         Thread currentThread = Thread.currentThread();
         if (currentThread instanceof CustomThread) {
-            return ((CustomThread) currentThread).getContext();
+            return ((CustomThread)currentThread).getContext();
         } else {
             return currentThreadCtx.get();
         }

@@ -13,8 +13,8 @@ public class ShardProvisioner {
     StorageSubscriptionService<StorageSubscription<StorageTopic>> storageSubscriptionService;
 
     public ShardProvisioner(
-            StorageSubscriptionService<StorageSubscription<StorageTopic>> storageSubscriptionService,
-            StorageTopicService<StorageTopic> storageTopicService
+        StorageSubscriptionService<StorageSubscription<StorageTopic>> storageSubscriptionService,
+        StorageTopicService<StorageTopic> storageTopicService
     ) {
         this.storageSubscriptionService = storageSubscriptionService;
         this.storageTopicService = storageTopicService;
@@ -48,7 +48,9 @@ public class ShardProvisioner {
     }
 
     private void provisionCompositeSubscription(
-            InternalCompositeSubscription compositeSubscription, Project project, boolean provisionTopics
+        InternalCompositeSubscription compositeSubscription,
+        Project project,
+        boolean provisionTopics
     ) {
         List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
@@ -61,7 +63,9 @@ public class ShardProvisioner {
 
     private void provisionStorageSubscription(StorageSubscription<StorageTopic> storageSub, Project project) {
         if (storageSubscriptionService.exists(
-                storageSub.getName(), storageSub.getTopicPartitions().getTopic().getName())) {
+            storageSub.getName(),
+            storageSub.getTopicPartitions().getTopic().getName()
+        )) {
             log.info("StorageSubscription:{} already exists, re-using it.", storageSub.getName());
         } else {
             storageSubscriptionService.create(storageSub, project);
@@ -90,7 +94,9 @@ public class ShardProvisioner {
     }
 
     private void deProvisionCompositeSubscription(
-            InternalCompositeSubscription compositeSubscription, Project project, boolean deProvisionTopics
+        InternalCompositeSubscription compositeSubscription,
+        Project project,
+        boolean deProvisionTopics
     ) {
         List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
@@ -112,7 +118,9 @@ public class ShardProvisioner {
 
     private void deProvisionStorageSubscription(StorageSubscription<StorageTopic> storageSub, Project project) {
         if (!storageSubscriptionService.exists(
-                storageSub.getName(), storageSub.getTopicPartitions().getTopic().getName())) {
+            storageSub.getName(),
+            storageSub.getTopicPartitions().getTopic().getName()
+        )) {
             log.info("StorageSubscription:{} not found, skipping delete.", storageSub.getName());
         } else {
             storageSubscriptionService.delete(storageSub, project);

@@ -38,7 +38,7 @@ public class MessageRouter {
     public void sendHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.SEND);
         vertxEventBus.consumer(apiPath, message -> {
-            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
             log.debug("Received msg via - send({}, {})", apiPath, msg.getId());
             try {
                 // this is async invocation.
@@ -54,32 +54,29 @@ public class MessageRouter {
         });
     }
 
-    public void requestHandler(
-            String routeName, String apiName, RequestHandler handler
-    ) {
+    public void requestHandler(String routeName, String apiName, RequestHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.REQUEST);
         vertxEventBus.consumer(apiPath, message -> {
-            ClusterMessage msg = JsonMapper.jsonDeserialize((String) message.body(), ClusterMessage.class);
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
             log.debug("Received msg via - request({}, {})", apiPath, msg.getId());
             try {
-                handler.handle(msg).thenAccept(response -> message.reply(
-                        JsonMapper.jsonSerialize(response),
-                        deliveryOptions
-                )).exceptionally(t -> {
-                    log.error("request handler completed exceptionally: {}", t.getMessage());
-                    //TODO::exception exchange is not working always. ser(de) is failing for some exception.
-                    Exception failure;
-                    if (t instanceof ExecutionException) {
-                        failure = (ExecutionException) t.getCause();
-                    } else if (t instanceof Exception) {
-                        failure = (Exception) t;
-                    } else {
-                        failure = new VaradhiException(t);
-                    }
-                    ResponseMessage response = msg.getResponseMessage(failure);
-                    message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
-                    return null;
-                });
+                handler.handle(msg)
+                       .thenAccept(response -> message.reply(JsonMapper.jsonSerialize(response), deliveryOptions))
+                       .exceptionally(t -> {
+                           log.error("request handler completed exceptionally: {}", t.getMessage());
+                           //TODO::exception exchange is not working always. ser(de) is failing for some exception.
+                           Exception failure;
+                           if (t instanceof ExecutionException) {
+                               failure = (ExecutionException)t.getCause();
+                           } else if (t instanceof Exception) {
+                               failure = (Exception)t;
+                           } else {
+                               failure = new VaradhiException(t);
+                           }
+                           ResponseMessage response = msg.getResponseMessage(failure);
+                           message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
+                           return null;
+                       });
             } catch (Exception e) {
                 log.error("request handler Unhandled exception: {}", e.getMessage());
                 ResponseMessage response = msg.getResponseMessage(e);

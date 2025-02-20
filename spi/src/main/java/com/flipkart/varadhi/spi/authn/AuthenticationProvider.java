@@ -7,5 +7,6 @@ import io.vertx.core.Future;
 
 public interface AuthenticationProvider {
     Future<Boolean> init(AuthenticationOptions authenticationOptions);
+
     Future<UserContext> authenticate(Org org, RequestContext requestContext);
 }

@@ -6,15 +6,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import static com.flipkart.varadhi.Constants.REST_DEFAULTS.*;
+import static com.flipkart.varadhi.Constants.RestDefaults.*;
 
 @Data
 public class RestOptions {
-    @NotBlank
-    private String deployedRegion;
-    @NotNull
-    private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
-    private TopicCapacityPolicy defaultTopicCapacity = Constants.DefaultTopicCapacity;
+    @NotBlank private String deployedRegion;
+    @NotNull private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
+    private TopicCapacityPolicy defaultTopicCapacity = Constants.DEFAULT_TOPIC_CAPACITY;
     private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
     private int headersAllowedMax = HEADERS_ALLOWED_MAX;

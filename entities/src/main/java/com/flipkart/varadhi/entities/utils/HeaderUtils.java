@@ -29,7 +29,7 @@ public class HeaderUtils {
 
     public static String getHeader(StandardHeaders header){
         checkInitialization();
-        return mapping.get(header);
+        return mapping.get(header).toLowerCase();
     }
     public static void checkInitialization() {
         if (HeaderUtils.initialized != Boolean.TRUE) {
@@ -59,7 +59,7 @@ public class HeaderUtils {
             String key = entry.getKey();
             boolean validPrefix = HeaderUtils.allowedPrefix.stream().anyMatch(key::startsWith);
             if (validPrefix) {
-                varadhiHeaders.put(key, entry.getValue());
+                varadhiHeaders.put(key.toLowerCase(), entry.getValue());
             }
         });
         return varadhiHeaders;

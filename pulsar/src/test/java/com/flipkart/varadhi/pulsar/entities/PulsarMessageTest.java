@@ -35,14 +35,18 @@ class PulsarMessageTest {
         Message producerMessage = new ProducerMessage("message".getBytes(StandardCharsets.UTF_8), requestHeaders);
 
         // create produce path message builder
-        TypedMessageBuilder<byte[]> messageBuilder = new TypedMessageBuilderImpl<>(null, Schema.BYTES)
-                .key("key").value(producerMessage.getPayload());
-        producerMessage.getHeaders().asMap()
-                .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
+        TypedMessageBuilder<byte[]> messageBuilder = new TypedMessageBuilderImpl<>(null, Schema.BYTES).key("key")
+                                                                                                      .value(
+                                                                                                          producerMessage.getPayload()
+                                                                                                      );
+        producerMessage.getHeaders()
+                       .asMap()
+                       .forEach(
+                           (key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values))
+                       );
 
         // create pulsar message, which is the message that is consumed by the consumer
-        PulsarMessage pulsarMessage =
-                new PulsarMessage(((TypedMessageBuilderImpl<byte[]>) messageBuilder).getMessage());
+        PulsarMessage pulsarMessage = new PulsarMessage(((TypedMessageBuilderImpl<byte[]>)messageBuilder).getMessage());
 
         // pulsar message and producer message should match
         Assertions.assertEquals(producerMessage.getMessageId(), pulsarMessage.getMessageId());

@@ -12,16 +12,15 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MessageHeaderConfigurationTest {
-
     @ParameterizedTest
-    @CsvSource({
-            "'VARADHI_', 'VARADHI-', true",            // Valid case
-            "'', 'VARADHI-', false",                   // Empty prefix
-            "'VARADHI_', '', false",                   // Empty second prefix
-            "'T_', 'T-', false",                       // Invalid prefix not matching
-            "'VARADHI_', null, true",                  // Null second prefix, valid first
-            "'varadhi_', 'VARADHI-', false",           // Case sensitivity issue
-            "'VARADHI_', 'VARADHI\u00A9', true",       // Unicode characters
+    @CsvSource ({
+        "'VARADHI_', 'VARADHI-', true",            // Valid case
+        "'', 'VARADHI-', false",                   // Empty prefix
+        "'VARADHI_', '', false",                   // Empty second prefix
+        "'T_', 'T-', false",                       // Invalid prefix not matching
+        "'VARADHI_', null, true",                  // Null second prefix, valid first
+        "'varadhi_', 'VARADHI-', false",           // Case sensitivity issue
+        "'VARADHI_', 'VARADHI\u00A9', true",       // Unicode characters
     })
     void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) {
         MessageHeaderConfiguration config = getDefaultMessageHeaderConfig();

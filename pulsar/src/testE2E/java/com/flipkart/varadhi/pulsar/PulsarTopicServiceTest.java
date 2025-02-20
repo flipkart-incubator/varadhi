@@ -34,7 +34,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
     }
@@ -42,7 +42,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithSameConfigAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, project);
         topicService.create(pt, project);
     }
@@ -50,12 +50,17 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     @Test
     public void testDuplicateTopicWithDifferentConfigNotAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt1 = PulsarStorageTopic.of(topicFQDN, 2, Constants.DefaultTopicCapacity);
-        PulsarStorageTopic pt2 = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt1 = PulsarStorageTopic.of(topicFQDN, 2, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt2 = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt1, project);
-        MessagingException m =
-                Assertions.assertThrows(MessagingException.class, () -> topicService.create(pt2, project));
-        Assertions.assertEquals("Found existing pulsar topic %s with different config, can't re-use it.".formatted(pt1.getName()), m.getMessage());
+        MessagingException m = Assertions.assertThrows(
+            MessagingException.class,
+            () -> topicService.create(pt2, project)
+        );
+        Assertions.assertEquals(
+            "Found existing pulsar topic %s with different config, can't re-use it.".formatted(pt1.getName()),
+            m.getMessage()
+        );
     }
 
     @Test
@@ -65,7 +70,7 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         String topicFQDN = getRandomTopicFQDN();
 
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DefaultTopicCapacity);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
         topicService.create(pt, projectNew);
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
@@ -85,6 +90,8 @@ public class PulsarTopicServiceTest extends PulsarTestBase {
     private void validateNamespaceExists(String tenant, String namespace) throws PulsarAdminException {
         List<String> namespaces = clientProvider.getAdminClient().namespaces().getNamespaces(tenant);
         Assertions.assertTrue(
-                namespaces.contains(namespace), String.format("Failed to find the namespace %s.", namespace));
+            namespaces.contains(namespace),
+            String.format("Failed to find the namespace %s.", namespace)
+        );
     }
 }

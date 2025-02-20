@@ -74,8 +74,8 @@ public abstract class ProcessingLoop implements Context.Task {
      * @param currentInFlightMessages
      */
     public void runLoopIfRequired(int currentInFlightMessages) {
-        if (currentInFlightMessages <= Math.max(maxInFlightMessages - msgSrcSelector.getBatchSize(), 0) &&
-                iterationInProgress.compareAndSet(false, true)) {
+        if (currentInFlightMessages <= Math.max(maxInFlightMessages - msgSrcSelector.getBatchSize(), 0)
+            && iterationInProgress.compareAndSet(false, true)) {
             log.debug("enqueuing next iteration. inFlightMessages: {}", currentInFlightMessages);
             context.run(this);
         } else {
@@ -119,7 +119,8 @@ public abstract class ProcessingLoop implements Context.Task {
     }
 
     protected Collection<CompletableFuture<DeliveryResult>> deliverMessages(
-            InternalQueueType type, Iterable<MessageTracker> msg
+        InternalQueueType type,
+        Iterable<MessageTracker> msg
     ) {
         List<Supplier<CompletableFuture<DeliveryResult>>> forPush = new ArrayList<>();
         for (MessageTracker message : msg) {
@@ -129,7 +130,8 @@ public abstract class ProcessingLoop implements Context.Task {
     }
 
     /**
-     * Deliver the message to the destination. If the delivery fails, then we wait for the quota from the error throttler.
+     * Deliver the message to the destination. If the delivery fails, then we wait for the quota from the error
+     * throttler.
      */
     private CompletableFuture<DeliveryResponse> deliver(InternalQueueType type, MessageTracker msg) {
         try {
@@ -139,18 +141,18 @@ public abstract class ProcessingLoop implements Context.Task {
             return deliveryClient.deliver(msg.getMessage()).thenCompose(response -> {
                 throttleThresholdProvider.mark();
                 log.info(
-                        "Delivery attempt was made. queue: {}, message id: {}. status: {}", type,
-                        msg.getMessage().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID)), response.statusCode()
+                    "Delivery attempt was made. queue: {}, message id: {}. status: {}",
+                    type,
+                    msg.getMessage().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID)),
+                    response.statusCode()
                 );
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);
                 } else {
-                    return throttler.acquire(
-                            type, () -> {
-                                // acquired the error throttler. now complete the push task
-                                return CompletableFuture.completedFuture(response);
-                            }, 1
-                    );
+                    return throttler.acquire(type, () -> {
+                        // acquired the error throttler. now complete the push task
+                        return CompletableFuture.completedFuture(response);
+                    }, 1);
                 }
             });
         } catch (Exception e) {
@@ -167,7 +169,11 @@ public abstract class ProcessingLoop implements Context.Task {
      * @param status
      */
     protected void onComplete(MessageTracker message, MessageConsumptionStatus status) {
-        log.info("Message processing complete. message id: {}, status: {}", message.getMessage().getMessageId(), status);
+        log.info(
+            "Message processing complete. message id: {}, status: {}",
+            message.getMessage().getMessageId(),
+            status
+        );
         // all kind of processing finishes here for the message.
         message.onConsumed(status);
 

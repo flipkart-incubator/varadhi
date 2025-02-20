@@ -35,20 +35,24 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
         createTenant(project.getOrg());
         createNamespace(project.getOrg(), project.getName());
         try {
-            PartitionedTopicMetadata topicMeta =
-                    clientProvider.getAdminClient().topics().getPartitionedTopicMetadata((topic.getName()));
+            PartitionedTopicMetadata topicMeta = clientProvider.getAdminClient()
+                                                               .topics()
+                                                               .getPartitionedTopicMetadata((topic.getName()));
             if (topicMeta.partitions != topic.getPartitionCount()) {
                 // This can be enhanced to validate other properties of the topic as well to establish
                 // pre-existing Pulsar topic is valid to be associated with requested PulsarStorageTopic
                 log.error(
-                        "Topic {} properties mismatch: PartitionCount expected:{} found:{}", topic.getName(),
-                        topic.getPartitionCount(), topicMeta.partitions
+                    "Topic {} properties mismatch: PartitionCount expected:{} found:{}",
+                    topic.getName(),
+                    topic.getPartitionCount(),
+                    topicMeta.partitions
                 );
                 throw new MessagingException(
-                        String.format(
-                                "Found existing pulsar topic %s with different config, can't re-use it.",
-                                topic.getName()
-                        ));
+                    String.format(
+                        "Found existing pulsar topic %s with different config, can't re-use it.",
+                        topic.getName()
+                    )
+                );
             }
             log.info("Found well formed pulsar topic {}, re-using it.", topic.getName());
             return;
@@ -69,14 +73,16 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
 
     @Override
     public List<TopicPartitions<PulsarStorageTopic>> shardTopic(
-            PulsarStorageTopic topic, InternalQueueCategory category
+        PulsarStorageTopic topic,
+        InternalQueueCategory category
     ) {
         List<TopicPartitions<PulsarStorageTopic>> topicPartitions = new ArrayList<>();
         int shardCount = topicPlanner.getShardCount(topic, category);
         int partitionsPerShard = topic.getPartitionCount() / shardCount;
         for (int shardId = 0; shardId < shardCount; shardId++) {
             topicPartitions.add(
-                    TopicPartitions.byPartitions(topic, getPartitionsForShard(shardId, partitionsPerShard)));
+                TopicPartitions.byPartitions(topic, getPartitionsForShard(shardId, partitionsPerShard))
+            );
         }
         return topicPartitions;
     }
@@ -113,7 +119,9 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
             return false;
         } catch (PulsarAdminException e) {
             throw new MessagingException(
-                    String.format("Failed to check existence of Topic. Error: %s.", e.getMessage()), e);
+                String.format("Failed to check existence of Topic. Error: %s.", e.getMessage()),
+                e
+            );
         }
     }
 

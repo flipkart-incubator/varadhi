@@ -21,8 +21,11 @@ public class SubscriptionUnitShard extends SubscriptionShards {
     private final InternalCompositeSubscription deadLetterSubscription;
 
     public SubscriptionUnitShard(
-            int shardId, TopicCapacityPolicy capacityRequest, InternalCompositeSubscription mainSubscription,
-            RetrySubscription retrySubscription, InternalCompositeSubscription deadLetterSubscription
+        int shardId,
+        TopicCapacityPolicy capacityRequest,
+        InternalCompositeSubscription mainSubscription,
+        RetrySubscription retrySubscription,
+        InternalCompositeSubscription deadLetterSubscription
     ) {
         super(1);
         this.shardId = shardId;

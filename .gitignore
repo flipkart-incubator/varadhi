@@ -28,6 +28,7 @@ nb-configuration.xml
 
 # VisualStudioCode artifacts
 .vscode/
+**/bin
 
 # Maven
 log/

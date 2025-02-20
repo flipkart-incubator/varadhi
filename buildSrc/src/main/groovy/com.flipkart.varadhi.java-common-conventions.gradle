@@ -4,6 +4,7 @@ plugins {
     id 'idea'
     id 'java'
     id 'jacoco'
+    id 'com.diffplug.spotless'
 }
 
 group = projectGroupId
@@ -170,6 +171,28 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
     sourceCompatibility = JavaVersion.VERSION_21
+}
+
+spotless {
+    // ratchetFrom 'origin/master'
+    format 'misc', {
+        target '*.gradle', '.gitattributes', '.gitignore'
+        trimTrailingWhitespace()
+        leadingTabsToSpaces()
+        endWithNewline()
+    }
+    java {
+        removeUnusedImports()
+        cleanthat()
+        eclipse().configFile(file("$rootDir/codestyle.xml"))
+        formatAnnotations()
+        endWithNewline()
+        // licenseHeader '/* Licensed under Apache-2.0 (C)$YEAR */'
+    }
+    json {
+        target '**/*.json'
+        simple().indentWithSpaces(4)
+    }
 }
 
 tasks.register('testE2E', Test) {

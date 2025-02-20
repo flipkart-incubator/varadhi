@@ -18,7 +18,7 @@ import java.util.Map;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
-@ExtensionMethod({RoutingContextExtension.class})
+@ExtensionMethod ({RoutingContextExtension.class})
 public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvider {
 
     // TODO: add appropriate checks
@@ -43,10 +43,11 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-                RouteDefinition.get("HealthCheck", "/v1/health-check")
-                        .unAuthenticated()
-                        .logsDisabled().tracingDisabled()
-                        .build(this::getHierarchies, this)
+            RouteDefinition.get("HealthCheck", "/v1/health-check")
+                           .unAuthenticated()
+                           .logsDisabled()
+                           .tracingDisabled()
+                           .build(this::getHierarchies, this)
 
         );
     }

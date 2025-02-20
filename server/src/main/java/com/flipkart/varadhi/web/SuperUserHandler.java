@@ -12,7 +12,7 @@ import java.util.List;
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_IS_SUPER_USER;
 
 
-@ExtensionMethod({Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RoutingContextExtension.class})
 public class SuperUserHandler implements RouteConfigurator {
 
     private final List<String> superUsers = new ArrayList<>();

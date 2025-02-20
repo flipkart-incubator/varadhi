@@ -20,6 +20,7 @@ public interface ThresholdProvider {
         void removeListener(ThresholdChangeListener listener);
     }
 
+
     interface ThresholdChangeListener {
         void onThresholdChange(float newThreshold);
     }

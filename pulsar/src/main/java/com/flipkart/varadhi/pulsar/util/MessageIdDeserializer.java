@@ -22,7 +22,7 @@ public class MessageIdDeserializer extends StdDeserializer<MessageId> {
 
     @Override
     public MessageId deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-            throws IOException {
+        throws IOException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         String text = node.get(0).asText();
         return PulsarOffset.messageIdFrom(text);
@@ -30,7 +30,9 @@ public class MessageIdDeserializer extends StdDeserializer<MessageId> {
 
     @Override
     public MessageId deserializeWithType(
-            JsonParser p, DeserializationContext deserializationContext, TypeDeserializer typeDeserializer
+        JsonParser p,
+        DeserializationContext deserializationContext,
+        TypeDeserializer typeDeserializer
     ) throws IOException {
         return deserialize(p, deserializationContext);
     }

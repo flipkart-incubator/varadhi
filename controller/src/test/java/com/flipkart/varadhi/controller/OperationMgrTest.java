@@ -43,7 +43,7 @@ public class OperationMgrTest {
     @Test
     public void scheduleAndExecuteOperation() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -65,7 +65,7 @@ public class OperationMgrTest {
 
     @Test
     public void orderedExecutionForSingleSubscription() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp1 = getStartOp(sub1);
         SubscriptionOperation stopOp1 = getStopOp(sub1);
         SubscriptionOperation startOp2 = getStartOp(sub1);
@@ -109,7 +109,7 @@ public class OperationMgrTest {
     @Test
     public void duplicateOperationsAreIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -143,9 +143,9 @@ public class OperationMgrTest {
 
     @Test
     public void parallelExecutionForDifferentSubs() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
-        VaradhiSubscription sub2 = SubscriptionUtils.getBuilder().build("project1.sub2", "project1", "project1.topic1");
-        VaradhiSubscription sub3 = SubscriptionUtils.getBuilder().build("project1.sub3", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub2 = SubscriptionUtils.builder().build("project1.sub2", "project1", "project1.topic1");
+        VaradhiSubscription sub3 = SubscriptionUtils.builder().build("project1.sub3", "project1", "project1.topic1");
         SubscriptionOperation startOp1 = getStartOp(sub1);
         SubscriptionOperation startOp2 = getStopOp(sub2);
         SubscriptionOperation startOp3 = getStartOp(sub3);
@@ -203,8 +203,8 @@ public class OperationMgrTest {
     @Test
     public void updateOnNonTrackedTaskIsIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
-        VaradhiSubscription sub2 = SubscriptionUtils.getBuilder().build("project1.sub2", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub2 = SubscriptionUtils.builder().build("project1.sub2", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation startOp2 = getStartOp(sub1);
         SubscriptionOperation startOp3 = getStartOp(sub2);
@@ -234,7 +234,7 @@ public class OperationMgrTest {
     @Test
     public void partialUpdatesDoesNotCompleteTask() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -261,7 +261,7 @@ public class OperationMgrTest {
     @Test
     public void updateWaitingTaskIsIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
@@ -295,7 +295,7 @@ public class OperationMgrTest {
     @Test
     public void enqueueWhenOpExecutorThrows() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
         CountDownLatch updateLatch = new CountDownLatch(1);
@@ -314,13 +314,13 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(() -> updateLatch.getCount() == 0);
 
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED, "Failed to allocate.");
     }
 
     @Test
     public void enqueueWhenOpFailsWithException() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -342,12 +342,12 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(() -> updateLatch.getCount() == 0);
 
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED, "Failed to allocate.");
     }
 
     @Test
     public void updateOpThrows() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -370,14 +370,14 @@ public class OperationMgrTest {
         completeOperation(startOp);
 
         await().atMost(100, TimeUnit.SECONDS)
-                .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
-        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to update in handler");
+               .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED, "Failed to update in handler");
     }
 
     @Test
     public void saveFailureInExecutionRemovesPendingTask() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -395,18 +395,21 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(executionCalled::isDone);
         executionLatch.countDown();
         await().atMost(100, TimeUnit.SECONDS)
-                .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
+               .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
         verify(opStore).updateSubOp(opCaptor.capture());
-        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to allocate.");
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED, "Failed to allocate.");
     }
 
     @Test
     public void saveFailureInUpdateRemovesPendingTask() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
-        doThrow(new MetaStoreException("Failed to update in handler"), new MetaStoreException("Failed to update in saveFailure")).when(opStore).updateSubOp(opCaptor.capture());
+        doThrow(
+            new MetaStoreException("Failed to update in handler"),
+            new MetaStoreException("Failed to update in saveFailure")
+        ).when(opStore).updateSubOp(opCaptor.capture());
 
         operationMgr.enqueue(startOp, operation -> {
             executionCalled.complete(null);
@@ -417,13 +420,15 @@ public class OperationMgrTest {
         completeOperation(startOp);
 
         await().atMost(100, TimeUnit.SECONDS)
-                .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
-        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED,"Failed to update in handler");
+               .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).isEmpty());
+        validateOp(opCaptor.getValue(), startOp.getId(), ERRORED, "Failed to update in handler");
     }
 
     @Test
     public void updateOfShardOpUpdatesSubscriptionOp() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         SubscriptionOperation startSubOp = getStartOp(sub1);
         ShardOperation shard1Op = getShardStartOp(startSubOp.getId(), shards.get(0), sub1);
@@ -445,7 +450,7 @@ public class OperationMgrTest {
         await().atMost(100, TimeUnit.SECONDS).until(() -> shard2Latch.getCount() == 0);
 
         await().atMost(100, TimeUnit.SECONDS)
-                .until(() -> operationMgr.getPendingOperations(startSubOp.getOrderingKey()).isEmpty());
+               .until(() -> operationMgr.getPendingOperations(startSubOp.getOrderingKey()).isEmpty());
         verify(opStore, times(2)).updateSubOp(startSubOp);
         verify(opStore, times(1)).updateShardOp(shard1Op);
         verify(opStore, times(1)).updateShardOp(shard2Op);
@@ -453,7 +458,9 @@ public class OperationMgrTest {
 
     @Test
     public void testCreateAndEnqueue() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startSubOp = getStartOp(sub1);
         operationMgr.createAndEnqueue(startSubOp, operation -> CompletableFuture.completedFuture(null));
         verify(opStore, times(1)).createSubOp(startSubOp);
@@ -461,7 +468,9 @@ public class OperationMgrTest {
 
     @Test
     public void testCreateIfNeededAndExecute() {
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().setNumShards(2).build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder()
+                                                    .setNumShards(2)
+                                                    .build("project1.sub1", "project1", "project1.topic1");
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         SubscriptionOperation startSubOp = getStartOp(sub1);
         ShardOperation shard1Op = getShardStartOp(startSubOp.getId(), shards.get(0), sub1);
@@ -479,7 +488,7 @@ public class OperationMgrTest {
     public void failedOperationShouldBeRetried() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
 
         operationMgr.enqueue(startOp, operation -> CompletableFuture.completedFuture(null));
@@ -487,16 +496,17 @@ public class OperationMgrTest {
         CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
         await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        OperationMgr.RetryOpTask retryOpTask = operationMgr.getRetryOperations(startOp.getOrderingKey());
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
         assertNotNull(retryOpTask);
         assertEquals(1, retryOpTask.opTask.operation.getRetryAttempt());
 
         // retry should happen in a second.
-        await().atMost(2, TimeUnit.SECONDS).until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).size() == 1);
+        await().atMost(2, TimeUnit.SECONDS)
+               .until(() -> operationMgr.getPendingOperations(startOp.getOrderingKey()).size() == 1);
         CountDownLatch completed2 = completeOperation(startOp);
         await().atMost(100, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0);
-        retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        retryOpTask = operationMgr.getRetryOperations(startOp.getOrderingKey());
         // successful operation shouldn't be retried.
         assertNull(retryOpTask);
     }
@@ -505,7 +515,7 @@ public class OperationMgrTest {
     public void failedOperationIsNotRetriedIfSubAlreadyHasPendingOp() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
 
@@ -516,7 +526,7 @@ public class OperationMgrTest {
         CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
         await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
         assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        OperationMgr.RetryOpTask retryOpTask = operationMgr.getRetryOperations(startOp.getOrderingKey());
         assertNull(retryOpTask);
     }
 
@@ -524,7 +534,7 @@ public class OperationMgrTest {
     public void subsequentOperationShouldClearPendingRetriesIfAny() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.getBuilder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
 
@@ -533,11 +543,11 @@ public class OperationMgrTest {
         CountDownLatch completed1 = failOperation(startOp, new MetaStoreException("Some failure."));
         await().atMost(100, TimeUnit.SECONDS).until(() -> completed1.getCount() == 0);
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
-        OperationMgr.RetryOpTask retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        OperationMgr.RetryOpTask retryOpTask = operationMgr.getRetryOperations(startOp.getOrderingKey());
         assertEquals(0, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
         assertNotNull(retryOpTask);
         operationMgr.enqueue(stopOp, operation -> CompletableFuture.completedFuture(null));
-        retryOpTask =  operationMgr.getRetryOperations(startOp.getOrderingKey());
+        retryOpTask = operationMgr.getRetryOperations(startOp.getOrderingKey());
         assertNull(retryOpTask);
         assertEquals(1, operationMgr.getPendingOperations(startOp.getOrderingKey()).size());
     }
@@ -575,7 +585,12 @@ public class OperationMgrTest {
         CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             shardOp.markCompleted();
-            operationMgr.updateShardOp(shardOp.getOpData().getParentOpId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+            operationMgr.updateShardOp(
+                shardOp.getOpData().getParentOpId(),
+                shardOp.getId(),
+                shardOp.getState(),
+                shardOp.getErrorMsg()
+            );
             latch.countDown();
         }, executor);
         return latch;

@@ -64,18 +64,18 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         Org org1 = Org.of("name1");
         doReturn(org1).when(orgService).createOrg(eq(org1));
-        Org org1Created = sendRequestWithBody(request, org1, Org.class);
+        Org org1Created = sendRequestWithEntity(request, org1, Org.class);
         Assertions.assertEquals(org1, org1Created);
         verify(orgService, times(1)).createOrg(eq(org1));
 
         String duplicateOrgError = String.format("Org(%s) already exists. Org is globally unique.", org1.getName());
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(orgService).createOrg(org1);
-        ErrorResponse response = sendRequestWithBody(request, org1, 409, duplicateOrgError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, org1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
         doThrow(new MetaStoreException(someInternalError)).when(orgService).createOrg(org1);
-        response = sendRequestWithBody(request, org1, 500, someInternalError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, org1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }
 
@@ -95,7 +95,7 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         String orgNameErr = "Invalid Org name. Check naming constraints.";
         Org org = Org.of(name);
-        ErrorResponse response = sendRequestWithBody(request, org, 400, orgNameErr, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, org, 400, orgNameErr, ErrorResponse.class);
         Assertions.assertEquals(orgNameErr, response.reason());
     }
 
@@ -106,13 +106,13 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getOrgUrl(org1.getName()));
         doReturn(org1).when(orgService).getOrg(org1.getName());
 
-        Org org1Get = sendRequestWithoutBody(request, Org.class);
+        Org org1Get = sendRequestWithoutPayload(request, Org.class);
         Assertions.assertEquals(org1, org1Get);
         verify(orgService, times(1)).getOrg(org1.getName());
 
         String notFoundError = String.format("Org(%s) not found.", org1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(orgService).getOrg(org1.getName());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
     @Test
@@ -138,16 +138,16 @@ public class OrgHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getOrgUrl(org1.getName()));
         doNothing().when(orgService).deleteOrg(org1.getName());
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
         verify(orgService, times(1)).deleteOrg(org1.getName());
 
         String notFoundError = String.format("Org(%s) not found.", org1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(orgService).deleteOrg(org1.getName());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
 
         String invalidOpError = String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(orgService).deleteOrg(org1.getName());
-        sendRequestWithoutBody(request, 409, invalidOpError);
+        sendRequestWithoutPayload(request, 409, invalidOpError);
     }
 
 }

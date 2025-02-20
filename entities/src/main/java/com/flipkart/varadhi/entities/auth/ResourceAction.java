@@ -1,58 +1,113 @@
 package com.flipkart.varadhi.entities.auth;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
+/**
+ * Enum representing various resource actions in the system.
+ */
 @Getter
+@RequiredArgsConstructor
 public enum ResourceAction {
 
-    ORG_CREATE(ResourceType.ORG, "create"),
-    ORG_UPDATE(ResourceType.ORG, "update"),
-    ORG_DELETE(ResourceType.ORG, "delete"),
-    ORG_GET(ResourceType.ORG, "get"),
-    ORG_LIST(ResourceType.ROOT, "list"),
-    ORG_PROJECT_MIGRATE(ResourceType.ORG, "migrate"),
+    /**
+     * Actions related to organization resources.
+     */
+    ORG_CREATE(ResourceType.ORG, Action.CREATE), ORG_UPDATE(ResourceType.ORG, Action.UPDATE), ORG_DELETE(
+        ResourceType.ORG,
+        Action.DELETE
+    ), ORG_GET(ResourceType.ORG, Action.GET), ORG_LIST(ResourceType.ROOT, Action.LIST), ORG_PROJECT_MIGRATE(
+        ResourceType.ORG,
+        Action.MIGRATE
+    ),
 
-    TEAM_CREATE(ResourceType.TEAM, "create"),
-    TEAM_UPDATE(ResourceType.TEAM, "update"),
-    TEAM_DELETE(ResourceType.TEAM, "delete"),
-    TEAM_GET(ResourceType.TEAM, "get"),
-    TEAM_LIST(ResourceType.ORG, "list"),
+    /**
+     * Actions related to team resources.
+     */
+    TEAM_CREATE(ResourceType.TEAM, Action.CREATE), TEAM_UPDATE(ResourceType.TEAM, Action.UPDATE), TEAM_DELETE(
+        ResourceType.TEAM,
+        Action.DELETE
+    ), TEAM_GET(ResourceType.TEAM, Action.GET), TEAM_LIST(ResourceType.ORG, Action.LIST),
 
-    PROJECT_CREATE(ResourceType.PROJECT, "create"),
-    PROJECT_UPDATE(ResourceType.PROJECT, "update"),
-    PROJECT_DELETE(ResourceType.PROJECT, "delete"),
-    PROJECT_GET(ResourceType.PROJECT, "get"),
-    PROJECT_LIST(ResourceType.TEAM, "list"),
+    /**
+     * Actions related to project resources.
+     */
+    PROJECT_CREATE(ResourceType.PROJECT, Action.CREATE), PROJECT_UPDATE(
+        ResourceType.PROJECT,
+        Action.UPDATE
+    ), PROJECT_DELETE(ResourceType.PROJECT, Action.DELETE), PROJECT_GET(ResourceType.PROJECT, Action.GET), PROJECT_LIST(
+        ResourceType.TEAM,
+        Action.LIST
+    ),
 
-    TOPIC_CREATE(ResourceType.TOPIC, "create"),
-    TOPIC_GET(ResourceType.TOPIC, "get"),
-    TOPIC_DELETE(ResourceType.TOPIC, "delete"),
-    TOPIC_UPDATE(ResourceType.TOPIC, "update"),
-    TOPIC_LIST(ResourceType.PROJECT, "list"),
-    TOPIC_CONSUME(ResourceType.TOPIC, "consume"),
-    TOPIC_PRODUCE(ResourceType.TOPIC, "produce"),
+    /**
+     * Actions related to topic resources.
+     */
+    TOPIC_CREATE(ResourceType.TOPIC, Action.CREATE), TOPIC_UPDATE(ResourceType.TOPIC, Action.UPDATE), TOPIC_DELETE(
+        ResourceType.TOPIC,
+        Action.DELETE
+    ), TOPIC_GET(ResourceType.TOPIC, Action.GET), TOPIC_LIST(ResourceType.PROJECT, Action.LIST), TOPIC_CONSUME(
+        ResourceType.TOPIC,
+        Action.CONSUME
+    ), TOPIC_PRODUCE(ResourceType.TOPIC, Action.PRODUCE),
 
-    SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, "create"),
-    SUBSCRIPTION_GET(ResourceType.SUBSCRIPTION, "get"),
-    SUBSCRIPTION_LIST(ResourceType.PROJECT, "list"),
-    SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, "delete"),
-    SUBSCRIPTION_UPDATE(ResourceType.SUBSCRIPTION, "update"),
-    SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, "seek"),
+    /**
+     * Actions related to subscription resources.
+     */
+    SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, Action.CREATE), SUBSCRIPTION_UPDATE(
+        ResourceType.SUBSCRIPTION,
+        Action.UPDATE
+    ), SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, Action.DELETE), SUBSCRIPTION_GET(
+        ResourceType.SUBSCRIPTION,
+        Action.GET
+    ), SUBSCRIPTION_LIST(ResourceType.PROJECT, Action.LIST), SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, Action.SEEK),
 
-    IAM_POLICY_GET(ResourceType.IAM_POLICY, "get"),
-    IAM_POLICY_SET(ResourceType.IAM_POLICY, "set"),
-    IAM_POLICY_DELETE(ResourceType.IAM_POLICY, "delete");
+    /**
+     * Actions related to IAM policy resources.
+     */
+    IAM_POLICY_GET(ResourceType.IAM_POLICY, Action.GET), IAM_POLICY_SET(
+        ResourceType.IAM_POLICY,
+        Action.SET
+    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE);
 
+    /**
+     * The type of resource associated with the action.
+     */
     private final ResourceType resourceType;
-    private final String action;
 
-    ResourceAction(ResourceType type, String action) {
-        this.resourceType = type;
-        this.action = action;
-    }
+    /**
+     * The action to be performed on the resource.
+     */
+    private final Action action;
 
+    /**
+     * Returns the string representation of the resource action.
+     *
+     * @return the string representation of the resource action
+     */
     @Override
     public String toString() {
         return String.format("%s.%s", resourceType, action);
+    }
+
+    /**
+     * Enum representing all possible actions on resources.
+     */
+    @Getter
+    @RequiredArgsConstructor
+    public enum Action {
+        CREATE("create"), UPDATE("update"), DELETE("delete"), GET("get"), LIST("list"), MIGRATE("migrate"), CONSUME(
+            "consume"
+        ), PRODUCE("produce"), SEEK("seek"), SET("set");
+
+        /**
+         * The name of the action.
+         */
+        private final String actionName;
+
+        @Override
+        public String toString() {
+            return actionName;
+        }
     }
 }

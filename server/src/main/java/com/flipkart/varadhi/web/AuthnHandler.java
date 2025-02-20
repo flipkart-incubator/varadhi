@@ -39,13 +39,13 @@ public class AuthnHandler implements RouteConfigurator {
         if (configuration.isAuthenticationEnabled()) {
             // we do the wrapping to force vertx to consider this as USER handler and prevent imposing its own priority.
             authenticationHandler = new AuthenticationHandlerWrapper(
-                    switch (configuration.getAuthentication().getMechanism()) {
-                        case jwt -> createJWTHandler(
-                                vertx,
-                                configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
-                        );
-                        case user_header -> createUserHeaderHandler();
-                    }
+                switch (configuration.getAuthentication().getMechanism()) {
+                    case jwt -> createJWTHandler(
+                        vertx,
+                        configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
+                    );
+                    case user_header -> createUserHeaderHandler();
+                }
             );
         } else {
             authenticationHandler = null;
@@ -70,7 +70,8 @@ public class AuthnHandler implements RouteConfigurator {
             JsonArray jwkKeys = new JsonObject(response.body()).getJsonArray("keys");
             if (null == jwkKeys) {
                 throw new VaradhiException(
-                        String.format("Invalid jwks url %s response. No jwk keys found.", config.getJwksUrl()));
+                    String.format("Invalid jwks url %s response. No jwk keys found.", config.getJwksUrl())
+                );
             }
 
             JWTAuthOptions jwtAuthOptions = new JWTAuthOptions();

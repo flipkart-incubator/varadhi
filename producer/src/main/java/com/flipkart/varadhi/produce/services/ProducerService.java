@@ -24,59 +24,72 @@ public class ProducerService {
     private final String produceRegion;
 
     public ProducerService(
-            String produceRegion,
-            ProducerOptions producerOptions,
-            Function<StorageTopic, Producer> producerProvider,
-            Function<String, VaradhiTopic> topicProvider,
-            MeterRegistry meterRegistry
+        String produceRegion,
+        ProducerOptions producerOptions,
+        Function<StorageTopic, Producer> producerProvider,
+        Function<String, VaradhiTopic> topicProvider,
+        MeterRegistry meterRegistry
     ) {
-        this.internalTopicCache =
-                setupTopicCache(producerOptions.getTopicCacheBuilderSpec(), topicProvider, meterRegistry);
-        this.producerCache =
-                setupProducerCache(producerOptions.getProducerCacheBuilderSpec(), producerProvider,
-                        meterRegistry
-                );
+        this.internalTopicCache = setupTopicCache(
+            producerOptions.getTopicCacheBuilderSpec(),
+            topicProvider,
+            meterRegistry
+        );
+        this.producerCache = setupProducerCache(
+            producerOptions.getProducerCacheBuilderSpec(),
+            producerProvider,
+            meterRegistry
+        );
         this.produceRegion = produceRegion;
     }
 
     private VaradhiCache<String, VaradhiTopic> setupTopicCache(
-            String cacheSpec, Function<String, VaradhiTopic> topicProvider, MeterRegistry meterRegistry
+        String cacheSpec,
+        Function<String, VaradhiTopic> topicProvider,
+        MeterRegistry meterRegistry
     ) {
         return new VaradhiCache<>(
-                cacheSpec,
-                topicProvider,
-                (topicName, failure) -> new ProduceException(
-                        String.format("Failed to get produce Topic(%s). %s", topicName, failure.getMessage()), failure),
-                "topic",
-                meterRegistry
+            cacheSpec,
+            topicProvider,
+            (topicName, failure) -> new ProduceException(
+                String.format("Failed to get produce Topic(%s). %s", topicName, failure.getMessage()),
+                failure
+            ),
+            "topic",
+            meterRegistry
         );
     }
 
 
     private VaradhiCache<StorageTopic, Producer> setupProducerCache(
-            String cacheSpec, Function<StorageTopic, Producer> producerProvider, MeterRegistry meterRegistry
+        String cacheSpec,
+        Function<StorageTopic, Producer> producerProvider,
+        MeterRegistry meterRegistry
     ) {
         return new VaradhiCache<>(
-                cacheSpec,
-                producerProvider,
-                (storageTopic, failure) -> new ProduceException(
-                        String.format(
-                                "Failed to create Pulsar producer for Topic(%s). %s", storageTopic.getName(),
-                                failure.getMessage()
-                        ), failure),
-                "producer",
-                meterRegistry
+            cacheSpec,
+            producerProvider,
+            (storageTopic, failure) -> new ProduceException(
+                String.format(
+                    "Failed to create Pulsar producer for Topic(%s). %s",
+                    storageTopic.getName(),
+                    failure.getMessage()
+                ),
+                failure
+            ),
+            "producer",
+            meterRegistry
         );
     }
 
     public CompletableFuture<ProduceResult> produceToTopic(
-            Message message,
-            String varadhiTopicName,
-            ProducerMetricsEmitter metricsEmitter
+        Message message,
+        String varadhiTopicName,
+        ProducerMetricsEmitter metricsEmitter
     ) {
         try {
-            InternalCompositeTopic internalTopic =
-                    internalTopicCache.get(varadhiTopicName).getProduceTopicForRegion(produceRegion);
+            InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
+                                                                     .getProduceTopicForRegion(produceRegion);
 
             // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
             if (internalTopic == null) {
@@ -85,12 +98,16 @@ public class ProducerService {
 
             if (!internalTopic.getTopicState().isProduceAllowed()) {
                 return CompletableFuture.completedFuture(
-                        ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState()));
+                    ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
+                );
             }
             Producer producer = producerCache.get(internalTopic.getTopicToProduce());
             return produceToStorageProducer(
-                    producer, metricsEmitter, internalTopic.getTopicToProduce().getName(), message).thenApply(result ->
-                    ProduceResult.of(message.getMessageId(), result));
+                producer,
+                metricsEmitter,
+                internalTopic.getTopicToProduce().getName(),
+                message
+            ).thenApply(result -> ProduceResult.of(message.getMessageId(), result));
         } catch (VaradhiException e) {
             throw e;
         } catch (Exception e) {
@@ -100,16 +117,19 @@ public class ProducerService {
 
 
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
-            Producer producer, ProducerMetricsEmitter metricsEmitter, String topic, Message message
+        Producer producer,
+        ProducerMetricsEmitter metricsEmitter,
+        String topic,
+        Message message
     ) {
         long produceStart = System.currentTimeMillis();
         return producer.produceAsync(message).handle((result, throwable) -> {
-            int producerLatency = (int) (System.currentTimeMillis() - produceStart);
+            int producerLatency = (int)(System.currentTimeMillis() - produceStart);
             metricsEmitter.emit(result != null, producerLatency);
             if (throwable != null) {
                 log.debug(
-                        String.format("Produce Message(%s) to StorageTopic(%s) failed.", message.getMessageId(), topic),
-                        throwable
+                    String.format("Produce Message(%s) to StorageTopic(%s) failed.", message.getMessageId(), topic),
+                    throwable
                 );
             }
             return Result.of(result, throwable);

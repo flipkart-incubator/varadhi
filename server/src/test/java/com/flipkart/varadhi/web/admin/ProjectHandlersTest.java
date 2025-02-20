@@ -80,24 +80,26 @@ public class ProjectHandlersTest extends WebTestBase {
         Project p1 = getProject("project1");
 
         doReturn(p1).when(projectService).createProject(p1);
-        Project p1Created = sendRequestWithBody(request, p1, Project.class);
+        Project p1Created = sendRequestWithEntity(request, p1, Project.class);
         Assertions.assertEquals(p1, p1Created);
         verify(projectService, times(1)).createProject(eq(p1));
 
         String orgNotFoundError = String.format("Org(%s) not found.", t1.getOrg());
         doThrow(new ResourceNotFoundException(orgNotFoundError)).when(projectService).createProject(p1);
-        ErrorResponse response = sendRequestWithBody(request, p1, 404, orgNotFoundError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, p1, 404, orgNotFoundError, ErrorResponse.class);
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
-        String duplicateOrgError =
-                String.format("Project(%s) already exists.  Projects are globally unique.", p1.getName());
+        String duplicateOrgError = String.format(
+            "Project(%s) already exists.  Projects are globally unique.",
+            p1.getName()
+        );
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(projectService).createProject(p1);
-        response = sendRequestWithBody(request, p1, 409, duplicateOrgError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, p1, 409, duplicateOrgError, ErrorResponse.class);
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
         doThrow(new MetaStoreException(someInternalError)).when(projectService).createProject(p1);
-        response = sendRequestWithBody(request, p1, 500, someInternalError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, p1, 500, someInternalError, ErrorResponse.class);
         Assertions.assertEquals(someInternalError, response.reason());
     }
 
@@ -109,13 +111,13 @@ public class ProjectHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getProjectUrl(p1.getName()));
         doReturn(p1).when(projectService).getProject(p1.getName());
 
-        Project p1Get = sendRequestWithoutBody(request, Project.class);
+        Project p1Get = sendRequestWithoutPayload(request, Project.class);
         Assertions.assertEquals(p1, p1Get);
         verify(projectService, times(1)).getProject(p1.getName());
 
         String notFoundError = String.format("Project(%s) not found.", p1.getName());
         doThrow(new ResourceNotFoundException(notFoundError)).when(projectService).getProject(p1.getName());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        sendRequestWithoutPayload(request, 404, notFoundError);
     }
 
 
@@ -124,21 +126,20 @@ public class ProjectHandlersTest extends WebTestBase {
         Project p1 = getProject("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getProjectsUrl());
         doReturn(p1).when(projectService).updateProject(p1);
-        Project p1Updated = sendRequestWithBody(request, p1, Project.class);
+        Project p1Updated = sendRequestWithEntity(request, p1, Project.class);
         Assertions.assertEquals(p1, p1Updated);
 
         String argumentError = String.format("Project(%s) can not be moved across organisation.", p1.getName());
         doThrow(new IllegalArgumentException(argumentError)).when(projectService).updateProject(p1);
-        ErrorResponse response = sendRequestWithBody(request, p1, 400, argumentError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, p1, 400, argumentError, ErrorResponse.class);
         Assertions.assertEquals(argumentError, response.reason());
 
-        String invalidOpError =
-                String.format(
-                        "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
-                        p1.getName()
-                );
+        String invalidOpError = String.format(
+            "Conflicting update, Project(%s) has been modified. Fetch latest and try again.",
+            p1.getName()
+        );
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService).updateProject(p1);
-        response = sendRequestWithBody(request, p1, 409, invalidOpError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, p1, 409, invalidOpError, ErrorResponse.class);
         Assertions.assertEquals(invalidOpError, response.reason());
     }
 
@@ -148,18 +149,16 @@ public class ProjectHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getProjectUrl(p1.getName()));
         doNothing().when(projectService).deleteProject(p1.getName());
-        sendRequestWithoutBody(request, null);
+        sendRequestWithoutPayload(request, null);
         verify(projectService, times(1)).deleteProject(p1.getName());
 
         String notFoundError = String.format("Project(%s) not found.", p1.getName());
-        doThrow(new ResourceNotFoundException(notFoundError)).when(projectService)
-                .deleteProject(p1.getName());
-        sendRequestWithoutBody(request, 404, notFoundError);
+        doThrow(new ResourceNotFoundException(notFoundError)).when(projectService).deleteProject(p1.getName());
+        sendRequestWithoutPayload(request, 404, notFoundError);
 
-        String invalidOpError =
-                String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
+        String invalidOpError = String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService)
-                .deleteProject(p1.getName());
-        sendRequestWithoutBody(request, 409, invalidOpError);
+                                                                         .deleteProject(p1.getName());
+        sendRequestWithoutPayload(request, 409, invalidOpError);
     }
 }

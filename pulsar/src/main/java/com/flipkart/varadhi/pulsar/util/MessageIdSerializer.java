@@ -19,7 +19,7 @@ public class MessageIdSerializer extends StdSerializer<MessageId> {
 
     @Override
     public void serialize(MessageId messageId, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-            throws IOException {
+        throws IOException {
         jsonGenerator.writeStartArray();
         jsonGenerator.writeString("mId:" + messageId.toString());
         jsonGenerator.writeEndArray();
@@ -27,7 +27,10 @@ public class MessageIdSerializer extends StdSerializer<MessageId> {
 
     @Override
     public void serializeWithType(
-            MessageId messageId, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSer
+        MessageId messageId,
+        JsonGenerator gen,
+        SerializerProvider provider,
+        TypeSerializer typeSer
     ) throws IOException {
         this.serialize(messageId, gen, provider);
     }

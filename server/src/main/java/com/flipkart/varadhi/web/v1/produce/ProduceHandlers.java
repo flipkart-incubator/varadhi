@@ -49,28 +49,29 @@ public class ProduceHandlers implements RouteProvider {
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
-
     @Override
     public List<RouteDefinition> get() {
 
         return new SubRoutes(
-                "/v1/projects/:project",
-                List.of(
-                        RouteDefinition.post("Produce", "/topics/:topic/produce")
-                                .hasBody()
-                                .nonBlocking()
-                                .metricsEnabled()
-                                .preHandler(headerValidationHandler)
-                                .authorize(TOPIC_PRODUCE)
-                                .build(this::getHierarchies, this::produce)
-                )
+            "/v1/projects/:project",
+            List.of(
+                RouteDefinition.post("Produce", "/topics/:topic/produce")
+                               .hasBody()
+                               .nonBlocking()
+                               .metricsEnabled()
+                               .preHandler(headerValidationHandler)
+                               .authorize(TOPIC_PRODUCE)
+                               .build(this::getHierarchies, this::produce)
+            )
         ).get();
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(
-                ResourceType.TOPIC, new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC)));
+            ResourceType.TOPIC,
+            new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))
+        );
     }
 
     public void produce(RoutingContext ctx) {
@@ -131,8 +132,6 @@ public class ProduceHandlers implements RouteProvider {
             }
         };
     }
-
-
     private Message buildMessageToProduce(
             byte[] payload,
             MultiMap headers,

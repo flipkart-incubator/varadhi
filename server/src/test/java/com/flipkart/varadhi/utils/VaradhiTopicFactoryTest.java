@@ -1,59 +1,130 @@
 package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.InternalCompositeTopic;
+import com.flipkart.varadhi.entities.InternalQueueCategory;
+import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.TopicState;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.web.entities.TopicResource;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import static org.mockito.Mockito.*;
+import java.lang.reflect.Method;
 
-public class VaradhiTopicFactoryTest {
-    private final String region = "local";
-    private final String topicName = "testTopic";
-    private VaradhiTopicFactory varadhiTopicFactory;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+class VaradhiTopicFactoryTest {
+
+    private static final String REGION = "local";
+    private static final String TOPIC_NAME = "testTopic";
+    private static final TopicCapacityPolicy CAPACITY_POLICY = Constants.DEFAULT_TOPIC_CAPACITY;
+
+    @Mock
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
+
+    @InjectMocks
+    private VaradhiTopicFactory varadhiTopicFactory;
+
     private Project project;
     private String vTopicName;
 
     @BeforeEach
     public void setUp() {
-        storageTopicFactory = mock(StorageTopicFactory.class);
-        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, region, Constants.DefaultTopicCapacity);
+        MockitoAnnotations.openMocks(this);
+        varadhiTopicFactory = new VaradhiTopicFactory(storageTopicFactory, REGION, Constants.DEFAULT_TOPIC_CAPACITY);
+
         project = Project.of("default", "", "public", "public");
-        vTopicName = String.format("%s.%s", project.getName(), topicName);
-        String pTopicName =
-                String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, capacityPolicy);
+        vTopicName = String.format("%s.%s", project.getName(), TOPIC_NAME);
+        String pTopicName = String.format("persistent://%s/%s", project.getOrg(), vTopicName);
+        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, CAPACITY_POLICY);
+
         doReturn(pTopic).when(storageTopicFactory)
-                .getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
+                        .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
     }
 
     @Test
-    public void getTopic() {
-        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        TopicResource topicResource = TopicResource.grouped(topicName, project.getName(), capacityPolicy);
+    void get_WithValidTopicResource_ShouldReturnValidVaradhiTopic() {
+        TopicResource topicResource = TopicResource.grouped(
+            TOPIC_NAME,
+            project.getName(),
+            CAPACITY_POLICY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        Assertions.assertNotNull(varadhiTopic);
-        InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
-        StorageTopic st = it.getTopicToProduce();
-        Assertions.assertEquals(it.getTopicState(), TopicState.Producing);
-        Assertions.assertNotNull(st);
-        verify(storageTopicFactory, times(1)).getTopic(vTopicName, project, capacityPolicy, InternalQueueCategory.MAIN);
+
+        assertNotNull(varadhiTopic);
+        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        assertEquals(TopicState.Producing, internalTopic.getTopicState());
+        assertNotNull(internalTopic.getTopicToProduce());
+
+        verify(storageTopicFactory, times(1)).getTopic(
+            vTopicName,
+            project,
+            CAPACITY_POLICY,
+            InternalQueueCategory.MAIN
+        );
     }
 
     @Test
-    public void getTopicWithDefaultCapacity() {
-        TopicCapacityPolicy capacityPolicy = Constants.DefaultTopicCapacity;
-        TopicResource topicResource = TopicResource.grouped(topicName, project.getName(), null);
+    void get_WhenNoCapacityPolicyProvided_ShouldUseDefaultCapacity() {
+        TopicResource topicResource = TopicResource.grouped(
+            TOPIC_NAME,
+            project.getName(),
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        InternalCompositeTopic it = varadhiTopic.getProduceTopicForRegion(region);
-        PulsarStorageTopic pt = (PulsarStorageTopic) it.getTopicToProduce();
-        Assertions.assertEquals(capacityPolicy.getThroughputKBps(), pt.getCapacity().getThroughputKBps());
-        Assertions.assertEquals(capacityPolicy.getQps(), pt.getCapacity().getQps());
+        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
+
+        assertNotNull(storageTopic);
+        assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
+        assertEquals(CAPACITY_POLICY.getThroughputKBps(), storageTopic.getCapacity().getThroughputKBps());
+        assertEquals(CAPACITY_POLICY.getQps(), storageTopic.getCapacity().getQps());
+    }
+
+    @Test
+    void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() throws Exception {
+        TopicResource topicResource = TopicResource.grouped(
+            TOPIC_NAME,
+            project.getName(),
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+
+        Method planDeploymentMethod = VaradhiTopicFactory.class.getDeclaredMethod(
+            "planDeployment",
+            Project.class,
+            VaradhiTopic.class
+        );
+        planDeploymentMethod.setAccessible(true);
+
+        planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
+
+        InternalCompositeTopic internalCompositeTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        assertNotNull(internalCompositeTopic);
+        assertEquals(TopicState.Producing, internalCompositeTopic.getTopicState());
+        assertNotNull(internalCompositeTopic.getTopicToProduce());
+
+        verify(storageTopicFactory, times(1)).getTopic(
+            vTopicName,
+            project,
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            InternalQueueCategory.MAIN
+        );
     }
 }

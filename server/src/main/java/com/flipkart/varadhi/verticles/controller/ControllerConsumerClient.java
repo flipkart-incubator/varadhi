@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.cluster.ShardOperation;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerConsumerClient implements ControllerConsumerApi  {
+public class ControllerConsumerClient implements ControllerConsumerApi {
     private final MessageExchange exchange;
 
     public ControllerConsumerClient(MessageExchange exchange) {
@@ -17,7 +17,10 @@ public class ControllerConsumerClient implements ControllerConsumerApi  {
 
     @Override
     public CompletableFuture<Void> update(
-            String subOpId, String shardOpId, ShardOperation.State state, String errorMsg
+        String subOpId,
+        String shardOpId,
+        ShardOperation.State state,
+        String errorMsg
     ) {
         ClusterMessage msg = ClusterMessage.of(new ShardOpResponse(subOpId, shardOpId, state, errorMsg));
         return exchange.send(ROUTE_CONTROLLER, "update", msg);

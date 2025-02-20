@@ -12,10 +12,7 @@ public class ProducerMessage implements Message {
     private final byte[] payload;
     private final ArrayListMultimap<String, String> requestHeaders;
 
-    public ProducerMessage(
-            byte[] payload,
-            Multimap<String, String> requestHeaders
-    ) {
+    public ProducerMessage(byte[] payload, Multimap<String, String> requestHeaders) {
         this.payload = payload;
         this.requestHeaders = ArrayListMultimap.create(requestHeaders);
     }

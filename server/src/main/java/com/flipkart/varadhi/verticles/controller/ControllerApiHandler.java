@@ -21,39 +21,42 @@ public class ControllerApiHandler {
     public CompletableFuture<ResponseMessage> start(ClusterMessage message) {
         SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
         return controllerMgr.startSubscription(request.getSubscriptionId(), request.getRequestedBy())
-                .thenApply(message::getResponseMessage);
+                            .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> stop(ClusterMessage message) {
         SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
         return controllerMgr.stopSubscription(request.getSubscriptionId(), request.getRequestedBy())
-                .thenApply(message::getResponseMessage);
+                            .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> status(ClusterMessage message) {
         SubscriptionOpRequest request = message.getRequest(SubscriptionOpRequest.class);
         return controllerMgr.getSubscriptionState(request.getSubscriptionId(), request.getRequestedBy())
-                .thenApply(message::getResponseMessage);
+                            .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> unsideline(ClusterMessage message) {
         UnsidelineOpRequest request = message.getRequest(UnsidelineOpRequest.class);
         return controllerMgr.unsideline(request.getSubscriptionId(), request.getRequest(), request.getRequestedBy())
-                .thenApply(message::getResponseMessage);
+                            .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> getShards(ClusterMessage message) {
-        String subscriptionId  = message.getRequest(String.class);
+        String subscriptionId = message.getRequest(String.class);
         return controllerMgr.getShardAssignments(subscriptionId).thenApply(message::getResponseMessage);
     }
 
     public void update(ClusterMessage message) {
         ShardOpResponse opResponse = message.getData(ShardOpResponse.class);
         controllerMgr.update(
-                        opResponse.getSubOpId(), opResponse.getShardOpId(), opResponse.getState(), opResponse.getErrorMsg())
-                .exceptionally(throwable -> {
-                    log.error("Shard update ({}) failed {}.", opResponse, throwable.getMessage());
-                    return null;
-                });
+            opResponse.getSubOpId(),
+            opResponse.getShardOpId(),
+            opResponse.getState(),
+            opResponse.getErrorMsg()
+        ).exceptionally(throwable -> {
+            log.error("Shard update ({}) failed {}.", opResponse, throwable.getMessage());
+            return null;
+        });
     }
 }

@@ -30,12 +30,14 @@ public class PulsarProducer implements Producer {
     private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
-            PulsarClient pulsarClient, PulsarStorageTopic storageTopic, ProducerOptions producerOptions,
-            String hostName
-    )
-            throws PulsarClientException {
-        this.stringGenerator =
-                new RandomStringGenerator.Builder().withinRange('0', 'z').filteredBy(DIGITS, LETTERS).build();
+        PulsarClient pulsarClient,
+        PulsarStorageTopic storageTopic,
+        ProducerOptions producerOptions,
+        String hostName
+    ) throws PulsarClientException {
+        this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
+                                                                  .filteredBy(DIGITS, LETTERS)
+                                                                  .build();
         this.pulsarProducer = getProducer(pulsarClient, storageTopic, producerOptions, hostName);
     }
 
@@ -85,11 +87,13 @@ public class PulsarProducer implements Producer {
     }
 
     private org.apache.pulsar.client.api.Producer<byte[]> getProducer(
-            PulsarClient pulsarClient, PulsarStorageTopic topic, ProducerOptions options, String hostname
-    )
-            throws PulsarClientException {
+        PulsarClient pulsarClient,
+        PulsarStorageTopic topic,
+        ProducerOptions options,
+        String hostname
+    ) throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, options, hostname);
-        
+
         return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 

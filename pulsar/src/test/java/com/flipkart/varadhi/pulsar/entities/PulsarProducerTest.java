@@ -50,7 +50,7 @@ public class PulsarProducerTest {
         messageBuilder = spy(new TypedMessageBuilderImpl(producer, Schema.BYTES));
         doReturn(messageBuilder).when(producer).newMessage();
 
-        policy = Constants.DefaultTopicCapacity;
+        policy = Constants.DEFAULT_TOPIC_CAPACITY;
         topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
         doReturn(topic.getName()).when(producer).getTopic();
 
@@ -89,7 +89,10 @@ public class PulsarProducerTest {
     }
 
     public void validateProducerConfig(
-            Map<String, Object> pConfig, PulsarStorageTopic topic, ProducerOptions options, String hostname
+        Map<String, Object> pConfig,
+        PulsarStorageTopic topic,
+        ProducerOptions options,
+        String hostname
     ) {
         Assertions.assertEquals(topic.getName(), pConfig.get("topicName"));
         Assertions.assertEquals(String.format("%s.%s", topic.getName(), hostname), pConfig.get("producerName"));
@@ -100,20 +103,27 @@ public class PulsarProducerTest {
         Assertions.assertEquals(options.isBatchingEnabled(), pConfig.get("batchingEnabled"));
         Assertions.assertEquals(options.getCompressionType(), pConfig.get("compressionType"));
         Assertions.assertEquals(
-                options.getBatchingMaxPublishDelayMs() * 1000, pConfig.get("batchingMaxPublishDelayMicros"));
+            options.getBatchingMaxPublishDelayMs() * 1000,
+            pConfig.get("batchingMaxPublishDelayMicros")
+        );
 
         Assertions.assertEquals(
-                PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()), pConfig.get("maxPendingMessages"));
-        Assertions.assertEquals(
-                PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
-                pConfig.get("maxPendingMessagesAcrossPartitions")
+            PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
+            pConfig.get("maxPendingMessages")
         );
-        int batchMaxMessages =
-                PulsarProducer.getBatchMaxMessages(
-                        topic.getCapacity().getQps(), options.getBatchingMaxPublishDelayMs());
+        Assertions.assertEquals(
+            PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
+            pConfig.get("maxPendingMessagesAcrossPartitions")
+        );
+        int batchMaxMessages = PulsarProducer.getBatchMaxMessages(
+            topic.getCapacity().getQps(),
+            options.getBatchingMaxPublishDelayMs()
+        );
         Assertions.assertEquals(batchMaxMessages, pConfig.get("batchingMaxMessages"));
         Assertions.assertEquals(
-                PulsarProducer.getBatchingMaxBytes(batchMaxMessages, topic), pConfig.get("batchingMaxBytes"));
+            PulsarProducer.getBatchingMaxBytes(batchMaxMessages, topic),
+            pConfig.get("batchingMaxBytes")
+        );
     }
 
     Message getMessage(String payload) {
@@ -193,8 +203,10 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doThrow(new RuntimeException("Some Internal Error.")).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        RuntimeException ee =
-                Assertions.assertThrows(RuntimeException.class, () -> pulsarProducer.produceAsync(message));
+        RuntimeException ee = Assertions.assertThrows(
+            RuntimeException.class,
+            () -> pulsarProducer.produceAsync(message)
+        );
         Assertions.assertEquals("Some Internal Error.", ee.getMessage());
     }
 
@@ -202,14 +214,18 @@ public class PulsarProducerTest {
     public void testSendAsyncFailsExceptionally() throws PulsarClientException {
         String payload = "somedata";
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
-        doReturn(
-                CompletableFuture.failedFuture(new PulsarClientException.ProducerQueueIsFullError("Queue full."))).when(
-                messageBuilder).sendAsync();
+        doReturn(CompletableFuture.failedFuture(new PulsarClientException.ProducerQueueIsFullError("Queue full.")))
+                                                                                                                   .when(
+                                                                                                                       messageBuilder
+                                                                                                                   )
+                                                                                                                   .sendAsync();
         Message message = getMessage(payload);
         CompletableFuture<Offset> future = pulsarProducer.produceAsync(message);
         Assertions.assertTrue(future.isCompletedExceptionally());
-        ExecutionException ee =
-                Assertions.assertThrows(ExecutionException.class, () -> future.get(1, TimeUnit.MILLISECONDS));
+        ExecutionException ee = Assertions.assertThrows(
+            ExecutionException.class,
+            () -> future.get(1, TimeUnit.MILLISECONDS)
+        );
         Assertions.assertTrue(ee.getCause() instanceof PulsarClientException.ProducerQueueIsFullError);
         Assertions.assertEquals("Queue full.", ee.getCause().getMessage());
     }

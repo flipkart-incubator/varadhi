@@ -20,15 +20,24 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
     private final ConsumptionFailurePolicy failurePolicy;
 
     public UngroupedProcessingLoop(
-            Context context,
-            MessageSrcSelector msgSrcSelector, ConcurrencyControl<DeliveryResult> concurrencyControl,
-            ThresholdProvider.Dynamic throttleThresholdProvider, Throttler<DeliveryResponse> throttler,
-            MessageDelivery deliveryClient, Map<InternalQueueType, FailedMsgProducer> internalProducers,
-            ConsumptionFailurePolicy failurePolicy, int maxInFlightMessages
+        Context context,
+        MessageSrcSelector msgSrcSelector,
+        ConcurrencyControl<DeliveryResult> concurrencyControl,
+        ThresholdProvider.Dynamic throttleThresholdProvider,
+        Throttler<DeliveryResponse> throttler,
+        MessageDelivery deliveryClient,
+        Map<InternalQueueType, FailedMsgProducer> internalProducers,
+        ConsumptionFailurePolicy failurePolicy,
+        int maxInFlightMessages
     ) {
         super(
-                context, msgSrcSelector, concurrencyControl, throttleThresholdProvider, throttler, deliveryClient,
-                maxInFlightMessages
+            context,
+            msgSrcSelector,
+            concurrencyControl,
+            throttleThresholdProvider,
+            throttler,
+            deliveryClient,
+            maxInFlightMessages
         );
         this.internalProducers = internalProducers;
         this.failurePolicy = failurePolicy;
@@ -40,11 +49,10 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
 
         log.debug("Got {} polled messages to process.", polled.getSize());
         if (polled.getSize() > 0) {
-            Collection<CompletableFuture<DeliveryResult>> asyncResponses =
-                    deliverMessages(
-                            polled.getInternalQueueType(),
-                            () -> Arrays.stream(polled.getMessages()).limit(polled.getSize()).iterator()
-                    );
+            Collection<CompletableFuture<DeliveryResult>> asyncResponses = deliverMessages(
+                polled.getInternalQueueType(),
+                () -> Arrays.stream(polled.getMessages()).limit(polled.getSize()).iterator()
+            );
             // Some of the push will have succeeded, for which we can begin the post processing.
             // For others we start the failure management.
             asyncResponses.forEach(fut -> fut.whenComplete((response, ex) -> {
@@ -58,19 +66,20 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
     }
 
     void onFailure(
-            InternalQueueType type, InternalQueueType failedMsgInQueue, MessageTracker message,
-            MessageConsumptionStatus status
+        InternalQueueType type,
+        InternalQueueType failedMsgInQueue,
+        MessageTracker message,
+        MessageConsumptionStatus status
     ) {
         // failed msgs are present in failedMsgInQueue, so produce this msg there
-        CompletableFuture<Offset> asyncProduce =
-                internalProducers.get(failedMsgInQueue).produceAsync(message.getMessage());
+        CompletableFuture<Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
+                                                                  .produceAsync(message.getMessage());
         asyncProduce.whenComplete((offset, e) -> {
             log.debug(
-                    "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue,
-                    offset,
-                    message.getMessage().getHeader(
-                            HeaderUtils.getHeader(StandardHeaders.MSG_ID)
-                    )
+                "Produced failed message to internal queue: {} with offset: {}. msg id: {}",
+                failedMsgInQueue,
+                offset,
+                message.getMessage().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID))
             );
             onComplete(message, status);
         });

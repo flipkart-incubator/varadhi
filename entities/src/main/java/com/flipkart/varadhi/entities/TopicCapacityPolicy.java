@@ -15,9 +15,10 @@ public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
         this.throughputKBps = throughputKBps;
         this.readFanOut = readFanOut;
     }
+
     public TopicCapacityPolicy from(double factor, int readFanOut) {
-        int qps = (int)Math.ceil((double) this.qps * factor);
-        int kbps = (int)Math.ceil((double) throughputKBps * factor);
+        int qps = (int)Math.ceil((double)this.qps * factor);
+        int kbps = (int)Math.ceil((double)throughputKBps * factor);
         return new TopicCapacityPolicy(qps, kbps, readFanOut);
     }
 

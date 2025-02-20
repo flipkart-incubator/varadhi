@@ -12,7 +12,7 @@ import java.util.UUID;
 import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class ShardOperation extends MetaStoreEntity implements Operation {
     private final OpData opData;
     private long startTime;
@@ -22,8 +22,13 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
 
     @JsonCreator
     ShardOperation(
-            String operationId, int version, long startTime, long endTime, State state, String errorMsg,
-            ShardOperation.OpData opData
+        String operationId,
+        int version,
+        long startTime,
+        long endTime,
+        State state,
+        String errorMsg,
+        ShardOperation.OpData opData
     ) {
         super(operationId, version);
         this.state = state;
@@ -42,7 +47,9 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     }
 
     public static ShardOperation startOp(
-            String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription
+        String subOpId,
+        SubscriptionUnitShard shard,
+        VaradhiSubscription subscription
     ) {
         return new ShardOperation(new ShardOperation.StartData(subOpId, shard, subscription));
     }
@@ -52,7 +59,10 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     }
 
     public static ShardOperation unsidelineOp(
-            String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+        String subOpId,
+        SubscriptionUnitShard shard,
+        VaradhiSubscription subscription,
+        UnsidelineRequest request
     ) {
         return new ShardOperation(new ShardOperation.UnsidelineData(subOpId, shard, subscription, request));
     }
@@ -111,12 +121,11 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
     @Setter
     @AllArgsConstructor
     @NoArgsConstructor
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@opDataType")
-    @JsonSubTypes({
-            @JsonSubTypes.Type(value = ShardOperation.StartData.class, name = "startShardData"),
-            @JsonSubTypes.Type(value = ShardOperation.StopData.class, name = "stopShardData"),
-            @JsonSubTypes.Type(value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),
-    })
+    @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@opDataType")
+    @JsonSubTypes ({
+        @JsonSubTypes.Type (value = ShardOperation.StartData.class, name = "startShardData"),
+        @JsonSubTypes.Type (value = ShardOperation.StopData.class, name = "stopShardData"),
+        @JsonSubTypes.Type (value = ShardOperation.UnsidelineData.class, name = "unsidelineShardData"),})
     public static class OpData {
         private String operationId;
         private String parentOpId;
@@ -127,15 +136,19 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         @Override
         public String toString() {
             return String.format(
-                    "ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d", parentOpId, operationId, subscriptionId,
-                    shardId
+                "ParentOpId=%s Id='%s', subscriptionId='%s', shardId=%d",
+                parentOpId,
+                operationId,
+                subscriptionId,
+                shardId
             );
         }
     }
 
+
     @Getter
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class StartData extends ShardOperation.OpData {
         private boolean grouped;
         private Endpoint endpoint;
@@ -145,8 +158,11 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
 
         StartData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
-                    UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject()
+                UUID.randomUUID().toString(),
+                subOpId,
+                shard.getShardId(),
+                subscription.getName(),
+                subscription.getProject()
             );
             this.grouped = subscription.isGrouped();
             this.endpoint = subscription.getEndpoint();
@@ -161,13 +177,17 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
+
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class StopData extends ShardOperation.OpData {
         StopData(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription) {
             super(
-                    UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject()
+                UUID.randomUUID().toString(),
+                subOpId,
+                shard.getShardId(),
+                subscription.getName(),
+                subscription.getProject()
             );
         }
 
@@ -177,18 +197,25 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
         }
     }
 
+
     @Getter
     @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
+    @EqualsAndHashCode (callSuper = true)
     public static class UnsidelineData extends ShardOperation.OpData {
         UnsidelineRequest request;
 
         UnsidelineData(
-                String subOpId, SubscriptionUnitShard shard, VaradhiSubscription subscription, UnsidelineRequest request
+            String subOpId,
+            SubscriptionUnitShard shard,
+            VaradhiSubscription subscription,
+            UnsidelineRequest request
         ) {
             super(
-                    UUID.randomUUID().toString(), subOpId, shard.getShardId(), subscription.getName(),
-                    subscription.getProject()
+                UUID.randomUUID().toString(),
+                subOpId,
+                shard.getShardId(),
+                subscription.getName(),
+                subscription.getProject()
             );
             this.request = request;
         }

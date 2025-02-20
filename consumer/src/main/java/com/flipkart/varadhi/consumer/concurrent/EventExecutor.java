@@ -26,11 +26,13 @@ public class EventExecutor implements Executor {
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     public EventExecutor(
-            ScheduledExecutorService scheduler, ThreadFactory threadFactory, BlockingQueue<Context.Task> taskQueue
+        ScheduledExecutorService scheduler,
+        ThreadFactory threadFactory,
+        BlockingQueue<Context.Task> taskQueue
     ) {
         this.scheduler = scheduler;
         this.taskQueue = taskQueue;
-        this.thread = (CustomThread) threadFactory.newThread(this::run);
+        this.thread = (CustomThread)threadFactory.newThread(this::run);
         this.thread.setName("consumer-event-executor");
         this.thread.start();
     }
@@ -50,7 +52,8 @@ public class EventExecutor implements Executor {
             EventExecutor boundExecutor = task.getContext().getExecutor();
             if (boundExecutor != null && boundExecutor != this) {
                 throw new IllegalStateException(
-                        "task is tied to an executor:" + boundExecutor + ", but is being executed on:" + this);
+                    "task is tied to an executor:" + boundExecutor + ", but is being executed on:" + this
+                );
             }
             add(task);
             return;
@@ -63,11 +66,11 @@ public class EventExecutor implements Executor {
         if (DEBUG) {
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String caller = Arrays.stream(stacks)
-                    .skip(1)
-                    .filter(e -> !e.toString().startsWith("com.flipkart.varadhi.consumer.concurrent"))
-                    .findFirst()
-                    .map(StackTraceElement::toString)
-                    .orElse("UNKNOWN");
+                                  .skip(1)
+                                  .filter(e -> !e.toString().startsWith("com.flipkart.varadhi.consumer.concurrent"))
+                                  .findFirst()
+                                  .map(StackTraceElement::toString)
+                                  .orElse("UNKNOWN");
             log.info("Adding task: {}@{}", caller, System.identityHashCode(task));
         }
         taskQueue.add(task);

@@ -52,8 +52,12 @@ public class ProducerServiceTests {
         topicProvider = mock(TopicProvider.class);
         meterRegistry = new OtlpMeterRegistry();
 
-        service = new ProducerService(region, new ProducerOptions(), producerFactory::newProducer, topicProvider::get,
-                meterRegistry
+        service = new ProducerService(
+            region,
+            new ProducerOptions(),
+            producerFactory::newProducer,
+            topicProvider::get,
+            meterRegistry
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
@@ -69,8 +73,11 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -97,8 +104,8 @@ public class ProducerServiceTests {
         // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
         // This is not expected in general.
         ProduceException pe = Assertions.assertThrows(
-                ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+            ProduceException.class,
+            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         Assertions.assertEquals("Produce failed due to internal error: Some random error.", pe.getMessage());
         verify(emitter, never()).emit(anyBoolean(), anyLong());
@@ -112,8 +119,8 @@ public class ProducerServiceTests {
         doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new ResourceNotFoundException("Topic doesn't exists.")).when(topicProvider).get(vt.getName());
         Assertions.assertThrows(
-                ResourceNotFoundException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+            ResourceNotFoundException.class,
+            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         verify(producer, never()).produceAsync(any());
     }
@@ -126,51 +133,52 @@ public class ProducerServiceTests {
         doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new RuntimeException("Unknown error.")).when(topicProvider).get(vt.getName());
         ProduceException e = Assertions.assertThrows(
-                ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+            ProduceException.class,
+            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
-        Assertions.assertEquals(
-                "Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
+        Assertions.assertEquals("Failed to get produce Topic(project1.topic1). Unknown error.", e.getMessage());
         verify(producer, never()).produceAsync(any());
     }
 
     @Test
     public void produceToBlockedTopic() throws InterruptedException {
         produceNotAllowedTopicState(
-                TopicState.Blocked,
-                ProduceStatus.Blocked,
-                "Topic/Queue is blocked. Unblock the Topic/Queue before produce."
+            TopicState.Blocked,
+            ProduceStatus.Blocked,
+            "Topic/Queue is blocked. Unblock the Topic/Queue before produce."
         );
     }
 
     @Test
     public void produceToThrottledTopic() throws InterruptedException {
         produceNotAllowedTopicState(
-                TopicState.Throttled,
-                ProduceStatus.Throttled,
-                "Produce to Topic/Queue is currently rate limited, try again after sometime."
+            TopicState.Throttled,
+            ProduceStatus.Throttled,
+            "Produce to Topic/Queue is currently rate limited, try again after sometime."
         );
     }
 
     @Test
     public void produceToReplicatingTopic() throws InterruptedException {
         produceNotAllowedTopicState(
-                TopicState.Replicating,
-                ProduceStatus.NotAllowed,
-                "Produce is not allowed for replicating Topic/Queue."
+            TopicState.Replicating,
+            ProduceStatus.NotAllowed,
+            "Produce is not allowed for replicating Topic/Queue."
         );
     }
 
-    public void produceNotAllowedTopicState(
-            TopicState topicState, ProduceStatus produceStatus, String message
-    ) throws InterruptedException {
+    public void produceNotAllowedTopicState(TopicState topicState, ProduceStatus produceStatus, String message)
+        throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
@@ -187,11 +195,13 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicProvider).get(vt.getName());
         doThrow(new RuntimeException("Unknown Error.")).when(producerFactory).newProducer(any());
         ProduceException pe = Assertions.assertThrows(
-                ProduceException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+            ProduceException.class,
+            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         Assertions.assertEquals(
-                "Failed to create Pulsar producer for Topic(project1.topic1). Unknown Error.", pe.getMessage());
+            "Failed to create Pulsar producer for Topic(project1.topic1). Unknown Error.",
+            pe.getMessage()
+        );
     }
 
     @Test
@@ -202,12 +212,14 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicProvider).get(vt.getName());
         doThrow(new RuntimeException("Topic doesn't exists.")).when(producerFactory).newProducer(any());
         RuntimeException re = Assertions.assertThrows(
-                RuntimeException.class,
-                () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+            RuntimeException.class,
+            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
         );
         verify(producer, never()).produceAsync(any());
         Assertions.assertEquals(
-                "Failed to create Pulsar producer for Topic(project1.topic1). Topic doesn't exists.", re.getMessage());
+            "Failed to create Pulsar producer for Topic(project1.topic1). Topic doesn't exists.",
+            re.getMessage()
+        );
     }
 
     @Test
@@ -218,16 +230,19 @@ public class ProducerServiceTests {
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
 
-        CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
 
         ResultCapture rc = getResult(result);
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
+        Assertions.assertEquals(ProduceStatus.Failed, rc.produceResult.getProduceStatus());
         Assertions.assertEquals(
-                ProduceStatus.Failed, rc.produceResult.getProduceStatus());
-        Assertions.assertEquals(
-                "Produce failure from messaging stack for Topic/Queue. null", rc.produceResult.getFailureReason()
+            "Produce failure from messaging stack for Topic/Queue. null",
+            rc.produceResult.getFailureReason()
         );
         verify(producerFactory, times(1)).newProducer(any());
     }
@@ -240,8 +255,11 @@ public class ProducerServiceTests {
         VaradhiTopic vt = getTopic(topic, project, region);
         doReturn(vt).when(topicProvider).get(vt.getName());
         doReturn(producer).when(producerFactory).newProducer(any());
-        CompletableFuture<ProduceResult> result =
-                service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter);
+        CompletableFuture<ProduceResult> result = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
+        );
         ResultCapture rc = getResult(result);
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
@@ -256,8 +274,14 @@ public class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
-        VaradhiTopic topic = VaradhiTopic.of(project.getName(), name, false, null);
-        StorageTopic st = new DummyStorageTopic(topic.getName(), 0);
+        VaradhiTopic topic = VaradhiTopic.of(
+            project.getName(),
+            name,
+            false,
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
+        );
+        StorageTopic st = new DummyStorageTopic(topic.getName());
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);
         ict.setTopicState(state);
         topic.addInternalTopic(region, ict);
@@ -275,8 +299,7 @@ public class ProducerServiceTests {
             payload = new byte[payloadSize];
             random.nextBytes(payload);
         }
-        DummyProducer.DummyMessage message =
-                new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
+        DummyProducer.DummyMessage message = new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
         return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
@@ -288,7 +311,7 @@ public class ProducerServiceTests {
         produceAttributes.put(TAG_PROJECT, project.getName());
         produceAttributes.put(TAG_TOPIC, topic);
         produceAttributes.put(TAG_IDENTITY, "ANONYMOUS");
-        produceAttributes.put(TAG_REMOTEHOST, "remoteHost");
+        produceAttributes.put(TAG_REMOTE_HOST, "remoteHost");
         return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
     }
 
@@ -316,14 +339,16 @@ public class ProducerServiceTests {
         }
     }
 
+
     static class ResultCapture {
         ProduceResult produceResult;
         Throwable throwable;
     }
 
+
     public static class DummyStorageTopic extends StorageTopic {
-        public DummyStorageTopic(String name, int version) {
-            super(name, version, Constants.DefaultTopicCapacity);
+        public DummyStorageTopic(String name) {
+            super(name, Constants.DEFAULT_TOPIC_CAPACITY);
         }
     }
 }

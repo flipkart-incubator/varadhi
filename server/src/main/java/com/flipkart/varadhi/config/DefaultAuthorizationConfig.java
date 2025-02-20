@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.entities.auth.Role;
-import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import lombok.Data;
 

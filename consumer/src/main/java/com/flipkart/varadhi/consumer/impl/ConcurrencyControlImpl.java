@@ -51,7 +51,8 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
 
     @Override
     public Collection<CompletableFuture<T>> enqueueTasks(
-            InternalQueueType type, Iterable<Supplier<CompletableFuture<T>>> tasks
+        InternalQueueType type,
+        Iterable<Supplier<CompletableFuture<T>>> tasks
     ) {
         int currentConcurrency = executePendingTasksInternal();
 
@@ -161,13 +162,16 @@ public class ConcurrencyControlImpl<T> implements ConcurrencyControl<T> {
         private final CircularQueue<Holder<T>> tasks = new CircularQueue<>(16);
     }
 
+
     static class Holder<T> {
         private final CompletableFuture<T> future;
         private final Supplier<CompletableFuture<T>> task;
         private final BiConsumer<T, Throwable> onComplete;
 
         public Holder(
-                CompletableFuture<T> future, Supplier<CompletableFuture<T>> task, BiConsumer<T, Throwable> onComplete
+            CompletableFuture<T> future,
+            Supplier<CompletableFuture<T>> task,
+            BiConsumer<T, Throwable> onComplete
         ) {
             this.future = future;
             this.task = task;

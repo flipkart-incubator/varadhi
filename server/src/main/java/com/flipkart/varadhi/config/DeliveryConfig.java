@@ -9,8 +9,8 @@ import lombok.Data;
  * and tracing policy for Vertx eventBus in ClusterManager flow.
  * (de)serialzation of DeliveryOptions is broken because of "all" property which is used via MultiMap headers.
  * com.fasterxml.jackson.databind.exc.InvalidDefinitionException:
- *     Conflicting setter definitions for property "all": io.vertx.core.MultiMap#setAll(io.vertx.core.MultiMap)
- *     vs io.vertx.core.MultiMap#setAll(java.util.Map)
+ * Conflicting setter definitions for property "all": io.vertx.core.MultiMap#setAll(io.vertx.core.MultiMap)
+ * vs io.vertx.core.MultiMap#setAll(java.util.Map)
  * https://github.com/eclipse-vertx/vert.x/issues/3735
  */
 @Data
