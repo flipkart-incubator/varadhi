@@ -68,10 +68,12 @@ public class PulsarProducer implements Producer {
     public CompletableFuture<Offset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
-        TypedMessageBuilder<byte[]> messageBuilder =
-                pulsarProducer.newMessage().key(partitioningKey).value(message.getPayload());
-        message.getHeaders().asMap()
-                .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
+        TypedMessageBuilder<byte[]> messageBuilder = pulsarProducer.newMessage()
+                                                                   .key(partitioningKey)
+                                                                   .value(message.getPayload());
+        message.getHeaders()
+               .asMap()
+               .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));
 
         // In general Pulsar client and producer, auto-reconnects so this should be fine.Might need to
         // refresh/re-create producer (and possibly client) if there are fatal errors, currently these

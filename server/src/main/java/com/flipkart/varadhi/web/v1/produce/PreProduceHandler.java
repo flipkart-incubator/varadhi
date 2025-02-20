@@ -18,7 +18,7 @@ public class PreProduceHandler {
         ctx.next();
     }
 
-    public void validateHeadersAndBodyForMessage(RoutingContext ctx){
+    public void validateHeadersAndBodyForMessage(RoutingContext ctx) {
         ensureHeaderSemanticsAndSize(ctx.request().headers(), ctx.body().buffer().getBytes());
     }
 
@@ -37,28 +37,37 @@ public class PreProduceHandler {
 
             if (isIdHeader(key)) {
                 if (value.length() > HeaderUtils.headerValueSizeMax) {
-                    throw new IllegalArgumentException(String.format("%s %s exceeds allowed size of %d.",
-                            key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) ? "Message id" : "Group id", value,
+                    throw new IllegalArgumentException(
+                        String.format(
+                            "%s %s exceeds allowed size of %d.",
+                            key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) ? "Message id" : "Group id",
+                            value,
                             HeaderUtils.headerValueSizeMax
-                    ));
+                        )
+                    );
                 }
             }
 
             // Calculate the size of each header and its value
-            headersAndBodySize += key.getBytes(StandardCharsets.UTF_8).length + value.getBytes(StandardCharsets.UTF_8).length;
+            headersAndBodySize += key.getBytes(StandardCharsets.UTF_8).length + value.getBytes(
+                StandardCharsets.UTF_8
+            ).length;
         }
 
-        headersAndBodySize+= body.length;
+        headersAndBodySize += body.length;
 
         // If the total size of the headers and body exceeds the allowed limit, throw an exception
         if (headersAndBodySize > HeaderUtils.maxRequestSize) {
-            throw new IllegalArgumentException(String.format("Request size exceeds allowed limit of %d bytes.", HeaderUtils.maxRequestSize));
+            throw new IllegalArgumentException(
+                String.format("Request size exceeds allowed limit of %d bytes.", HeaderUtils.maxRequestSize)
+            );
         }
     }
 
     private boolean isIdHeader(String key) {
-        return key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) ||
-                key.equals(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
+        return key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) || key.equals(
+            HeaderUtils.getHeader(StandardHeaders.GROUP_ID)
+        );
     }
 
 }

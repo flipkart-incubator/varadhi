@@ -242,8 +242,7 @@ public class WebServerVerticle extends AbstractVerticle {
     @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        PreProduceHandler
-                preProduceHandler = new PreProduceHandler();
+        PreProduceHandler preProduceHandler = new PreProduceHandler();
         Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
@@ -259,13 +258,13 @@ public class WebServerVerticle extends AbstractVerticle {
             meterRegistry
         );
         return new ArrayList<>(
-                new ProduceHandlers(
-                        producerService,
-                        preProduceHandler::validate,
-                        projectService,
-                        producerMetricsHandler,
-                        deployedRegion
-                ).get()
+            new ProduceHandlers(
+                producerService,
+                preProduceHandler::validate,
+                projectService,
+                producerMetricsHandler,
+                deployedRegion
+            ).get()
         );
     }
 

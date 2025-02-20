@@ -26,8 +26,7 @@ public class HeaderUtilsTest {
         varadhiHeaders.put("X_PRODUCE_TIMESTAMP", "value1");
         varadhiHeaders.put("X_PRODUCE_REGION", "value1");
         varadhiHeaders.put("X_PRODUCE_IDENTITY", "value1");
-        HeaderUtils.getRequiredHeaders().forEach(
-                key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
+        HeaderUtils.getRequiredHeaders().forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         HeaderUtils.ensureRequiredHeaders(varadhiHeaders);
@@ -37,14 +36,19 @@ public class HeaderUtilsTest {
     public void testMissingRequiredHeaders() {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
-        HeaderUtils.getRequiredHeaders().stream().filter(key -> !key.equals(HeaderUtils.getHeader(
-                        StandardHeaders.MSG_ID)) && !key.equals(HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION)))
-                .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
+        HeaderUtils.getRequiredHeaders()
+                   .stream()
+                   .filter(
+                       key -> !key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) && !key.equals(
+                           HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION)
+                       )
+                   )
+                   .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         IllegalArgumentException ae = Assertions.assertThrows(
-                IllegalArgumentException.class,
-                () -> HeaderUtils.ensureRequiredHeaders(varadhiHeaders)
+            IllegalArgumentException.class,
+            () -> HeaderUtils.ensureRequiredHeaders(varadhiHeaders)
         );
     }
 

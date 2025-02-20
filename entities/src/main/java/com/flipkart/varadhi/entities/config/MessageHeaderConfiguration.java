@@ -6,20 +6,18 @@ import lombok.*;
 
 import java.util.List;
 import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Builder
-public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> mapping,
-                                         @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax,
-                                         @NotNull Integer maxRequestSize) {
+public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize) {
     @JsonCreator
-    public MessageHeaderConfiguration(
-            @JsonProperty("mapping") Map<StandardHeaders, String> mapping,
-            @JsonProperty("allowedPrefix") List<String> allowedPrefix,
-            @JsonProperty("headerValueSizeMax") Integer headerValueSizeMax,
-            @JsonProperty("maxRequestSize") Integer maxRequestSize
-    ) {
+    public MessageHeaderConfiguration(@JsonProperty ("mapping")
+    Map<StandardHeaders, String> mapping, @JsonProperty ("allowedPrefix")
+    List<String> allowedPrefix, @JsonProperty ("headerValueSizeMax")
+    Integer headerValueSizeMax, @JsonProperty ("maxRequestSize")
+    Integer maxRequestSize) {
         this.mapping = mapping;
         this.allowedPrefix = allowedPrefix;
         this.headerValueSizeMax = headerValueSizeMax;
@@ -41,8 +39,9 @@ public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> m
             // Combined check for null/empty and valid prefix
             if (value == null || value.isEmpty() || !startsWithValidPrefix(value)) {
                 throw new IllegalArgumentException(
-                        "Invalid value for header " + header + ": value '" + value +
-                                "' is either null, empty, or does not start with a valid prefix.");
+                    "Invalid value for header " + header + ": value '" + value
+                                                   + "' is either null, empty, or does not start with a valid prefix."
+                );
             }
         }
 
@@ -52,8 +51,3 @@ public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> m
         return allowedPrefix.stream().anyMatch(value::startsWith);
     }
 }
-
-
-
-
-

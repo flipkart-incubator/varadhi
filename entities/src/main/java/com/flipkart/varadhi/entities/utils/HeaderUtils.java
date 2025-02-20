@@ -15,6 +15,7 @@ public class HeaderUtils {
     public static Integer headerValueSizeMax;
     public static Integer maxRequestSize;
     private static Boolean initialized;
+
     public static void initialize(MessageHeaderConfiguration config) {
         if (initialized != null && initialized) {
             return; // Prevent re-initialization if already initialized
@@ -27,10 +28,11 @@ public class HeaderUtils {
         HeaderUtils.initialized = true;
     }
 
-    public static String getHeader(StandardHeaders header){
+    public static String getHeader(StandardHeaders header) {
         checkInitialization();
         return mapping.get(header).toLowerCase();
     }
+
     public static void checkInitialization() {
         if (HeaderUtils.initialized != Boolean.TRUE) {
             throw new IllegalStateException("One or more required static fields are not initialized");
@@ -38,9 +40,7 @@ public class HeaderUtils {
     }
 
     public static List<String> getRequiredHeaders() {
-        return List.of(
-                HeaderUtils.getHeader(StandardHeaders.MSG_ID)
-        );
+        return List.of(HeaderUtils.getHeader(StandardHeaders.MSG_ID));
     }
 
     public static void ensureRequiredHeaders(Multimap<String, String> headers) {
@@ -51,9 +51,7 @@ public class HeaderUtils {
         });
     }
 
-    public static Multimap<String, String> copyVaradhiHeaders(
-            Multimap<String, String> headers
-    ) {
+    public static Multimap<String, String> copyVaradhiHeaders(Multimap<String, String> headers) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         headers.entries().forEach(entry -> {
             String key = entry.getKey();

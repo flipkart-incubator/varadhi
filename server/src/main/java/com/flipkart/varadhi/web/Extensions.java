@@ -27,6 +27,7 @@ import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 
 public class Extensions {
     public static String ANONYMOUS_IDENTITY = "Anonymous";
+
     private enum ContentKind {
         APPLICATION_JSON(HttpHeaderValues.APPLICATION_JSON.toString()), APPLICATION_JSON_SEQ(
             "application/json-seq"

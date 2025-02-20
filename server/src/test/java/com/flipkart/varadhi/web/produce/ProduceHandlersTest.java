@@ -4,7 +4,6 @@ import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
@@ -35,6 +34,7 @@ import static org.mockito.Mockito.*;
 
 public class ProduceHandlersTest extends ProduceTestBase {
     Span span;
+
     @Override
     public void tearDown() throws InterruptedException {
         super.tearDown();
@@ -54,7 +54,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         doReturn(span).when(span).setAttribute(anyString(), anyString());
-        HeaderUtils.initialize( MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach
@@ -210,7 +210,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         request.putHeader("X_HEADER2", "h2v1");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
-        String[] h1Values = msgCapture.getValue().getHeaders("x_header1").toArray(new String[]{});
+        String[] h1Values = msgCapture.getValue().getHeaders("x_header1").toArray(new String[] {});
         Assertions.assertEquals("h1v1", h1Values[0]);
         Assertions.assertEquals("h1v2", h1Values[1]);
         Assertions.assertEquals("h1v3", h1Values[2]);
