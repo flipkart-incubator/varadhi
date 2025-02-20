@@ -140,7 +140,7 @@ public abstract class ProcessingLoop implements Context.Task {
                 throttleThresholdProvider.mark();
                 log.info(
                         "Delivery attempt was made. queue: {}, message id: {}. status: {}", type,
-                        msg.getMessage().getHeader(HeaderUtils.mapping.get(StandardHeaders.MSG_ID)), response.statusCode()
+                        msg.getMessage().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID)), response.statusCode()
                 );
                 if (response.success()) {
                     return CompletableFuture.completedFuture(response);

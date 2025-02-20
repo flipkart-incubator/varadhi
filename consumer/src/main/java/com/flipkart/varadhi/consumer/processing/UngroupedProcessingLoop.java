@@ -69,7 +69,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
                     "Produced failed message to internal queue: {} with offset: {}. msg id: {}", failedMsgInQueue,
                     offset,
                     message.getMessage().getHeader(
-                            HeaderUtils.mapping.get(StandardHeaders.MSG_ID)
+                            HeaderUtils.getHeader(StandardHeaders.MSG_ID)
                     )
             );
             onComplete(message, status);

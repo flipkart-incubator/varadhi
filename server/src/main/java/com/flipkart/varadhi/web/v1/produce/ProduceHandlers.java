@@ -9,6 +9,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.entities.Hierarchies;
@@ -35,13 +36,12 @@ import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
 import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 
 @Slf4j
-@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
+@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
 @AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
@@ -79,7 +79,7 @@ public class ProduceHandlers implements RouteProvider {
 
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         //TODO FIx attribute name semantics here.
-        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+        String produceIdentity = ctx.getIdentityOrDefault();
         produceAttributes.put(TAG_REGION, produceRegion);
         produceAttributes.put(TAG_IDENTITY, produceIdentity);
         ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
@@ -144,14 +144,14 @@ public class ProduceHandlers implements RouteProvider {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        Multimap<String, String> varadhiHeaders = HeaderUtils.copyVaradhiHeaders(requestHeaders, HeaderUtils.allowedPrefix);
+        Multimap<String, String> varadhiHeaders = HeaderUtils.copyVaradhiHeaders(requestHeaders);
 
         //enriching headers with custom headers
-        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+        String produceIdentity = ctx.getIdentityOrDefault();
 
-        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_REGION), produceRegion);
-        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_IDENTITY), produceIdentity);
-        varadhiHeaders.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_TIMESTAMP), Long.toString(System.currentTimeMillis()));
+        varadhiHeaders.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION), produceRegion);
+        varadhiHeaders.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_IDENTITY), produceIdentity);
+        varadhiHeaders.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_TIMESTAMP), Long.toString(System.currentTimeMillis()));
         return new ProducerMessage(payload, varadhiHeaders);
     }
 }

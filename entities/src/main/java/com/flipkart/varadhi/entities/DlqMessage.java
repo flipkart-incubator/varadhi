@@ -26,13 +26,13 @@ public class DlqMessage implements Message {
     @JsonIgnore
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.mapping.get(StandardHeaders.MSG_ID));
+        return getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID));
     }
 
     @JsonIgnore
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID));
+        return getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
     }
 
     @JsonIgnore

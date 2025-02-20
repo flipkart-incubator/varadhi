@@ -56,7 +56,7 @@ public class PulsarProducerTest {
 
         options = new ProducerOptions();
         hostname = "some_host_name";
-        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
 
@@ -143,20 +143,20 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getHeaders().put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), groupId1);
+        message.getHeaders().put(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), groupId1);
         pulsarProducer.produceAsync(message);
         org.apache.pulsar.client.api.Message<byte[]> actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertEquals(groupId1, actualMessage.getKey());
 
-        message.getHeaders().remove(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), groupId1);
+        message.getHeaders().remove(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), groupId1);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertNotEquals(groupId1, actualMessage.getKey());
         Assertions.assertEquals(RANDOM_PARTITION_KEY_LENGTH, actualMessage.getKeyBytes().length);
 
-        message.getHeaders().put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), groupId2);
+        message.getHeaders().put(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), groupId2);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
@@ -172,7 +172,7 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getHeaders().put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), groupId1);
+        message.getHeaders().put(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), groupId1);
         message.getHeaders().put("SomeHeader", "someheadervalue");
         message.getHeaders().put("x_foobar", "x_foobar_value");
         message.getHeaders().put("x_multivalue", "x_multivalue1");
@@ -183,7 +183,7 @@ public class PulsarProducerTest {
         Map<String, String> properites = actualMessage.getProperties();
         Assertions.assertEquals("someheadervalue", properites.get("SomeHeader"));
         Assertions.assertEquals("x_foobar_value", properites.get("x_foobar"));
-        Assertions.assertEquals(groupId1, properites.get(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID)));
+        Assertions.assertEquals(groupId1, properites.get(HeaderUtils.getHeader(StandardHeaders.GROUP_ID)));
         Assertions.assertEquals("x_multivalue1,x_multivalue2,x_multivalue3", properites.get("x_multivalue"));
     }
 

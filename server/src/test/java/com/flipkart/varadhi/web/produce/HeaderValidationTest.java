@@ -90,7 +90,7 @@ public class HeaderValidationTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.mapping.get(StandardHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
         sendRequestWithByteBufferBody(
                 request, payload, 400, "Message id " + randomString +  " exceeds allowed size of 100.",
                 ErrorResponse.class

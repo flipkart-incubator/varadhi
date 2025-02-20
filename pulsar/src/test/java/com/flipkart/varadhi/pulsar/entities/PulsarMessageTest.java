@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
@@ -23,11 +24,11 @@ class PulsarMessageTest {
     void testPulsarMessagesEqualsProducerMessage() {
         // test request headers
         Multimap<String, String> requestHeaders = ArrayListMultimap.create();
-        MessageHeaderConfiguration messageHeaderConfiguration = HeaderUtils.fetchDummyHeaderConfiguration();
+        MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderUtils.fetchDummyHeaderConfiguration();
         HeaderUtils.initialize(messageHeaderConfiguration);
         requestHeaders.put("header1", "value1");
-        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), "msgId");
-        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), "grpId");
+        requestHeaders.put(HeaderUtils.getHeader(StandardHeaders.MSG_ID), "msgId");
+        requestHeaders.put(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), "grpId");
         requestHeaders.putAll("header2", List.of("value2", "value3"));
 
         // now create the producer message

@@ -56,7 +56,7 @@ public class SubscriptionTestBase extends WebTestBase {
         projectService = mock(ProjectService.class);
         topicService = mock(VaradhiTopicService.class);
         subscriptionFactory = mock(VaradhiSubscriptionFactory.class);
-        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     public static VaradhiSubscription getUngroupedSubscription(
@@ -108,8 +108,8 @@ public class SubscriptionTestBase extends WebTestBase {
 
     protected DlqMessage getDlqMessage(int partitionId) {
         ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
-        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), Arrays.toString(getRandomBytes(10)));
-        requestHeaders.put(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID), Arrays.toString(getRandomBytes(10)));
+        requestHeaders.put(HeaderUtils.getHeader(StandardHeaders.MSG_ID), Arrays.toString(getRandomBytes(10)));
+        requestHeaders.put(HeaderUtils.getHeader(StandardHeaders.GROUP_ID), Arrays.toString(getRandomBytes(10)));
         int lId = r.nextInt(30) % 5000;
         int eId = r.nextInt(30) % 40000;
         Offset offset = PulsarOffset.of("mId:%d:%d:%d".formatted(lId, eId, partitionId));

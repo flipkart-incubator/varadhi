@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.google.common.collect.ArrayListMultimap;
@@ -39,7 +38,7 @@ public class PreProduceHandler {
             if (isIdHeader(key)) {
                 if (value.length() > HeaderUtils.headerValueSizeMax) {
                     throw new IllegalArgumentException(String.format("%s %s exceeds allowed size of %d.",
-                            key.equals(HeaderUtils.mapping.get(StandardHeaders.MSG_ID)) ? "Message id" : "Group id", value,
+                            key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) ? "Message id" : "Group id", value,
                             HeaderUtils.headerValueSizeMax
                     ));
                 }
@@ -58,8 +57,8 @@ public class PreProduceHandler {
     }
 
     private boolean isIdHeader(String key) {
-        return key.equals(HeaderUtils.mapping.get(StandardHeaders.MSG_ID)) ||
-                key.equals(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID));
+        return key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) ||
+                key.equals(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
     }
 
 }

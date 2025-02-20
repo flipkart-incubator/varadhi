@@ -57,6 +57,7 @@ public class WebTestBase {
         awaitLatch(latch);
         bodyHandler = BodyHandler.create(false);
         failureHandler = new FailureHandler();
+        //make common
     }
 
     protected HttpServerOptions getHttpServerOptions() {

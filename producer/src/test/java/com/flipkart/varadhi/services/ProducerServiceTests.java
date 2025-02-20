@@ -31,7 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 import static com.flipkart.varadhi.Constants.Tags.*;
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -58,9 +57,8 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        messageHeaderConfiguration = HeaderUtils.fetchDummyHeaderConfiguration();
         //initialization required
-        HeaderUtils.initialize(messageHeaderConfiguration);
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
 
     }
 
@@ -268,10 +266,10 @@ public class ProducerServiceTests {
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        headers.put(HeaderUtils.mapping.get(StandardHeaders.MSG_ID), getMessageId());
-        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_IDENTITY), ANONYMOUS_IDENTITY);
-        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_REGION), region);
-        headers.put(HeaderUtils.mapping.get(StandardHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
+        headers.put(HeaderUtils.getHeader(StandardHeaders.MSG_ID), getMessageId());
+        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_IDENTITY), "ANONYMOUS");
+        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION), region);
+        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
@@ -289,7 +287,7 @@ public class ProducerServiceTests {
         produceAttributes.put(TAG_TEAM, project.getTeam());
         produceAttributes.put(TAG_PROJECT, project.getName());
         produceAttributes.put(TAG_TOPIC, topic);
-        produceAttributes.put(TAG_IDENTITY, ANONYMOUS_IDENTITY);
+        produceAttributes.put(TAG_IDENTITY, "ANONYMOUS");
         produceAttributes.put(TAG_REMOTEHOST, "remoteHost");
         return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
     }

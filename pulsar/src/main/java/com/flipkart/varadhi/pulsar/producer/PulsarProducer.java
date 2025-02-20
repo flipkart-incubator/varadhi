@@ -78,8 +78,8 @@ public class PulsarProducer implements Producer {
     }
 
     private String getPartitioningKey(Message message) {
-        if (message.hasHeader(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID))) {
-            return message.getHeader(HeaderUtils.mapping.get(StandardHeaders.GROUP_ID));
+        if (message.hasHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID))) {
+            return message.getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
         }
         return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }

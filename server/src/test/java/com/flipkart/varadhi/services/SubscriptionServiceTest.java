@@ -45,8 +45,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getGroupedSubscription;
 import static com.flipkart.varadhi.web.admin.SubscriptionHandlersTest.getUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.*;

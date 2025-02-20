@@ -23,10 +23,10 @@ import java.util.function.Function;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_IS_SUPER_USER;
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 
 
 public class Extensions {
+    public static String ANONYMOUS_IDENTITY = "Anonymous";
     private enum ContentKind {
         APPLICATION_JSON(HttpHeaderValues.APPLICATION_JSON.toString()),
         APPLICATION_JSON_SEQ("application/json-seq"),

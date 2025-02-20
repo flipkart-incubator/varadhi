@@ -40,7 +40,7 @@ class DlqServiceTest extends SubscriptionTestBase {
         consumerFactory = mock(ConsumerClientFactory.class);
         consumerClient = mock(ConsumerApi.class);
         dlqService = new DlqService(controllerClient, consumerFactory);
-        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @Test

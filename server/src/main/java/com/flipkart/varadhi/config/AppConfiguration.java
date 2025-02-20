@@ -82,7 +82,6 @@ public class AppConfiguration implements Validatable {
     @Override
     public void validate(){
         Validatable.super.validate();
-        messageHeaderConfiguration.validate();
         HeaderUtils.initialize(messageHeaderConfiguration);
         HeaderUtils.checkInitialization();
     }

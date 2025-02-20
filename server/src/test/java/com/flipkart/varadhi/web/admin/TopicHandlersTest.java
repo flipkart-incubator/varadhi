@@ -48,7 +48,7 @@ public class TopicHandlersTest extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
-        HeaderUtils.initialize(HeaderUtils.fetchDummyHeaderConfiguration());
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
 
         varadhiTopicService = mock(VaradhiTopicService.class);
