@@ -100,4 +100,5 @@ messageHeaderConfiguration:
     produceTimestamp: "X_PRODUCE_TIMESTAMP"
   headerValueSizeMax: 100
   maxRequestSize: 5242880
+  filterNonCompliantHeaders: true
 

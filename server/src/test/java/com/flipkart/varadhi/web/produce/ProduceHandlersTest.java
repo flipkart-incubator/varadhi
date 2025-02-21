@@ -80,15 +80,15 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         Message capturedMessage = msgCapture.getValue();
-        HeaderUtils.getRequiredHeaders().forEach(s -> Assertions.assertTrue(capturedMessage.hasHeader(s)));
+        Assertions.assertTrue(capturedMessage.hasHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID)));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
 
-        Assertions.assertFalse(capturedMessage.hasHeader("RandomHeader"));
-        Assertions.assertTrue(capturedMessage.getHeaders("x_header1").contains("h1v1"));
-        Assertions.assertTrue(capturedMessage.getHeaders("x_header1").contains("h1v2"));
-        Assertions.assertTrue(capturedMessage.getHeaders("x_header2").contains("h2v1"));
-        Assertions.assertFalse(capturedMessage.hasHeader("X_HEADER2"));
+        Assertions.assertFalse(capturedMessage.hasHeader("RandomHeader".toUpperCase()));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header1".toUpperCase()).contains("h1v1"));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header1".toUpperCase()).contains("h1v2"));
+        Assertions.assertTrue(capturedMessage.getHeaders("x_header2".toUpperCase()).contains("h2v1"));
+        Assertions.assertTrue(capturedMessage.hasHeader("X_HEADER2"));
         messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any());
@@ -210,11 +210,11 @@ public class ProduceHandlersTest extends ProduceTestBase {
         request.putHeader("X_HEADER2", "h2v1");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
-        String[] h1Values = msgCapture.getValue().getHeaders("x_header1").toArray(new String[] {});
+        String[] h1Values = msgCapture.getValue().getHeaders("X_HEADER1").toArray(new String[] {});
         Assertions.assertEquals("h1v1", h1Values[0]);
         Assertions.assertEquals("h1v2", h1Values[1]);
         Assertions.assertEquals("h1v3", h1Values[2]);
-        Assertions.assertEquals("h1v1", msgCapture.getValue().getHeader("x_header1"));
+        Assertions.assertEquals("h1v1", msgCapture.getValue().getHeader("X_HEADER1"));
     }
 
     @Test

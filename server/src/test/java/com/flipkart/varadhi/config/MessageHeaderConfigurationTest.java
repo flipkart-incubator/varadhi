@@ -27,7 +27,8 @@ public class MessageHeaderConfigurationTest {
             config.mapping(),
             List.of(prefix1, prefix2),
             config.headerValueSizeMax(),
-            config.maxRequestSize()
+            config.maxRequestSize(),
+            config.filterNonCompliantHeaders()
         );
 
         if (expectedResult) {
@@ -62,7 +63,8 @@ public class MessageHeaderConfigurationTest {
             ),
             List.of("VARADHI_"),
             100,
-            2000
+            2000,
+            true
         );
     }
 }

@@ -14,6 +14,7 @@ public class HeaderUtils {
     private static Map<StandardHeaders, String> mapping;
     public static Integer headerValueSizeMax;
     public static Integer maxRequestSize;
+    private static Boolean filterNonCompliantHeaders;
     private static Boolean initialized;
 
     public static synchronized void initialize(MessageHeaderConfiguration config) {
@@ -27,7 +28,12 @@ public class HeaderUtils {
         HeaderUtils.mapping = ImmutableMap.copyOf(config.mapping());
         HeaderUtils.headerValueSizeMax = config.headerValueSizeMax();
         HeaderUtils.maxRequestSize = config.maxRequestSize();
+        HeaderUtils.filterNonCompliantHeaders = config.filterNonCompliantHeaders();
         HeaderUtils.initialized = true;
+    }
+
+    public static synchronized void deInitialize() {
+        HeaderUtils.initialized = false;
     }
 
     public static String getHeader(StandardHeaders header) {
@@ -55,13 +61,20 @@ public class HeaderUtils {
 
     public static Multimap<String, String> returnVaradhiRecognizedHeaders(Multimap<String, String> headers) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
-        headers.entries().forEach(entry -> {
+        boolean shouldFilter = HeaderUtils.filterNonCompliantHeaders.equals(Boolean.TRUE);
+
+        for (Map.Entry<String, String> entry : headers.entries()) {
             String key = entry.getKey();
-            boolean validPrefix = HeaderUtils.allowedPrefix.stream().anyMatch(key::startsWith);
-            if (validPrefix) {
-                varadhiHeaders.put(key.toLowerCase(), entry.getValue());
+            if (shouldFilter) {
+                boolean validPrefix = HeaderUtils.allowedPrefix.stream().anyMatch(key::startsWith);
+                if (validPrefix) {
+                    varadhiHeaders.put(key.toUpperCase(), entry.getValue());
+                }
+            } else {
+                varadhiHeaders.put(key.toUpperCase(), entry.getValue());
             }
-        });
+        }
         return varadhiHeaders;
     }
+
 }

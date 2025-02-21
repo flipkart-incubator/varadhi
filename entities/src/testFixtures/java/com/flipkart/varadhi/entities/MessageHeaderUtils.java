@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class MessageHeaderUtils {
 
-    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration() {
+    public static MessageHeaderConfiguration fetchConfiguration(boolean filterNonCompliantHeaders) {
         return new MessageHeaderConfiguration(
             Map.ofEntries(
                 Map.entry(StandardHeaders.MSG_ID, "X_MESSAGE_ID"),
@@ -27,7 +27,19 @@ public class MessageHeaderUtils {
             ),
             List.of("X_", "x_"),
             100,
-            (5 * 1024 * 1024)
+            (5 * 1024 * 1024),
+            filterNonCompliantHeaders
         );
     }
+
+    public static MessageHeaderConfiguration fetchDummyHeaderConfigurationWithParams(
+        boolean filterNonCompliantHeaders
+    ) {
+        return fetchConfiguration(filterNonCompliantHeaders);
+    }
+
+    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration() {
+        return fetchConfiguration(true);
+    }
+
 }

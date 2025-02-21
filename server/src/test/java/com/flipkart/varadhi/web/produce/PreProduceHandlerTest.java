@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -17,41 +17,21 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
-public class HeaderValidationTest extends ProduceTestBase {
+public class PreProduceHandlerTest extends ProduceTestBase {
     PreProduceHandler validationHandler;
     HttpRequest<Buffer> request;
 
-    @BeforeEach()
+    @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
-        MessageHeaderConfiguration messageHeaderConfiguration = new MessageHeaderConfiguration(
-                Map.ofEntries(
-                        Map.entry(StandardHeaders.MSG_ID, "X_MESSAGE_ID"),
-                        Map.entry(StandardHeaders.GROUP_ID, "X_GROUP_ID"),
-                        Map.entry(StandardHeaders.CALLBACK_CODE, "X_CALLBACK_CODES"),
-                        Map.entry(StandardHeaders.REQUEST_TIMEOUT, "X_REQUEST_TIMEOUT"),
-                        Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "X_REPLY_TO_HTTP_URI"),
-                        Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "X_REPLY_TO_HTTP_METHOD"),
-                        Map.entry(StandardHeaders.REPLY_TO, "X_REPLY_TO"),
-                        Map.entry(StandardHeaders.HTTP_URI, "X_HTTP_URI"),
-                        Map.entry(StandardHeaders.HTTP_METHOD, "X_HTTP_METHOD"),
-                        Map.entry(StandardHeaders.CONTENT_TYPE, "X_CONTENT_TYPE"),
-                        Map.entry(StandardHeaders.PRODUCE_IDENTITY, "X_PRODUCE_IDENTITY"),
-                        Map.entry(StandardHeaders.PRODUCE_REGION, "X_PRODUCE_REGION"),
-                        Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "X_PRODUCE_TIMESTAMP")
-                ),
-                List.of("X_", "x_"),
-                100,
-                (5 * 1024 * 1024)
-        );
         validationHandler = new PreProduceHandler();
         route.handler(bodyHandler).handler(ctx -> {
             ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
@@ -61,7 +41,7 @@ public class HeaderValidationTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
-        HeaderUtils.initialize(messageHeaderConfiguration);
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach
@@ -90,8 +70,30 @@ public class HeaderValidationTest extends ProduceTestBase {
         request.putHeader("X_MESSAGE_ID", randomString);
         request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
         sendRequestWithPayload(
-                request, payload, 400, "Message id " + randomString + " exceeds allowed size of 100.",
-                ErrorResponse.class
+            request,
+            payload,
+            400,
+            "Message id " + randomString + " exceeds allowed size of 100.",
+            ErrorResponse.class
+        );
+    }
+
+    @Test
+    public void testProduceWithHighBodyAndHeaderSize() throws InterruptedException {
+        String randomString = RandomString.make(99);
+        request.putHeader("X_MESSAGE_ID", randomString);
+        request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
+
+        // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
+        byte[] largeBody = new byte[5 * 1024 * 1024 + 1]; // Byte array of size greater than 5MB
+        Arrays.fill(largeBody, (byte)'A'); // Fill it with some data (e.g., 'A')
+
+        sendRequestWithPayload(
+            request,
+            largeBody,
+            400,
+            "Request size exceeds allowed limit of 5242880 bytes.",
+            ErrorResponse.class
         );
     }
 

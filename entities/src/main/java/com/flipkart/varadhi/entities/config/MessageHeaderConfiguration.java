@@ -11,17 +11,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Builder
-public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize) {
+public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize, @NotNull Boolean filterNonCompliantHeaders) {
     @JsonCreator
     public MessageHeaderConfiguration(@JsonProperty ("mapping")
     Map<StandardHeaders, String> mapping, @JsonProperty ("allowedPrefix")
     List<String> allowedPrefix, @JsonProperty ("headerValueSizeMax")
     Integer headerValueSizeMax, @JsonProperty ("maxRequestSize")
-    Integer maxRequestSize) {
+    Integer maxRequestSize, @JsonProperty ("filterNonCompliantHeaders")
+    Boolean filterNonCompliantHeaders) {
         this.mapping = mapping;
         this.allowedPrefix = allowedPrefix;
         this.headerValueSizeMax = headerValueSizeMax;
         this.maxRequestSize = maxRequestSize;
+        this.filterNonCompliantHeaders = filterNonCompliantHeaders;
         validate();
     }
 

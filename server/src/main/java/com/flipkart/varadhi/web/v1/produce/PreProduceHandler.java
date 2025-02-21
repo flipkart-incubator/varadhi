@@ -8,7 +8,6 @@ import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @AllArgsConstructor
@@ -19,10 +18,11 @@ public class PreProduceHandler {
     }
 
     public void validateHeadersAndBodyForMessage(RoutingContext ctx) {
-        ensureHeaderSemanticsAndSize(ctx.request().headers(), ctx.body().buffer().getBytes());
+        long bodyLength = ctx.body().length();
+        ensureHeaderSemanticsAndSize(ctx.request().headers(), bodyLength);
     }
 
-    private void ensureHeaderSemanticsAndSize(MultiMap headers, byte[] body) {
+    private void ensureHeaderSemanticsAndSize(MultiMap headers, long bodyLength) {
         Multimap<String, String> requestHeaders = ArrayListMultimap.create();
         headers.entries().forEach(entry -> {
             String key = entry.getKey();
@@ -47,14 +47,12 @@ public class PreProduceHandler {
                     );
                 }
             }
-
             // Calculate the size of each header and its value
-            headersAndBodySize += key.getBytes(StandardCharsets.UTF_8).length + value.getBytes(
-                StandardCharsets.UTF_8
-            ).length;
+            int byteLength = (key.length() + value.length()) * 2;
+            headersAndBodySize += byteLength;
         }
 
-        headersAndBodySize += body.length;
+        headersAndBodySize += bodyLength;
 
         // If the total size of the headers and body exceeds the allowed limit, throw an exception
         if (headersAndBodySize > HeaderUtils.maxRequestSize) {
