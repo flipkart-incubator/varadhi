@@ -45,7 +45,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 @AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
-    private final Handler<RoutingContext> headerValidationHandler;
+    private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final String produceRegion;
@@ -60,7 +60,7 @@ public class ProduceHandlers implements RouteProvider {
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()
-                               .preHandler(headerValidationHandler)
+                               .preHandler(preProduceHandler)
                                .authorize(TOPIC_PRODUCE)
                                .build(this::getHierarchies, this::produce)
             )
@@ -141,7 +141,7 @@ public class ProduceHandlers implements RouteProvider {
             String key = entry.getKey();
             requestHeaders.put(key, entry.getValue());
         });
-        Multimap<String, String> varadhiHeaders = HeaderUtils.copyVaradhiHeaders(requestHeaders);
+        Multimap<String, String> varadhiHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(requestHeaders);
 
         //enriching headers with custom headers
         String produceIdentity = ctx.getIdentityOrDefault();

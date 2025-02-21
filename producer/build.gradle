@@ -10,6 +10,7 @@ dependencies {
     implementation("io.micrometer:micrometer-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     testImplementation("io.micrometer:micrometer-registry-otlp")
+
     testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
 }

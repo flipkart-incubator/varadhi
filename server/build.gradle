@@ -57,7 +57,6 @@ dependencies {
 
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
-    //use like this where ever reequired
     testImplementation(testFixtures(project(":entities")))
     testImplementation(testFixtures(project(":common")))
     testImplementation("org.apache.curator:curator-test")

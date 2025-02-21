@@ -2,7 +2,6 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.StandardHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
@@ -44,7 +43,6 @@ public class ProducerServiceTests {
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
     String region = "region1";
-    MessageHeaderConfiguration messageHeaderConfiguration;
 
     @BeforeEach
     public void preTest() {

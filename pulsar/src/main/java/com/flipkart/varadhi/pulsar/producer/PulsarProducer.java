@@ -68,9 +68,11 @@ public class PulsarProducer implements Producer {
     public CompletableFuture<Offset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
+
         TypedMessageBuilder<byte[]> messageBuilder = pulsarProducer.newMessage()
                                                                    .key(partitioningKey)
                                                                    .value(message.getPayload());
+
         message.getHeaders()
                .asMap()
                .forEach((key, values) -> messageBuilder.property(key, PropertyHelper.encodePropertyValues(values)));

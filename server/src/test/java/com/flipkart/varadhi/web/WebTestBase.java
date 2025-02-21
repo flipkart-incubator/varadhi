@@ -67,8 +67,6 @@ public class WebTestBase {
         CountDownLatch latch = new CountDownLatch(1);
         server.requestHandler(router).listen().onComplete(onSuccess(res -> latch.countDown()));
         awaitLatch(latch);
-        bodyHandler = BodyHandler.create(false);
-        failureHandler = new FailureHandler();
     }
 
     protected HttpServerOptions getHttpServerOptions() {

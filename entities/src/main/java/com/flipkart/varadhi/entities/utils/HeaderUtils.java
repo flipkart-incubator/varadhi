@@ -10,18 +10,20 @@ import java.util.List;
 import java.util.Map;
 
 public class HeaderUtils {
-    public static List<String> allowedPrefix;
+    private static List<String> allowedPrefix;
     private static Map<StandardHeaders, String> mapping;
     public static Integer headerValueSizeMax;
     public static Integer maxRequestSize;
     private static Boolean initialized;
 
-    public static void initialize(MessageHeaderConfiguration config) {
+    public static synchronized void initialize(MessageHeaderConfiguration config) {
         if (initialized != null && initialized) {
             return; // Prevent re-initialization if already initialized
         }
+        if (config == null) {
+            throw new IllegalArgumentException("Configuration cannot be null");
+        }
         HeaderUtils.allowedPrefix = config.allowedPrefix();
-        //set immutable map
         HeaderUtils.mapping = ImmutableMap.copyOf(config.mapping());
         HeaderUtils.headerValueSizeMax = config.headerValueSizeMax();
         HeaderUtils.maxRequestSize = config.maxRequestSize();
@@ -30,7 +32,7 @@ public class HeaderUtils {
 
     public static String getHeader(StandardHeaders header) {
         checkInitialization();
-        return mapping.get(header).toLowerCase();
+        return mapping.get(header);
     }
 
     public static void checkInitialization() {
@@ -51,7 +53,7 @@ public class HeaderUtils {
         });
     }
 
-    public static Multimap<String, String> copyVaradhiHeaders(Multimap<String, String> headers) {
+    public static Multimap<String, String> returnVaradhiRecognizedHeaders(Multimap<String, String> headers) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         headers.entries().forEach(entry -> {
             String key = entry.getKey();

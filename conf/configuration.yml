@@ -82,8 +82,6 @@ otelOptions:
   otlp.resourceAttributes:
   otlp.headers:
 
-#//map of string,string for header and values
-#proprttiesd seperate
 messageHeaderConfiguration:
   allowedPrefix: ["X_"]
   mapping:

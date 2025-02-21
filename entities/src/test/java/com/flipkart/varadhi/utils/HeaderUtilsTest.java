@@ -70,7 +70,7 @@ public class HeaderUtilsTest {
         headers.put("x-header4", "value4");
         headers.put("x_Restbus_identity", "value5");
 
-        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
 
         Assertions.assertEquals(10, copiedHeaders.size());
         Assertions.assertEquals("value5", copiedHeaders.get("x_restbus_identity").toArray()[0]);
@@ -105,7 +105,7 @@ public class HeaderUtilsTest {
         headers.put("x_Multi_Value2", "multi_value2_1");
         headers.put("x_multi_value2", "multi_Value2_1");
         headers.put("x_multi_value1", "multi_value1_3");
-        Multimap<String, String> copiedHeaders = HeaderUtils.copyVaradhiHeaders(headers);
+        Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
         String[] values = copiedHeaders.get("x_multi_value1").toArray(new String[] {});
         Assertions.assertEquals(3, values.length);
         Assertions.assertEquals("multi_value1_2", values[0]);
