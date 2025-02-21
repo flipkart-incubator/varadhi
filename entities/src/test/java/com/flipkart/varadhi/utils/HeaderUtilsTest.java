@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
@@ -110,7 +109,7 @@ public class HeaderUtilsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
+    @ValueSource (booleans = {true, false})
     public void ensureHeadersAreProcessedCorrectly(Boolean filterNonCompliantHeaders) {
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put("x_multi_value1", "multi_value1_2");
@@ -123,9 +122,7 @@ public class HeaderUtilsTest {
         headers.put("aaa_multi_value1", "multi_value1_3");
         headers.put("bbb_multi_value1", "multi_value1_3");
 
-        HeaderUtils.initialize(
-            MessageHeaderUtils.fetchDummyHeaderConfigurationWithParams(filterNonCompliantHeaders)
-        );
+        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfigurationWithParams(filterNonCompliantHeaders));
 
         Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
 
