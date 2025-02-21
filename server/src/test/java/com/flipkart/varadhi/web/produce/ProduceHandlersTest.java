@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -72,15 +72,15 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                any()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         Message capturedMessage = msgCapture.getValue();
-        Assertions.assertTrue(capturedMessage.hasHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID)));
+        Assertions.assertTrue(capturedMessage.hasHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID)));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
 
@@ -101,7 +101,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                 .produceToTopic(any(), any(), any());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
         sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
     }
 
@@ -117,7 +117,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
 
         data.forEach(d -> {
             ProduceResult result = ProduceResult.ofNonProducingTopic(messageId, d.state);
@@ -139,7 +139,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void testProduceFailureResult() throws InterruptedException {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
         String topicProduceFailureMsg = "Failure from messaging stack in ProduceAsync().";
         ProduceResult result = ProduceResult.of(messageId, Result.of(new ProduceException(topicProduceFailureMsg)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
@@ -167,7 +167,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                                                      any()
                                                                                                  );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
         sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
 
         doReturn(CompletableFuture.failedFuture(new RuntimeException(exceptionMessage))).when(producerService)
@@ -185,7 +185,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         doThrow(new ProduceException(exceptionMessage)).when(producerService).produceToTopic(any(), any(), any());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
         sendRequestWithPayload(request, payload, 500, exceptionMessage, ErrorResponse.class);
     }
 
@@ -199,8 +199,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                any()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         MultiMap multimap = new HeadersMultiMap();
         multimap.add("X_HEADER1", "h1v1");
@@ -221,7 +221,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void testProduceForNonexistingProject() throws InterruptedException {
         doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(

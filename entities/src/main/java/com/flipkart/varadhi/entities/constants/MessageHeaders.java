@@ -2,7 +2,7 @@ package com.flipkart.varadhi.entities.constants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public enum StandardHeaders {
+public enum MessageHeaders {
 
     @JsonProperty ("msgIdHeader") MSG_ID,
 

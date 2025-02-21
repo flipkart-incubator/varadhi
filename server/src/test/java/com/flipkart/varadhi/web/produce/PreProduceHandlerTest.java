@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.produce;
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -69,7 +69,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
         sendRequestWithPayload(
             request,
             payload,
@@ -83,7 +83,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighBodyAndHeaderSize() throws InterruptedException {
         String randomString = RandomString.make(99);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
@@ -100,8 +100,8 @@ public class PreProduceHandlerTest extends ProduceTestBase {
 
     @Test
     public void testProduceWithMultiValueHeaderIsSingleHeader() throws InterruptedException {
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(StandardHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);

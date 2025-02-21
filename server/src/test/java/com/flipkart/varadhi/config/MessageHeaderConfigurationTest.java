@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -47,19 +47,19 @@ public class MessageHeaderConfigurationTest {
     private MessageHeaderConfiguration getDefaultMessageHeaderConfig() {
         return new MessageHeaderConfiguration(
             Map.ofEntries(
-                Map.entry(StandardHeaders.MSG_ID, "VARADHI_MESSAGE_ID"),
-                Map.entry(StandardHeaders.GROUP_ID, "VARADHI_GROUP_ID"),
-                Map.entry(StandardHeaders.CALLBACK_CODE, "VARADHI_CALLBACK_CODES"),
-                Map.entry(StandardHeaders.REQUEST_TIMEOUT, "VARADHI_REQUEST_TIMEOUT"),
-                Map.entry(StandardHeaders.REPLY_TO_HTTP_URI, "VARADHI_REPLY_TO_HTTP_URI"),
-                Map.entry(StandardHeaders.REPLY_TO_HTTP_METHOD, "VARADHI_REPLY_TO_HTTP_METHOD"),
-                Map.entry(StandardHeaders.REPLY_TO, "VARADHI_REPLY_TO"),
-                Map.entry(StandardHeaders.HTTP_URI, "VARADHI_HTTP_URI"),
-                Map.entry(StandardHeaders.HTTP_METHOD, "VARADHI_HTTP_METHOD"),
-                Map.entry(StandardHeaders.CONTENT_TYPE, "VARADHI_CONTENT_TYPE"),
-                Map.entry(StandardHeaders.PRODUCE_IDENTITY, "VARADHI_PRODUCE_IDENTITY"),
-                Map.entry(StandardHeaders.PRODUCE_REGION, "VARADHI_PRODUCE_REGION"),
-                Map.entry(StandardHeaders.PRODUCE_TIMESTAMP, "VARADHI_PRODUCE_TIMESTAMP")
+                Map.entry(MessageHeaders.MSG_ID, "VARADHI_MESSAGE_ID"),
+                Map.entry(MessageHeaders.GROUP_ID, "VARADHI_GROUP_ID"),
+                Map.entry(MessageHeaders.CALLBACK_CODE, "VARADHI_CALLBACK_CODES"),
+                Map.entry(MessageHeaders.REQUEST_TIMEOUT, "VARADHI_REQUEST_TIMEOUT"),
+                Map.entry(MessageHeaders.REPLY_TO_HTTP_URI, "VARADHI_REPLY_TO_HTTP_URI"),
+                Map.entry(MessageHeaders.REPLY_TO_HTTP_METHOD, "VARADHI_REPLY_TO_HTTP_METHOD"),
+                Map.entry(MessageHeaders.REPLY_TO, "VARADHI_REPLY_TO"),
+                Map.entry(MessageHeaders.HTTP_URI, "VARADHI_HTTP_URI"),
+                Map.entry(MessageHeaders.HTTP_METHOD, "VARADHI_HTTP_METHOD"),
+                Map.entry(MessageHeaders.CONTENT_TYPE, "VARADHI_CONTENT_TYPE"),
+                Map.entry(MessageHeaders.PRODUCE_IDENTITY, "VARADHI_PRODUCE_IDENTITY"),
+                Map.entry(MessageHeaders.PRODUCE_REGION, "VARADHI_PRODUCE_REGION"),
+                Map.entry(MessageHeaders.PRODUCE_TIMESTAMP, "VARADHI_PRODUCE_TIMESTAMP")
             ),
             List.of("VARADHI_"),
             100,

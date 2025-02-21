@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.entities.utils.HeadersDeserializer;
 import com.flipkart.varadhi.entities.utils.HeadersSerializer;
 import com.google.common.collect.ArrayListMultimap;
@@ -26,13 +26,13 @@ public class DlqMessage implements Message {
     @JsonIgnore
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID));
+        return getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
     }
 
     @JsonIgnore
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
+        return getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID));
     }
 
     @JsonIgnore

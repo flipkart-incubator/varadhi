@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.entities.utils;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class HeaderUtils {
     private static List<String> allowedPrefix;
-    private static Map<StandardHeaders, String> mapping;
+    private static Map<MessageHeaders, String> mapping;
     public static Integer headerValueSizeMax;
     public static Integer maxRequestSize;
     private static Boolean filterNonCompliantHeaders;
@@ -36,7 +36,7 @@ public class HeaderUtils {
         HeaderUtils.initialized = false;
     }
 
-    public static String getHeader(StandardHeaders header) {
+    public static String getHeader(MessageHeaders header) {
         checkInitialization();
         return mapping.get(header);
     }
@@ -48,7 +48,7 @@ public class HeaderUtils {
     }
 
     public static List<String> getRequiredHeaders() {
-        return List.of(HeaderUtils.getHeader(StandardHeaders.MSG_ID));
+        return List.of(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
     }
 
     public static void ensureRequiredHeaders(Multimap<String, String> headers) {

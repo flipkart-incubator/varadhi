@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.v1.produce;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -146,10 +146,10 @@ public class ProduceHandlers implements RouteProvider {
         //enriching headers with custom headers
         String produceIdentity = ctx.getIdentityOrDefault();
 
-        varadhiHeaders.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION), produceRegion);
-        varadhiHeaders.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_IDENTITY), produceIdentity);
+        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), produceRegion);
+        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), produceIdentity);
         varadhiHeaders.put(
-            HeaderUtils.getHeader(StandardHeaders.PRODUCE_TIMESTAMP),
+            HeaderUtils.getHeader(MessageHeaders.PRODUCE_TIMESTAMP),
             Long.toString(System.currentTimeMillis())
         );
         return new ProducerMessage(payload, varadhiHeaders);

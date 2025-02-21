@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.entities.config;
 
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -11,10 +11,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Builder
-public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize, @NotNull Boolean filterNonCompliantHeaders) {
+public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize, @NotNull Boolean filterNonCompliantHeaders) {
     @JsonCreator
     public MessageHeaderConfiguration(@JsonProperty ("mapping")
-    Map<StandardHeaders, String> mapping, @JsonProperty ("allowedPrefix")
+    Map<MessageHeaders, String> mapping, @JsonProperty ("allowedPrefix")
     List<String> allowedPrefix, @JsonProperty ("headerValueSizeMax")
     Integer headerValueSizeMax, @JsonProperty ("maxRequestSize")
     Integer maxRequestSize, @JsonProperty ("filterNonCompliantHeaders")
@@ -35,7 +35,7 @@ public record MessageHeaderConfiguration(@NotNull Map<StandardHeaders, String> m
             }
         }
 
-        for (StandardHeaders header : StandardHeaders.values()) {
+        for (MessageHeaders header : MessageHeaders.values()) {
             String value = mapping.get(header);
 
             // Combined check for null/empty and valid prefix

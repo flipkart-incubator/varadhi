@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -20,12 +20,12 @@ public class ProducerMessage implements Message {
     // TODO:: This will affect json, verify it.
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID));
+        return getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
     }
 
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
+        return getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID));
     }
 
     @Override

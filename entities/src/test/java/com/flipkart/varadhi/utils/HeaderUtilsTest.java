@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -30,8 +30,8 @@ public class HeaderUtilsTest {
         HeaderUtils.getRequiredHeaders()
                    .stream()
                    .filter(
-                       key -> !key.equals(HeaderUtils.getHeader(StandardHeaders.MSG_ID)) && !key.equals(
-                           HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION)
+                       key -> !key.equals(HeaderUtils.getHeader(MessageHeaders.MSG_ID)) && !key.equals(
+                           HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION)
                        )
                    )
                    .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));

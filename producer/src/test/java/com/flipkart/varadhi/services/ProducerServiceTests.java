@@ -3,7 +3,7 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -288,10 +288,10 @@ public class ProducerServiceTests {
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        headers.put(HeaderUtils.getHeader(StandardHeaders.MSG_ID), getMessageId());
-        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_IDENTITY), "ANONYMOUS");
-        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_REGION), region);
-        headers.put(HeaderUtils.getHeader(StandardHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
+        headers.put(HeaderUtils.getHeader(MessageHeaders.MSG_ID), getMessageId());
+        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), "ANONYMOUS");
+        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), region);
+        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];

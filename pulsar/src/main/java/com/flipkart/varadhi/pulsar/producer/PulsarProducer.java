@@ -3,7 +3,7 @@ package com.flipkart.varadhi.pulsar.producer;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -84,8 +84,8 @@ public class PulsarProducer implements Producer {
     }
 
     private String getPartitioningKey(Message message) {
-        if (message.hasHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID))) {
-            return message.getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID));
+        if (message.hasHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))) {
+            return message.getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID));
         }
         return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }

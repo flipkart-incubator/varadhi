@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.StandardHeaders;
+import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.TelemetryType;
@@ -113,11 +113,11 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
 
     private List<Tag> getMessageTags(RoutingContext ctx) {
         List<Tag> tags = new ArrayList<>();
-        if (null != ctx.request().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID))) {
-            tags.add(Tag.of("message.id", ctx.request().getHeader(HeaderUtils.getHeader(StandardHeaders.MSG_ID))));
+        if (null != ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID))) {
+            tags.add(Tag.of("message.id", ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID))));
         }
-        if (null != ctx.request().getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID))) {
-            tags.add(Tag.of("group.id", ctx.request().getHeader(HeaderUtils.getHeader(StandardHeaders.GROUP_ID))));
+        if (null != ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))) {
+            tags.add(Tag.of("group.id", ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))));
         }
         tags.add(Tag.of("payload.size", String.valueOf(ctx.body() != null ? ctx.body().length() : 0)));
         return tags;
