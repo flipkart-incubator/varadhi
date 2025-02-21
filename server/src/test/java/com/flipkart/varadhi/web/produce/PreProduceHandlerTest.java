@@ -28,6 +28,7 @@ import static org.mockito.Mockito.doReturn;
 public class PreProduceHandlerTest extends ProduceTestBase {
     PreProduceHandler validationHandler;
     HttpRequest<Buffer> request;
+    private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
@@ -85,7 +86,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
         request.putHeader(HeaderUtils.getHeader(StandardHeaders.HTTP_URI), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
-        byte[] largeBody = new byte[5 * 1024 * 1024 + 1]; // Byte array of size greater than 5MB
+        byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
         Arrays.fill(largeBody, (byte)'A'); // Fill it with some data (e.g., 'A')
 
         sendRequestWithPayload(
