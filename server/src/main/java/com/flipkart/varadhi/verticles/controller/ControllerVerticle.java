@@ -1,19 +1,26 @@
 package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.cluster.*;
-import com.flipkart.varadhi.controller.OperationMgr;
+import com.flipkart.varadhi.cluster.MembershipListener;
+import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.MessageRouter;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
+import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.controller.EventManager;
+import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.core.cluster.entities.*;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.events.EventConsumer;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.controller.ControllerApiMgr;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -36,6 +43,8 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
+    private EventManager eventManager;
+    private EventConsumer eventConsumer;
 
     public ControllerVerticle(
         ControllerConfig config,
@@ -56,13 +65,40 @@ public class ControllerVerticle extends AbstractVerticle {
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
-        onLeaderElected(controllerApiMgr, handler, messageRouter).onComplete(ar -> {
-            if (ar.failed()) {
-                startPromise.fail(ar.cause());
-            } else {
-                startPromise.complete();
-            }
-        });
+        onLeaderElected(controllerApiMgr, handler, messageRouter)
+                .compose(v -> initializeEventSystem())
+                .onComplete(ar -> {
+                    if (ar.failed()) {
+                        log.error("Failed to initialize controller", ar.cause());
+                        startPromise.fail(ar.cause());
+                    } else {
+                        log.info("Controller initialized successfully");
+                        startPromise.complete();
+                    }
+                });
+    }
+
+    private Future<Void> initializeEventSystem() {
+        try {
+            eventManager = new EventManager(
+                    metaStoreProvider.getEventStore(),
+                    metaStoreProvider.getMetaStore(),
+                    vertx.eventBus()
+            );
+
+            eventConsumer = new EventConsumer(
+                    metaStoreProvider.getEventStore(),
+                    vertx.eventBus(),
+                    clusterManager.getExchange(vertx),
+                    clusterManager,
+                    controllerConfig.getEventProcessorConfig()
+            );
+
+            eventConsumer.start();
+            return Future.succeededFuture();
+        } catch (Exception e) {
+            return Future.failedFuture(e);
+        }
     }
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
@@ -138,7 +174,7 @@ public class ControllerVerticle extends AbstractVerticle {
         }).onComplete(ar -> {
             if (ar.failed()) {
                 log.error("Failed to Start controller. Giving up leadership.", ar.cause());
-                abortLeaderShip();
+                abortLeadership();
             } else {
                 log.info("Leadership obtained successfully");
             }
@@ -195,13 +231,23 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
 
-    private void abortLeaderShip() {
+    private void abortLeadership() {
         throw new UnsupportedOperationException("abortLeaderShip to be implemented.");
     }
 
     @Override
     public void stop(Promise<Void> stopPromise) {
-        stopPromise.complete();
+        try {
+            if (eventManager != null) {
+                eventManager.close();
+            }
+            if (eventConsumer != null) {
+                eventConsumer.close();
+            }
+            stopPromise.complete();
+        } catch (Exception e) {
+            stopPromise.fail(e);
+        }
     }
 
     private void setupApiHandlers(MessageRouter messageRouter, ControllerApiHandler handler) {
