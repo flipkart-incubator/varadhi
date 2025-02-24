@@ -14,6 +14,5 @@ package com.flipkart.varadhi.entities;
  * to track resource state changes across the distributed system.
  */
 public enum ResourceOperation {
-    INVALIDATE,
-    UPSERT
+    INVALIDATE, UPSERT
 }

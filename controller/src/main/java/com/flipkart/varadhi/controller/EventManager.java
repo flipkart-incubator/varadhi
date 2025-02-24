@@ -122,15 +122,11 @@ public class EventManager implements AutoCloseable {
      * @param eventBus   The event bus for distributing events across the cluster
      * @throws NullPointerException if any parameter is null
      */
-    public EventManager(
-            EventStore eventStore,
-            MetaStore metaStore,
-            EventBus eventBus
-    ) {
+    public EventManager(EventStore eventStore, MetaStore metaStore, EventBus eventBus) {
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore cannot be null");
         this.metaStore = Objects.requireNonNull(metaStore, "metaStore cannot be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus cannot be null");
-        this.curatorCache = (CuratorCache) eventStore.getEventCache();
+        this.curatorCache = (CuratorCache)eventStore.getEventCache();
         this.executor = createExecutor();
         this.eventQueue = new LinkedBlockingQueue<>();
         this.initializationFuture = new CompletableFuture<>();
@@ -145,15 +141,14 @@ public class EventManager implements AutoCloseable {
      * @return A new ExecutorService configured with virtual threads
      */
     private ExecutorService createExecutor() {
-        return Executors.newSingleThreadExecutor(Thread.ofVirtual()
-                .name(THREAD_NAME_PREFIX, 0)
-                .uncaughtExceptionHandler((t, e) -> {
-                    log.error("Uncaught exception in thread {}", t.getName(), e);
-                    if (e instanceof InterruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
-                })
-                .factory());
+        return Executors.newSingleThreadExecutor(
+            Thread.ofVirtual().name(THREAD_NAME_PREFIX, 0).uncaughtExceptionHandler((t, e) -> {
+                log.error("Uncaught exception in thread {}", t.getName(), e);
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+            }).factory()
+        );
     }
 
     /**
@@ -207,11 +202,9 @@ public class EventManager implements AutoCloseable {
             List<EventMarker> pendingEvents = eventStore.getPendingEvents();
             log.info("Processing {} pending events", pendingEvents.size());
 
-            pendingEvents.sort(Comparator.comparingLong(event ->
-                    extractSequenceNumber(event.getName())));
+            pendingEvents.sort(Comparator.comparingLong(event -> extractSequenceNumber(event.getName())));
 
-            Lists.partition(pendingEvents, BATCH_SIZE)
-                    .forEach(this::processBatch);
+            Lists.partition(pendingEvents, BATCH_SIZE).forEach(this::processBatch);
 
             processingPendingEvents = false;
             log.info("Completed processing all pending events");
@@ -242,9 +235,7 @@ public class EventManager implements AutoCloseable {
      * Configures listener to handle event creation notifications.
      */
     private void setupEventListener() {
-        CuratorCacheListener listener = CuratorCacheListener.builder()
-                .forCreates(this::handleEventCreated)
-                .build();
+        CuratorCacheListener listener = CuratorCacheListener.builder().forCreates(this::handleEventCreated).build();
 
         curatorCache.listenable().addListener(listener);
     }
@@ -297,11 +288,10 @@ public class EventManager implements AutoCloseable {
      * Continues processing until shutdown is initiated.
      */
     private void startEventProcessing() {
-        CompletableFuture.runAsync(this::processQueuedEvents, executor)
-                .exceptionally(throwable -> {
-                    log.error("Event queue processing failed", throwable);
-                    return null;
-                });
+        CompletableFuture.runAsync(this::processQueuedEvents, executor).exceptionally(throwable -> {
+            log.error("Event queue processing failed", throwable);
+            return null;
+        });
     }
 
     /**
@@ -356,17 +346,14 @@ public class EventManager implements AutoCloseable {
         try {
             var result = resolveCurrentState(event);
             return ResourceEvent.of(
-                    event.getName(),
-                    event.getResourceType(),
-                    event.getResourceName(),
-                    result.operation(),
-                    result.state()
+                event.getName(),
+                event.getResourceType(),
+                event.getResourceName(),
+                result.operation(),
+                result.state()
             );
         } catch (Exception e) {
-            throw new EventProcessingException(
-                    String.format("Failed to resolve resource event: %s", event),
-                    e
-            );
+            throw new EventProcessingException(String.format("Failed to resolve resource event: %s", event), e);
         }
     }
 
@@ -379,15 +366,9 @@ public class EventManager implements AutoCloseable {
      */
     private StateResolutionResult resolveCurrentState(EventMarker event) {
         return switch (event.getResourceType()) {
-            case PROJECT -> safeResolveState(
-                    () -> metaStore.getProject(event.getResourceName())
-            );
-            case TOPIC -> safeResolveState(
-                    () -> metaStore.getTopic(event.getResourceName())
-            );
-            case SUBSCRIPTION -> safeResolveState(
-                    () -> metaStore.getSubscription(event.getResourceName())
-            );
+            case PROJECT -> safeResolveState(() -> metaStore.getProject(event.getResourceName()));
+            case TOPIC -> safeResolveState(() -> metaStore.getTopic(event.getResourceName()));
+            case SUBSCRIPTION -> safeResolveState(() -> metaStore.getSubscription(event.getResourceName()));
             case ROOT, ORG, TEAM, IAM_POLICY -> StateResolutionResult.noStateRequired();
         };
     }
@@ -437,12 +418,8 @@ public class EventManager implements AutoCloseable {
      */
     public boolean isHealthy() {
         try {
-            return !isShutdown &&
-                    initializationFuture.isDone() &&
-                    !initializationFuture.isCompletedExceptionally() &&
-                    curatorCache.listenable() != null &&
-                    !executor.isShutdown() &&
-                    !executor.isTerminated();
+            return !isShutdown && initializationFuture.isDone() && !initializationFuture.isCompletedExceptionally()
+                   && curatorCache.listenable() != null && !executor.isShutdown() && !executor.isTerminated();
         } catch (Exception e) {
             log.warn("CuratorCache health check failed", e);
             return false;

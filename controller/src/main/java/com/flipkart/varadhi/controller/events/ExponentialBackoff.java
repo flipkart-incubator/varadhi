@@ -56,8 +56,8 @@ public final class ExponentialBackoff {
         attempts++;
         if (!shouldRetry()) {
             throw new EventProcessingException(
-                    String.format("Failed to publish event after %d attempts: %s", maxRetries, event),
-                    e
+                String.format("Failed to publish event after %d attempts: %s", maxRetries, event),
+                e
             );
         }
         log.warn("Retry {} - Failed to publish event: {}", attempts, event, e);

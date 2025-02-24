@@ -85,19 +85,19 @@ public final class EventConsumer implements AutoCloseable {
      * @throws NullPointerException if any parameter is null
      */
     public EventConsumer(
-            EventStore eventStore,
-            EventBus eventBus,
-            MessageExchange messageExchange,
-            VaradhiClusterManager clusterManager,
-            EventProcessorConfig eventProcessorConfig
+        EventStore eventStore,
+        EventBus eventBus,
+        MessageExchange messageExchange,
+        VaradhiClusterManager clusterManager,
+        EventProcessorConfig eventProcessorConfig
     ) {
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore cannot be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus cannot be null");
         this.pendingEvents = new ConcurrentHashMap<>();
         this.eventProcessor = new EventProcessor(
-                Objects.requireNonNull(messageExchange, "messageExchange cannot be null"),
-                Objects.requireNonNull(clusterManager, "clusterManager cannot be null"),
-                eventProcessorConfig
+            Objects.requireNonNull(messageExchange, "messageExchange cannot be null"),
+            Objects.requireNonNull(clusterManager, "clusterManager cannot be null"),
+            eventProcessorConfig
         );
         this.isShutdown = new AtomicBoolean(false);
     }
@@ -130,8 +130,7 @@ public final class EventConsumer implements AutoCloseable {
                 return;
             }
 
-            processEvent(event)
-                    .whenComplete(createEventCompletionHandler(message, event));
+            processEvent(event).whenComplete(createEventCompletionHandler(message, event));
 
         } catch (Exception e) {
             log.error("Failed to process event message", e);
@@ -160,10 +159,9 @@ public final class EventConsumer implements AutoCloseable {
      * @return true if the event is valid, false otherwise
      */
     private boolean validateEvent(ResourceEvent event) {
-        return event != null &&
-                event.eventName() != null &&
-                !event.eventName().isBlank() &&
-                !pendingEvents.containsKey(event.eventName());
+        return event != null && event.eventName() != null && !event.eventName().isBlank() && !pendingEvents.containsKey(
+            event.eventName()
+        );
     }
 
     /**
@@ -195,16 +193,14 @@ public final class EventConsumer implements AutoCloseable {
         var state = new EventProcessingState(event);
         pendingEvents.put(eventName, state);
 
-        return eventProcessor.process(event)
-                .thenAccept(v -> {
-                    state.incrementAttempts();
-                    cleanupEvent(eventName);
-                })
-                .exceptionally(throwable -> {
-                    state.incrementAttempts();
-                    handleProcessingFailure(eventName, throwable);
-                    throw new CompletionException(throwable);
-                });
+        return eventProcessor.process(event).thenAccept(v -> {
+            state.incrementAttempts();
+            cleanupEvent(eventName);
+        }).exceptionally(throwable -> {
+            state.incrementAttempts();
+            handleProcessingFailure(eventName, throwable);
+            throw new CompletionException(throwable);
+        });
     }
 
     /**
@@ -217,8 +213,7 @@ public final class EventConsumer implements AutoCloseable {
         var state = pendingEvents.remove(eventName);
         if (state != null) {
             state.fail(throwable);
-            log.error("Failed to process event: {} after {} attempts",
-                    eventName, state.getAttempts(), throwable);
+            log.error("Failed to process event: {} after {} attempts", eventName, state.getAttempts(), throwable);
         }
     }
 
@@ -234,8 +229,7 @@ public final class EventConsumer implements AutoCloseable {
             var state = pendingEvents.remove(eventName);
             if (state != null) {
                 state.complete();
-                log.info("Event {} processed successfully after {} attempts",
-                        eventName, state.getAttempts());
+                log.info("Event {} processed successfully after {} attempts", eventName, state.getAttempts());
             }
         } catch (Exception e) {
             log.error("Failed to cleanup event: {}", eventName, e);
@@ -276,8 +270,7 @@ public final class EventConsumer implements AutoCloseable {
         pendingEvents.forEach((eventName, state) -> {
             try {
                 state.fail(new EventProcessingException("EventConsumer shutting down"));
-                log.warn("Event {} terminated due to shutdown after {} attempts",
-                        eventName, state.getAttempts());
+                log.warn("Event {} terminated due to shutdown after {} attempts", eventName, state.getAttempts());
             } catch (Exception e) {
                 log.error("Error while terminating event {}", eventName, e);
             }

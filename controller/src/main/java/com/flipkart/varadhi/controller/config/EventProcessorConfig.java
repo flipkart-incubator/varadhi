@@ -25,11 +25,11 @@ public class EventProcessorConfig {
      */
     public static EventProcessorConfig getDefault() {
         return EventProcessorConfig.builder()
-                .maxRetries(3)
-                .retryDelayMs(1000)
-                .clusterMemberTimeoutMs(5000)
-                .maxConcurrentProcessing(100)
-                .processingTimeout(Duration.ofMinutes(5))
-                .build();
+                                   .maxRetries(3)
+                                   .retryDelayMs(1000)
+                                   .clusterMemberTimeoutMs(5000)
+                                   .maxConcurrentProcessing(100)
+                                   .processingTimeout(Duration.ofMinutes(5))
+                                   .build();
     }
 }

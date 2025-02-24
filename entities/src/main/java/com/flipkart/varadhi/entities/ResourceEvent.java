@@ -20,13 +20,8 @@ import com.flipkart.varadhi.entities.auth.ResourceType;
  * );
  * </pre>
  */
-public record ResourceEvent(
-        String eventName,
-        ResourceType resourceType,
-        String resourceName,
-        ResourceOperation operation,
-        Object resourceState
-) {
+public record ResourceEvent(String eventName, ResourceType resourceType, String resourceName,
+                            ResourceOperation operation, Object resourceState) {
     public ResourceEvent {
         if (eventName == null || eventName.isBlank()) {
             throw new IllegalArgumentException("eventName cannot be null or blank");
@@ -54,11 +49,11 @@ public record ResourceEvent(
      * @throws IllegalArgumentException if required parameters are null or invalid
      */
     public static ResourceEvent of(
-            String eventName,
-            ResourceType resourceType,
-            String resourceName,
-            ResourceOperation operation,
-            Object resourceState
+        String eventName,
+        ResourceType resourceType,
+        String resourceName,
+        ResourceOperation operation,
+        Object resourceState
     ) {
         return new ResourceEvent(eventName, resourceType, resourceName, operation, resourceState);
     }

@@ -65,33 +65,37 @@ public class ControllerVerticle extends AbstractVerticle {
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
-        onLeaderElected(controllerApiMgr, handler, messageRouter)
-                .compose(v -> initializeEventSystem())
-                .onComplete(ar -> {
-                    if (ar.failed()) {
-                        log.error("Failed to initialize controller", ar.cause());
-                        startPromise.fail(ar.cause());
-                    } else {
-                        log.info("Controller initialized successfully");
-                        startPromise.complete();
-                    }
-                });
+        onLeaderElected(controllerApiMgr, handler, messageRouter).compose(v -> initializeEventSystem())
+                                                                 .onComplete(ar -> {
+                                                                     if (ar.failed()) {
+                                                                         log.error(
+                                                                             "Failed to initialize controller",
+                                                                             ar.cause()
+                                                                         );
+                                                                         startPromise.fail(ar.cause());
+                                                                     } else {
+                                                                         log.info(
+                                                                             "Controller initialized successfully"
+                                                                         );
+                                                                         startPromise.complete();
+                                                                     }
+                                                                 });
     }
 
     private Future<Void> initializeEventSystem() {
         try {
             eventManager = new EventManager(
-                    metaStoreProvider.getEventStore(),
-                    metaStoreProvider.getMetaStore(),
-                    vertx.eventBus()
+                metaStoreProvider.getEventStore(),
+                metaStoreProvider.getMetaStore(),
+                vertx.eventBus()
             );
 
             eventConsumer = new EventConsumer(
-                    metaStoreProvider.getEventStore(),
-                    vertx.eventBus(),
-                    clusterManager.getExchange(vertx),
-                    clusterManager,
-                    controllerConfig.getEventProcessorConfig()
+                metaStoreProvider.getEventStore(),
+                vertx.eventBus(),
+                clusterManager.getExchange(vertx),
+                clusterManager,
+                controllerConfig.getEventProcessorConfig()
             );
 
             eventConsumer.start();

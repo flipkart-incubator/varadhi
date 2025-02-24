@@ -102,12 +102,16 @@ public class EventProcessor {
      * @param eventProcessorConfig          The processor configuration (uses default if null)
      * @throws NullPointerException if messageExchange or clusterManager is null
      */
-    public EventProcessor(MessageExchange messageExchange,
-                          VaradhiClusterManager clusterManager,
-                          EventProcessorConfig eventProcessorConfig) {
+    public EventProcessor(
+        MessageExchange messageExchange,
+        VaradhiClusterManager clusterManager,
+        EventProcessorConfig eventProcessorConfig
+    ) {
         this.messageExchange = messageExchange;
         this.clusterManager = clusterManager;
-        this.eventProcessorConfig = eventProcessorConfig != null ? eventProcessorConfig : EventProcessorConfig.getDefault();
+        this.eventProcessorConfig = eventProcessorConfig != null ?
+            eventProcessorConfig :
+            EventProcessorConfig.getDefault();
         this.scheduler = createScheduler();
         this.isShutdown = new AtomicBoolean(false);
         this.concurrencyLimiter = new Semaphore(this.eventProcessorConfig.getMaxConcurrentProcessing());
@@ -122,11 +126,11 @@ public class EventProcessor {
      */
     private ScheduledExecutorService createScheduler() {
         return Executors.newScheduledThreadPool(
-                Runtime.getRuntime().availableProcessors(),
-                Thread.ofVirtual()
-                        .name("event-processor-", 0)
-                        .uncaughtExceptionHandler(this::handleUncaughtException)
-                        .factory()
+            Runtime.getRuntime().availableProcessors(),
+            Thread.ofVirtual()
+                  .name("event-processor-", 0)
+                  .uncaughtExceptionHandler(this::handleUncaughtException)
+                  .factory()
         );
     }
 
@@ -150,18 +154,15 @@ public class EventProcessor {
      */
     CompletableFuture<Void> process(ResourceEvent event) {
         if (isShutdown.get()) {
-            return CompletableFuture.failedFuture(
-                    new EventProcessingException("EventProcessor is shutdown"));
+            return CompletableFuture.failedFuture(new EventProcessingException("EventProcessor is shutdown"));
         }
 
-        return acquirePermit()
-                .thenCompose(ignored -> processWithTimeout(event))
-                .whenComplete((ignored, throwable) -> {
-                    concurrencyLimiter.release();
-                    if (throwable != null) {
-                        handleProcessingFailure(event, throwable);
-                    }
-                });
+        return acquirePermit().thenCompose(ignored -> processWithTimeout(event)).whenComplete((ignored, throwable) -> {
+            concurrencyLimiter.release();
+            if (throwable != null) {
+                handleProcessingFailure(event, throwable);
+            }
+        });
     }
 
     /**
@@ -172,12 +173,17 @@ public class EventProcessor {
      * @return A future that completes when processing is done or times out
      */
     private CompletableFuture<Void> processWithTimeout(ResourceEvent event) {
-        return CompletableFuture.supplyAsync(() -> clusterManager.getAllMembers()
-                .toCompletionStage()
-                .toCompletableFuture()
-                .thenCompose(members -> processEventForAllClusterMembers(event, members))
-                .orTimeout(eventProcessorConfig.getProcessingTimeout().toMillis(), TimeUnit.MILLISECONDS), scheduler)
-                .thenCompose(Function.identity());
+        return CompletableFuture.supplyAsync(
+            () -> clusterManager.getAllMembers()
+                                .toCompletionStage()
+                                .toCompletableFuture()
+                                .thenCompose(members -> processEventForAllClusterMembers(event, members))
+                                .orTimeout(
+                                    eventProcessorConfig.getProcessingTimeout().toMillis(),
+                                    TimeUnit.MILLISECONDS
+                                ),
+            scheduler
+        ).thenCompose(Function.identity());
     }
 
     /**
@@ -191,17 +197,21 @@ public class EventProcessor {
      */
     private CompletableFuture<Void> processEventForAllClusterMembers(ResourceEvent event, List<MemberInfo> members) {
         if (members.isEmpty()) {
-            return CompletableFuture.failedFuture(
-                    new EventProcessingException("No cluster members available"));
+            return CompletableFuture.failedFuture(new EventProcessingException("No cluster members available"));
         }
 
         Map<String, ClusterMemberEventState> clusterMemberStates = new ConcurrentHashMap<>();
-        members.forEach(member ->
-                clusterMemberStates.put(member.hostname(),
-                        new ClusterMemberEventState(member, eventProcessorConfig.getMaxRetries())));
+        members.forEach(
+            member -> clusterMemberStates.put(
+                member.hostname(),
+                new ClusterMemberEventState(member, eventProcessorConfig.getMaxRetries())
+            )
+        );
 
-        return processClusterMembersWithRetry(event, clusterMemberStates)
-                .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs() * 2, TimeUnit.MILLISECONDS);
+        return processClusterMembersWithRetry(event, clusterMemberStates).orTimeout(
+            eventProcessorConfig.getClusterMemberTimeoutMs() * 2,
+            TimeUnit.MILLISECONDS
+        );
     }
 
     /**
@@ -212,7 +222,10 @@ public class EventProcessor {
      * @param clusterMemberStates Map of member states for tracking progress
      * @return A future that completes when all members have processed or max retries reached
      */
-    private CompletableFuture<Void> processClusterMembersWithRetry(ResourceEvent event, Map<String, ClusterMemberEventState> clusterMemberStates) {
+    private CompletableFuture<Void> processClusterMembersWithRetry(
+        ResourceEvent event,
+        Map<String, ClusterMemberEventState> clusterMemberStates
+    ) {
         CompletableFuture<Void> result = new CompletableFuture<>();
 
         processNextBatch(event, clusterMemberStates, result, 0);
@@ -229,16 +242,24 @@ public class EventProcessor {
      * @param result              The future to complete when processing is done
      * @param attempt             The current retry attempt number
      */
-    private void processNextBatch(ResourceEvent event, Map<String, ClusterMemberEventState> clusterMemberStates, CompletableFuture<Void> result, int attempt) {
+    private void processNextBatch(
+        ResourceEvent event,
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result,
+        int attempt
+    ) {
         if (isShutdown.get()) {
-            result.completeExceptionally(
-                    new EventProcessingException("EventProcessor shutdown during processing"));
+            result.completeExceptionally(new EventProcessingException("EventProcessor shutdown during processing"));
             return;
         }
 
-        List<ClusterMemberEventState> pendingClusterMembers = clusterMemberStates.values().stream()
-                .filter(state -> !state.isComplete() && state.hasRetriesLeft())
-                .toList();
+        List<ClusterMemberEventState> pendingClusterMembers = clusterMemberStates.values()
+                                                                                 .stream()
+                                                                                 .filter(
+                                                                                     state -> !state.isComplete()
+                                                                                              && state.hasRetriesLeft()
+                                                                                 )
+                                                                                 .toList();
 
         if (pendingClusterMembers.isEmpty()) {
             handleCompletion(clusterMemberStates, result);
@@ -263,26 +284,32 @@ public class EventProcessor {
      * @param result                The future to complete when all processing is done
      * @param attempt               The current retry attempt number
      */
-    private void processBatch(ResourceEvent event,
-                              List<ClusterMemberEventState> pendingClusterMembers,
-                              Map<String, ClusterMemberEventState> clusterMemberStates,
-                              CompletableFuture<Void> result,
-                              int attempt) {
+    private void processBatch(
+        ResourceEvent event,
+        List<ClusterMemberEventState> pendingClusterMembers,
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result,
+        int attempt
+    ) {
         List<CompletableFuture<Void>> clusterMemberFutures = pendingClusterMembers.stream()
-                .map(clusterMemberState -> processClusterMember(event, clusterMemberState))
-                .toList();
+                                                                                  .map(
+                                                                                      clusterMemberState -> processClusterMember(
+                                                                                          event,
+                                                                                          clusterMemberState
+                                                                                      )
+                                                                                  )
+                                                                                  .toList();
 
-        CompletableFuture.allOf(clusterMemberFutures.toArray(new CompletableFuture[0]))
-                .whenComplete((v, throwable) -> {
-                    if (throwable != null) {
-                        log.warn("Batch processing encountered errors", throwable);
-                    }
-                    scheduler.schedule(
-                            () -> processNextBatch(event, clusterMemberStates, result, attempt + 1),
-                            eventProcessorConfig.getRetryDelayMs(),
-                            TimeUnit.MILLISECONDS
-                    );
-                });
+        CompletableFuture.allOf(clusterMemberFutures.toArray(new CompletableFuture[0])).whenComplete((v, throwable) -> {
+            if (throwable != null) {
+                log.warn("Batch processing encountered errors", throwable);
+            }
+            scheduler.schedule(
+                () -> processNextBatch(event, clusterMemberStates, result, attempt + 1),
+                eventProcessorConfig.getRetryDelayMs(),
+                TimeUnit.MILLISECONDS
+            );
+        });
     }
 
     /**
@@ -292,16 +319,21 @@ public class EventProcessor {
      * @param clusterMemberStates Map of member states
      * @param result              The future to complete exceptionally
      */
-    private void handleMaxRetriesExceeded(Map<String, ClusterMemberEventState> clusterMemberStates,
-                                          CompletableFuture<Void> result) {
-        List<String> failedClusterMembers = clusterMemberStates.values().stream()
-                .filter(state -> !state.isComplete())
-                .map(state -> state.getMember().hostname())
-                .toList();
+    private void handleMaxRetriesExceeded(
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result
+    ) {
+        List<String> failedClusterMembers = clusterMemberStates.values()
+                                                               .stream()
+                                                               .filter(state -> !state.isComplete())
+                                                               .map(state -> state.getMember().hostname())
+                                                               .toList();
 
         String errorMessage = String.format(
-                "Event processing failed after %d retries for clusterMembers: %s",
-                eventProcessorConfig.getMaxRetries(), failedClusterMembers);
+            "Event processing failed after %d retries for clusterMembers: %s",
+            eventProcessorConfig.getMaxRetries(),
+            failedClusterMembers
+        );
 
         log.error(errorMessage);
 
@@ -316,28 +348,35 @@ public class EventProcessor {
      * @param clusterMemberState The state of the member being processed
      * @return A future that completes when the member processes the event
      */
-    private CompletableFuture<Void> processClusterMember(ResourceEvent event, ClusterMemberEventState clusterMemberState) {
+    private CompletableFuture<Void> processClusterMember(
+        ResourceEvent event,
+        ClusterMemberEventState clusterMemberState
+    ) {
         String clusterMemberId = clusterMemberState.getMember().hostname();
 
         return CompletableFuture.supplyAsync(() -> {
-                    try {
-                        ClusterMessage message = ClusterMessage.of(event);
-                        return messageExchange.request(clusterMemberId, "processEvent", message)
-                                .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS)
-                                .thenAccept(response -> {
-                                    if (response.getException() != null) {
-                                        handleClusterMemberFailure(clusterMemberState, response.getException());
-                                        throw new EventProcessingException(
-                                                "ClusterMember processing failed: " + response.getException().getMessage());
-                                    }
-                                    clusterMemberState.markComplete();
-                                });
-                    } catch (Exception e) {
-                        handleClusterMemberFailure(clusterMemberState, e);
-                        throw e;
-                    }
-                }, scheduler)
-                .thenCompose(Function.identity());
+            try {
+                ClusterMessage message = ClusterMessage.of(event);
+                return messageExchange.request(clusterMemberId, "processEvent", message)
+                                      .orTimeout(
+                                          eventProcessorConfig.getClusterMemberTimeoutMs(),
+                                          TimeUnit.MILLISECONDS
+                                      )
+                                      .thenAccept(response -> {
+                                          if (response.getException() != null) {
+                                              handleClusterMemberFailure(clusterMemberState, response.getException());
+                                              throw new EventProcessingException(
+                                                  "ClusterMember processing failed: " + response.getException()
+                                                                                                .getMessage()
+                                              );
+                                          }
+                                          clusterMemberState.markComplete();
+                                      });
+            } catch (Exception e) {
+                handleClusterMemberFailure(clusterMemberState, e);
+                throw e;
+            }
+        }, scheduler).thenCompose(Function.identity());
     }
 
     /**
@@ -352,11 +391,19 @@ public class EventProcessor {
         clusterMemberState.incrementRetries();
 
         if (!clusterMemberState.hasRetriesLeft()) {
-            log.error("ClusterMember {} failed permanently after {} retries. Error: {}",
-                    clusterMemberId, eventProcessorConfig.getMaxRetries(), throwable.getMessage());
+            log.error(
+                "ClusterMember {} failed permanently after {} retries. Error: {}",
+                clusterMemberId,
+                eventProcessorConfig.getMaxRetries(),
+                throwable.getMessage()
+            );
         } else {
-            log.warn("ClusterMember {} failed temporarily (attempt {}). Error: {}",
-                    clusterMemberId, clusterMemberState.getRetryCount(), throwable.getMessage());
+            log.warn(
+                "ClusterMember {} failed temporarily (attempt {}). Error: {}",
+                clusterMemberId,
+                clusterMemberState.getRetryCount(),
+                throwable.getMessage()
+            );
         }
     }
 
@@ -368,17 +415,21 @@ public class EventProcessor {
      * @param clusterMemberStates Map of member states tracking processing status
      * @param result              The future to complete based on overall processing status
      */
-    private void handleCompletion(Map<String, ClusterMemberEventState> clusterMemberStates, CompletableFuture<Void> result) {
-        List<String> failedClusterMembers = clusterMemberStates.values().stream()
-                .filter(state -> !state.isComplete())
-                .map(state -> state.getMember().hostname())
-                .toList();
+    private void handleCompletion(
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result
+    ) {
+        List<String> failedClusterMembers = clusterMemberStates.values()
+                                                               .stream()
+                                                               .filter(state -> !state.isComplete())
+                                                               .map(state -> state.getMember().hostname())
+                                                               .toList();
 
         if (failedClusterMembers.isEmpty()) {
             result.complete(null);
         } else {
             result.completeExceptionally(
-                    new EventProcessingException("Event processing failed for clusterMembers: " + failedClusterMembers)
+                new EventProcessingException("Event processing failed for clusterMembers: " + failedClusterMembers)
             );
         }
     }
