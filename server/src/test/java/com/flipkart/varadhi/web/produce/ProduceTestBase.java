@@ -56,7 +56,7 @@ public class ProduceTestBase extends WebTestBase {
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         produceHandlers = new ProduceHandlers(
             producerService,
-            preProduceHandler::validate,
+            preProduceHandler,
             projectService,
             metricHandler,
             deployedRegion

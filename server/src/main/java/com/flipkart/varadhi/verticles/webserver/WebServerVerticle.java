@@ -260,7 +260,7 @@ public class WebServerVerticle extends AbstractVerticle {
         return new ArrayList<>(
             new ProduceHandlers(
                 producerService,
-                preProduceHandler::validate,
+                preProduceHandler,
                 projectService,
                 producerMetricsHandler,
                 deployedRegion

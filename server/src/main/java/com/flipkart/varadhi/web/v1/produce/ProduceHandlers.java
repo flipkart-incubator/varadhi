@@ -17,7 +17,6 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -135,13 +134,7 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
-        //dropping headers which are not following semantics
-        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
-        headers.entries().forEach(entry -> {
-            String key = entry.getKey();
-            requestHeaders.put(key, entry.getValue());
-        });
-        Multimap<String, String> varadhiHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(requestHeaders);
+        Multimap<String, String> varadhiHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
 
         //enriching headers with custom headers
         String produceIdentity = ctx.getIdentityOrDefault();

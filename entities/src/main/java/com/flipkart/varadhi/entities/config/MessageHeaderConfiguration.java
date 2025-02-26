@@ -11,14 +11,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Builder
-public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull Integer headerValueSizeMax, @NotNull Integer maxRequestSize, @NotNull Boolean filterNonCompliantHeaders) {
+public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull int headerValueSizeMax, @NotNull int maxRequestSize, @NotNull boolean filterNonCompliantHeaders) {
     @JsonCreator
     public MessageHeaderConfiguration(@JsonProperty ("mapping")
     Map<MessageHeaders, String> mapping, @JsonProperty ("allowedPrefix")
     List<String> allowedPrefix, @JsonProperty ("headerValueSizeMax")
-    Integer headerValueSizeMax, @JsonProperty ("maxRequestSize")
-    Integer maxRequestSize, @JsonProperty ("filterNonCompliantHeaders")
-    Boolean filterNonCompliantHeaders) {
+    int headerValueSizeMax, @JsonProperty ("maxRequestSize")
+    int maxRequestSize, @JsonProperty ("filterNonCompliantHeaders")
+    boolean filterNonCompliantHeaders) {
         this.mapping = mapping;
         this.allowedPrefix = allowedPrefix;
         this.headerValueSizeMax = headerValueSizeMax;
@@ -41,7 +41,7 @@ public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> ma
             // Combined check for null/empty and valid prefix
             if (value == null || value.isEmpty() || !startsWithValidPrefix(value)) {
                 throw new IllegalArgumentException(
-                    "Invalid value for header " + header + ": value '" + value
+                    "Invalid header name" + value + "for header" + header
                                                    + "' is either null, empty, or does not start with a valid prefix."
                 );
             }

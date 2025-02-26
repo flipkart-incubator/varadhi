@@ -8,17 +8,18 @@ import com.google.common.collect.Multimap;
 
 import java.util.List;
 import java.util.Map;
+import io.vertx.core.MultiMap;
 
 public class HeaderUtils {
     private static List<String> allowedPrefix;
     private static Map<MessageHeaders, String> mapping;
-    public static Integer headerValueSizeMax;
-    public static Integer maxRequestSize;
-    private static Boolean filterNonCompliantHeaders;
-    private static Boolean initialized;
+    public static int headerValueSizeMax;
+    public static int maxRequestSize;
+    private static boolean filterNonCompliantHeaders;
+    private static boolean initialized;
 
     public static synchronized void initialize(MessageHeaderConfiguration config) {
-        if (initialized != null && initialized) {
+        if (initialized) {
             return; // Prevent re-initialization if already initialized
         }
         if (config == null) {
@@ -42,8 +43,8 @@ public class HeaderUtils {
     }
 
     public static void checkInitialization() {
-        if (HeaderUtils.initialized != Boolean.TRUE) {
-            throw new IllegalStateException("One or more required static fields are not initialized");
+        if (!HeaderUtils.initialized) {
+            throw new IllegalStateException("Header configuration not yet initialized.");
         }
     }
 
@@ -51,21 +52,19 @@ public class HeaderUtils {
         return List.of(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
     }
 
-    public static void ensureRequiredHeaders(Multimap<String, String> headers) {
+    public static void ensureRequiredHeaders(MultiMap headers) {
         getRequiredHeaders().forEach(key -> {
-            if (!headers.containsKey(key)) {
+            if (!headers.contains(key)) {
                 throw new IllegalArgumentException(String.format("Missing required header %s", key));
             }
         });
     }
 
-    public static Multimap<String, String> returnVaradhiRecognizedHeaders(Multimap<String, String> headers) {
+    public static Multimap<String, String> returnVaradhiRecognizedHeaders(MultiMap headers) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
-        boolean shouldFilter = HeaderUtils.filterNonCompliantHeaders.equals(Boolean.TRUE);
-
         for (Map.Entry<String, String> entry : headers.entries()) {
             String key = entry.getKey();
-            if (shouldFilter) {
+            if (HeaderUtils.filterNonCompliantHeaders) {
                 boolean validPrefix = HeaderUtils.allowedPrefix.stream().anyMatch(key::startsWith);
                 if (validPrefix) {
                     varadhiHeaders.put(key.toUpperCase(), entry.getValue());

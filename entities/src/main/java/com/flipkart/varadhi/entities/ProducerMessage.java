@@ -40,7 +40,7 @@ public class ProducerMessage implements Message {
 
     @Override
     public List<String> getHeaders(String key) {
-        return (requestHeaders).get(key);
+        return requestHeaders.get(key);
     }
 
     @Override

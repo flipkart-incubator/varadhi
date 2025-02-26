@@ -37,7 +37,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
         route.handler(bodyHandler).handler(ctx -> {
             ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
-        }).handler(validationHandler::validate).handler(produceHandlers::produce);
+        }).handler(validationHandler).handler(produceHandlers::produce);
         setupFailureHandler(route);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());

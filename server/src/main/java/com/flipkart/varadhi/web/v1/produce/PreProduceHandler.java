@@ -2,8 +2,7 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
@@ -11,27 +10,25 @@ import lombok.AllArgsConstructor;
 import java.util.*;
 
 @AllArgsConstructor
-public class PreProduceHandler {
-    public void validate(RoutingContext ctx) {
-        validateHeadersAndBodyForMessage(ctx);
+public class PreProduceHandler implements Handler<RoutingContext> {
+
+    /**
+     * Pre produce handler to do validations before producing it as message to data store.
+     *
+     * @param ctx the routing context to handle
+     */
+    @Override
+    public void handle(RoutingContext ctx) {
+        long bodyLength = ctx.body().length();
+        ensureHeaderSemanticsAndSize(ctx.request().headers(), bodyLength);
         ctx.next();
     }
 
-    public void validateHeadersAndBodyForMessage(RoutingContext ctx) {
-        long bodyLength = ctx.body().length();
-        ensureHeaderSemanticsAndSize(ctx.request().headers(), bodyLength);
-    }
-
-    private void ensureHeaderSemanticsAndSize(MultiMap headers, long bodyLength) {
-        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
-        headers.entries().forEach(entry -> {
-            String key = entry.getKey();
-            requestHeaders.put(key, entry.getValue());
-        });
+    private void ensureHeaderSemanticsAndSize(MultiMap requestHeaders, long bodyLength) {
         HeaderUtils.ensureRequiredHeaders(requestHeaders);
         long headersAndBodySize = 0;
 
-        for (Map.Entry<String, String> entry : headers.entries()) {
+        for (Map.Entry<String, String> entry : requestHeaders.entries()) {
             String key = entry.getKey();
             String value = entry.getValue();
 
@@ -67,5 +64,4 @@ public class PreProduceHandler {
             HeaderUtils.getHeader(MessageHeaders.GROUP_ID)
         );
     }
-
 }
