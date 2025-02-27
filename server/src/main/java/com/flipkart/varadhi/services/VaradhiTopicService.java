@@ -6,7 +6,6 @@ import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -24,23 +23,19 @@ public class VaradhiTopicService {
 
     private final StorageTopicService<StorageTopic> storageTopicService;
     private final MetaStore metaStore;
-    private final EventService eventService;
 
     /**
      * Constructs a VaradhiTopicService with the specified storage topic service and meta store.
      *
      * @param storageTopicService the storage topic service
      * @param metaStore           the meta store
-     * @param eventService        the event service
      */
     public VaradhiTopicService(
         StorageTopicService<StorageTopic> storageTopicService,
-        MetaStore metaStore,
-        EventService eventService
+        MetaStore metaStore
     ) {
         this.storageTopicService = storageTopicService;
         this.metaStore = metaStore;
-        this.eventService = eventService;
     }
 
     /**
@@ -66,7 +61,6 @@ public class VaradhiTopicService {
 
             createStorageTopics(varadhiTopic, project);
             varadhiTopic.markCreated();
-            eventService.createEventMarker(varadhiTopic.getName(), ResourceType.TOPIC);
         } catch (Exception e) {
             varadhiTopic.markCreateFailed(e.getMessage());
             throw e;
@@ -124,7 +118,6 @@ public class VaradhiTopicService {
         } else {
             handleSoftDelete(varadhiTopic, actionRequest);
         }
-        eventService.createEventMarker(topicName, ResourceType.TOPIC);
     }
 
     /**
@@ -206,7 +199,6 @@ public class VaradhiTopicService {
 
         varadhiTopic.restore(actionRequest.actorCode(), actionRequest.message());
         metaStore.updateTopic(varadhiTopic);
-        eventService.createEventMarker(topicName, ResourceType.TOPIC);
     }
 
     /**

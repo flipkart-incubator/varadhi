@@ -6,6 +6,8 @@ import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.spi.db.EventCallback;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.flipkart.varadhi.db.ZNode.EVENT;
 import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
 import static com.flipkart.varadhi.db.ZNode.ORG;
 import static com.flipkart.varadhi.db.ZNode.PROJECT;
@@ -22,7 +25,6 @@ import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
 import static com.flipkart.varadhi.db.ZNode.TEAM;
 import static com.flipkart.varadhi.db.ZNode.TOPIC;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-
 
 @Slf4j
 public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
@@ -40,6 +42,12 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC));
         zkMetaStore.createZNode(ZNode.ofEntityType(SUBSCRIPTION));
         zkMetaStore.createZNode(ZNode.ofEntityType(IAM_POLICY));
+        zkMetaStore.createZNode(ZNode.ofEntityType(EVENT));
+    }
+
+    @Override
+    public boolean registerEventListener(EventCallback callback) {
+        return zkMetaStore.registerEventListener(callback);
     }
 
     @Override
@@ -137,7 +145,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void createProject(Project project) {
         ZNode znode = ZNode.ofProject(project.getName());
-        zkMetaStore.createZNodeWithData(znode, project);
+        zkMetaStore.createTrackedResource(znode, project, ResourceType.PROJECT);
     }
 
     @Override
@@ -155,15 +163,14 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void deleteProject(String projectName) {
         ZNode znode = ZNode.ofProject(projectName);
-        zkMetaStore.deleteZNode(znode);
+        zkMetaStore.deleteTrackedResource(znode, ResourceType.PROJECT);
     }
 
     @Override
     public void updateProject(Project project) {
         ZNode znode = ZNode.ofProject(project.getName());
-        zkMetaStore.updateZNodeWithData(znode, project);
+        zkMetaStore.updateTrackedResource(znode, project, ResourceType.PROJECT);
     }
-
 
     @Override
     public List<String> getTopicNames(String projectName) {
@@ -178,7 +185,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void createTopic(VaradhiTopic topic) {
         ZNode znode = ZNode.ofTopic(topic.getName());
-        zkMetaStore.createZNodeWithData(znode, topic);
+        zkMetaStore.createTrackedResource(znode, topic, ResourceType.TOPIC);
     }
 
     @Override
@@ -196,13 +203,13 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void deleteTopic(String topicName) {
         ZNode znode = ZNode.ofTopic(topicName);
-        zkMetaStore.deleteZNode(znode);
+        zkMetaStore.deleteTrackedResource(znode, ResourceType.TOPIC);
     }
 
     @Override
     public void updateTopic(VaradhiTopic topic) {
         ZNode znode = ZNode.ofTopic(topic.getName());
-        zkMetaStore.updateZNodeWithData(znode, topic);
+        zkMetaStore.updateTrackedResource(znode, topic, ResourceType.TOPIC);
     }
 
     @Override
@@ -221,7 +228,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void createSubscription(VaradhiSubscription subscription) {
         ZNode znode = ZNode.ofSubscription(subscription.getName());
-        zkMetaStore.createZNodeWithData(znode, subscription);
+        zkMetaStore.createTrackedResource(znode, subscription, ResourceType.SUBSCRIPTION);
     }
 
     @Override
@@ -233,7 +240,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void updateSubscription(VaradhiSubscription subscription) {
         ZNode znode = ZNode.ofSubscription(subscription.getName());
-        zkMetaStore.updateZNodeWithData(znode, subscription);
+        zkMetaStore.updateTrackedResource(znode, subscription, ResourceType.SUBSCRIPTION);
     }
 
     @Override
@@ -245,7 +252,7 @@ public class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public void deleteSubscription(String subscriptionName) {
         ZNode znode = ZNode.ofSubscription(subscriptionName);
-        zkMetaStore.deleteZNode(znode);
+        zkMetaStore.deleteTrackedResource(znode, ResourceType.SUBSCRIPTION);
     }
 
     @Override

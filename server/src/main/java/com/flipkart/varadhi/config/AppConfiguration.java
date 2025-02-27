@@ -47,8 +47,6 @@ public class AppConfiguration implements Validatable {
     @NotNull private MetaStoreOptions metaStoreOptions;
     @NotNull private FeatureFlags featureFlags;
 
-    private EventOptions eventOptions;
-
     /**
      * This is used to connect to zookeeper for managing node cluster.
      */

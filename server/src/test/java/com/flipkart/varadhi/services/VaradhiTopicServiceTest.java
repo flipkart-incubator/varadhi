@@ -4,7 +4,6 @@ import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -18,6 +17,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,9 +57,6 @@ class VaradhiTopicServiceTest {
 
     @Mock
     private MetaStore metaStore;
-
-    @Mock
-    private EventService eventService;
 
     @Mock
     private StorageTopicFactory<StorageTopic> storageTopicFactory;

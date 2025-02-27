@@ -1,15 +1,20 @@
 package com.flipkart.varadhi.db;
 
+import com.flipkart.varadhi.db.entities.EventMarker;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.spi.db.EventCallback;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.utils.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Op;
@@ -20,9 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.flipkart.varadhi.db.ZNode.EVENT;
 
 @Slf4j
-class ZKMetaStore {
+public class ZKMetaStore {
     /*
     Implementation Details: < T extends VaradhiResource>
     Some APIs works on VaradhiResource abstraction. VaradhiResource implements Versioned entities.
@@ -32,9 +38,12 @@ class ZKMetaStore {
     Another implication -- manual data update when done, will automatically bump the entity version w/o user being aware of it.
      */
     private final CuratorFramework zkCurator;
+    private final CuratorCache eventCache;
+    private CuratorCacheListener eventListener;
 
     public ZKMetaStore(CuratorFramework zkCurator) {
         this.zkCurator = zkCurator;
+        this.eventCache = CuratorCache.build(zkCurator, ZNode.ofEntityType(EVENT).getPath());
     }
 
     void createZNode(ZNode znode) {
@@ -56,17 +65,43 @@ class ZKMetaStore {
                      .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8));
             log.debug("Created zk node {} with data: {}", znode, jsonData);
             dataObject.setVersion(0);
-        } catch (KeeperException.NodeExistsException e) {
-            throw new DuplicateResourceException(
-                String.format("%s(%s) already exists.", znode.getKind(), znode.getName()),
-                e
-            );
         } catch (Exception e) {
-            throw new MetaStoreException(
-                String.format("Failed to create %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            handleCreateException(znode, e);
+        }
+    }
+
+    public <T extends MetaStoreEntity> void createTrackedResource(ZNode znode, T dataObject, ResourceType resourceType) {
+        try {
+            List<CuratorOp> ops = new ArrayList<>();
+
+            String jsonData = JsonMapper.jsonSerialize(dataObject);
+            ops.add(zkCurator.transactionOp()
+                    .create()
+                    .withMode(CreateMode.PERSISTENT)
+                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8)));
+
+            createEventMarker(znode.getName(), resourceType, ops);
+
+            zkCurator.transaction().forOperations(ops);
+            dataObject.setVersion(0);
+
+        } catch (Exception e) {
+            handleCreateException(znode, e);
+        }
+    }
+
+    private void handleCreateException(ZNode znode, Exception e) {
+        if (e instanceof KeeperException.NodeExistsException) {
+            throw new DuplicateResourceException(
+                    String.format("%s(%s) already exists.", znode.getKind(), znode.getName()),
+                    e
             );
         }
+
+        throw new MetaStoreException(
+                String.format("Failed to create %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+        );
     }
 
     <T extends MetaStoreEntity> void updateZNodeWithData(ZNode znode, T dataObject) {
@@ -83,26 +118,53 @@ class ZKMetaStore {
                 stat.getVersion()
             );
             dataObject.setVersion(stat.getVersion());
-        } catch (KeeperException.NoNodeException e) {
-            throw new ResourceNotFoundException(
-                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
-                e
-            );
-        } catch (KeeperException.BadVersionException e) {
-            throw new InvalidOperationForResourceException(
-                String.format(
-                    "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
-                    znode.getKind(),
-                    znode.getName()
-                ),
-                e
-            );
         } catch (Exception e) {
-            throw new MetaStoreException(
-                String.format("Failed to update %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            handleUpdateException(znode, dataObject, e);
+        }
+    }
+
+    public <T extends MetaStoreEntity> void updateTrackedResource(ZNode znode, T dataObject, ResourceType resourceType) {
+        try {
+            List<CuratorOp> ops = new ArrayList<>();
+
+            String jsonData = JsonMapper.jsonSerialize(dataObject);
+            ops.add(zkCurator.transactionOp()
+                    .setData()
+                    .withVersion(dataObject.getVersion())
+                    .forPath(znode.getPath(), jsonData.getBytes(StandardCharsets.UTF_8)));
+
+            createEventMarker(znode.getName(), resourceType, ops);
+
+            zkCurator.transaction().forOperations(ops);
+
+        } catch (Exception e) {
+            handleUpdateException(znode, dataObject, e);
+        }
+    }
+
+    private void handleUpdateException(ZNode znode, MetaStoreEntity dataObject, Exception e) {
+        if (e instanceof KeeperException.NoNodeException) {
+            throw new ResourceNotFoundException(
+                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                    e
             );
         }
+
+        if (e instanceof KeeperException.BadVersionException) {
+            throw new InvalidOperationForResourceException(
+                    String.format(
+                            "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
+                            znode.getKind(),
+                            znode.getName()
+                    ),
+                    e
+            );
+        }
+
+        throw new MetaStoreException(
+                String.format("Failed to update %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+        );
     }
 
     <T extends MetaStoreEntity> T getZNodeDataAsPojo(ZNode znode, Class<T> pojoClazz) {
@@ -141,17 +203,40 @@ class ZKMetaStore {
     void deleteZNode(ZNode znode) {
         try {
             zkCurator.delete().forPath(znode.getPath());
-        } catch (KeeperException.NoNodeException e) {
-            throw new ResourceNotFoundException(
-                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
-                e
-            );
         } catch (Exception e) {
-            throw new MetaStoreException(
-                String.format("Failed to delete %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            handleDeleteException(znode, e);
+        }
+    }
+
+    public void deleteTrackedResource(ZNode znode, ResourceType resourceType) {
+        try {
+            List<CuratorOp> ops = new ArrayList<>();
+
+            ops.add(zkCurator.transactionOp()
+                    .delete()
+                    .forPath(znode.getPath()));
+
+            createEventMarker(znode.getName(), resourceType, ops);
+
+            zkCurator.transaction().forOperations(ops);
+
+        } catch (Exception e) {
+            handleDeleteException(znode, e);
+        }
+    }
+
+    private void handleDeleteException(ZNode znode, Exception e) {
+        if (e instanceof KeeperException.NoNodeException) {
+            throw new ResourceNotFoundException(
+                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                    e
             );
         }
+
+        throw new MetaStoreException(
+                String.format("Failed to delete %s(%s) at %s.", znode.getKind(), znode.getName(), znode.getPath()),
+                e
+        );
     }
 
     List<String> listChildren(ZNode znode) {
@@ -237,6 +322,86 @@ class ZKMetaStore {
             throw new MetaStoreException(
                 String.format("Failed to create Delete operation for path %s.", zNode.getPath()),
                 e
+            );
+        }
+    }
+
+    private void createEventMarker(String resourceName, ResourceType resourceType, List<CuratorOp> ops) {
+        try {
+            String eventsPath = ZNode.ofEntityType(EVENT).getPath();
+
+            // Format: event-{resourceType}-{resourceName}-{sequence}
+            String nodeName = String.format("event-%s-%s-", resourceType, resourceName);
+
+            log.debug("Adding event marker creation operation for resource {} of type {}", resourceName, resourceType);
+            ops.add(zkCurator.transactionOp()
+                    .create()
+                    .withMode(CreateMode.PERSISTENT_SEQUENTIAL)
+                    .forPath(eventsPath + "/" + nodeName));
+        } catch (Exception e) {
+            throw new MetaStoreException(
+                    String.format("Failed to create event marker for resource %s of type %s", resourceName, resourceType),
+                    e
+            );
+        }
+    }
+
+    public boolean registerEventListener(EventCallback callback) {
+        String listenerNode = "listener";
+        String listenerPath = ZNode.ofEntityType(EVENT).getPath() + "/" + listenerNode;
+
+        try {
+            zkCurator.create()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(listenerPath);
+
+            eventListener = CuratorCacheListener.builder()
+                    .forInitialized(() -> log.info("Event cache initialized"))
+                    .forAll((type, oldData, data) -> {
+                        if (type == CuratorCacheListener.Type.NODE_CREATED) {
+                            String path = data.getPath();
+                            if (!path.endsWith(listenerNode)) {
+                                handleEvent(path, callback);
+                            }
+                        }
+                    })
+                    .build();
+
+            eventCache.listenable().addListener(eventListener);
+            eventCache.start();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void handleEvent(String path, EventCallback callback) {
+        try {
+            String name = path.substring(path.lastIndexOf('/') + 1);
+            // Parse: event-resourceType-resourceName-sequence
+            String[] parts = name.split("-", 4);
+            if (parts.length >= 4 && parts[0].equals("event")) {
+                EventMarker marker = new EventMarker(
+                        path,
+                        parts[2],
+                        ResourceType.valueOf(parts[1].toUpperCase()),
+                        this
+                );
+                callback.onEvent(marker);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process event {}", path, e);
+        }
+    }
+
+    public void deleteEventMarker(String path) {
+        try {
+            zkCurator.delete().forPath(path);
+            log.debug("Deleted event marker at path {}", path);
+        } catch (Exception e) {
+            throw new MetaStoreException(
+                    String.format("Failed to delete event marker at path %s", path),
+                    e
             );
         }
     }

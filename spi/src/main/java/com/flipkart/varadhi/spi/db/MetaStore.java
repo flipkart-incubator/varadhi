@@ -64,4 +64,6 @@ public interface MetaStore {
     boolean checkSubscriptionExists(String subscriptionName);
 
     void deleteSubscription(String subscriptionName);
+
+    boolean registerEventListener(EventCallback callback);
 }

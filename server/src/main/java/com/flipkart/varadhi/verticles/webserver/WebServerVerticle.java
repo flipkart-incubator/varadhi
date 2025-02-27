@@ -5,7 +5,6 @@ import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.config.EventOptions;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -13,7 +12,6 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.DlqService;
-import com.flipkart.varadhi.services.EventService;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
@@ -21,7 +19,6 @@ import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.EventStore;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -73,7 +70,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 
@@ -86,7 +82,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
-    private final EventStore eventStore;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private OrgService orgService;
@@ -95,7 +90,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
     private DlqService dlqService;
-    private EventService eventService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -108,7 +102,6 @@ public class WebServerVerticle extends AbstractVerticle {
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
-        this.eventStore = services.getMetaStoreProvider().getEventStore();
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
     }
@@ -152,20 +145,12 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private void setupEntityServices() {
         String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
-        eventService = new EventService(
-            eventStore,
-            meterRegistry,
-            Optional.ofNullable(configuration.getEventOptions())
-                    .map(EventOptions::metricsEnabled)
-                    .orElseGet(() -> EventOptions.getDefault().metricsEnabled())
-        );
         orgService = new OrgService(metaStore);
         teamService = new TeamService(metaStore);
-        projectService = new ProjectService(metaStore, eventService, projectCacheSpec, meterRegistry);
+        projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(
             messagingStackProvider.getStorageTopicService(),
-            metaStore,
-            eventService
+            metaStore
         );
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);

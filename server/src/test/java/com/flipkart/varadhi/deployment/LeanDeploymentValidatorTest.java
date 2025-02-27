@@ -1,10 +1,5 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.config.EventOptions;
-import com.flipkart.varadhi.db.EventStoreImpl;
-import com.flipkart.varadhi.services.EventService;
-import com.flipkart.varadhi.spi.db.EventStore;
-import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
@@ -19,6 +14,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.utils.YamlLoader;
+import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;
@@ -29,9 +25,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class LeanDeploymentValidatorTest {
 
@@ -73,18 +71,10 @@ public class LeanDeploymentValidatorTest {
 
         appConfiguration = YamlLoader.loadConfig("test/configuration.yml", AppConfiguration.class);
 
-        EventStore eventStore = new EventStoreImpl(zkCurator);
-        EventService eventService = new EventService(
-            eventStore,
-            meterRegistry,
-            EventOptions.getDefault().metricsEnabled()
-        );
-
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
             varadhiMetaStore,
-            eventService,
             appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
             meterRegistry
         );

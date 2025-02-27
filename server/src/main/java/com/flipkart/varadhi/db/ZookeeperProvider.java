@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.spi.db.AssignmentStore;
-import com.flipkart.varadhi.spi.db.EventStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -30,7 +29,6 @@ public class ZookeeperProvider implements MetaStoreProvider {
     private VaradhiMetaStore varadhiMetaStore;
     private OpStoreImpl opStore;
     private AssignmentStoreImpl assignmentStore;
-    private EventStoreImpl eventStore;
 
     @Override
     public void init(MetaStoreOptions metaStoreOptions) {
@@ -53,7 +51,6 @@ public class ZookeeperProvider implements MetaStoreProvider {
         varadhiMetaStore = new VaradhiMetaStore(zkCurator);
         opStore = new OpStoreImpl(zkCurator);
         assignmentStore = new AssignmentStoreImpl(zkCurator);
-        eventStore = new EventStoreImpl(zkCurator);
     }
 
     @Override
@@ -72,12 +69,6 @@ public class ZookeeperProvider implements MetaStoreProvider {
     public AssignmentStore getAssignmentStore() {
         checkInitialized();
         return assignmentStore;
-    }
-
-    @Override
-    public EventStore getEventStore() {
-        checkInitialized();
-        return eventStore;
     }
 
     private void checkInitialized() {

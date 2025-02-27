@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.db.EventStoreImpl;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -9,7 +8,6 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.EventStore;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -25,9 +23,16 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 class IamPolicyServiceTest {
     TestingServer zkCuratorTestingServer;
@@ -58,11 +63,9 @@ class IamPolicyServiceTest {
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
         MeterRegistry meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        EventStore eventStore = new EventStoreImpl(zkCurator);
-        EventService eventService = new EventService(eventStore, meterRegistry, false);
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, eventService, "", meterRegistry);
+        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
         iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore);
         org1 = Org.of("org1");
         org2 = Org.of("org2");

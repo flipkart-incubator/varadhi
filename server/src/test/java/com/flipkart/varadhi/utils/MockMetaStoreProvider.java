@@ -2,7 +2,6 @@ package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
-import com.flipkart.varadhi.spi.db.EventStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -31,11 +30,6 @@ public class MockMetaStoreProvider implements MetaStoreProvider {
     @Override
     public AssignmentStore getAssignmentStore() {
         return Mockito.mock(AssignmentStore.class);
-    }
-
-    @Override
-    public EventStore getEventStore() {
-        return Mockito.mock(EventStore.class);
     }
 
     @Override
