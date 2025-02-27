@@ -8,7 +8,6 @@ import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
@@ -46,10 +45,13 @@ public class TeamServiceTest {
         );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
-        MeterRegistry meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
+        projectService = new ProjectService(
+            varadhiMetaStore,
+            "",
+            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
+        );
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         org1Team1 = Team.of("TestTeam1", org1.getName());

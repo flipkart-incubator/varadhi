@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
@@ -62,10 +61,13 @@ class IamPolicyServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(zkCurator));
-        MeterRegistry meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
+        projectService = new ProjectService(
+            varadhiMetaStore,
+            "",
+            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
+        );
         iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore);
         org1 = Org.of("org1");
         org2 = Org.of("org2");

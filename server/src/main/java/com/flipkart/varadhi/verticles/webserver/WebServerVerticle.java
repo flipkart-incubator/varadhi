@@ -148,10 +148,7 @@ public class WebServerVerticle extends AbstractVerticle {
         orgService = new OrgService(metaStore);
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
-        varadhiTopicService = new VaradhiTopicService(
-            messagingStackProvider.getStorageTopicService(),
-            metaStore
-        );
+        varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(

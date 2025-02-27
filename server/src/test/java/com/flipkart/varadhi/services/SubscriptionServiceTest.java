@@ -97,6 +97,7 @@ class SubscriptionServiceTest {
     private SubscriptionService subscriptionService;
     private ShardProvisioner shardProvisioner;
     private ControllerRestApi controllerRestApi;
+    private MeterRegistry meterRegistry;
 
     private Org org;
     private Team team;
@@ -133,7 +134,7 @@ class SubscriptionServiceTest {
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        MeterRegistry meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+        meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
     }
 

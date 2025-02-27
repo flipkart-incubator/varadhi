@@ -30,10 +30,7 @@ public class VaradhiTopicService {
      * @param storageTopicService the storage topic service
      * @param metaStore           the meta store
      */
-    public VaradhiTopicService(
-        StorageTopicService<StorageTopic> storageTopicService,
-        MetaStore metaStore
-    ) {
+    public VaradhiTopicService(StorageTopicService<StorageTopic> storageTopicService, MetaStore metaStore) {
         this.storageTopicService = storageTopicService;
         this.metaStore = metaStore;
     }

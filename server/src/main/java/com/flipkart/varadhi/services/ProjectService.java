@@ -14,11 +14,7 @@ public class ProjectService {
     private final MetaStore metaStore;
     private final VaradhiCache<String, Project> projectCache;
 
-    public ProjectService(
-        MetaStore metaStore,
-        String cacheSpec,
-        MeterRegistry meterRegistry
-    ) {
+    public ProjectService(MetaStore metaStore, String cacheSpec, MeterRegistry meterRegistry) {
         this.metaStore = metaStore;
         this.projectCache = buildProjectCache(cacheSpec, this::getProject, meterRegistry);
     }
