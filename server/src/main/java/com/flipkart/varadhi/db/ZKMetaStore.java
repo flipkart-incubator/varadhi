@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.db.entities.EventMarker;
+import com.flipkart.varadhi.db.entities.ZkEvent;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
@@ -381,7 +381,7 @@ public class ZKMetaStore {
             // Parse: event-resourceType-resourceName-sequence
             String[] parts = name.split("-", 4);
             if (parts.length >= 4 && parts[0].equals("event")) {
-                EventMarker marker = new EventMarker(
+                ZkEvent marker = new ZkEvent(
                         path,
                         parts[2],
                         ResourceType.valueOf(parts[1].toUpperCase()),

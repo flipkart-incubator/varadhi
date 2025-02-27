@@ -2,5 +2,5 @@ package com.flipkart.varadhi.spi.db;
 
 @FunctionalInterface
 public interface EventCallback {
-    void onEvent(IEventMarker marker);
+    void onEvent(EntityChangeEvent marker);
 }

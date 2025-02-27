@@ -34,7 +34,6 @@ public final class ZNode {
     public static final ZNodeKind EVENT = new ZNodeKind("Event");
 
     public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
-    public static final String SEQUENCES_BASE_PATH = "/varadhi/sequences";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";
 
@@ -54,7 +53,6 @@ public final class ZNode {
         private String path;
         private String parent;
         private ZNodeKind zNodeKind;
-        private boolean isSequence;
 
         public Builder withZNodeKind(ZNodeKind znodeKind) {
             this.zNodeKind = Objects.requireNonNull(znodeKind, "zNodeKind cannot be null");
@@ -72,18 +70,10 @@ public final class ZNode {
             return this;
         }
 
-        public Builder asSequence() {
-            this.isSequence = true;
-            return this;
-        }
-
         public ZNode build() {
             Objects.requireNonNull(zNodeKind, "zNodeKind must be set");
 
-            if (isSequence) {
-                this.name = kind;
-                this.path = String.join(ZK_PATH_SEPARATOR, SEQUENCES_BASE_PATH, kind);
-            } else if (parent != null) {
+            if (parent != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, getResourceFQDN(parent, name));
             } else if (name != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, name);
@@ -132,20 +122,12 @@ public final class ZNode {
         return new Builder().withZNodeKind(ASSIGNMENT).withName(assignment).build();
     }
 
-    public static ZNode ofEvent(String eventName) {
-        return new Builder().withZNodeKind(EVENT).withName(eventName).build();
-    }
-
     public static ZNode ofKind(ZNodeKind zNodeKind, String name) {
         return new Builder().withZNodeKind(zNodeKind).withName(name).build();
     }
 
     public static ZNode ofEntityType(ZNodeKind kind) {
         return new Builder().withZNodeKind(kind).build();
-    }
-
-    public static ZNode ofSequence(ZNodeKind kind) {
-        return new Builder().withZNodeKind(kind).asSequence().build();
     }
 
     public static String getResourceFQDN(String parentName, String resourceName) {

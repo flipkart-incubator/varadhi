@@ -2,7 +2,7 @@ package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
 
-public interface IEventMarker {
+public interface EntityChangeEvent {
 
     String getResourceName();
 
