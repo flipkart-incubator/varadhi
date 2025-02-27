@@ -112,13 +112,10 @@ public class OpStoreImpl implements OpStore {
     public List<ShardOperation> getShardOps(String subOpId) {
         // TODO: This needs to improvise i.e shouldn't need to deserialize all.
         return zkMetaStore.listChildren(ZNode.ofEntityType(SHARD_OP))
-                .stream()
-                .map(id -> zkMetaStore.getZNodeDataAsPojo(
-                        ZNode.ofShardOperation(id),
-                        ShardOperation.class)
-                )
-                .filter(shardOp -> subOpId.equals(shardOp.getOpData().getParentOpId()))
-                .toList();
+                          .stream()
+                          .map(id -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofShardOperation(id), ShardOperation.class))
+                          .filter(shardOp -> subOpId.equals(shardOp.getOpData().getParentOpId()))
+                          .toList();
     }
 
     /**
@@ -130,13 +127,15 @@ public class OpStoreImpl implements OpStore {
     public List<SubscriptionOperation> getPendingSubOps() {
         // TODO: This needs to improvise i.e shouldn't need to deserialize all.
         return zkMetaStore.listChildren(ZNode.ofEntityType(SUB_OP))
-                .stream()
-                .map(id -> zkMetaStore.getZNodeDataAsPojo(
-                        ZNode.ofSubOperation(id),
-                        SubscriptionOperation.class
-                ))
-                .filter(subOp -> !subOp.isDone())
-                .toList();
+                          .stream()
+                          .map(
+                              id -> zkMetaStore.getZNodeDataAsPojo(
+                                  ZNode.ofSubOperation(id),
+                                  SubscriptionOperation.class
+                              )
+                          )
+                          .filter(subOp -> !subOp.isDone())
+                          .toList();
     }
 
     /**

@@ -47,9 +47,7 @@ public final class AssignmentStoreImpl implements AssignmentStore {
      */
     @Override
     public void createAssignments(List<Assignment> assignments) {
-        var nodesToCreate = assignments.stream()
-                .map(this::createAssignmentNode)
-                .toList();
+        var nodesToCreate = assignments.stream().map(this::createAssignmentNode).toList();
         zkMetaStore.executeInTransaction(nodesToCreate, List.of());
     }
 
@@ -105,9 +103,7 @@ public final class AssignmentStoreImpl implements AssignmentStore {
      */
     @Override
     public void deleteAssignments(List<Assignment> assignments) {
-        var nodesToDelete = assignments.stream()
-                .map(this::createAssignmentNode)
-                .toList();
+        var nodesToDelete = assignments.stream().map(this::createAssignmentNode).toList();
         zkMetaStore.executeInTransaction(List.of(), nodesToDelete);
     }
 
@@ -147,8 +143,12 @@ public final class AssignmentStoreImpl implements AssignmentStore {
      * @return String representation of the assignment mapping
      */
     private String getAssignmentMapping(Assignment assignment) {
-        return String.join(SEPARATOR,
-                assignment.getSubscriptionId(), String.valueOf(assignment.getShardId()), assignment.getConsumerId());
+        return String.join(
+            SEPARATOR,
+            assignment.getSubscriptionId(),
+            String.valueOf(assignment.getShardId()),
+            assignment.getConsumerId()
+        );
     }
 
     /**

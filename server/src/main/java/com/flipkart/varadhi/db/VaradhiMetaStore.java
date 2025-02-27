@@ -130,10 +130,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public List<Org> getOrgs() {
         ZNode znode = ZNode.ofEntityType(ORG);
-        return zkMetaStore.listChildren(znode)
-                .stream()
-                .map(this::getOrg)
-                .toList();
+        return zkMetaStore.listChildren(znode).stream().map(this::getOrg).toList();
     }
 
     /**
@@ -203,9 +200,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
      */
     @Override
     public List<Team> getTeams(String orgName) {
-        return getTeamNames(orgName).stream()
-                .map(teamName -> getTeam(teamName, orgName))
-                .toList();
+        return getTeamNames(orgName).stream().map(teamName -> getTeam(teamName, orgName)).toList();
     }
 
     /**
@@ -221,10 +216,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         String orgPrefix = orgName + RESOURCE_NAME_SEPARATOR;
         ZNode znode = ZNode.ofEntityType(TEAM);
 
-        return zkMetaStore.listChildren(znode).stream()
-                .filter(teamName -> teamName.startsWith(orgPrefix))
-                .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
-                .toList();
+        return zkMetaStore.listChildren(znode)
+                          .stream()
+                          .filter(teamName -> teamName.startsWith(orgPrefix))
+                          .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
+                          .toList();
     }
 
     /**
@@ -298,10 +294,10 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     public List<Project> getProjects(String teamName, String orgName) {
         ZNode znode = ZNode.ofEntityType(PROJECT);
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .map(this::getProject)
-                .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
-                .toList();
+                          .stream()
+                          .map(this::getProject)
+                          .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
+                          .toList();
     }
 
     /**
@@ -355,8 +351,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
      * @return true if the project belongs to the specified team and organization
      */
     private boolean matchesTeamAndOrg(Project project, String teamName, String orgName) {
-        return project.getTeam().equals(teamName) &&
-                project.getOrg().equals(orgName);
+        return project.getTeam().equals(teamName) && project.getOrg().equals(orgName);
     }
 
     /**
@@ -400,10 +395,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     public List<String> getTopicNames(String projectName) {
         String projectPrefix = projectName + NAME_SEPARATOR;
         ZNode znode = ZNode.ofEntityType(TOPIC);
-        return zkMetaStore.listChildren(znode)
-                .stream()
-                .filter(name -> name.startsWith(projectPrefix))
-                .toList();
+        return zkMetaStore.listChildren(znode).stream().filter(name -> name.startsWith(projectPrefix)).toList();
     }
 
     /**

@@ -114,9 +114,7 @@ public class ZKMetaStore {
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
-            zkCurator.create()
-                     .withMode(CreateMode.PERSISTENT)
-                     .forPath(znode.getPath(), jsonData);
+            zkCurator.create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData);
 
             dataObject.setVersion(0);
             log.debug("Created ZNode {} with data", znode);
@@ -136,15 +134,18 @@ public class ZKMetaStore {
      * @throws DuplicateResourceException if the ZNode already exists
      * @throws MetaStoreException         if creation fails
      */
-    public <T extends MetaStoreEntity> void createTrackedZNodeWithData(ZNode znode, T dataObject, ResourceType resourceType) {
+    public <T extends MetaStoreEntity> void createTrackedZNodeWithData(
+        ZNode znode,
+        T dataObject,
+        ResourceType resourceType
+    ) {
         try {
             var ops = new ArrayList<CuratorOp>(2);
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
 
-            ops.add(zkCurator.transactionOp()
-                    .create()
-                    .withMode(CreateMode.PERSISTENT)
-                    .forPath(znode.getPath(), jsonData));
+            ops.add(
+                zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData)
+            );
 
             createEventZNode(znode.getName(), resourceType, ops);
 
@@ -167,14 +168,14 @@ public class ZKMetaStore {
     private void handleCreateException(ZNode znode, Exception e) {
         if (e instanceof KeeperException.NodeExistsException) {
             throw new DuplicateResourceException(
-                    String.format("%s(%s) already exists.", znode.getKind(), znode.getName()),
-                    e
+                String.format("%s(%s) already exists.", znode.getKind(), znode.getName()),
+                e
             );
         }
 
         throw new MetaStoreException(
-                String.format("Failed to create %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            String.format("Failed to create %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
+            e
         );
     }
 
@@ -191,16 +192,15 @@ public class ZKMetaStore {
     <T extends MetaStoreEntity> void updateZNodeWithData(ZNode znode, T dataObject) {
         try {
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
-            var stat = zkCurator.setData()
-                    .withVersion(dataObject.getVersion())
-                    .forPath(znode.getPath(), jsonData);
+            var stat = zkCurator.setData().withVersion(dataObject.getVersion()).forPath(znode.getPath(), jsonData);
 
             dataObject.setVersion(stat.getVersion());
-            log.debug("Updated {}({}) at {}: version {}",
-                    znode.getKind(),
-                    znode.getName(),
-                    znode.getPath(),
-                    stat.getVersion()
+            log.debug(
+                "Updated {}({}) at {}: version {}",
+                znode.getKind(),
+                znode.getName(),
+                znode.getPath(),
+                stat.getVersion()
             );
         } catch (Exception e) {
             handleUpdateException(znode, e);
@@ -219,15 +219,21 @@ public class ZKMetaStore {
      * @throws InvalidOperationForResourceException if there's a version conflict
      * @throws MetaStoreException                   for other update failures
      */
-    public <T extends MetaStoreEntity> void updateTrackedZNodeWithData(ZNode znode, T dataObject, ResourceType resourceType) {
+    public <T extends MetaStoreEntity> void updateTrackedZNodeWithData(
+        ZNode znode,
+        T dataObject,
+        ResourceType resourceType
+    ) {
         try {
             var ops = new ArrayList<CuratorOp>(2);
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
 
-            ops.add(zkCurator.transactionOp()
-                    .setData()
-                    .withVersion(dataObject.getVersion())
-                    .forPath(znode.getPath(), jsonData));
+            ops.add(
+                zkCurator.transactionOp()
+                         .setData()
+                         .withVersion(dataObject.getVersion())
+                         .forPath(znode.getPath(), jsonData)
+            );
 
             createEventZNode(znode.getName(), resourceType, ops);
 
@@ -247,13 +253,13 @@ public class ZKMetaStore {
      * @param results    List of transaction operation results
      */
     private <T extends MetaStoreEntity> void updateDataObjectVersion(
-            T dataObject,
-            List<CuratorTransactionResult> results
+        T dataObject,
+        List<CuratorTransactionResult> results
     ) {
         results.stream()
-                .filter(r -> r.getType().name().equals("SET_DATA"))
-                .findFirst()
-                .ifPresent(r -> dataObject.setVersion(r.getResultStat().getVersion()));
+               .filter(r -> r.getType().name().equals("SET_DATA"))
+               .findFirst()
+               .ifPresent(r -> dataObject.setVersion(r.getResultStat().getVersion()));
     }
 
     /**
@@ -269,25 +275,25 @@ public class ZKMetaStore {
     private void handleUpdateException(ZNode znode, Exception e) {
         if (e instanceof KeeperException.NoNodeException) {
             throw new ResourceNotFoundException(
-                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
-                    e
+                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                e
             );
         }
 
         if (e instanceof KeeperException.BadVersionException) {
             throw new InvalidOperationForResourceException(
-                    String.format(
-                            "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
-                            znode.getKind(),
-                            znode.getName()
-                    ),
-                    e
+                String.format(
+                    "Conflicting update, %s(%s) has been modified. Fetch latest and try again.",
+                    znode.getKind(),
+                    znode.getName()
+                ),
+                e
             );
         }
 
         throw new MetaStoreException(
-                String.format("Failed to update %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            String.format("Failed to update %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
+            e
         );
     }
 
@@ -367,9 +373,7 @@ public class ZKMetaStore {
         try {
             var ops = new ArrayList<CuratorOp>(2);
 
-            ops.add(zkCurator.transactionOp()
-                    .delete()
-                    .forPath(znode.getPath()));
+            ops.add(zkCurator.transactionOp().delete().forPath(znode.getPath()));
 
             createEventZNode(znode.getName(), resourceType, ops);
 
@@ -391,14 +395,14 @@ public class ZKMetaStore {
     private void handleDeleteException(ZNode znode, Exception e) {
         if (e instanceof KeeperException.NoNodeException) {
             throw new ResourceNotFoundException(
-                    String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
-                    e
+                String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
+                e
             );
         }
 
         throw new MetaStoreException(
-                String.format("Failed to delete %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
-                e
+            String.format("Failed to delete %s(%s) at %s", znode.getKind(), znode.getName(), znode.getPath()),
+            e
         );
     }
 
@@ -468,19 +472,19 @@ public class ZKMetaStore {
      * @param results List of transaction operation results
      */
     private void logFailedOperations(List<CuratorTransactionResult> results) {
-        var failedOps = results.stream()
-                .filter(r -> r.getError() != 0)
-                .toList();
+        var failedOps = results.stream().filter(r -> r.getError() != 0).toList();
 
         if (!failedOps.isEmpty()) {
             log.error("Transaction rolled back. Failed operations:");
-            failedOps.forEach(r -> log.error(
+            failedOps.forEach(
+                r -> log.error(
                     "Operation failed - Type: {}, Path: {}, Error: {}, Result Path: {}",
                     r.getType(),
                     r.getForPath(),
                     r.getError(),
                     r.getResultPath()
-            ));
+                )
+            );
         }
     }
 
@@ -503,10 +507,10 @@ public class ZKMetaStore {
             if (results.get(i) instanceof OpResult.ErrorResult errorResult) {
                 var operation = operations.get(i).get();
                 log.error(
-                        "Operation failed - Type: {}, Path: {}, Error: {}",
-                        operation.getType(),
-                        operation.getPath(),
-                        errorResult.getErr()
+                    "Operation failed - Type: {}, Path: {}, Error: {}",
+                    operation.getType(),
+                    operation.getPath(),
+                    errorResult.getErr()
                 );
             }
         }
@@ -563,14 +567,16 @@ public class ZKMetaStore {
             var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.toString(), resourceName, "");
 
             log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
-            ops.add(zkCurator.transactionOp()
-                    .create()
-                    .withMode(CreateMode.PERSISTENT_SEQUENTIAL)
-                    .forPath(eventsPath + "/" + nodeName));
+            ops.add(
+                zkCurator.transactionOp()
+                         .create()
+                         .withMode(CreateMode.PERSISTENT_SEQUENTIAL)
+                         .forPath(eventsPath + "/" + nodeName)
+            );
         } catch (Exception e) {
             throw new MetaStoreException(
-                    String.format("Failed to create event znode for resource %s of type %s", resourceName, resourceType),
-                    e
+                String.format("Failed to create event znode for resource %s of type %s", resourceName, resourceType),
+                e
             );
         }
     }
@@ -586,9 +592,7 @@ public class ZKMetaStore {
         var listenerPath = Path.of(ZNode.ofEntityType(EVENT).getPath(), LISTENER_NODE).toString();
 
         try {
-            zkCurator.create()
-                    .withMode(CreateMode.EPHEMERAL)
-                    .forPath(listenerPath);
+            zkCurator.create().withMode(CreateMode.EPHEMERAL).forPath(listenerPath);
 
             var eventListener = buildEventListener(listener);
             eventCache.listenable().addListener(eventListener);
@@ -613,19 +617,16 @@ public class ZKMetaStore {
      * @return A configured CuratorCacheListener
      */
     private CuratorCacheListener buildEventListener(MetaStoreEventListener listener) {
-        return CuratorCacheListener.builder()
-                .forInitialized(() -> {
-                    log.info("Event cache initialized");
-                    eventCache.stream()
-                            .filter(data -> isEventNode(data.getPath()))
-                            .forEach(data -> processEventZNode(data.getPath(), listener));
-                })
-                .forCreates(childData -> {
-                    if (isEventNode(childData.getPath())) {
-                        processEventZNode(childData.getPath(), listener);
-                    }
-                })
-                .build();
+        return CuratorCacheListener.builder().forInitialized(() -> {
+            log.info("Event cache initialized");
+            eventCache.stream()
+                      .filter(data -> isEventNode(data.getPath()))
+                      .forEach(data -> processEventZNode(data.getPath(), listener));
+        }).forCreates(childData -> {
+            if (isEventNode(childData.getPath())) {
+                processEventZNode(childData.getPath(), listener);
+            }
+        }).build();
     }
 
     /**
@@ -650,12 +651,7 @@ public class ZKMetaStore {
             var name = Path.of(path).getFileName().toString();
             var parts = name.split(EVENT_DELIMITER, 4);
             if (parts.length >= 4 && EVENT_PREFIX.equals(parts[0])) {
-                var event = new ZKMetadataEvent(
-                        path,
-                        parts[2],
-                        ResourceType.valueOf(parts[1].toUpperCase()),
-                        this
-                );
+                var event = new ZKMetadataEvent(path, parts[2], ResourceType.valueOf(parts[1].toUpperCase()), this);
                 listener.onEvent(event);
             }
         } catch (Exception e) {
@@ -674,10 +670,7 @@ public class ZKMetaStore {
             zkCurator.delete().forPath(path);
             log.debug("Deleted event znode at path {}", path);
         } catch (Exception e) {
-            throw new MetaStoreException(
-                    String.format("Failed to delete event znode at path %s", path),
-                    e
-            );
+            throw new MetaStoreException(String.format("Failed to delete event znode at path %s", path), e);
         }
     }
 }

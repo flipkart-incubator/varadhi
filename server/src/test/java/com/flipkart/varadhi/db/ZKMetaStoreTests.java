@@ -90,7 +90,7 @@ public class ZKMetaStoreTests {
         doReturn(builder).when(zkCuratorFramework).create();
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any());
         MetaStoreException e = Assertions.assertThrows(MetaStoreException.class, () -> zkMetaStore.createZNode(zn));
-        Assertions.assertEquals(String.format("Failed to create path %s.", zn.getPath()), e.getMessage());
+        Assertions.assertEquals(String.format("Failed to create ZNode at path %s", zn.getPath()), e.getMessage());
     }
 
     @Test
@@ -118,7 +118,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.BadArgumentsException()).when(builder).forPath(any(), any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to create %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to create %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.createZNodeWithData(zn, data1)
         );
     }
@@ -152,7 +152,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.DataInconsistencyException()).when(builder).forPath(any(), any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to update %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to update %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.updateZNodeWithData(zn, data1)
         );
     }
@@ -185,7 +185,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.AuthFailedException()).when(builder).forPath(any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to check if %s(%s) exists.", zn.getName(), zn.getPath()),
+            String.format("Failed to check existence of %s at %s", zn.getName(), zn.getPath()),
             () -> zkMetaStore.zkPathExist(zn)
         );
     }
@@ -205,7 +205,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.InvalidACLException()).when(builder).forPath(zn.getPath());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to delete %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to delete %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.deleteZNode(zn)
         );
     }
