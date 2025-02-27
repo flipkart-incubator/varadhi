@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.deployment;
 
+import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
@@ -14,7 +15,6 @@ import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.utils.YamlLoader;
-import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;
@@ -25,11 +25,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class LeanDeploymentValidatorTest {
 
