@@ -9,11 +9,25 @@ import java.util.Objects;
  * <p>
  * This class provides a type-safe way to handle ZooKeeper paths and node types.
  * It follows a hierarchical structure for different entity types and their sequences.
- * <p>
- * Path structure:
+ *
+ * <p>The path structure follows these patterns:
  * <ul>
  *     <li>Entities: /varadhi/entities/[kind]/[name]</li>
- *     <li>Sequences: /varadhi/sequences/[kind]</li>
+ *     <li>Hierarchical Resources: /varadhi/entities/[kind]/[parent]:[name]</li>
+ * </ul>
+ *
+ * <p>Supported node kinds:
+ * <ul>
+ *     <li>ORG - Organization nodes</li>
+ *     <li>TEAM - Team nodes (hierarchical under ORG)</li>
+ *     <li>PROJECT - Project nodes</li>
+ *     <li>TOPIC - Topic nodes</li>
+ *     <li>IAM_POLICY - IAM Policy nodes</li>
+ *     <li>SUBSCRIPTION - Subscription nodes</li>
+ *     <li>SUB_OP - Subscription Operation nodes</li>
+ *     <li>SHARD_OP - Shard Operation nodes</li>
+ *     <li>ASSIGNMENT - Assignment nodes</li>
+ *     <li>EVENT - Event nodes</li>
  * </ul>
  *
  * @see ZNodeKind
@@ -34,7 +48,6 @@ public final class ZNode {
     public static final ZNodeKind EVENT = new ZNodeKind("Event");
 
     public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
-    public static final String SEQUENCES_BASE_PATH = "/varadhi/sequences";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
     public static final String ZK_PATH_SEPARATOR = "/";
 
@@ -42,48 +55,75 @@ public final class ZNode {
     private final String kind;
     private final String path;
 
+    /**
+     * Constructs a ZNode instance with the provided builder.
+     *
+     * @param builder The builder containing the node properties
+     */
     private ZNode(Builder builder) {
         this.name = builder.name;
         this.kind = builder.kind;
         this.path = builder.path;
     }
 
+    /**
+     * Builder class for creating ZNode instances.
+     * Provides a fluent interface for setting node properties.
+     */
     public static class Builder {
         private String name;
         private String kind;
         private String path;
         private String parent;
         private ZNodeKind zNodeKind;
-        private boolean isSequence;
 
+        /**
+         * Sets the ZNodeKind for this node.
+         *
+         * @param znodeKind The kind of node to create
+         * @return The builder instance for method chaining
+         * @throws NullPointerException if znodeKind is null
+         */
         public Builder withZNodeKind(ZNodeKind znodeKind) {
             this.zNodeKind = Objects.requireNonNull(znodeKind, "zNodeKind cannot be null");
             this.kind = znodeKind.kind();
             return this;
         }
 
+        /**
+         * Sets the name for this node.
+         *
+         * @param name The name of the node
+         * @return The builder instance for method chaining
+         * @throws NullPointerException if name is null
+         */
         public Builder withName(String name) {
             this.name = Objects.requireNonNull(name, "name cannot be null");
             return this;
         }
 
+        /**
+         * Sets the parent for this node, used in hierarchical resources.
+         *
+         * @param parent The parent resource name
+         * @return The builder instance for method chaining
+         * @throws NullPointerException if parent is null
+         */
         public Builder withParent(String parent) {
             this.parent = Objects.requireNonNull(parent, "parent cannot be null");
             return this;
         }
 
-        public Builder asSequence() {
-            this.isSequence = true;
-            return this;
-        }
-
+        /**
+         * Builds the ZNode instance with the configured properties.
+         *
+         * @return A new ZNode instance
+         * @throws NullPointerException if required properties are not set
+         */
         public ZNode build() {
             Objects.requireNonNull(zNodeKind, "zNodeKind must be set");
 
-            if (isSequence) {
-                this.name = kind;
-                this.path = String.join(ZK_PATH_SEPARATOR, SEQUENCES_BASE_PATH, kind);
-            } else if (parent != null) {
+            if (parent != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, getResourceFQDN(parent, name));
             } else if (name != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, name);
@@ -132,10 +172,6 @@ public final class ZNode {
         return new Builder().withZNodeKind(ASSIGNMENT).withName(assignment).build();
     }
 
-    public static ZNode ofEvent(String eventName) {
-        return new Builder().withZNodeKind(EVENT).withName(eventName).build();
-    }
-
     public static ZNode ofKind(ZNodeKind zNodeKind, String name) {
         return new Builder().withZNodeKind(zNodeKind).withName(name).build();
     }
@@ -144,14 +180,23 @@ public final class ZNode {
         return new Builder().withZNodeKind(kind).build();
     }
 
-    public static ZNode ofSequence(ZNodeKind kind) {
-        return new Builder().withZNodeKind(kind).asSequence().build();
-    }
-
+    /**
+     * Constructs a fully qualified domain name (FQDN) for a resource.
+     *
+     * @param parentName   The name of the parent resource
+     * @param resourceName The name of the resource
+     * @return The FQDN as a string in the format "parentName:resourceName"
+     * @throws NullPointerException if either parameter is null
+     */
     public static String getResourceFQDN(String parentName, String resourceName) {
         return String.join(RESOURCE_NAME_SEPARATOR, parentName, resourceName);
     }
 
+    /**
+     * Returns a string representation of the ZNode.
+     *
+     * @return A string in the format "ZNode{[kind] name @ path}"
+     */
     @Override
     public String toString() {
         return "ZNode{[%s] %s @ %s}".formatted(kind, name, path);

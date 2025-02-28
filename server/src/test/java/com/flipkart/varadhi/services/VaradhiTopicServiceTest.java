@@ -59,9 +59,6 @@ class VaradhiTopicServiceTest {
     private MetaStore metaStore;
 
     @Mock
-    private EventService eventService;
-
-    @Mock
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
 
     @Mock

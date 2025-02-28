@@ -1,9 +1,5 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.config.EventOptions;
-import com.flipkart.varadhi.db.EventStoreImpl;
-import com.flipkart.varadhi.services.EventService;
-import com.flipkart.varadhi.spi.db.EventStore;
 import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
@@ -73,18 +69,11 @@ public class LeanDeploymentValidatorTest {
 
         appConfiguration = YamlLoader.loadConfig("test/configuration.yml", AppConfiguration.class);
 
-        EventStore eventStore = new EventStoreImpl(zkCurator);
-        EventService eventService = new EventService(
-            eventStore,
-            meterRegistry,
-            EventOptions.getDefault().metricsEnabled()
-        );
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
             varadhiMetaStore,
-            eventService,
             appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
             meterRegistry
         );

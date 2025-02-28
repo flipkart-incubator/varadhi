@@ -17,7 +17,6 @@ package com.flipkart.varadhi.spi.db;
  * @see MetaStore
  * @see OpStore
  * @see AssignmentStore
- * @see EventStore
  */
 public interface MetaStoreProvider extends AutoCloseable {
 
@@ -54,12 +53,4 @@ public interface MetaStoreProvider extends AutoCloseable {
      * @throws IllegalStateException if provider is not initialized
      */
     AssignmentStore getAssignmentStore();
-
-    /**
-     * Returns the event store implementation.
-     *
-     * @return The event store instance
-     * @throws IllegalStateException if provider is not initialized
-     */
-    EventStore getEventStore();
 }

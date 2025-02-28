@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.Constants;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.db.EventStoreImpl;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.CodeRange;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
@@ -16,7 +15,6 @@ import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.spi.db.EventStore;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -99,6 +97,7 @@ class SubscriptionServiceTest {
     private SubscriptionService subscriptionService;
     private ShardProvisioner shardProvisioner;
     private ControllerRestApi controllerRestApi;
+    private MeterRegistry meterRegistry;
 
     private Org org;
     private Team team;
@@ -135,10 +134,8 @@ class SubscriptionServiceTest {
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        MeterRegistry meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        EventStore eventStore = new EventStoreImpl(zkCurator);
-        EventService eventService = new EventService(eventStore, meterRegistry, false);
-        projectService = new ProjectService(varadhiMetaStore, eventService, "", meterRegistry);
+        meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
     }
 
     private void setupTestData() {

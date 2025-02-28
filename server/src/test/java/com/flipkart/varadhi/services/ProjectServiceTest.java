@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.db.EventStoreImpl;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
@@ -8,7 +7,6 @@ import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.EventStore;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -55,9 +53,7 @@ public class ProjectServiceTest {
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        EventStore eventStore = new EventStoreImpl(zkCurator);
-        EventService eventService = new EventService(eventStore, meterRegistry, false);
-        projectService = spy(new ProjectService(varadhiMetaStore, eventService, "", meterRegistry));
+        projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         o1t1 = Team.of("TestTeam1", org1.getName());
