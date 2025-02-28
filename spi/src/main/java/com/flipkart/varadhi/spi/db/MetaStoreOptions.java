@@ -2,7 +2,9 @@ package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.spi.ConfigFile;
 import jakarta.validation.constraints.NotBlank;
-import lombok.With;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Configuration options for metadata storage providers.
@@ -24,8 +26,21 @@ import lombok.With;
  * @see MetaStoreProvider
  * @see ConfigFile
  */
-@With
-public record MetaStoreOptions(@NotBlank (message = "providerClassName must not be blank")
-String providerClassName, @NotBlank (message = "configFile must not be blank") @ConfigFile
-String configFile) {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class MetaStoreOptions {
+
+    /**
+     * The fully qualified class name of the metadata store provider implementation.
+     */
+    @NotBlank (message = "providerClassName must not be blank")
+    private String providerClassName;
+
+    /**
+     * The path to the configuration file containing provider-specific settings.
+     */
+    @NotBlank (message = "configFile must not be blank")
+    @ConfigFile
+    private String configFile;
 }

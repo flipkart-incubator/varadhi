@@ -68,7 +68,7 @@ public class CoreServices {
      */
 
     private MetaStoreProvider setupMetaStoreProvider(MetaStoreOptions metaStoreOptions) {
-        MetaStoreProvider provider = loadClass(metaStoreOptions.providerClassName());
+        MetaStoreProvider provider = loadClass(metaStoreOptions.getProviderClassName());
         provider.init(metaStoreOptions);
         return provider;
     }

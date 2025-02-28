@@ -49,7 +49,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
         if (initialized.compareAndSet(false, true)) {
             try {
                 ZKMetaStoreConfig zkMetaStoreConfig = YamlLoader.loadConfig(
-                    metaStoreOptions.configFile(),
+                    metaStoreOptions.getConfigFile(),
                     ZKMetaStoreConfig.class
                 );
                 zkCurator = CuratorFrameworkCreator.create(zkMetaStoreConfig.getZookeeperOptions());
