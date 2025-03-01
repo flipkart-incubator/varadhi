@@ -18,7 +18,7 @@ import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.events.EventConsumer;
+import com.flipkart.varadhi.events.EventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -44,7 +44,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
     private EventManager eventManager;
-    private EventConsumer eventConsumer;
+    private EventProcessor eventProcessor;
 
     public ControllerVerticle(
         ControllerConfig config,
@@ -84,21 +84,13 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private Future<Void> initializeEventSystem() {
         try {
-            eventManager = new EventManager(
-                metaStoreProvider.getEventStore(),
-                metaStoreProvider.getMetaStore(),
-                vertx.eventBus()
+            eventProcessor = new EventProcessor(
+                    clusterManager.getExchange(vertx),
+                    clusterManager,
+                    controllerConfig.getEventProcessorConfig()
             );
 
-            eventConsumer = new EventConsumer(
-                metaStoreProvider.getEventStore(),
-                vertx.eventBus(),
-                clusterManager.getExchange(vertx),
-                clusterManager,
-                controllerConfig.getEventProcessorConfig()
-            );
-
-            eventConsumer.start();
+            eventManager = new EventManager(metaStoreProvider.getMetaStore(), eventProcessor);
             return Future.succeededFuture();
         } catch (Exception e) {
             return Future.failedFuture(e);
@@ -244,9 +236,11 @@ public class ControllerVerticle extends AbstractVerticle {
         try {
             if (eventManager != null) {
                 eventManager.close();
+                eventManager = null;
             }
-            if (eventConsumer != null) {
-                eventConsumer.close();
+            if (eventProcessor != null) {
+                eventProcessor.close();
+                eventProcessor = null;
             }
             stopPromise.complete();
         } catch (Exception e) {
