@@ -5,7 +5,6 @@ import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.ProducerMessage;
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -25,10 +24,10 @@ class PulsarMessageTest {
         // test request headers
         Multimap<String, String> requestHeaders = ArrayListMultimap.create();
         MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderUtils.fetchDummyHeaderConfiguration();
-        HeaderUtils.initialize(messageHeaderConfiguration);
+        HeaderUtils.init(messageHeaderConfiguration);
         requestHeaders.put("header1", "value1");
-        requestHeaders.put(HeaderUtils.getHeader(MessageHeaders.MSG_ID), "msgId");
-        requestHeaders.put(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), "grpId");
+        requestHeaders.put(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey(), "msgId");
+        requestHeaders.put(HeaderUtils.getInstance().messageHeaderConfiguration.getGroupIdHeaderKey(), "grpId");
         requestHeaders.putAll("header2", List.of("value2", "value3"));
 
         // now create the producer message

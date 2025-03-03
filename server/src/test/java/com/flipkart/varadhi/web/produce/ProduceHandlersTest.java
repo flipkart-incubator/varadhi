@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
@@ -54,7 +53,6 @@ public class ProduceHandlersTest extends ProduceTestBase {
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         doReturn(span).when(span).setAttribute(anyString(), anyString());
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach

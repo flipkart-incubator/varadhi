@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web.produce;
 
 import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -42,7 +41,6 @@ public class PreProduceHandlerTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach

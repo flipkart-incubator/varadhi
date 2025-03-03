@@ -2,70 +2,72 @@ package com.flipkart.varadhi.entities.utils;
 
 import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
 import java.util.List;
 import java.util.Map;
-import io.vertx.core.MultiMap;
+import lombok.Getter;
 
 public class HeaderUtils {
-    private static List<String> allowedPrefix;
-    private static Map<MessageHeaders, String> mapping;
-    public static int headerValueSizeMax;
-    public static int maxRequestSize;
-    private static boolean filterNonCompliantHeaders;
-    private static boolean initialized;
+    private static final HeaderUtils DEFAULT_INSTANCE = new HeaderUtils();
+    @Getter
+    private boolean initialized = false;
+    public MessageHeaderConfiguration messageHeaderConfiguration;
 
-    public static synchronized void initialize(MessageHeaderConfiguration config) {
-        if (initialized) {
-            return; // Prevent re-initialization if already initialized
-        }
+    private HeaderUtils() {
+    }
+
+    @VisibleForTesting
+    public HeaderUtils(MessageHeaderConfiguration configuration) {
+        messageHeaderConfiguration = configuration;
+    }
+
+    private void initialize(MessageHeaderConfiguration config) {
         if (config == null) {
             throw new IllegalArgumentException("Configuration cannot be null");
         }
-        HeaderUtils.allowedPrefix = config.allowedPrefix();
-        HeaderUtils.mapping = ImmutableMap.copyOf(config.mapping());
-        HeaderUtils.headerValueSizeMax = config.headerValueSizeMax();
-        HeaderUtils.maxRequestSize = config.maxRequestSize();
-        HeaderUtils.filterNonCompliantHeaders = config.filterNonCompliantHeaders();
-        HeaderUtils.initialized = true;
+        messageHeaderConfiguration = config;
+        initialized = true;
     }
 
-    public static synchronized void deInitialize() {
-        HeaderUtils.initialized = false;
+    public static synchronized void init(MessageHeaderConfiguration messageHeaderConfiguration) {
+        // Prevent re-initialization if already initialized
+        if (DEFAULT_INSTANCE.isInitialized()) {
+            throw new IllegalStateException("Already initialized");
+        }
+        DEFAULT_INSTANCE.initialize(messageHeaderConfiguration);
+    }
+
+    public static HeaderUtils getInstance() {
+        return DEFAULT_INSTANCE;
     }
 
     public static String getHeader(MessageHeaders header) {
-        checkInitialization();
-        return mapping.get(header);
-    }
-
-    public static void checkInitialization() {
-        if (!HeaderUtils.initialized) {
-            throw new IllegalStateException("Header configuration not yet initialized.");
-        }
+        return DEFAULT_INSTANCE.messageHeaderConfiguration.mapping().get(header);
     }
 
     public static List<String> getRequiredHeaders() {
-        return List.of(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
+        return List.of(DEFAULT_INSTANCE.messageHeaderConfiguration.mapping().get(MessageHeaders.MSG_ID));
     }
 
-    public static void ensureRequiredHeaders(MultiMap headers) {
+    public static void ensureRequiredHeaders(Multimap<String, String> headers) {
         getRequiredHeaders().forEach(key -> {
-            if (!headers.contains(key)) {
+            if (!headers.containsKey(key)) {
                 throw new IllegalArgumentException(String.format("Missing required header %s", key));
             }
         });
     }
 
-    public static Multimap<String, String> returnVaradhiRecognizedHeaders(MultiMap headers) {
+    public static Multimap<String, String> returnVaradhiRecognizedHeaders(Multimap<String, String> headers) {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         for (Map.Entry<String, String> entry : headers.entries()) {
             String key = entry.getKey();
-            if (HeaderUtils.filterNonCompliantHeaders) {
-                boolean validPrefix = HeaderUtils.allowedPrefix.stream().anyMatch(key::startsWith);
+            if (DEFAULT_INSTANCE.messageHeaderConfiguration.filterNonCompliantHeaders()) {
+                boolean validPrefix = DEFAULT_INSTANCE.messageHeaderConfiguration.allowedPrefix()
+                                                                                 .stream()
+                                                                                 .anyMatch(key::startsWith);
                 if (validPrefix) {
                     varadhiHeaders.put(key.toUpperCase(), entry.getValue());
                 }

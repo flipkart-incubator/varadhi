@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.entities.config;
 
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -52,4 +54,86 @@ public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> ma
     private boolean startsWithValidPrefix(String value) {
         return allowedPrefix.stream().anyMatch(value::startsWith);
     }
+
+    public List<String> getRequiredHeaders() {
+        return List.of(mapping().get(MessageHeaders.MSG_ID));
+    }
+
+    public void ensureRequiredHeaders(Multimap<String, String> headers) {
+        getRequiredHeaders().forEach(key -> {
+            if (!headers.containsKey(key)) {
+                throw new IllegalArgumentException(String.format("Missing required header %s", key));
+            }
+        });
+    }
+
+    public Multimap<String, String> returnVaradhiRecognizedHeaders(Multimap<String, String> headers) {
+        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
+        for (Map.Entry<String, String> entry : headers.entries()) {
+            String key = entry.getKey();
+            if (filterNonCompliantHeaders()) {
+                boolean validPrefix = allowedPrefix().stream().anyMatch(key::startsWith);
+                if (validPrefix) {
+                    varadhiHeaders.put(key.toUpperCase(), entry.getValue());
+                }
+            } else {
+                varadhiHeaders.put(key.toUpperCase(), entry.getValue());
+            }
+        }
+        return varadhiHeaders;
+    }
+
+    public String getMsgIdHeaderKey() {
+        return mapping.get(MessageHeaders.MSG_ID);
+    }
+
+    public String getGroupIdHeaderKey() {
+        return mapping.get(MessageHeaders.GROUP_ID);
+    }
+
+    public String getCallbackCodesKey() {
+        return mapping.get(MessageHeaders.CALLBACK_CODE);
+    }
+
+    public String getRequestTimeoutKey() {
+        return mapping.get(MessageHeaders.REQUEST_TIMEOUT);
+    }
+
+    public String getReplyToHttpUriHeaderKey() {
+        return mapping.get(MessageHeaders.REPLY_TO_HTTP_URI);
+    }
+
+    public String getReplyToHttpMethodHeaderKey() {
+        return mapping.get(MessageHeaders.REPLY_TO_HTTP_METHOD);
+    }
+
+    public String getReplyToHeaderKey() {
+        return mapping.get(MessageHeaders.REPLY_TO);
+    }
+
+    public String getHttpUriHeaderKey() {
+        return mapping.get(MessageHeaders.HTTP_URI);
+    }
+
+    public String getHttpMethodHeaderKey() {
+        return mapping.get(MessageHeaders.HTTP_METHOD);
+    }
+
+    public String getHttpContentTypeKey() {
+        return mapping.get(MessageHeaders.CONTENT_TYPE);
+    }
+
+    public String getProduceIdentityKey() {
+        return mapping.get(MessageHeaders.PRODUCE_IDENTITY);
+    }
+
+    public String getProduceRegionKey() {
+        return mapping.get(MessageHeaders.PRODUCE_REGION);
+    }
+
+    public String getProduceTimestampKey() {
+        return mapping.get(MessageHeaders.PRODUCE_TIMESTAMP);
+    }
+
+
 }

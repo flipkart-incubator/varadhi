@@ -20,6 +20,7 @@ import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,11 @@ public class ProducerServiceTests {
     Project project = Project.of("project1", "", "team1", "org1");
     String region = "region1";
 
+    @BeforeAll
+    public static void setup() {
+        HeaderUtils.init(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+    }
+
     @BeforeEach
     public void preTest() {
         producerFactory = mock(ProducerFactory.class);
@@ -59,8 +65,6 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        //initialization required
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
 
     }
 

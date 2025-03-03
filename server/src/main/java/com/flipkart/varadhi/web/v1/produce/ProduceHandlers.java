@@ -9,6 +9,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
@@ -17,6 +18,7 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -134,17 +136,19 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
-        Multimap<String, String> varadhiHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
-
+        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
+        headers.forEach(varadhiHeaders::put);
+        Multimap<String, String> varadhiAcceptedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(varadhiHeaders);
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(varadhiAcceptedHeaders, payload.length);
         //enriching headers with custom headers
         String produceIdentity = ctx.getIdentityOrDefault();
 
-        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), produceRegion);
-        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), produceIdentity);
-        varadhiHeaders.put(
+        varadhiAcceptedHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), produceRegion);
+        varadhiAcceptedHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), produceIdentity);
+        varadhiAcceptedHeaders.put(
             HeaderUtils.getHeader(MessageHeaders.PRODUCE_TIMESTAMP),
             Long.toString(System.currentTimeMillis())
         );
-        return new ProducerMessage(payload, varadhiHeaders);
+        return new ProducerMessage(payload, varadhiAcceptedHeaders);
     }
 }

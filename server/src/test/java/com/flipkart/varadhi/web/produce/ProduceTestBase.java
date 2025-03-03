@@ -49,7 +49,9 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        if (!HeaderUtils.getInstance().isInitialized()) {
+            HeaderUtils.init(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        }
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);

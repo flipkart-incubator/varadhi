@@ -1,12 +1,10 @@
 package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import io.vertx.core.MultiMap;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -17,51 +15,52 @@ import java.util.List;
 
 public class HeaderUtilsTest {
 
-    @BeforeEach
-    public void setup() {
-        HeaderUtils.deInitialize();
-    }
-
     @Test
     public void testMissingRequiredHeaders() {
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
-        MultiMap varadhiHeaders = MultiMap.caseInsensitiveMultiMap();
-        varadhiHeaders.add("Header1", "value1");
-        HeaderUtils.getRequiredHeaders()
-                   .stream()
-                   .filter(
-                       key -> !key.equals(HeaderUtils.getHeader(MessageHeaders.MSG_ID)) && !key.equals(
-                           HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION)
-                       )
-                   )
-                   .forEach(key -> varadhiHeaders.add(key, String.format("%s_sometext", key)));
-        varadhiHeaders.add("Header2", "value2");
-        varadhiHeaders.add("x_header1", "value1");
+        HeaderUtils headerUtils = new HeaderUtils(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
+        varadhiHeaders.put("Header1", "value1");
+        headerUtils.messageHeaderConfiguration.getRequiredHeaders()
+                                              .stream()
+                                              .filter(
+                                                  key -> !key.equals(
+                                                      headerUtils.messageHeaderConfiguration.getMsgIdHeaderKey()
+                                                  ) && !key.equals(
+                                                      headerUtils.messageHeaderConfiguration.getProduceRegionKey()
+                                                  )
+                                              )
+                                              .forEach(
+                                                  key -> varadhiHeaders.put(key, String.format("%s_sometext", key))
+                                              );
+        varadhiHeaders.put("Header2", "value2");
+        varadhiHeaders.put("x_header1", "value1");
         IllegalArgumentException ae = Assertions.assertThrows(
             IllegalArgumentException.class,
-            () -> HeaderUtils.ensureRequiredHeaders(varadhiHeaders)
+            () -> headerUtils.messageHeaderConfiguration.ensureRequiredHeaders(varadhiHeaders)
         );
     }
 
     @Test
     public void testCopyVaradhiHeaders() {
-        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        headers.add("header1", "h1value1");
-        headers.add("Header1", "h1value2");
-        headers.add("X_UPPER_CASE", "UPPER_CASE");
-        headers.add("x_lower_case", "lower_case");
-        headers.add("X_Mixed_Case", "Mixed_Case");
-        headers.add("x_multi_value1", "multi_value1_1");
-        headers.add("x_multi_value1", "multi_value1_2");
-        headers.add("x_Multi_Value2", "multi_value2_1");
-        headers.add("x_multi_value2", "multi_Value2_1");
-        headers.add("x_multi_value2", "multi_Value2_1");
-        headers.add("xy_header2", "value2");
-        headers.add("x__header3", "value3");
-        headers.add("x-header4", "value4");
-        headers.add("x_Restbus_identity", "value5");
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
-        Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put("header1", "h1value1");
+        headers.put("Header1", "h1value2");
+        headers.put("X_UPPER_CASE", "UPPER_CASE");
+        headers.put("x_lower_case", "lower_case");
+        headers.put("X_Mixed_Case", "Mixed_Case");
+        headers.put("x_multi_value1", "multi_value1_1");
+        headers.put("x_multi_value1", "multi_value1_2");
+        headers.put("x_Multi_Value2", "multi_value2_1");
+        headers.put("x_multi_value2", "multi_Value2_1");
+        headers.put("x_multi_value2", "multi_Value2_1");
+        headers.put("xy_header2", "value2");
+        headers.put("x__header3", "value3");
+        headers.put("x-header4", "value4");
+        headers.put("x_Restbus_identity", "value5");
+        HeaderUtils headerUtils = new HeaderUtils(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+            headers
+        );
 
         Assertions.assertEquals(10, copiedHeaders.size());
         Assertions.assertEquals("value5", copiedHeaders.get("x_restbus_identity".toUpperCase()).toArray()[0]);
@@ -88,14 +87,16 @@ public class HeaderUtilsTest {
 
     @Test
     public void ensureHeaderOrderIsMaintained() {
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
-        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        headers.add("x_multi_value1", "multi_value1_2");
-        headers.add("x_multi_value1", "multi_value1_1");
-        headers.add("x_Multi_Value2", "multi_value2_1");
-        headers.add("x_multi_value2", "multi_Value2_1");
-        headers.add("x_multi_value1", "multi_value1_3");
-        Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
+        HeaderUtils headerUtils = new HeaderUtils(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put("x_multi_value1", "multi_value1_2");
+        headers.put("x_multi_value1", "multi_value1_1");
+        headers.put("x_Multi_Value2", "multi_value2_1");
+        headers.put("x_multi_value2", "multi_Value2_1");
+        headers.put("x_multi_value1", "multi_value1_3");
+        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+            headers
+        );
         String[] values = copiedHeaders.get("x_multi_value1".toUpperCase()).toArray(new String[] {});
         Assertions.assertEquals(3, values.length);
         Assertions.assertEquals("multi_value1_2", values[0]);
@@ -111,20 +112,24 @@ public class HeaderUtilsTest {
     @ParameterizedTest
     @ValueSource (booleans = {true, false})
     public void ensureHeadersAreProcessedCorrectly(Boolean filterNonCompliantHeaders) {
-        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        headers.add("x_multi_value1", "multi_value1_2");
-        headers.add("x_multi_value1", "multi_value1_1");
-        headers.add("x_multi_value1", "multi_value1_3");
-        headers.add("x_Multi_Value2", "multi_value2_1");
-        headers.add("x_multi_value2", "multi_Value2_1");
-        headers.add("abc_multi_value1", "multi_value1_3");
-        headers.add("xyz_multi_value1", "multi_value1_3");
-        headers.add("aaa_multi_value1", "multi_value1_3");
-        headers.add("bbb_multi_value1", "multi_value1_3");
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put("x_multi_value1", "multi_value1_2");
+        headers.put("x_multi_value1", "multi_value1_1");
+        headers.put("x_multi_value1", "multi_value1_3");
+        headers.put("x_Multi_Value2", "multi_value2_1");
+        headers.put("x_multi_value2", "multi_Value2_1");
+        headers.put("abc_multi_value1", "multi_value1_3");
+        headers.put("xyz_multi_value1", "multi_value1_3");
+        headers.put("aaa_multi_value1", "multi_value1_3");
+        headers.put("bbb_multi_value1", "multi_value1_3");
 
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfigurationWithParams(filterNonCompliantHeaders));
+        HeaderUtils headerUtils = new HeaderUtils(
+            MessageHeaderUtils.fetchDummyHeaderConfigurationWithParams(filterNonCompliantHeaders)
+        );
 
-        Multimap<String, String> copiedHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(headers);
+        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+            headers
+        );
 
         String[] values = copiedHeaders.get("x_multi_value1".toUpperCase()).toArray(new String[] {});
         Assertions.assertEquals(3, values.length);
