@@ -19,15 +19,13 @@ public class MessageRequestValidator {
             String value = entry.getValue();
 
             if (isIdHeader(key)) {
-                if (value.length() > HeaderUtils.getInstance().messageHeaderConfiguration.headerValueSizeMax()) {
+                if (value.length() > HeaderUtils.getMessageConfig().headerValueSizeMax()) {
                     throw new IllegalArgumentException(
                         String.format(
                             "%s %s exceeds allowed size of %d.",
-                            key.equals(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey()) ?
-                                "Message id" :
-                                "Group id",
+                            key.equals(HeaderUtils.getMessageConfig().getMsgIdHeaderKey()) ? "Message id" : "Group id",
                             value,
-                            HeaderUtils.getInstance().messageHeaderConfiguration.headerValueSizeMax()
+                            HeaderUtils.getMessageConfig().headerValueSizeMax()
                         )
                     );
                 }
@@ -39,19 +37,19 @@ public class MessageRequestValidator {
         headersAndBodySize += bodyLength;
 
         // If the total size of the headers and body exceeds the allowed limit, throw an exception
-        if (headersAndBodySize > HeaderUtils.getInstance().messageHeaderConfiguration.maxRequestSize()) {
+        if (headersAndBodySize > HeaderUtils.getMessageConfig().maxRequestSize()) {
             throw new IllegalArgumentException(
                 String.format(
                     "Request size exceeds allowed limit of %d bytes.",
-                    HeaderUtils.getInstance().messageHeaderConfiguration.maxRequestSize()
+                    HeaderUtils.getMessageConfig().maxRequestSize()
                 )
             );
         }
     }
 
     private static boolean isIdHeader(String key) {
-        return key.equals(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey()) || key.equals(
-            HeaderUtils.getInstance().messageHeaderConfiguration.getGroupIdHeaderKey()
+        return key.equals(HeaderUtils.getMessageConfig().getMsgIdHeaderKey()) || key.equals(
+            HeaderUtils.getMessageConfig().getGroupIdHeaderKey()
         );
     }
 }

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,7 +10,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MessageHeaderConfigurationTest {
+public class MessageConfigurationTest {
     @ParameterizedTest
     @CsvSource ({
         "'VARADHI_', 'VARADHI-', true",            // Valid case
@@ -22,9 +22,9 @@ public class MessageHeaderConfigurationTest {
         "'VARADHI_', 'VARADHI\u00A9', true",       // Unicode characters
     })
     void testHeaderPrefixValidation(String prefix1, String prefix2, boolean expectedResult) {
-        MessageHeaderConfiguration config = getDefaultMessageHeaderConfig();
-        Runnable validationAction = () -> new MessageHeaderConfiguration(
-            config.mapping(),
+        MessageConfiguration config = getDefaultMessageHeaderConfig();
+        Runnable validationAction = () -> new MessageConfiguration(
+            config.headerMapping(),
             List.of(prefix1, prefix2),
             config.headerValueSizeMax(),
             config.maxRequestSize(),
@@ -44,8 +44,8 @@ public class MessageHeaderConfigurationTest {
 
 
     // Utility method to build a default config for testing
-    private MessageHeaderConfiguration getDefaultMessageHeaderConfig() {
-        return new MessageHeaderConfiguration(
+    private MessageConfiguration getDefaultMessageHeaderConfig() {
+        return new MessageConfiguration(
             Map.ofEntries(
                 Map.entry(MessageHeaders.MSG_ID, "VARADHI_MESSAGE_ID"),
                 Map.entry(MessageHeaders.GROUP_ID, "VARADHI_GROUP_ID"),

@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.ProducerMessage;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
+import com.flipkart.varadhi.pulsar.PulsarTestBase;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -12,22 +11,25 @@ import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 import org.apache.pulsar.client.impl.TypedMessageBuilderImpl;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-class PulsarMessageTest {
+class PulsarMessageTest extends PulsarTestBase {
+    @BeforeAll
+    static void preTest() {
+        setUp();
+    }
 
     @Test
     void testPulsarMessagesEqualsProducerMessage() {
         // test request headers
         Multimap<String, String> requestHeaders = ArrayListMultimap.create();
-        MessageHeaderConfiguration messageHeaderConfiguration = MessageHeaderUtils.fetchDummyHeaderConfiguration();
-        HeaderUtils.init(messageHeaderConfiguration);
         requestHeaders.put("header1", "value1");
-        requestHeaders.put(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey(), "msgId");
-        requestHeaders.put(HeaderUtils.getInstance().messageHeaderConfiguration.getGroupIdHeaderKey(), "grpId");
+        requestHeaders.put(HeaderUtils.getMessageConfig().getMsgIdHeaderKey(), "msgId");
+        requestHeaders.put(HeaderUtils.getMessageConfig().getGroupIdHeaderKey(), "grpId");
         requestHeaders.putAll("header2", List.of("value2", "value3"));
 
         // now create the producer message

@@ -16,6 +16,7 @@ import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.utils.YamlLoader;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,7 +28,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
-public class PulsarStackProviderTest {
+public class PulsarStackProviderTest extends PulsarTestBase {
     @TempDir
     Path tempDir;
     private PulsarStackProvider pulsarStackProvider;
@@ -36,8 +37,13 @@ public class PulsarStackProviderTest {
     private Project project;
     private TopicPlanner planner;
 
+    @BeforeAll
+    public static void preTestInitConfig() {
+        setUp();
+    }
+
     @BeforeEach
-    public void setUp() throws IOException {
+    public void preTest() throws InterruptedException, IOException {
         String yamlContent =
             "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");

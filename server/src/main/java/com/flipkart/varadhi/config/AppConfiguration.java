@@ -2,7 +2,7 @@ package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
@@ -64,11 +64,11 @@ public class AppConfiguration implements Validatable {
 
     private Map<String, String> otelOptions;
 
-    @NotNull @Valid private MessageHeaderConfiguration messageHeaderConfiguration;
+    @NotNull @Valid private MessageConfiguration messageConfiguration;
 
     @Override
     public void validate() {
         Validatable.super.validate();
-        HeaderUtils.init(messageHeaderConfiguration);
+        HeaderUtils.init(messageConfiguration);
     }
 }

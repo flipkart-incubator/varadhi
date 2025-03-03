@@ -13,15 +13,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Builder
-public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> mapping, @NotNull List<String> allowedPrefix, @NotNull int headerValueSizeMax, @NotNull int maxRequestSize, @NotNull boolean filterNonCompliantHeaders) {
+public record MessageConfiguration(@NotNull Map<MessageHeaders, String> headerMapping, @NotNull List<String> allowedPrefix, @NotNull int headerValueSizeMax, @NotNull int maxRequestSize, @NotNull boolean filterNonCompliantHeaders) {
     @JsonCreator
-    public MessageHeaderConfiguration(@JsonProperty ("mapping")
-    Map<MessageHeaders, String> mapping, @JsonProperty ("allowedPrefix")
+    public MessageConfiguration(@JsonProperty ("headerMapping")
+    Map<MessageHeaders, String> headerMapping, @JsonProperty ("allowedPrefix")
     List<String> allowedPrefix, @JsonProperty ("headerValueSizeMax")
     int headerValueSizeMax, @JsonProperty ("maxRequestSize")
     int maxRequestSize, @JsonProperty ("filterNonCompliantHeaders")
     boolean filterNonCompliantHeaders) {
-        this.mapping = mapping;
+        this.headerMapping = headerMapping;
         this.allowedPrefix = allowedPrefix;
         this.headerValueSizeMax = headerValueSizeMax;
         this.maxRequestSize = maxRequestSize;
@@ -38,12 +38,12 @@ public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> ma
         }
 
         for (MessageHeaders header : MessageHeaders.values()) {
-            String value = mapping.get(header);
+            String value = headerMapping.get(header);
 
             // Combined check for null/empty and valid prefix
             if (value == null || value.isEmpty() || !startsWithValidPrefix(value)) {
                 throw new IllegalArgumentException(
-                    "Invalid header name" + value + "for header" + header
+                    "Invalid header name " + value + "for header" + header
                                                    + "' is either null, empty, or does not start with a valid prefix."
                 );
             }
@@ -56,7 +56,7 @@ public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> ma
     }
 
     public List<String> getRequiredHeaders() {
-        return List.of(mapping().get(MessageHeaders.MSG_ID));
+        return List.of(headerMapping().get(MessageHeaders.MSG_ID));
     }
 
     public void ensureRequiredHeaders(Multimap<String, String> headers) {
@@ -84,55 +84,55 @@ public record MessageHeaderConfiguration(@NotNull Map<MessageHeaders, String> ma
     }
 
     public String getMsgIdHeaderKey() {
-        return mapping.get(MessageHeaders.MSG_ID);
+        return headerMapping.get(MessageHeaders.MSG_ID);
     }
 
     public String getGroupIdHeaderKey() {
-        return mapping.get(MessageHeaders.GROUP_ID);
+        return headerMapping.get(MessageHeaders.GROUP_ID);
     }
 
     public String getCallbackCodesKey() {
-        return mapping.get(MessageHeaders.CALLBACK_CODE);
+        return headerMapping.get(MessageHeaders.CALLBACK_CODE);
     }
 
     public String getRequestTimeoutKey() {
-        return mapping.get(MessageHeaders.REQUEST_TIMEOUT);
+        return headerMapping.get(MessageHeaders.REQUEST_TIMEOUT);
     }
 
     public String getReplyToHttpUriHeaderKey() {
-        return mapping.get(MessageHeaders.REPLY_TO_HTTP_URI);
+        return headerMapping.get(MessageHeaders.REPLY_TO_HTTP_URI);
     }
 
     public String getReplyToHttpMethodHeaderKey() {
-        return mapping.get(MessageHeaders.REPLY_TO_HTTP_METHOD);
+        return headerMapping.get(MessageHeaders.REPLY_TO_HTTP_METHOD);
     }
 
     public String getReplyToHeaderKey() {
-        return mapping.get(MessageHeaders.REPLY_TO);
+        return headerMapping.get(MessageHeaders.REPLY_TO);
     }
 
     public String getHttpUriHeaderKey() {
-        return mapping.get(MessageHeaders.HTTP_URI);
+        return headerMapping.get(MessageHeaders.HTTP_URI);
     }
 
     public String getHttpMethodHeaderKey() {
-        return mapping.get(MessageHeaders.HTTP_METHOD);
+        return headerMapping.get(MessageHeaders.HTTP_METHOD);
     }
 
     public String getHttpContentTypeKey() {
-        return mapping.get(MessageHeaders.CONTENT_TYPE);
+        return headerMapping.get(MessageHeaders.CONTENT_TYPE);
     }
 
     public String getProduceIdentityKey() {
-        return mapping.get(MessageHeaders.PRODUCE_IDENTITY);
+        return headerMapping.get(MessageHeaders.PRODUCE_IDENTITY);
     }
 
     public String getProduceRegionKey() {
-        return mapping.get(MessageHeaders.PRODUCE_REGION);
+        return headerMapping.get(MessageHeaders.PRODUCE_REGION);
     }
 
     public String getProduceTimestampKey() {
-        return mapping.get(MessageHeaders.PRODUCE_TIMESTAMP);
+        return headerMapping.get(MessageHeaders.PRODUCE_TIMESTAMP);
     }
 
 

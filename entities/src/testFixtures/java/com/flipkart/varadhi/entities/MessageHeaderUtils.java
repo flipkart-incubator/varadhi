@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
 
 import java.util.List;
@@ -8,8 +8,8 @@ import java.util.Map;
 
 public class MessageHeaderUtils {
 
-    public static MessageHeaderConfiguration fetchConfiguration(boolean filterNonCompliantHeaders) {
-        return new MessageHeaderConfiguration(
+    public static MessageConfiguration fetchConfiguration(boolean filterNonCompliantHeaders) {
+        return new MessageConfiguration(
             Map.ofEntries(
                 Map.entry(MessageHeaders.MSG_ID, "X_MESSAGE_ID"),
                 Map.entry(MessageHeaders.GROUP_ID, "X_GROUP_ID"),
@@ -32,13 +32,11 @@ public class MessageHeaderUtils {
         );
     }
 
-    public static MessageHeaderConfiguration fetchDummyHeaderConfigurationWithParams(
-        boolean filterNonCompliantHeaders
-    ) {
+    public static MessageConfiguration fetchDummyHeaderConfigurationWithParams(boolean filterNonCompliantHeaders) {
         return fetchConfiguration(filterNonCompliantHeaders);
     }
 
-    public static MessageHeaderConfiguration fetchDummyHeaderConfiguration() {
+    public static MessageConfiguration fetchDummyHeaderConfiguration() {
         return fetchConfiguration(true);
     }
 

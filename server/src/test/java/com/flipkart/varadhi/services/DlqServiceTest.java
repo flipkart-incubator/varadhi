@@ -8,12 +8,10 @@ import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.web.admin.SubscriptionTestBase;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
 import com.flipkart.varadhi.web.entities.DlqPageMarker;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -34,17 +32,13 @@ class DlqServiceTest extends SubscriptionTestBase {
     private ConsumerApi consumerClient;
     private DlqService dlqService;
 
-    @BeforeAll
-    public static void init() {
-        HeaderUtils.init(MessageHeaderUtils.fetchDummyHeaderConfiguration());
-    }
-
     @BeforeEach
     public void setUp() {
         controllerClient = mock(ControllerRestApi.class);
         consumerFactory = mock(ConsumerClientFactory.class);
         consumerClient = mock(ConsumerApi.class);
         dlqService = new DlqService(controllerClient, consumerFactory);
+        super.setupInitialConfig();
     }
 
     @Test

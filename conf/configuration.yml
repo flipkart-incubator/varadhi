@@ -82,9 +82,9 @@ otelOptions:
   otlp.resourceAttributes:
   otlp.headers:
 
-messageHeaderConfiguration:
+messageConfiguration:
   allowedPrefix: ["X_"]
-  mapping:
+  headerMapping:
     msgIdHeader: "X_MESSAGE_ID"
     groupIdHeader: "X_GROUP_ID"
     callbackCodes: "X_CALLBACK_CODES"

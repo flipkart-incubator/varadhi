@@ -9,6 +9,7 @@ import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -19,12 +20,17 @@ import java.nio.file.Path;
 
 import static org.mockito.Mockito.*;
 
-public class PulsarProducerFactoryTest {
+public class PulsarProducerFactoryTest extends PulsarTestBase {
     @TempDir
     Path tempDir;
     PulsarClient pClient;
     PulsarStorageTopic topic;
     ProducerBuilder<byte[]> builder;
+
+    @BeforeAll
+    public static void preTestInitConfig() {
+        setUp();
+    }
 
     @BeforeEach
     public void preTest() throws IOException {

@@ -1,7 +1,6 @@
-package com.flipkart.varadhi.utils;
+package com.flipkart.varadhi.entities.utils;
 
 import com.flipkart.varadhi.entities.MessageHeaderUtils;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.junit.jupiter.api.Assertions;
@@ -20,23 +19,20 @@ public class HeaderUtilsTest {
         HeaderUtils headerUtils = new HeaderUtils(MessageHeaderUtils.fetchDummyHeaderConfiguration());
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
-        headerUtils.messageHeaderConfiguration.getRequiredHeaders()
-                                              .stream()
-                                              .filter(
-                                                  key -> !key.equals(
-                                                      headerUtils.messageHeaderConfiguration.getMsgIdHeaderKey()
-                                                  ) && !key.equals(
-                                                      headerUtils.messageHeaderConfiguration.getProduceRegionKey()
-                                                  )
-                                              )
-                                              .forEach(
-                                                  key -> varadhiHeaders.put(key, String.format("%s_sometext", key))
-                                              );
+        headerUtils.messageConfiguration.getRequiredHeaders()
+                                        .stream()
+                                        .filter(
+                                            key -> !key.equals(headerUtils.messageConfiguration.getMsgIdHeaderKey())
+                                                   && !key.equals(
+                                                       headerUtils.messageConfiguration.getProduceRegionKey()
+                                                   )
+                                        )
+                                        .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         IllegalArgumentException ae = Assertions.assertThrows(
             IllegalArgumentException.class,
-            () -> headerUtils.messageHeaderConfiguration.ensureRequiredHeaders(varadhiHeaders)
+            () -> headerUtils.messageConfiguration.ensureRequiredHeaders(varadhiHeaders)
         );
     }
 
@@ -58,7 +54,7 @@ public class HeaderUtilsTest {
         headers.put("x-header4", "value4");
         headers.put("x_Restbus_identity", "value5");
         HeaderUtils headerUtils = new HeaderUtils(MessageHeaderUtils.fetchDummyHeaderConfiguration());
-        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+        Multimap<String, String> copiedHeaders = headerUtils.messageConfiguration.returnVaradhiRecognizedHeaders(
             headers
         );
 
@@ -94,7 +90,7 @@ public class HeaderUtilsTest {
         headers.put("x_Multi_Value2", "multi_value2_1");
         headers.put("x_multi_value2", "multi_Value2_1");
         headers.put("x_multi_value1", "multi_value1_3");
-        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+        Multimap<String, String> copiedHeaders = headerUtils.messageConfiguration.returnVaradhiRecognizedHeaders(
             headers
         );
         String[] values = copiedHeaders.get("x_multi_value1".toUpperCase()).toArray(new String[] {});
@@ -127,7 +123,7 @@ public class HeaderUtilsTest {
             MessageHeaderUtils.fetchDummyHeaderConfigurationWithParams(filterNonCompliantHeaders)
         );
 
-        Multimap<String, String> copiedHeaders = headerUtils.messageHeaderConfiguration.returnVaradhiRecognizedHeaders(
+        Multimap<String, String> copiedHeaders = headerUtils.messageConfiguration.returnVaradhiRecognizedHeaders(
             headers
         );
 

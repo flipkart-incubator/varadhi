@@ -65,12 +65,12 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey());
+        return getHeader(HeaderUtils.getMsgIdHeaderKey());
     }
 
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.getInstance().messageHeaderConfiguration.getGroupIdHeaderKey());
+        return getHeader(HeaderUtils.getMessageConfig().getGroupIdHeaderKey());
     }
 
     @Override

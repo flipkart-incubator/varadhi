@@ -19,12 +19,12 @@ public class ProducerMessage implements Message {
     // TODO:: This will affect json, verify it.
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.getInstance().messageHeaderConfiguration.getMsgIdHeaderKey());
+        return getHeader(HeaderUtils.getMessageConfig().getMsgIdHeaderKey());
     }
 
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.getInstance().messageHeaderConfiguration.getGroupIdHeaderKey());
+        return getHeader(HeaderUtils.getMessageConfig().getGroupIdHeaderKey());
     }
 
     @Override

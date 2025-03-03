@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.entities.utils;
 
-import com.flipkart.varadhi.entities.config.MessageHeaderConfiguration;
+import com.flipkart.varadhi.entities.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -14,42 +14,50 @@ public class HeaderUtils {
     private static final HeaderUtils DEFAULT_INSTANCE = new HeaderUtils();
     @Getter
     private boolean initialized = false;
-    public MessageHeaderConfiguration messageHeaderConfiguration;
+    public MessageConfiguration messageConfiguration;
 
     private HeaderUtils() {
     }
 
     @VisibleForTesting
-    public HeaderUtils(MessageHeaderConfiguration configuration) {
-        messageHeaderConfiguration = configuration;
+    protected HeaderUtils(MessageConfiguration configuration) {
+        messageConfiguration = configuration;
     }
 
-    private void initialize(MessageHeaderConfiguration config) {
+    private void initialize(MessageConfiguration config) {
         if (config == null) {
             throw new IllegalArgumentException("Configuration cannot be null");
         }
-        messageHeaderConfiguration = config;
+        messageConfiguration = config;
         initialized = true;
     }
 
-    public static synchronized void init(MessageHeaderConfiguration messageHeaderConfiguration) {
+    public static synchronized void init(MessageConfiguration messageConfiguration) {
         // Prevent re-initialization if already initialized
         if (DEFAULT_INSTANCE.isInitialized()) {
             throw new IllegalStateException("Already initialized");
         }
-        DEFAULT_INSTANCE.initialize(messageHeaderConfiguration);
+        DEFAULT_INSTANCE.initialize(messageConfiguration);
     }
 
     public static HeaderUtils getInstance() {
         return DEFAULT_INSTANCE;
     }
 
+    public static MessageConfiguration getMessageConfig() {
+        return DEFAULT_INSTANCE.messageConfiguration;
+    }
+
+    public static String getMsgIdHeaderKey() {
+        return getMessageConfig().getMsgIdHeaderKey();
+    }
+
     public static String getHeader(MessageHeaders header) {
-        return DEFAULT_INSTANCE.messageHeaderConfiguration.mapping().get(header);
+        return DEFAULT_INSTANCE.messageConfiguration.headerMapping().get(header);
     }
 
     public static List<String> getRequiredHeaders() {
-        return List.of(DEFAULT_INSTANCE.messageHeaderConfiguration.mapping().get(MessageHeaders.MSG_ID));
+        return List.of(DEFAULT_INSTANCE.messageConfiguration.headerMapping().get(MessageHeaders.MSG_ID));
     }
 
     public static void ensureRequiredHeaders(Multimap<String, String> headers) {
@@ -64,10 +72,10 @@ public class HeaderUtils {
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         for (Map.Entry<String, String> entry : headers.entries()) {
             String key = entry.getKey();
-            if (DEFAULT_INSTANCE.messageHeaderConfiguration.filterNonCompliantHeaders()) {
-                boolean validPrefix = DEFAULT_INSTANCE.messageHeaderConfiguration.allowedPrefix()
-                                                                                 .stream()
-                                                                                 .anyMatch(key::startsWith);
+            if (DEFAULT_INSTANCE.messageConfiguration.filterNonCompliantHeaders()) {
+                boolean validPrefix = DEFAULT_INSTANCE.messageConfiguration.allowedPrefix()
+                                                                           .stream()
+                                                                           .anyMatch(key::startsWith);
                 if (validPrefix) {
                     varadhiHeaders.put(key.toUpperCase(), entry.getValue());
                 }

@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web;
 
 import com.fasterxml.jackson.databind.JavaType;
+import com.flipkart.varadhi.entities.MessageHeaderUtils;
+import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import io.vertx.core.AsyncResult;
@@ -67,6 +69,12 @@ public class WebTestBase {
         CountDownLatch latch = new CountDownLatch(1);
         server.requestHandler(router).listen().onComplete(onSuccess(res -> latch.countDown()));
         awaitLatch(latch);
+    }
+
+    public void setupInitialConfig() {
+        if (!HeaderUtils.getInstance().isInitialized()) {
+            HeaderUtils.init(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        }
     }
 
     protected HttpServerOptions getHttpServerOptions() {
