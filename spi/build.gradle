@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
     api(project(':entities'))
-    api("io.vertx:vertx-core:$vertx_version")
     api('com.fasterxml.jackson.core:jackson-databind')
 
     testFixturesImplementation("com.google.guava:guava:$guava_version")

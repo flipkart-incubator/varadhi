@@ -1,0 +1,9 @@
+[versions]
+vertx = "4.5.10"
+guava = "33.3.1-jre"
+
+[libraries]
+vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
+vertx-web = { group = "io.vertx", name = "vertx-web", version.ref = "vertx" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
