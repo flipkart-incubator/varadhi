@@ -32,14 +32,16 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
     private final EntityEventProcessor eventProcessor;
     private final ExecutorService executorService;
     private final AtomicBoolean isShutdown;
+    private final AtomicBoolean isActive;
 
     public EventManager(MetaStore metaStore, EntityEventProcessor eventProcessor) {
         this.metaStore = Objects.requireNonNull(metaStore, "metaStore cannot be null");
         this.eventProcessor = Objects.requireNonNull(eventProcessor, "eventProcessor cannot be null");
         this.executorService = createExecutorService();
         this.isShutdown = new AtomicBoolean(false);
+        this.isActive = new AtomicBoolean(false);
 
-        metaStore.registerEventListener(this);
+        initializeEventListener();
         log.info("EventManager initialized successfully");
     }
 
@@ -57,10 +59,20 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
         }
     }
 
+    private void initializeEventListener() {
+        boolean registered = metaStore.registerEventListener(this);
+        if (!registered) {
+            log.info("Failed to register event listener - another controller is already active");
+            return;
+        }
+        isActive.set(true);
+        log.info("Successfully registered as active event listener");
+    }
+
     @Override
     public void onEvent(MetaStoreChangeEvent event) {
-        if (isShutdown.get()) {
-            log.warn("Skipping Event processing for {}/{} - Manager is shutdown",
+        if (isShutdown.get() || !isActive.get()) {
+            log.warn("Skipping Event processing for {}/{} - Manager is shutdown or inactive",
                     event.getResourceType(), event.getResourceName());
             return;
         }
@@ -154,24 +166,23 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
 
     @Override
     public void close() {
-        if (!isShutdown.compareAndSet(false, true)) {
-            return;
-        }
-
-        try {
-            log.info("Initiating EventManager shutdown...");
-            shutdownExecutor();
-            log.info("EventManager shutdown completed");
-        } catch (Exception e) {
-            log.error("Error during EventManager shutdown", e);
-            executorService.shutdownNow();
-            Thread.currentThread().interrupt();
+        if (isShutdown.compareAndSet(false, true)) {
+            try {
+                log.info("Initiating EventManager shutdown...");
+                shutdownExecutor();
+                log.info("EventManager shutdown completed");
+            } catch (Exception e) {
+                log.error("Error during EventManager shutdown", e);
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
     private void shutdownExecutor() throws InterruptedException {
         executorService.shutdown();
         if (!executorService.awaitTermination(SHUTDOWN_TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
+            log.warn("EventManager executor service did not terminate in time");
             executorService.shutdownNow().forEach(Runnable::run);
         }
     }
