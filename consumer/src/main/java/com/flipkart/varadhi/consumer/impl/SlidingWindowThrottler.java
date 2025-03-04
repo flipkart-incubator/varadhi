@@ -27,7 +27,7 @@ public class SlidingWindowThrottler<T> implements Throttler<T>, ThresholdProvide
           dictate whether the rate should be consumed / replenished uniformly over the window. Usually it is not.
           Do we require this uniformity? Preferably yes. Lets aim for it, as it is ideal in definition. This behaviour is also easier to test.
           But not technically needed. So lets keep the solution efficient and performant.
-        - Tick rate / sub-interval: smaller than window size. If it smaller, than it allows us to approximately track the usage of permits across the whole window at this sub-interval level. And then we use this info, to replinish the permits.
+        - Tick rate / sub-interval: smaller than window size. If it smaller, than it allows us to approximately track the usage of permits across the whole window at this sub-interval level. AndCondition then we use this info, to replinish the permits.
           Basically, the previous utilization will roughly dictate how the permits are going to be replinised.
         - Starting config: window_size = 1 sec, sub-interval = 10ms.
     

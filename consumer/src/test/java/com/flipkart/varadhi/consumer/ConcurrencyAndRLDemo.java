@@ -176,7 +176,7 @@ public class ConcurrencyAndRLDemo {
                                     throttlePending.decrementAndGet();
                                     throttlerCtx.stop();
                                     log.debug("task: {}, throttle acquired", id);
-                                    // And the "failure handling" is : produce to rq simulation
+                                    // AndCondition the "failure handling" is : produce to rq simulation
                                     if (errorProduceLatency > 0) {
                                         CompletableFuture<Boolean> produced = new CompletableFuture<>();
                                         httpScheduler.schedule(() -> {

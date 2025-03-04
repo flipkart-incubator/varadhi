@@ -9,6 +9,8 @@ dependencies {
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
     api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")
 
+    implementation 'org.apache.commons:commons-jexl3:3.4.0'
+    testImplementation project(path: ':common')
     testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
     testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
 }
