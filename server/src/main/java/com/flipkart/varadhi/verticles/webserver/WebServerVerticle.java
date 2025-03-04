@@ -271,7 +271,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private void setupRouteConfigurators() {
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
         AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
-        VertxUserHandler vertxUserHandler = new VertxUserHandler(vertx, configuration);
 
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
@@ -286,10 +285,6 @@ public class WebServerVerticle extends AbstractVerticle {
         HierarchyHandler hierarchyHandler = new HierarchyHandler();
         routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
         routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnHandler);
-        routeBehaviourConfigurators.put(
-            RouteBehaviour.post_authentication,
-            (route, routeDef) -> route.handler(vertxUserHandler)
-        );
         routeBehaviourConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
         routeBehaviourConfigurators.put(RouteBehaviour.parseBody, bodyParser);
         routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyHandler);

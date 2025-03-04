@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.utils.OrgResolver;
 import io.vertx.core.Future;

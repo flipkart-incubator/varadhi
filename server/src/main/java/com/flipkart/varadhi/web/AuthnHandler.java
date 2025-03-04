@@ -21,24 +21,27 @@ public class AuthnHandler implements RouteConfigurator {
 
         AuthenticationConfig authenticationConfig = configuration.getAuthentication();
         AuthenticationHandlerProvider provider = null;
-        
+
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
             if (!AuthenticationHandlerProvider.class.isAssignableFrom(providerClass)) {
                 throw new RuntimeException(
-                        "Provider class " + providerClass.getName() + " does not implement AuthenticationHandlerProvider interface"
+                    "Provider class " + providerClass.getName()
+                                           + " does not implement AuthenticationHandlerProvider interface"
                 );
             }
             provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
-            
-            
+
+
         } catch (ClassNotFoundException e) {
-            
+
         } catch (Exception e) {
-            
+
         }
 
-        authenticationHandler = new AuthenticationHandlerWrapper( provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig.getConfigFile()), Org::of));
+        authenticationHandler = new AuthenticationHandlerWrapper(
+            provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig.getConfigFile()), Org::of)
+        );
 
     }
 
