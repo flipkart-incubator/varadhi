@@ -42,9 +42,9 @@ producerOptions:
   metricEnabled: true
 
 authentication:
-  mechanism: user_header
   configFile: ""
-  providerClassName: ""
+  handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
+  authenticatorClassName: ""
 
 authorizationEnabled: true
 

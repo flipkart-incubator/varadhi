@@ -6,10 +6,13 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.entities.utils.RequestContext;
-import com.flipkart.varadhi.spi.authn.AuthenticationProvider;
+import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.spi.authn.Authenticator;
+import com.flipkart.varadhi.spi.utils.OrgResolver;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
@@ -27,18 +30,23 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomAuthenticationHandler implements AuthenticationHandler {
-    private AuthenticationProvider authenticationProvider;
+public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
+    private Authenticator authenticationProvider;
+
+    @Override
+    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
+        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class));
+    }
 
     public AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getProviderClassName());
-            if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
+            if (!Authenticator.class.isAssignableFrom(providerClass)) {
                 throw new RuntimeException(
                     "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
                 );
             }
-            authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
+            authenticationProvider = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
             authenticationProvider.init(authenticationConfig);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(
@@ -48,6 +56,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
         } catch (Exception e) {
             throw new RuntimeException("Failed to create authentication provider", e);
         }
+
         return new CustomAuthenticationHandler(authenticationProvider);
     }
 
@@ -107,4 +116,6 @@ public class CustomAuthenticationHandler implements AuthenticationHandler {
         request.params().forEach(entry -> params.put(entry.getKey(), entry.getValue()));
         return params;
     }
+
+
 }
