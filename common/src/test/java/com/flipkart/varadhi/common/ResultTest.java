@@ -1,6 +1,5 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.common;
 
-import com.flipkart.varadhi.common.Result;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

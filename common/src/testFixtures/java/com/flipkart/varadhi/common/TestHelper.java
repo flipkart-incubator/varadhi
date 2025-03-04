@@ -1,14 +1,14 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.common;
 
-import org.junit.jupiter.api.Assertions;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Assertions;
 
 public class TestHelper {
     public static <T> void assertListEquals(List<T> expected, List<T> actual) {

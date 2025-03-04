@@ -1,23 +1,12 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.config.ControllerConfig;
-import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.entities.*;
-import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.entities.SubscriptionUtils;
-import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.cluster.*;
-import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.OpStore;
-import io.vertx.core.eventbus.ReplyException;
-import io.vertx.core.eventbus.ReplyFailure;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import static com.flipkart.varadhi.common.TestHelper.*;
+import static com.flipkart.varadhi.core.cluster.entities.NodeProvider.getAssignment;
+import static com.flipkart.varadhi.core.cluster.entities.NodeProvider.getConsumerNodes;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,12 +16,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static com.flipkart.varadhi.TestHelper.*;
-import static com.flipkart.varadhi.core.cluster.entities.NodeProvider.*;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.controller.config.ControllerConfig;
+import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.entities.*;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
+import com.flipkart.varadhi.entities.SubscriptionUtils;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
+import com.flipkart.varadhi.spi.db.OpStore;
+
+import io.vertx.core.eventbus.ReplyException;
+import io.vertx.core.eventbus.ReplyFailure;
 
 public class ControllerApiMgrTest {
 

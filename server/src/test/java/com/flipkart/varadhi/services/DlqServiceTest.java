@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.services;
 
-import static com.flipkart.varadhi.TestHelper.assertException;
-import static com.flipkart.varadhi.TestHelper.assertValue;
+import static com.flipkart.varadhi.common.TestHelper.assertException;
+import static com.flipkart.varadhi.common.TestHelper.assertValue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

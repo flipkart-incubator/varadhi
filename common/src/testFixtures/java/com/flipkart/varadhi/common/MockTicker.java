@@ -1,9 +1,9 @@
-package com.flipkart.varadhi;
-
-import com.google.common.base.Ticker;
+package com.flipkart.varadhi.common;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.common.base.Ticker;
 
 public class MockTicker extends Ticker {
 

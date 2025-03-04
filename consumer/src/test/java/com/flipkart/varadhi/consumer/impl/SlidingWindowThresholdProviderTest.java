@@ -1,9 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.MockTicker;
-import com.google.common.base.Ticker;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -11,7 +8,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import com.flipkart.varadhi.common.MockTicker;
+import com.google.common.base.Ticker;
 
 class SlidingWindowThresholdProviderTest {
 

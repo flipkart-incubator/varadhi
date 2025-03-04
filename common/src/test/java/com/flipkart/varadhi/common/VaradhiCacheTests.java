@@ -1,8 +1,16 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.common;
 
-import com.flipkart.varadhi.common.VaradhiCache;
+import static org.mockito.Mockito.*;
+
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -11,13 +19,6 @@ import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.StandardException;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.TimeUnit;
-
-import static org.mockito.Mockito.*;
 
 public class VaradhiCacheTests {
 
