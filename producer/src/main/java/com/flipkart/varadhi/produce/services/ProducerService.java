@@ -2,84 +2,53 @@ package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.Result;
 import com.flipkart.varadhi.VaradhiCache;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.InternalCompositeTopic;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.exceptions.ProduceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.spi.services.Producer;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-
 @Slf4j
 public class ProducerService {
+    private static final String TOPIC_CACHE_NAME = "topic";
+    private static final String PRODUCER_CACHE_NAME = "producer";
+
+    @Getter
     private final VaradhiCache<StorageTopic, Producer> producerCache;
+
+    @Getter
     private final VaradhiCache<String, VaradhiTopic> internalTopicCache;
+
     private final String produceRegion;
+    private final Function<StorageTopic, Producer> producerProvider;
 
     public ProducerService(
         String produceRegion,
-        ProducerOptions producerOptions,
-        Function<StorageTopic, Producer> producerProvider,
-        Function<String, VaradhiTopic> topicProvider,
-        MeterRegistry meterRegistry
-    ) {
-        this.internalTopicCache = setupTopicCache(
-            producerOptions.getTopicCacheBuilderSpec(),
-            topicProvider,
-            meterRegistry
-        );
-        this.producerCache = setupProducerCache(
-            producerOptions.getProducerCacheBuilderSpec(),
-            producerProvider,
-            meterRegistry
-        );
-        this.produceRegion = produceRegion;
-    }
-
-    private VaradhiCache<String, VaradhiTopic> setupTopicCache(
-        String cacheSpec,
-        Function<String, VaradhiTopic> topicProvider,
-        MeterRegistry meterRegistry
-    ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            topicProvider,
-            (topicName, failure) -> new ProduceException(
-                String.format("Failed to get produce Topic(%s). %s", topicName, failure.getMessage()),
-                failure
-            ),
-            "topic",
-            meterRegistry
-        );
-    }
-
-
-    private VaradhiCache<StorageTopic, Producer> setupProducerCache(
-        String cacheSpec,
         Function<StorageTopic, Producer> producerProvider,
         MeterRegistry meterRegistry
     ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            producerProvider,
-            (storageTopic, failure) -> new ProduceException(
-                String.format(
-                    "Failed to create Pulsar producer for Topic(%s). %s",
-                    storageTopic.getName(),
-                    failure.getMessage()
-                ),
-                failure
-            ),
-            "producer",
-            meterRegistry
-        );
+        this.produceRegion = Objects.requireNonNull(produceRegion, "Produce region cannot be null");
+        this.producerProvider = Objects.requireNonNull(producerProvider, "Producer provider cannot be null");
+        Objects.requireNonNull(meterRegistry, "Meter registry cannot be null");
+
+        this.internalTopicCache = new VaradhiCache<>(TOPIC_CACHE_NAME, meterRegistry);
+        this.producerCache = new VaradhiCache<>(PRODUCER_CACHE_NAME, meterRegistry);
     }
 
     public CompletableFuture<ProduceResult> produceToTopic(
@@ -88,8 +57,12 @@ public class ProducerService {
         ProducerMetricsEmitter metricsEmitter
     ) {
         try {
-            InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
-                                                                     .getProduceTopicForRegion(produceRegion);
+            VaradhiTopic varadhiTopic = internalTopicCache.get(varadhiTopicName);
+            if (varadhiTopic == null || !varadhiTopic.isActive()) {
+                throw new ResourceNotFoundException(String.format("Topic(%s) not found or is inactive.", varadhiTopicName));
+            }
+
+            InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
 
             // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
             if (internalTopic == null) {
@@ -115,7 +88,6 @@ public class ProducerService {
         }
     }
 
-
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
         Producer producer,
         ProducerMetricsEmitter metricsEmitter,
@@ -127,12 +99,56 @@ public class ProducerService {
             int producerLatency = (int)(System.currentTimeMillis() - produceStart);
             metricsEmitter.emit(result != null, producerLatency);
             if (throwable != null) {
-                log.debug(
-                    String.format("Produce Message(%s) to StorageTopic(%s) failed.", message.getMessageId(), topic),
-                    throwable
-                );
+                log.debug("Produce Message({}) to StorageTopic({}) failed.", message.getMessageId(), topic, throwable);
             }
             return Result.of(result, throwable);
         });
+    }
+
+    public Future<Void> initializeCaches(List<VaradhiTopic> topics) {
+        Promise<Void> promise = Promise.promise();
+        try {
+            log.info("Starting cache initialization with {} topics", topics.size());
+
+            initializeTopicCache(topics);
+
+            initializeProducerCache(topics);
+
+            log.info("Successfully initialized all caches");
+            promise.complete();
+        } catch (Exception e) {
+            log.error("Failed to initialize caches", e);
+            promise.fail(e);
+        }
+        return promise.future();
+    }
+
+    private void initializeTopicCache(List<VaradhiTopic> topics) {
+        log.info("Initializing topic cache");
+        topics.forEach(topic -> internalTopicCache.put(topic.getName(), topic));
+        log.info("Topic cache initialized with {} entries", topics.size());
+    }
+
+    private void initializeProducerCache(List<VaradhiTopic> topics) {
+        var activeStorageTopics = topics.stream()
+                .map(topic -> topic.getProduceTopicForRegion(produceRegion))
+                .filter(Objects::nonNull)
+                .filter(internalTopic -> internalTopic.getTopicState().isProduceAllowed())
+                .map(InternalCompositeTopic::getTopicToProduce)
+                .toList();
+
+        log.info("Initializing producer cache with {} active topics", activeStorageTopics.size());
+
+        activeStorageTopics.forEach(storageTopic -> {
+            try {
+                Producer producer = producerProvider.apply(storageTopic);
+                producerCache.put(storageTopic, producer);
+            } catch (Exception e) {
+                log.error("Failed to initialize producer for topic: {}", storageTopic.getName(), e);
+                throw e;
+            }
+        });
+
+        log.info("Producer cache initialized successfully");
     }
 }

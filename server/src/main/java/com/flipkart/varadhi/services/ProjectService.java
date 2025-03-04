@@ -6,17 +6,26 @@ import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.Objects;
 
+@Slf4j
 public class ProjectService {
+    private static final String CACHE_NAME = "project";
+
     private final MetaStore metaStore;
+
+    @Getter
     private final VaradhiCache<String, Project> projectCache;
 
-    public ProjectService(MetaStore metaStore, String cacheSpec, MeterRegistry meterRegistry) {
-        this.metaStore = metaStore;
-        this.projectCache = buildProjectCache(cacheSpec, this::getProject, meterRegistry);
+    public ProjectService(MetaStore metaStore, MeterRegistry meterRegistry) {
+        this.metaStore = Objects.requireNonNull(metaStore, "MetaStore cannot be null");
+        this.projectCache = new VaradhiCache<>(CACHE_NAME, meterRegistry);
     }
 
     public Project createProject(Project project) {
@@ -103,20 +112,20 @@ public class ProjectService {
         }
     }
 
-    private VaradhiCache<String, Project> buildProjectCache(
-        String cacheSpec,
-        Function<String, Project> projectProvider,
-        MeterRegistry meterRegistry
-    ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            projectProvider,
-            (projectName, exception) -> new ResourceNotFoundException(
-                String.format("Failed to get project(%s). %s", projectName, exception.getMessage()),
-                exception
-            ),
-            "project",
-            meterRegistry
-        );
+    public Future<Void> initializeCache() {
+        Promise<Void> promise = Promise.promise();
+        try {
+            List<Project> projects = metaStore.getAllProjects();
+            log.info("Starting project cache initialization with {} projects", projects.size());
+
+            projects.forEach(project -> projectCache.put(project.getName(), project));
+
+            log.info("Successfully initialized project cache with {} entries", projects.size());
+            promise.complete();
+        } catch (Exception e) {
+            log.error("Failed to initialize project cache", e);
+            promise.fail(e);
+        }
+        return promise.future();
     }
 }

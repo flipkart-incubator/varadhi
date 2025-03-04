@@ -36,13 +36,6 @@ public class VaradhiCacheTests {
         entityProvider = spy(this);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         testCache = new VaradhiCache<>(
-            cacheSpec,
-            ticker,
-            entityProvider::getData,
-            (key, failure) -> new CustomException(
-                String.format("Failed to get data (%s): %s", key, failure.getMessage()),
-                failure
-            ),
             "test",
             meterRegistry
         );

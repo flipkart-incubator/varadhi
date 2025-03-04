@@ -3,38 +3,66 @@ package com.flipkart.varadhi.verticles.webserver;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.core.cluster.EntityEventHandler;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.events.EntityEventApiHandler;
+import com.flipkart.varadhi.events.CompositeEntityEventHandler;
+import com.flipkart.varadhi.events.ProjectEntityEventHandler;
+import com.flipkart.varadhi.events.TopicEntityEventHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.services.DlqService;
+import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.SubscriptionService;
+import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.web.*;
+import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
+import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
+import com.flipkart.varadhi.web.AuthnHandler;
+import com.flipkart.varadhi.web.AuthzHandler;
+import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.FailureHandler;
+import com.flipkart.varadhi.web.HierarchyHandler;
+import com.flipkart.varadhi.web.RequestBodyHandler;
+import com.flipkart.varadhi.web.RequestBodyParser;
+import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.*;
+import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
+import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
+import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
+import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
+import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
+import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.produce.HeaderValidationHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
-import io.vertx.core.*;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
@@ -42,9 +70,13 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
-
 
 @Slf4j
 @ExtensionMethod ({Extensions.RoutingContextExtension.class})
@@ -57,12 +89,14 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MetaStore metaStore;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
+
     private OrgService orgService;
     private TeamService teamService;
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
     private SubscriptionService subscriptionService;
     private DlqService dlqService;
+    private ProducerService producerService;
     private HttpServer httpServer;
 
     public WebServerVerticle(
@@ -102,9 +136,21 @@ public class WebServerVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        setupEntityServices();
-        performValidations();
-        startHttpServer(startPromise);
+        setupEntityServices()
+                .compose(v -> initializeCaches())
+                .compose(v -> setupEventHandlers())
+                .compose(v -> {
+                    performValidations();
+                    return startHttpServer();
+                })
+                .onSuccess(v -> {
+                    log.info("WebServer verticle started successfully with initialized caches");
+                    startPromise.complete();
+                })
+                .onFailure(e -> {
+                    log.error("Failed to start WebServer verticle", e);
+                    startPromise.fail(e);
+                });
     }
 
     @Override
@@ -116,21 +162,40 @@ public class WebServerVerticle extends AbstractVerticle {
         });
     }
 
-    private void setupEntityServices() {
-        String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
-        orgService = new OrgService(metaStore);
-        teamService = new TeamService(metaStore);
-        projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
-        varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
-        MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
-        ShardProvisioner shardProvisioner = new ShardProvisioner(
-            messagingStackProvider.getStorageSubscriptionService(),
-            messagingStackProvider.getStorageTopicService()
-        );
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
-        dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
+    @SuppressWarnings("unchecked")
+    private Future<Void> setupEntityServices() {
+        Promise<Void> promise = Promise.promise();
+        try {
+            orgService = new OrgService(metaStore);
+            teamService = new TeamService(metaStore);
+            projectService = new ProjectService(metaStore, meterRegistry);
+            varadhiTopicService = new VaradhiTopicService(
+                    messagingStackProvider.getStorageTopicService(),
+                    metaStore
+            );
 
+            MessageExchange messageExchange = clusterManager.getExchange(vertx);
+            ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
+            ShardProvisioner shardProvisioner = new ShardProvisioner(
+                    messagingStackProvider.getStorageSubscriptionService(),
+                    messagingStackProvider.getStorageTopicService()
+            );
+            subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
+            dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
+
+            String deployedRegion = configuration.getRestOptions().getDeployedRegion();
+            Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
+            producerService = new ProducerService(
+                    deployedRegion,
+                    producerProvider,
+                    meterRegistry
+            );
+
+            promise.complete();
+        } catch (Exception e) {
+            promise.fail(e);
+        }
+        return promise.future();
     }
 
     private void performValidations() {
@@ -141,17 +206,37 @@ public class WebServerVerticle extends AbstractVerticle {
         }
     }
 
-    private void startHttpServer(Promise<Void> startPromise) {
-        Router router = createApiRouter();
-        httpServer = vertx.createHttpServer(configuration.getHttpServerOptions()).requestHandler(router).listen(h -> {
-            if (h.succeeded()) {
-                log.info("HttpServer Started.");
-                startPromise.complete();
-            } else {
-                log.warn("HttpServer Start Failed." + h.cause());
-                startPromise.fail("HttpServer Start Failed." + h.cause());
-            }
-        });
+    private Future<Void> initializeCaches() {
+        return projectService.initializeCache()
+                .compose(v -> {
+                    log.info("Project cache initialized successfully");
+                    List<VaradhiTopic> topics = metaStore.getAllTopics();
+                    return producerService.initializeCaches(topics);
+                })
+                .onSuccess(v -> log.info("All caches initialized successfully"))
+                .onFailure(e -> log.error("Cache initialization failed", e));
+    }
+
+    private Future<Void> startHttpServer() {
+        Promise<Void> promise = Promise.promise();
+        try {
+            Router router = createApiRouter();
+            httpServer = vertx.createHttpServer(configuration.getHttpServerOptions())
+                    .requestHandler(router)
+                    .listen(h -> {
+                        if (h.succeeded()) {
+                            log.info("HttpServer Started.");
+                            promise.complete();
+                        } else {
+                            log.error("HttpServer Start Failed: {}", h.cause().getMessage());
+                            promise.fail(h.cause());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Failed to start HTTP server", e);
+            promise.fail(e);
+        }
+        return promise.future();
     }
 
     private Router createApiRouter() {
@@ -239,20 +324,9 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
-    @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
         HeaderValidationHandler headerValidator = new HeaderValidationHandler(configuration.getRestOptions());
-        Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
-        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
-
-        ProducerService producerService = new ProducerService(
-            deployedRegion,
-            configuration.getProducerOptions(),
-            producerProvider,
-            topicProvider,
-            meterRegistry
-        );
         ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
             configuration.getProducerOptions().isMetricEnabled(),
             meterRegistry
@@ -314,5 +388,31 @@ public class WebServerVerticle extends AbstractVerticle {
             }
             route.failureHandler(defaultFailureHandler);
         }
+    }
+
+    @SuppressWarnings ("unchecked")
+    private Future<Void> setupEventHandlers() {
+        Promise<Void> promise = Promise.promise();
+        try {
+            List<EntityEventHandler> handlers = new ArrayList<>();
+            handlers.add(new ProjectEntityEventHandler(projectService));
+
+            Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
+            handlers.add(new TopicEntityEventHandler(producerService, configuration.getRestOptions().getDeployedRegion(), producerProvider));
+
+            CompositeEntityEventHandler compositeHandler = new CompositeEntityEventHandler(handlers);
+            EntityEventApiHandler apiHandler = new EntityEventApiHandler(compositeHandler);
+
+            MessageRouter messageRouter = clusterManager.getRouter(vertx);
+
+            messageRouter.requestHandler("cache-events", "processEvent", apiHandler::handleEvent);
+
+            log.info("Cache event handlers initialized");
+            promise.complete();
+        } catch (Exception e) {
+            log.error("Failed to setup event handlers", e);
+            promise.fail(e);
+        }
+        return promise.future();
     }
 }
