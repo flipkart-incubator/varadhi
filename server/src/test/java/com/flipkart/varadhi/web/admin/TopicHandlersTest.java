@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;

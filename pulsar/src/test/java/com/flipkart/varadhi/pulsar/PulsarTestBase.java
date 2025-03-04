@@ -1,14 +1,13 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
-
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.TestStdHeaders;
 
 public class PulsarTestBase {
 
     public static void setUp() {
-        if (!HeaderUtils.getInstance().isInitialized()) {
-            HeaderUtils.init(MessageHeaderUtils.fetchDummyHeaderConfiguration());
+        if (!StdHeaders.isGlobalInstanceInitialized()) {
+            StdHeaders.init(TestStdHeaders.get());
         }
     }
 }

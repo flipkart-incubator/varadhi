@@ -1,23 +1,26 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.TelemetryType;
-import io.micrometer.core.instrument.*;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j (topic = "RequestLogs")
 @ExtensionMethod ({Extensions.RoutingContextExtension.class})
@@ -113,11 +116,14 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
 
     private List<Tag> getMessageTags(RoutingContext ctx) {
         List<Tag> tags = new ArrayList<>();
-        if (null != ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID))) {
-            tags.add(Tag.of("message.id", ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID))));
+        String msgId = ctx.request().getHeader(StdHeaders.get().msgId());
+        String groupId = ctx.request().getHeader(StdHeaders.get().groupId());
+
+        if (null != msgId) {
+            tags.add(Tag.of("message.id", msgId));
         }
-        if (null != ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))) {
-            tags.add(Tag.of("group.id", ctx.request().getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))));
+        if (null != groupId) {
+            tags.add(Tag.of("group.id", groupId));
         }
         tags.add(Tag.of("payload.size", String.valueOf(ctx.body() != null ? ctx.body().length() : 0)));
         return tags;

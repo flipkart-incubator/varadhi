@@ -1,28 +1,29 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.spi.services.DummyProducer;
-import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.client.HttpRequest;
-import net.bytebuddy.utility.RandomString;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
+
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.HttpRequest;
+import net.bytebuddy.utility.RandomString;
 
 public class PreProduceHandlerTest extends ProduceTestBase {
     PreProduceHandler validationHandler;
@@ -67,7 +68,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
         sendRequestWithPayload(
             request,
             payload,
@@ -81,7 +82,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighBodyAndHeaderSize() throws InterruptedException {
         String randomString = RandomString.make(99);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
@@ -98,8 +99,8 @@ public class PreProduceHandlerTest extends ProduceTestBase {
 
     @Test
     public void testProduceWithMultiValueHeaderIsSingleHeader() throws InterruptedException {
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);

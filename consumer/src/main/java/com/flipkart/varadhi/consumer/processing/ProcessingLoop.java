@@ -1,15 +1,5 @@
 package com.flipkart.varadhi.consumer.processing;
 
-import com.flipkart.varadhi.consumer.*;
-import com.flipkart.varadhi.consumer.concurrent.Context;
-import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
-import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
-import com.flipkart.varadhi.entities.InternalQueueType;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +7,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+
+import com.flipkart.varadhi.consumer.*;
+import com.flipkart.varadhi.consumer.concurrent.Context;
+import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
+import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
+import com.flipkart.varadhi.entities.InternalQueueType;
+import com.flipkart.varadhi.entities.StdHeaders;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -143,7 +143,7 @@ public abstract class ProcessingLoop implements Context.Task {
                 log.info(
                     "Delivery attempt was made. queue: {}, message id: {}. status: {}",
                     type,
-                    msg.getMessage().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID)),
+                    msg.getMessage().getHeader(StdHeaders.get().msgId()),
                     response.statusCode()
                 );
                 if (response.success()) {

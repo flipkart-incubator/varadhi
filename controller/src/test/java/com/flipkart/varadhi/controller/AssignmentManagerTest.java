@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.exceptions.CapacityException;
+import com.flipkart.varadhi.common.exceptions.CapacityException;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import io.micrometer.core.instrument.MeterRegistry;

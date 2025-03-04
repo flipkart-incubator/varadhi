@@ -1,7 +1,8 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.VaradhiCache;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;

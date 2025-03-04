@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.exceptions.ProduceException;
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;

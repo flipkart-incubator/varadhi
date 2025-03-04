@@ -5,7 +5,7 @@ import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
-import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.common.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -69,7 +69,7 @@ class DefaultAuthorizationProviderTest {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent = """
                     metaStoreOptions:
-                      providerClassName: "com.flipkart.varadhi.utils.InvalidMetaStoreProvider"
+                      providerClassName: "com.flipkart.varadhi.common.utils.InvalidMetaStoreProvider"
                       configFile: ""
                     roleDefinitions:
                       org.admin:

@@ -3,14 +3,14 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.HashMap;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.common.utils.IamPolicyHelper.getAuthResourceFQN;
 
 public class IamPolicyService {
     private final MetaStore metaStore;

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.produce;
 
 
-import com.flipkart.varadhi.Result;
+import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.ProduceStatus;
 import com.flipkart.varadhi.entities.TopicState;

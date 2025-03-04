@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import static com.flipkart.varadhi.Constants.RestDefaults.*;
+import static com.flipkart.varadhi.common.Constants.RestDefaults.*;
 
 @Data
 public class RestOptions {

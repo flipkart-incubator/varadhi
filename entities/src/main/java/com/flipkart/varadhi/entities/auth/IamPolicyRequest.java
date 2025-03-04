@@ -18,9 +18,7 @@ public class IamPolicyRequest implements Validatable {
     @NotNull Set<String> roles;
 
     @JsonCreator
-    public IamPolicyRequest(@JsonProperty ("subject")
-    String subject, @JsonProperty ("roles")
-    Set<String> roles) {
+    public IamPolicyRequest(@JsonProperty ("subject") String subject, @JsonProperty ("roles") Set<String> roles) {
         this.subject = subject;
         this.roles = roles;
     }
