@@ -308,7 +308,7 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
 
         return CompletableFuture.supplyAsync(() -> {
             ClusterMessage message = ClusterMessage.of(event);
-            return messageExchange.request(clusterMemberId, "processEvent", message)
+            return messageExchange.request("cache-events", "processEvent", message)
                                   .orTimeout(
                                       eventProcessorConfig.getClusterMemberTimeoutMs(),
                                       TimeUnit.MILLISECONDS
