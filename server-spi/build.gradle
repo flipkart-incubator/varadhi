@@ -1,0 +1,16 @@
+plugins {
+    id "com.flipkart.varadhi.java-published-library-conventions"
+    id 'java-test-fixtures'
+}
+
+dependencies {
+    api(project(':entities'))
+    api(project(':spi'))
+
+    api(libs.vertx.core)
+    api(libs.vertx.web)
+
+    api(libs.jackson.databind)
+
+    testFixturesImplementation(libs.guava)
+}
