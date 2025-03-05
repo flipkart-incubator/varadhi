@@ -31,7 +31,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
-    private Authenticator authenticationProvider;
+    private Authenticator authenticator;
 
     @Override
     public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
@@ -46,8 +46,8 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                     "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
                 );
             }
-            authenticationProvider = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
-            authenticationProvider.init(authenticationConfig);
+            authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
+            authenticator.init(authenticationConfig);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(
                 "Authentication provider class not found: " + authenticationConfig.getProviderClassName(),
@@ -57,7 +57,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new RuntimeException("Failed to create authentication provider", e);
         }
 
-        return new CustomAuthenticationHandler(authenticationProvider);
+        return new CustomAuthenticationHandler(authenticator);
     }
 
     private Org parseOrg(RoutingContext routingContext) {
@@ -77,7 +77,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         Org org = parseOrg(routingContext);
 
-        Future<UserContext> userContext = authenticationProvider.authenticate(
+        Future<UserContext> userContext = authenticator.authenticate(
             org,
             createRequestContext(routingContext)
         );
