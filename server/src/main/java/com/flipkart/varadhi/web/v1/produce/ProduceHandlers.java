@@ -1,20 +1,10 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
-import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
-import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -23,6 +13,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
@@ -31,13 +22,22 @@ import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
+
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 
 
 @Slf4j

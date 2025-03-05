@@ -1,6 +1,6 @@
 ---
 metaStoreOptions:
-  providerClassName: "com.flipkart.varadhi.common.utils.MockMetaStoreProvider"
+  providerClassName: "com.flipkart.varadhi.utils.MockMetaStoreProvider"
   configFile: ""
 roleDefinitions:
   org.admin:

@@ -1,12 +1,5 @@
 package com.flipkart.varadhi.web.produce;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-
-import org.mockito.ArgumentCaptor;
-
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
@@ -20,9 +13,14 @@ import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
-
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
+import org.mockito.ArgumentCaptor;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class ProduceTestBase extends WebTestBase {
     ProduceHandlers produceHandlers;
@@ -58,7 +56,7 @@ public class ProduceTestBase extends WebTestBase {
             preProduceHandler,
             projectService,
             metricHandler,
-            MessageHeaderUtils.fetchTestConfiguration(),
+            MessageHeaderUtils.getTestConfiguration(),
             deployedRegion
         );
         route = router.post("/projects/:project/topics/:topic/produce");

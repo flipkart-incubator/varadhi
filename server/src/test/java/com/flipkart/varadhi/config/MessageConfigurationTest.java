@@ -1,21 +1,20 @@
 package com.flipkart.varadhi.config;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.flipkart.varadhi.entities.StdHeaders;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MessageConfigurationTest {
     @ParameterizedTest
@@ -73,7 +72,7 @@ public class MessageConfigurationTest {
 
     @Test
     public void testMissingRequiredHeaders() {
-        MessageConfiguration msgConfig = MessageHeaderUtils.fetchTestConfiguration();
+        MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration();
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
         msgConfig.getRequiredHeaders()
@@ -106,7 +105,7 @@ public class MessageConfigurationTest {
         headers.put("x__header3", "value3");
         headers.put("x-header4", "value4");
         headers.put("x_Restbus_identity", "value5");
-        MessageConfiguration msgConfig = MessageHeaderUtils.fetchTestConfiguration();
+        MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration();
         Multimap<String, String> copiedHeaders = msgConfig.filterCompliantHeaders(headers);
 
         Assertions.assertEquals(10, copiedHeaders.size());
@@ -134,7 +133,7 @@ public class MessageConfigurationTest {
 
     @Test
     public void ensureHeaderOrderIsMaintained() {
-        MessageConfiguration msgConfig = MessageHeaderUtils.fetchTestConfiguration();
+        MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration();
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put("x_multi_value1", "multi_value1_2");
         headers.put("x_multi_value1", "multi_value1_1");
@@ -168,7 +167,7 @@ public class MessageConfigurationTest {
         headers.put("aaa_multi_value1", "multi_value1_3");
         headers.put("bbb_multi_value1", "multi_value1_3");
 
-        MessageConfiguration msgConfig = MessageHeaderUtils.fetchTestConfiguration(filterNonCompliantHeaders);
+        MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders);
 
         Multimap<String, String> copiedHeaders = msgConfig.filterCompliantHeaders(headers);
 

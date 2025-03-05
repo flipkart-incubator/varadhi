@@ -59,7 +59,6 @@ public class PulsarProducerTest extends PulsarTestBase {
 
         options = new ProducerOptions();
         hostname = "some_host_name";
-        super.setUp();
     }
 
 
