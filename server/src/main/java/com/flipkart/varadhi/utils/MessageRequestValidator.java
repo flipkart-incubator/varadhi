@@ -9,6 +9,14 @@ import com.google.common.collect.Multimap;
 
 public class MessageRequestValidator {
 
+    /**
+     * The headers must be normalized according to the header config. If the config is capitalized, then the headers
+     * object here must be capitalized as well.
+     * 
+     * @param msgConfig
+     * @param requestHeaders
+     * @param bodyLength
+     */
     public static void ensureHeaderSemanticsAndSize(
         MessageConfiguration msgConfig,
         Multimap<String, String> requestHeaders,

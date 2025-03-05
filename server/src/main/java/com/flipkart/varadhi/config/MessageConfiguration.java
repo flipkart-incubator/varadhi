@@ -2,23 +2,33 @@ package com.flipkart.varadhi.config;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
+import lombok.Getter;
 
-@Builder
-public record MessageConfiguration(
-    @NotNull StdHeaders stdHeaders,
-    @NotNull int maxHeaderValueSize,
-    @NotNull int maxRequestSize,
-    @NotNull boolean filterNonCompliantHeaders
-) {
+@Getter
+public class MessageConfiguration {
+
+    @NotNull
+    private final StdHeaders stdHeaders;
+
+    @NotNull
+    private final int maxHeaderValueSize;
+
+    @NotNull
+    private final int maxRequestSize;
+
+    @NotNull
+    private final boolean filterNonCompliantHeaders;
+
+    private final List<String> requiredHeaders;
+
     @JsonCreator
     public MessageConfiguration(
         @JsonProperty ("headers") StdHeaders stdHeaders,
@@ -30,6 +40,7 @@ public record MessageConfiguration(
         this.maxHeaderValueSize = maxHeaderValueSize;
         this.maxRequestSize = maxRequestSize;
         this.filterNonCompliantHeaders = filterNonCompliantHeaders;
+        this.requiredHeaders = List.of(stdHeaders.msgId());
         validate();
     }
 
@@ -55,10 +66,9 @@ public record MessageConfiguration(
         return stdHeaders.allowedPrefix().stream().anyMatch(value::startsWith);
     }
 
-    public List<String> getRequiredHeaders() {
-        return List.of(stdHeaders.msgId());
-    }
-
+    /**
+     * @param headers which must be normalized
+     */
     public void ensureRequiredHeaders(Multimap<String, String> headers) {
         getRequiredHeaders().forEach(key -> {
             if (!headers.containsKey(key)) {
@@ -68,7 +78,8 @@ public record MessageConfiguration(
     }
 
     /**
-     * The method needs to return a copy.
+     * The method needs to return a copy with normalized casing of headers.
+     *
      * @param headers
      * @return
      */
@@ -76,17 +87,59 @@ public record MessageConfiguration(
         Multimap<String, String> copy = ArrayListMultimap.create();
 
         if (!filterNonCompliantHeaders) {
-            copy.putAll(headers);
+            for (Map.Entry<String, String> entry : headers.entries()) {
+                copy.put(entry.getKey().toUpperCase(), entry.getValue());
+            }
             return copy;
         }
 
         for (Map.Entry<String, String> entry : headers.entries()) {
-            String key = entry.getKey();
+            String key = entry.getKey().toUpperCase();
             boolean validPrefix = stdHeaders.allowedPrefix().stream().anyMatch(key::startsWith);
             if (validPrefix) {
                 copy.put(key, entry.getValue());
             }
         }
         return copy;
+    }
+
+    public StdHeaders stdHeaders() {
+        return stdHeaders;
+    }
+
+    public int maxHeaderValueSize() {
+        return maxHeaderValueSize;
+    }
+
+    public int maxRequestSize() {
+        return maxRequestSize;
+    }
+
+    public boolean filterNonCompliantHeaders() {
+        return filterNonCompliantHeaders;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this)
+            return true;
+        if (obj == null || obj.getClass() != this.getClass())
+            return false;
+        var that = (MessageConfiguration)obj;
+        return Objects.equals(this.stdHeaders, that.stdHeaders) && this.maxHeaderValueSize == that.maxHeaderValueSize
+               && this.maxRequestSize == that.maxRequestSize && this.filterNonCompliantHeaders
+                                                                == that.filterNonCompliantHeaders;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(stdHeaders, maxHeaderValueSize, maxRequestSize, filterNonCompliantHeaders);
+    }
+
+    @Override
+    public String toString() {
+        return "MessageConfiguration[" + "stdHeaders=" + stdHeaders + ", " + "maxHeaderValueSize=" + maxHeaderValueSize
+               + ", " + "maxRequestSize=" + maxRequestSize + ", " + "filterNonCompliantHeaders="
+               + filterNonCompliantHeaders + ']';
     }
 }
