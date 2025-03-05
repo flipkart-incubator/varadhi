@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.common.utils;
+package com.flipkart.varadhi.utils;
 
 import io.micrometer.core.instrument.Tags;
 import io.vertx.core.MultiMap;

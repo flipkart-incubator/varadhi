@@ -1,7 +1,7 @@
 package com.flipkart.varadhi;
 
 
-import static com.flipkart.varadhi.common.utils.LoaderUtils.loadClass;
+import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.spi.ConfigFileResolver;

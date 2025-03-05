@@ -1,21 +1,10 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
-import static org.mockito.Mockito.*;
-
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.pulsar.client.api.*;
-import org.apache.pulsar.client.impl.*;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.SimpleMessage;
@@ -27,6 +16,15 @@ import com.flipkart.varadhi.pulsar.PulsarTestBase;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducer;
 import com.google.common.collect.ArrayListMultimap;
+import org.apache.pulsar.client.api.*;
+import org.apache.pulsar.client.impl.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static org.mockito.Mockito.*;
 
 public class PulsarProducerTest extends PulsarTestBase {
 
@@ -41,11 +39,6 @@ public class PulsarProducerTest extends PulsarTestBase {
 
     TopicCapacityPolicy policy;
     String hostname;
-
-    @BeforeAll
-    static void preTestInitConfig() {
-        setUp();
-    }
 
     @BeforeEach
     public void preTest() throws IOException, InterruptedException {

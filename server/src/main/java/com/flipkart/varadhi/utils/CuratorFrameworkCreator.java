@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.common.utils;
+package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.config.ZookeeperConnectConfig;
 import lombok.extern.slf4j.Slf4j;

@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.common.utils.JsonMapper;
-import com.flipkart.varadhi.common.utils.JsonSeqStream;
+import com.flipkart.varadhi.utils.JsonSeqStream;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;

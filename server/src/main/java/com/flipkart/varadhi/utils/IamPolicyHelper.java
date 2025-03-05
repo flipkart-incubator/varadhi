@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.common.utils;
+package com.flipkart.varadhi.utils;
 
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;

@@ -1,8 +1,13 @@
 package com.flipkart.varadhi.pulsar;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -14,16 +19,10 @@ import com.flipkart.varadhi.spi.services.MessagingStackOptions;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.common.utils.YamlLoader;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -36,11 +35,6 @@ public class PulsarStackProviderTest extends PulsarTestBase {
     private ObjectMapper objectMapper;
     private Project project;
     private TopicPlanner planner;
-
-    @BeforeAll
-    public static void preTestInitConfig() {
-        setUp();
-    }
 
     @BeforeEach
     public void preTest() throws InterruptedException, IOException {

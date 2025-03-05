@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.flipkart.varadhi.common.utils.LoaderUtils.loadClass;
+import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
 
 @Slf4j

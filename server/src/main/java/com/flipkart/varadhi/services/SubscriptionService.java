@@ -15,7 +15,7 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.common.utils.ShardProvisioner;
+import com.flipkart.varadhi.utils.ShardProvisioner;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;

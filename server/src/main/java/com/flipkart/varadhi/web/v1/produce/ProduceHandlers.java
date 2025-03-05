@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.common.utils.MessageRequestValidator;
+import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;

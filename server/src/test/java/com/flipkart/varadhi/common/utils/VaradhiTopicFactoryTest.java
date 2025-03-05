@@ -11,6 +11,7 @@ import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

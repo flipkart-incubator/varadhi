@@ -5,7 +5,6 @@ module com.flipkart.varadhi.entities {
     requires com.google.common;
     requires jakarta.validation;
     requires jakarta.annotation;
-    requires io.vertx.core;
 
     exports com.flipkart.varadhi.entities;
     exports com.flipkart.varadhi.entities.cluster;

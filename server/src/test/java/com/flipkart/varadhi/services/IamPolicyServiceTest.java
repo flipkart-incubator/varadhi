@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Set;
 
-import static com.flipkart.varadhi.common.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;

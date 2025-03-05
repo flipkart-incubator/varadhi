@@ -10,7 +10,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import java.util.HashMap;
 
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.common.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 
 public class IamPolicyService {
     private final MetaStore metaStore;

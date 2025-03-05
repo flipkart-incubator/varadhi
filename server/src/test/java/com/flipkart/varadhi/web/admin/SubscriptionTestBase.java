@@ -9,8 +9,8 @@ import java.util.UUID;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.flipkart.varadhi.common.utils.SubscriptionPropertyValidator;
-import com.flipkart.varadhi.common.utils.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
+import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;

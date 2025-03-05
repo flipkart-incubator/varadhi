@@ -23,8 +23,8 @@ import java.util.stream.Stream;
 import static com.flipkart.varadhi.common.Constants.PathParams.*;
 import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.common.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
-import static com.flipkart.varadhi.common.utils.IamPolicyHelper.toResponse;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})

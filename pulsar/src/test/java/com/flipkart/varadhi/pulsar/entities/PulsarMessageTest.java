@@ -3,13 +3,6 @@ package com.flipkart.varadhi.pulsar.entities;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import org.apache.pulsar.client.api.Schema;
-import org.apache.pulsar.client.api.TypedMessageBuilder;
-import org.apache.pulsar.client.impl.TypedMessageBuilderImpl;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
@@ -17,12 +10,13 @@ import com.flipkart.varadhi.pulsar.PulsarTestBase;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.client.api.TypedMessageBuilder;
+import org.apache.pulsar.client.impl.TypedMessageBuilderImpl;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class PulsarMessageTest extends PulsarTestBase {
-    @BeforeAll
-    static void preTest() {
-        setUp();
-    }
 
     @Test
     void testPulsarMessagesEqualsProducerMessage() {

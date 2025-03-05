@@ -1,19 +1,19 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.pulsar.config.PulsarConfig;
+import java.util.HashSet;
+import java.util.List;
+
 import com.flipkart.varadhi.common.utils.YamlLoader;
+import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.common.policies.data.TenantInfo;
 import org.apache.pulsar.common.policies.data.TenantInfoImpl;
 
-import java.util.HashSet;
-import java.util.List;
-
 import static org.apache.commons.text.CharacterPredicates.DIGITS;
 import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
-public class PulsarTestBase {
+public class PulsarE2ETestBase {
     public static final String TENANT = "testTenant";
     public static final String NAMESPACE = "testNamespace";
     static String pulsarConfigFileName = "pulsartestconfig.yml";
@@ -23,7 +23,7 @@ public class PulsarTestBase {
     ClientProvider clientProvider;
 
     static void loadPulsarConfig() {
-        String filePath = PulsarTopicServiceTest.class.getClassLoader().getResource(pulsarConfigFileName).getFile();
+        String filePath = PulsarTopicServiceE2ETest.class.getClassLoader().getResource(pulsarConfigFileName).getFile();
         pulsarConfig = YamlLoader.loadConfig(filePath, PulsarConfig.class);
     }
 

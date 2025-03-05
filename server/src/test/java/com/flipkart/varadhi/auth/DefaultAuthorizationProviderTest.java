@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
-import static com.flipkart.varadhi.common.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 

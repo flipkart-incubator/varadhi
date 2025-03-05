@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;

@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.pulsar;
 
+import java.util.List;
+
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -12,10 +14,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 
-
-public class PulsarTopicServiceTest extends PulsarTestBase {
+public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     PulsarTopicService topicService;
     Project project;
 
