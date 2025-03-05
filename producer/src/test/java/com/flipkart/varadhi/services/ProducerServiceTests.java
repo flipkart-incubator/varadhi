@@ -52,9 +52,7 @@ public class ProducerServiceTests {
 
         service = new ProducerService(
             region,
-            new ProducerOptions(),
             producerFactory::newProducer,
-            topicProvider::get,
             meterRegistry
         );
         random = new Random();

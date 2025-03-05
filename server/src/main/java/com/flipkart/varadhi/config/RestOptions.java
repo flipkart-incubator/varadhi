@@ -11,7 +11,7 @@ import static com.flipkart.varadhi.Constants.RestDefaults.*;
 @Data
 public class RestOptions {
     @NotBlank private String deployedRegion;
-    @NotNull private String projectCacheBuilderSpec = "expireAfterWrite=3600s";
+    @NotNull private String projectCacheBuilderSpec = "";
     private TopicCapacityPolicy defaultTopicCapacity = Constants.DEFAULT_TOPIC_CAPACITY;
     private boolean traceRequestEnabled = true;
     private int payloadSizeMax = PAYLOAD_SIZE_MAX;
