@@ -18,9 +18,9 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
      * Provides an authentication handler that allows anonymous access.
      * This handler should only be used in development or testing environments.
      *
-     * @param vertx The Vertx instance
-     * @param jsonObject Configuration parameters (not used for anonymous auth)
-     * @param orgResolver Organization resolver (not used for anonymous auth) 
+     * @param vertx       The Vertx instance
+     * @param jsonObject  Configuration parameters (not used for anonymous auth)
+     * @param orgResolver Organization resolver (not used for anonymous auth)
      * @return An AuthenticationHandler that allows all requests with an anonymous user
      */
 

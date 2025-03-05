@@ -38,8 +38,8 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
      * This method initializes the authenticator from the provided configuration and returns this handler
      * instance configured with that authenticator.
      *
-     * @param vertx The Vertx instance
-     * @param jsonObject Configuration parameters containing authenticator provider class name and settings
+     * @param vertx       The Vertx instance
+     * @param jsonObject  Configuration parameters containing authenticator provider class name and settings
      * @param orgResolver Organization resolver (not used in custom authentication)
      * @return This CustomAuthenticationHandler instance configured with the initialized authenticator
      * @throws RuntimeException if the authenticator provider class cannot be loaded or initialized
@@ -90,10 +90,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         Org org = parseOrg(routingContext);
 
-        Future<UserContext> userContext = authenticator.authenticate(
-            org,
-            createRequestContext(routingContext)
-        );
+        Future<UserContext> userContext = authenticator.authenticate(org, createRequestContext(routingContext));
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
