@@ -33,12 +33,25 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
     private Authenticator authenticator;
 
+    /**
+     * Provides a custom authentication handler that uses the configured Authenticator implementation.
+     * This method initializes the authenticator from the provided configuration and returns this handler
+     * instance configured with that authenticator.
+     *
+     * @param vertx The Vertx instance
+     * @param jsonObject Configuration parameters containing authenticator provider class name and settings
+     * @param orgResolver Organization resolver (not used in custom authentication)
+     * @return This CustomAuthenticationHandler instance configured with the initialized authenticator
+     * @throws RuntimeException if the authenticator provider class cannot be loaded or initialized
+     */
+
+
     @Override
     public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
         return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class));
     }
 
-    public AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
+    private AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getProviderClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
@@ -92,7 +105,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         });
     }
 
-    RequestContext createRequestContext(RoutingContext routingContext) {
+    private RequestContext createRequestContext(RoutingContext routingContext) {
         RequestContext httpContext = new RequestContext();
         try {
             httpContext.setUri(new URI(routingContext.request().uri()));
