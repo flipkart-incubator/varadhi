@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 public class AuthenticationOptions {
-    private String providerClassName;
+    private String authenticatorClassName;
 
     @ConfigFile
     private String configFile;

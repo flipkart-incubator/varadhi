@@ -53,7 +53,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     private AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
         try {
-            Class<?> providerClass = Class.forName(authenticationConfig.getProviderClassName());
+            Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
                 throw new RuntimeException(
                     "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
@@ -63,7 +63,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             authenticator.init(authenticationConfig);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(
-                "Authentication provider class not found: " + authenticationConfig.getProviderClassName(),
+                "Authentication provider class not found: " + authenticationConfig.getAuthenticatorClassName(),
                 e
             );
         } catch (Exception e) {

@@ -40,7 +40,7 @@ public class AuthnHandler implements RouteConfigurator {
         }
 
         authenticationHandler = new AuthenticationHandlerWrapper(
-            provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig.getConfigFile()), Org::of)
+            provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of)
         );
 
     }
