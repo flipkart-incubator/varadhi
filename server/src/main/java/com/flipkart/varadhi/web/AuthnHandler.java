@@ -34,15 +34,21 @@ public class AuthnHandler implements RouteConfigurator {
 
 
         } catch (ClassNotFoundException e) {
-
+            throw new InvalidConfigException(
+                "Authentication handler provider class not found: " + authenticationConfig.getHandlerProviderClassName(),
+                e
+            );
         } catch (Exception e) {
-
+            throw new InvalidConfigException("Failed to create authentication handler provider", e);
         }
 
-        authenticationHandler = new AuthenticationHandlerWrapper(
-            provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of)
-        );
-
+        try {
+            authenticationHandler = new AuthenticationHandlerWrapper(
+                    provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of)
+            );
+        } catch (Exception e) {
+            throw new InvalidConfigException("Failed to create authentication handler", e);
+        }
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
