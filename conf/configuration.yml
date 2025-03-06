@@ -98,7 +98,7 @@ messageConfiguration:
     produceIdentity: "X_PRODUCE_IDENTITY"
     produceRegion: "X_PRODUCE_REGION"
     produceTimestamp: "X_PRODUCE_TIMESTAMP"
-  maxHeaderValueSize: 100
+  maxHeaderIdSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true
 

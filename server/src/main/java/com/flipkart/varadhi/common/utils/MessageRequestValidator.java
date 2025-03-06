@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.common.utils;
 
+import java.util.List;
 import java.util.Map;
 
 import com.flipkart.varadhi.config.MessageConfiguration;
@@ -14,7 +15,7 @@ public class MessageRequestValidator {
         Multimap<String, String> requestHeaders,
         long bodyLength
     ) {
-        msgConfig.ensureRequiredHeaders(requestHeaders);
+        ensureRequiredHeaders(requestHeaders);
         long headersAndBodySize = 0;
 
         for (Map.Entry<String, String> entry : requestHeaders.entries()) {
@@ -22,13 +23,13 @@ public class MessageRequestValidator {
             String value = entry.getValue();
 
             if (isIdHeader(msgConfig.stdHeaders(), key)) {
-                if (value.length() > msgConfig.maxHeaderValueSize()) {
+                if (value.length() > msgConfig.maxHeaderIdSize()) {
                     throw new IllegalArgumentException(
                         String.format(
                             "%s %s exceeds allowed size of %d.",
                             key.equals(msgConfig.stdHeaders().msgId()) ? "Message id" : "Group id",
                             value,
-                            msgConfig.maxHeaderValueSize()
+                            msgConfig.maxHeaderIdSize()
                         )
                     );
                 }
@@ -49,5 +50,18 @@ public class MessageRequestValidator {
 
     private static boolean isIdHeader(StdHeaders stdHeaders, String key) {
         return key.equals(stdHeaders.msgId()) || key.equals(stdHeaders.groupId());
+    }
+
+    //might be separate for Topic/Queue in future
+    public static List<String> getRequiredHeaders() {
+        return List.of(StdHeaders.get().msgId());
+    }
+
+    public static void ensureRequiredHeaders(Multimap<String, String> headers) {
+        getRequiredHeaders().forEach(key -> {
+            if (!headers.containsKey(key)) {
+                throw new IllegalArgumentException(String.format("Missing required header %s", key));
+            }
+        });
     }
 }

@@ -136,9 +136,8 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
-        Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
-        headers.forEach(varadhiHeaders::put);
-        Multimap<String, String> compliantHeaders = msgConfig.filterCompliantHeaders(varadhiHeaders);
+        Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
+        //if used here why not build here
         MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, compliantHeaders, payload.length);
         //enriching headerNames with custom headerNames
         String produceIdentity = ctx.getIdentityOrDefault();
@@ -147,5 +146,27 @@ public class ProduceHandlers implements RouteProvider {
         compliantHeaders.put(StdHeaders.get().produceIdentity(), produceIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
         return new SimpleMessage(payload, compliantHeaders);
+    }
+
+    /**
+     * Converting headers to uppercase and filtering non-compliant ones.
+     * This step is necessary as Vert.x's MultiMap is already case-insensitive,
+     * allowing access to headers in a case-insensitive manner before converting
+     * to Google Multimap. The conversion to uppercase ensures consistent case insensitivity in Google Multimap.
+     * @param headers
+     * @return Multimap with headers converted to uppercase and non-compliant headers filtered
+     */
+    public Multimap<String, String> filterCompliantHeaders(MultiMap headers) {
+        Multimap<String, String> copy = ArrayListMultimap.create();
+        boolean filterNonCompliant = msgConfig.filterNonCompliantHeaders();
+        List<String> allowedPrefixes = msgConfig.stdHeaders().allowedPrefix();
+
+        for (Map.Entry<String, String> entry : headers.entries()) {
+            String key = entry.getKey().toUpperCase();
+            if (!filterNonCompliant || allowedPrefixes.stream().anyMatch(key::startsWith)) {
+                copy.put(key, entry.getValue());
+            }
+        }
+        return copy;
     }
 }

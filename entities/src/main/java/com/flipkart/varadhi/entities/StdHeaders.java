@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
 
 public class StdHeaders {
@@ -45,6 +46,7 @@ public class StdHeaders {
     private final List<String> allHeaders;
 
     @JsonCreator
+    @VisibleForTesting
     public StdHeaders(
         @JsonProperty ("allowedPrefix") List<String> allowedPrefix,
         @JsonProperty ("msgId") String msgId,
