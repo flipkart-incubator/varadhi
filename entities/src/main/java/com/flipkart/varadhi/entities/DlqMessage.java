@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.entities;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -7,13 +10,12 @@ import com.flipkart.varadhi.entities.utils.HeadersDeserializer;
 import com.flipkart.varadhi.entities.utils.HeadersSerializer;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
+import lombok.Data;
 
 @Data
 public class DlqMessage implements Message {
+
     private final byte[] payload;
     @JsonSerialize (using = HeadersSerializer.class)
     @JsonDeserialize (using = HeadersDeserializer.class)
@@ -24,13 +26,13 @@ public class DlqMessage implements Message {
     @JsonIgnore
     @Override
     public String getMessageId() {
-        return getHeader(StandardHeaders.MESSAGE_ID);
+        return getHeader(StdHeaders.get().msgId());
     }
 
     @JsonIgnore
     @Override
     public String getGroupId() {
-        return getHeader(StandardHeaders.GROUP_ID);
+        return getHeader(StdHeaders.get().groupId());
     }
 
     @JsonIgnore
@@ -58,5 +60,4 @@ public class DlqMessage implements Message {
     public Multimap<String, String> getHeaders() {
         return requestHeaders;
     }
-
 }

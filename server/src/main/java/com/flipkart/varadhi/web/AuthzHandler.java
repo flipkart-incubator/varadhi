@@ -4,7 +4,7 @@ import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.ext.web.Route;

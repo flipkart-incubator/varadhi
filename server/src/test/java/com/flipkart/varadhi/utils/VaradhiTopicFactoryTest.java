@@ -1,14 +1,9 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.InternalCompositeTopic;
-import com.flipkart.varadhi.entities.InternalQueueCategory;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import java.lang.reflect.Method;
+
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.web.entities.TopicResource;
@@ -18,13 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.lang.reflect.Method;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 class VaradhiTopicFactoryTest {
 

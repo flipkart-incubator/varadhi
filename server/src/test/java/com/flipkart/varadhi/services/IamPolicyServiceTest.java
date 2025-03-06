@@ -7,7 +7,7 @@ import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
@@ -26,8 +26,8 @@ import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.pulsar.PulsarSubscriptionFactory;
 import com.flipkart.varadhi.pulsar.PulsarTopicFactory;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
@@ -38,7 +38,7 @@ import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
@@ -67,8 +67,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createGroupedSubscription;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;

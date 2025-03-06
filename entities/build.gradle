@@ -8,7 +8,6 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
     api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")
-
     testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
     testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
 }
