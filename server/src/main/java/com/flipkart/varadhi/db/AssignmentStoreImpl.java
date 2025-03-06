@@ -1,12 +1,11 @@
 package com.flipkart.varadhi.db;
 
+import java.util.List;
+import java.util.regex.Pattern;
+
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import org.apache.curator.framework.CuratorFramework;
-
-import java.util.List;
-import java.util.regex.Pattern;
 
 import static com.flipkart.varadhi.db.ZNode.ASSIGNMENT;
 
@@ -21,11 +20,10 @@ public final class AssignmentStoreImpl implements AssignmentStore {
     /**
      * Constructs a new AssignmentStoreImpl with the given ZooKeeper curator.
      *
-     * @param zkCurator The ZooKeeper curator framework instance
      * @throws IllegalStateException if unable to create required ZooKeeper paths
      */
-    public AssignmentStoreImpl(CuratorFramework zkCurator) {
-        this.zkMetaStore = new ZKMetaStore(zkCurator);
+    public AssignmentStoreImpl(ZKMetaStore zkMetaStore) {
+        this.zkMetaStore = zkMetaStore;
         ensureEntityTypePathExists();
     }
 

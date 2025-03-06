@@ -1,16 +1,12 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.spi.db.AssignmentStore;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.MetaStoreOptions;
-import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.db.OpStore;
-import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.flipkart.varadhi.common.utils.YamlLoader;
+import com.flipkart.varadhi.spi.db.*;
+import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provider implementation for ZooKeeper-based metadata storage.
@@ -37,6 +33,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     private CuratorFramework zkCurator;
+    private ZKMetaStore zkMetaStore;
     private VaradhiMetaStore varadhiMetaStore;
     private OpStoreImpl opStore;
     private AssignmentStoreImpl assignmentStore;
@@ -53,6 +50,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
                     ZKMetaStoreConfig.class
                 );
                 zkCurator = CuratorFrameworkCreator.create(zkMetaStoreConfig.getZookeeperOptions());
+                zkCurator.start();
                 initializeStores();
             } catch (Exception e) {
                 initialized.set(false);
@@ -66,9 +64,10 @@ public class ZookeeperProvider implements MetaStoreProvider {
      * This method should only be called once during initialization.
      */
     private void initializeStores() {
-        varadhiMetaStore = new VaradhiMetaStore(zkCurator);
-        opStore = new OpStoreImpl(zkCurator);
-        assignmentStore = new AssignmentStoreImpl(zkCurator);
+        zkMetaStore = new ZKMetaStore(zkCurator);
+        varadhiMetaStore = new VaradhiMetaStore(zkMetaStore);
+        opStore = new OpStoreImpl(zkMetaStore);
+        assignmentStore = new AssignmentStoreImpl(zkMetaStore);
     }
 
     /**
@@ -118,6 +117,9 @@ public class ZookeeperProvider implements MetaStoreProvider {
     public void close() {
         if (initialized.get() && zkCurator != null) {
             try {
+                if (zkMetaStore != null) {
+                    zkMetaStore.close();
+                }
                 zkCurator.close();
             } catch (Exception e) {
                 log.error("Error closing ZooKeeper curator", e);

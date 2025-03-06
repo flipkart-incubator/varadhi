@@ -1,32 +1,20 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import java.util.List;
+
+import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.curator.framework.CuratorFramework;
 
-import java.util.List;
-
-import static com.flipkart.varadhi.db.ZNode.EVENT;
-import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
-import static com.flipkart.varadhi.db.ZNode.ORG;
-import static com.flipkart.varadhi.db.ZNode.PROJECT;
-import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
-import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
-import static com.flipkart.varadhi.db.ZNode.TEAM;
-import static com.flipkart.varadhi.db.ZNode.TOPIC;
+import static com.flipkart.varadhi.db.ZNode.*;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 /**
@@ -59,8 +47,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
      * @throws IllegalArgumentException if zkCurator is null
      * @throws MetaStoreException       if initialization fails or required paths cannot be created
      */
-    public VaradhiMetaStore(CuratorFramework zkCurator) {
-        this.zkMetaStore = new ZKMetaStore(zkCurator);
+    public VaradhiMetaStore(ZKMetaStore zkMetaStore) {
+        this.zkMetaStore = zkMetaStore;
         ensureEntityTypePathExists();
     }
 

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.db;
 
-import lombok.Getter;
-
 import java.util.Objects;
+
+import lombok.Getter;
 
 /**
  * Represents a ZooKeeper node in the Varadhi system.
@@ -45,7 +45,7 @@ public final class ZNode {
     public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment");
     // TODO: Hierarchical or Flat?
     public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation");
-    public static final ZNodeKind EVENT = new ZNodeKind("Event");
+    public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent");
 
     public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
