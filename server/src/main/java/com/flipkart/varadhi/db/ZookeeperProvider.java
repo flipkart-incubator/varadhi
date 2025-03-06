@@ -50,7 +50,6 @@ public class ZookeeperProvider implements MetaStoreProvider {
                     ZKMetaStoreConfig.class
                 );
                 zkCurator = CuratorFrameworkCreator.create(zkMetaStoreConfig.getZookeeperOptions());
-                zkCurator.start();
                 initializeStores();
             } catch (Exception e) {
                 initialized.set(false);
