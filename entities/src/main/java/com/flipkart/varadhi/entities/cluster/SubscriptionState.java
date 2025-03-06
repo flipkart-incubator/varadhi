@@ -35,7 +35,8 @@ public class SubscriptionState {
      *
      * Will be populated only when the assignmentState is ASSIGNED.
      */
-    @Nullable private final ConsumerState consumerState;
+    @Nullable
+    private final ConsumerState consumerState;
 
     public static SubscriptionState mergeShardStates(List<SubscriptionState> states) {
         int totalShards = states.size();
