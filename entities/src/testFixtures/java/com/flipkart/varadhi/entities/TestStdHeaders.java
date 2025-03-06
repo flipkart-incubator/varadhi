@@ -6,7 +6,7 @@ public class TestStdHeaders {
 
     public static StdHeaders get() {
         return new StdHeaders(
-            List.of("X_", "x_"),
+            List.of("X_", "X-"),
             "X_MESSAGE_ID",
             "X_GROUP_ID",
             "X_CALLBACK_CODES",

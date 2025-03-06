@@ -130,9 +130,6 @@ public class Constants {
      */
     public static class RestDefaults {
         public static final int PAYLOAD_SIZE_MAX = 5 * 1024 * 1024;
-        public static final int HEADERS_ALLOWED_MAX = 10;
-        public static final int HEADER_NAME_SIZE_MAX = 64;
-        public static final int HEADER_VALUE_SIZE_MAX = 256;
         public static final String DEFAULT_ORG = "default";
         public static final String DEFAULT_TEAM = "public";
         public static final String DEFAULT_PROJECT = "public";

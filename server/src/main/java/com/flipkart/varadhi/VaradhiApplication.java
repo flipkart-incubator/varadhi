@@ -11,7 +11,6 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
-import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.common.utils.HostUtils;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.config.AppConfiguration;
@@ -22,6 +21,7 @@ import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
@@ -56,7 +56,7 @@ public class VaradhiApplication {
             ConfigFileResolver configResolver = configReadResult.getRight();
 
             HostUtils.init();
-            StdHeaders.init(configuration.getMessageConfiguration().stdHeaders());
+            StdHeaders.init(configuration.getMessageConfiguration().getStdHeaders());
 
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration, configResolver);

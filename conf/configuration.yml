@@ -84,7 +84,7 @@ otelOptions:
 
 messageConfiguration:
   headers:
-    allowedPrefix: [ "X_" ]
+    allowedPrefix: [ "X_", "X-" ]
     msgId: "X_MESSAGE_ID"
     groupId: "X_GROUP_ID"
     callbackCodes: "X_CALLBACK_CODES"
@@ -98,7 +98,7 @@ messageConfiguration:
     produceIdentity: "X_PRODUCE_IDENTITY"
     produceRegion: "X_PRODUCE_REGION"
     produceTimestamp: "X_PRODUCE_TIMESTAMP"
-  maxHeaderValueSize: 100
+  maxIdHeaderSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true
 

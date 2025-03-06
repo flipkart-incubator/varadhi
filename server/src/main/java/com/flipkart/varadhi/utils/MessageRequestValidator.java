@@ -23,39 +23,41 @@ public class MessageRequestValidator {
         long bodyLength
     ) {
         msgConfig.ensureRequiredHeaders(requestHeaders);
-        long headersAndBodySize = 0;
 
+        validateIdHeader(msgConfig, StdHeaders.get().msgId(), requestHeaders);
+        validateIdHeader(msgConfig, StdHeaders.get().groupId(), requestHeaders);
+
+        long headersAndBodySize = 0;
         for (Map.Entry<String, String> entry : requestHeaders.entries()) {
             String key = entry.getKey();
             String value = entry.getValue();
-
-            if (isIdHeader(msgConfig.stdHeaders(), key)) {
-                if (value.length() > msgConfig.maxHeaderValueSize()) {
-                    throw new IllegalArgumentException(
-                        String.format(
-                            "%s %s exceeds allowed size of %d.",
-                            key.equals(msgConfig.stdHeaders().msgId()) ? "Message id" : "Group id",
-                            value,
-                            msgConfig.maxHeaderValueSize()
-                        )
-                    );
-                }
-            }
             int byteLength = Utf8.encodedLength(key) + Utf8.encodedLength(value);
             headersAndBodySize += byteLength;
         }
-
         headersAndBodySize += bodyLength;
 
         // If the total size of the headerNames and body exceeds the allowed limit, throw an exception
-        if (headersAndBodySize > msgConfig.maxRequestSize()) {
+        if (headersAndBodySize > msgConfig.getMaxRequestSize()) {
             throw new IllegalArgumentException(
-                String.format("Request size exceeds allowed limit of %d bytes.", msgConfig.maxRequestSize())
+                String.format("Request size exceeds allowed limit of %d bytes.", msgConfig.getMaxRequestSize())
             );
         }
     }
 
-    private static boolean isIdHeader(StdHeaders stdHeaders, String key) {
-        return key.equals(stdHeaders.msgId()) || key.equals(stdHeaders.groupId());
+    private static void validateIdHeader(MessageConfiguration msgConfig, String key, Multimap<String, String> headers) {
+        var value = headers.get(key);
+
+        // google multimap returns empty collection for non existent key
+        if (!value.isEmpty()) {
+            if (value.size() > 1) {
+                throw new IllegalArgumentException(String.format("Multiple values for %s header found.", key));
+            }
+            var first = value.iterator().next();
+            if (first.length() > msgConfig.getMaxIdHeaderSize()) {
+                throw new IllegalArgumentException(
+                    String.format("%s %s exceeds allowed size of %d.", key, first, msgConfig.getMaxIdHeaderSize())
+                );
+            }
+        }
     }
 }

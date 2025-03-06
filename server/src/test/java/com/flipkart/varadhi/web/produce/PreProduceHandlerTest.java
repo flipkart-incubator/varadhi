@@ -71,7 +71,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
             request,
             payload,
             400,
-            "Message id " + randomString + " exceeds allowed size of 100.",
+            "X_MESSAGE_ID " + randomString + " exceeds allowed size of 100.",
             ErrorResponse.class
         );
     }
