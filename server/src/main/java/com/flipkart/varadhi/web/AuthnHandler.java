@@ -35,7 +35,8 @@ public class AuthnHandler implements RouteConfigurator {
 
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
-                "Authentication handler provider class not found: " + authenticationConfig.getHandlerProviderClassName(),
+                "Authentication handler provider class not found: " + authenticationConfig
+                                                                                          .getHandlerProviderClassName(),
                 e
             );
         } catch (Exception e) {
@@ -44,7 +45,7 @@ public class AuthnHandler implements RouteConfigurator {
 
         try {
             authenticationHandler = new AuthenticationHandlerWrapper(
-                    provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of)
+                provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of)
             );
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to create authentication handler", e);

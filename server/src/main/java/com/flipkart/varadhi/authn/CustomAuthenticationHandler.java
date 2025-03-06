@@ -4,7 +4,6 @@ import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
 import com.flipkart.varadhi.spi.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.authn.Authenticator;
@@ -51,7 +50,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver);
     }
 
-    private AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig, OrgResolver orgResolver) {
+    private AuthenticationHandler provideHandler(
+        Vertx vertx,
+        AuthenticationConfig authenticationConfig,
+        OrgResolver orgResolver
+    ) {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
@@ -67,7 +70,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                 e
             );
         } catch (ReflectiveOperationException e) {
-            throw new InvalidConfigException("Failed to create authentication provider",e);
+            throw new InvalidConfigException("Failed to create authentication provider", e);
         }
 
         return new CustomAuthenticationHandler(authenticator, orgResolver);
