@@ -7,6 +7,8 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 public class MessageRequestValidatorTest extends WebTestBase {
     @Test
@@ -29,5 +31,35 @@ public class MessageRequestValidatorTest extends WebTestBase {
             IllegalArgumentException.class,
             () -> MessageRequestValidator.ensureRequiredHeaders(varadhiHeaders)
         );
+    }
+
+    @ParameterizedTest
+    @CsvSource ({
+        "100000, 4194304, false", // 100000 headers, 4MB payload (failing case)
+        "50000, 5242880, false",  // 50000 headers, 5MB payload (failing case)
+        "200000, 3145728, false", // 200000 headers, 3MB payload (failing case)
+        "10, 1024, true"          // 10 headers, 1KB payload (passing case)
+    })
+    public void testEnsureHeaderSemanticsAndSize(int headerCount, int payloadSize, boolean shouldPass) {
+        MessageConfiguration msgConfig = MessageHeaderUtils.fetchTestConfiguration();
+
+        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
+        requestHeaders.put("X_MESSAGE_ID", "12");
+        for (int i = 0; i < headerCount; i++) {
+            requestHeaders.put("X_HEADER_" + i, "value_" + i);
+        }
+        byte[] payload = new byte[payloadSize]; // Payload size from parameters
+
+        if (shouldPass) {
+            Assertions.assertDoesNotThrow(
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, requestHeaders, payload.length)
+            );
+        } else {
+            IllegalArgumentException exception = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, requestHeaders, payload.length)
+            );
+            Assertions.assertTrue(exception.getMessage().contains("Request size exceeds allowed limit"));
+        }
     }
 }
