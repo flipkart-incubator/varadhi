@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.entities;
 
-import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;

@@ -28,9 +28,9 @@
         <setting id="org.eclipse.jdt.core.formatter.wrap_before_or_operator_multicatch" value="false"/>
         <setting id="org.eclipse.jdt.core.formatter.enabling_tag" value="@formatter:on"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.count_line_length_from_starting_position" value="false"/>
-        <setting id="org.eclipse.jdt.core.formatter.alignment_for_record_components" value="18"/>
+        <setting id="org.eclipse.jdt.core.formatter.alignment_for_record_components" value="48"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_method_declaration" value="16"/>
-        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_parameter" value="insert"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_parameter" value="do not insert"/>
         <setting id="org.eclipse.jdt.core.formatter.wrap_before_multiplicative_operator" value="true"/>
         <setting id="org.eclipse.jdt.core.formatter.keep_then_statement_on_same_line" value="false"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_explicitconstructorcall_arguments" value="insert"/>
@@ -214,7 +214,7 @@
         <setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_method_invocation" value="separate_lines_if_wrapped"/>
         <setting id="org.eclipse.jdt.core.formatter.blank_lines_after_imports" value="1"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.insert_new_line_before_root_tags" value="insert"/>
-        <setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_record_declaration" value="common_lines"/>
+        <setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_record_declaration" value="separate_lines_if_wrapped"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_method_declaration_throws" value="do not insert"/>
         <setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_switch_statement" value="common_lines"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_after_postfix_operator" value="do not insert"/>

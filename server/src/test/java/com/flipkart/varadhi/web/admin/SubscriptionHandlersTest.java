@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.entities.SubscriptionResource;

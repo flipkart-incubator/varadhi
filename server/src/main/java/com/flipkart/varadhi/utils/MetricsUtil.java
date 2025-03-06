@@ -3,9 +3,6 @@ package com.flipkart.varadhi.utils;
 import io.micrometer.core.instrument.Tags;
 import io.vertx.core.MultiMap;
 
-
-import static com.flipkart.varadhi.Constants.Tags.*;
-
 public class MetricsUtil {
 
     public static Tags getCustomHttpHeaders(MultiMap multiMap) {

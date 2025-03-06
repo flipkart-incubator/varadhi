@@ -6,7 +6,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
-import com.flipkart.varadhi.utils.YamlLoader;
+import com.flipkart.varadhi.common.utils.YamlLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 

@@ -2,8 +2,8 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.auth.AuthenticationOptions;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.core.Future;
@@ -28,7 +28,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
+import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 

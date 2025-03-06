@@ -22,9 +22,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.*;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
