@@ -2,36 +2,36 @@ package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.entities.utils.RequestContext;
+import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.spi.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.authn.Authenticator;
 import com.flipkart.varadhi.spi.utils.OrgResolver;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Slf4j
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
+    private static final String DEFAULT_ORG = "placeholder.org";
     private Authenticator authenticator;
+    private OrgResolver orgResolver;
 
     /**
      * Provides a custom authentication handler that uses the configured Authenticator implementation.
@@ -48,49 +48,43 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     @Override
     public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
-        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class));
+        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver);
     }
 
-    private AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig) {
+    private AuthenticationHandler provideHandler(Vertx vertx, AuthenticationConfig authenticationConfig, OrgResolver orgResolver) {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
-                throw new RuntimeException(
-                    "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
+                throw new InvalidConfigException(
+                    "Provider class " + providerClass.getName() + " does not implement Authenticator interface"
                 );
             }
             authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
             authenticator.init(authenticationConfig);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException(
+            throw new InvalidConfigException(
                 "Authentication provider class not found: " + authenticationConfig.getAuthenticatorClassName(),
                 e
             );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create authentication provider", e);
+        } catch (ReflectiveOperationException e) {
+            throw new InvalidConfigException("Failed to create authentication provider",e);
         }
 
-        return new CustomAuthenticationHandler(authenticator);
-    }
-
-    private Org parseOrg(RoutingContext routingContext) {
-        try {
-            Map<ResourceType, ResourceHierarchy> hierarchies = routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
-            ResourceHierarchy hf = hierarchies.get(ResourceType.ORG);
-            String orgName = hf.getResourcePath().substring(1);
-
-            return Org.of(orgName);
-        } catch (Exception e) {
-            throw new BadRequestException("Invalid org");
-        }
+        return new CustomAuthenticationHandler(authenticator, orgResolver);
     }
 
     @Override
     public void handle(RoutingContext routingContext) {
 
-        Org org = parseOrg(routingContext);
+        Org org = orgResolver.resolve(DEFAULT_ORG);
+        RequestContext requestContext = null;
+        try {
+            requestContext = createRequestContext(routingContext);
+        } catch (URISyntaxException e) {
+            throw new BadRequestException(e);
+        }
 
-        Future<UserContext> userContext = authenticator.authenticate(org, createRequestContext(routingContext));
+        Future<UserContext> userContext = authenticator.authenticate(org.getName(), requestContext);
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
@@ -102,30 +96,13 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         });
     }
 
-    private RequestContext createRequestContext(RoutingContext routingContext) {
+    private RequestContext createRequestContext(RoutingContext routingContext) throws URISyntaxException {
         RequestContext httpContext = new RequestContext();
-        try {
-            httpContext.setUri(new URI(routingContext.request().uri()));
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-        httpContext.setHeaders(getAllHeaders(routingContext.request()));
-        httpContext.setParams(getAllParams(routingContext.request()));
+        httpContext.setUri(new URI(routingContext.request().uri()));
+
+        httpContext.setHeaders(routingContext.request().headers());
+        httpContext.setParams(routingContext.request().params());
 
         return httpContext;
     }
-
-    private Map<String, String> getAllHeaders(HttpServerRequest request) {
-        Map<String, String> headers = new HashMap<>();
-        request.headers().forEach(entry -> headers.put(entry.getKey().toLowerCase(), entry.getValue()));
-        return headers;
-    }
-
-    private Map<String, String> getAllParams(HttpServerRequest request) {
-        Map<String, String> params = new HashMap<>();
-        request.params().forEach(entry -> params.put(entry.getKey(), entry.getValue()));
-        return params;
-    }
-
-
 }
