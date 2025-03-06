@@ -46,14 +46,14 @@ public class ZKMetaStoreTests {
         zkCuratorFramework.start();
         testKind = new ZNodeKind("test");
         zkMetaStore = new ZKMetaStore(zkCuratorFramework);
-        zkMetaStore.createZNode(ZNode.OfEntityType(testKind));
+        zkMetaStore.createZNode(ZNode.ofEntityType(testKind));
         data1 = new TestData("test-node1", 0, "sample-testing-node1");
         zn = getZnode(data1.getName());
     }
 
     @AfterEach
     public void closeTest() throws IOException {
-        zkMetaStore.deleteZNode(ZNode.OfEntityType(testKind));
+        zkMetaStore.deleteZNode(ZNode.ofEntityType(testKind));
         zkCuratorTestingServer.close();
     }
 
@@ -61,27 +61,27 @@ public class ZKMetaStoreTests {
     @Test
     public void testZKData() {
         TestData data2 = new TestData("test-node2", 0, "sample-testing-node2");
-        zkMetaStore.createZNodeWithData(ZNode.OfKind(testKind, data1.getName()), data1);
+        zkMetaStore.createZNodeWithData(ZNode.ofKind(testKind, data1.getName()), data1);
 
-        TestData g_data1 = zkMetaStore.getZNodeDataAsPojo(ZNode.OfKind(testKind, data1.getName()), TestData.class);
+        TestData g_data1 = zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class);
         Assertions.assertEquals(data1, g_data1);
 
-        zkMetaStore.createZNodeWithData(ZNode.OfKind(testKind, data2.getName()), data2);
-        List<String> zkChildrenNodes = zkMetaStore.listChildren(ZNode.OfEntityType(testKind));
+        zkMetaStore.createZNodeWithData(ZNode.ofKind(testKind, data2.getName()), data2);
+        List<String> zkChildrenNodes = zkMetaStore.listChildren(ZNode.ofEntityType(testKind));
         Assertions.assertEquals(2, zkChildrenNodes.size());
 
-        zkMetaStore.deleteZNode(ZNode.OfKind(testKind, data1.getName()));
-        zkMetaStore.deleteZNode(ZNode.OfKind(testKind, data2.getName()));
+        zkMetaStore.deleteZNode(ZNode.ofKind(testKind, data1.getName()));
+        zkMetaStore.deleteZNode(ZNode.ofKind(testKind, data2.getName()));
 
         ResourceNotFoundException e = Assertions.assertThrows(
             ResourceNotFoundException.class,
-            () -> zkMetaStore.getZNodeDataAsPojo(ZNode.OfKind(testKind, data1.getName()), TestData.class)
+            () -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class)
         );
         Assertions.assertEquals(String.format("test(%s) not found.", data1.getName()), e.getMessage());
     }
 
     private ZNode getZnode(String name) {
-        return ZNode.OfKind(testKind, name);
+        return ZNode.ofKind(testKind, name);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class ZKMetaStoreTests {
         doReturn(builder).when(zkCuratorFramework).create();
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any());
         MetaStoreException e = Assertions.assertThrows(MetaStoreException.class, () -> zkMetaStore.createZNode(zn));
-        Assertions.assertEquals(String.format("Failed to create path %s.", zn.getPath()), e.getMessage());
+        Assertions.assertEquals(String.format("Failed to create ZNode at path %s", zn.getPath()), e.getMessage());
     }
 
     @Test
@@ -118,7 +118,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.BadArgumentsException()).when(builder).forPath(any(), any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to create %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to create %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.createZNodeWithData(zn, data1)
         );
     }
@@ -152,7 +152,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.DataInconsistencyException()).when(builder).forPath(any(), any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to update %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to update %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.updateZNodeWithData(zn, data1)
         );
     }
@@ -185,7 +185,7 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.AuthFailedException()).when(builder).forPath(any());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to check if %s(%s) exists.", zn.getName(), zn.getPath()),
+            String.format("Failed to check existence of %s at %s", zn.getName(), zn.getPath()),
             () -> zkMetaStore.zkPathExist(zn)
         );
     }
@@ -205,14 +205,14 @@ public class ZKMetaStoreTests {
         doThrow(new KeeperException.InvalidACLException()).when(builder).forPath(zn.getPath());
         validateException(
             MetaStoreException.class,
-            String.format("Failed to delete %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
+            String.format("Failed to delete %s(%s) at %s", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.deleteZNode(zn)
         );
     }
 
     @Test
     public void testListChildrenFailure() throws Exception {
-        ZNode zn1 = ZNode.OfEntityType(testKind);
+        ZNode zn1 = ZNode.ofEntityType(testKind);
         GetChildrenBuilder builder = spy(zkCuratorFramework.getChildren());
         doReturn(builder).when(zkCuratorFramework).getChildren();
 
@@ -224,7 +224,7 @@ public class ZKMetaStoreTests {
         );
 
         ZNodeKind testKind2 = new ZNodeKind("test2");
-        ZNode zn2 = ZNode.OfEntityType(testKind2);
+        ZNode zn2 = ZNode.ofEntityType(testKind2);
         ResourceNotFoundException e = Assertions.assertThrows(
             ResourceNotFoundException.class,
             () -> zkMetaStore.listChildren(zn2)

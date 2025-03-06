@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.db.VaradhiMetaStore;
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Team;
+import java.util.List;
+
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.db.ZKMetaStore;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -16,8 +19,6 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -38,7 +39,7 @@ public class OrgServiceTest {
             )
         );
         zkCurator.start();
-        VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
+        VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
     }

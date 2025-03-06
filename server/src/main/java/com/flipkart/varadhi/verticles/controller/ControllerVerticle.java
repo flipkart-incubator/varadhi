@@ -181,7 +181,7 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     private void requeueInProgressOperation(ControllerApiMgr controllerApiMgr) {
-        List<SubscriptionOperation> pendingSubOps = getPendingSubOps(controllerApiMgr);
+        List<SubscriptionOperation> pendingSubOps = new java.util.ArrayList<>(getPendingSubOps(controllerApiMgr));
         pendingSubOps.sort(Comparator.comparing(SubscriptionOperation::getStartTime));
         log.info("Found {} inProgress operations.", pendingSubOps.size());
         pendingSubOps.forEach(subOp -> {
