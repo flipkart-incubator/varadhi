@@ -9,7 +9,7 @@
 
 - Enable annotation processing. Enable `Obtain processors from project classpath`.
 - Configure Project JDK to JDK 17, if not configured automatically.
-- Install `Adapter for Eclipse Code Formatter` plugin for code formatting. Configure it via `Settings | Adapter for Eclipse Code Formatter`. Check `Use Eclipse's Code Formatter`. Check `Eclipse workspace/project folder or config file` and choose `varadhi/codestyle.xml`. Choose `VaradhiStyle` as the formatter profile.
+- Install `Adapter for Eclipse Code Formatter` plugin for code formatting. Configure it via `Settings | Adapter for Eclipse Code Formatter`. Check `Use Eclipse's Code Formatter`. Check `Eclipse workspace/project folder or config file` and choose `varadhi/codestyle.xml`. Choose `VaradhiStyle` as the formatter profile. Check `Optimize Imports`. Under Manual Import Order put `java;;\#java;\#`.
 
 ## VSCode
 

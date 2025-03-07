@@ -184,8 +184,7 @@ spotless {
     java {
         removeUnusedImports()
         cleanthat()
-        eclipse().configFile(file("$rootDir/codestyle.xml"))
-        formatAnnotations()
+        eclipse('4.33').configFile(file("$rootDir/codestyle.xml"))
         endWithNewline()
         // licenseHeader '/* Licensed under Apache-2.0 (C)$YEAR */'
     }

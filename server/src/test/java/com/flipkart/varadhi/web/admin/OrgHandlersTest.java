@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.ErrorResponse;

@@ -12,7 +12,7 @@ import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
+import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 @Slf4j

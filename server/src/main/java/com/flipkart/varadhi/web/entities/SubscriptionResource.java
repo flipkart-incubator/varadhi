@@ -1,22 +1,15 @@
 package com.flipkart.varadhi.web.entities;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.Endpoint;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.entities.ValidateResource;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VersionedEntity;
+import com.flipkart.varadhi.entities.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Represents a subscription resource in Varadhi.
@@ -26,23 +19,31 @@ import java.util.Map;
 @ValidateResource (message = "Invalid Subscription name. Check naming constraints.", max = 64)
 public class SubscriptionResource extends VersionedEntity implements Validatable {
 
-    @NotBlank private final String project;
+    @NotBlank
+    private final String project;
 
-    @NotBlank private final String topic;
+    @NotBlank
+    private final String topic;
 
-    @NotBlank private final String topicProject;
+    @NotBlank
+    private final String topicProject;
 
-    @NotBlank private final String description;
+    @NotBlank
+    private final String description;
 
     private final boolean grouped;
 
-    @NotNull private final Endpoint endpoint;
+    @NotNull
+    private final Endpoint endpoint;
 
-    @NotNull private final RetryPolicy retryPolicy;
+    @NotNull
+    private final RetryPolicy retryPolicy;
 
-    @NotNull private final ConsumptionPolicy consumptionPolicy;
+    @NotNull
+    private final ConsumptionPolicy consumptionPolicy;
 
-    @NotNull private final Map<String, String> properties;
+    @NotNull
+    private final Map<String, String> properties;
 
     @Setter
     private LifecycleStatus.ActorCode actorCode;

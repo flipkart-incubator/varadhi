@@ -1,12 +1,15 @@
 package com.flipkart.varadhi.services;
 
+import java.util.List;
+
+import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
@@ -17,8 +20,6 @@ import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.mockito.Mockito.spy;
 
@@ -44,7 +45,7 @@ public class TeamServiceTest {
             )
         );
         zkCurator.start();
-        VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(zkCurator);
+        VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(

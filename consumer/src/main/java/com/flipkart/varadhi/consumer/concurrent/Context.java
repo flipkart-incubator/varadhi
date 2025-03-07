@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer.concurrent;
 
-import com.flipkart.varadhi.SafeCallable;
+import com.flipkart.varadhi.common.SafeCallable;
 import com.google.common.annotations.VisibleForTesting;
 import io.netty.util.concurrent.FastThreadLocal;
 import lombok.Getter;

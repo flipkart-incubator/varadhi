@@ -3,7 +3,7 @@ package com.flipkart.varadhi.authn;
 import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.spi.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.authn.Authenticator;
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static com.flipkart.varadhi.Constants.ContextKeys.USER_CONTEXT;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 @AllArgsConstructor
