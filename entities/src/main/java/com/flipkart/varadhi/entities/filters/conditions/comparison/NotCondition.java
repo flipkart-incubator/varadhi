@@ -15,8 +15,7 @@ public class NotCondition implements Condition {
     private Condition values;
 
     @JsonCreator
-    public NotCondition(@JsonProperty (value = "values", required = true)
-    Condition value) {
+    public NotCondition(@JsonProperty (value = "values", required = true) Condition value) {
         this.values = value;
     }
 

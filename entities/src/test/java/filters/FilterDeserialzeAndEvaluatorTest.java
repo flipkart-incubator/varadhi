@@ -20,70 +20,74 @@ public class FilterDeserialzeAndEvaluatorTest {
 
     private static Stream<Arguments> provideConditions() {
         return Stream.of(
-                Arguments.of(
-                        "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]}]",
-                        false, "startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"suffix\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"prefix\"}]}]",
-                        true, "startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"prefix\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"OR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
-                        true, "contains(X_abc,\"substring\") or exists(X_abc)"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"NAND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]}]",
-                        true, "not(startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"suffix\"))"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"NOR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
-                        false, "not(contains(X_abc,\"substring\") or exists(X_abc))"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"NOT\",\"values\":{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}}]",
-                        false, "not(startsWith(X_abc,\"my_prefix\"))"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}]",
-                        true, "startsWith(X_abc,\"my_prefix\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix_123\"}]",
-                        false, "startsWith(X_abc,\"my_prefix_123\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"fix\"}]",
-                        true, "endsWith(X_abc,\"fix\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]",
-                        false, "endsWith(X_abc,\"suffix\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"in\",\"key\":\"X_abc\",\"values\":[\"value1\",\"value2\",\"value3\"]}]",
-                        false, "in(X_abc,[\"value1\",\"value2\",\"value3\"])"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"in\",\"key\":\"X_abc\",\"values\":[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"]}]",
-                        true, "in(X_abc,[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"])"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"}]",
-                        false, "contains(X_abc,\"substring\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"x\"}]",
-                        true, "contains(X_abc,\"x\")"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"exists\",\"key\":\"X_abc\"}]",
-                        true, "exists(X_abc)"
-                ),
-                Arguments.of(
-                        "[{\"op\":\"exists\",\"key\":\"X_abcd\"}]",
-                        false, "exists(X_abcd)"
-                )
+            Arguments.of(
+                "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]}]",
+                false,
+                "startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"suffix\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"prefix\"}]}]",
+                true,
+                "startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"prefix\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"OR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
+                true,
+                "contains(X_abc,\"substring\") or exists(X_abc)"
+            ),
+            Arguments.of(
+                "[{\"op\":\"NAND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]}]",
+                true,
+                "not(startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"suffix\"))"
+            ),
+            Arguments.of(
+                "[{\"op\":\"NOR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
+                false,
+                "not(contains(X_abc,\"substring\") or exists(X_abc))"
+            ),
+            Arguments.of(
+                "[{\"op\":\"NOT\",\"values\":{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}}]",
+                false,
+                "not(startsWith(X_abc,\"my_prefix\"))"
+            ),
+            Arguments.of(
+                "[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}]",
+                true,
+                "startsWith(X_abc,\"my_prefix\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix_123\"}]",
+                false,
+                "startsWith(X_abc,\"my_prefix_123\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"fix\"}]",
+                true,
+                "endsWith(X_abc,\"fix\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]",
+                false,
+                "endsWith(X_abc,\"suffix\")"
+            ),
+            Arguments.of(
+                "[{\"op\":\"in\",\"key\":\"X_abc\",\"values\":[\"value1\",\"value2\",\"value3\"]}]",
+                false,
+                "in(X_abc,[\"value1\",\"value2\",\"value3\"])"
+            ),
+            Arguments.of(
+                "[{\"op\":\"in\",\"key\":\"X_abc\",\"values\":[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"]}]",
+                true,
+                "in(X_abc,[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"])"
+            ),
+            Arguments.of(
+                "[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"}]",
+                false,
+                "contains(X_abc,\"substring\")"
+            ),
+            Arguments.of("[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"x\"}]", true, "contains(X_abc,\"x\")"),
+            Arguments.of("[{\"op\":\"exists\",\"key\":\"X_abc\"}]", true, "exists(X_abc)"),
+            Arguments.of("[{\"op\":\"exists\",\"key\":\"X_abcd\"}]", false, "exists(X_abcd)")
         );
     }
 

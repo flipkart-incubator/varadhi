@@ -7,9 +7,10 @@ import com.google.common.collect.Multimap;
 
 public record EndsWithCondition(String key, String value) implements Condition {
     @JsonCreator
-    public EndsWithCondition(@JsonProperty (value = "key", required = true)
-    String key, @JsonProperty (value = "value", required = true)
-    String value) {
+    public EndsWithCondition(
+        @JsonProperty (value = "key", required = true) String key,
+        @JsonProperty (value = "value", required = true) String value
+    ) {
         this.key = key;
         this.value = value;
     }

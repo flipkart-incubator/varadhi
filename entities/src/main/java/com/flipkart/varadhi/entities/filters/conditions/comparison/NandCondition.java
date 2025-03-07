@@ -18,8 +18,7 @@ public class NandCondition implements Condition {
     private List<Condition> values;
 
     @JsonCreator
-    public NandCondition(@JsonProperty (value = "values", required = true)
-    List<Condition> values) {
+    public NandCondition(@JsonProperty (value = "values", required = true) List<Condition> values) {
         this.values = values;
     }
 

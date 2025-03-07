@@ -8,7 +8,10 @@ import jakarta.validation.constraints.NotNull;
 
 public record StartsWithCondition(String key, String value) implements Condition {
     @JsonCreator
-    public StartsWithCondition(@JsonProperty (value = "key", required = true) @NotNull String key, @JsonProperty (value = "value", required = true) @NotNull String value) {
+    public StartsWithCondition(
+        @JsonProperty (value = "key", required = true) @NotNull String key,
+        @JsonProperty (value = "value", required = true) @NotNull String value
+    ) {
         this.key = key;
         this.value = value;
     }

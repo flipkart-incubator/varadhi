@@ -18,8 +18,7 @@ public class OrCondition implements Condition {
     private List<Condition> values;
 
     @JsonCreator
-    public OrCondition(@JsonProperty (value = "values", required = true)
-    List<Condition> values) {
+    public OrCondition(@JsonProperty (value = "values", required = true) List<Condition> values) {
         this.values = values;
     }
 

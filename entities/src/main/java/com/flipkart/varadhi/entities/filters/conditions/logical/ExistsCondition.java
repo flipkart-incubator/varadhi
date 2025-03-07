@@ -7,8 +7,7 @@ import com.google.common.collect.Multimap;
 
 public record ExistsCondition(String key) implements Condition {
     @JsonCreator
-    public ExistsCondition(@JsonProperty (value = "key", required = true)
-    String key) {
+    public ExistsCondition(@JsonProperty (value = "key", required = true) String key) {
         this.key = key;
     }
 

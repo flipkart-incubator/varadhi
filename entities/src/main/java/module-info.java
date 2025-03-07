@@ -5,7 +5,6 @@ module com.flipkart.varadhi.entities {
     requires com.google.common;
     requires jakarta.validation;
     requires jakarta.annotation;
-    requires org.apache.commons.jexl3;
 
     exports com.flipkart.varadhi.entities;
     exports com.flipkart.varadhi.entities.cluster;

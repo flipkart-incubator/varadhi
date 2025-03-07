@@ -18,8 +18,7 @@ public class AndCondition implements Condition {
     private List<Condition> values;
 
     @JsonCreator
-    public AndCondition(@JsonProperty (value = "values", required = true)
-    List<Condition> values) {
+    public AndCondition(@JsonProperty (value = "values", required = true) List<Condition> values) {
         this.values = values;
     }
 

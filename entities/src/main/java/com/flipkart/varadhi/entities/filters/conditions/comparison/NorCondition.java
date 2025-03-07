@@ -18,8 +18,7 @@ public class NorCondition implements Condition {
     private List<Condition> values;
 
     @JsonCreator
-    public NorCondition(@JsonProperty (value = "values", required = true)
-    List<Condition> values) {
+    public NorCondition(@JsonProperty (value = "values", required = true) List<Condition> values) {
         this.values = values;
     }
 

@@ -58,15 +58,18 @@ public class AppConfiguration implements Validatable {
     /**
      * zookeeper options. This is used to connect to zookeeper for managing node cluster.
      */
-    @NotNull private ZookeeperConnectConfig zookeeperOptions;
+    @NotNull
+    private ZookeeperConnectConfig zookeeperOptions;
 
     /**
      * Overridable configuration to configure the amount of cpu & nic bandwidth available for this node.
      * In the future, when this becomes auto-detected, this parameter will become optional.
      */
-    @NotNull private MemberConfig member;
+    @NotNull
+    private MemberConfig member;
 
-    @NotNull private ControllerConfig controller;
+    @NotNull
+    private ControllerConfig controller;
 
     private Map<String, String> otelOptions;
 

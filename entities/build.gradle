@@ -8,14 +8,7 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
     api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")
-<<<<<<< HEAD
 
-    implementation 'org.apache.commons:commons-jexl3:3.4.0'
-    testImplementation project(path: ':common')
-||||||| 4cac077c
-
-=======
->>>>>>> master
     testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
     testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
 }
