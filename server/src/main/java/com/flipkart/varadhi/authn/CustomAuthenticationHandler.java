@@ -63,7 +63,13 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                 );
             }
             authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
-            authenticator.init(authenticationConfig);
+
+            try {
+                authenticator.init(authenticationConfig);
+            } catch (Exception e) {
+                throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
+            }
+
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
                 "Authentication provider class not found: " + authenticationConfig.getAuthenticatorClassName(),
