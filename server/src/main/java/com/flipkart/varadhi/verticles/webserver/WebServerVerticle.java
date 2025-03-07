@@ -272,12 +272,10 @@ public class WebServerVerticle extends AbstractVerticle {
     private void setupRouteConfigurators() {
         AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
         AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
-
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
             meterRegistry
         );
-
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
             configuration.getRestOptions().getPayloadSizeMax()
