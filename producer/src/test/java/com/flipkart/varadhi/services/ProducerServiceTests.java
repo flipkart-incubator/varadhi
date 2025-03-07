@@ -1,11 +1,17 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.Constants;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import com.flipkart.varadhi.exceptions.ProduceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -14,22 +20,16 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.flipkart.varadhi.utils.JsonMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-
-import static com.flipkart.varadhi.Constants.Tags.*;
+import static com.flipkart.varadhi.common.Constants.Tags.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -43,6 +43,11 @@ public class ProducerServiceTests {
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
     String region = "region1";
+
+    @BeforeAll
+    public static void setup() {
+        StdHeaders.init(TestStdHeaders.get());
+    }
 
     @BeforeEach
     public void preTest() {
@@ -59,8 +64,6 @@ public class ProducerServiceTests {
         );
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        //initialization required
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
 
     }
 
@@ -288,17 +291,17 @@ public class ProducerServiceTests {
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
-        headers.put(HeaderUtils.getHeader(MessageHeaders.MSG_ID), getMessageId());
-        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), "ANONYMOUS");
-        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), region);
-        headers.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_TIMESTAMP), System.currentTimeMillis() + "");
+        headers.put(StdHeaders.get().msgId(), getMessageId());
+        headers.put(StdHeaders.get().produceIdentity(), "ANONYMOUS");
+        headers.put(StdHeaders.get().produceRegion(), region);
+        headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
             random.nextBytes(payload);
         }
         DummyProducer.DummyMessage message = new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
-        return new ProducerMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
+        return new SimpleMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
     public ProducerMetricsEmitter getMetricEmitter(String topic, Project project, String region) {

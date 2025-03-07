@@ -1,12 +1,14 @@
 package com.flipkart.varadhi.pulsar.producer;
 
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
-import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +18,7 @@ import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.TypedMessageBuilder;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
 import static com.flipkart.varadhi.pulsar.Constants.Producer.*;
 import static org.apache.commons.text.CharacterPredicates.DIGITS;
 import static org.apache.commons.text.CharacterPredicates.LETTERS;
@@ -84,8 +83,8 @@ public class PulsarProducer implements Producer {
     }
 
     private String getPartitioningKey(Message message) {
-        if (message.hasHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID))) {
-            return message.getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID));
+        if (message.hasHeader(StdHeaders.get().groupId())) {
+            return message.getHeader(StdHeaders.get().groupId());
         }
         return stringGenerator.generate(RANDOM_PARTITION_KEY_LENGTH);
     }

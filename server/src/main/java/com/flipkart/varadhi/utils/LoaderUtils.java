@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 
 public final class LoaderUtils {
 

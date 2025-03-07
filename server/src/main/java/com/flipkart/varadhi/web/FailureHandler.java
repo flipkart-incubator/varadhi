@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.exceptions.*;
+import com.flipkart.varadhi.common.exceptions.*;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
@@ -90,7 +90,7 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review produceStatus code mapping for correctness.
+        //TODO:: review produceStatus code headerMapping for correctness.
         Class tClazz = t.getClass();
         if (t instanceof HttpException he) {
             return he.getStatusCode();

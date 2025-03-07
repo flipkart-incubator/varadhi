@@ -1,9 +1,13 @@
 package com.flipkart.varadhi.web.admin;
 
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
@@ -17,11 +21,6 @@ import com.google.common.collect.ArrayListMultimap;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
 
 public class SubscriptionTestBase extends WebTestBase {
 
@@ -164,8 +163,8 @@ public class SubscriptionTestBase extends WebTestBase {
 
     protected DlqMessage createDlqMessage(int partitionId) {
         var requestHeaders = ArrayListMultimap.<String, String>create();
-        requestHeaders.put(HeaderUtils.getHeader(MessageHeaders.MSG_ID), generateRandomHex(10));
-        requestHeaders.put(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), generateRandomHex(10));
+        requestHeaders.put(StdHeaders.get().msgId(), generateRandomHex(10));
+        requestHeaders.put(StdHeaders.get().groupId(), generateRandomHex(10));
 
         int lId = random.nextInt(5000);
         int eId = random.nextInt(40000);

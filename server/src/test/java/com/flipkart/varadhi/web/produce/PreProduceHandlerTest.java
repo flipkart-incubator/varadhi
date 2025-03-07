@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -17,11 +19,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -37,12 +35,11 @@ public class PreProduceHandlerTest extends ProduceTestBase {
         route.handler(bodyHandler).handler(ctx -> {
             ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
-        }).handler(validationHandler::validate).handler(produceHandlers::produce);
+        }).handler(validationHandler).handler(produceHandlers::produce);
         setupFailureHandler(route);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach
@@ -53,8 +50,8 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     @Test
     public void testProduceWithValidHeaders() throws InterruptedException {
 
-        request.putHeader("X_MESSAGE_ID", messageId);
-        request.putHeader("X_ForwardedFor", "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().groupId(), "host1, host2");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
@@ -69,12 +66,12 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
         String randomString = RandomString.make(101);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
         sendRequestWithPayload(
             request,
             payload,
             400,
-            "Message id " + randomString + " exceeds allowed size of 100.",
+            "X_MESSAGE_ID " + randomString + " exceeds allowed size of 100.",
             ErrorResponse.class
         );
     }
@@ -83,7 +80,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     public void testProduceWithHighBodyAndHeaderSize() throws InterruptedException {
         String randomString = RandomString.make(99);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.HTTP_URI), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
@@ -91,17 +88,33 @@ public class PreProduceHandlerTest extends ProduceTestBase {
 
         sendRequestWithPayload(
             request,
-            largeBody,
+            payload,
             400,
-            "Request size exceeds allowed limit of 5242880 bytes.",
+            "Value of Header x_header1 exceeds allowed size.",
+            ErrorResponse.class
+        );
+    }
+
+    @Test
+    public void testProduceWithHighHeaderNumbers() throws InterruptedException {
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().msgId(), "host1, host2");
+        request.putHeader("x_header1", "value1");
+        request.putHeader("x_header2", "value2");
+        request.putHeader("x_header3", "value3");
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "More Varadhi specific headers specified than allowed max(4).",
             ErrorResponse.class
         );
     }
 
     @Test
     public void testProduceWithMultiValueHeaderIsSingleHeader() throws InterruptedException {
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);

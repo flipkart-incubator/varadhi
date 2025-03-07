@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.web.produce;
 
+import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -28,7 +27,6 @@ public class ProduceTestBase extends WebTestBase {
     ProducerService producerService;
     ProjectService projectService;
     String deployedRegion = "region1";
-    String serviceHost = "localhost";
 
     ArgumentCaptor<Message> msgCapture;
     String topicPath = "/projects/project1/topics/topic1/produce";
@@ -49,16 +47,16 @@ public class ProduceTestBase extends WebTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         produceHandlers = new ProduceHandlers(
             producerService,
-            preProduceHandler::validate,
+            preProduceHandler,
             projectService,
             metricHandler,
+            MessageHeaderUtils.getTestConfiguration(),
             deployedRegion
         );
         route = router.post("/projects/:project/topics/:topic/produce");

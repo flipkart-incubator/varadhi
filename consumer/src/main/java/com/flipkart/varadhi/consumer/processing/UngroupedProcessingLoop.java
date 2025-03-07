@@ -1,17 +1,19 @@
 package com.flipkart.varadhi.consumer.processing;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import com.flipkart.varadhi.consumer.*;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.delivery.DeliveryResponse;
 import com.flipkart.varadhi.consumer.delivery.MessageDelivery;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import lombok.extern.slf4j.Slf4j;
+import com.flipkart.varadhi.entities.StdHeaders;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class UngroupedProcessingLoop extends ProcessingLoop {
@@ -79,7 +81,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
                 "Produced failed message to internal queue: {} with offset: {}. msg id: {}",
                 failedMsgInQueue,
                 offset,
-                message.getMessage().getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID))
+                message.getMessage().getHeader(StdHeaders.get().msgId())
             );
             onComplete(message, status);
         });

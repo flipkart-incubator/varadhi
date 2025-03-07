@@ -1,19 +1,22 @@
 package com.flipkart.varadhi.web.v1.produce;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -26,18 +29,15 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_RATE_LIMITED;
-import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 
 
 @Slf4j
@@ -48,6 +48,7 @@ public class ProduceHandlers implements RouteProvider {
     private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
+    private final MessageConfiguration msgConfig;
     private final String produceRegion;
 
     @Override
@@ -135,23 +136,37 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
-        //dropping headers which are not following semantics
-        Multimap<String, String> requestHeaders = ArrayListMultimap.create();
-        headers.entries().forEach(entry -> {
-            String key = entry.getKey();
-            requestHeaders.put(key, entry.getValue());
-        });
-        Multimap<String, String> varadhiHeaders = HeaderUtils.returnVaradhiRecognizedHeaders(requestHeaders);
-
-        //enriching headers with custom headers
+        Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, compliantHeaders, payload.length);
+        //enriching headerNames with custom headerNames
         String produceIdentity = ctx.getIdentityOrDefault();
 
-        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_REGION), produceRegion);
-        varadhiHeaders.put(HeaderUtils.getHeader(MessageHeaders.PRODUCE_IDENTITY), produceIdentity);
-        varadhiHeaders.put(
-            HeaderUtils.getHeader(MessageHeaders.PRODUCE_TIMESTAMP),
-            Long.toString(System.currentTimeMillis())
-        );
-        return new ProducerMessage(payload, varadhiHeaders);
+        compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
+        compliantHeaders.put(StdHeaders.get().produceIdentity(), produceIdentity);
+        compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
+        return new SimpleMessage(payload, compliantHeaders);
+    }
+
+    /**
+     * Converting headers to uppercase and filtering non-compliant ones.
+     * This step is necessary as Vert.x's MultiMap is already case-insensitive,
+     * allowing access to headers in a case-insensitive manner before converting
+     * to Google Multimap. The conversion to uppercase ensures consistent case insensitivity in Google Multimap.
+     * @param headers
+     * @return Multimap with headers converted to uppercase and non-compliant headers filtered
+     */
+    public Multimap<String, String> filterCompliantHeaders(MultiMap headers) {
+        Multimap<String, String> copy = ArrayListMultimap.create();
+
+        boolean filterNonCompliant = msgConfig.isFilterNonCompliantHeaders();
+        List<String> allowedPrefixes = msgConfig.getStdHeaders().allowedPrefix();
+
+        for (Map.Entry<String, String> entry : headers) {
+            String key = entry.getKey().toUpperCase();
+            if (!filterNonCompliant || allowedPrefixes.stream().anyMatch(key::startsWith)) {
+                copy.put(key, entry.getValue());
+            }
+        }
+        return copy;
     }
 }

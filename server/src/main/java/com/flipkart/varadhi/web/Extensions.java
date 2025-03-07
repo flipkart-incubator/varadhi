@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.utils.JsonSeqStream;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -21,8 +21,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_IS_SUPER_USER;
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_IS_SUPER_USER;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 
 
 public class Extensions {

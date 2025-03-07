@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.cluster.messages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import lombok.Getter;
 
 

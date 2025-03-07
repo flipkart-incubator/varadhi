@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.pulsar.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.Constants;
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
@@ -11,7 +11,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingException;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import org.apache.pulsar.client.admin.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,10 +1,18 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.entities.*;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.pulsar.PulsarTestBase;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducer;
 import com.google.common.collect.ArrayListMultimap;
@@ -15,15 +23,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import static com.flipkart.varadhi.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
 import static org.mockito.Mockito.*;
 
-public class PulsarProducerTest {
+public class PulsarProducerTest extends PulsarTestBase {
 
     PulsarClientImpl pulsarClient;
     ProducerBuilder<byte[]> producerBuilder;
@@ -38,7 +41,7 @@ public class PulsarProducerTest {
     String hostname;
 
     @BeforeEach
-    public void preTest() throws PulsarClientException {
+    public void preTest() throws IOException, InterruptedException {
         pulsarClient = mock(PulsarClientImpl.class);
 
         producerBuilder = spy(new ProducerBuilderImpl<>(pulsarClient, Schema.BYTES));
@@ -56,7 +59,6 @@ public class PulsarProducerTest {
 
         options = new ProducerOptions();
         hostname = "some_host_name";
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
 
@@ -128,7 +130,7 @@ public class PulsarProducerTest {
 
     Message getMessage(String payload) {
         ArrayListMultimap<String, String> requestHeaders = ArrayListMultimap.create();
-        return new ProducerMessage(payload.getBytes(), requestHeaders);
+        return new SimpleMessage(payload.getBytes(), requestHeaders);
     }
 
     @Test
@@ -153,20 +155,20 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getHeaders().put(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), groupId1);
+        message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
         pulsarProducer.produceAsync(message);
         org.apache.pulsar.client.api.Message<byte[]> actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertEquals(groupId1, actualMessage.getKey());
 
-        message.getHeaders().remove(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), groupId1);
+        message.getHeaders().remove(StdHeaders.get().groupId(), groupId1);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
         Assertions.assertNotEquals(groupId1, actualMessage.getKey());
         Assertions.assertEquals(RANDOM_PARTITION_KEY_LENGTH, actualMessage.getKeyBytes().length);
 
-        message.getHeaders().put(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), groupId2);
+        message.getHeaders().put(StdHeaders.get().groupId(), groupId2);
         pulsarProducer.produceAsync(message);
         actualMessage = messageBuilder.getMessage();
         Assertions.assertArrayEquals(payload.getBytes(), actualMessage.getData());
@@ -182,7 +184,7 @@ public class PulsarProducerTest {
         pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
-        message.getHeaders().put(HeaderUtils.getHeader(MessageHeaders.GROUP_ID), groupId1);
+        message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
         message.getHeaders().put("SomeHeader", "someheadervalue");
         message.getHeaders().put("x_foobar", "x_foobar_value");
         message.getHeaders().put("x_multivalue", "x_multivalue1");
@@ -193,7 +195,7 @@ public class PulsarProducerTest {
         Map<String, String> properites = actualMessage.getProperties();
         Assertions.assertEquals("someheadervalue", properites.get("SomeHeader"));
         Assertions.assertEquals("x_foobar_value", properites.get("x_foobar"));
-        Assertions.assertEquals(groupId1, properites.get(HeaderUtils.getHeader(MessageHeaders.GROUP_ID)));
+        Assertions.assertEquals(groupId1, properites.get(StdHeaders.get().groupId()));
         Assertions.assertEquals("x_multivalue1,x_multivalue2,x_multivalue3", properites.get("x_multivalue"));
     }
 
@@ -229,5 +231,4 @@ public class PulsarProducerTest {
         Assertions.assertTrue(ee.getCause() instanceof PulsarClientException.ProducerQueueIsFullError);
         Assertions.assertEquals("Queue full.", ee.getCause().getMessage());
     }
-
 }

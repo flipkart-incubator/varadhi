@@ -1,17 +1,32 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.Result;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.config.MessageHeaderUtils;
+import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.MessageHeaderUtils;
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import com.flipkart.varadhi.exceptions.ProduceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
+import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
+import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
+import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
+import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
+import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import com.google.common.collect.Multimap;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
@@ -22,11 +37,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,7 +68,6 @@ public class ProduceHandlersTest extends ProduceTestBase {
         span = mock(Span.class);
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         doReturn(span).when(span).setAttribute(anyString(), anyString());
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @AfterEach
@@ -72,15 +85,15 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                any()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
         Message capturedMessage = msgCapture.getValue();
-        Assertions.assertTrue(capturedMessage.hasHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID)));
+        Assertions.assertTrue(capturedMessage.hasHeader(StdHeaders.get().msgId()));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
         verify(spanProvider, times(1)).addSpan(eq(REQUEST_SPAN_NAME));
 
@@ -101,7 +114,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                 .produceToTopic(any(), any(), any());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
         sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
     }
 
@@ -117,7 +130,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
 
         data.forEach(d -> {
             ProduceResult result = ProduceResult.ofNonProducingTopic(messageId, d.state);
@@ -139,7 +152,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void testProduceFailureResult() throws InterruptedException {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
         String topicProduceFailureMsg = "Failure from messaging stack in ProduceAsync().";
         ProduceResult result = ProduceResult.of(messageId, Result.of(new ProduceException(topicProduceFailureMsg)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
@@ -167,7 +180,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                                                      any()
                                                                                                  );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
         sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
 
         doReturn(CompletableFuture.failedFuture(new RuntimeException(exceptionMessage))).when(producerService)
@@ -185,7 +198,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         doThrow(new ProduceException(exceptionMessage)).when(producerService).produceToTopic(any(), any(), any());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
         sendRequestWithPayload(request, payload, 500, exceptionMessage, ErrorResponse.class);
     }
 
@@ -199,8 +212,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                any()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.CALLBACK_CODE), "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         MultiMap multimap = new HeadersMultiMap();
         multimap.add("X_HEADER1", "h1v1");
@@ -221,7 +234,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void testProduceForNonexistingProject() throws InterruptedException {
         doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
-        request.putHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID), messageId);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(
@@ -230,5 +243,131 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                any()
                                                            );
         sendRequestWithPayload(request, payload, 404, "Project1 not found.", ErrorResponse.class);
+    }
+
+    @Test
+    public void testCopyVaradhiHeaders() {
+        MultiMap headers = new HeadersMultiMap();
+        headers.add("header1", "h1value1");
+        headers.add("Header1", "h1value2");
+        headers.add("X_UPPER_CASE", "UPPER_CASE");
+        headers.add("x_lower_case", "lower_case");
+        headers.add("X_Mixed_Case", "Mixed_Case");
+        headers.add("x_multi_value1", "multi_value1_1");
+        headers.add("x_multi_value1", "multi_value1_2");
+        headers.add("x_Multi_Value2", "multi_value2_1");
+        headers.add("x_multi_value2", "multi_Value2_1");
+        headers.add("x_multi_value2", "multi_Value2_1");
+        headers.add("xy_header2", "value2");
+        headers.add("x__header3", "value3");
+        headers.add("x-header4", "value4");
+        headers.add("x_Restbus_identity", "value5");
+        Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
+        Assertions.assertEquals(11, copiedHeaders.size());
+        Assertions.assertEquals("value5", copiedHeaders.get("x_restbus_identity".toUpperCase()).toArray()[0]);
+        Assertions.assertEquals("value3", copiedHeaders.get("x__header3".toUpperCase()).toArray()[0]);
+        Assertions.assertEquals("Mixed_Case", copiedHeaders.get("x_mixed_case".toUpperCase()).toArray()[0]);
+        Assertions.assertEquals("lower_case", copiedHeaders.get("x_lower_case".toUpperCase()).toArray()[0]);
+        Assertions.assertEquals("UPPER_CASE", copiedHeaders.get("x_upper_case".toUpperCase()).toArray()[0]);
+        Assertions.assertEquals("value4", copiedHeaders.get("x-header4".toUpperCase()).toArray()[0]);
+        Collection<String> multi_value1 = copiedHeaders.get("x_multi_value1".toUpperCase());
+        Assertions.assertEquals(2, multi_value1.size());
+        Assertions.assertTrue(multi_value1.contains("multi_value1_1"));
+        Assertions.assertTrue(multi_value1.contains("multi_value1_2"));
+        Collection<String> multi_value2 = copiedHeaders.get("x_multi_value2".toUpperCase());
+        Assertions.assertEquals(3, multi_value2.size());
+        Assertions.assertTrue(multi_value2.contains("multi_value2_1"));
+        Assertions.assertTrue(multi_value2.contains("multi_Value2_1"));
+        multi_value2.remove("multi_Value2_1");
+        Assertions.assertTrue(multi_value2.contains("multi_Value2_1"));
+
+        Assertions.assertTrue(copiedHeaders.get("xy_header2".toUpperCase()).isEmpty());
+        Assertions.assertTrue(copiedHeaders.get("header1".toUpperCase()).isEmpty());
+        Assertions.assertTrue(copiedHeaders.get("Header1".toUpperCase()).isEmpty());
+    }
+
+    @Test
+    public void ensureHeaderOrderIsMaintained() {
+        MultiMap headers = new HeadersMultiMap();
+        headers.add("x_multi_value1", "multi_value1_2");
+        headers.add("x_multi_value1", "multi_value1_1");
+        headers.add("x_Multi_Value2", "multi_value2_1");
+        headers.add("x_multi_value2", "multi_Value2_1");
+        headers.add("x_multi_value1", "multi_value1_3");
+        Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
+        String[] values = copiedHeaders.get("x_multi_value1".toUpperCase()).toArray(new String[] {});
+        Assertions.assertEquals(3, values.length);
+        Assertions.assertEquals("multi_value1_2", values[0]);
+        Assertions.assertEquals("multi_value1_1", values[1]);
+        Assertions.assertEquals("multi_value1_3", values[2]);
+
+        values = copiedHeaders.get("x_multi_value2".toUpperCase()).toArray(new String[] {});
+        Assertions.assertEquals(2, values.length);
+        Assertions.assertEquals("multi_value2_1", values[0]);
+        Assertions.assertEquals("multi_Value2_1", values[1]);
+    }
+
+    @ParameterizedTest
+    @ValueSource (booleans = {true, false})
+    public void ensureHeadersAreProcessedCorrectlyAsInsestiveMultimap(Boolean filterNonCompliantHeaders) {
+        MultiMap headers = new HeadersMultiMap();
+        headers.add("x_multi_value1", "multi_value1_2");
+        headers.add("x_multi_value1", "multi_value1_1");
+        headers.add("x_multi_value1", "multi_value1_3");
+        headers.add("x_Multi_Value2", "multi_value2_1");
+        headers.add("x_multi_value2", "multi_Value2_1");
+        headers.add("x_muLti_value2", "multi_Value2_1");
+        headers.add("abc_multi_value1", "multi_value1_3");
+        headers.add("xyz_multi_value1", "multi_value1_3");
+        headers.add("aaa_multi_value1", "multi_value1_3");
+        headers.add("bbb_multi_value1", "multi_value1_3");
+        projectService = mock(ProjectService.class);
+        producerService = mock(ProducerService.class);
+        spanProvider = mock(SpanProvider.class);
+        RestOptions options = new RestOptions();
+        options.setDeployedRegion(deployedRegion);
+        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
+        PreProduceHandler preProduceHandler = new PreProduceHandler();
+        ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
+        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
+        produceHandlers = new ProduceHandlers(
+            producerService,
+            preProduceHandler,
+            projectService,
+            metricHandler,
+            MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
+            deployedRegion
+        );
+        Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
+
+        String[] values = copiedHeaders.get("x_multi_value1".toUpperCase()).toArray(new String[] {});
+        Assertions.assertEquals(3, values.length);
+        Assertions.assertEquals("multi_value1_2", values[0]);
+        Assertions.assertEquals("multi_value1_1", values[1]);
+        Assertions.assertEquals("multi_value1_3", values[2]);
+
+        // Verify that "x_multi_value2" is always included with its 2 values
+        values = copiedHeaders.get("x_multi_value2".toUpperCase()).toArray(new String[] {});
+        Assertions.assertEquals(3, values.length);
+        Assertions.assertEquals("multi_value2_1", values[0]);
+        Assertions.assertEquals("multi_Value2_1", values[1]);
+        Assertions.assertEquals("multi_Value2_1", values[2]);
+
+        // Verify that "abc_multi_value1", "xyz_multi_value1", "aaa_multi_value1", and "bbb_multi_value1" are processed based on the filter setting
+        List<String> headerKeys = Arrays.asList(
+            "abc_multi_value1",
+            "xyz_multi_value1",
+            "aaa_multi_value1",
+            "bbb_multi_value1"
+        );
+
+        headerKeys.forEach(headerKey -> {
+            int expectedSize = filterNonCompliantHeaders ? 0 : 1;
+            Assertions.assertEquals(
+                expectedSize,
+                copiedHeaders.get(headerKey.toUpperCase()).size(),
+                "Header: " + headerKey + " was not processed as expected."
+            );
+        });
     }
 }

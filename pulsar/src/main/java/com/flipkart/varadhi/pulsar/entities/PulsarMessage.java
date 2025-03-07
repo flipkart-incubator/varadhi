@@ -1,17 +1,17 @@
 package com.flipkart.varadhi.pulsar.entities;
 
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.entities.constants.MessageHeaders;
-import com.flipkart.varadhi.pulsar.util.PropertyHelper;
-import com.flipkart.varadhi.spi.services.PolledMessage;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.apache.pulsar.client.impl.TopicMessageIdImpl;
 
-import java.util.List;
-import java.util.Map;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.pulsar.util.PropertyHelper;
+import com.flipkart.varadhi.spi.services.PolledMessage;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
@@ -66,12 +66,12 @@ public class PulsarMessage implements PolledMessage<PulsarOffset> {
 
     @Override
     public String getMessageId() {
-        return getHeader(HeaderUtils.getHeader(MessageHeaders.MSG_ID));
+        return getHeader(StdHeaders.get().msgId());
     }
 
     @Override
     public String getGroupId() {
-        return getHeader(HeaderUtils.getHeader(MessageHeaders.GROUP_ID));
+        return getHeader(StdHeaders.get().groupId());
     }
 
     @Override

@@ -1,5 +1,11 @@
 package com.flipkart.varadhi.services;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
@@ -8,20 +14,14 @@ import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.utils.HeaderUtils;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.web.admin.SubscriptionTestBase;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
 import com.flipkart.varadhi.web.entities.DlqPageMarker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
-import static com.flipkart.varadhi.TestHelper.assertException;
-import static com.flipkart.varadhi.TestHelper.assertValue;
+import static com.flipkart.varadhi.common.TestHelper.assertException;
+import static com.flipkart.varadhi.common.TestHelper.assertValue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -33,14 +33,12 @@ class DlqServiceTest extends SubscriptionTestBase {
     private ConsumerApi consumerClient;
     private DlqService dlqService;
 
-
     @BeforeEach
     public void setUp() {
         controllerClient = mock(ControllerRestApi.class);
         consumerFactory = mock(ConsumerClientFactory.class);
         consumerClient = mock(ConsumerApi.class);
         dlqService = new DlqService(controllerClient, consumerFactory);
-        HeaderUtils.initialize(MessageHeaderUtils.fetchDummyHeaderConfiguration());
     }
 
     @Test

@@ -1,82 +1,162 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.spi.db.AssignmentStore;
-import org.apache.curator.framework.CuratorFramework;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import static com.flipkart.varadhi.db.ZNode.*;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.spi.db.AssignmentStore;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 
-public class AssignmentStoreImpl implements AssignmentStore {
+import static com.flipkart.varadhi.db.ZNode.ASSIGNMENT;
+
+/**
+ * ZooKeeper-based implementation of the AssignmentStore interface.
+ * Manages persistence and retrieval of Assignment entities in ZooKeeper.
+ */
+public final class AssignmentStoreImpl implements AssignmentStore {
+    private static final String SEPARATOR = ":";
     private final ZKMetaStore zkMetaStore;
-    private final String separator = ":";
 
-    public AssignmentStoreImpl(CuratorFramework zkCurator) {
-        this.zkMetaStore = new ZKMetaStore(zkCurator);
+    /**
+     * Constructs a new AssignmentStoreImpl with the given ZooKeeper curator.
+     *
+     * @throws IllegalStateException if unable to create required ZooKeeper paths
+     */
+    public AssignmentStoreImpl(ZKMetaStore zkMetaStore) {
+        this.zkMetaStore = zkMetaStore;
         ensureEntityTypePathExists();
     }
 
+    /**
+     * Ensures that required entity type path exist in ZooKeeper.
+     * Creates missing path if necessary.
+     *
+     * @throws MetaStoreException if path creation fails
+     */
     private void ensureEntityTypePathExists() {
-        zkMetaStore.createZNode(ZNode.OfEntityType(ASSIGNMENT));
+        zkMetaStore.createZNode(ZNode.ofEntityType(ASSIGNMENT));
     }
 
+    /**
+     * Creates multiple assignments in a single atomic transaction.
+     *
+     * @param assignments List of assignments to create
+     * @throws IllegalStateException if the operation fails
+     */
     @Override
     public void createAssignments(List<Assignment> assignments) {
-        List<ZNode> nodesToCreate = new ArrayList<>();
-        assignments.forEach(a -> nodesToCreate.add(ZNode.OfAssignment(getAssignmentMapping(a))));
-        zkMetaStore.executeInTransaction(nodesToCreate, new ArrayList<>());
+        var nodesToCreate = assignments.stream().map(this::createAssignmentNode).toList();
+        zkMetaStore.executeInTransaction(nodesToCreate, List.of());
     }
 
-    @Override
-    public void deleteAssignments(List<Assignment> assignments) {
-        List<ZNode> nodesToDelete = new ArrayList<>();
-        assignments.forEach(a -> nodesToDelete.add(ZNode.OfAssignment(getAssignmentMapping(a))));
-        zkMetaStore.executeInTransaction(new ArrayList<>(), nodesToDelete);
-    }
-
-    @Override
-    public boolean exists(Assignment assignment) {
-        ZNode nodeToVerify = ZNode.OfAssignment(getAssignmentMapping(assignment));
-        return zkMetaStore.zkPathExist(nodeToVerify);
-    }
-
+    /**
+     * Retrieves assignments for a specific subscription.
+     *
+     * @param subscriptionName The name of the subscription
+     * @return List of assignments for the specified subscription
+     */
     @Override
     public List<Assignment> getSubAssignments(String subscriptionName) {
         return getAssignments(subscriptionName, ".*");
     }
 
+    /**
+     * Retrieves assignments for a specific consumer node.
+     *
+     * @param consumerNodeId The ID of the consumer node
+     * @return List of assignments for the specified consumer node
+     */
     @Override
     public List<Assignment> getConsumerNodeAssignments(String consumerNodeId) {
         return getAssignments(".*", consumerNodeId);
     }
 
+    /**
+     * Retrieves all assignments.
+     *
+     * @return List of all assignments
+     */
     @Override
     public List<Assignment> getAllAssignments() {
         return getAssignments(".*", ".*");
     }
 
+    /**
+     * Checks if an assignment exists in ZooKeeper.
+     *
+     * @param assignment The assignment to check
+     * @return true if the assignment exists, false otherwise
+     */
+    @Override
+    public boolean exists(Assignment assignment) {
+        ZNode nodeToVerify = ZNode.ofAssignment(getAssignmentMapping(assignment));
+        return zkMetaStore.zkPathExist(nodeToVerify);
+    }
+
+    /**
+     * Deletes multiple assignments in a single atomic transaction.
+     *
+     * @param assignments List of assignments to delete
+     * @throws IllegalStateException if the operation fails
+     */
+    @Override
+    public void deleteAssignments(List<Assignment> assignments) {
+        var nodesToDelete = assignments.stream().map(this::createAssignmentNode).toList();
+        zkMetaStore.executeInTransaction(List.of(), nodesToDelete);
+    }
+
+    /**
+     * Creates a ZNode for the given assignment.
+     *
+     * @param assignment The assignment to create a node for
+     * @return ZNode representing the assignment
+     */
+    private ZNode createAssignmentNode(Assignment assignment) {
+        return ZNode.ofAssignment(getAssignmentMapping(assignment));
+    }
+
+    /**
+     * Retrieves assignments based on subscription name and consumer node ID patterns.
+     *
+     * @param subscriptionName Subscription name pattern
+     * @param consumerNodeId   Consumer node ID pattern
+     * @return List of matching assignments
+     */
     private List<Assignment> getAssignments(String subscriptionName, String consumerNodeId) {
-        Pattern filter = Pattern.compile(
-            String.format("^%s%s.*%s%s$", subscriptionName, separator, separator, consumerNodeId)
+        var filter = Pattern.compile(
+            String.format("^%s%s.*%s%s$", subscriptionName, SEPARATOR, SEPARATOR, consumerNodeId)
         );
-        return zkMetaStore.listChildren(ZNode.OfEntityType(ZNode.ASSIGNMENT))
+
+        return zkMetaStore.listChildren(ZNode.ofEntityType(ZNode.ASSIGNMENT))
                           .stream()
-                          .filter(m -> filter.matcher(m).matches())
+                          .filter(filter.asPredicate())
                           .map(this::getAssignment)
-                          .collect(Collectors.toList());
+                          .toList();
     }
 
+    /**
+     * Creates the assignment mapping string from an Assignment object.
+     *
+     * @param assignment The assignment to create mapping for
+     * @return String representation of the assignment mapping
+     */
     private String getAssignmentMapping(Assignment assignment) {
-        return assignment.getSubscriptionId() + separator + assignment.getShardId() + separator + assignment
-                                                                                                            .getConsumerId();
+        return String.join(
+            SEPARATOR,
+            assignment.getSubscriptionId(),
+            String.valueOf(assignment.getShardId()),
+            assignment.getConsumerId()
+        );
     }
 
+    /**
+     * Parses an assignment mapping string into an Assignment object.
+     *
+     * @param mapping The mapping string to parse
+     * @return Assignment object
+     */
     private Assignment getAssignment(String mapping) {
-        String[] parts = mapping.split(separator);
+        var parts = mapping.split(SEPARATOR);
         return new Assignment(parts[0], Integer.parseInt(parts[1]), parts[2]);
     }
 }

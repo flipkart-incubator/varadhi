@@ -10,8 +10,8 @@ import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.*;
-import com.flipkart.varadhi.utils.HostUtils;
-import com.flipkart.varadhi.utils.YamlLoader;
+import com.flipkart.varadhi.common.utils.HostUtils;
+import com.flipkart.varadhi.common.utils.YamlLoader;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;

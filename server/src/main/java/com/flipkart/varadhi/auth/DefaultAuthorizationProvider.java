@@ -1,34 +1,34 @@
 package com.flipkart.varadhi.auth;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.utils.YamlLoader;
+import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
+import com.flipkart.varadhi.entities.auth.*;
+import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
-import com.flipkart.varadhi.entities.auth.*;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
-
 @Slf4j
-public class DefaultAuthorizationProvider implements AuthorizationProvider {
+public class DefaultAuthorizationProvider implements AuthorizationProvider, AutoCloseable {
     private static final Role EMPTY_ROLE = new Role("", Set.of());
     private DefaultAuthorizationConfig configuration;
     private IamPolicyService iamPolicyService;
+    private MetaStoreProvider metaStoreProvider;
     private volatile boolean initialised = false;
 
     @Override
@@ -57,15 +57,26 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private IamPolicyService initAuthZService(MetaStoreOptions options) {
-        MetaStoreProvider provider = loadClass(options.getProviderClassName());
-        provider.init(options);
-        MetaStore store = provider.getMetaStore();
+        metaStoreProvider = loadClass(options.getProviderClassName());
+        try {
+            metaStoreProvider.init(options);
+            MetaStore store = metaStoreProvider.getMetaStore();
 
-        if (store instanceof IamPolicyMetaStore ipm) {
-            return new IamPolicyService(store, ipm);
+            if (!(store instanceof IamPolicyMetaStore)) {
+                throw new IllegalStateException(
+                    String.format("Provider %s must implement IamPolicyMetaStore", options.getProviderClassName())
+                );
+            }
+
+            log.info(
+                "Successfully initialized authorization service with provider: {}",
+                options.getProviderClassName()
+            );
+            return new IamPolicyService(store, (IamPolicyMetaStore)store);
+        } catch (Exception e) {
+            cleanupProvider();
+            throw new IllegalStateException("Failed to initialize authorization service", e);
         }
-
-        throw new IllegalStateException("Provider must implement IamPolicyMetaStore");
     }
 
     /**
@@ -255,5 +266,23 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider {
     }
 
     private record ResourceContext(ResourceType resourceType, String resourceId, String policyPath) {
+    }
+
+    private void cleanupProvider() {
+        MetaStoreProvider provider = this.metaStoreProvider;
+        if (provider != null) {
+            try {
+                provider.close();
+            } catch (Exception ex) {
+                log.warn("Error while closing metadata store provider", ex);
+            } finally {
+                this.metaStoreProvider = null;
+            }
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        cleanupProvider();
     }
 }
