@@ -1,18 +1,7 @@
 package com.flipkart.varadhi.pulsar.producer;
 
-import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
-import static com.flipkart.varadhi.pulsar.Constants.Producer.*;
-import static org.apache.commons.text.CharacterPredicates.DIGITS;
-import static org.apache.commons.text.CharacterPredicates.LETTERS;
-
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import org.apache.commons.text.RandomStringGenerator;
-import org.apache.pulsar.client.api.ProducerAccessMode;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.TypedMessageBuilder;
 
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
@@ -22,8 +11,17 @@ import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
-
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.RandomStringGenerator;
+import org.apache.pulsar.client.api.ProducerAccessMode;
+import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.TypedMessageBuilder;
+
+import static com.flipkart.varadhi.common.Constants.RANDOM_PARTITION_KEY_LENGTH;
+import static com.flipkart.varadhi.pulsar.Constants.Producer.*;
+import static org.apache.commons.text.CharacterPredicates.DIGITS;
+import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class PulsarProducer implements Producer {

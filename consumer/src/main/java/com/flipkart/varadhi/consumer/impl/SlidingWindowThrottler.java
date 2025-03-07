@@ -1,16 +1,16 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.entities.InternalQueueType;
-import com.flipkart.varadhi.consumer.ThresholdProvider;
-import com.flipkart.varadhi.consumer.Throttler;
-import com.google.common.base.Ticker;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.function.Supplier;
+
+import com.flipkart.varadhi.consumer.ThresholdProvider;
+import com.flipkart.varadhi.consumer.Throttler;
+import com.flipkart.varadhi.entities.InternalQueueType;
+import com.google.common.base.Ticker;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Looks similar to CC. implement it and see if they share structure.

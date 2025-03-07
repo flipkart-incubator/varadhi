@@ -50,8 +50,8 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     @Test
     public void testProduceWithValidHeaders() throws InterruptedException {
 
-        request.putHeader("X_MESSAGE_ID", messageId);
-        request.putHeader("X_ForwardedFor", "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().groupId(), "host1, host2");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
@@ -88,9 +88,25 @@ public class PreProduceHandlerTest extends ProduceTestBase {
 
         sendRequestWithPayload(
             request,
-            largeBody,
+            payload,
             400,
-            "Request size exceeds allowed limit of 5242880 bytes.",
+            "Value of Header x_header1 exceeds allowed size.",
+            ErrorResponse.class
+        );
+    }
+
+    @Test
+    public void testProduceWithHighHeaderNumbers() throws InterruptedException {
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().msgId(), "host1, host2");
+        request.putHeader("x_header1", "value1");
+        request.putHeader("x_header2", "value2");
+        request.putHeader("x_header3", "value3");
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "More Varadhi specific headers specified than allowed max(4).",
             ErrorResponse.class
         );
     }

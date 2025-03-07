@@ -1,19 +1,10 @@
 package com.flipkart.varadhi.services;
 
-import static com.flipkart.varadhi.common.Constants.Tags.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.SimpleMessage;
@@ -31,9 +22,16 @@ import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.registry.otlp.OtlpMeterRegistry;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static com.flipkart.varadhi.common.Constants.Tags.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class ProducerServiceTests {
     ProducerService service;
