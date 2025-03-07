@@ -16,7 +16,6 @@ import org.apache.pulsar.client.impl.TypedMessageBuilderImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-
 class PulsarMessageTest extends PulsarTestBase {
 
     @Test

@@ -1,7 +1,18 @@
 package com.flipkart.varadhi.consumer;
 
-import com.codahale.metrics.Timer;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.consumer.concurrent.CustomThread;
 import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
@@ -23,17 +34,6 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSSocket;
 import lombok.extern.slf4j.Slf4j;
-
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class ConcurrencyAndRLDemo {
@@ -176,7 +176,7 @@ public class ConcurrencyAndRLDemo {
                                     throttlePending.decrementAndGet();
                                     throttlerCtx.stop();
                                     log.debug("task: {}, throttle acquired", id);
-                                    // AndCondition the "failure handling" is : produce to rq simulation
+                                    // And the "failure handling" is : produce to rq simulation
                                     if (errorProduceLatency > 0) {
                                         CompletableFuture<Boolean> produced = new CompletableFuture<>();
                                         httpScheduler.schedule(() -> {
