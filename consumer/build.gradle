@@ -8,6 +8,8 @@ dependencies {
     api(project(':common'))
     api(project(":core"))
 
+    implementation(libs.netty.common)
+
     api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
     implementation("org.slf4j:slf4j-api:$slf4j_version")
     implementation("org.jctools:jctools-core:$jctools_version")
