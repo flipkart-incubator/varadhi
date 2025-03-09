@@ -1,11 +1,5 @@
 package com.flipkart.varadhi.db;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -19,13 +13,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
-import org.apache.curator.framework.api.transaction.OperationType;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.OpResult;
 import org.apache.zookeeper.data.Stat;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 import static com.flipkart.varadhi.db.ZNode.EVENT;
 
@@ -58,7 +57,7 @@ import static com.flipkart.varadhi.db.ZNode.EVENT;
  * @see CuratorCache
  */
 @Slf4j
-public class ZKMetaStore implements AutoCloseable {
+public class ZKMetaStore {
 
     private final CuratorFramework zkCurator;
     private final CuratorCache eventCache;
@@ -68,7 +67,7 @@ public class ZKMetaStore implements AutoCloseable {
      */
     private static final String EVENT_PREFIX = "event";
     private static final String EVENT_DELIMITER = "-";
-    private static final String LISTENER_NODE = "change_event_listener";
+    private static final String LISTENER_NODE = "listener";
 
     /**
      * Constructs a new ZKMetaStore instance.
@@ -141,11 +140,14 @@ public class ZKMetaStore implements AutoCloseable {
         ResourceType resourceType
     ) {
         try {
+            var ops = new ArrayList<CuratorOp>(2);
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
-            var ops = List.of(
-                zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData),
-                createChangeEventZNode(znode.getName(), resourceType)
+
+            ops.add(
+                zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData)
             );
+
+            createEventZNode(znode.getName(), resourceType, ops);
 
             zkCurator.transaction().forOperations(ops);
             dataObject.setVersion(0);
@@ -223,15 +225,17 @@ public class ZKMetaStore implements AutoCloseable {
         ResourceType resourceType
     ) {
         try {
+            var ops = new ArrayList<CuratorOp>(2);
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
 
-            var ops = List.of(
+            ops.add(
                 zkCurator.transactionOp()
                          .setData()
                          .withVersion(dataObject.getVersion())
-                         .forPath(znode.getPath(), jsonData),
-                createChangeEventZNode(znode.getName(), resourceType)
+                         .forPath(znode.getPath(), jsonData)
             );
+
+            createEventZNode(znode.getName(), resourceType, ops);
 
             var results = zkCurator.transaction().forOperations(ops);
             updateDataObjectVersion(dataObject, results);
@@ -253,7 +257,7 @@ public class ZKMetaStore implements AutoCloseable {
         List<CuratorTransactionResult> results
     ) {
         results.stream()
-               .filter(r -> OperationType.SET_DATA.equals(r.getType()))
+               .filter(r -> r.getType().name().equals("SET_DATA"))
                .findFirst()
                .ifPresent(r -> dataObject.setVersion(r.getResultStat().getVersion()));
     }
@@ -367,10 +371,12 @@ public class ZKMetaStore implements AutoCloseable {
      */
     public void deleteTrackedZNode(ZNode znode, ResourceType resourceType) {
         try {
-            var ops = List.of(
-                zkCurator.transactionOp().delete().forPath(znode.getPath()),
-                createChangeEventZNode(znode.getName(), resourceType)
-            );
+            var ops = new ArrayList<CuratorOp>(2);
+
+            ops.add(zkCurator.transactionOp().delete().forPath(znode.getPath()));
+
+            createEventZNode(znode.getName(), resourceType, ops);
+
             zkCurator.transaction().forOperations(ops);
         } catch (Exception e) {
             handleDeleteException(znode, e);
@@ -445,17 +451,10 @@ public class ZKMetaStore implements AutoCloseable {
         }
 
         var ops = new ArrayList<CuratorOp>(toAdd.size() + toDelete.size());
-
-
+        toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
+        toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
 
         try {
-            for (var zNode : toAdd) {
-                ops.add(zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(zNode.getPath()));
-            }
-            for (var zNode : toDelete) {
-                ops.add(addDeleteZNodeOp(zNode));
-            }
-
             var results = zkCurator.transaction().forOperations(ops);
             logFailedOperations(results);
         } catch (KeeperException e) {
@@ -559,15 +558,21 @@ public class ZKMetaStore implements AutoCloseable {
      *
      * @param resourceName Name of the resource being tracked
      * @param resourceType Type of the resource being tracked
+     * @param ops          List of curator operations to which the create operation will be added
      * @throws MetaStoreException if the creation operation fails
      */
-    private CuratorOp createChangeEventZNode(String resourceName, ResourceType resourceType) {
+    private void createEventZNode(String resourceName, ResourceType resourceType, List<CuratorOp> ops) {
         try {
+            var eventsPath = ZNode.ofEntityType(EVENT).getPath();
             var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.toString(), resourceName, "");
-            log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
 
-            var eventsPath = ZNode.ofKind(EVENT, nodeName).getPath();
-            return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(eventsPath);
+            log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
+            ops.add(
+                zkCurator.transactionOp()
+                         .create()
+                         .withMode(CreateMode.PERSISTENT_SEQUENTIAL)
+                         .forPath(eventsPath + "/" + nodeName)
+            );
         } catch (Exception e) {
             throw new MetaStoreException(
                 String.format("Failed to create event znode for resource %s of type %s", resourceName, resourceType),
@@ -666,13 +671,6 @@ public class ZKMetaStore implements AutoCloseable {
             log.debug("Deleted event znode at path {}", path);
         } catch (Exception e) {
             throw new MetaStoreException(String.format("Failed to delete event znode at path %s", path), e);
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-        if (eventCache != null) {
-            eventCache.close();
         }
     }
 }

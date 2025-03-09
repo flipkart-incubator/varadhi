@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.db;
 
-import java.util.List;
-
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
+import org.apache.curator.framework.CuratorFramework;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.db.ZNode.SHARD_OP;
 import static com.flipkart.varadhi.db.ZNode.SUB_OP;
@@ -20,10 +23,11 @@ public class OpStoreImpl implements OpStore {
     /**
      * Constructs a new OpStoreImpl with the given ZooKeeper curator.
      *
+     * @param zkCurator The ZooKeeper curator framework instance
      * @throws IllegalArgumentException if zkCurator is null
      */
-    public OpStoreImpl(ZKMetaStore zkMetaStore) {
-        this.zkMetaStore = zkMetaStore;
+    public OpStoreImpl(CuratorFramework zkCurator) {
+        this.zkMetaStore = new ZKMetaStore(zkCurator);
         ensureEntityTypePathExists();
     }
 
@@ -113,7 +117,7 @@ public class OpStoreImpl implements OpStore {
                           .stream()
                           .map(id -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofShardOperation(id), ShardOperation.class))
                           .filter(shardOp -> subOpId.equals(shardOp.getOpData().getParentOpId()))
-                          .toList();
+                          .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -133,7 +137,7 @@ public class OpStoreImpl implements OpStore {
                               )
                           )
                           .filter(subOp -> !subOp.isDone())
-                          .toList();
+                          .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
