@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.CircularQueue;
+import com.flipkart.varadhi.common.CircularQueue;
 import com.flipkart.varadhi.consumer.ConcurrencyControl;
 import com.flipkart.varadhi.consumer.concurrent.Context;
 import com.flipkart.varadhi.entities.InternalQueueType;

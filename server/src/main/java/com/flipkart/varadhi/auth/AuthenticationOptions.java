@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import lombok.Data;

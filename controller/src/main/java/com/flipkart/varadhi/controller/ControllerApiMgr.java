@@ -10,11 +10,11 @@ import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.core.cluster.*;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.flipkart.varadhi.Constants.SYSTEM_IDENTITY;
+import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
 @Slf4j
 public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerApi {

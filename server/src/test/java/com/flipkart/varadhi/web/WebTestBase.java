@@ -1,8 +1,23 @@
 package com.flipkart.varadhi.web;
 
+import static io.vertx.core.http.HttpMethod.*;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Collection;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import org.junit.jupiter.api.BeforeAll;
+
 import com.fasterxml.jackson.databind.JavaType;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -18,19 +33,6 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
-
-import java.util.Collection;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import static io.vertx.core.http.HttpMethod.*;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class WebTestBase {
 
@@ -67,6 +69,13 @@ public class WebTestBase {
         CountDownLatch latch = new CountDownLatch(1);
         server.requestHandler(router).listen().onComplete(onSuccess(res -> latch.countDown()));
         awaitLatch(latch);
+    }
+
+    @BeforeAll
+    public static void setupInitialConfig() {
+        if (!StdHeaders.isGlobalInstanceInitialized()) {
+            StdHeaders.init(TestStdHeaders.get());
+        }
     }
 
     protected HttpServerOptions getHttpServerOptions() {

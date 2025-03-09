@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
-import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
-import static com.flipkart.varadhi.Constants.QueryParams.QUERY_PARAM_MESSAGE;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Hierarchies.ProjectHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;

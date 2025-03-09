@@ -1,22 +1,10 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.core.cluster.entities.NodeProvider;
-import com.flipkart.varadhi.entities.SubscriptionUtils;
-import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.exceptions.CapacityException;
-import com.flipkart.varadhi.spi.db.AssignmentStore;
-import com.flipkart.varadhi.spi.db.MetaStoreException;
-import io.micrometer.core.instrument.MeterRegistry;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import static com.flipkart.varadhi.common.TestHelper.assertException;
+import static com.flipkart.varadhi.common.TestHelper.assertListEquals;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,10 +12,25 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.flipkart.varadhi.TestHelper.*;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import com.flipkart.varadhi.common.exceptions.CapacityException;
+import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
+import com.flipkart.varadhi.core.cluster.entities.NodeProvider;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
+import com.flipkart.varadhi.entities.SubscriptionUtils;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.spi.db.AssignmentStore;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 public class AssignmentManagerTest {
     @Mock

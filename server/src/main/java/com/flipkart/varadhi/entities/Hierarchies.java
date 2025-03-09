@@ -3,7 +3,7 @@ package com.flipkart.varadhi.entities;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.Tags.*;
+import static com.flipkart.varadhi.common.Constants.Tags.*;
 
 public class Hierarchies {
     public record RootHierarchy() implements ResourceHierarchy {

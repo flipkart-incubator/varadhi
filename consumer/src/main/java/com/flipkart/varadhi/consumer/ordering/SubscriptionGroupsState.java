@@ -7,7 +7,8 @@ import jakarta.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 public interface SubscriptionGroupsState {
-    @Nullable GroupPointer getPointer(String groupId);
+    @Nullable
+    GroupPointer getPointer(String groupId);
 
     /**
      * fetch the pointers for the given messages and populate the pointers array accordingly.

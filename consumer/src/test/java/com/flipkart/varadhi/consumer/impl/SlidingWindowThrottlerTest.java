@@ -1,12 +1,6 @@
 package com.flipkart.varadhi.consumer.impl;
 
-import com.flipkart.varadhi.MockTicker;
-import com.flipkart.varadhi.entities.InternalQueueType;
-import com.google.common.base.Ticker;
-import io.vertx.core.impl.ConcurrentHashSet;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,7 +11,15 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import com.flipkart.varadhi.common.MockTicker;
+import com.flipkart.varadhi.entities.InternalQueueType;
+import com.google.common.base.Ticker;
+
+import io.vertx.core.impl.ConcurrentHashSet;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class SlidingWindowThrottlerTest {

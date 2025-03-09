@@ -4,7 +4,7 @@ import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;

@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.exceptions.CapacityException;
+import com.flipkart.varadhi.common.exceptions.CapacityException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;

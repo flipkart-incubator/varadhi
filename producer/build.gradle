@@ -12,4 +12,5 @@ dependencies {
     testImplementation("io.micrometer:micrometer-registry-otlp")
 
     testImplementation(testFixtures(project(":spi")))
+    testImplementation(testFixtures(project(":entities")))
 }

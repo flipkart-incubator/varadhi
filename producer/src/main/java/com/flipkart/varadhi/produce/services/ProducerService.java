@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.Result;
-import com.flipkart.varadhi.VaradhiCache;
+import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.common.VaradhiCache;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.exceptions.ProduceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;

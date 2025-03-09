@@ -17,9 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_BODY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_ORG;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TEAM;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j

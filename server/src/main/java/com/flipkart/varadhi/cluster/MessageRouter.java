@@ -2,8 +2,8 @@ package com.flipkart.varadhi.cluster;
 
 
 import com.flipkart.varadhi.cluster.messages.*;
-import com.flipkart.varadhi.exceptions.VaradhiException;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;

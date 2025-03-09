@@ -8,8 +8,10 @@ import java.util.function.Function;
 
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.*;
 
-public record SubscriptionPropertyValidator(Function<String, Boolean> restrictiveValidator,
-                                            Function<String, Boolean> permissibleValidator) {
+public record SubscriptionPropertyValidator(
+    Function<String, Boolean> restrictiveValidator,
+    Function<String, Boolean> permissibleValidator
+) {
     public static Map<String, String> createPropertyDefaultValueProviders(RestOptions restOptions) {
         Map<String, String> propertyDefaultValueProviders = new HashMap<>();
         propertyDefaultValueProviders.put(

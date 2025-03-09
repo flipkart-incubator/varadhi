@@ -7,8 +7,10 @@ import lombok.Data;
 @Data
 public class MessagingStackOptions {
 
-    @NotBlank private String providerClassName;
+    @NotBlank
+    private String providerClassName;
 
-    @NotBlank @ConfigFile
+    @NotBlank
+    @ConfigFile
     private String configFile;
 }

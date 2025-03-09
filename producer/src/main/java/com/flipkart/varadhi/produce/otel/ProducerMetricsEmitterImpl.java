@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.flipkart.varadhi.Constants.Meters.Produce.BYTES_METER;
-import static com.flipkart.varadhi.Constants.Meters.Produce.LATENCY_METER;
-import static com.flipkart.varadhi.Constants.Tags.*;
+import static com.flipkart.varadhi.common.Constants.Meters.Produce.BYTES_METER;
+import static com.flipkart.varadhi.common.Constants.Meters.Produce.LATENCY_METER;
+import static com.flipkart.varadhi.common.Constants.Tags.*;
 
 public class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter {
     private final MeterRegistry meterRegistry;

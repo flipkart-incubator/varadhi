@@ -19,10 +19,11 @@ public class IamPolicyRecord extends MetaStoreEntity {
     private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator
-    public IamPolicyRecord(@JsonProperty ("name")
-    String name, @JsonProperty ("version")
-    int version, @JsonProperty ("roleBindings")
-    Map<String, Set<String>> roleBindings) {
+    public IamPolicyRecord(
+        @JsonProperty ("name") String name,
+        @JsonProperty ("version") int version,
+        @JsonProperty ("roleBindings") Map<String, Set<String>> roleBindings
+    ) {
         super(name, version);
         this.roleBindings = new HashMap<>();
         this.roleBindings.putAll(roleBindings);

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.cluster.custom;
 
 import com.flipkart.varadhi.cluster.*;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
-import com.flipkart.varadhi.utils.JsonMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.vertx.core.Future;

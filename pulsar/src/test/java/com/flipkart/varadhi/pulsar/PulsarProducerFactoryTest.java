@@ -1,7 +1,11 @@
 package com.flipkart.varadhi.pulsar;
 
-import com.flipkart.varadhi.Constants;
-import com.flipkart.varadhi.exceptions.ProduceException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -13,13 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.mockito.Mockito.*;
 
-public class PulsarProducerFactoryTest {
+public class PulsarProducerFactoryTest extends PulsarTestBase {
     @TempDir
     Path tempDir;
     PulsarClient pClient;

@@ -9,7 +9,7 @@ import lombok.experimental.ExtensionMethod;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_IS_SUPER_USER;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_IS_SUPER_USER;
 
 
 @ExtensionMethod ({Extensions.RoutingContextExtension.class})

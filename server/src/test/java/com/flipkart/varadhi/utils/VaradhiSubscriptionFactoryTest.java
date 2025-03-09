@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.Constants;
+import java.lang.reflect.Method;
+
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -14,8 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

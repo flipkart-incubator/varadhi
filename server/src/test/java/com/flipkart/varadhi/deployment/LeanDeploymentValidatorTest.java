@@ -1,12 +1,13 @@
 package com.flipkart.varadhi.deployment;
 
-import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
+import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.TeamService;
@@ -14,7 +15,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.flipkart.varadhi.utils.YamlLoader;
+import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;
@@ -25,8 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class LeanDeploymentValidatorTest {
@@ -58,7 +59,7 @@ public class LeanDeploymentValidatorTest {
             )
         );
         zkCurator.start();
-        varadhiMetaStore = new VaradhiMetaStore(zkCurator);
+        varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
 
         messagingStackProvider = mock(MessagingStackProvider.class);
         metaStoreProvider = mock(MetaStoreProvider.class);

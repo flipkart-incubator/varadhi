@@ -1,5 +1,11 @@
 package com.flipkart.varadhi.web.v1.produce;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
@@ -7,60 +13,43 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.utils.HeaderUtils;
-import com.flipkart.varadhi.utils.MessageHelper;
+import com.flipkart.varadhi.utils.MessageRequestValidator;
+import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
+import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_RATE_LIMITED;
-import static com.flipkart.varadhi.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_PROJECT;
-import static com.flipkart.varadhi.Constants.PathParams.PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.Constants.Tags.TAG_REGION;
-import static com.flipkart.varadhi.MessageConstants.ANONYMOUS_IDENTITY;
-import static com.flipkart.varadhi.entities.StandardHeaders.*;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
+import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 
 
 @Slf4j
-@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
+@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
+@AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
-    private final Handler<RoutingContext> headerValidationHandler;
+    private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
+    private final MessageConfiguration msgConfig;
     private final String produceRegion;
-
-    public ProduceHandlers(
-        String produceRegion,
-        Handler<RoutingContext> headerValidationHandler,
-        ProducerService producerService,
-        ProjectService projectService,
-        ProducerMetricHandler metricHandler
-    ) {
-        this.produceRegion = produceRegion;
-        this.producerService = producerService;
-        this.headerValidationHandler = headerValidationHandler;
-        this.projectService = projectService;
-        this.metricHandler = metricHandler;
-    }
 
     @Override
     public List<RouteDefinition> get() {
@@ -72,7 +61,7 @@ public class ProduceHandlers implements RouteProvider {
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()
-                               .preHandler(headerValidationHandler)
+                               .preHandler(preProduceHandler)
                                .authorize(TOPIC_PRODUCE)
                                .build(this::getHierarchies, this::produce)
             )
@@ -93,7 +82,7 @@ public class ProduceHandlers implements RouteProvider {
 
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         //TODO FIx attribute name semantics here.
-        String produceIdentity = ctx.user() == null ? ANONYMOUS_IDENTITY : ctx.user().subject();
+        String produceIdentity = ctx.getIdentityOrDefault();
         produceAttributes.put(TAG_REGION, produceRegion);
         produceAttributes.put(TAG_IDENTITY, produceIdentity);
         ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
@@ -104,7 +93,7 @@ public class ProduceHandlers implements RouteProvider {
         // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), produceIdentity);
+        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
             messageToProduce,
             varadhiTopicName,
@@ -146,13 +135,38 @@ public class ProduceHandlers implements RouteProvider {
         };
     }
 
+    private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
+        Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, compliantHeaders, payload.length);
+        //enriching headerNames with custom headerNames
+        String produceIdentity = ctx.getIdentityOrDefault();
 
-    private Message buildMessageToProduce(byte[] payload, MultiMap headers, String produceIdentity) {
-        Multimap<String, String> requestHeaders = HeaderUtils.copyVaradhiHeaders(headers);
-        requestHeaders.put(PRODUCE_TIMESTAMP, Long.toString(System.currentTimeMillis()));
-        requestHeaders.put(PRODUCE_IDENTITY, produceIdentity);
-        requestHeaders.put(PRODUCE_REGION, produceRegion);
-        MessageHelper.ensureRequiredHeaders(requestHeaders);
-        return new ProducerMessage(payload, requestHeaders);
+        compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
+        compliantHeaders.put(StdHeaders.get().produceIdentity(), produceIdentity);
+        compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
+        return new SimpleMessage(payload, compliantHeaders);
+    }
+
+    /**
+     * Converting headers to uppercase and filtering non-compliant ones.
+     * This step is necessary as Vert.x's MultiMap is already case-insensitive,
+     * allowing access to headers in a case-insensitive manner before converting
+     * to Google Multimap. The conversion to uppercase ensures consistent case insensitivity in Google Multimap.
+     * @param headers
+     * @return Multimap with headers converted to uppercase and non-compliant headers filtered
+     */
+    public Multimap<String, String> filterCompliantHeaders(MultiMap headers) {
+        Multimap<String, String> copy = ArrayListMultimap.create();
+
+        boolean filterNonCompliant = msgConfig.isFilterNonCompliantHeaders();
+        List<String> allowedPrefixes = msgConfig.getStdHeaders().allowedPrefix();
+
+        for (Map.Entry<String, String> entry : headers) {
+            String key = entry.getKey().toUpperCase();
+            if (!filterNonCompliant || allowedPrefixes.stream().anyMatch(key::startsWith)) {
+                copy.put(key, entry.getValue());
+            }
+        }
+        return copy;
     }
 }
