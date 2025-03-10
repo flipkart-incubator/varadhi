@@ -2,8 +2,12 @@ package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
 
-public record EntityEvent(ResourceType resourceType, String resourceName,
-                          CacheOperation operation, Object resourceState) {
+public record EntityEvent(
+    ResourceType resourceType,
+    String resourceName,
+    CacheOperation operation,
+    Object resourceState
+) {
     public EntityEvent {
         if (resourceType == null) {
             throw new IllegalArgumentException("resourceType cannot be null");
@@ -17,10 +21,10 @@ public record EntityEvent(ResourceType resourceType, String resourceName,
     }
 
     public static EntityEvent of(
-            ResourceType resourceType,
-            String resourceName,
-            CacheOperation cacheOperation,
-            Object resourceState
+        ResourceType resourceType,
+        String resourceName,
+        CacheOperation cacheOperation,
+        Object resourceState
     ) {
         return new EntityEvent(resourceType, resourceName, cacheOperation, resourceState);
     }

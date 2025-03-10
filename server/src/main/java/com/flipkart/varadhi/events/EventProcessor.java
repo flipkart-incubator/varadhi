@@ -39,23 +39,23 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     private final Map<String, MemberInfo> memberCache = new ConcurrentHashMap<>();
 
     public EventProcessor(
-            MessageExchange messageExchange,
-            VaradhiClusterManager clusterManager,
-            EventProcessorConfig eventProcessorConfig
+        MessageExchange messageExchange,
+        VaradhiClusterManager clusterManager,
+        EventProcessorConfig eventProcessorConfig
     ) {
         this.messageExchange = messageExchange;
         this.eventProcessorConfig = eventProcessorConfig != null ?
-                eventProcessorConfig :
-                EventProcessorConfig.getDefault();
+            eventProcessorConfig :
+            EventProcessorConfig.getDefault();
         this.scheduler = createScheduler();
         this.isShutdown = new AtomicBoolean(false);
         this.concurrencyLimiter = new Semaphore(this.eventProcessorConfig.getMaxConcurrentProcessing());
 
         try {
             List<MemberInfo> initialMembers = clusterManager.getAllMembers()
-                    .toCompletionStage()
-                    .toCompletableFuture()
-                    .get(30, TimeUnit.SECONDS);
+                                                            .toCompletionStage()
+                                                            .toCompletableFuture()
+                                                            .get(30, TimeUnit.SECONDS);
 
             initialMembers.forEach(member -> memberCache.put(member.hostname(), member));
             log.info("Initialized member cache with {} members", memberCache.size());
@@ -87,11 +87,11 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
 
     private ScheduledExecutorService createScheduler() {
         return Executors.newScheduledThreadPool(
-                Runtime.getRuntime().availableProcessors(),
-                Thread.ofVirtual()
-                        .name("event-processor-", 0)
-                        .uncaughtExceptionHandler(this::handleUncaughtException)
-                        .factory()
+            Runtime.getRuntime().availableProcessors(),
+            Thread.ofVirtual()
+                  .name("event-processor-", 0)
+                  .uncaughtExceptionHandler(this::handleUncaughtException)
+                  .factory()
         );
     }
 
@@ -116,18 +116,18 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     private CompletableFuture<Void> processWithTimeout(EntityEvent event) {
         if (memberCache.isEmpty()) {
             return CompletableFuture.failedFuture(
-                    new EventProcessingException("No cluster members available for processing")
+                new EventProcessingException("No cluster members available for processing")
             );
         }
 
         List<MemberInfo> members = new ArrayList<>(memberCache.values());
 
-        return CompletableFuture.supplyAsync(
-                        () -> processEventForAllClusterMembers(event, members),
-                        scheduler
-                )
-                .thenCompose(Function.identity())
-                .orTimeout(eventProcessorConfig.getProcessingTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        return CompletableFuture.supplyAsync(() -> processEventForAllClusterMembers(event, members), scheduler)
+                                .thenCompose(Function.identity())
+                                .orTimeout(
+                                    eventProcessorConfig.getProcessingTimeout().toMillis(),
+                                    TimeUnit.MILLISECONDS
+                                );
     }
 
     private CompletableFuture<Void> processEventForAllClusterMembers(EntityEvent event, List<MemberInfo> members) {
@@ -137,18 +137,18 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
 
         Map<String, ClusterMemberEventState> clusterMemberStates = new ConcurrentHashMap<>();
         members.forEach(
-                member -> clusterMemberStates.put(
-                        member.hostname(),
-                        new ClusterMemberEventState(member, eventProcessorConfig.getMaxRetries())
-                )
+            member -> clusterMemberStates.put(
+                member.hostname(),
+                new ClusterMemberEventState(member, eventProcessorConfig.getMaxRetries())
+            )
         );
 
         return processClusterMembersWithRetry(event, clusterMemberStates);
     }
 
     private CompletableFuture<Void> processClusterMembersWithRetry(
-            EntityEvent event,
-            Map<String, ClusterMemberEventState> clusterMemberStates
+        EntityEvent event,
+        Map<String, ClusterMemberEventState> clusterMemberStates
     ) {
         CompletableFuture<Void> result = new CompletableFuture<>();
 
@@ -158,10 +158,10 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     }
 
     private void processNextBatch(
-            EntityEvent event,
-            Map<String, ClusterMemberEventState> clusterMemberStates,
-            CompletableFuture<Void> result,
-            int attempt
+        EntityEvent event,
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result,
+        int attempt
     ) {
         if (isShutdown.get()) {
             result.completeExceptionally(new EventProcessingException("EventProcessor shutdown during processing"));
@@ -174,12 +174,12 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
         }
 
         List<ClusterMemberEventState> pendingClusterMembers = clusterMemberStates.values()
-                .stream()
-                .filter(
-                        state -> !state.isComplete()
-                                && state.hasRetriesLeft()
-                )
-                .toList();
+                                                                                 .stream()
+                                                                                 .filter(
+                                                                                     state -> !state.isComplete()
+                                                                                              && state.hasRetriesLeft()
+                                                                                 )
+                                                                                 .toList();
 
         if (pendingClusterMembers.isEmpty()) {
             handleCompletion(clusterMemberStates, result);
@@ -199,9 +199,9 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     }
 
     private void handleMembershipChange(
-            EntityEvent event,
-            Map<String, ClusterMemberEventState> currentStates,
-            CompletableFuture<Void> result
+        EntityEvent event,
+        Map<String, ClusterMemberEventState> currentStates,
+        CompletableFuture<Void> result
     ) {
         Set<String> newMemberSet = memberCache.keySet();
 
@@ -222,23 +222,26 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
             MemberInfo newMember = memberCache.get(addedMember);
             if (newMember != null) {
                 currentStates.put(
-                        addedMember,
-                        new ClusterMemberEventState(newMember, eventProcessorConfig.getMaxRetries())
+                    addedMember,
+                    new ClusterMemberEventState(newMember, eventProcessorConfig.getMaxRetries())
                 );
                 log.info("New member {} added during event processing", addedMember);
             }
         }
 
         if (!removedMembers.isEmpty() || !addedMembers.isEmpty()) {
-            log.info("Cluster membership changed during event processing. Removed: {}, Added: {}",
-                    removedMembers, addedMembers);
+            log.info(
+                "Cluster membership changed during event processing. Removed: {}, Added: {}",
+                removedMembers,
+                addedMembers
+            );
         }
 
         membershipChanged.set(false);
 
         if (currentStates.isEmpty()) {
             result.completeExceptionally(
-                    new EventProcessingException("All cluster members were removed during processing")
+                new EventProcessingException("All cluster members were removed during processing")
             );
         } else {
             processNextBatch(event, currentStates, result, 0);
@@ -246,47 +249,47 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     }
 
     private void processBatch(
-            EntityEvent event,
-            List<ClusterMemberEventState> pendingClusterMembers,
-            Map<String, ClusterMemberEventState> clusterMemberStates,
-            CompletableFuture<Void> result,
-            int attempt
+        EntityEvent event,
+        List<ClusterMemberEventState> pendingClusterMembers,
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result,
+        int attempt
     ) {
         List<CompletableFuture<Void>> clusterMemberFutures = pendingClusterMembers.stream()
-                .map(
-                        clusterMemberState -> processClusterMember(
-                                event,
-                                clusterMemberState
-                        )
-                )
-                .toList();
+                                                                                  .map(
+                                                                                      clusterMemberState -> processClusterMember(
+                                                                                          event,
+                                                                                          clusterMemberState
+                                                                                      )
+                                                                                  )
+                                                                                  .toList();
 
         CompletableFuture.allOf(clusterMemberFutures.toArray(new CompletableFuture[0])).whenComplete((v, throwable) -> {
             if (throwable != null) {
                 log.warn("Batch processing encountered errors", throwable);
             }
             scheduler.schedule(
-                    () -> processNextBatch(event, clusterMemberStates, result, attempt + 1),
-                    eventProcessorConfig.getRetryDelayMs(),
-                    TimeUnit.MILLISECONDS
+                () -> processNextBatch(event, clusterMemberStates, result, attempt + 1),
+                eventProcessorConfig.getRetryDelayMs(),
+                TimeUnit.MILLISECONDS
             );
         });
     }
 
     private void handleMaxRetriesExceeded(
-            Map<String, ClusterMemberEventState> clusterMemberStates,
-            CompletableFuture<Void> result
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result
     ) {
         List<String> failedClusterMembers = clusterMemberStates.values()
-                .stream()
-                .filter(state -> !state.isComplete())
-                .map(state -> state.getMember().hostname())
-                .toList();
+                                                               .stream()
+                                                               .filter(state -> !state.isComplete())
+                                                               .map(state -> state.getMember().hostname())
+                                                               .toList();
 
         String errorMessage = String.format(
-                "Event processing failed after %d retries for clusterMembers: %s",
-                eventProcessorConfig.getMaxRetries(),
-                failedClusterMembers
+            "Event processing failed after %d retries for clusterMembers: %s",
+            eventProcessorConfig.getMaxRetries(),
+            failedClusterMembers
         );
 
         log.error(errorMessage);
@@ -295,34 +298,30 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
     }
 
     private CompletableFuture<Void> processClusterMember(
-            EntityEvent event,
-            ClusterMemberEventState clusterMemberState
+        EntityEvent event,
+        ClusterMemberEventState clusterMemberState
     ) {
         String clusterMemberId = clusterMemberState.getMember().hostname();
 
         if (hasMembershipChanged()) {
             return CompletableFuture.failedFuture(
-                    new EventProcessingException("Cluster membership changed before processing member: " + clusterMemberId)
+                new EventProcessingException("Cluster membership changed before processing member: " + clusterMemberId)
             );
         }
 
         return CompletableFuture.supplyAsync(() -> {
             ClusterMessage message = ClusterMessage.of(event);
             return messageExchange.request("cache-events", "processEvent", message)
-                    .orTimeout(
-                            eventProcessorConfig.getClusterMemberTimeoutMs(),
-                            TimeUnit.MILLISECONDS
-                    )
-                    .thenAccept(response -> {
-                        if (response.getException() != null) {
-                            handleClusterMemberFailure(clusterMemberState, response.getException());
-                            throw new EventProcessingException(
-                                    "ClusterMember processing failed: " + response.getException()
-                                            .getMessage()
-                            );
-                        }
-                        clusterMemberState.markComplete();
-                    });
+                                  .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS)
+                                  .thenAccept(response -> {
+                                      if (response.getException() != null) {
+                                          handleClusterMemberFailure(clusterMemberState, response.getException());
+                                          throw new EventProcessingException(
+                                              "ClusterMember processing failed: " + response.getException().getMessage()
+                                          );
+                                      }
+                                      clusterMemberState.markComplete();
+                                  });
         }, scheduler).thenCompose(Function.identity());
     }
 
@@ -332,39 +331,37 @@ public class EventProcessor implements EntityEventProcessor, AutoCloseable {
 
         if (!clusterMemberState.hasRetriesLeft()) {
             log.error(
-                    "ClusterMember {} failed permanently after {} retries. Error: {}",
-                    clusterMemberId,
-                    eventProcessorConfig.getMaxRetries(),
-                    throwable.getMessage()
+                "ClusterMember {} failed permanently after {} retries. Error: {}",
+                clusterMemberId,
+                eventProcessorConfig.getMaxRetries(),
+                throwable.getMessage()
             );
         } else {
             log.warn(
-                    "ClusterMember {} failed temporarily (attempt {}). Error: {}",
-                    clusterMemberId,
-                    clusterMemberState.getRetryCount(),
-                    throwable.getMessage()
+                "ClusterMember {} failed temporarily (attempt {}). Error: {}",
+                clusterMemberId,
+                clusterMemberState.getRetryCount(),
+                throwable.getMessage()
             );
         }
     }
 
     private void handleCompletion(
-            Map<String, ClusterMemberEventState> clusterMemberStates,
-            CompletableFuture<Void> result
+        Map<String, ClusterMemberEventState> clusterMemberStates,
+        CompletableFuture<Void> result
     ) {
-        boolean allComplete = clusterMemberStates.values()
-                .stream()
-                .allMatch(ClusterMemberEventState::isComplete);
+        boolean allComplete = clusterMemberStates.values().stream().allMatch(ClusterMemberEventState::isComplete);
 
         if (allComplete) {
             result.complete(null);
         } else {
             List<String> failedClusterMembers = clusterMemberStates.values()
-                    .stream()
-                    .filter(state -> !state.isComplete())
-                    .map(state -> state.getMember().hostname())
-                    .toList();
+                                                                   .stream()
+                                                                   .filter(state -> !state.isComplete())
+                                                                   .map(state -> state.getMember().hostname())
+                                                                   .toList();
             result.completeExceptionally(
-                    new EventProcessingException("Event processing failed for clusterMembers: " + failedClusterMembers)
+                new EventProcessingException("Event processing failed for clusterMembers: " + failedClusterMembers)
             );
         }
     }

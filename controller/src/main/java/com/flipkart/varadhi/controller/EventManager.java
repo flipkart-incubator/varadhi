@@ -46,10 +46,12 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
     }
 
     private ExecutorService createExecutorService() {
-        return Executors.newSingleThreadExecutor(r -> Thread.ofPlatform()
-                .name(THREAD_NAME)
-                .uncaughtExceptionHandler(this::handleUncaughtException)
-                .unstarted(r));
+        return Executors.newSingleThreadExecutor(
+            r -> Thread.ofPlatform()
+                       .name(THREAD_NAME)
+                       .uncaughtExceptionHandler(this::handleUncaughtException)
+                       .unstarted(r)
+        );
     }
 
     private void handleUncaughtException(Thread thread, Throwable throwable) {
@@ -72,42 +74,51 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
     @Override
     public void onEvent(MetaStoreChangeEvent event) {
         if (isShutdown.get() || !isActive.get()) {
-            log.warn("Skipping Event processing for {}/{} - Manager is shutdown or inactive",
-                    event.getResourceType(), event.getResourceName());
+            log.warn(
+                "Skipping Event processing for {}/{} - Manager is shutdown or inactive",
+                event.getResourceType(),
+                event.getResourceName()
+            );
             return;
         }
 
-        CompletableFuture.runAsync(() -> processEvent(event), executorService)
-                .exceptionallyAsync(throwable -> {
-                    log.error("Unexpected error in event processing future for {}/{}",
-                            event.getResourceType(), event.getResourceName(), throwable);
-                    return null;
-                }, executorService);
+        CompletableFuture.runAsync(() -> processEvent(event), executorService).exceptionallyAsync(throwable -> {
+            log.error(
+                "Unexpected error in event processing future for {}/{}",
+                event.getResourceType(),
+                event.getResourceName(),
+                throwable
+            );
+            return null;
+        }, executorService);
     }
 
     private void processEvent(MetaStoreChangeEvent event) {
         try {
             var entityEvent = createEntityEvent(event);
             if (entityEvent == null) {
-                log.error("Unable to process event {}/{} - failed to create entity event",
-                        event.getResourceType(), event.getResourceName());
+                log.error(
+                    "Unable to process event {}/{} - failed to create entity event",
+                    event.getResourceType(),
+                    event.getResourceName()
+                );
                 return;
             }
 
-            eventProcessor.process(entityEvent)
-                    .thenAcceptAsync(v -> {
-                        event.markAsProcessed();
-                        log.info("Successfully processed event for {}/{}",
-                                event.getResourceType(), event.getResourceName());
-                    }, executorService)
-                    .exceptionallyAsync(throwable -> {
-                        log.error("Failed to process event for {}/{}",
-                                event.getResourceType(), event.getResourceName(), throwable);
-                        return null;
-                    }, executorService);
+            eventProcessor.process(entityEvent).thenAcceptAsync(v -> {
+                event.markAsProcessed();
+                log.info("Successfully processed event for {}/{}", event.getResourceType(), event.getResourceName());
+            }, executorService).exceptionallyAsync(throwable -> {
+                log.error(
+                    "Failed to process event for {}/{}",
+                    event.getResourceType(),
+                    event.getResourceName(),
+                    throwable
+                );
+                return null;
+            }, executorService);
         } catch (Exception e) {
-            log.error("Failed to create entity event for {}/{}",
-                    event.getResourceType(), event.getResourceName(), e);
+            log.error("Failed to create entity event for {}/{}", event.getResourceType(), event.getResourceName(), e);
         }
     }
 
@@ -117,17 +128,15 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
             return null;
         }
         return EntityEvent.of(
-                event.getResourceType(),
-                event.getResourceName(),
-                result.cacheOperation(),
-                result.state()
+            event.getResourceType(),
+            event.getResourceName(),
+            result.cacheOperation(),
+            result.state()
         );
     }
 
     private MetaStoreEntityResult getMetaStoreEntity(MetaStoreChangeEvent event) {
-        return fetchMetaStoreEntity(() ->
-                invokeGetMethod(event.getResourceType(), event.getResourceName())
-        );
+        return fetchMetaStoreEntity(() -> invokeGetMethod(event.getResourceType(), event.getResourceName()));
     }
 
     private Object invokeGetMethod(ResourceType type, String name) {
@@ -136,7 +145,7 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
             Method method = metaStore.getClass().getMethod(methodName, String.class);
             return method.invoke(metaStore, name);
         } catch (InvocationTargetException e) {
-            throw (RuntimeException) e.getTargetException();
+            throw (RuntimeException)e.getTargetException();
         } catch (Exception e) {
             log.error("Failed to invoke get method for {}/{}", type, name, e);
             return null;
@@ -145,8 +154,8 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
 
     private String formatMethodName(String typeName) {
         return Arrays.stream(typeName.split("_"))
-                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1).toLowerCase())
-                .collect(Collectors.joining());
+                     .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1).toLowerCase())
+                     .collect(Collectors.joining());
     }
 
     private MetaStoreEntityResult fetchMetaStoreEntity(Supplier<Object> entitySupplier) {
