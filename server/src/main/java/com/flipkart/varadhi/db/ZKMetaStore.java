@@ -557,7 +557,7 @@ public class ZKMetaStore implements AutoCloseable {
      */
     private CuratorOp createChangeEventZNode(String resourceName, ResourceType resourceType) {
         try {
-            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.toString(), resourceName, "");
+            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.name(), resourceName, "");
             log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
 
             var eventsPath = ZNode.ofKind(EVENT, nodeName).getPath();

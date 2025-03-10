@@ -83,18 +83,20 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     private Future<Void> initializeEventSystem() {
-        try {
-            eventProcessor = new EventProcessor(
-                clusterManager.getExchange(vertx),
-                clusterManager,
-                controllerConfig.getEventProcessorConfig()
-            );
-
-            eventManager = new EventManager(metaStoreProvider.getMetaStore(), eventProcessor);
-            return Future.succeededFuture();
-        } catch (Exception e) {
-            return Future.failedFuture(e);
-        }
+        return EventProcessor.create(
+            vertx,
+            clusterManager.getExchange(vertx),
+            clusterManager,
+            controllerConfig.getEventProcessorConfig()
+        ).compose(processor -> {
+            this.eventProcessor = processor;
+            try {
+                this.eventManager = new EventManager(metaStoreProvider.getMetaStore(), eventProcessor);
+                return Future.succeededFuture();
+            } catch (Exception e) {
+                return Future.failedFuture(new RuntimeException("Failed to initialize EventManager", e));
+            }
+        });
     }
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
