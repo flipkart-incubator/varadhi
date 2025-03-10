@@ -33,6 +33,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.client.HttpRequest;
+import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +49,8 @@ import static org.mockito.Mockito.*;
 
 public class ProduceHandlersTest extends ProduceTestBase {
     Span span;
+    private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
+    private static final int OVERSIZED_HEADER_KEY_LENGTH = 101;
 
     @Override
     public void tearDown() throws InterruptedException {
@@ -66,6 +69,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
         }).handler(produceHandlers::produce);
         setupFailureHandler(route);
         span = mock(Span.class);
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         doReturn(span).when(span).setAttribute(anyString(), anyString());
     }
@@ -370,4 +375,40 @@ public class ProduceHandlersTest extends ProduceTestBase {
             );
         });
     }
+
+    @Test
+    public void testProduceWithHighHeaderKeySize() throws InterruptedException {
+        String randomString = RandomString.make(OVERSIZED_HEADER_KEY_LENGTH);
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader("X_MESSAGE_ID", randomString);
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        sendRequestWithPayload(
+            request,
+            payload,
+            400,
+            "X_MESSAGE_ID " + randomString + " exceeds allowed size of 100.",
+            ErrorResponse.class
+        );
+    }
+
+    @Test
+    public void testProduceWithHighBodyAndHeaderSize() throws InterruptedException {
+        String randomString = RandomString.make(99);
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader("X_MESSAGE_ID", randomString);
+        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+
+        // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
+        byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
+        Arrays.fill(largeBody, (byte)'A'); // Fill it with some data (e.g., 'A')
+
+        sendRequestWithPayload(
+            request,
+            largeBody,
+            400,
+            "Request size exceeds allowed limit of 5242880 bytes.",
+            ErrorResponse.class
+        );
+    }
+
 }

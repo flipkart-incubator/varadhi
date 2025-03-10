@@ -101,4 +101,3 @@ messageConfiguration:
   maxIdHeaderSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true
-
