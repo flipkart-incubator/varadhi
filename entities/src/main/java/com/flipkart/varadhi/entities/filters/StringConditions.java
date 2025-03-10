@@ -8,6 +8,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
 
+/**
+ * Provides string-based condition implementations of the Condition interface.
+ * These classes can be used to create complex string-based expressions for filtering.
+ */
 public class StringConditions {
 
     public record ContainsCondition(String key, String value) implements Condition {

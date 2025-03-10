@@ -7,6 +7,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Multimap;
 
+/**
+ * Provides boolean logic implementations of the Condition interface.
+ * These classes can be used to create complex boolean expressions for filtering.
+ */
 public class BooleanConditions {
 
     public record AndCondition(List<Condition> values) implements Condition {

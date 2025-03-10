@@ -50,6 +50,7 @@ import static org.mockito.Mockito.*;
 public class ProduceHandlersTest extends ProduceTestBase {
     Span span;
     private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
+    private static final int OVERSIZED_HEADER_KEY_LENGTH = 101;
 
     @Override
     public void tearDown() throws InterruptedException {
@@ -377,7 +378,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testProduceWithHighHeaderKeySize() throws InterruptedException {
-        String randomString = RandomString.make(101);
+        String randomString = RandomString.make(OVERSIZED_HEADER_KEY_LENGTH);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
         request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
