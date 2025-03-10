@@ -9,10 +9,10 @@ import com.google.common.collect.Multimap;
 
 public class BooleanConditions {
 
-    public record AndCondition (List<Condition> values) implements Condition {
+    public record AndCondition(List<Condition> values) implements Condition {
 
         @JsonCreator
-        public AndCondition(@JsonProperty(value = "values", required = true) List<Condition> values) {
+        public AndCondition(@JsonProperty (value = "values", required = true) List<Condition> values) {
             this.values = values;
         }
 
@@ -26,6 +26,7 @@ public class BooleanConditions {
             return values.stream().allMatch(condition -> condition.evaluate(headers));
         }
     }
+
 
     public record NandCondition(List<Condition> values) implements Condition {
 
@@ -45,6 +46,7 @@ public class BooleanConditions {
         }
     }
 
+
     public record OrCondition(List<Condition> values) implements Condition {
 
         @JsonCreator
@@ -63,6 +65,7 @@ public class BooleanConditions {
         }
     }
 
+
     public record NorCondition(List<Condition> values) implements Condition {
 
         @JsonCreator
@@ -80,6 +83,7 @@ public class BooleanConditions {
             return values.stream().noneMatch(condition -> condition.evaluate(headers));
         }
     }
+
 
     public record NotCondition(Condition value) implements Condition {
 

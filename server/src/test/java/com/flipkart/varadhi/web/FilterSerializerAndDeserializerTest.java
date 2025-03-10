@@ -1,10 +1,9 @@
-package filters;
-
-import java.util.List;
-import java.util.stream.Stream;
+package com.flipkart.varadhi.web;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.filters.BooleanConditions;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -13,11 +12,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.List;
+import java.util.stream.Stream;
 
-public class FilterDeserialzeAndEvaluatorTest {
+import static org.junit.jupiter.api.Assertions.*;
 
+public class FilterSerializerAndDeserializerTest {
     private static Stream<Arguments> provideConditions() {
         return Stream.of(
             Arguments.of(
@@ -46,7 +46,7 @@ public class FilterDeserialzeAndEvaluatorTest {
                 "not(contains(X_abc,\"substring\") or exists(X_abc))"
             ),
             Arguments.of(
-                "[{\"op\":\"NOT\",\"values\":{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}}]",
+                "[{\"op\":\"NOT\",\"value\":{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}}]",
                 false,
                 "not(startsWith(X_abc,\"my_prefix\"))"
             ),
@@ -117,6 +117,29 @@ public class FilterDeserialzeAndEvaluatorTest {
 
         for (Condition condition : conditions) {
             assertEquals(expected, condition.evaluate(headers));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource ("provideConditions")
+    public void testConditionsWithEmptyHeader(String json, boolean expected, String result)
+        throws JsonProcessingException {
+        ObjectMapper mapper = JsonMapper.getMapper();
+        List<Condition> conditions = mapper.readValue(
+            json,
+            mapper.getTypeFactory().constructCollectionType(List.class, Condition.class)
+        );
+
+        Multimap<String, String> headers = ArrayListMultimap.create();
+
+        for (Condition condition : conditions) {
+            if (condition.getClass() == BooleanConditions.NandCondition.class || condition.getClass()
+                                                                                 == BooleanConditions.NorCondition.class
+                || condition.getClass() == BooleanConditions.NotCondition.class) {
+                assertTrue(condition.evaluate(headers));
+            } else {
+                assertFalse(condition.evaluate(headers));
+            }
         }
     }
 
