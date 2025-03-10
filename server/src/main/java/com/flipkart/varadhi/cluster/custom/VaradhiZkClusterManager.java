@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * Customized zkClusterManager that only works with provided zk configuration. The curatorFramework, needs to be
@@ -54,26 +53,27 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
 
     @Override
     public Future<List<MemberInfo>> getAllMembers() {
+        log.info("Fetching all cluster members...");
         List<CompletableFuture<MemberInfo>> allFutures = new ArrayList<>();
-        getNodes().forEach(
-            nodeId -> allFutures.add(
+        getNodes().forEach(nodeId -> {
+            log.debug("Fetching info for node: {}", nodeId);
+            allFutures.add(
                 Failsafe.with(NodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
-                        .thenApply(
-                            nodeInfo -> JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(), MemberInfo.class)
-                        )
+                        .thenApply(nodeInfo -> {
+                            log.debug("Successfully fetched info for node: {}", nodeId);
+                            return JsonMapper.jsonDeserialize(nodeInfo.metadata().toString(), MemberInfo.class);
+                        })
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
                                 log.error("Failed to get nodeInfo for node: {}.", nodeId, throwable);
                             }
                         })
-            )
-        );
+            );
+        });
         return Future.fromCompletionStage(
             CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0]))
-                             .thenApply(
-                                 v -> allFutures.stream().map(CompletableFuture::join).collect(Collectors.toList())
-                             )
+                             .thenApply(v -> allFutures.stream().map(CompletableFuture::join).toList())
         );
     }
 

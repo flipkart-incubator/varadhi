@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.db;
 
-import java.util.List;
-
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
+
+import java.util.List;
 
 import static com.flipkart.varadhi.db.ZNode.SHARD_OP;
 import static com.flipkart.varadhi.db.ZNode.SUB_OP;
@@ -18,9 +18,9 @@ public class OpStoreImpl implements OpStore {
     private final ZKMetaStore zkMetaStore;
 
     /**
-     * Constructs a new OpStoreImpl with the given ZooKeeper curator.
+     * Constructs a new OpStoreImpl with the given ZooKeeper MetaStore.
      *
-     * @throws IllegalArgumentException if zkCurator is null
+     * @throws MetaStoreException if unable to create required ZooKeeper paths
      */
     public OpStoreImpl(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;

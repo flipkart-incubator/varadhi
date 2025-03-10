@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.db;
 
-import java.util.Objects;
-
 import lombok.Getter;
+
+import java.util.Objects;
 
 /**
  * Represents a ZooKeeper node in the Varadhi system.

@@ -1,11 +1,5 @@
 package com.flipkart.varadhi.db;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -26,6 +20,12 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.OpResult;
 import org.apache.zookeeper.data.Stat;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 import static com.flipkart.varadhi.db.ZNode.EVENT;
 
@@ -446,15 +446,9 @@ public class ZKMetaStore implements AutoCloseable {
 
         var ops = new ArrayList<CuratorOp>(toAdd.size() + toDelete.size());
 
-
-
         try {
-            for (var zNode : toAdd) {
-                ops.add(zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(zNode.getPath()));
-            }
-            for (var zNode : toDelete) {
-                ops.add(addDeleteZNodeOp(zNode));
-            }
+            toAdd.forEach(zNode -> ops.add(addCreateZNodeOp(zNode)));
+            toDelete.forEach(zNode -> ops.add(addDeleteZNodeOp(zNode)));
 
             var results = zkCurator.transaction().forOperations(ops);
             logFailedOperations(results);
@@ -563,7 +557,7 @@ public class ZKMetaStore implements AutoCloseable {
      */
     private CuratorOp createChangeEventZNode(String resourceName, ResourceType resourceType) {
         try {
-            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.toString(), resourceName, "");
+            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.name(), resourceName, "");
             log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
 
             var eventsPath = ZNode.ofKind(EVENT, nodeName).getPath();

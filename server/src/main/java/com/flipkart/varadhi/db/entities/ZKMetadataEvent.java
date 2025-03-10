@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.db.entities;
 
-import java.util.Objects;
-
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
+
+import java.util.Objects;
 
 /**
  * Implementation of {@link MetaStoreChangeEvent} for ZooKeeper-based metadata store events.
@@ -29,10 +29,10 @@ public class ZKMetadataEvent implements MetaStoreChangeEvent {
      * @param zkMetaStore  the ZooKeeper metadata store instance
      */
     public ZKMetadataEvent(String path, String resourceName, ResourceType resourceType, ZKMetaStore zkMetaStore) {
-        this.path = Objects.requireNonNull(path, "path");
-        this.resourceName = Objects.requireNonNull(resourceName, "resourceName");
-        this.resourceType = Objects.requireNonNull(resourceType, "resourceType");
-        this.zkMetaStore = Objects.requireNonNull(zkMetaStore, "zkMetaStore");
+        this.path = Objects.requireNonNull(path, "path cannot be null.");
+        this.resourceName = Objects.requireNonNull(resourceName, "resourceName cannot be null.");
+        this.resourceType = Objects.requireNonNull(resourceType, "resourceType cannot be null.");
+        this.zkMetaStore = Objects.requireNonNull(zkMetaStore, "zkMetaStore cannot be null.");
         this.completed = false;
     }
 
