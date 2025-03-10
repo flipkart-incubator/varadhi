@@ -120,26 +120,22 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
 
         Promise<Void> promise = Promise.promise();
 
-        acquirePermit()
-                .compose(ignored -> processWithTimeout(event))
-                .onComplete(ar -> {
-                    concurrencyLimiter.release();
-                    if (ar.succeeded()) {
-                        promise.complete();
-                    } else {
-                        handleProcessingFailure(event, ar.cause());
-                        promise.fail(ar.cause());
-                    }
-                });
+        acquirePermit().compose(ignored -> processWithTimeout(event)).onComplete(ar -> {
+            concurrencyLimiter.release();
+            if (ar.succeeded()) {
+                promise.complete();
+            } else {
+                handleProcessingFailure(event, ar.cause());
+                promise.fail(ar.cause());
+            }
+        });
 
         return promise.future().toCompletionStage().toCompletableFuture();
     }
 
     private Future<Void> processWithTimeout(EntityEvent event) {
         if (memberCache.isEmpty()) {
-            return Future.failedFuture(
-                new EventProcessingException("No cluster members available for processing")
-            );
+            return Future.failedFuture(new EventProcessingException("No cluster members available for processing"));
         }
 
         List<MemberInfo> members = new ArrayList<>(memberCache.values());
@@ -277,9 +273,7 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         membershipChanged.set(false);
 
         if (currentStates.isEmpty()) {
-            result.fail(
-                new EventProcessingException("All cluster members were removed during processing")
-            );
+            result.fail(new EventProcessingException("All cluster members were removed during processing"));
         } else {
             processNextBatch(event, currentStates, result, 0);
         }
@@ -293,24 +287,23 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         int attempt
     ) {
         List<Future<Void>> clusterMemberFutures = pendingClusterMembers.stream()
-                                                                                  .map(
-                                                                                      clusterMemberState -> processClusterMember(
-                                                                                          event,
-                                                                                          clusterMemberState
-                                                                                      )
-                                                                                  )
-                                                                                  .toList();
+                                                                       .map(
+                                                                           clusterMemberState -> processClusterMember(
+                                                                               event,
+                                                                               clusterMemberState
+                                                                           )
+                                                                       )
+                                                                       .toList();
 
-        CompositeFuture.join(new ArrayList<>(clusterMemberFutures))
-                .onComplete(ar -> {
-                    if (ar.failed()) {
-                        log.warn("Batch processing encountered errors", ar.cause());
-                    }
-                    vertx.setTimer(
-                            eventProcessorConfig.getRetryDelayMs(),
-                            id -> processNextBatch(event, clusterMemberStates, result, attempt + 1)
-                    );
-                });
+        CompositeFuture.join(new ArrayList<>(clusterMemberFutures)).onComplete(ar -> {
+            if (ar.failed()) {
+                log.warn("Batch processing encountered errors", ar.cause());
+            }
+            vertx.setTimer(
+                eventProcessorConfig.getRetryDelayMs(),
+                id -> processNextBatch(event, clusterMemberStates, result, attempt + 1)
+            );
+        });
     }
 
     private void handleMaxRetriesExceeded(
@@ -334,10 +327,7 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         result.fail(new EventProcessingException(errorMessage));
     }
 
-    private Future<Void> processClusterMember(
-        EntityEvent event,
-        ClusterMemberEventState clusterMemberState
-    ) {
+    private Future<Void> processClusterMember(EntityEvent event, ClusterMemberEventState clusterMemberState) {
         String clusterMemberId = clusterMemberState.getMember().hostname();
 
         if (hasMembershipChanged()) {
@@ -350,22 +340,25 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
             try {
                 ClusterMessage message = ClusterMessage.of(event);
                 messageExchange.request("cache-events", "processEvent", message)
-                        .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS)
-                        .thenAccept(response -> {
-                            if (response.getException() != null) {
-                                handleClusterMemberFailure(clusterMemberState, response.getException());
-                                promise.fail(new EventProcessingException(
-                                        "ClusterMember processing failed: " + response.getException().getMessage()
-                                ));
-                            } else {
-                                clusterMemberState.markComplete();
-                                promise.complete();
-                            }
-                        })
-                        .exceptionally(throwable -> {
-                            promise.fail(throwable);
-                            return null;
-                        });
+                               .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS)
+                               .thenAccept(response -> {
+                                   if (response.getException() != null) {
+                                       handleClusterMemberFailure(clusterMemberState, response.getException());
+                                       promise.fail(
+                                           new EventProcessingException(
+                                               "ClusterMember processing failed: " + response.getException()
+                                                                                             .getMessage()
+                                           )
+                                       );
+                                   } else {
+                                       clusterMemberState.markComplete();
+                                       promise.complete();
+                                   }
+                               })
+                               .exceptionally(throwable -> {
+                                   promise.fail(throwable);
+                                   return null;
+                               });
             } catch (Exception e) {
                 promise.fail(e);
             }
@@ -393,10 +386,7 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         }
     }
 
-    private void handleCompletion(
-        Map<String, ClusterMemberEventState> clusterMemberStates,
-        Promise<Void> result
-    ) {
+    private void handleCompletion(Map<String, ClusterMemberEventState> clusterMemberStates, Promise<Void> result) {
         boolean allComplete = clusterMemberStates.values().stream().allMatch(ClusterMemberEventState::isComplete);
 
         if (allComplete) {
@@ -440,7 +430,9 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         return vertx.executeBlocking(promise -> {
             try {
                 if (!concurrencyLimiter.tryAcquire(5, TimeUnit.SECONDS)) {
-                    promise.fail(new EventProcessingException("Failed to acquire processing permit - system overloaded"));
+                    promise.fail(
+                        new EventProcessingException("Failed to acquire processing permit - system overloaded")
+                    );
                 } else {
                     promise.complete();
                 }
