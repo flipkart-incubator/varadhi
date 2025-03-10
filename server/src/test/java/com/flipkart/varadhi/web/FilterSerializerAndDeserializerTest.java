@@ -3,10 +3,10 @@ package com.flipkart.varadhi.web;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.common.utils.JsonMapper;
-import com.flipkart.varadhi.entities.filters.BooleanConditions;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -18,7 +18,22 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FilterSerializerAndDeserializerTest {
+    private static ObjectMapper mapper;
+
+    @BeforeAll
+    public static void setUp() {
+        mapper = JsonMapper.getMapper();
+    }
+
     private static Stream<Arguments> provideConditions() {
+        return createConditions(false);
+    }
+
+    private static Stream<Arguments> provideConditionsWithEmptyHeader() {
+        return createConditions(true);
+    }
+
+    private static Stream<Arguments> createConditions(boolean emptyHeader) {
         return Stream.of(
             Arguments.of(
                 "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"suffix\"}]}]",
@@ -27,12 +42,12 @@ public class FilterSerializerAndDeserializerTest {
             ),
             Arguments.of(
                 "[{\"op\":\"AND\",\"values\":[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"},{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"prefix\"}]}]",
-                true,
+                !emptyHeader,
                 "startsWith(X_abc,\"my_prefix\") and endsWith(X_abc,\"prefix\")"
             ),
             Arguments.of(
                 "[{\"op\":\"OR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
-                true,
+                !emptyHeader,
                 "contains(X_abc,\"substring\") or exists(X_abc)"
             ),
             Arguments.of(
@@ -42,17 +57,17 @@ public class FilterSerializerAndDeserializerTest {
             ),
             Arguments.of(
                 "[{\"op\":\"NOR\",\"values\":[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"substring\"},{\"op\":\"exists\",\"key\":\"X_abc\"}]}]",
-                false,
+                emptyHeader,
                 "not(contains(X_abc,\"substring\") or exists(X_abc))"
             ),
             Arguments.of(
                 "[{\"op\":\"NOT\",\"value\":{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}}]",
-                false,
+                emptyHeader,
                 "not(startsWith(X_abc,\"my_prefix\"))"
             ),
             Arguments.of(
                 "[{\"op\":\"startsWith\",\"key\":\"X_abc\",\"value\":\"my_prefix\"}]",
-                true,
+                !emptyHeader,
                 "startsWith(X_abc,\"my_prefix\")"
             ),
             Arguments.of(
@@ -62,7 +77,7 @@ public class FilterSerializerAndDeserializerTest {
             ),
             Arguments.of(
                 "[{\"op\":\"endsWith\",\"key\":\"X_abc\",\"value\":\"fix\"}]",
-                true,
+                !emptyHeader,
                 "endsWith(X_abc,\"fix\")"
             ),
             Arguments.of(
@@ -77,7 +92,7 @@ public class FilterSerializerAndDeserializerTest {
             ),
             Arguments.of(
                 "[{\"op\":\"in\",\"key\":\"X_abc\",\"values\":[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"]}]",
-                true,
+                !emptyHeader,
                 "in(X_abc,[\"my_prefix\",\"my_prefix_2\",\"my_prefix_3\"])"
             ),
             Arguments.of(
@@ -85,8 +100,12 @@ public class FilterSerializerAndDeserializerTest {
                 false,
                 "contains(X_abc,\"substring\")"
             ),
-            Arguments.of("[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"x\"}]", true, "contains(X_abc,\"x\")"),
-            Arguments.of("[{\"op\":\"exists\",\"key\":\"X_abc\"}]", true, "exists(X_abc)"),
+            Arguments.of(
+                "[{\"op\":\"contains\",\"key\":\"X_abc\",\"value\":\"x\"}]",
+                !emptyHeader,
+                "contains(X_abc,\"x\")"
+            ),
+            Arguments.of("[{\"op\":\"exists\",\"key\":\"X_abc\"}]", !emptyHeader, "exists(X_abc)"),
             Arguments.of("[{\"op\":\"exists\",\"key\":\"X_abcd\"}]", false, "exists(X_abcd)")
         );
     }
@@ -104,7 +123,6 @@ public class FilterSerializerAndDeserializerTest {
     @ParameterizedTest
     @MethodSource ("provideConditions")
     public void testConditions(String json, boolean expected, String result) throws JsonProcessingException {
-        ObjectMapper mapper = JsonMapper.getMapper();
         List<Condition> conditions = mapper.readValue(
             json,
             mapper.getTypeFactory().constructCollectionType(List.class, Condition.class)
@@ -117,14 +135,14 @@ public class FilterSerializerAndDeserializerTest {
 
         for (Condition condition : conditions) {
             assertEquals(expected, condition.evaluate(headers));
+            assertEquals(result, condition.toString());
         }
     }
 
     @ParameterizedTest
-    @MethodSource ("provideConditions")
+    @MethodSource ("provideConditionsWithEmptyHeader")
     public void testConditionsWithEmptyHeader(String json, boolean expected, String result)
         throws JsonProcessingException {
-        ObjectMapper mapper = JsonMapper.getMapper();
         List<Condition> conditions = mapper.readValue(
             json,
             mapper.getTypeFactory().constructCollectionType(List.class, Condition.class)
@@ -133,28 +151,8 @@ public class FilterSerializerAndDeserializerTest {
         Multimap<String, String> headers = ArrayListMultimap.create();
 
         for (Condition condition : conditions) {
-            if (condition.getClass() == BooleanConditions.NandCondition.class || condition.getClass()
-                                                                                 == BooleanConditions.NorCondition.class
-                || condition.getClass() == BooleanConditions.NotCondition.class) {
-                assertTrue(condition.evaluate(headers));
-            } else {
-                assertFalse(condition.evaluate(headers));
-            }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource ("provideConditions")
-    public void testToString(String json, boolean expected, String expectedToString) throws JsonProcessingException {
-        ObjectMapper mapper = JsonMapper.getMapper();
-        List<Condition> conditions = mapper.readValue(
-            json,
-            mapper.getTypeFactory().constructCollectionType(List.class, Condition.class)
-        );
-
-        for (int i = 0; i < conditions.size(); i++) {
-            Condition condition = conditions.get(i);
-            assertEquals(expectedToString, condition.toString());
+            assertEquals(expected, condition.evaluate(headers));
+            assertEquals(result, condition.toString());
         }
     }
 
