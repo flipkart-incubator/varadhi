@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
-public final class EventProcessor implements EntityEventProcessor, AutoCloseable {
+public final class EventProcessor implements EntityEventProcessor {
 
     private final Vertx vertx;
     private final EventProcessorConfig eventProcessorConfig;
@@ -46,25 +46,24 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         EventProcessorConfig eventProcessorConfig
     ) {
         Promise<EventProcessor> promise = Promise.promise();
-        try (EventProcessor processor = new EventProcessor(vertx, messageExchange, eventProcessorConfig)) {
-            clusterManager.getAllMembers().compose(initialMembers -> {
-                if (!initialMembers.isEmpty()) {
-                    processor.initializeMemberCache(initialMembers);
-                    processor.setupMembershipListener(clusterManager);
-                    return Future.succeededFuture(processor.closeOnError());
-                }
-                return Future.failedFuture("No members found in cluster");
-            }).onComplete(ar -> {
-                if (ar.succeeded()) {
-                    promise.complete(ar.result());
-                } else {
-                    log.error("Failed to initialize EventProcessor", ar.cause());
-                    promise.fail(ar.cause());
-                }
-            });
-        } catch (Exception e) {
-            promise.fail(new EventProcessingException("Failed to create EventProcessor", e));
-        }
+        EventProcessor processor = new EventProcessor(vertx, messageExchange, eventProcessorConfig);
+
+        clusterManager.getAllMembers().compose(initialMembers -> {
+            if (!initialMembers.isEmpty()) {
+                processor.initializeMemberCache(initialMembers);
+                processor.setupMembershipListener(clusterManager);
+                return Future.succeededFuture(processor.closeOnError());
+            }
+            return Future.failedFuture("No members found in cluster");
+        }).onComplete(ar -> {
+            if (ar.succeeded()) {
+                promise.complete(ar.result());
+            } else {
+                processor.close();
+                log.error("Failed to initialize EventProcessor", ar.cause());
+                promise.fail(ar.cause());
+            }
+        });
 
         return promise.future();
     }
@@ -407,8 +406,7 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
         log.error("Failed to process event: {}/{}", event.resourceType(), event.resourceName(), throwable);
     }
 
-    @Override
-    public void close() throws InterruptedException {
+    public void close() {
         if (!isShutdown.compareAndSet(false, true)) {
             return;
         }
@@ -421,6 +419,9 @@ public final class EventProcessor implements EntityEventProcessor, AutoCloseable
             )) {
                 log.warn("Shutdown timed out waiting for tasks to complete");
             }
+        } catch (InterruptedException e) {
+            log.warn("Shutdown interrupted while waiting for tasks to complete", e);
+            Thread.currentThread().interrupt();
         } finally {
             concurrencyLimiter.release(eventProcessorConfig.getMaxConcurrentProcessing());
         }
