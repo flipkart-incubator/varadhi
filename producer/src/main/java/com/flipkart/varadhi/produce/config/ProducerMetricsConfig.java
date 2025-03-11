@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.Duration;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Configuration for producer metrics collection and reporting.
@@ -48,6 +50,20 @@ public class ProducerMetricsConfig {
     @Positive(message = "Throughput refresh interval must be positive")
     @Builder.Default
     private Duration throughputRefreshInterval = Duration.ofSeconds(10);
+
+    /**
+     * List of attribute names to be included as metric tags.
+     * If empty, all attributes will be included.
+     */
+    @Builder.Default
+    private Set<String> includedTags = new HashSet<>();
+
+    /**
+     * Whether to include all attributes as tags when includedTags is empty.
+     * If false and includedTags is empty, no attribute tags will be added.
+     */
+    @Builder.Default
+    private boolean includeAllTagsWhenEmpty = false;
 
     /**
      * Creates a new instance with default values.
