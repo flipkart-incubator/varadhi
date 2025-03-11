@@ -130,12 +130,12 @@ public class ProduceHandlers implements RouteProvider {
         String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
         String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
 
-        initializeMetricsEmitter(ctx, topicName);
-        //TODO FIx attribute name semantics here.
+        initializeMetricsEmitter(ctx, varadhiTopicName);
 
-        // TODO:: Below is making extra copy, this needs to be avoided.
-        // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
-        // however only required bytes are needed. Need to figure out the correct mechanism here.
+        // FIXME: Optimize memory usage by avoiding buffer copy
+        // Current implementation: Uses getBytes() which creates a copy of the entire buffer
+        // Potential solution: Use getByteBuf().array() to access the backing array directly,
+        // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
 
@@ -152,6 +152,7 @@ public class ProduceHandlers implements RouteProvider {
     private void initializeMetricsEmitter(RoutingContext ctx, String topicName) {
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         String produceIdentity = ctx.getIdentityOrDefault();
+        // FIXME: Fix Attribute Name Semantics here
         produceAttributes.put(TAG_TOPIC, topicName);
         produceAttributes.put(TAG_REGION, produceRegion);
         produceAttributes.put(TAG_IDENTITY, produceIdentity);

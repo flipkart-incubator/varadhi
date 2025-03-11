@@ -40,8 +40,6 @@ public interface ProducerMetricsEmitter extends AutoCloseable {
     /**
      * Closes this metrics emitter and releases any system resources associated with it.
      * Implementations should ensure that any buffered metrics are properly flushed.
-     *
-     * @throws Exception if an error occurs during closure
      */
     @Override
     void close();

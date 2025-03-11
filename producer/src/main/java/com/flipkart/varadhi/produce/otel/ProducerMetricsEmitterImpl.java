@@ -12,8 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +76,7 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
         this.config = config;
         this.scheduler = createScheduler();
 
+        validateConfig(produceAttributes);
         List<Tag> baseTags = getTags(produceAttributes);
         initializeMetrics(baseTags);
         scheduleThroughputReset();
@@ -252,10 +255,32 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
         filteredByteCounter.set(0);
     }
 
+    private void validateConfig(Map<String, String> produceAttributes) {
+        if (!config.getIncludedTags().isEmpty()) {
+            Set<String> invalidTags = new HashSet<>(config.getIncludedTags());
+            invalidTags.removeAll(produceAttributes.keySet());
+            if (!invalidTags.isEmpty()) {
+                log.warn("Some configured metric tags are not present in produce attributes: {}", invalidTags);
+            }
+        }
+    }
+
     private List<Tag> getTags(Map<String, String> produceAttributes) {
-        // TODO:: All of them needed, can this be driven from config ?
         List<Tag> tags = new ArrayList<>();
-        produceAttributes.forEach((k, v) -> tags.add(Tag.of(k, v)));
+
+        if (config.getIncludedTags().isEmpty()) {
+            if (config.isIncludeAllTagsWhenEmpty()) {
+                produceAttributes.forEach((k, v) -> tags.add(Tag.of(k, v)));
+            }
+        } else {
+            config.getIncludedTags().forEach(tagName -> {
+                String value = produceAttributes.get(tagName);
+                if (value != null) {
+                    tags.add(Tag.of(tagName, value));
+                }
+            });
+        }
+
         return tags;
     }
 

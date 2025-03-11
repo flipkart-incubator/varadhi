@@ -133,7 +133,6 @@ public class ProducerService {
             InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
                                                                      .getProduceTopicForRegion(produceRegion);
 
-            // TODO: evaluate, if there is no reason for this to be null. It should IllegalStateException if it is null.
             if (internalTopic == null) {
                 metricsEmitter.emit(false, 0, 0, 0,
                         false, ProducerErrorType.TOPIC_NOT_FOUND);
