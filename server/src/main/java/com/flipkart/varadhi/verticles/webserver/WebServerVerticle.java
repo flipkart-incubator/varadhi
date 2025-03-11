@@ -254,7 +254,8 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
             configuration.getProducerOptions().isMetricEnabled(),
-            meterRegistry
+            meterRegistry,
+            configuration.getProducerOptions().getMetricsConfig()
         );
         return new ArrayList<>(
             new ProduceHandlers(
