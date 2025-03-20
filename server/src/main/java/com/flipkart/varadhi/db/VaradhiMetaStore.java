@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
+import com.flipkart.varadhi.spi.db.org.OrgFilterOperations;
 import com.flipkart.varadhi.spi.db.org.OrgOperations;
 import com.flipkart.varadhi.spi.db.project.ProjectOperations;
 import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
@@ -41,6 +42,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     private final ProjectOperations projectOperations;
     private final TopicOperations topicOperations;
     private final SubscriptionOperations subscriptionOperations;
+    private final OrgFilterOperations orgLevelFilters;
 
     /**
      * Constructs a new VaradhiMetaStore instance.
@@ -59,6 +61,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         this.projectOperations = new ProjectOperationsImpl(zkMetaStore);
         this.topicOperations = new TopicOperationsImpl(zkMetaStore);
         this.subscriptionOperations = new SubscriptionOperationsImpl(zkMetaStore);
+        this.orgLevelFilters = new OrgFilterOperationsImpl(zkMetaStore);
         ensureEntityTypePathExists();
     }
 
@@ -81,6 +84,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public OrgOperations orgOperations() {
         return orgOperations;
+    }
+
+    @Override
+    public OrgFilterOperations orgLevelFilters() {
+        return orgLevelFilters;
     }
 
     @Override

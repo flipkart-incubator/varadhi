@@ -29,8 +29,6 @@ import java.util.function.BiFunction;
 @Slf4j
 public class SubscriptionService {
     private final MetaStore metaStore;
-    private final TopicOperations topicOperations;
-    private final
     private final ControllerRestApi controllerClient;
     private final ShardProvisioner shardProvisioner;
 

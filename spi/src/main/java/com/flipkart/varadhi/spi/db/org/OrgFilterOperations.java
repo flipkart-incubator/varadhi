@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Interface for operations related to named filters.
  */
-public interface OrgLevelFilters {
+public interface OrgFilterOperations {
 
     /**
      * Retrieves a named filter by its name within a specified organization.

@@ -3,14 +3,14 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.org.OrgLevelFilters;
+import com.flipkart.varadhi.spi.db.org.OrgFilterOperations;
 
 import java.util.List;
 
-public class OrgLevelFiltersImpl implements OrgLevelFilters {
+public class OrgFilterOperationsImpl implements OrgFilterOperations {
     private final ZKMetaStore zkMetaStore;
 
-    private OrgLevelFiltersImpl(ZKMetaStore zkMetaStore) {
+    OrgFilterOperationsImpl(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;
     }
 
