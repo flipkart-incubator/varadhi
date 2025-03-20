@@ -8,7 +8,9 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.project.ProjectOperations;
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
+import com.flipkart.varadhi.spi.db.topic.TopicOperations;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -22,17 +24,20 @@ import java.util.List;
 public class VaradhiTopicService {
 
     private final StorageTopicService<StorageTopic> storageTopicService;
-    private final MetaStore metaStore;
-
+    private final TopicOperations topicOperations;
+    private final SubscriptionOperations subscriptionOperations;
+    private final ProjectOperations projectOperations;
     /**
      * Constructs a VaradhiTopicService with the specified storage topic service and meta store.
      *
      * @param storageTopicService the storage topic service
-     * @param metaStore           the meta store
+     * @param topicOperations           the meta store
      */
-    public VaradhiTopicService(StorageTopicService<StorageTopic> storageTopicService, MetaStore metaStore) {
+    public VaradhiTopicService(StorageTopicService<StorageTopic> storageTopicService, TopicOperations topicOperations, SubscriptionOperations subscriptionOperations, ProjectOperations projectOperations) {
         this.storageTopicService = storageTopicService;
-        this.metaStore = metaStore;
+        this.topicOperations = topicOperations;
+        this.subscriptionOperations = subscriptionOperations;
+        this.projectOperations = projectOperations;
     }
 
     /**
@@ -45,7 +50,7 @@ public class VaradhiTopicService {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
         try {
             if (!exists(varadhiTopic.getName())) {
-                metaStore.createTopic(varadhiTopic);
+                topicOperations.createTopic(varadhiTopic);
             } else {
                 VaradhiTopic existingTopic = get(varadhiTopic.getName());
                 if (!existingTopic.isRetriable()) {
@@ -53,7 +58,7 @@ public class VaradhiTopicService {
                         String.format("Topic '%s' already exists.", varadhiTopic.getName())
                     );
                 }
-                metaStore.updateTopic(varadhiTopic);
+                topicOperations.updateTopic(varadhiTopic);
             }
 
             createStorageTopics(varadhiTopic, project);
@@ -94,7 +99,7 @@ public class VaradhiTopicService {
      * @return the Varadhi topic
      */
     public VaradhiTopic get(String topicName) {
-        return metaStore.getTopic(topicName);
+        return topicOperations.getTopic(topicName);
     }
 
     /**
@@ -107,7 +112,7 @@ public class VaradhiTopicService {
     public void delete(String topicName, ResourceDeletionType deletionType, ResourceActionRequest actionRequest) {
         log.info("Deleting Varadhi topic: {}", topicName);
         // TODO: If the only topic in a namespace, also delete the namespace and tenant. Perform cleanup independently of the delete operation.
-        VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
+        VaradhiTopic varadhiTopic = topicOperations.getTopic(topicName);
         validateTopicForDeletion(topicName, deletionType);
 
         if (deletionType.equals(ResourceDeletionType.HARD_DELETE)) {
@@ -126,7 +131,7 @@ public class VaradhiTopicService {
     public void handleSoftDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Soft deleting Varadhi topic: {}", varadhiTopic.getName());
         varadhiTopic.markInactive(actionRequest.actorCode(), actionRequest.message());
-        metaStore.updateTopic(varadhiTopic);
+        topicOperations.updateTopic(varadhiTopic);
     }
 
     /**
@@ -138,11 +143,11 @@ public class VaradhiTopicService {
     public void handleHardDelete(VaradhiTopic varadhiTopic, ResourceActionRequest actionRequest) {
         log.info("Hard deleting Varadhi topic: {}", varadhiTopic.getName());
 
-        Project project = metaStore.getProject(varadhiTopic.getProjectName());
+        Project project = projectOperations.getProject(varadhiTopic.getProjectName());
 
         try {
             varadhiTopic.markDeleting(actionRequest.actorCode(), "Starting Topic Deletion");
-            metaStore.updateTopic(varadhiTopic);
+            topicOperations.updateTopic(varadhiTopic);
 
             varadhiTopic.getInternalTopics()
                         .forEach(
@@ -154,7 +159,7 @@ public class VaradhiTopicService {
                                                                         )
                                                                     )
                         );
-            metaStore.deleteTopic(varadhiTopic.getName());
+            topicOperations.deleteTopic(varadhiTopic.getName());
         } catch (Exception e) {
             varadhiTopic.markDeleteFailed(e.getMessage());
             updateTopicState(varadhiTopic);
@@ -173,7 +178,7 @@ public class VaradhiTopicService {
     public void restore(String topicName, ResourceActionRequest actionRequest) {
         log.info("Restoring Varadhi topic: {}", topicName);
 
-        VaradhiTopic varadhiTopic = metaStore.getTopic(topicName);
+        VaradhiTopic varadhiTopic = topicOperations.getTopic(topicName);
 
         if (varadhiTopic.isActive()) {
             throw new InvalidOperationForResourceException("Topic %s is not deleted.".formatted(topicName));
@@ -195,7 +200,7 @@ public class VaradhiTopicService {
         }
 
         varadhiTopic.restore(actionRequest.actorCode(), actionRequest.message());
-        metaStore.updateTopic(varadhiTopic);
+        topicOperations.updateTopic(varadhiTopic);
     }
 
     /**
@@ -208,9 +213,9 @@ public class VaradhiTopicService {
      */
     private void validateTopicForDeletion(String topicName, ResourceDeletionType deletionType) {
         // TODO: Improve efficiency by avoiding a full scan of all subscriptions across projects.
-        List<VaradhiSubscription> subscriptions = metaStore.getAllSubscriptionNames()
+        List<VaradhiSubscription> subscriptions = subscriptionOperations.getAllSubscriptionNames()
                                                            .stream()
-                                                           .map(metaStore::getSubscription)
+                                                           .map(subscriptionOperations::getSubscription)
                                                            .filter(s -> s.getTopic().equals(topicName))
                                                            .toList();
 
@@ -240,7 +245,7 @@ public class VaradhiTopicService {
      * @return true if the topic exists, false otherwise
      */
     public boolean exists(String topicName) {
-        return metaStore.checkTopicExists(topicName);
+        return topicOperations.checkTopicExists(topicName);
     }
 
     /**
@@ -252,9 +257,9 @@ public class VaradhiTopicService {
      * @return a list of Varadhi topic names
      */
     public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
-        return metaStore.getTopicNames(projectName)
+        return topicOperations.getTopicNames(projectName)
                         .stream()
-                        .filter(topicName -> includeInactive || metaStore.getTopic(topicName).isActive())
+                        .filter(topicName -> includeInactive || topicOperations.getTopic(topicName).isActive())
                         .toList();
     }
 
@@ -265,7 +270,7 @@ public class VaradhiTopicService {
      */
     private void updateTopicState(VaradhiTopic varadhiTopic) {
         try {
-            metaStore.updateTopic(varadhiTopic);
+            topicOperations.updateTopic(varadhiTopic);
         } catch (Exception e) {
             log.error("Failed to update topic state: {}", varadhiTopic.getName(), e);
         }

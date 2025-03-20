@@ -36,6 +36,7 @@ import lombok.Getter;
 @Getter
 public final class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
+    public static final ZNodeKind NAMED_FILTER = new ZNodeKind("NamedFilter");
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
@@ -76,6 +77,8 @@ public final class ZNode {
         private String path;
         private String parent;
         private ZNodeKind zNodeKind;
+        private String childKind;
+        private String childName;
 
         /**
          * Sets the ZNodeKind for this node.
@@ -114,6 +117,12 @@ public final class ZNode {
             return this;
         }
 
+        public Builder insideParent(String childKind, String childName) {
+            this.childKind = Objects.requireNonNull(childKind, "childKind cannot be null");
+            this.childName = Objects.requireNonNull(childName, "childName cannot be null");
+            return this;
+        }
+
         /**
          * Builds the ZNode instance with the configured properties.
          *
@@ -123,7 +132,9 @@ public final class ZNode {
         public ZNode build() {
             Objects.requireNonNull(zNodeKind, "zNodeKind must be set");
 
-            if (parent != null) {
+            if (parent != null && childKind != null && childName != null) {
+                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, parent, childKind, childName);
+            } else if (parent != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, getResourceFQDN(parent, name));
             } else if (name != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, name);
@@ -138,6 +149,10 @@ public final class ZNode {
 
     public static ZNode ofOrg(String orgName) {
         return new Builder().withZNodeKind(ORG).withName(orgName).build();
+    }
+
+    public static ZNode ofOrgNamedFilter(String orgName, String namedFilterName) {
+        return new Builder().withZNodeKind(ORG).withName(orgName).insideParent(NAMED_FILTER.kind(), namedFilterName).build();
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {

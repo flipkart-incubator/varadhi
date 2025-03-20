@@ -20,7 +20,7 @@ public class ProjectService {
     }
 
     public Project createProject(Project project) {
-        boolean orgExists = metaStore.checkOrgExists(project.getOrg());
+        boolean orgExists = metaStore.orgOperations().checkOrgExists(project.getOrg());
         if (!orgExists) {
             throw new ResourceNotFoundException(
                 String.format(
@@ -29,7 +29,7 @@ public class ProjectService {
                 )
             );
         }
-        boolean teamExists = metaStore.checkTeamExists(project.getTeam(), project.getOrg());
+        boolean teamExists = metaStore.teamOperations().checkTeamExists(project.getTeam(), project.getOrg());
         if (!teamExists) {
             throw new ResourceNotFoundException(
                 String.format(
@@ -38,12 +38,12 @@ public class ProjectService {
                 )
             );
         }
-        metaStore.createProject(project);
+        metaStore.projectOperations().createProject(project);
         return project;
     }
 
     public Project getProject(String projectName) {
-        return metaStore.getProject(projectName);
+        return metaStore.projectOperations().getProject(projectName);
     }
 
     public Project getCachedProject(String projectName) {
@@ -51,7 +51,7 @@ public class ProjectService {
     }
 
     public Project updateProject(Project project) {
-        Project existingProject = metaStore.getProject(project.getName());
+        Project existingProject = metaStore.projectOperations().getProject(project.getName());
         if (!project.getOrg().equals(existingProject.getOrg())) {
             throw new IllegalArgumentException(
                 String.format("Project(%s) can not be moved across organisation.", project.getName())
@@ -71,13 +71,13 @@ public class ProjectService {
                 )
             );
         }
-        metaStore.updateProject(project);
+        metaStore.projectOperations().updateProject(project);
         return project;
     }
 
     public void deleteProject(String projectName) {
         validateDelete(projectName);
-        metaStore.deleteProject(projectName);
+        metaStore.projectOperations().deleteProject(projectName);
     }
 
     private void validateDelete(String projectName) {
@@ -86,7 +86,7 @@ public class ProjectService {
     }
 
     private void ensureNoTopicExist(String projectName) {
-        List<String> varadhiTopicNames = metaStore.getTopicNames(projectName);
+        List<String> varadhiTopicNames = metaStore.topicOperations().getTopicNames(projectName);
         if (!varadhiTopicNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                 String.format("Can not delete Project(%s), it has associated entities.", projectName)
@@ -95,7 +95,7 @@ public class ProjectService {
     }
 
     private void ensureNoSubscriptionExist(String projectName) {
-        List<String> varadhiSubscriptionNames = metaStore.getSubscriptionNames(projectName);
+        List<String> varadhiSubscriptionNames = metaStore.subscriptionOperations().getSubscriptionNames(projectName);
         if (!varadhiSubscriptionNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                 String.format("Can not delete Project(%s), it has associated subscription entities.", projectName)

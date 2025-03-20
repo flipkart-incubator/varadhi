@@ -4,7 +4,7 @@ public enum ResourceType {
 
     ROOT("root"), ORG("org"), TEAM("team"), PROJECT("project"), TOPIC("topic"), SUBSCRIPTION(
         "subscription"
-    ), IAM_POLICY("iam_policy");
+    ), IAM_POLICY("iam_policy"), ORG_FILTER("org_filter");
 
     private final String type;
 

@@ -40,7 +40,7 @@ public class OrgServiceTest {
         );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgOperations(), varadhiMetaStore.teamOperations());
         teamService = new TeamService(varadhiMetaStore);
     }
 

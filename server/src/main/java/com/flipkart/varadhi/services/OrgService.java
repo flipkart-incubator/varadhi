@@ -3,6 +3,8 @@ package com.flipkart.varadhi.services;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.org.OrgOperations;
+import com.flipkart.varadhi.spi.db.team.TeamOperations;
 import com.flipkart.varadhi.web.Extensions;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -11,35 +13,37 @@ import java.util.List;
 
 
 @Slf4j
-@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgService {
-    private final MetaStore metaStore;
+    private final OrgOperations orgOperations;
+    private final TeamOperations teamOperations;
 
-    public OrgService(MetaStore metaStore) {
-        this.metaStore = metaStore;
+    public OrgService(OrgOperations orgOperations, TeamOperations teamOperations) {
+        this.orgOperations = orgOperations;
+        this.teamOperations = teamOperations;
     }
 
     public Org createOrg(Org org) {
-        metaStore.createOrg(org);
+        orgOperations.createOrg(org);
         return org;
     }
 
     public List<Org> getOrgs() {
-        return metaStore.getOrgs();
+        return orgOperations.getOrgs();
     }
 
     public Org getOrg(String orgName) {
-        return metaStore.getOrg(orgName);
+        return orgOperations.getOrg(orgName);
     }
 
 
     public void deleteOrg(String orgName) {
-        List<String> teamsInOrg = metaStore.getTeamNames(orgName);
+        List<String> teamsInOrg = teamOperations.getTeamNames(orgName);
         if (teamsInOrg.size() > 0) {
             throw new InvalidOperationForResourceException(
-                String.format("Can not delete Org(%s) as it has associated Team(s).", orgName)
+                    String.format("Can not delete Org(%s) as it has associated Team(s).", orgName)
             );
         }
-        metaStore.deleteOrg(orgName);
+        orgOperations.deleteOrg(orgName);
     }
 }

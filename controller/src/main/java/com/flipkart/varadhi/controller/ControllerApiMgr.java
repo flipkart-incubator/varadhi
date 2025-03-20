@@ -37,7 +37,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     @Override
     public CompletableFuture<SubscriptionState> getSubscriptionState(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> metaStore.subscriptionOperations().getSubscription(subscriptionId))
                                 .thenCompose(this::getSubscriptionState);
     }
 
@@ -118,7 +118,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     @Override
     public CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> metaStore.subscriptionOperations().getSubscription(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     if (!AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
                                         throw new InvalidOperationForResourceException(
@@ -146,7 +146,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     @Override
     public CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> metaStore.subscriptionOperations().getSubscription(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     // This means that partially assigned subscriptions can be stopped.
                                     if (AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
@@ -209,7 +209,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
         UnsidelineRequest request,
         String requestedBy
     ) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> metaStore.subscriptionOperations().getSubscription(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     if (!ss.isRunningSuccessfully()) {
                                         throw new InvalidOperationForResourceException(
@@ -257,7 +257,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             assignments.forEach(assignment -> {
                 log.info("Assignment {} needs to be re-assigned", assignment);
                 SubscriptionOperation operation = SubscriptionOperation.reAssignShardOp(assignment, SYSTEM_IDENTITY);
-                VaradhiSubscription subscription = metaStore.getSubscription(assignment.getSubscriptionId());
+                VaradhiSubscription subscription = metaStore.subscriptionOperations().getSubscription(assignment.getSubscriptionId());
                 operationMgr.createAndEnqueue(
                     operation,
                     new ReAssignOpExecutor(
@@ -293,7 +293,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     }
 
     public void retryOperation(SubscriptionOperation operation) {
-        VaradhiSubscription subscription = metaStore.getSubscription(operation.getData().getSubscriptionId());
+        VaradhiSubscription subscription = metaStore.subscriptionOperations().getSubscription(operation.getData().getSubscriptionId());
         OpExecutor<OrderedOperation> executor = getOpExecutor(operation, subscription);
         operationMgr.enqueue(operation, executor);
     }

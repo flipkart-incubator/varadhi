@@ -10,6 +10,7 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.spi.db.topic.TopicOperations;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,8 +24,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.*;
 
 public class ProjectServiceTest {
 
@@ -51,7 +51,7 @@ public class ProjectServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgOperations(), varadhiMetaStore.teamOperations());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
@@ -188,8 +188,9 @@ public class ProjectServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
-
-        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
+        TopicOperations topicOperations = mock(TopicOperations.class);
+        when(varadhiMetaStore.topicOperations()).thenReturn(topicOperations);
+        when(topicOperations.getTopicNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
         InvalidOperationForResourceException e = Assertions.assertThrows(
             InvalidOperationForResourceException.class,
             () -> projectService.deleteProject(o1t1p2.getName())
