@@ -26,6 +26,7 @@ import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
 import com.flipkart.varadhi.web.*;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -238,6 +239,13 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    private HttpApiMetricsHandler createHttpApiMetricsHandler() {
+        return new HttpApiMetricsHandler(
+                true, // Enable metrics by default, or read from configuration
+                meterRegistry
+        );
+    }
+
     @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getProduceApiRoutes() {
         String deployedRegion = configuration.getRestOptions().getDeployedRegion();
@@ -257,12 +265,14 @@ public class WebServerVerticle extends AbstractVerticle {
             meterRegistry,
             configuration.getProducerOptions().getMetricsConfig()
         );
+        HttpApiMetricsHandler httpApiMetricsHandler = createHttpApiMetricsHandler();
         return new ArrayList<>(
             new ProduceHandlers(
                 producerService,
                 preProduceHandler,
                 projectService,
                 producerMetricsHandler,
+                httpApiMetricsHandler,
                 configuration.getMessageConfiguration(),
                 deployedRegion
             ).get()

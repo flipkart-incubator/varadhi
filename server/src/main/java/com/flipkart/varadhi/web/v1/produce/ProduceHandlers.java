@@ -21,6 +21,9 @@ import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsEmitter;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
+import com.flipkart.varadhi.web.metrics.HttpErrorTypeMapper;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -66,10 +69,12 @@ public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
-    private final ProducerMetricHandler metricHandler;
+    private final ProducerMetricHandler producerMetricHandler;
+    private final HttpApiMetricsHandler httpApiMetricsHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
-    private ProducerMetricsEmitter metricsEmitter;
+    private ProducerMetricsEmitter producerMetricsEmitter;
+    private final ThreadLocal<HttpApiMetricsEmitter> httpApiMetricsEmitter = new ThreadLocal<>();
 
     /**
      * Returns the list of route definitions for message production endpoints.
@@ -132,14 +137,20 @@ public class ProduceHandlers implements RouteProvider {
 
         initializeMetricsEmitter(ctx, varadhiTopicName);
 
-        // FIXME: Optimize memory usage by avoiding buffer copy
-        // Current implementation: Uses getBytes() which creates a copy of the entire buffer
-        // Potential solution: Use getByteBuf().array() to access the backing array directly,
-        // but need to implement proper bounds handling for partial buffer reads
-        byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
+        try {
+            // FIXME: Optimize memory usage by avoiding buffer copy
+            // Current implementation: Uses getBytes() which creates a copy of the entire buffer
+            // Potential solution: Use getByteBuf().array() to access the backing array directly,
+            // but need to implement proper bounds handling for partial buffer reads
+            byte[] payload = ctx.body().buffer().getBytes();
+            Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
 
-        handleProduceToTopic(ctx, requestStartTime, messageToProduce, varadhiTopicName);
+            handleProduceToTopic(ctx, requestStartTime, messageToProduce, varadhiTopicName);
+        } catch (Exception e) {
+            // Record HTTP API error metrics and rethrow
+            recordHttpApiError(ctx);
+            throw e;
+        }
     }
 
     /**
@@ -152,11 +163,32 @@ public class ProduceHandlers implements RouteProvider {
     private void initializeMetricsEmitter(RoutingContext ctx, String topicName) {
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         String produceIdentity = ctx.getIdentityOrDefault();
+
         // FIXME: Fix Attribute Name Semantics here
         produceAttributes.put(TAG_TOPIC, topicName);
         produceAttributes.put(TAG_REGION, produceRegion);
         produceAttributes.put(TAG_IDENTITY, produceIdentity);
-        metricsEmitter = metricHandler.getEmitter(produceAttributes);
+        producerMetricsEmitter = producerMetricHandler.getEmitter(produceAttributes);
+
+        // Set up HTTP API metrics
+        String apiName = "produce";
+        httpApiMetricsEmitter.set(httpApiMetricsHandler.getEmitter(apiName, produceAttributes));
+    }
+
+    /**
+     * Records HTTP API error metrics for an exception.
+     *
+     * @param ctx The routing context containing the request information
+     */
+    private void recordHttpApiError(RoutingContext ctx) {
+        int statusCode = ctx.response().getStatusCode();
+        String errorType = HttpErrorTypeMapper.mapStatusCodeToErrorType(statusCode);
+
+        HttpApiMetricsEmitter emitter = httpApiMetricsEmitter.get();
+        if (emitter != null) {
+            emitter.recordError(statusCode, errorType);
+            httpApiMetricsEmitter.remove();
+        }
     }
 
     /**
@@ -173,7 +205,7 @@ public class ProduceHandlers implements RouteProvider {
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
                 messageToProduce,
                 varadhiTopicName,
-                metricsEmitter
+                producerMetricsEmitter
         );
 
         produceFuture.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext(v ->
@@ -196,14 +228,40 @@ public class ProduceHandlers implements RouteProvider {
                                          Message messageToProduce, String varadhiTopicName,
                                          ProduceResult produceResult, Throwable failure) {
         long totalLatency = System.currentTimeMillis() - requestStartTime;
-        emitMetrics(totalLatency, failure);
+        emitProducerMetrics(totalLatency, failure);
 
-        if (produceResult != null) {
-            handleProduceResult(ctx, produceResult);
-        } else {
-            log.error("produceToTopic({}, {}) failed unexpectedly.",
-                    messageToProduce.getMessageId(), varadhiTopicName, failure);
-            ctx.endRequestWithException(failure);
+        try {
+            if (produceResult != null) {
+                handleProduceResult(ctx, produceResult);
+            } else {
+                log.error("produceToTopic({}, {}) failed unexpectedly.",
+                        messageToProduce.getMessageId(), varadhiTopicName, failure);
+                ctx.endRequestWithException(failure);
+            }
+        } finally {
+            // Record HTTP API metrics at the end of processing
+            recordHttpApiMetrics(ctx);
+        }
+    }
+
+    /**
+     * Records HTTP API metrics for the completed request.
+     *
+     * @param ctx The routing context containing response information
+     */
+    private void recordHttpApiMetrics(RoutingContext ctx) {
+        HttpApiMetricsEmitter emitter = httpApiMetricsEmitter.get();
+        if (emitter != null) {
+            int statusCode = ctx.response().getStatusCode();
+
+            if (statusCode >= 200 && statusCode < 400) {
+                emitter.recordSuccess(statusCode);
+            } else {
+                String errorType = HttpErrorTypeMapper.mapStatusCodeToErrorType(statusCode);
+                emitter.recordError(statusCode, errorType);
+            }
+
+            httpApiMetricsEmitter.remove();
         }
     }
 
@@ -214,8 +272,8 @@ public class ProduceHandlers implements RouteProvider {
      * @param totalLatency The total time taken for the produce operation
      * @param failure      The exception if the operation failed, null if successful
      */
-    private void emitMetrics(long totalLatency, Throwable failure) {
-        metricsEmitter.emit(
+    private void emitProducerMetrics(long totalLatency, Throwable failure) {
+        producerMetricsEmitter.emit(
                 true,
                 totalLatency,
                 0,
@@ -278,7 +336,7 @@ public class ProduceHandlers implements RouteProvider {
             enrichHeaders(compliantHeaders, ctx.getIdentityOrDefault());
             return new SimpleMessage(payload, compliantHeaders);
         } catch (Exception e) {
-            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.SERIALIZE);
+            producerMetricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.SERIALIZE);
             return null;
         }
     }
