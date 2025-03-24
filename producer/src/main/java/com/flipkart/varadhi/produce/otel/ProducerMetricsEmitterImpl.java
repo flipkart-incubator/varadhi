@@ -152,7 +152,7 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
     }
 
     private void registerMessageThroughputGauge(List<Tag> baseTags, boolean filtered, AtomicLong counter) {
-        Gauge.builder(METRIC_PREFIX + "throughput.messages", counter, this::calculateMessageRate)
+        Gauge.builder(METRIC_PREFIX + "throughput", counter, this::calculateMessageRate)
                 .tags(baseTags)
                 .tag(TAG_FILTERED, String.valueOf(filtered))
                 .description(filtered ? "Filtered message production rate" : "Message production rate")
