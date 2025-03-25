@@ -8,4 +8,5 @@ module com.flipkart.varadhi.spi {
     exports com.flipkart.varadhi.spi.services;
     exports com.flipkart.varadhi.spi.db;
     exports com.flipkart.varadhi.spi.authn;
+    exports com.flipkart.varadhi.spi.db.IamPolicy;
 }

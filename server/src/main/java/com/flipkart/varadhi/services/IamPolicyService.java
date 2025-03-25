@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
 import com.flipkart.varadhi.spi.db.MetaStore;
 
 import java.util.HashMap;
@@ -14,11 +14,11 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 
 public class IamPolicyService {
     private final MetaStore metaStore;
-    private final IamPolicyMetaStore iamPolicyMetaStore;
+    private final IamPolicyOperations iamPolicyOperations;
 
-    public IamPolicyService(MetaStore metaStore, IamPolicyMetaStore iamPolicyMetaStore) {
+    public IamPolicyService(MetaStore metaStore, IamPolicyOperations iamPolicyOperations) {
         this.metaStore = metaStore;
-        this.iamPolicyMetaStore = iamPolicyMetaStore;
+        this.iamPolicyOperations = iamPolicyOperations;
     }
 
     private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
@@ -32,12 +32,12 @@ public class IamPolicyService {
             0,
             new HashMap<>()
         );
-        iamPolicyMetaStore.createIamPolicyRecord(policyRecord);
+        iamPolicyOperations.createIamPolicyRecord(policyRecord);
         return policyRecord;
     }
 
     public IamPolicyRecord getIamPolicy(ResourceType resourceType, String resourceId) {
-        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+        return iamPolicyOperations.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
     public IamPolicyRecord setIamPolicy(ResourceType resourceType, String resourceId, IamPolicyRequest binding) {
@@ -47,19 +47,19 @@ public class IamPolicyService {
     }
 
     public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
-        iamPolicyMetaStore.deleteIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+        iamPolicyOperations.deleteIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
     private IamPolicyRecord createOrGetIamPolicyRecord(String resourceId, ResourceType resourceType) {
-        boolean exists = iamPolicyMetaStore.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
+        boolean exists = iamPolicyOperations.isIamPolicyRecordPresent(getAuthResourceFQN(resourceType, resourceId));
         if (!exists) {
             return createIamPolicyRecord(resourceId, resourceType);
         }
-        return iamPolicyMetaStore.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
+        return iamPolicyOperations.getIamPolicyRecord(getAuthResourceFQN(resourceType, resourceId));
     }
 
     private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
-        IamPolicyRecord existingNode = iamPolicyMetaStore.getIamPolicyRecord(iamPolicyRecord.getName());
+        IamPolicyRecord existingNode = iamPolicyOperations.getIamPolicyRecord(iamPolicyRecord.getName());
         if (iamPolicyRecord.getVersion() != existingNode.getVersion()) {
             throw new InvalidOperationForResourceException(
                 String.format(
@@ -68,7 +68,7 @@ public class IamPolicyService {
                 )
             );
         }
-        iamPolicyMetaStore.updateIamPolicyRecord(iamPolicyRecord);
+        iamPolicyOperations.updateIamPolicyRecord(iamPolicyRecord);
         return iamPolicyRecord;
     }
 
@@ -77,7 +77,7 @@ public class IamPolicyService {
             case ROOT -> throw new IllegalArgumentException(
                 "ROOT is implicit resource type. No Iam policies supported on it."
             );
-            case ORG -> metaStore.orgOperations().checkOrgExists(resourceId);
+            case ORG, ORG_FILTER -> metaStore.orgOperations().checkOrgExists(resourceId);
             case TEAM -> {
                 // org:team
                 String[] segments = resourceId.split(":");

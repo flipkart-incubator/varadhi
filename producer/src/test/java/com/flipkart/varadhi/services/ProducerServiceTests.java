@@ -67,6 +67,7 @@ public class ProducerServiceTests {
 
     }
 
+
     @Test
     public void testProduceMessage() throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);

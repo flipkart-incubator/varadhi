@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.db;
+package com.flipkart.varadhi.spi.db.IamPolicy;
 
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 
@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
  * the existence of IAM policy records, as well as retrieving records
  * by authentication resource ID.
  */
-public interface IamPolicyMetaStore {
+public interface IamPolicyOperations {
 
     void createIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
 

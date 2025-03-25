@@ -5,6 +5,11 @@ import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.org.OrgOperations;
+import com.flipkart.varadhi.spi.db.project.ProjectOperations;
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
+import com.flipkart.varadhi.spi.db.team.TeamOperations;
+import com.flipkart.varadhi.spi.db.topic.TopicOperations;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -75,6 +80,17 @@ class VaradhiTopicServiceTest {
     private String vTopicName;
     private PulsarStorageTopic pulsarStorageTopic;
 
+    @Mock
+    private TopicOperations topicOperations;
+    @Mock
+    private SubscriptionOperations subscriptionOperations;
+    @Mock
+    private OrgOperations orgOperations;
+    @Mock
+    private TeamOperations teamOperations;
+    @Mock
+    private ProjectOperations projectOperations;
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -86,6 +102,12 @@ class VaradhiTopicServiceTest {
         pulsarStorageTopic = PulsarStorageTopic.of(pTopicName, 1, DEFAULT_CAPACITY_POLICY);
         doReturn(pulsarStorageTopic).when(storageTopicFactory)
                                     .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
+
+        when(metaStore.topicOperations()).thenReturn(topicOperations);
+        when(metaStore.subscriptionOperations()).thenReturn(subscriptionOperations);
+        when(metaStore.orgOperations()).thenReturn(orgOperations);
+        when(metaStore.projectOperations()).thenReturn(projectOperations);
+        when(metaStore.teamOperations()).thenReturn(teamOperations);
     }
 
     @Test
@@ -106,7 +128,7 @@ class VaradhiTopicServiceTest {
     @Test
     void createVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        doThrow(new VaradhiException("metaStore.topicOperations() error")).when(metaStore.topicOperations()).createTopic(varadhiTopic);
+        doThrow(new VaradhiException("metaStore.topicOperations() error")).when(topicOperations).createTopic(varadhiTopic);
 
         Exception exception = assertThrows(
             VaradhiException.class,
@@ -192,7 +214,7 @@ class VaradhiTopicServiceTest {
             "message"
         );
 
-        doThrow(new VaradhiException("metaStore.topicOperations() deletion failed")).when(metaStore.topicOperations()).deleteTopic(varadhiTopic.getName());
+        doThrow(new VaradhiException("metaStore.topicOperations() deletion failed")).when(topicOperations).deleteTopic(varadhiTopic.getName());
 
         Exception exception = assertThrows(
             VaradhiException.class,
@@ -261,7 +283,7 @@ class VaradhiTopicServiceTest {
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
             "message"
         );
-        doThrow(new VaradhiException("metaStore.topicOperations() update failed")).when(metaStore.topicOperations()).updateTopic(varadhiTopic);
+        doThrow(new VaradhiException("metaStore.topicOperations() update failed")).when(topicOperations).updateTopic(varadhiTopic);
 
         Exception exception = assertThrows(
             VaradhiException.class,

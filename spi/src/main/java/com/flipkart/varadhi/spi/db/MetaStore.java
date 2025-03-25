@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.db;
 
-import com.flipkart.varadhi.spi.db.org.OrgFilterOperations;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
 import com.flipkart.varadhi.spi.db.org.OrgOperations;
 import com.flipkart.varadhi.spi.db.project.ProjectOperations;
 import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
@@ -13,7 +13,6 @@ import com.flipkart.varadhi.spi.db.topic.TopicOperations;
  */
 public interface MetaStore {
     OrgOperations orgOperations();
-    OrgFilterOperations orgLevelFilters();
 
     TeamOperations teamOperations();
 
@@ -22,6 +21,8 @@ public interface MetaStore {
     TopicOperations topicOperations();
 
     SubscriptionOperations subscriptionOperations();
+
+    IamPolicyOperations iamPolicyOperations();
 
     boolean registerEventListener(MetaStoreEventListener listener);
 }

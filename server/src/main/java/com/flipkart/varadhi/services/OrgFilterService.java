@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.filters.OrgFilters;
-import com.flipkart.varadhi.spi.db.org.OrgFilterOperations;
+import com.flipkart.varadhi.spi.db.org.OrgOperations;
 
 import java.util.List;
 
 public class OrgFilterService {
-    private final OrgFilterOperations orgFilterOperations;
+    private final OrgOperations orgFilterOperations;
 
-    public OrgFilterService(OrgFilterOperations orgFilterOperations) {
+    public OrgFilterService(OrgOperations orgFilterOperations) {
         this.orgFilterOperations = orgFilterOperations;
     }
 
