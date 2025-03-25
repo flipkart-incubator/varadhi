@@ -29,7 +29,7 @@ public class AuthnHandler implements RouteConfigurator {
     public AuthnHandler(Vertx vertx, AppConfiguration configuration) throws InvalidConfigException {
 
         AuthenticationConfig authenticationConfig = configuration.getAuthentication();
-        AuthenticationHandlerProvider provider = null;
+        AuthenticationHandlerProvider provider;
 
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());

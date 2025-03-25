@@ -11,6 +11,7 @@ dependencies {
     api(libs.vertx.web)
 
     api(libs.jackson.databind)
+    api(libs.vertx.micrometer.metrics)
 
     testFixturesImplementation(libs.guava)
 }
