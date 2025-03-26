@@ -126,7 +126,10 @@ public class AuthnHandler implements RouteConfigurator {
         }
 
         private boolean isWhitelisted(String path) {
-            return this.whitelistedURLPatterns.stream().anyMatch(e -> e.matcher(path).matches());
+            return this.whitelistedURLPatterns != null && this.whitelistedURLPatterns.stream()
+                                                                                     .anyMatch(
+                                                                                         e -> e.matcher(path).matches()
+                                                                                     );
         }
     }
 }
