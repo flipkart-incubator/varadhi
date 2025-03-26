@@ -41,8 +41,9 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
      * @param vertx       The Vertx instance
      * @param jsonObject  Configuration parameters containing authenticator provider class name and settings
      * @param orgResolver Organization resolver (not used in custom authentication)
-     * @return This CustomAuthenticationHandler instance configured with the initialized authenticator
-     * @throws RuntimeException if the authenticator provider class cannot be loaded or initialized
+     * @param meterRegistry for registering metrics
+     * @return AuthenticationHandler
+     * @throws InvalidConfigException if the authenticator provider class cannot be loaded or initialized
      */
 
 

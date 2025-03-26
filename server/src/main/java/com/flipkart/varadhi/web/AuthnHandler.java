@@ -36,9 +36,9 @@ public class AuthnHandler implements RouteConfigurator {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
             if (!AuthenticationHandlerProvider.class.isAssignableFrom(providerClass)) {
-                throw new RuntimeException(
+                throw new InvalidConfigException(
                     "Provider class " + providerClass.getName()
-                                           + " does not implement AuthenticationHandlerProvider interface"
+                                                 + " does not implement AuthenticationHandlerProvider interface"
                 );
             }
             provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
