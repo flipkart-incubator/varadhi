@@ -46,7 +46,7 @@ authentication:
   handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
   authenticatorClassName: ""
   whitelistedURLs:
-    - ^\/v1\/health-check$
+    - ^\\/v1\\/health-check\$
 
 authorizationEnabled: true
 
