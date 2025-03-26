@@ -9,6 +9,7 @@ import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -30,11 +31,13 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(String configFile) {
+    public Future<Boolean> init(ConfigFileResolver resolver, String configFile) {
         if (!this.initialised) {
             this.configuration = YamlLoader.loadConfig(configFile, DefaultAuthorizationConfig.class);
             this.configuration.getMetaStoreOptions()
-                              .setConfigFile(this.configuration.getMetaStoreOptions().getConfigFile());
+                              .setConfigFile(
+                                  resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
+                              );
             getAuthZService();
             this.initialised = true;
         }

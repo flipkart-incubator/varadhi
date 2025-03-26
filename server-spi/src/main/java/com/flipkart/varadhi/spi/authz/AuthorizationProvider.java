@@ -2,11 +2,12 @@ package com.flipkart.varadhi.spi.authz;
 
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
 import io.vertx.core.Future;
 
 
 public interface AuthorizationProvider {
-    Future<Boolean> init(String configFile);
+    Future<Boolean> init(ConfigFileResolver configFileResolver, String configFile);
 
     Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource);
 
@@ -14,7 +15,7 @@ public interface AuthorizationProvider {
 
     class NoAuthorizationProvider implements AuthorizationProvider {
         @Override
-        public Future<Boolean> init(String configFile) {
+        public Future<Boolean> init(ConfigFileResolver configFileResolver, String configFile) {
             return Future.succeededFuture(true);
         }
 
