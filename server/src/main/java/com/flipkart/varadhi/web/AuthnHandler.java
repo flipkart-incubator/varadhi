@@ -36,9 +36,9 @@ public class AuthnHandler implements RouteConfigurator {
 
         try {
 
-            if (authenticationConfig.getAuthenticatorClassName() == null || authenticationConfig
-                                                                                                .getAuthenticatorClassName()
-                                                                                                .isEmpty()) {
+            if (authenticationConfig.getHandlerProviderClassName() == null || authenticationConfig
+                                                                                                  .getHandlerProviderClassName()
+                                                                                                  .isEmpty()) {
                 throw new InvalidConfigException("Authenticator class name is missing or empty in configuration");
             }
 
