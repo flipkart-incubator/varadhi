@@ -86,7 +86,7 @@ public class AuthorizationHandlerTests {
 
         @Override
         public Future<Boolean> isSuperAdmin(UserContext userContext) {
-            return null;
+            return Future.succeededFuture(List.of("a", "b").contains(userContext.getSubject()));
         }
     }
 }
