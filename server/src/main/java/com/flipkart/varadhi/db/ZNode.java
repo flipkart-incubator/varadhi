@@ -14,6 +14,7 @@ import lombok.Getter;
  * <ul>
  *     <li>Entities: /varadhi/entities/[kind]/[name]</li>
  *     <li>Hierarchical Resources: /varadhi/entities/[kind]/[parent]:[name]</li>
+ *     <li>Child Resources: /varadhi/entities/[kind]/[parent]/[kind]/[name]</li>
  * </ul>
  *
  * <p>Supported node kinds:
@@ -36,7 +37,7 @@ import lombok.Getter;
 @Getter
 public final class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
-    public static final ZNodeKind NAMED_FILTER = new ZNodeKind("NamedFilter");
+    public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filter");
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
@@ -117,6 +118,14 @@ public final class ZNode {
             return this;
         }
 
+        /**
+         * Sets the parent for this node, used in hierarchical resources.
+         *
+         * @param childKind The kind of child resource
+         * @param childName The name of child resource
+         * @return The builder instance for method chaining
+         * @throws NullPointerException if parent is null
+         */
         public Builder insideParent(String childKind, String childName) {
             this.childKind = Objects.requireNonNull(childKind, "childKind cannot be null");
             this.childName = Objects.requireNonNull(childName, "childName cannot be null");
@@ -152,7 +161,7 @@ public final class ZNode {
     }
 
     public static ZNode ofOrgNamedFilter(String orgName, String namedFilterName) {
-        return new Builder().withZNodeKind(ORG).withName(orgName).insideParent(NAMED_FILTER.kind(), namedFilterName).build();
+        return new Builder().withZNodeKind(ORG).withName(orgName).insideParent(ORG_FILTER.kind(), namedFilterName).build();
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {

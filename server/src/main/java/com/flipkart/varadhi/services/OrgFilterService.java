@@ -12,43 +12,23 @@ public class OrgFilterService {
         this.orgFilterOperations = orgFilterOperations;
     }
 
-    public List<OrgFilters> getAllGlobalFilters(String orgName) {
-        return orgFilterOperations.getAllNamedFilters(orgName);
+    public OrgFilters getOrgFilterByName(String orgName, String filterName) {
+        return orgFilterOperations.getOrgFilter(orgName, filterName);
     }
 
-    public OrgFilters getNamedFilterByName(String orgName, String filterName) {
-        return orgFilterOperations.getNamedFilterByName(orgName, filterName);
+    public List<OrgFilters> getAllOrgFilters(String orgName) {
+        return orgFilterOperations.getOrgFilters(orgName);
     }
 
-    public List<OrgFilters> getAllNamedFilters(String orgName) {
-        return orgFilterOperations.getAllNamedFilters(orgName);
+    public boolean checkIfOrgFilterExists(String orgName, String filterName) {
+        return orgFilterOperations.checkOrgFilterExists(orgName, filterName);
     }
 
-    public boolean checkIfNamedFilterExists(String orgName, String filterName) {
-        return orgFilterOperations.checkIfNamedFilterExists(orgName, filterName);
+    public void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters) {
+        orgFilterOperations.updateOrgFilter(orgName, filterName, orgFilters);
     }
 
-    public void updateNamedFilter(String orgName, String filterName, OrgFilters orgFilters) {
-        orgFilterOperations.updateNamedFilter(orgName, filterName, orgFilters);
-    }
-
-    public OrgFilters createNamedFilter(String orgName, OrgFilters namedFilter) {
-        return orgFilterOperations.createNamedFilter(orgName, namedFilter);
-    }
-
-    public void replaceGlobalFilters(String orgName, List<OrgFilters> filters) {
-        // Implementation to replace all global filters for the given organization
-    }
-
-    public void addOrUpdateGlobalFilter(String orgName, OrgFilters filter) {
-        // Implementation to add or update a global filter for the given organization
-    }
-
-    public void updateGlobalFilter(String orgName, OrgFilters filter) {
-        // Implementation to update a global filter for the given organization
-    }
-
-    public void deleteGlobalFilters(String orgName) {
-        // Implementation to delete all global filters for the given organization
+    public OrgFilters createOrgFilter(String orgName, OrgFilters OrgFilter) {
+        return orgFilterOperations.createOrgFilter(orgName, OrgFilter);
     }
 }

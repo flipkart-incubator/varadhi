@@ -57,6 +57,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private OrgService orgService;
+    private OrgFilterService orgFilterService;
     private TeamService teamService;
     private ProjectService projectService;
     private VaradhiTopicService varadhiTopicService;
@@ -118,6 +119,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private void setupEntityServices() {
         String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
         orgService = new OrgService(metaStore.orgOperations(), metaStore.teamOperations());
+        orgFilterService = new OrgFilterService(metaStore.orgOperations());
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore.topicOperations(), metaStore.subscriptionOperations(), metaStore.projectOperations());
@@ -234,6 +236,7 @@ public class WebServerVerticle extends AbstractVerticle {
             routes.addAll(new OrgHandlers(orgService).get());
             routes.addAll(new TeamHandlers(teamService).get());
             routes.addAll(new ProjectHandlers(projectService).get());
+            routes.addAll(new OrgLevelFilterHandler(orgFilterService).get());
         }
         return routes;
     }

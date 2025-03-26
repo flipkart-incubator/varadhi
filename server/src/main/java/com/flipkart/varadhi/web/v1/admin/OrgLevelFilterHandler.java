@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
+import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FILTER_NAME;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_GET;
 
 @Slf4j
@@ -37,7 +38,7 @@ public class OrgLevelFilterHandler implements RouteProvider {
                         RouteDefinition.get("GetFilters", "")
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchies, this::getOrgFilters),
-                        RouteDefinition.get("GetFilterByName", "/:filterName")
+                        RouteDefinition.get("GetFilterByName", "/:orgFilterName")
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchies, this::getNamedFilterByName),
                         RouteDefinition.post("CreateFilter", "")
@@ -45,12 +46,12 @@ public class OrgLevelFilterHandler implements RouteProvider {
                                 .bodyParser(this::setNamedFilter)
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchies, this::createNamedFilter),
-                        RouteDefinition.put("UpdateFilter", "/:filterName")
+                        RouteDefinition.put("UpdateFilter", "/:orgFilterName")
                                 .hasBody()
                                 .bodyParser(this::setNamedFilter)
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchies, this::updateNamedFilter),
-                        RouteDefinition.get("CheckFilterExists", "/:filterName/exists")
+                        RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
                                 .authorize(ORG_GET)
                                 .build(this::getHierarchies, this::checkIfNamedFilterExists)
                 )
@@ -69,36 +70,36 @@ public class OrgLevelFilterHandler implements RouteProvider {
 
     public void getOrgFilters(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        List<OrgFilters> filters = orgFilterService.getAllNamedFilters(orgName);
+        List<OrgFilters> filters = orgFilterService.getAllOrgFilters(orgName);
         ctx.endApiWithResponse(filters);
     }
 
     public void getNamedFilterByName(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        String filterName = ctx.pathParam("filterName");
-        OrgFilters filter = orgFilterService.getNamedFilterByName(orgName, filterName);
+        String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
+        OrgFilters filter = orgFilterService.getOrgFilterByName(orgName, filterName);
         ctx.endApiWithResponse(filter);
     }
 
     public void createNamedFilter(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        OrgFilters createdFilter = orgFilterService.createNamedFilter(orgName, filter);
+        OrgFilters createdFilter = orgFilterService.createOrgFilter(orgName, filter);
         ctx.endApiWithResponse(createdFilter);
     }
 
     public void updateNamedFilter(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        String filterName = ctx.pathParam("filterName");
+        String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        orgFilterService.updateNamedFilter(orgName, filterName, filter);
+        orgFilterService.updateOrgFilter(orgName, filterName, filter);
         ctx.endApi();
     }
 
     public void checkIfNamedFilterExists(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        String filterName = ctx.pathParam("filterName");
-        boolean exists = orgFilterService.checkIfNamedFilterExists(orgName, filterName);
+        String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
+        boolean exists = orgFilterService.checkIfOrgFilterExists(orgName, filterName);
         ctx.endApiWithResponse(exists);
     }
 }

@@ -30,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class VaradhiMetaStore implements MetaStore {
     private final VaradhiOperationsImpl VaradhiOperationsImpl;
+    private final ZKMetaStore zkMetaStore;
 
     /**
      * Constructs a new VaradhiMetaStore instance.
@@ -42,6 +43,7 @@ public final class VaradhiMetaStore implements MetaStore {
      * @throws MetaStoreException       if initialization fails or required paths cannot be created
      */
     public VaradhiMetaStore(ZKMetaStore zkMetaStore) {
+        this.zkMetaStore = zkMetaStore;
         VaradhiOperationsImpl = new VaradhiOperationsImpl(zkMetaStore);
     }
 
@@ -81,6 +83,6 @@ public final class VaradhiMetaStore implements MetaStore {
      */
     @Override
     public boolean registerEventListener(MetaStoreEventListener listener) {
-        return false;
+        return zkMetaStore.registerEventListener(listener);
     }
 }
