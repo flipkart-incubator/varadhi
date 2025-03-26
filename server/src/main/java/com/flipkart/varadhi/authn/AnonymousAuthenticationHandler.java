@@ -2,6 +2,7 @@ package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.utils.OrgResolver;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -25,7 +26,12 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
      */
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
+    public AuthenticationHandler provideHandler(
+        Vertx vertx,
+        JsonObject jsonObject,
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
+    ) {
         log.warn("Anonymous authentication is enabled. This allows unauthenticated access.");
 
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {

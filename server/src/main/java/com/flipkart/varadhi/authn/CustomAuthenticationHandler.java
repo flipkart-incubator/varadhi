@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.authn.Authenticator;
 import com.flipkart.varadhi.spi.utils.OrgResolver;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -28,7 +29,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 @NoArgsConstructor
 @Slf4j
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
-    private static final String DEFAULT_ORG = "placeholder.org";
+    private static final String DEFAULT_ORG = "SYSTEM";
     private Authenticator authenticator;
     private OrgResolver orgResolver;
 
@@ -40,22 +41,33 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
      * @param vertx       The Vertx instance
      * @param jsonObject  Configuration parameters containing authenticator provider class name and settings
      * @param orgResolver Organization resolver (not used in custom authentication)
-     * @return This CustomAuthenticationHandler instance configured with the initialized authenticator
-     * @throws RuntimeException if the authenticator provider class cannot be loaded or initialized
+     * @param meterRegistry for registering metrics
+     * @return AuthenticationHandler
+     * @throws InvalidConfigException if the authenticator provider class cannot be loaded or initialized
      */
 
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
-        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver);
+    public AuthenticationHandler provideHandler(
+        Vertx vertx,
+        JsonObject jsonObject,
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
+    ) {
+        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
     }
 
     private AuthenticationHandler provideHandler(
         Vertx vertx,
         AuthenticationConfig authenticationConfig,
-        OrgResolver orgResolver
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
     ) {
         try {
+            if (authenticationConfig.getAuthenticatorClassName().isEmpty()) {
+                throw new InvalidConfigException("Empty/Null Authenticator class name");
+            }
+
             Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
@@ -65,7 +77,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
 
             try {
-                authenticator.init(authenticationConfig);
+                authenticator.init(authenticationConfig, meterRegistry);
             } catch (Exception e) {
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
