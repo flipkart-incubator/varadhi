@@ -72,7 +72,7 @@ public class AuthzHandler implements RouteConfigurator {
     ) throws InvalidConfigException {
         try {
             AuthorizationProvider provider = clazz.getDeclaredConstructor().newInstance();
-            provider.init(resolver, options);
+            provider.init(options.getConfigFile());
             return provider;
         } catch (Exception e) {
             throw new InvalidConfigException(e);
