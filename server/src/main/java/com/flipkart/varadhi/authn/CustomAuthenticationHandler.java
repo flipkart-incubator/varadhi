@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.RequestContext;
 import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.spi.authn.Authenticator;
 import com.flipkart.varadhi.spi.utils.OrgResolver;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -46,14 +47,15 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver) {
-        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver);
+    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver, MeterRegistry meterRegistry) {
+        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
     }
 
     private AuthenticationHandler provideHandler(
         Vertx vertx,
         AuthenticationConfig authenticationConfig,
-        OrgResolver orgResolver
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
     ) {
         try {
             Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
@@ -65,7 +67,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
 
             try {
-                authenticator.init(authenticationConfig);
+                authenticator.init(authenticationConfig, meterRegistry);
             } catch (Exception e) {
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }

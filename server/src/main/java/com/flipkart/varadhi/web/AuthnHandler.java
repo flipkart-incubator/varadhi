@@ -10,6 +10,7 @@ import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
 
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -26,7 +27,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 public class AuthnHandler implements RouteConfigurator {
     private final AuthenticationHandlerWrapper authenticationHandler;
 
-    public AuthnHandler(Vertx vertx, AppConfiguration configuration) throws InvalidConfigException {
+    public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry) throws InvalidConfigException {
 
         AuthenticationConfig authenticationConfig = configuration.getAuthentication();
         AuthenticationHandlerProvider provider;
@@ -54,7 +55,7 @@ public class AuthnHandler implements RouteConfigurator {
 
         try {
             authenticationHandler = new AuthenticationHandlerWrapper(
-                provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of),
+                provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of, meterRegistry),
                 authenticationConfig.getWhitelistedURLs()
             );
         } catch (Exception e) {
