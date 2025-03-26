@@ -85,7 +85,13 @@ public class AuthnHandler implements RouteConfigurator {
         public AuthenticationHandlerWrapper(Handler<RoutingContext> wrappedHandler, List<String> whitelistedURLs) {
             this.wrappedHandler = wrappedHandler;
 
-            whitelistedURLPatterns = whitelistedURLs.stream().map(Pattern::compile).collect(Collectors.toList());
+            whitelistedURLPatterns = whitelistedURLs.stream().map(pattern -> {
+                try {
+                    return Pattern.compile(pattern);
+                } catch (Exception e) {
+                    throw new InvalidConfigException("Invalid whitelist pattern: " + pattern, e);
+                }
+            }).collect(Collectors.toList());
         }
 
         @Override
