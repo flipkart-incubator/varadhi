@@ -29,7 +29,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 @NoArgsConstructor
 @Slf4j
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
-    private static final String DEFAULT_ORG = "placeholder.org";
+    private static final String DEFAULT_ORG = "SYSTEM";
     private Authenticator authenticator;
     private OrgResolver orgResolver;
 
@@ -64,6 +64,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         MeterRegistry meterRegistry
     ) {
         try {
+            if (authenticationConfig.getAuthenticatorClassName().isEmpty()) {
+                throw new InvalidConfigException("Empty/Null Authenticator class name");
+            }
+
             Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
