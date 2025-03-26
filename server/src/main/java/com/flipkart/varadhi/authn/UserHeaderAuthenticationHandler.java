@@ -31,7 +31,12 @@ public class UserHeaderAuthenticationHandler implements AuthenticationHandlerPro
      */
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver, MeterRegistry meterRegistry) {
+    public AuthenticationHandler provideHandler(
+        Vertx vertx,
+        JsonObject jsonObject,
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
+    ) {
         log.warn("Staring to configure User header based authentication.");
 
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {

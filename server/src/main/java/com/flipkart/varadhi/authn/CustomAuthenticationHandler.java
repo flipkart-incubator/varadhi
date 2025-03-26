@@ -47,7 +47,12 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver, MeterRegistry meterRegistry) {
+    public AuthenticationHandler provideHandler(
+        Vertx vertx,
+        JsonObject jsonObject,
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
+    ) {
         return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
     }
 

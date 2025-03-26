@@ -26,7 +26,12 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
      */
 
     @Override
-    public AuthenticationHandler provideHandler(Vertx vertx, JsonObject jsonObject, OrgResolver orgResolver, MeterRegistry meterRegistry) {
+    public AuthenticationHandler provideHandler(
+        Vertx vertx,
+        JsonObject jsonObject,
+        OrgResolver orgResolver,
+        MeterRegistry meterRegistry
+    ) {
         log.warn("Anonymous authentication is enabled. This allows unauthenticated access.");
 
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {

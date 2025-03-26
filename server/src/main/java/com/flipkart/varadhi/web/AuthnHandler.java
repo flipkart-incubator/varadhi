@@ -27,7 +27,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 public class AuthnHandler implements RouteConfigurator {
     private final AuthenticationHandlerWrapper authenticationHandler;
 
-    public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry) throws InvalidConfigException {
+    public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry)
+        throws InvalidConfigException {
 
         AuthenticationConfig authenticationConfig = configuration.getAuthentication();
         AuthenticationHandlerProvider provider;
