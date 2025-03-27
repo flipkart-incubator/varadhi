@@ -42,9 +42,8 @@ producerOptions:
   metricEnabled: true
 
 authenticationOptions:
-  configFile: ""
+  configFile: "authn.yml"
   handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
-  authenticatorClassName: ""
   whitelistedURLs:
     - ^\\/v1\\/health-check\$
 

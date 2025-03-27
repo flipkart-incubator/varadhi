@@ -5,6 +5,7 @@ module com.flipkart.varadhi.server.spi {
     requires micrometer.core;
     requires io.vertx.web;
     requires static lombok;
+    requires com.fasterxml.jackson.annotation;
 
     exports com.flipkart.varadhi.server.spi.authn;
     exports com.flipkart.varadhi.server.spi.authz;
