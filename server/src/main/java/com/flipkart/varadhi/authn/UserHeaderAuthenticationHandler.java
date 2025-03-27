@@ -24,7 +24,7 @@ public class UserHeaderAuthenticationHandler implements AuthenticationHandlerPro
      * This handler expects the user ID to be present in the USER_ID_HEADER of incoming requests.
      *
      * @param vertx       The Vertx instance
-     * @param jsonObject  Configuration parameters (not used for header-based auth)
+     * @param configObject  Configuration parameters (not used for header-based auth)
      * @param orgResolver Organization resolver (not used for header-based auth)
      * @return An AuthenticationHandler that validates the user header and creates a User object
      * @throws HttpException with 401 status if the user header is missing or empty
@@ -33,7 +33,7 @@ public class UserHeaderAuthenticationHandler implements AuthenticationHandlerPro
     @Override
     public AuthenticationHandler provideHandler(
         Vertx vertx,
-        JsonObject jsonObject,
+        JsonObject configObject,
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     ) {

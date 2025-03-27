@@ -39,7 +39,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
      * instance configured with that authenticator.
      *
      * @param vertx       The Vertx instance
-     * @param jsonObject  Configuration parameters containing authenticator provider class name and settings
+     * @param configObject  Configuration parameters containing authenticator provider class name and settings
      * @param orgResolver Organization resolver (not used in custom authentication)
      * @param meterRegistry for registering metrics
      * @return AuthenticationHandler
@@ -50,11 +50,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
     @Override
     public AuthenticationHandler provideHandler(
         Vertx vertx,
-        JsonObject jsonObject,
+        JsonObject configObject,
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     ) {
-        return provideHandler(vertx, jsonObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
+        return provideHandler(vertx, configObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
     }
 
     private AuthenticationHandler provideHandler(

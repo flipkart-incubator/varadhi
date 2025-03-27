@@ -29,7 +29,7 @@ class AnonymousAuthenticationHandlerTest {
 
     private AnonymousAuthenticationHandler handlerProvider;
     private Vertx vertx;
-    private JsonObject jsonObject;
+    private JsonObject configObject;
     private OrgResolver orgResolver;
     private MeterRegistry meterRegistry;
     private RoutingContext routingContext;
@@ -40,7 +40,7 @@ class AnonymousAuthenticationHandlerTest {
     void setUp() {
         handlerProvider = new AnonymousAuthenticationHandler();
         vertx = Vertx.vertx();
-        jsonObject = new JsonObject();
+        configObject = new JsonObject();
         orgResolver = mock(OrgResolver.class);
         meterRegistry = mock(MeterRegistry.class);
         routingContext = mock(RoutingContext.class);
@@ -50,14 +50,14 @@ class AnonymousAuthenticationHandlerTest {
 
     @Test
     void providesHandlerAllowsAnonymousAccess() {
-        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
+        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, configObject, orgResolver, meterRegistry);
         assertNotNull(handler);
         assertInstanceOf(SimpleAuthenticationHandler.class, handler);
     }
 
     @Test
     void anonymousAccessSucceeds() {
-        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
+        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, configObject, orgResolver, meterRegistry);
 
         doReturn(request).when(routingContext).request();
         SocketAddress socketAddress = new SocketAddressImpl(new InetSocketAddress("localhost", 8080));
