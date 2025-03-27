@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith (MockitoExtension.class)
 class AnonymousAuthenticationHandlerTest {
 
     private AnonymousAuthenticationHandler handlerProvider;
