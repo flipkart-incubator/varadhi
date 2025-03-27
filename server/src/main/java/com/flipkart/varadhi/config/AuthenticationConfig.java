@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.spi.utils.OrgResolver;
+import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;

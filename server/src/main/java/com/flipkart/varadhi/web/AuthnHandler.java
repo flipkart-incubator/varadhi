@@ -6,7 +6,7 @@ import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

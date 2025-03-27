@@ -4,5 +4,7 @@ module com.flipkart.varadhi.spi {
     requires com.flipkart.varadhi.entities;
     requires jakarta.validation;
 
+    exports com.flipkart.varadhi.spi.db;
+    exports com.flipkart.varadhi.spi.services;
     exports com.flipkart.varadhi.spi;
 }

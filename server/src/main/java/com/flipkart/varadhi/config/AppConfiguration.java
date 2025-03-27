@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.config;
 
 import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import java.util.Map;
 
 
