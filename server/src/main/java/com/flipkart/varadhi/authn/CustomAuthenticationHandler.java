@@ -1,11 +1,12 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.config.AuthenticationConfig;
+
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.server.spi.authn.Authenticator;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -54,21 +55,21 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     ) {
-        return provideHandler(vertx, configObject.mapTo(AuthenticationConfig.class), orgResolver, meterRegistry);
+        return provideHandler(vertx, configObject.mapTo(AuthenticationOptions.class), orgResolver, meterRegistry);
     }
 
     private AuthenticationHandler provideHandler(
         Vertx vertx,
-        AuthenticationConfig authenticationConfig,
+        AuthenticationOptions authenticationOptions,
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     ) {
         try {
-            if (authenticationConfig.getAuthenticatorClassName().isEmpty()) {
+            if (authenticationOptions.getAuthenticatorClassName().isEmpty()) {
                 throw new InvalidConfigException("Empty/Null Authenticator class name");
             }
 
-            Class<?> providerClass = Class.forName(authenticationConfig.getAuthenticatorClassName());
+            Class<?> providerClass = Class.forName(authenticationOptions.getAuthenticatorClassName());
             if (!Authenticator.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
                     "Provider class " + providerClass.getName() + " does not implement Authenticator interface"
@@ -77,14 +78,14 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
 
             try {
-                authenticator.init(authenticationConfig, meterRegistry);
+                authenticator.init(authenticationOptions, meterRegistry);
             } catch (Exception e) {
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
 
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
-                "Authentication provider class not found: " + authenticationConfig.getAuthenticatorClassName(),
+                "Authentication provider class not found: " + authenticationOptions.getAuthenticatorClassName(),
                 e
             );
         } catch (ReflectiveOperationException e) {

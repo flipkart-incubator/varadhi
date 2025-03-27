@@ -2,12 +2,12 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.config.AuthenticationConfig;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 
+import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,7 +31,7 @@ public class AuthnHandler implements RouteConfigurator {
     public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry)
         throws InvalidConfigException {
 
-        AuthenticationConfig authenticationConfig = configuration.getAuthentication();
+        AuthenticationOptions authenticationConfig = configuration.getAuthenticationOptions();
         AuthenticationHandlerProvider provider;
 
         try {
