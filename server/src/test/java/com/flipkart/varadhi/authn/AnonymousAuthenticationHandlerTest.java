@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.InetSocketAddress;
 
+import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -71,7 +72,7 @@ class AnonymousAuthenticationHandlerTest {
 
         User user = userCaptor.getValue();
         assertNotNull(user);
-        assertEquals("anonymous", user.subject());
+        assertEquals(ANONYMOUS_IDENTITY, user.subject());
         assertFalse(user.expired());
     }
 }

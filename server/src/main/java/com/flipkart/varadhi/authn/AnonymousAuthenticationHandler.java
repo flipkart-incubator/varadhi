@@ -11,6 +11,8 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
+
 
 @Slf4j
 public class AnonymousAuthenticationHandler implements AuthenticationHandlerProvider {
@@ -36,7 +38,7 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
 
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {
             log.info("Anonymous access attempt from: {}", ctx.request().remoteAddress());
-            return Future.succeededFuture(User.fromName("anonymous"));
+            return Future.succeededFuture(User.fromName(ANONYMOUS_IDENTITY));
         });
     }
 }
