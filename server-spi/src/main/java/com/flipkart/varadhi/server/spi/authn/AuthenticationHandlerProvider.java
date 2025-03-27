@@ -1,6 +1,6 @@
-package com.flipkart.varadhi.spi.authn;
+package com.flipkart.varadhi.server.spi.authn;
 
-import com.flipkart.varadhi.spi.utils.OrgResolver;
+import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;

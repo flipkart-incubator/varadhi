@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.authz;
+package com.flipkart.varadhi.server.spi.authz;
 
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;

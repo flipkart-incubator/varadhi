@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi;
+package com.flipkart.varadhi.server.spi;
 
 
 import java.net.URI;
