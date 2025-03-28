@@ -9,4 +9,6 @@ module com.flipkart.varadhi.server.spi {
 
     exports com.flipkart.varadhi.server.spi.authn;
     exports com.flipkart.varadhi.server.spi.authz;
+    exports com.flipkart.varadhi.server.spi.utils;
+    exports com.flipkart.varadhi.server.spi;
 }
