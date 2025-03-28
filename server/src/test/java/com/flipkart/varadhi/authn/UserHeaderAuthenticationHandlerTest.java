@@ -9,6 +9,7 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,7 @@ class UserHeaderAuthenticationHandlerTest {
         handler.handle(routingContext);
 
         verify(routingContext, never()).setUser(any());
+        verify(routingContext).fail(eq(401), any(HttpException.class));
 
     }
 }
