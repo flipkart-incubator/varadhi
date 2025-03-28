@@ -19,6 +19,7 @@ import jakarta.ws.rs.BadRequestException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -65,7 +66,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         MeterRegistry meterRegistry
     ) {
         try {
-            if (authenticationOptions.getAuthenticatorClassName().isEmpty()) {
+            if (StringUtils.isEmpty(authenticationOptions.getAuthenticatorClassName())) {
                 throw new InvalidConfigException("Empty/Null Authenticator class name");
             }
 
