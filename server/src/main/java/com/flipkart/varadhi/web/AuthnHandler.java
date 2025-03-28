@@ -39,7 +39,9 @@ public class AuthnHandler implements RouteConfigurator {
             if (authenticationConfig.getHandlerProviderClassName() == null || authenticationConfig
                                                                                                   .getHandlerProviderClassName()
                                                                                                   .isEmpty()) {
-                throw new InvalidConfigException("Authenticator class name is missing or empty in configuration");
+                throw new InvalidConfigException(
+                    "AuthenticationHandlerProvider class name is missing or empty in configuration"
+                );
             }
 
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
@@ -102,7 +104,7 @@ public class AuthnHandler implements RouteConfigurator {
                 wrappedHandler.handle(ctx);
                 User user = ctx.user();
 
-                if (user != null) {
+                if (user != null && ctx.get(USER_CONTEXT) == null) {
                     ctx.put(USER_CONTEXT, new UserContext() {
                         @Override
                         public String getSubject() {
@@ -119,7 +121,9 @@ public class AuthnHandler implements RouteConfigurator {
                 if (ctx.get(USER_CONTEXT) == null) {
                     ctx.fail(
                         UNAUTHORIZED.code(),
-                        new UnAuthenticatedException("User context not found for authenticated API")
+                        new UnAuthenticatedException(
+                            "Authentication failed: User context not found for path" + ctx.request().path()
+                        )
                     );
                 }
             }

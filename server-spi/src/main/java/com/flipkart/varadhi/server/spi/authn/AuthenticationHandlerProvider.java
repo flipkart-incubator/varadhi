@@ -9,7 +9,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
 public interface AuthenticationHandlerProvider {
     AuthenticationHandler provideHandler(
         Vertx vertx,
-        JsonObject jsonObject,
+        JsonObject configObject,
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     );

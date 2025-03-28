@@ -7,7 +7,7 @@ import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
-import com.flipkart.varadhi.server.spi.authn.Authenticator;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
@@ -31,7 +31,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 @Slf4j
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
     private static final String DEFAULT_ORG = "SYSTEM";
-    private Authenticator authenticator;
+    private AuthenticationProvider authenticationProvider;
     private OrgResolver orgResolver;
 
     /**
@@ -70,15 +70,15 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             }
 
             Class<?> providerClass = Class.forName(authenticationOptions.getAuthenticatorClassName());
-            if (!Authenticator.class.isAssignableFrom(providerClass)) {
+            if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
                     "Provider class " + providerClass.getName() + " does not implement Authenticator interface"
                 );
             }
-            authenticator = (Authenticator)providerClass.getDeclaredConstructor().newInstance();
+            authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
 
             try {
-                authenticator.init(authenticationOptions, meterRegistry);
+                authenticationProvider.init(authenticationOptions, meterRegistry);
             } catch (Exception e) {
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
@@ -92,7 +92,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
 
-        return new CustomAuthenticationHandler(authenticator, orgResolver);
+        return new CustomAuthenticationHandler(authenticationProvider, orgResolver);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new BadRequestException(e);
         }
 
-        Future<UserContext> userContext = authenticator.authenticate(org.getName(), requestContext);
+        Future<UserContext> userContext = authenticationProvider.authenticate(org.getName(), requestContext);
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
