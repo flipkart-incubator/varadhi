@@ -7,6 +7,8 @@ import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.controller.DefaultEntityEventFactory;
+import com.flipkart.varadhi.controller.EntityEventFactory;
 import com.flipkart.varadhi.controller.EventManager;
 import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
@@ -83,15 +85,20 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     private Future<Void> initializeEventSystem() {
+        EntityEventFactory eventFactory = new DefaultEntityEventFactory();
         return EventProcessor.create(
-            vertx,
             clusterManager.getExchange(vertx),
             clusterManager,
             controllerConfig.getEventProcessorConfig()
         ).compose(processor -> {
             this.eventProcessor = processor;
             try {
-                this.eventManager = new EventManager(metaStoreProvider.getMetaStore(), eventProcessor);
+                this.eventManager = new EventManager(
+                    metaStoreProvider.getMetaStore(),
+                    eventProcessor,
+                    eventFactory,
+                    controllerConfig.getEventProcessorConfig()
+                );
                 return Future.succeededFuture();
             } catch (Exception e) {
                 return Future.failedFuture(new RuntimeException("Failed to initialize EventManager", e));

@@ -4,57 +4,62 @@ import com.flipkart.varadhi.cluster.MembershipListener;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.exceptions.EventProcessingException;
 import com.flipkart.varadhi.controller.EntityEventProcessor;
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
-import com.flipkart.varadhi.entities.EntityEvent;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public final class EventProcessor implements EntityEventProcessor {
 
-    private final Vertx vertx;
     private final EventProcessorConfig eventProcessorConfig;
     private final MessageExchange messageExchange;
     private final AtomicBoolean isShutdown;
-    private final Semaphore concurrencyLimiter;
 
-    private final AtomicBoolean membershipChanged = new AtomicBoolean(false);
-    private final Map<String, MemberInfo> memberCache = new ConcurrentHashMap<>();
+    private final Map<String, BlockingQueue<EventWrapper>> nodeEventQueues;
+    private final Map<String, Thread> nodeVirtualThreads;
+
+    private final BlockingQueue<EventWrapper> inFlightEvents;
+    private Thread committerThread;
 
     public static Future<EventProcessor> create(
-        Vertx vertx,
         MessageExchange messageExchange,
         VaradhiClusterManager clusterManager,
         EventProcessorConfig eventProcessorConfig
     ) {
         Promise<EventProcessor> promise = Promise.promise();
-        EventProcessor processor = new EventProcessor(vertx, messageExchange, eventProcessorConfig);
+        EventProcessor processor = new EventProcessor(messageExchange, eventProcessorConfig);
+
+        processor.setupMembershipListener(clusterManager);
 
         clusterManager.getAllMembers().compose(initialMembers -> {
-            if (!initialMembers.isEmpty()) {
-                processor.initializeMemberCache(initialMembers);
-                processor.setupMembershipListener(clusterManager);
-                return Future.succeededFuture(processor.closeOnError());
+            processor.initializeEventQueuesAndThreads(initialMembers);
+
+            if (initialMembers.isEmpty()) {
+                log.warn("No members found in cluster, processor will wait for members to join");
             }
-            return Future.failedFuture("No members found in cluster");
+
+            processor.initialize();
+            processor.startCommitterThread();
+
+            return Future.succeededFuture(processor);
         }).onComplete(ar -> {
             if (ar.succeeded()) {
                 promise.complete(ar.result());
@@ -68,379 +73,354 @@ public final class EventProcessor implements EntityEventProcessor {
         return promise.future();
     }
 
-    private EventProcessor closeOnError() {
+    private void initialize() {
         isShutdown.set(false);
-        return this;
     }
 
-    private EventProcessor(Vertx vertx, MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
-        this.vertx = vertx;
+    private EventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
         this.messageExchange = messageExchange;
         this.eventProcessorConfig = eventProcessorConfig != null ?
             eventProcessorConfig :
             EventProcessorConfig.getDefault();
         this.isShutdown = new AtomicBoolean(true);
-        this.concurrencyLimiter = new Semaphore(this.eventProcessorConfig.getMaxConcurrentProcessing());
+        this.nodeEventQueues = new ConcurrentHashMap<>();
+        this.nodeVirtualThreads = new ConcurrentHashMap<>();
+        this.inFlightEvents = new LinkedBlockingQueue<>();
     }
 
-    private void initializeMemberCache(List<MemberInfo> members) {
-        members.forEach(member -> {
-            memberCache.put(member.hostname(), member);
-            log.info("Added member to cache: {}", member.hostname());
-        });
-        log.info("Initialized member cache with {} members", memberCache.size());
+    private void initializeEventQueuesAndThreads(List<MemberInfo> members) {
+        for (MemberInfo member : members) {
+            String hostname = member.hostname();
+
+            if (nodeEventQueues.containsKey(hostname)) {
+                log.debug("Node {} already initialized, skipping", hostname);
+                continue;
+            }
+
+            log.info("Creating event queue and virtual thread for node: {}", hostname);
+
+            BlockingQueue<EventWrapper> queue = new LinkedBlockingQueue<>();
+            nodeEventQueues.put(hostname, queue);
+
+            startNodeVirtualThread(member, queue);
+        }
+        log.info("Initialized node queues and virtual threads, total active nodes: {}", nodeEventQueues.size());
+    }
+
+    private void startNodeVirtualThread(MemberInfo member, BlockingQueue<EventWrapper> queue) {
+        String hostname = member.hostname();
+        Thread virtualThread = Thread.ofVirtual()
+                                     .name(eventProcessorConfig.getNodeProcessorThreadName(hostname))
+                                     .start(() -> {
+                                         log.info("Started virtual thread for node: {}", hostname);
+
+                                         while (!isShutdown.get()) {
+                                             try {
+                                                 EventWrapper eventWrapper = queue.take();
+                                                 log.debug(
+                                                     "Processing {} event for node {}",
+                                                     eventWrapper.event.resourceName(),
+                                                     hostname
+                                                 );
+
+                                                 processEventWithRetry(eventWrapper, member);
+
+                                                 eventWrapper.markNodeComplete(hostname);
+                                                 log.debug(
+                                                     "Node {} completed processing {} event",
+                                                     hostname,
+                                                     eventWrapper.event.resourceName()
+                                                 );
+                                             } catch (InterruptedException e) {
+                                                 log.info("Virtual thread for node {} was interrupted", hostname);
+                                                 Thread.currentThread().interrupt();
+                                                 break;
+                                             } catch (Exception e) {
+                                                 log.error("Error in virtual thread for node {}", hostname, e);
+                                             }
+                                         }
+                                         log.info("Virtual thread for node {} is shutting down", hostname);
+                                     });
+
+        nodeVirtualThreads.put(hostname, virtualThread);
+    }
+
+    private void processEventWithRetry(EventWrapper eventWrapper, MemberInfo member) {
+        EntityEvent<?> event = eventWrapper.event;
+        boolean success = false;
+        int attempts = 0;
+        final String nodeId = member.hostname();
+
+        while (!success && !isShutdown.get() && !Thread.currentThread().isInterrupted()) {
+            attempts++;
+
+            try {
+                log.debug("Processing event {} for node {} (attempt {})", event.resourceName(), nodeId, attempts);
+
+                ClusterMessage message = ClusterMessage.of(event);
+                CompletableFuture<ResponseMessage> future = messageExchange.request(
+                    "resource-events",
+                    "process-event",
+                    message
+                ).orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS);
+
+                ResponseMessage response = future.get();
+                if (response.getException() != null) {
+                    throw response.getException();
+                }
+
+                success = true;
+                log.debug(
+                    "Successfully processed event {} for node {} on attempt {}",
+                    event.resourceName(),
+                    member.hostname(),
+                    attempts
+                );
+            } catch (Exception e) {
+                long backoffMs = Math.min(
+                    eventProcessorConfig.getRetryDelayMs() * (long)Math.pow(
+                        2,
+                        Math.min(eventProcessorConfig.getMaxBackoffAttempts(), attempts - 1)
+                    ),
+                    eventProcessorConfig.getMaxBackoffMs()
+                );
+
+                log.warn(
+                    "Failed to process event {} for node {} (attempt {}), retrying in {} ms: {}",
+                    event.resourceName(),
+                    nodeId,
+                    attempts,
+                    backoffMs,
+                    e.getMessage()
+                );
+
+                try {
+                    CountDownLatch latch = new CountDownLatch(1);
+                    boolean completed = latch.await(backoffMs, TimeUnit.MILLISECONDS);
+                    if (!completed) {
+                        log.debug("Retry delay of {} ms elapsed for event {}, continuing retry",
+                                backoffMs, event.resourceName());
+                    }
+
+                    if (Thread.currentThread().isInterrupted()) {
+                        handleInterruption(event.resourceName(), nodeId);
+                    }
+                } catch (InterruptedException ie) {
+                    handleInterruption(event.resourceName(), nodeId);
+                }
+            }
+        }
+
+        if (!success && !isShutdown.get() && !Thread.currentThread().isInterrupted()) {
+            log.warn("Event {} processing for node {} exited retry loop without success", event.resourceName(), nodeId);
+        }
+    }
+
+    private void handleInterruption(String resourceName, String nodeId) {
+        log.info("Retry interrupted for event {} on node {}", resourceName, nodeId);
+        Thread.currentThread().interrupt();
+    }
+
+    private void startCommitterThread() {
+        committerThread = Thread.ofPlatform()
+                                .name(eventProcessorConfig.getEventCommitterThreadName())
+                                .daemon(true)
+                                .priority(Thread.NORM_PRIORITY)
+                                .start(() -> {
+                                    log.info("Started event committer thread");
+
+                                    while (!isShutdown.get()) {
+                                        try {
+                                            processNextCompletableEvent();
+                                        } catch (InterruptedException e) {
+                                            log.info("Committer thread was interrupted");
+                                            Thread.currentThread().interrupt();
+                                            break;
+                                        } catch (Exception e) {
+                                            log.error("Error in committer thread", e);
+                                        }
+                                    }
+
+                                    handleRemainingEventsOnShutdown();
+                                });
+    }
+
+    private void processNextCompletableEvent() throws InterruptedException {
+        EventWrapper eventWrapper = inFlightEvents.take();
+
+        synchronized (eventWrapper) {
+            while (!isEventReady(eventWrapper) && !isShutdown.get()) {
+                eventWrapper.wait(eventProcessorConfig.getEventReadyCheckMs());
+            }
+        }
+
+        processEventIfAvailable(eventWrapper);
+    }
+
+    private boolean isEventReady(EventWrapper eventWrapper) {
+        return eventWrapper.isCompleteForAllNodes() || eventWrapper.hasNodesChanged();
+    }
+
+    private void processEventIfAvailable(EventWrapper eventWrapper) {
+        EventWrapper processed = inFlightEvents.poll();
+        if (processed == null || processed != eventWrapper) {
+            log.warn("Expected to process event wrapper but found a different one or none");
+            return;
+        }
+
+        if (eventWrapper.hasNodesChanged()) {
+            handleNodesChanged(eventWrapper);
+        } else if (eventWrapper.isCompleteForAllNodes()) {
+            handleEventCompletion(eventWrapper);
+        } else {
+            handleShutdownInterruption(eventWrapper);
+        }
+    }
+
+    private void handleNodesChanged(EventWrapper eventWrapper) {
+        log.info("Nodes changed during processing of event {}, reprocessing", eventWrapper.event.resourceName());
+        enqueueEventToAllNodes(eventWrapper.event, eventWrapper.completeFuture);
+    }
+
+    private void handleEventCompletion(EventWrapper eventWrapper) {
+        log.debug("Event {} processed by all nodes, completing", eventWrapper.event.resourceName());
+        eventWrapper.completeFuture.complete(null);
+    }
+
+    private void handleShutdownInterruption(EventWrapper eventWrapper) {
+        eventWrapper.completeFuture.completeExceptionally(
+            new EventProcessingException("Processing interrupted due to shutdown")
+        );
+    }
+
+    private void handleRemainingEventsOnShutdown() {
+        log.info("Event committer thread is shutting down");
+
+        EventWrapper remaining;
+        while ((remaining = inFlightEvents.poll()) != null) {
+            remaining.completeFuture.completeExceptionally(
+                new EventProcessingException("EventProcessor is shutting down")
+            );
+        }
     }
 
     private void setupMembershipListener(VaradhiClusterManager clusterManager) {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
             public CompletableFuture<Void> joined(MemberInfo memberInfo) {
-                memberCache.put(memberInfo.hostname(), memberInfo);
-                membershipChanged.set(true);
-                log.info("New member added to cluster: {}", memberInfo.hostname());
+                String hostname = memberInfo.hostname();
+                log.info("New member joined: {}", hostname);
+
+                BlockingQueue<EventWrapper> queue = new LinkedBlockingQueue<>();
+                nodeEventQueues.put(hostname, queue);
+
+                startNodeVirtualThread(memberInfo, queue);
+
+                inFlightEvents.forEach(EventWrapper::markNodesChanged);
+
                 return CompletableFuture.completedFuture(null);
             }
 
             @Override
-            public CompletableFuture<Void> left(String id) {
-                memberCache.remove(id);
-                membershipChanged.set(true);
-                log.info("Member removed from cluster: {}", id);
+            public CompletableFuture<Void> left(String hostname) {
+                log.info("Member left: {}", hostname);
+
+                inFlightEvents.forEach(eventWrapper -> {
+                    if (eventWrapper.nodes.contains(hostname)) {
+                        eventWrapper.markNodeComplete(hostname);
+                    }
+                });
+
+                Thread virtualThread = nodeVirtualThreads.remove(hostname);
+                if (virtualThread != null) {
+                    virtualThread.interrupt();
+                }
+
+                nodeEventQueues.remove(hostname);
+
+                inFlightEvents.forEach(EventWrapper::markNodesChanged);
+
                 return CompletableFuture.completedFuture(null);
             }
         });
     }
 
     @Override
-    public CompletableFuture<Void> process(EntityEvent event) {
+    public <T> CompletableFuture<Void> process(EntityEvent<T> event) {
         if (isShutdown.get()) {
             return CompletableFuture.failedFuture(new EventProcessingException("EventProcessor is shutdown"));
         }
 
-        Promise<Void> promise = Promise.promise();
+        CompletableFuture<Void> completeFuture = new CompletableFuture<>();
 
-        acquirePermit().compose(ignored -> processWithTimeout(event)).onComplete(ar -> {
-            concurrencyLimiter.release();
-            if (ar.succeeded()) {
-                promise.complete();
-            } else {
-                handleProcessingFailure(event, ar.cause());
-                promise.fail(ar.cause());
-            }
-        });
+        enqueueEventToAllNodes(event, completeFuture);
 
-        return promise.future().toCompletionStage().toCompletableFuture();
+        return completeFuture;
     }
 
-    private Future<Void> processWithTimeout(EntityEvent event) {
-        if (memberCache.isEmpty()) {
-            return Future.failedFuture(new EventProcessingException("No cluster members available for processing"));
-        }
+    private void enqueueEventToAllNodes(EntityEvent<?> event, CompletableFuture<Void> completeFuture) {
+        synchronized (nodeEventQueues) {
+            Set<String> currentNodes = Set.copyOf(nodeEventQueues.keySet());
 
-        List<MemberInfo> members = new ArrayList<>(memberCache.values());
-        Promise<Void> promise = Promise.promise();
-
-        long timerId = vertx.setTimer(eventProcessorConfig.getProcessingTimeout().toMillis(), id -> {
-            if (!promise.future().isComplete()) {
-                promise.fail(
-                    new TimeoutException(
-                        "Processing timed out after " + eventProcessorConfig.getProcessingTimeout().toMillis() + "ms"
-                    )
+            if (currentNodes.isEmpty()) {
+                completeFuture.completeExceptionally(
+                    new EventProcessingException("No nodes available to process the event")
                 );
+                return;
             }
-        });
 
-        processEventForAllClusterMembers(event, members).onComplete(ar -> {
-            vertx.cancelTimer(timerId);
-            if (ar.succeeded()) {
-                promise.complete();
-            } else {
-                promise.fail(ar.cause());
+            EventWrapper eventWrapper = new EventWrapper(event, currentNodes, completeFuture);
+
+            inFlightEvents.add(eventWrapper);
+
+            boolean nodesChanged = !currentNodes.equals(Set.copyOf(nodeEventQueues.keySet()));
+            if (nodesChanged) {
+                eventWrapper.markNodesChanged();
+                return;
             }
-        });
 
-        return promise.future();
-    }
-
-    private Future<Void> processEventForAllClusterMembers(EntityEvent event, List<MemberInfo> members) {
-        if (members.isEmpty()) {
-            return Future.failedFuture(new EventProcessingException("No cluster members available"));
-        }
-
-        Map<String, ClusterMemberEventState> clusterMemberStates = new ConcurrentHashMap<>();
-        members.forEach(
-            member -> clusterMemberStates.put(
-                member.hostname(),
-                new ClusterMemberEventState(member, eventProcessorConfig.getMaxRetries())
-            )
-        );
-
-        return processClusterMembersWithRetry(event, clusterMemberStates);
-    }
-
-    private Future<Void> processClusterMembersWithRetry(
-        EntityEvent event,
-        Map<String, ClusterMemberEventState> clusterMemberStates
-    ) {
-        Promise<Void> promise = Promise.promise();
-
-        processNextBatch(event, clusterMemberStates, promise, 0);
-
-        return promise.future();
-    }
-
-    private void processNextBatch(
-        EntityEvent event,
-        Map<String, ClusterMemberEventState> clusterMemberStates,
-        Promise<Void> result,
-        int attempt
-    ) {
-        if (isShutdown.get()) {
-            result.fail(new EventProcessingException("EventProcessor shutdown during processing"));
-            return;
-        }
-
-        if (hasMembershipChanged()) {
-            handleMembershipChange(event, clusterMemberStates, result);
-            return;
-        }
-
-        List<ClusterMemberEventState> pendingClusterMembers = clusterMemberStates.values()
-                                                                                 .stream()
-                                                                                 .filter(
-                                                                                     state -> !state.isComplete()
-                                                                                              && state.hasRetriesLeft()
-                                                                                 )
-                                                                                 .toList();
-
-        if (pendingClusterMembers.isEmpty()) {
-            handleCompletion(clusterMemberStates, result);
-            return;
-        }
-
-        if (attempt >= eventProcessorConfig.getMaxRetries()) {
-            handleMaxRetriesExceeded(clusterMemberStates, result);
-            return;
-        }
-
-        processBatch(event, pendingClusterMembers, clusterMemberStates, result, attempt);
-    }
-
-    private boolean hasMembershipChanged() {
-        return membershipChanged.get();
-    }
-
-    private void handleMembershipChange(
-        EntityEvent event,
-        Map<String, ClusterMemberEventState> currentStates,
-        Promise<Void> result
-    ) {
-        Set<String> newMemberSet = memberCache.keySet();
-
-        Set<String> removedMembers = new HashSet<>(currentStates.keySet());
-        removedMembers.removeAll(newMemberSet);
-
-        Set<String> addedMembers = new HashSet<>(newMemberSet);
-        addedMembers.removeAll(currentStates.keySet());
-
-        for (String removedMember : removedMembers) {
-            ClusterMemberEventState state = currentStates.remove(removedMember);
-            if (state != null && !state.isComplete()) {
-                log.warn("Member {} removed during event processing", removedMember);
+            for (String hostname : currentNodes) {
+                BlockingQueue<EventWrapper> nodeQueue = nodeEventQueues.get(hostname);
+                if (nodeQueue != null) {
+                    nodeQueue.add(eventWrapper);
+                } else {
+                    eventWrapper.markNodesChanged();
+                }
             }
+
+            log.debug("Enqueued event {} to {} nodes", event.resourceName(), currentNodes.size());
         }
-
-        for (String addedMember : addedMembers) {
-            MemberInfo newMember = memberCache.get(addedMember);
-            if (newMember != null) {
-                currentStates.put(
-                    addedMember,
-                    new ClusterMemberEventState(newMember, eventProcessorConfig.getMaxRetries())
-                );
-                log.info("New member {} added during event processing", addedMember);
-            }
-        }
-
-        if (!removedMembers.isEmpty() || !addedMembers.isEmpty()) {
-            log.info(
-                "Cluster membership changed during event processing. Removed: {}, Added: {}",
-                removedMembers,
-                addedMembers
-            );
-        }
-
-        membershipChanged.set(false);
-
-        if (currentStates.isEmpty()) {
-            result.fail(new EventProcessingException("All cluster members were removed during processing"));
-        } else {
-            processNextBatch(event, currentStates, result, 0);
-        }
-    }
-
-    private void processBatch(
-        EntityEvent event,
-        List<ClusterMemberEventState> pendingClusterMembers,
-        Map<String, ClusterMemberEventState> clusterMemberStates,
-        Promise<Void> result,
-        int attempt
-    ) {
-        List<Future<Void>> clusterMemberFutures = pendingClusterMembers.stream()
-                                                                       .map(
-                                                                           clusterMemberState -> processClusterMember(
-                                                                               event,
-                                                                               clusterMemberState
-                                                                           )
-                                                                       )
-                                                                       .toList();
-
-        CompositeFuture.join(new ArrayList<>(clusterMemberFutures)).onComplete(ar -> {
-            if (ar.failed()) {
-                log.warn("Batch processing encountered errors", ar.cause());
-            }
-            vertx.setTimer(
-                eventProcessorConfig.getRetryDelayMs(),
-                id -> processNextBatch(event, clusterMemberStates, result, attempt + 1)
-            );
-        });
-    }
-
-    private void handleMaxRetriesExceeded(
-        Map<String, ClusterMemberEventState> clusterMemberStates,
-        Promise<Void> result
-    ) {
-        List<String> failedClusterMembers = clusterMemberStates.values()
-                                                               .stream()
-                                                               .filter(state -> !state.isComplete())
-                                                               .map(state -> state.getMember().hostname())
-                                                               .toList();
-
-        String errorMessage = String.format(
-            "Event processing failed after %d retries for clusterMembers: %s",
-            eventProcessorConfig.getMaxRetries(),
-            failedClusterMembers
-        );
-
-        log.error(errorMessage);
-
-        result.fail(new EventProcessingException(errorMessage));
-    }
-
-    private Future<Void> processClusterMember(EntityEvent event, ClusterMemberEventState clusterMemberState) {
-        String clusterMemberId = clusterMemberState.getMember().hostname();
-
-        if (hasMembershipChanged()) {
-            return Future.failedFuture(
-                new EventProcessingException("Cluster membership changed before processing member: " + clusterMemberId)
-            );
-        }
-
-        return vertx.executeBlocking(promise -> {
-            try {
-                ClusterMessage message = ClusterMessage.of(event);
-                messageExchange.request("cache-events", "processEvent", message)
-                               .orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS)
-                               .thenAccept(response -> {
-                                   if (response.getException() != null) {
-                                       handleClusterMemberFailure(clusterMemberState, response.getException());
-                                       promise.fail(
-                                           new EventProcessingException(
-                                               "ClusterMember processing failed: " + response.getException()
-                                                                                             .getMessage()
-                                           )
-                                       );
-                                   } else {
-                                       clusterMemberState.markComplete();
-                                       promise.complete();
-                                   }
-                               })
-                               .exceptionally(throwable -> {
-                                   promise.fail(throwable);
-                                   return null;
-                               });
-            } catch (Exception e) {
-                promise.fail(e);
-            }
-        });
-    }
-
-    private void handleClusterMemberFailure(ClusterMemberEventState clusterMemberState, Throwable throwable) {
-        String clusterMemberId = clusterMemberState.getMember().hostname();
-        clusterMemberState.incrementRetries();
-
-        if (!clusterMemberState.hasRetriesLeft()) {
-            log.error(
-                "ClusterMember {} failed permanently after {} retries. Error: {}",
-                clusterMemberId,
-                eventProcessorConfig.getMaxRetries(),
-                throwable.getMessage()
-            );
-        } else {
-            log.warn(
-                "ClusterMember {} failed temporarily (attempt {}). Error: {}",
-                clusterMemberId,
-                clusterMemberState.getRetryCount(),
-                throwable.getMessage()
-            );
-        }
-    }
-
-    private void handleCompletion(Map<String, ClusterMemberEventState> clusterMemberStates, Promise<Void> result) {
-        boolean allComplete = clusterMemberStates.values().stream().allMatch(ClusterMemberEventState::isComplete);
-
-        if (allComplete) {
-            result.complete(null);
-        } else {
-            List<String> failedClusterMembers = clusterMemberStates.values()
-                                                                   .stream()
-                                                                   .filter(state -> !state.isComplete())
-                                                                   .map(state -> state.getMember().hostname())
-                                                                   .toList();
-            result.fail(
-                new EventProcessingException("Event processing failed for clusterMembers: " + failedClusterMembers)
-            );
-        }
-    }
-
-    private void handleProcessingFailure(EntityEvent event, Throwable throwable) {
-        log.error("Failed to process event: {}/{}", event.resourceType(), event.resourceName(), throwable);
     }
 
     public void close() {
-        if (!isShutdown.compareAndSet(false, true)) {
-            return;
-        }
+        if (isShutdown.compareAndSet(false, true)) {
+            log.info("Shutting down EventProcessor");
 
-        try {
-            if (!concurrencyLimiter.tryAcquire(
-                eventProcessorConfig.getMaxConcurrentProcessing(),
-                eventProcessorConfig.getProcessingTimeout().toMillis(),
-                TimeUnit.MILLISECONDS
-            )) {
-                log.warn("Shutdown timed out waiting for tasks to complete");
-            }
-        } catch (InterruptedException e) {
-            log.warn("Shutdown interrupted while waiting for tasks to complete", e);
-            Thread.currentThread().interrupt();
-        } finally {
-            concurrencyLimiter.release(eventProcessorConfig.getMaxConcurrentProcessing());
-        }
-    }
-
-    private Future<Void> acquirePermit() {
-        return vertx.executeBlocking(promise -> {
             try {
-                if (!concurrencyLimiter.tryAcquire(5, TimeUnit.SECONDS)) {
-                    promise.fail(
-                        new EventProcessingException("Failed to acquire processing permit - system overloaded")
-                    );
-                } else {
-                    promise.complete();
+                if (committerThread != null) {
+                    committerThread.join(eventProcessorConfig.getThreadJoinTimeoutPrimaryMs());
+                }
+
+                if (committerThread != null && committerThread.isAlive()) {
+                    committerThread.interrupt();
+                }
+
+                for (Map.Entry<String, Thread> entry : nodeVirtualThreads.entrySet()) {
+                    String hostname = entry.getKey();
+                    Thread thread = entry.getValue();
+                    log.debug("Interrupting virtual thread for node: {}", hostname);
+                    thread.interrupt();
+                    thread.join(eventProcessorConfig.getThreadJoinTimeoutWorkerMs());
                 }
             } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting for threads to shut down", e);
                 Thread.currentThread().interrupt();
-                promise.fail(new EventProcessingException("Interrupted while acquiring permit", e));
             }
-        });
+
+            nodeEventQueues.clear();
+            nodeVirtualThreads.clear();
+
+            log.info("EventProcessor shutdown complete");
+        }
     }
 }

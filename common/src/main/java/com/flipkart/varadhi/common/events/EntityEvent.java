@@ -1,12 +1,12 @@
-package com.flipkart.varadhi.entities;
+package com.flipkart.varadhi.common.events;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
 
-public record EntityEvent(
+public record EntityEvent<T>(
     ResourceType resourceType,
     String resourceName,
-    CacheOperation operation,
-    Object resourceState
+    ResourceOperation operation,
+    T resourceState
 ) {
     public EntityEvent {
         if (resourceType == null) {
@@ -20,12 +20,12 @@ public record EntityEvent(
         }
     }
 
-    public static EntityEvent of(
+    public static <T> EntityEvent<T> of(
         ResourceType resourceType,
         String resourceName,
-        CacheOperation cacheOperation,
-        Object resourceState
+        ResourceOperation resourceOperation,
+        T resourceState
     ) {
-        return new EntityEvent(resourceType, resourceName, cacheOperation, resourceState);
+        return new EntityEvent<>(resourceType, resourceName, resourceOperation, resourceState);
     }
 }

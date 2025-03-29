@@ -1,42 +1,41 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.events.MetaStoreEntityResult;
-import com.flipkart.varadhi.entities.EntityEvent;
+import com.flipkart.varadhi.common.events.EntityEvent;
+import com.flipkart.varadhi.controller.config.EventProcessorConfig;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
-import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 @Slf4j
 public final class EventManager implements MetaStoreEventListener, AutoCloseable {
-    private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
-    private static final String THREAD_NAME = "event-manager";
 
     private final MetaStore metaStore;
     private final EntityEventProcessor eventProcessor;
+    private final EventProcessorConfig config;
+    private final EntityEventFactory eventFactory;
     private final ExecutorService executorService;
     private final AtomicBoolean isShutdown;
     private final AtomicBoolean isActive;
 
-    public EventManager(MetaStore metaStore, EntityEventProcessor eventProcessor) {
+    public EventManager(
+        MetaStore metaStore,
+        EntityEventProcessor eventProcessor,
+        EntityEventFactory eventFactory,
+        EventProcessorConfig config
+    ) {
         this.metaStore = Objects.requireNonNull(metaStore, "metaStore cannot be null");
         this.eventProcessor = Objects.requireNonNull(eventProcessor, "eventProcessor cannot be null");
+        this.eventFactory = Objects.requireNonNull(eventFactory, "eventFactory cannot be null");
+        this.config = config != null ? config : EventProcessorConfig.getDefault();
         this.executorService = createExecutorService();
         this.isShutdown = new AtomicBoolean(false);
         this.isActive = new AtomicBoolean(false);
@@ -48,7 +47,7 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
     private ExecutorService createExecutorService() {
         return Executors.newSingleThreadExecutor(
             r -> Thread.ofPlatform()
-                       .name(THREAD_NAME)
+                       .name(config.getEventManagerThreadName())
                        .uncaughtExceptionHandler(this::handleUncaughtException)
                        .unstarted(r)
         );
@@ -82,95 +81,91 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
             return;
         }
 
-        CompletableFuture.runAsync(() -> processEvent(event), executorService).exceptionallyAsync(throwable -> {
+        CompletableFuture.runAsync(() -> processEventWithRetry(event, 0), executorService).exceptionally(throwable -> {
             log.error(
                 "Unexpected error in event processing future for {}/{}",
                 event.getResourceType(),
                 event.getResourceName(),
                 throwable
             );
+            scheduleRetry(event, 10);
             return null;
-        }, executorService);
+        });
     }
 
-    private void processEvent(MetaStoreChangeEvent event) {
+    private void processEventWithRetry(MetaStoreChangeEvent event, int retryCount) {
         try {
-            var entityEvent = createEntityEvent(event);
-            if (entityEvent == null) {
+            EntityEvent<?> entityEvent;
+            try {
+                entityEvent = createEntityEvent(event);
+            } catch (Exception e) {
                 log.error(
-                    "Unable to process event {}/{} - failed to create entity event",
+                    "Error creating entity event for {}/{}, scheduling retry",
                     event.getResourceType(),
-                    event.getResourceName()
+                    event.getResourceName(),
+                    e
                 );
+                scheduleRetry(event, retryCount);
                 return;
             }
 
-            eventProcessor.process(entityEvent).thenAcceptAsync(v -> {
-                event.markAsProcessed();
-                log.info("Successfully processed event for {}/{}", event.getResourceType(), event.getResourceName());
-            }, executorService).exceptionallyAsync(throwable -> {
-                log.error(
-                    "Failed to process event for {}/{}",
-                    event.getResourceType(),
-                    event.getResourceName(),
-                    throwable
-                );
-                return null;
-            }, executorService);
+            eventProcessor.process(entityEvent)
+                          .thenCompose(v -> markEventProcessedWithRetry(event))
+                          .whenComplete((result, throwable) -> {
+                              if (throwable != null) {
+                                  log.error(
+                                      "Failed to process event for {}/{}, scheduling retry",
+                                      event.getResourceType(),
+                                      event.getResourceName(),
+                                      throwable
+                                  );
+                                  scheduleRetry(event, retryCount);
+                              } else {
+                                  log.info(
+                                      "Successfully processed event for {}/{}",
+                                      event.getResourceType(),
+                                      event.getResourceName()
+                                  );
+                              }
+                          });
         } catch (Exception e) {
             log.error("Failed to create entity event for {}/{}", event.getResourceType(), event.getResourceName(), e);
+            scheduleRetry(event, retryCount);
         }
     }
 
-    private EntityEvent createEntityEvent(MetaStoreChangeEvent event) {
-        var result = getMetaStoreEntity(event);
-        if (result == null) {
-            return null;
-        }
-        return EntityEvent.of(
-            event.getResourceType(),
-            event.getResourceName(),
-            result.cacheOperation(),
-            result.state()
-        );
-    }
-
-    private MetaStoreEntityResult getMetaStoreEntity(MetaStoreChangeEvent event) {
-        return fetchMetaStoreEntity(() -> invokeGetMethod(event.getResourceType(), event.getResourceName()));
-    }
-
-    private Object invokeGetMethod(ResourceType type, String name) {
+    private CompletableFuture<Void> markEventProcessedWithRetry(MetaStoreChangeEvent event) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
         try {
-            String methodName = "get" + formatMethodName(type.name());
-            Method method = metaStore.getClass().getMethod(methodName, String.class);
-            return method.invoke(metaStore, name);
-        } catch (InvocationTargetException e) {
-            throw (RuntimeException)e.getTargetException();
+            event.markAsProcessed();
+            future.complete(null);
         } catch (Exception e) {
-            log.error("Failed to invoke get method for {}/{}", type, name, e);
-            return null;
+            log.error("Failed to mark event as processed, will retry", e);
+            future.completeExceptionally(e);
         }
+        return future;
     }
 
-    private String formatMethodName(String typeName) {
-        return Arrays.stream(typeName.split("_"))
-                     .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1).toLowerCase())
-                     .collect(Collectors.joining());
+    private void scheduleRetry(MetaStoreChangeEvent event, int retryCount) {
+        if (isShutdown.get() || !isActive.get()) {
+            log.warn(
+                "Skipping retry for {}/{} - Manager is shutdown or inactive",
+                event.getResourceType(),
+                event.getResourceName()
+            );
+            return;
+        }
+
+        long delayMillis = config.calculateRetryDelayMs(retryCount);
+        CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS, executorService)
+                         .execute(() -> processEventWithRetry(event, retryCount + 1));
     }
 
-    private MetaStoreEntityResult fetchMetaStoreEntity(Supplier<Object> entitySupplier) {
-        try {
-            Object entity = entitySupplier.get();
-            if (entity == null) {
-                return null;
-            }
-            return MetaStoreEntityResult.of(entity);
-        } catch (ResourceNotFoundException e) {
-            return MetaStoreEntityResult.notFound();
-        } catch (MetaStoreException e) {
-            log.error("MetaStore error while fetching entity", e);
-            return null;
-        }
+    private EntityEvent<?> createEntityEvent(MetaStoreChangeEvent event) {
+        ResourceType resourceType = event.getResourceType();
+        String resourceName = event.getResourceName();
+
+        return eventFactory.createEvent(resourceType, resourceName, metaStore);
     }
 
     @Override
@@ -190,7 +185,7 @@ public final class EventManager implements MetaStoreEventListener, AutoCloseable
 
     private void shutdownExecutor() throws InterruptedException {
         executorService.shutdown();
-        if (!executorService.awaitTermination(SHUTDOWN_TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
+        if (!executorService.awaitTermination(config.getShutdownTimeoutSeconds(), TimeUnit.SECONDS)) {
             log.warn("EventManager executor service did not terminate in time");
             executorService.shutdownNow().forEach(Runnable::run);
         }
