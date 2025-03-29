@@ -14,7 +14,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -198,8 +197,11 @@ public final class EventProcessor implements EntityEventProcessor {
                     CountDownLatch latch = new CountDownLatch(1);
                     boolean completed = latch.await(backoffMs, TimeUnit.MILLISECONDS);
                     if (!completed) {
-                        log.debug("Retry delay of {} ms elapsed for event {}, continuing retry",
-                                backoffMs, event.resourceName());
+                        log.debug(
+                            "Retry delay of {} ms elapsed for event {}, continuing retry",
+                            backoffMs,
+                            event.resourceName()
+                        );
                     }
 
                     if (Thread.currentThread().isInterrupted()) {
