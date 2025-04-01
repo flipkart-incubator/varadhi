@@ -264,9 +264,13 @@ public final class EventProcessor implements EntityEventProcessor {
     }
 
     private void processEventIfAvailable(EventWrapper eventWrapper) {
-        EventWrapper processed = inFlightEvents.poll();
-        if (processed == null || processed != eventWrapper) {
-            log.warn("Expected to process event wrapper but found a different one or none");
+        boolean removed = inFlightEvents.remove(eventWrapper);
+
+        if (!removed) {
+            log.warn(
+                "Event {} was not found in the queue, may have been processed by another thread",
+                eventWrapper.event.resourceName()
+            );
             return;
         }
 
