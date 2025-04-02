@@ -77,7 +77,7 @@ public class IamPolicyService {
             case ROOT -> throw new IllegalArgumentException(
                 "ROOT is implicit resource type. No Iam policies supported on it."
             );
-            case ORG, ORG_FILTER -> metaStore.orgOperations().checkOrgExists(resourceId);
+            case ORG -> metaStore.orgOperations().checkOrgExists(resourceId);
             case TEAM -> {
                 // org:team
                 String[] segments = resourceId.split(":");

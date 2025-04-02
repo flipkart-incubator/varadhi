@@ -48,7 +48,7 @@ public class IamPolicyHandlers implements RouteProvider {
             case ROOT -> throw new IllegalArgumentException(
                 "ROOT is implicit resource type. No Iam policies supported on it."
             );
-            case ORG, ORG_FILTER -> ctx.pathParam(PATH_PARAM_ORG);
+            case ORG -> ctx.pathParam(PATH_PARAM_ORG);
             case TEAM -> String.join(
                 AUTH_RESOURCE_NAME_SEPARATOR,
                 ctx.pathParam(PATH_PARAM_ORG),

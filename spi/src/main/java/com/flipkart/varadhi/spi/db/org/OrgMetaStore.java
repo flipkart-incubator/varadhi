@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.spi.db.org;
 
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 
 import java.util.List;

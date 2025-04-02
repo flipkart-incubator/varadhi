@@ -163,9 +163,9 @@ public final class ZNode {
 
     public static ZNode ofOrgNamedFilter(String orgName, String namedFilterName) {
         return new Builder().withZNodeKind(ORG_FILTER)
-                .withName(namedFilterName)
-                .withParent(ORG.kind(), orgName)
-                .build();
+                            .withName(namedFilterName)
+                            .withParent(ORG.kind(), orgName)
+                            .build();
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {

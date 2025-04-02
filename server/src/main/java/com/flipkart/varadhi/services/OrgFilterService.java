@@ -13,23 +13,23 @@ public class OrgFilterService {
         this.orgFilterOperations = orgFilterOperations;
     }
 
-    public Condition getOrgFilterByName(String orgName, String filterName) {
+    public Condition getFilter(String orgName, String filterName) {
         return orgFilterOperations.getOrgFilter(orgName, filterName).getFilters().get(filterName);
     }
 
-    public List<OrgFilters> getAllOrgFilters(String orgName) {
+    public List<OrgFilters> getAll(String orgName) {
         return orgFilterOperations.getOrgFilters(orgName);
     }
 
-    public boolean checkIfOrgFilterExists(String orgName, String filterName) {
+    public boolean filterExists(String orgName, String filterName) {
         return orgFilterOperations.getOrgFilter(orgName, filterName).getFilters().get(filterName) != null;
     }
 
-    public void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters) {
+    public void updateFilter(String orgName, String filterName, OrgFilters orgFilters) {
         orgFilterOperations.updateOrgFilter(orgName, filterName, orgFilters);
     }
 
-    public OrgFilters createOrgFilter(String orgName, OrgFilters OrgFilter) {
+    public OrgFilters createFilter(String orgName, OrgFilters OrgFilter) {
         return orgFilterOperations.createOrgFilter(orgName, OrgFilter);
     }
 }

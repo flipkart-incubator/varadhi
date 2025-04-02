@@ -71,21 +71,21 @@ public class OrgLevelFilterHandler implements RouteProvider {
 
     public void getOrgFilters(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        List<OrgFilters> filters = orgFilterService.getAllOrgFilters(orgName);
+        List<OrgFilters> filters = orgFilterService.getAll(orgName);
         ctx.endApiWithResponse(filters);
     }
 
     public void getNamedFilterByName(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        Condition filter = orgFilterService.getOrgFilterByName(orgName, filterName);
+        Condition filter = orgFilterService.getFilter(orgName, filterName);
         ctx.endApiWithResponse(filter);
     }
 
     public void createNamedFilter(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        OrgFilters createdFilter = orgFilterService.createOrgFilter(orgName, filter);
+        OrgFilters createdFilter = orgFilterService.createFilter(orgName, filter);
         ctx.endApiWithResponse(createdFilter);
     }
 
@@ -93,14 +93,14 @@ public class OrgLevelFilterHandler implements RouteProvider {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        orgFilterService.updateOrgFilter(orgName, filterName, filter);
+        orgFilterService.updateFilter(orgName, filterName, filter);
         ctx.endApi();
     }
 
     public void checkIfNamedFilterExists(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        boolean exists = orgFilterService.checkIfOrgFilterExists(orgName, filterName);
+        boolean exists = orgFilterService.filterExists(orgName, filterName);
         ctx.endApiWithResponse(exists);
     }
 }
