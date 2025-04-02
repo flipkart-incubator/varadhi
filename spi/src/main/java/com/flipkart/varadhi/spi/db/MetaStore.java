@@ -1,28 +1,28 @@
 package com.flipkart.varadhi.spi.db;
 
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
-import com.flipkart.varadhi.spi.db.org.OrgOperations;
-import com.flipkart.varadhi.spi.db.project.ProjectOperations;
-import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
-import com.flipkart.varadhi.spi.db.team.TeamOperations;
-import com.flipkart.varadhi.spi.db.topic.TopicOperations;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
+import com.flipkart.varadhi.spi.db.project.ProjectMetaStore;
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
+import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
 
 /**
  * Interface defining operations for managing metadata storage in the Varadhi system.
  * Provides CRUD operations for organizations, teams, projects, topics, and subscriptions.
  */
 public interface MetaStore {
-    OrgOperations orgOperations();
+    OrgMetaStore orgOperations();
 
-    TeamOperations teamOperations();
+    TeamMetaStore teamOperations();
 
-    ProjectOperations projectOperations();
+    ProjectMetaStore projectOperations();
 
-    TopicOperations topicOperations();
+    TopicMetaStore topicOperations();
 
-    SubscriptionOperations subscriptionOperations();
+    SubscriptionMetaStore subscriptionOperations();
 
-    IamPolicyOperations iamPolicyOperations();
+    IamPolicyMetaStore iamPolicyOperations();
 
     boolean registerEventListener(MetaStoreEventListener listener);
 }

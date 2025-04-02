@@ -1,19 +1,20 @@
 package com.flipkart.varadhi.services;
 
+import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
-import com.flipkart.varadhi.spi.db.org.OrgOperations;
+import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
 
 import java.util.List;
 
 public class OrgFilterService {
-    private final OrgOperations orgFilterOperations;
+    private final OrgMetaStore orgFilterOperations;
 
-    public OrgFilterService(OrgOperations orgFilterOperations) {
+    public OrgFilterService(OrgMetaStore orgFilterOperations) {
         this.orgFilterOperations = orgFilterOperations;
     }
 
-    public OrgFilters getOrgFilterByName(String orgName, String filterName) {
-        return orgFilterOperations.getOrgFilter(orgName, filterName);
+    public Condition getOrgFilterByName(String orgName, String filterName) {
+        return orgFilterOperations.getOrgFilter(orgName, filterName).getFilters().get(filterName);
     }
 
     public List<OrgFilters> getAllOrgFilters(String orgName) {
@@ -21,7 +22,7 @@ public class OrgFilterService {
     }
 
     public boolean checkIfOrgFilterExists(String orgName, String filterName) {
-        return orgFilterOperations.checkOrgFilterExists(orgName, filterName);
+        return orgFilterOperations.getOrgFilter(orgName, filterName).getFilters().get(filterName) != null;
     }
 
     public void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters) {

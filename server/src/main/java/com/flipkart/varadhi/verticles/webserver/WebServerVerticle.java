@@ -16,7 +16,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -122,7 +122,12 @@ public class WebServerVerticle extends AbstractVerticle {
         orgFilterService = new OrgFilterService(metaStore.orgOperations());
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
-        varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore.topicOperations(), metaStore.subscriptionOperations(), metaStore.projectOperations());
+        varadhiTopicService = new VaradhiTopicService(
+            messagingStackProvider.getStorageTopicService(),
+            metaStore.topicOperations(),
+            metaStore.subscriptionOperations(),
+            metaStore.projectOperations()
+        );
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
@@ -172,7 +177,7 @@ public class WebServerVerticle extends AbstractVerticle {
             null :
             configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
-        boolean isIamPolicyStore = metaStore instanceof IamPolicyOperations;
+        boolean isIamPolicyStore = metaStore instanceof IamPolicyMetaStore;
         //TODO::Validate below specifically w.r.to lean deployment.
         // enable IamPolicy Routes, if
         // 1. provider class name is DefaultAuthorizationProvider, and
@@ -183,7 +188,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 routes.addAll(
                     new IamPolicyHandlers(
                         projectService,
-                        new IamPolicyService(metaStore, (IamPolicyOperations)metaStore)
+                        new IamPolicyService(metaStore, (IamPolicyMetaStore)metaStore)
                     ).get()
                 );
             } else {

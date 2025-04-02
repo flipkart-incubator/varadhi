@@ -12,7 +12,6 @@ import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -62,17 +61,17 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
             metaStoreProvider.init(options);
             MetaStore store = metaStoreProvider.getMetaStore();
 
-            if (!(store instanceof IamPolicyOperations)) {
-                throw new IllegalStateException(
-                    String.format("Provider %s must implement IamPolicyOperations", options.getProviderClassName())
-                );
-            }
+            //            if (store.iamPolicyOperations() == null) {
+            //                throw new IllegalStateException(
+            //                    String.format("Provider %s must implement IamPolicyMetaStore", options.getProviderClassName())
+            //                );
+            //            }
 
             log.info(
                 "Successfully initialized authorization service with provider: {}",
                 options.getProviderClassName()
             );
-            return new IamPolicyService(store, (IamPolicyOperations)store);
+            return new IamPolicyService(store, store.iamPolicyOperations());
         } catch (Exception e) {
             cleanupProvider();
             throw new IllegalStateException("Failed to initialize authorization service", e);

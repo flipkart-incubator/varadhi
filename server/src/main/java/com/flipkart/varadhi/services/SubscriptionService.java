@@ -6,7 +6,6 @@ import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
-import com.flipkart.varadhi.spi.db.topic.TopicOperations;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -58,10 +57,12 @@ public class SubscriptionService {
      * @return the list of subscription names
      */
     public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
-        return metaStore.subscriptionOperations().getSubscriptionNames(projectName)
+        return metaStore.subscriptionOperations()
+                        .getSubscriptionNames(projectName)
                         .stream()
                         .filter(
-                            subscriptionName -> includeInactive || metaStore.subscriptionOperations().getSubscription(subscriptionName)
+                            subscriptionName -> includeInactive || metaStore.subscriptionOperations()
+                                                                            .getSubscription(subscriptionName)
                                                                             .isActive()
                         )
                         .toList();

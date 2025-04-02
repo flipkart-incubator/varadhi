@@ -1,11 +1,12 @@
 package com.flipkart.varadhi.spi.db.org;
 
 import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 
 import java.util.List;
 
-public interface OrgOperations {
+public interface OrgMetaStore {
     void createOrg(Org org);
 
     Org getOrg(String orgName);
@@ -19,8 +20,6 @@ public interface OrgOperations {
     OrgFilters getOrgFilter(String orgName, String filterName);
 
     List<OrgFilters> getOrgFilters(String orgName);
-
-    boolean checkOrgFilterExists(String orgName, String filterName);
 
     void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters);
 

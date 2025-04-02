@@ -44,7 +44,8 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
     private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
         SubscriptionOperation.ReassignShardData data = (SubscriptionOperation.ReassignShardData)subOp.getData();
         Assignment currentAssignment = data.getAssignment();
-        VaradhiSubscription subscription = metaStore.subscriptionOperations().getSubscription(currentAssignment.getSubscriptionId());
+        VaradhiSubscription subscription = metaStore.subscriptionOperations()
+                                                    .getSubscription(currentAssignment.getSubscriptionId());
         Map<Integer, ShardOperation> shardOps = operationMgr.getShardOps(subOp.getId());
         return assignmentManager.reAssignShard(currentAssignment, subscription, false).thenCompose(a -> {
             ConsumerApi consumer = getAssignedConsumer(a);

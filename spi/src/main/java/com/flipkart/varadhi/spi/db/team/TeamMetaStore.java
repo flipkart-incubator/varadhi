@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.Team;
 
 import java.util.List;
 
-public interface TeamOperations {
+public interface TeamMetaStore {
     void createTeam(Team team);
 
     Team getTeam(String teamName, String orgName);

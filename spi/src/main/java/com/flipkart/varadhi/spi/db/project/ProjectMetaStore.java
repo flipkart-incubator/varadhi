@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.Project;
 
 import java.util.List;
 
-public interface ProjectOperations {
+public interface ProjectMetaStore {
     void createProject(Project project);
 
     Project getProject(String projectName);

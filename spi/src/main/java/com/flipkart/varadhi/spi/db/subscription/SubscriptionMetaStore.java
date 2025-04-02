@@ -4,7 +4,7 @@ import com.flipkart.varadhi.entities.VaradhiSubscription;
 
 import java.util.List;
 
-public interface SubscriptionOperations {
+public interface SubscriptionMetaStore {
     void createSubscription(VaradhiSubscription subscription);
 
     VaradhiSubscription getSubscription(String subscriptionName);

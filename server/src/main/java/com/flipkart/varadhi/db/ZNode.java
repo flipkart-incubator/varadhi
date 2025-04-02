@@ -3,6 +3,7 @@ package com.flipkart.varadhi.db;
 import java.util.Objects;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Represents a ZooKeeper node in the Varadhi system.
@@ -35,6 +36,7 @@ import lombok.Getter;
  * @see ZKMetaStore
  */
 @Getter
+@Slf4j
 public final class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
     public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filter");
@@ -78,8 +80,8 @@ public final class ZNode {
         private String path;
         private String parent;
         private ZNodeKind zNodeKind;
-        private String childKind;
-        private String childName;
+        private String parentKind;
+        private String parentName;
 
         /**
          * Sets the ZNodeKind for this node.
@@ -121,14 +123,14 @@ public final class ZNode {
         /**
          * Sets the parent for this node, used in hierarchical resources.
          *
-         * @param childKind The kind of child resource
-         * @param childName The name of child resource
+         * @param parentKind The kind of child resource
+         * @param parentName The name of child resource
          * @return The builder instance for method chaining
          * @throws NullPointerException if parent is null
          */
-        public Builder insideParent(String childKind, String childName) {
-            this.childKind = Objects.requireNonNull(childKind, "childKind cannot be null");
-            this.childName = Objects.requireNonNull(childName, "childName cannot be null");
+        public Builder withParent(String parentKind, String parentName) {
+            this.parentKind = Objects.requireNonNull(parentKind, "childKind cannot be null");
+            this.parentName = Objects.requireNonNull(parentName, "childName cannot be null");
             return this;
         }
 
@@ -140,9 +142,8 @@ public final class ZNode {
          */
         public ZNode build() {
             Objects.requireNonNull(zNodeKind, "zNodeKind must be set");
-
-            if (parent != null && childKind != null && childName != null) {
-                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, parent, childKind, childName);
+            if (parentKind != null && parentName != null) {
+                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, parentKind, parentName, kind);
             } else if (parent != null) {
                 this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, getResourceFQDN(parent, name));
             } else if (name != null) {
@@ -161,7 +162,10 @@ public final class ZNode {
     }
 
     public static ZNode ofOrgNamedFilter(String orgName, String namedFilterName) {
-        return new Builder().withZNodeKind(ORG).withName(orgName).insideParent(ORG_FILTER.kind(), namedFilterName).build();
+        return new Builder().withZNodeKind(ORG_FILTER)
+                .withName(namedFilterName)
+                .withParent(ORG.kind(), orgName)
+                .build();
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {

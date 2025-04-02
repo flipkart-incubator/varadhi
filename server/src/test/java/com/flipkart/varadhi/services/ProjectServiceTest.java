@@ -10,7 +10,7 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.spi.db.topic.TopicOperations;
+import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -188,9 +188,9 @@ public class ProjectServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
-        TopicOperations topicOperations = mock(TopicOperations.class);
-        when(varadhiMetaStore.topicOperations()).thenReturn(topicOperations);
-        when(topicOperations.getTopicNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
+        TopicMetaStore topicMetaStore = mock(TopicMetaStore.class);
+        when(varadhiMetaStore.topicOperations()).thenReturn(topicMetaStore);
+        when(topicMetaStore.getTopicNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
         InvalidOperationForResourceException e = Assertions.assertThrows(
             InvalidOperationForResourceException.class,
             () -> projectService.deleteProject(o1t1p2.getName())

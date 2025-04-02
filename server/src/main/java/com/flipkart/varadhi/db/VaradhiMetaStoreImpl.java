@@ -7,20 +7,23 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.org.OrgOperations;
-import com.flipkart.varadhi.spi.db.project.ProjectOperations;
-import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
-import com.flipkart.varadhi.spi.db.team.TeamOperations;
-import com.flipkart.varadhi.spi.db.topic.TopicOperations;
+import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
+import com.flipkart.varadhi.spi.db.project.ProjectMetaStore;
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
+import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 import static com.flipkart.varadhi.db.ZNode.*;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
-public class VaradhiOperationsImpl implements TopicOperations, SubscriptionOperations, TeamOperations, OrgOperations, IamPolicyOperations, ProjectOperations {
+@Slf4j
+public class VaradhiMetaStoreImpl implements TopicMetaStore, SubscriptionMetaStore, TeamMetaStore, OrgMetaStore,
+    IamPolicyMetaStore, ProjectMetaStore {
 
     private final ZKMetaStore zkMetaStore;
 
@@ -34,7 +37,7 @@ public class VaradhiOperationsImpl implements TopicOperations, SubscriptionOpera
      * @throws IllegalArgumentException if zkCurator is null
      * @throws MetaStoreException       if initialization fails or required paths cannot be created
      */
-    public VaradhiOperationsImpl(ZKMetaStore zkMetaStore) {
+    public VaradhiMetaStoreImpl(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;
         ensureEntityTypePathExists();
     }
@@ -136,26 +139,15 @@ public class VaradhiOperationsImpl implements TopicOperations, SubscriptionOpera
     @Override
     public List<OrgFilters> getOrgFilters(String orgName) {
         ZNode znode = ZNode.ofOrg(orgName);
-        return zkMetaStore.listChildren(znode).stream()
-                .map(
-                        id -> zkMetaStore.getZNodeDataAsPojo(
-                                ZNode.ofOrgNamedFilter(orgName, id),
-                                OrgFilters.class
-                        )
-                ).toList();
-    }
-
-    /**
-     * Checks if a named filter exists within a specified organization.
-     *
-     * @param orgName    the name of the organization
-     * @param filterName the name of the filter
-     * @return true if the filter exists, false otherwise
-     */
-    @Override
-    public boolean checkOrgFilterExists(String orgName, String filterName) {
-        ZNode znode = ZNode.ofTeam(orgName, filterName);
-        return zkMetaStore.zkPathExist(znode);
+        return zkMetaStore.listChildren(znode)
+                          .stream()
+                          .map(
+                              id -> zkMetaStore.getZNodeDataAsPojo(
+                                  ZNode.ofOrgNamedFilter(orgName, id),
+                                  OrgFilters.class
+                              )
+                          )
+                          .toList();
     }
 
     /**
@@ -228,10 +220,10 @@ public class VaradhiOperationsImpl implements TopicOperations, SubscriptionOpera
     public List<Project> getProjects(String teamName, String orgName) {
         ZNode znode = ZNode.ofEntityType(PROJECT);
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .map(this::getProject)
-                .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
-                .toList();
+                          .stream()
+                          .map(this::getProject)
+                          .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
+                          .toList();
     }
 
     /**
@@ -442,10 +434,10 @@ public class VaradhiOperationsImpl implements TopicOperations, SubscriptionOpera
         ZNode znode = ZNode.ofEntityType(TEAM);
 
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .filter(teamName -> teamName.startsWith(orgPrefix))
-                .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
-                .toList();
+                          .stream()
+                          .filter(teamName -> teamName.startsWith(orgPrefix))
+                          .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
+                          .toList();
     }
 
     /**

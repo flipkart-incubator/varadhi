@@ -257,7 +257,8 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             assignments.forEach(assignment -> {
                 log.info("Assignment {} needs to be re-assigned", assignment);
                 SubscriptionOperation operation = SubscriptionOperation.reAssignShardOp(assignment, SYSTEM_IDENTITY);
-                VaradhiSubscription subscription = metaStore.subscriptionOperations().getSubscription(assignment.getSubscriptionId());
+                VaradhiSubscription subscription = metaStore.subscriptionOperations()
+                                                            .getSubscription(assignment.getSubscriptionId());
                 operationMgr.createAndEnqueue(
                     operation,
                     new ReAssignOpExecutor(
@@ -293,7 +294,8 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     }
 
     public void retryOperation(SubscriptionOperation operation) {
-        VaradhiSubscription subscription = metaStore.subscriptionOperations().getSubscription(operation.getData().getSubscriptionId());
+        VaradhiSubscription subscription = metaStore.subscriptionOperations()
+                                                    .getSubscription(operation.getData().getSubscriptionId());
         OpExecutor<OrderedOperation> executor = getOpExecutor(operation, subscription);
         operationMgr.enqueue(operation, executor);
     }

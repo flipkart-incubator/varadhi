@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyOperations;
+import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.org.OrgOperations;
-import com.flipkart.varadhi.spi.db.project.ProjectOperations;
-import com.flipkart.varadhi.spi.db.subscription.SubscriptionOperations;
-import com.flipkart.varadhi.spi.db.team.TeamOperations;
-import com.flipkart.varadhi.spi.db.topic.TopicOperations;
+import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
+import com.flipkart.varadhi.spi.db.project.ProjectMetaStore;
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
+import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class VaradhiMetaStore implements MetaStore {
-    private final VaradhiOperationsImpl VaradhiOperationsImpl;
+    private final VaradhiMetaStoreImpl VaradhiOperationsImpl;
     private final ZKMetaStore zkMetaStore;
 
     /**
@@ -44,36 +44,36 @@ public final class VaradhiMetaStore implements MetaStore {
      */
     public VaradhiMetaStore(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;
-        VaradhiOperationsImpl = new VaradhiOperationsImpl(zkMetaStore);
+        VaradhiOperationsImpl = new VaradhiMetaStoreImpl(zkMetaStore);
     }
 
     @Override
-    public OrgOperations orgOperations() {
+    public OrgMetaStore orgOperations() {
         return VaradhiOperationsImpl;
     }
 
     @Override
-    public TeamOperations teamOperations() {
+    public TeamMetaStore teamOperations() {
         return VaradhiOperationsImpl;
     }
 
     @Override
-    public ProjectOperations projectOperations() {
+    public ProjectMetaStore projectOperations() {
         return VaradhiOperationsImpl;
     }
 
     @Override
-    public TopicOperations topicOperations() {
+    public TopicMetaStore topicOperations() {
         return VaradhiOperationsImpl;
     }
 
     @Override
-    public SubscriptionOperations subscriptionOperations() {
+    public SubscriptionMetaStore subscriptionOperations() {
         return VaradhiOperationsImpl;
     }
 
     @Override
-    public IamPolicyOperations iamPolicyOperations() {
+    public IamPolicyMetaStore iamPolicyOperations() {
         return VaradhiOperationsImpl;
     }
 

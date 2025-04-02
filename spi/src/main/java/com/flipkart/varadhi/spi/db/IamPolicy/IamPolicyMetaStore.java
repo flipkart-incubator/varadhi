@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
  * the existence of IAM policy records, as well as retrieving records
  * by authentication resource ID.
  */
-public interface IamPolicyOperations {
+public interface IamPolicyMetaStore {
 
     void createIamPolicyRecord(IamPolicyRecord iamPolicyRecord);
 

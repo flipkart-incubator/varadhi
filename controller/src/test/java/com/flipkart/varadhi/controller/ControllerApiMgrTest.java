@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -46,6 +47,7 @@ public class ControllerApiMgrTest {
     OpStore opStore;
     ConsumerClientFactory consumerClientFactory;
     String requestedBy = "testRequester";
+    SubscriptionMetaStore subscriptionMetaStore;
 
     @BeforeEach
     public void preTest() {
@@ -59,6 +61,8 @@ public class ControllerApiMgrTest {
         operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20)));
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
         controllerApiMgr = spy(new ControllerApiMgr(operationMgr, assignmentManager, metaStore, consumerClientFactory));
+        subscriptionMetaStore = mock(SubscriptionMetaStore.class);
+        when(metaStore.subscriptionOperations()).thenReturn(subscriptionMetaStore);
     }
 
     @Test
@@ -131,7 +135,7 @@ public class ControllerApiMgrTest {
         assignments.add(getAssignment(sub1, consumerNodes.get(0), shards.get(0)));
         assignments.add(getAssignment(sub1, consumerNodes.get(1), shards.get(1)));
         assignments.add(getAssignment(sub1, consumerNodes.get(2), shards.get(2)));
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
         doReturn(assignments).when(assignmentManager).getSubAssignments(sub1.getName());
         setupConsumerState(sub1.getName(), 0, ConsumerState.CONSUMING);
         setupConsumerState(sub1.getName(), 1, ConsumerState.CONSUMING);
@@ -221,7 +225,7 @@ public class ControllerApiMgrTest {
                                                     .setNumShards(3)
                                                     .build("project1.sub1", "project1", "project1.topic1");
 
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(assignmentManager)
                                                                              .getSubAssignments(sub1.getName());
 
@@ -446,7 +450,7 @@ public class ControllerApiMgrTest {
         VaradhiSubscription sub1 = SubscriptionUtils.builder()
                                                     .setNumShards(3)
                                                     .build("project1.sub1", "project1", "project1.topic1");
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(assignmentManager)
                                                                              .getSubAssignments(sub1.getName());
 
@@ -625,7 +629,7 @@ public class ControllerApiMgrTest {
                                                     .setNumShards(3)
                                                     .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
         doNothing().when(operationMgr).enqueue(any(), any());
         controllerApiMgr.retryOperation(subOp);
         verify(operationMgr, times(1)).enqueue(eq(subOp), any());
@@ -673,8 +677,8 @@ public class ControllerApiMgrTest {
             assignmentManager
         ).reAssignShard(consumer0Assignments.get(1), sub2, false);
 
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
-        doReturn(sub2).when(metaStore).getSubscription(sub2.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
+        doReturn(sub2).when(subscriptionMetaStore).getSubscription(sub2.getName());
         doReturn(consumer0Assignments).when(assignmentManager).getConsumerNodeAssignments(nodes.get(0).getConsumerId());
 
         doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
@@ -743,7 +747,7 @@ public class ControllerApiMgrTest {
             assignments.add(getAssignment(sub1, consumerNodes.get(i), shards.get(i)));
             setupConsumerState(sub1.getName(), shards.get(i).getShardId(), state.getConsumerState());
         }
-        doReturn(sub1).when(metaStore).getSubscription(sub1.getName());
+        doReturn(sub1).when(subscriptionMetaStore).getSubscription(sub1.getName());
         doReturn(assignments).when(assignmentManager).getSubAssignments(sub1.getName());
         doReturn(CompletableFuture.completedFuture(assignments)).when(assignmentManager)
                                                                 .assignShards(shards, sub1, List.of());

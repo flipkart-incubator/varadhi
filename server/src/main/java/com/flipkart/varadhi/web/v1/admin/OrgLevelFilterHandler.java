@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1.admin;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.services.OrgFilterService;
 import com.flipkart.varadhi.web.Extensions;
@@ -22,7 +23,7 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FI
 import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_GET;
 
 @Slf4j
-@ExtensionMethod({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgLevelFilterHandler implements RouteProvider {
     private final OrgFilterService orgFilterService;
 
@@ -33,28 +34,28 @@ public class OrgLevelFilterHandler implements RouteProvider {
     @Override
     public List<RouteDefinition> get() {
         return new SubRoutes(
-                "/v1/orgs/:orgName/filters",
-                List.of(
-                        RouteDefinition.get("GetFilters", "")
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::getOrgFilters),
-                        RouteDefinition.get("GetFilterByName", "/:orgFilterName")
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::getNamedFilterByName),
-                        RouteDefinition.post("CreateFilter", "")
-                                .hasBody()
-                                .bodyParser(this::setNamedFilter)
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::createNamedFilter),
-                        RouteDefinition.put("UpdateFilter", "/:orgFilterName")
-                                .hasBody()
-                                .bodyParser(this::setNamedFilter)
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::updateNamedFilter),
-                        RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
-                                .authorize(ORG_GET)
-                                .build(this::getHierarchies, this::checkIfNamedFilterExists)
-                )
+            "/v1/orgs/:org/filters",
+            List.of(
+                RouteDefinition.get("GetFilters", "")
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::getOrgFilters),
+                RouteDefinition.get("GetFilterByName", "/:orgFilterName")
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::getNamedFilterByName),
+                RouteDefinition.post("CreateFilter", "")
+                               .hasBody()
+                               .bodyParser(this::setNamedFilter)
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::createNamedFilter),
+                RouteDefinition.put("UpdateFilter", "/:orgFilterName")
+                               .hasBody()
+                               .bodyParser(this::setNamedFilter)
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::updateNamedFilter),
+                RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::checkIfNamedFilterExists)
+            )
         ).get();
     }
 
@@ -77,7 +78,7 @@ public class OrgLevelFilterHandler implements RouteProvider {
     public void getNamedFilterByName(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        OrgFilters filter = orgFilterService.getOrgFilterByName(orgName, filterName);
+        Condition filter = orgFilterService.getOrgFilterByName(orgName, filterName);
         ctx.endApiWithResponse(filter);
     }
 
