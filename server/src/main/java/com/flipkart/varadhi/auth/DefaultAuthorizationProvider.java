@@ -71,7 +71,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
                 "Successfully initialized authorization service with provider: {}",
                 options.getProviderClassName()
             );
-            return new IamPolicyService(store, store.iamPolicyOperations());
+            return new IamPolicyService(store, store.iamPolicyMetaStore());
         } catch (Exception e) {
             cleanupProvider();
             throw new IllegalStateException("Failed to initialize authorization service", e);

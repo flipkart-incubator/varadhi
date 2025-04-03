@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
-    public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filter");
+    public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filters");
     public static final ZNodeKind TEAM = new ZNodeKind("Team");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
@@ -161,11 +161,8 @@ public final class ZNode {
         return new Builder().withZNodeKind(ORG).withName(orgName).build();
     }
 
-    public static ZNode ofOrgNamedFilter(String orgName, String namedFilterName) {
-        return new Builder().withZNodeKind(ORG_FILTER)
-                            .withName(namedFilterName)
-                            .withParent(ORG.kind(), orgName)
-                            .build();
+    public static ZNode ofOrgNamedFilter(String orgName) {
+        return new Builder().withZNodeKind(ORG_FILTER).withName("Filters").withParent(ORG.kind(), orgName).build();
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {

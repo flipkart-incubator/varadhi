@@ -51,7 +51,7 @@ public class ProjectServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore.orgOperations(), varadhiMetaStore.teamOperations());
+        orgService = new OrgService(varadhiMetaStore.orgMetaStore(), varadhiMetaStore.teamMetaStore());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
@@ -189,7 +189,7 @@ public class ProjectServiceTest {
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
         TopicMetaStore topicMetaStore = mock(TopicMetaStore.class);
-        when(varadhiMetaStore.topicOperations()).thenReturn(topicMetaStore);
+        when(varadhiMetaStore.topicMetaStore()).thenReturn(topicMetaStore);
         when(topicMetaStore.getTopicNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
         InvalidOperationForResourceException e = Assertions.assertThrows(
             InvalidOperationForResourceException.class,

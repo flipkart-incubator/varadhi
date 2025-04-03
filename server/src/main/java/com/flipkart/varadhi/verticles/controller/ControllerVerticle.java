@@ -77,7 +77,12 @@ public class ControllerVerticle extends AbstractVerticle {
             metaStoreProvider.getAssignmentStore(),
             meterRegistry
         );
-        return new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
+        return new ControllerApiMgr(
+            operationMgr,
+            assigner,
+            metaStoreProvider.getMetaStore().subscriptionMetaStore(),
+            consumerClientFactory
+        );
     }
 
     private RetryPolicy getRetryPolicy() {

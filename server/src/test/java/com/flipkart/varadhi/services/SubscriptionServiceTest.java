@@ -114,14 +114,14 @@ class SubscriptionServiceTest {
         zkCurator.start();
 
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        topicMetaStore = spy(varadhiMetaStore.topicOperations());
-        subscriptionMetaStore = spy(varadhiMetaStore.subscriptionOperations());
-        orgMetaStore = spy(varadhiMetaStore.orgOperations());
-        teamMetaStore = spy(varadhiMetaStore.teamOperations());
-        projectMetaStore = spy(varadhiMetaStore.projectOperations());
+        topicMetaStore = spy(varadhiMetaStore.topicMetaStore());
+        subscriptionMetaStore = spy(varadhiMetaStore.subscriptionMetaStore());
+        orgMetaStore = spy(varadhiMetaStore.orgMetaStore());
+        teamMetaStore = spy(varadhiMetaStore.teamMetaStore());
+        projectMetaStore = spy(varadhiMetaStore.projectMetaStore());
 
 
-        orgService = new OrgService(varadhiMetaStore.orgOperations(), varadhiMetaStore.teamOperations());
+        orgService = new OrgService(varadhiMetaStore.orgMetaStore(), varadhiMetaStore.teamMetaStore());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
@@ -161,11 +161,11 @@ class SubscriptionServiceTest {
         doNothing().when(shardProvisioner).provision(any(), any());
 
         controllerRestApi = mock(ControllerRestApi.class);
-        when(varadhiMetaStore.subscriptionOperations()).thenReturn(subscriptionMetaStore);
-        when(varadhiMetaStore.topicOperations()).thenReturn(topicMetaStore);
-        when(varadhiMetaStore.projectOperations()).thenReturn(projectMetaStore);
-        when(varadhiMetaStore.orgOperations()).thenReturn(orgMetaStore);
-        when(varadhiMetaStore.teamOperations()).thenReturn(teamMetaStore);
+        when(varadhiMetaStore.subscriptionMetaStore()).thenReturn(subscriptionMetaStore);
+        when(varadhiMetaStore.topicMetaStore()).thenReturn(topicMetaStore);
+        when(varadhiMetaStore.projectMetaStore()).thenReturn(projectMetaStore);
+        when(varadhiMetaStore.orgMetaStore()).thenReturn(orgMetaStore);
+        when(varadhiMetaStore.teamMetaStore()).thenReturn(teamMetaStore);
         subscriptionService = new SubscriptionService(shardProvisioner, controllerRestApi, varadhiMetaStore);
     }
 

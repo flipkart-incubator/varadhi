@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class VaradhiMetaStore implements MetaStore {
-    private final VaradhiMetaStoreImpl VaradhiOperationsImpl;
+    private final VaradhiMetaStoreImpl storeImpl;
     private final ZKMetaStore zkMetaStore;
 
     /**
@@ -44,37 +44,37 @@ public final class VaradhiMetaStore implements MetaStore {
      */
     public VaradhiMetaStore(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;
-        VaradhiOperationsImpl = new VaradhiMetaStoreImpl(zkMetaStore);
+        storeImpl = new VaradhiMetaStoreImpl(zkMetaStore);
     }
 
     @Override
-    public OrgMetaStore orgOperations() {
-        return VaradhiOperationsImpl;
+    public OrgMetaStore orgMetaStore() {
+        return storeImpl;
     }
 
     @Override
-    public TeamMetaStore teamOperations() {
-        return VaradhiOperationsImpl;
+    public TeamMetaStore teamMetaStore() {
+        return storeImpl;
     }
 
     @Override
-    public ProjectMetaStore projectOperations() {
-        return VaradhiOperationsImpl;
+    public ProjectMetaStore projectMetaStore() {
+        return storeImpl;
     }
 
     @Override
-    public TopicMetaStore topicOperations() {
-        return VaradhiOperationsImpl;
+    public TopicMetaStore topicMetaStore() {
+        return storeImpl;
     }
 
     @Override
-    public SubscriptionMetaStore subscriptionOperations() {
-        return VaradhiOperationsImpl;
+    public SubscriptionMetaStore subscriptionMetaStore() {
+        return storeImpl;
     }
 
     @Override
-    public IamPolicyMetaStore iamPolicyOperations() {
-        return VaradhiOperationsImpl;
+    public IamPolicyMetaStore iamPolicyMetaStore() {
+        return storeImpl;
     }
 
     /**

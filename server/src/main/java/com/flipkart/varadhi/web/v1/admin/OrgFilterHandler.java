@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
-import com.flipkart.varadhi.services.OrgFilterService;
+import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -20,15 +20,15 @@ import java.util.Map;
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FILTER_NAME;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
-public class OrgLevelFilterHandler implements RouteProvider {
-    private final OrgFilterService orgFilterService;
+public class OrgFilterHandler implements RouteProvider {
+    private final OrgService orgService;
 
-    public OrgLevelFilterHandler(OrgFilterService orgFilterService) {
-        this.orgFilterService = orgFilterService;
+    public OrgFilterHandler(OrgService orgService) {
+        this.orgService = orgService;
     }
 
     @Override
@@ -45,16 +45,19 @@ public class OrgLevelFilterHandler implements RouteProvider {
                 RouteDefinition.post("CreateFilter", "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
-                               .authorize(ORG_GET)
+                               .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::createNamedFilter),
                 RouteDefinition.put("UpdateFilter", "/:orgFilterName")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
-                               .authorize(ORG_GET)
+                               .authorize(ORG_UPDATE)
                                .build(this::getHierarchies, this::updateNamedFilter),
                 RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
                                .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::checkIfNamedFilterExists)
+                               .build(this::getHierarchies, this::checkIfNamedFilterExists),
+                RouteDefinition.delete("deleteFilter", "")
+                               .authorize(ORG_DELETE)
+                               .build(this::getHierarchies, this::deleteFilter)
             )
         ).get();
     }
@@ -71,21 +74,21 @@ public class OrgLevelFilterHandler implements RouteProvider {
 
     public void getOrgFilters(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        List<OrgFilters> filters = orgFilterService.getAll(orgName);
+        OrgFilters filters = orgService.getAllFilters(orgName);
         ctx.endApiWithResponse(filters);
     }
 
     public void getNamedFilterByName(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        Condition filter = orgFilterService.getFilter(orgName, filterName);
+        Condition filter = orgService.getFilter(orgName, filterName);
         ctx.endApiWithResponse(filter);
     }
 
     public void createNamedFilter(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        OrgFilters createdFilter = orgFilterService.createFilter(orgName, filter);
+        OrgFilters createdFilter = orgService.createFilter(orgName, filter);
         ctx.endApiWithResponse(createdFilter);
     }
 
@@ -93,14 +96,20 @@ public class OrgLevelFilterHandler implements RouteProvider {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        orgFilterService.updateFilter(orgName, filterName, filter);
+        orgService.updateFilter(orgName, filterName, filter);
         ctx.endApi();
     }
 
     public void checkIfNamedFilterExists(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        boolean exists = orgFilterService.filterExists(orgName, filterName);
+        boolean exists = orgService.filterExists(orgName, filterName);
         ctx.endApiWithResponse(exists);
+    }
+
+    public void deleteFilter(RoutingContext ctx) {
+        String orgName = ctx.pathParam(PATH_PARAM_ORG);
+        orgService.deleteFilter(orgName);
+        ctx.endApi();
     }
 }

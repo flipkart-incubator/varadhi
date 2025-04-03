@@ -121,33 +121,12 @@ public class VaradhiMetaStoreImpl implements TopicMetaStore, SubscriptionMetaSto
      * Retrieves a named filter by its name within a specified organization.
      *
      * @param orgName    the name of the organization
-     * @param filterName the name of the filter
      * @return the named filter with the specified name
      */
     @Override
-    public OrgFilters getOrgFilter(String orgName, String filterName) {
-        ZNode znode = ZNode.ofOrgNamedFilter(orgName, filterName);
+    public OrgFilters getOrgFilter(String orgName) {
+        ZNode znode = ZNode.ofOrgNamedFilter(orgName);
         return zkMetaStore.getZNodeDataAsPojo(znode, OrgFilters.class);
-    }
-
-    /**
-     * Retrieves all named filters within a specified organization.
-     *
-     * @param orgName the name of the organization
-     * @return a list of all named filters within the organization
-     */
-    @Override
-    public List<OrgFilters> getOrgFilters(String orgName) {
-        ZNode znode = ZNode.ofOrg(orgName);
-        return zkMetaStore.listChildren(znode)
-                          .stream()
-                          .map(
-                              id -> zkMetaStore.getZNodeDataAsPojo(
-                                  ZNode.ofOrgNamedFilter(orgName, id),
-                                  OrgFilters.class
-                              )
-                          )
-                          .toList();
     }
 
     /**
@@ -159,7 +138,7 @@ public class VaradhiMetaStoreImpl implements TopicMetaStore, SubscriptionMetaSto
      */
     @Override
     public void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters) {
-        ZNode znode = ZNode.ofOrgNamedFilter(orgName, filterName);
+        ZNode znode = ZNode.ofOrgNamedFilter(orgName);
         zkMetaStore.updateZNodeWithData(znode, orgFilters);
     }
 
@@ -173,9 +152,18 @@ public class VaradhiMetaStoreImpl implements TopicMetaStore, SubscriptionMetaSto
      */
     @Override
     public OrgFilters createOrgFilter(String orgName, OrgFilters namedFilter) {
-        ZNode znode = ZNode.ofOrgNamedFilter(orgName, namedFilter.getName());
+        ZNode znode = ZNode.ofOrgNamedFilter(orgName);
         zkMetaStore.createZNodeWithData(znode, namedFilter);
         return namedFilter;
+    }
+
+    /**
+     * @param orgName
+     */
+    @Override
+    public void deleteOrgFilter(String orgName) {
+        ZNode znode = ZNode.ofOrgNamedFilter(orgName);
+        zkMetaStore.deleteZNode(znode);
     }
 
     /**

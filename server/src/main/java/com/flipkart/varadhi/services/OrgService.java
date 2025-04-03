@@ -2,6 +2,8 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
 import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
 import com.flipkart.varadhi.web.Extensions;
@@ -44,5 +46,29 @@ public class OrgService {
             );
         }
         orgMetaStore.deleteOrg(orgName);
+    }
+
+    public Condition getFilter(String orgName, String filterName) {
+        return orgMetaStore.getOrgFilter(orgName).getFilters().get(filterName);
+    }
+
+    public OrgFilters getAllFilters(String orgName) {
+        return orgMetaStore.getOrgFilter(orgName);
+    }
+
+    public boolean filterExists(String orgName, String filterName) {
+        return orgMetaStore.getOrgFilter(orgName).getFilters().get(filterName) != null;
+    }
+
+    public void updateFilter(String orgName, String filterName, OrgFilters orgFilters) {
+        orgMetaStore.updateOrgFilter(orgName, filterName, orgFilters);
+    }
+
+    public OrgFilters createFilter(String orgName, OrgFilters OrgFilter) {
+        return orgMetaStore.createOrgFilter(orgName, OrgFilter);
+    }
+
+    public void deleteFilter(String orgName) {
+        orgMetaStore.deleteOrgFilter(orgName);
     }
 }

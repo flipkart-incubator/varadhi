@@ -60,9 +60,11 @@ public class ControllerApiMgrTest {
         opStore = mock(OpStore.class);
         operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20)));
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
-        controllerApiMgr = spy(new ControllerApiMgr(operationMgr, assignmentManager, metaStore, consumerClientFactory));
         subscriptionMetaStore = mock(SubscriptionMetaStore.class);
-        when(metaStore.subscriptionOperations()).thenReturn(subscriptionMetaStore);
+        when(metaStore.subscriptionMetaStore()).thenReturn(subscriptionMetaStore);
+        controllerApiMgr = spy(
+            new ControllerApiMgr(operationMgr, assignmentManager, subscriptionMetaStore, consumerClientFactory)
+        );
     }
 
     @Test

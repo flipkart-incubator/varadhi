@@ -7,9 +7,9 @@ import java.util.Map;
 
 @Getter
 public class OrgFilters extends MetaStoreEntity {
-    Map<String, Condition> filters;
+    private Map<String, Condition> filters;
 
-    protected OrgFilters(String name, int version) {
-        super(name, version);
+    protected OrgFilters(int version) {
+        super("NamedFilters", version);
     }
 }

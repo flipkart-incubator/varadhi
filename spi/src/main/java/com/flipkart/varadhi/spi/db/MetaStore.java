@@ -12,17 +12,17 @@ import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
  * Provides CRUD operations for organizations, teams, projects, topics, and subscriptions.
  */
 public interface MetaStore {
-    OrgMetaStore orgOperations();
+    OrgMetaStore orgMetaStore();
 
-    TeamMetaStore teamOperations();
+    TeamMetaStore teamMetaStore();
 
-    ProjectMetaStore projectOperations();
+    ProjectMetaStore projectMetaStore();
 
-    TopicMetaStore topicOperations();
+    TopicMetaStore topicMetaStore();
 
-    SubscriptionMetaStore subscriptionOperations();
+    SubscriptionMetaStore subscriptionMetaStore();
 
-    IamPolicyMetaStore iamPolicyOperations();
+    IamPolicyMetaStore iamPolicyMetaStore();
 
     boolean registerEventListener(MetaStoreEventListener listener);
 }

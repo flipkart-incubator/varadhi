@@ -16,11 +16,11 @@ public interface OrgMetaStore {
 
     void deleteOrg(String orgName);
 
-    OrgFilters getOrgFilter(String orgName, String filterName);
-
-    List<OrgFilters> getOrgFilters(String orgName);
+    OrgFilters getOrgFilter(String orgName);
 
     void updateOrgFilter(String orgName, String filterName, OrgFilters orgFilters);
 
     OrgFilters createOrgFilter(String orgName, OrgFilters namedFilter);
+
+    void deleteOrgFilter(String orgName);
 }
