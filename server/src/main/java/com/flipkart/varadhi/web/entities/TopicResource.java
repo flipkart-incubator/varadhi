@@ -119,6 +119,6 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode);
+        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode, "test");
     }
 }

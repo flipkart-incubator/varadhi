@@ -267,6 +267,8 @@ public class WebServerVerticle extends AbstractVerticle {
                 producerService,
                 preProduceHandler,
                 projectService,
+                varadhiTopicService,
+                orgService,
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
                 deployedRegion

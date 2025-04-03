@@ -281,7 +281,8 @@ public class ProducerServiceTests {
             name,
             false,
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         StorageTopic st = new DummyStorageTopic(topic.getName());
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);

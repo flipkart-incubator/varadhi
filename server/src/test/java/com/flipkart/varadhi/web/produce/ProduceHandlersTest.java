@@ -327,6 +327,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         headers.add("aaa_multi_value1", "multi_value1_3");
         headers.add("bbb_multi_value1", "multi_value1_3");
         projectService = mock(ProjectService.class);
+        projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
@@ -339,6 +340,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
             producerService,
             preProduceHandler,
             projectService,
+            varadhiTopicService,
+            orgService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion

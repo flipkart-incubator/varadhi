@@ -1,18 +1,25 @@
+// filepath:
+// /Users/bandeep.kataria/Desktop/oss/varadhi/server/src/main/java/com/flipkart/varadhi/web/v1/produce/ProduceHandlers.java
 package com.flipkart.varadhi.web.v1.produce;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -47,6 +54,8 @@ public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
+    private final VaradhiTopicService varadhiTopicService;
+    private final OrgService orgService;
     private final ProducerMetricHandler metricHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
@@ -79,7 +88,6 @@ public class ProduceHandlers implements RouteProvider {
     public void produce(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
-
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         //TODO FIx attribute name semantics here.
         String produceIdentity = ctx.getIdentityOrDefault();
@@ -94,6 +102,11 @@ public class ProduceHandlers implements RouteProvider {
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
+        //NFR filtration and org level filters
+        if (!applyOrgFilterRules(messageToProduce, projectName, topicName)) {
+            //early exit if org filter rules not followed
+            return;
+        }
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
             messageToProduce,
             varadhiTopicName,
@@ -168,5 +181,21 @@ public class ProduceHandlers implements RouteProvider {
             }
         }
         return copy;
+    }
+
+    private boolean applyOrgFilterRules(Message message, String projectName, String topicName) {
+        Project project = projectService.getCachedProject(projectName);
+        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
+        VaradhiTopic topic = varadhiTopicService.get(topicName);
+        if (orgFilters != null && !orgFilters.getFilters().isEmpty()) {
+            for (Map.Entry<String, Condition> entry : orgFilters.getFilters().entrySet()) {
+                //Check which NFR strategy is applicable
+                if (topic.getNfrStrategy().isPresent() && Objects.equals(topic.getNfrStrategy().get(), entry.getKey())
+                    && !entry.getValue().evaluate(message.getHeaders())) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
