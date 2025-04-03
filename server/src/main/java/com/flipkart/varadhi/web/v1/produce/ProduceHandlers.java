@@ -103,8 +103,10 @@ public class ProduceHandlers implements RouteProvider {
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
         //NFR filtration and org level filters
+        //TODO:: Add metrics
         if (!applyOrgFilterRules(messageToProduce, projectName, topicName)) {
             //early exit if org filter rules not followed
+            ctx.end(messageToProduce.getMessageId());
             return;
         }
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
@@ -183,7 +185,7 @@ public class ProduceHandlers implements RouteProvider {
         return copy;
     }
 
-    private boolean applyOrgFilterRules(Message message, String projectName, String topicName) {
+    public boolean applyOrgFilterRules(Message message, String projectName, String topicName) {
         Project project = projectService.getCachedProject(projectName);
         OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
         VaradhiTopic topic = varadhiTopicService.get(topicName);

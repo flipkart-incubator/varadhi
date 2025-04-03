@@ -115,7 +115,6 @@ public class ZKMetaStore implements AutoCloseable {
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
-            log.info(znode.getPath());
             zkCurator.create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData);
 
             dataObject.setVersion(0);

@@ -64,8 +64,8 @@ public class OrgService {
         orgMetaStore.updateOrgFilter(orgName, filterName, orgFilters);
     }
 
-    public OrgFilters createFilter(String orgName, OrgFilters OrgFilter) {
-        return orgMetaStore.createOrgFilter(orgName, OrgFilter);
+    public OrgFilters createFilter(String orgName, OrgFilters orgFilter) {
+        return orgMetaStore.createOrgFilter(orgName, orgFilter);
     }
 
     public void deleteFilter(String orgName) {
