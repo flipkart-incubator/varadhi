@@ -147,8 +147,8 @@ class CustomAuthenticationHandlerTest {
     void handleAuthenticatesSuccessfullyWhenOrgIsNotAvailable(String path) {
         URLMatcherUtil urlMatcherUtil1 = new URLMatcherUtil(
             List.of(
-                new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST)), null),
-                new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)), null)
+                new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST))),
+                new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)))
             )
         );
 

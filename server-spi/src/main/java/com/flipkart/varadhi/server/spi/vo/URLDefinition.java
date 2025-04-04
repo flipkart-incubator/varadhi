@@ -1,15 +1,13 @@
 package com.flipkart.varadhi.server.spi.vo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.regex.Pattern;
 
-@Data
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
 public class URLDefinition {
     private String path;
@@ -17,4 +15,22 @@ public class URLDefinition {
 
     @JsonIgnore
     private Pattern urlPattern;
+
+    public URLDefinition(String path, List<String> methodList) {
+        this.methodList = methodList;
+        this.setPath(path);
+    }
+
+    private void compilePattern() {
+        this.urlPattern = Pattern.compile(path);
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+        compilePattern();
+    }
+
+    public void setMethodList(List<String> methodList) {
+        this.methodList = methodList;
+    }
 }
