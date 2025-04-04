@@ -6,6 +6,7 @@ module com.flipkart.varadhi.server.spi {
     requires io.vertx.web;
     requires static lombok;
     requires com.fasterxml.jackson.annotation;
+    requires jakarta.validation;
 
     exports com.flipkart.varadhi.server.spi.authn;
     exports com.flipkart.varadhi.server.spi.authz;
