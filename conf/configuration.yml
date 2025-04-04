@@ -44,8 +44,14 @@ producerOptions:
 authenticationOptions:
   configFile: "authn.yml"
   handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
+  orgContextExemptionURLs:
+    - path: ^\\/v1\\/orgs\$
+      methodList:
+        - POST
   whitelistedURLs:
-    - ^\\/v1\\/health-check\$
+    - path: ^\\/v1\\/health-check\$
+      methodList:
+        - GET
 
 authorizationEnabled: true
 

@@ -8,6 +8,8 @@ import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 
 import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
+import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,8 +21,6 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 
 import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
@@ -82,23 +82,19 @@ public class AuthnHandler implements RouteConfigurator {
 
     static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
         private final Handler<RoutingContext> wrappedHandler;
-        private final List<Pattern> whitelistedURLPatterns;
+        private final URLMatcherUtil whitelistedURLMatcher;
 
-        public AuthenticationHandlerWrapper(Handler<RoutingContext> wrappedHandler, List<String> whitelistedURLs) {
+        public AuthenticationHandlerWrapper(
+            Handler<RoutingContext> wrappedHandler,
+            List<URLDefinition> whitelistedURLs
+        ) {
             this.wrappedHandler = wrappedHandler;
-
-            whitelistedURLPatterns = whitelistedURLs.stream().map(pattern -> {
-                try {
-                    return Pattern.compile(pattern);
-                } catch (Exception e) {
-                    throw new InvalidConfigException("Invalid whitelist pattern: " + pattern, e);
-                }
-            }).collect(Collectors.toList());
+            this.whitelistedURLMatcher = new URLMatcherUtil(whitelistedURLs);
         }
 
         @Override
         public void handle(RoutingContext ctx) {
-            if (isWhitelisted(ctx.request().path())) {
+            if (this.whitelistedURLMatcher.matches(String.valueOf(ctx.request().method()), ctx.request().path())) {
                 ctx.next();
             } else {
                 wrappedHandler.handle(ctx);
@@ -127,13 +123,6 @@ public class AuthnHandler implements RouteConfigurator {
                     );
                 }
             }
-        }
-
-        private boolean isWhitelisted(String path) {
-            return this.whitelistedURLPatterns != null && this.whitelistedURLPatterns.stream()
-                                                                                     .anyMatch(
-                                                                                         e -> e.matcher(path).matches()
-                                                                                     );
         }
     }
 }

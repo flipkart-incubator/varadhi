@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.authn;
 
-
-import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.server.spi.RequestContext;
@@ -9,6 +9,7 @@ import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
+import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -16,24 +17,30 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
+import static com.flipkart.varadhi.server.spi.vo.Constants.DEFAULT_ORG;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Slf4j
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
-    private static final String DEFAULT_ORG = "SYSTEM";
     private AuthenticationProvider authenticationProvider;
-    private OrgResolver orgResolver;
+
+    private URLMatcherUtil orgExemptionURLMatcher;
+
+    public CustomAuthenticationHandler(AuthenticationProvider authenticationProvider) {
+        this.authenticationProvider = authenticationProvider;
+    }
 
     /**
      * Provides a custom authentication handler that uses the configured Authenticator implementation.
@@ -66,11 +73,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         MeterRegistry meterRegistry
     ) {
         try {
-            if (StringUtils.isEmpty(authenticationOptions.getAuthenticatorClassName())) {
+            if (StringUtils.isEmpty(authenticationOptions.getAuthenticationProviderClassName())) {
                 throw new InvalidConfigException("Empty/Null Authenticator class name");
             }
 
-            Class<?> providerClass = Class.forName(authenticationOptions.getAuthenticatorClassName());
+            Class<?> providerClass = Class.forName(authenticationOptions.getAuthenticationProviderClassName());
             if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
                     "Provider class " + providerClass.getName() + " does not implement Authenticator interface"
@@ -79,35 +86,39 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
 
             try {
-                authenticationProvider.init(authenticationOptions, meterRegistry);
+                authenticationProvider.init(authenticationOptions, orgResolver, meterRegistry);
             } catch (Exception e) {
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
 
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
-                "Authentication provider class not found: " + authenticationOptions.getAuthenticatorClassName(),
+                "Authentication provider class not found: " + authenticationOptions
+                                                                                   .getAuthenticationProviderClassName(),
                 e
             );
         } catch (ReflectiveOperationException e) {
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
 
-        return new CustomAuthenticationHandler(authenticationProvider, orgResolver);
+        this.orgExemptionURLMatcher = new URLMatcherUtil(authenticationOptions.getOrgContextExemptionURLs());
+
+        return new CustomAuthenticationHandler(authenticationProvider);
     }
 
     @Override
     public void handle(RoutingContext routingContext) {
 
-        Org org = orgResolver.resolve(DEFAULT_ORG);
-        RequestContext requestContext = null;
+        RequestContext requestContext;
         try {
             requestContext = createRequestContext(routingContext);
         } catch (URISyntaxException e) {
             throw new BadRequestException(e);
         }
 
-        Future<UserContext> userContext = authenticationProvider.authenticate(org.getName(), requestContext);
+        String orgName = readOrgNameFromContext(routingContext);
+
+        Future<UserContext> userContext = authenticationProvider.authenticate(orgName, requestContext);
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
@@ -117,6 +128,29 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                 routingContext.fail(UNAUTHORIZED.code(), result.cause());
             }
         });
+    }
+
+    private String readOrgNameFromContext(RoutingContext routingContext) {
+
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+        if (typeHierarchyMap != null) {
+            if (typeHierarchyMap.containsKey(ResourceType.ORG)) {
+                ResourceHierarchy hierarchy = typeHierarchyMap.get(ResourceType.ORG);
+                if (hierarchy != null && hierarchy.getAttributes() != null && hierarchy.getAttributes()
+                                                                                       .containsKey(TAG_ORG)) {
+                    return hierarchy.getAttributes().get(TAG_ORG);
+                }
+            }
+        }
+
+        if (!orgExemptionURLMatcher.matches(
+            String.valueOf(routingContext.request().method()),
+            routingContext.request().path()
+        )) {
+            throw new BadRequestException("Org context missing in the request");
+        }
+
+        return DEFAULT_ORG;
     }
 
     private RequestContext createRequestContext(RoutingContext routingContext) throws URISyntaxException {
