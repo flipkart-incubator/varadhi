@@ -36,28 +36,26 @@ public class OrgFilterHandler implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs/:org/filters",
             List.of(
-                RouteDefinition.get("GetFilters", "")
-                               .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::getOrgFilters),
+                RouteDefinition.get("GetFilters", "").authorize(ORG_GET).build(this::getHierarchies, this::getAll),
                 RouteDefinition.get("GetFilterByName", "/:orgFilterName")
                                .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::getNamedFilterByName),
+                               .build(this::getHierarchies, this::get),
                 RouteDefinition.post("CreateFilter", "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_CREATE)
-                               .build(this::getHierarchies, this::createNamedFilter),
+                               .build(this::getHierarchies, this::create),
                 RouteDefinition.put("UpdateFilter", "/:orgFilterName")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)
-                               .build(this::getHierarchies, this::updateNamedFilter),
+                               .build(this::getHierarchies, this::update),
                 RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
                                .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::checkIfNamedFilterExists),
+                               .build(this::getHierarchies, this::exists),
                 RouteDefinition.delete("deleteFilter", "")
                                .authorize(ORG_DELETE)
-                               .build(this::getHierarchies, this::deleteFilter)
+                               .build(this::getHierarchies, this::delete)
             )
         ).get();
     }
@@ -72,27 +70,27 @@ public class OrgFilterHandler implements RouteProvider {
         return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(orgName));
     }
 
-    public void getOrgFilters(RoutingContext ctx) {
+    public void getAll(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filters = orgService.getAllFilters(orgName);
         ctx.endApiWithResponse(filters);
     }
 
-    public void getNamedFilterByName(RoutingContext ctx) {
+    public void get(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         Condition filter = orgService.getFilter(orgName, filterName);
         ctx.endApiWithResponse(filter);
     }
 
-    public void createNamedFilter(RoutingContext ctx) {
+    public void create(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
         OrgFilters createdFilter = orgService.createFilter(orgName, filter);
         ctx.endApiWithResponse(createdFilter);
     }
 
-    public void updateNamedFilter(RoutingContext ctx) {
+    public void update(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
@@ -100,14 +98,14 @@ public class OrgFilterHandler implements RouteProvider {
         ctx.endApi();
     }
 
-    public void checkIfNamedFilterExists(RoutingContext ctx) {
+    public void exists(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         boolean exists = orgService.filterExists(orgName, filterName);
         ctx.endApiWithResponse(exists);
     }
 
-    public void deleteFilter(RoutingContext ctx) {
+    public void delete(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         orgService.deleteFilter(orgName);
         ctx.endApi();

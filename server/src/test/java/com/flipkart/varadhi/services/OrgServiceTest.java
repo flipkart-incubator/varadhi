@@ -39,10 +39,10 @@ public class OrgServiceTest {
     public void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
         zkCurator = spy(
-                CuratorFrameworkFactory.newClient(
-                        zkCuratorTestingServer.getConnectString(),
-                        new ExponentialBackoffRetry(1000, 1)
-                )
+            CuratorFrameworkFactory.newClient(
+                zkCuratorTestingServer.getConnectString(),
+                new ExponentialBackoffRetry(1000, 1)
+            )
         );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
@@ -58,8 +58,8 @@ public class OrgServiceTest {
         Assertions.assertEquals(org, orgCreated);
         Assertions.assertEquals(org, orgGet);
         DuplicateResourceException e = Assertions.assertThrows(
-                DuplicateResourceException.class,
-                () -> orgService.createOrg(org)
+            DuplicateResourceException.class,
+            () -> orgService.createOrg(org)
         );
         Assertions.assertEquals(String.format("Org(%s) already exists.", org.getName()), e.getMessage());
     }
@@ -71,8 +71,8 @@ public class OrgServiceTest {
         doReturn(builder).when(zkCurator).create();
         doThrow(new KeeperException.NodeExistsException()).when(builder).forPath(any(), any());
         DuplicateResourceException e = Assertions.assertThrows(
-                DuplicateResourceException.class,
-                () -> orgService.createOrg(org)
+            DuplicateResourceException.class,
+            () -> orgService.createOrg(org)
         );
         Assertions.assertEquals(String.format("Org(%s) already exists.", org.getName()), e.getMessage());
     }
@@ -92,8 +92,8 @@ public class OrgServiceTest {
         orgService.createOrg(org);
         orgService.deleteOrg(org.getName());
         ResourceNotFoundException e = Assertions.assertThrows(
-                ResourceNotFoundException.class,
-                () -> orgService.getOrg(org.getName())
+            ResourceNotFoundException.class,
+            () -> orgService.getOrg(org.getName())
         );
         Assertions.assertEquals(String.format("Org(%s) not found.", org.getName()), e.getMessage());
     }
@@ -109,12 +109,12 @@ public class OrgServiceTest {
         teamService.createTeam(team1);
         teamService.createTeam(team2);
         InvalidOperationForResourceException e = Assertions.assertThrows(
-                InvalidOperationForResourceException.class,
-                () -> orgService.deleteOrg(org1.getName())
+            InvalidOperationForResourceException.class,
+            () -> orgService.deleteOrg(org1.getName())
         );
         Assertions.assertEquals(
-                String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName()),
-                e.getMessage()
+            String.format("Can not delete Org(%s) as it has associated Team(s).", org1.getName()),
+            e.getMessage()
         );
         teamService.deleteTeam(team1.getName(), team1.getOrg());
         teamService.deleteTeam(team2.getName(), team2.getOrg());
@@ -140,16 +140,16 @@ public class OrgServiceTest {
 
         // Create OrgFilters using JSON (initially without filterA)
         String jsonCreate = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters orgFilters = JsonMapper.getMapper().readValue(jsonCreate, OrgFilters.class);
         orgService.createFilter(orgName, orgFilters);
 
@@ -159,20 +159,20 @@ public class OrgServiceTest {
 
         // Update the filter by adding a new filter named "filterA" via a new JSON
         String jsonUpdate = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterA": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        },
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterA": {
+                        "op": "exists",
+                        "key": "X_abc"
+                    },
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters updatedFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
         orgService.updateFilter(orgName, "filterA", updatedFilters);
 
@@ -192,16 +192,16 @@ public class OrgServiceTest {
 
         // Create OrgFilters using JSON
         String json = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterToDelete": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterToDelete": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters orgFilters = JsonMapper.getMapper().readValue(json, OrgFilters.class);
         orgService.createFilter(orgName, orgFilters);
 
@@ -213,8 +213,8 @@ public class OrgServiceTest {
 
         // After deletion, retrieval should throw a ResourceNotFoundException
         ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> orgService.getAllFilters(orgName)
+            ResourceNotFoundException.class,
+            () -> orgService.getAllFilters(orgName)
         );
         assertEquals("Filters(Filters) not found.", exception.getMessage());
     }
@@ -224,8 +224,8 @@ public class OrgServiceTest {
         // Attempt to delete filters for a non-existent org name should throw an exception
         String nonExistentOrg = "nonExistentOrg";
         ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> orgService.deleteFilter(nonExistentOrg)
+            ResourceNotFoundException.class,
+            () -> orgService.deleteFilter(nonExistentOrg)
         );
         assertEquals("Filters(Filters) not found.", exception.getMessage());
     }

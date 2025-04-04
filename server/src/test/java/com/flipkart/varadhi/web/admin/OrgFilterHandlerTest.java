@@ -33,27 +33,29 @@ public class OrgFilterHandlerTest extends WebTestBase {
         orgFilterHandler = new OrgFilterHandler(orgService);
 
         // Register filter endpoints under /v1/orgs/:org/filters
-        Route routeGetFilters = router.get("/v1/orgs/:org/filters").handler(wrapBlocking(orgFilterHandler::getOrgFilters));
+        Route routeGetFilters = router.get("/v1/orgs/:org/filters").handler(wrapBlocking(orgFilterHandler::getAll));
         setupFailureHandler(routeGetFilters);
-        Route routeGetFilterByName = router.get("/v1/orgs/:org/filters/:orgFilterName").handler(wrapBlocking(orgFilterHandler::getNamedFilterByName));
+        Route routeGetFilterByName = router.get("/v1/orgs/:org/filters/:orgFilterName")
+                                           .handler(wrapBlocking(orgFilterHandler::get));
         setupFailureHandler(routeGetFilterByName);
-        Route routeCreateFilter = router.post("/v1/orgs/:org/filters").handler(bodyHandler)
-                .handler(ctx -> {
-                    orgFilterHandler.setNamedFilter(ctx);
-                    ctx.next();
-                })
-                .handler(wrapBlocking(orgFilterHandler::createNamedFilter));
+        Route routeCreateFilter = router.post("/v1/orgs/:org/filters").handler(bodyHandler).handler(ctx -> {
+            orgFilterHandler.setNamedFilter(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(orgFilterHandler::create));
         setupFailureHandler(routeCreateFilter);
-        Route routeUpdateFilter = router.put("/v1/orgs/:org/filters/:orgFilterName").handler(bodyHandler)
-                .handler(ctx -> {
-                    orgFilterHandler.setNamedFilter(ctx);
-                    ctx.next();
-                })
-                .handler(wrapBlocking(orgFilterHandler::updateNamedFilter));
+        Route routeUpdateFilter = router.put("/v1/orgs/:org/filters/:orgFilterName")
+                                        .handler(bodyHandler)
+                                        .handler(ctx -> {
+                                            orgFilterHandler.setNamedFilter(ctx);
+                                            ctx.next();
+                                        })
+                                        .handler(wrapBlocking(orgFilterHandler::update));
         setupFailureHandler(routeUpdateFilter);
-        Route routeCheckExists = router.get("/v1/orgs/:org/filters/:orgFilterName/exists").handler(wrapBlocking(orgFilterHandler::checkIfNamedFilterExists));
+        Route routeCheckExists = router.get("/v1/orgs/:org/filters/:orgFilterName/exists")
+                                       .handler(wrapBlocking(orgFilterHandler::exists));
         setupFailureHandler(routeCheckExists);
-        Route routeDeleteFilter = router.delete("/v1/orgs/:org/filters").handler(wrapBlocking(orgFilterHandler::deleteFilter));
+        Route routeDeleteFilter = router.delete("/v1/orgs/:org/filters")
+                                        .handler(wrapBlocking(orgFilterHandler::delete));
         setupFailureHandler(routeDeleteFilter);
     }
 
@@ -75,23 +77,23 @@ public class OrgFilterHandlerTest extends WebTestBase {
     }
 
     @Test
-    public void testGetOrgFilters() throws Exception {
+    public void testGetAll() throws Exception {
         String orgName = "org1";
         String jsonUpdate = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterA": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        },
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterA": {
+                        "op": "exists",
+                        "key": "X_abc"
+                    },
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters orgFilter = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
         // Assume filters are set in the service
         when(orgService.getAllFilters(eq(orgName))).thenReturn(orgFilter);
@@ -102,15 +104,17 @@ public class OrgFilterHandlerTest extends WebTestBase {
         verify(orgService, times(1)).getAllFilters(eq(orgName));
 
         // Test not found scenario
-        when(orgService.getAllFilters(eq(orgName))).thenThrow(new ResourceNotFoundException("Org(" + orgName + ") filter not found."));
+        when(orgService.getAllFilters(eq(orgName))).thenThrow(
+            new ResourceNotFoundException("Org(" + orgName + ") filter not found.")
+        );
         sendRequestWithoutPayload(request, 404, "Org(" + orgName + ") filter not found.");
     }
 
     @Test
-    public void testGetNamedFilterByName() throws Exception {
+    public void testGet() throws Exception {
         String orgName = "org1";
         String filterName = "myFilter";
-        Condition condition = new StringConditions.ContainsCondition("test","x_abc");
+        Condition condition = new StringConditions.ContainsCondition("test", "x_abc");
         when(orgService.getFilter(eq(orgName), eq(filterName))).thenReturn(condition);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getFilterByNameUrl(orgName, filterName));
@@ -125,40 +129,40 @@ public class OrgFilterHandlerTest extends WebTestBase {
     }
 
     @Test
-    public void testCreateNamedFilter() throws Exception {
+    public void testCreate() throws Exception {
         String orgName = "org1";
         String jsonUpdate = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterA": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        },
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterA": {
+                        "op": "exists",
+                        "key": "X_abc"
+                    },
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters inputFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
 
         String jsonUpdateCreated = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterA": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        },
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterA": {
+                        "op": "exists",
+                        "key": "X_abc"
+                    },
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters createdFilters = JsonMapper.getMapper().readValue(jsonUpdateCreated, OrgFilters.class);
 
 
@@ -177,24 +181,24 @@ public class OrgFilterHandlerTest extends WebTestBase {
     }
 
     @Test
-    public void testUpdateNamedFilter() throws Exception {
+    public void testUpdate() throws Exception {
         String orgName = "org1";
         String filterName = "nameGroup.filterName";
         String jsonUpdate = """
-                {
-                    "version": 0,
-                    "filters": {
-                        "filterA": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        },
-                        "nameGroup.filterName": {
-                            "op": "exists",
-                            "key": "X_abc"
-                        }
+            {
+                "version": 0,
+                "filters": {
+                    "filterA": {
+                        "op": "exists",
+                        "key": "X_abc"
+                    },
+                    "nameGroup.filterName": {
+                        "op": "exists",
+                        "key": "X_abc"
                     }
                 }
-                """;
+            }
+            """;
         OrgFilters inputFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
 
         // assume update does not return any entity

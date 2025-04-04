@@ -54,7 +54,6 @@ public class ProducerServiceTests {
         producerFactory = mock(ProducerFactory.class);
         topicProvider = mock(TopicProvider.class);
         meterRegistry = new OtlpMeterRegistry();
-
         service = new ProducerService(
             region,
             new ProducerOptions(),
@@ -66,7 +65,6 @@ public class ProducerServiceTests {
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
 
     }
-
 
     @Test
     public void testProduceMessage() throws InterruptedException {
@@ -281,8 +279,7 @@ public class ProducerServiceTests {
             name,
             false,
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
-            "test"
+            LifecycleStatus.ActorCode.SYSTEM_ACTION
         );
         StorageTopic st = new DummyStorageTopic(topic.getName());
         InternalCompositeTopic ict = InternalCompositeTopic.of(st);

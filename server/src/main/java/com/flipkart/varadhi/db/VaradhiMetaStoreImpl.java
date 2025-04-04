@@ -38,6 +38,9 @@ public class VaradhiMetaStoreImpl implements TopicMetaStore, SubscriptionMetaSto
      * @throws MetaStoreException       if initialization fails or required paths cannot be created
      */
     public VaradhiMetaStoreImpl(ZKMetaStore zkMetaStore) {
+        if (zkMetaStore == null) {
+            throw new IllegalArgumentException("ZKMetaStore must not be null");
+        }
         this.zkMetaStore = zkMetaStore;
         ensureEntityTypePathExists();
     }

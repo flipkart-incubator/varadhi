@@ -3,7 +3,6 @@ package com.flipkart.varadhi.db;
 import java.util.Objects;
 
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Represents a ZooKeeper node in the Varadhi system.
@@ -36,7 +35,6 @@ import lombok.extern.slf4j.Slf4j;
  * @see ZKMetaStore
  */
 @Getter
-@Slf4j
 public final class ZNode {
     public static final ZNodeKind ORG = new ZNodeKind("Org");
     public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filters");
@@ -121,7 +119,7 @@ public final class ZNode {
         }
 
         /**
-         * Sets the parent for this node, used in hierarchical resources.
+         * Sets the parent for this node, used in child resources.
          *
          * @param parentKind The kind of child resource
          * @param parentName The name of child resource

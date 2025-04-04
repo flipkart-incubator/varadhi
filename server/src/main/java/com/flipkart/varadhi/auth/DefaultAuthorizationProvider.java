@@ -60,8 +60,8 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         try {
             metaStoreProvider.init(options);
             MetaStore store = metaStoreProvider.getMetaStore();
-
-            //            if (store.iamPolicyOperations() == null) {
+            //is this check even required now ?
+            //            if (store.iamPolicyMetaStore() == null) {
             //                throw new IllegalStateException(
             //                    String.format("Provider %s must implement IamPolicyMetaStore", options.getProviderClassName())
             //                );

@@ -434,7 +434,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         setupProjectAndFilters(projectName, "org1", null, mock(VaradhiTopic.class));
 
         Multimap<String, String> headers = ArrayListMultimap.create();
-        Message message = new SimpleMessage(new byte[]{}, headers);
+        Message message = new SimpleMessage(new byte[] {}, headers);
 
         boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
         assertTrue(result);
@@ -450,14 +450,14 @@ public class ProduceHandlersTest extends ProduceTestBase {
         setupProjectAndFilters(projectName, "org1", emptyFilters, mock(VaradhiTopic.class));
 
         Multimap<String, String> headers = ArrayListMultimap.create();
-        Message message = new SimpleMessage(new byte[]{}, headers);
+        Message message = new SimpleMessage(new byte[] {}, headers);
 
         boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
         assertTrue(result);
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
+    @ValueSource (booleans = {true, false})
     public void testApplyOrgFilterRules_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
         String projectName = "proj1";
         String topicName = "topic1";
@@ -478,7 +478,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(strategyKey, "exists");
-        Message message = new SimpleMessage(new byte[]{}, headers);
+        Message message = new SimpleMessage(new byte[] {}, headers);
 
         boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
         // Verify that condition.evaluate is called with message headers.
@@ -506,7 +506,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         setupProjectAndFilters(projectName, "org1", orgFilters, topic);
 
         Multimap<String, String> headers = ArrayListMultimap.create();
-        Message message = new SimpleMessage(new byte[]{}, headers);
+        Message message = new SimpleMessage(new byte[] {}, headers);
 
         boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
         // Since the topic's nfrStrategy is not present, the condition should not be evaluated.

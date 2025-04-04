@@ -166,7 +166,12 @@ class SubscriptionServiceTest {
         when(varadhiMetaStore.projectMetaStore()).thenReturn(projectMetaStore);
         when(varadhiMetaStore.orgMetaStore()).thenReturn(orgMetaStore);
         when(varadhiMetaStore.teamMetaStore()).thenReturn(teamMetaStore);
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerRestApi, varadhiMetaStore);
+        subscriptionService = new SubscriptionService(
+            shardProvisioner,
+            controllerRestApi,
+            subscriptionMetaStore,
+            topicMetaStore
+        );
     }
 
     @AfterEach

@@ -6,7 +6,6 @@ import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -19,7 +18,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
     //Should it be list<String> ?
-    private final Optional<String> nfrStrategy;
+    private final String nfrStrategy;
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -45,7 +44,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
-        this.nfrStrategy = Optional.ofNullable(nfrStrategy);
+        this.nfrStrategy = nfrStrategy;
         this.status = status;
     }
 

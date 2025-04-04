@@ -1,10 +1,7 @@
-// filepath:
-// /Users/bandeep.kataria/Desktop/oss/varadhi/server/src/main/java/com/flipkart/varadhi/web/v1/produce/ProduceHandlers.java
 package com.flipkart.varadhi.web.v1.produce;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.SimpleMessage;
@@ -88,6 +85,7 @@ public class ProduceHandlers implements RouteProvider {
     public void produce(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
+
         Map<String, String> produceAttributes = ctx.getRequestAttributes();
         //TODO FIx attribute name semantics here.
         String produceIdentity = ctx.getIdentityOrDefault();
@@ -103,7 +101,7 @@ public class ProduceHandlers implements RouteProvider {
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
         //NFR filtration and org level filters
-        //TODO:: Add metrics
+        //TODO:: Add metrics for nfr
         if (!applyOrgFilterRules(messageToProduce, projectName, topicName)) {
             //early exit if org filter rules not followed
             ctx.end(messageToProduce.getMessageId());
@@ -192,8 +190,7 @@ public class ProduceHandlers implements RouteProvider {
         if (orgFilters != null && !orgFilters.getFilters().isEmpty()) {
             for (Map.Entry<String, Condition> entry : orgFilters.getFilters().entrySet()) {
                 //Check which NFR strategy is applicable
-                if (topic.getNfrStrategy().isPresent() && Objects.equals(topic.getNfrStrategy().get(), entry.getKey())
-                    && !entry.getValue().evaluate(message.getHeaders())) {
+                if (topic.getNfrStrategy().equals(entry.getKey()) && !entry.getValue().evaluate(message.getHeaders())) {
                     return false;
                 }
             }

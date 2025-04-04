@@ -562,7 +562,8 @@ class VaradhiTopicServiceTest {
             TOPIC_NAME,
             project.getName(),
             DEFAULT_CAPACITY_POLICY,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            null
         );
         return varadhiTopicFactory.get(project, topicResource);
     }

@@ -132,7 +132,12 @@ public class WebServerVerticle extends AbstractVerticle {
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
         );
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
+        subscriptionService = new SubscriptionService(
+            shardProvisioner,
+            controllerClient,
+            metaStore.subscriptionMetaStore(),
+            metaStore.topicMetaStore()
+        );
         dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
 
     }
