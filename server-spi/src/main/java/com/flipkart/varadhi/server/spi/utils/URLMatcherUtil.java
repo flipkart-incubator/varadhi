@@ -9,10 +9,10 @@ public class URLMatcherUtil {
     private List<URLDefinition> urlDefinitionList;
 
     public URLMatcherUtil(List<URLDefinition> urlDefinitionList) {
-        for (URLDefinition urlDefinition : urlDefinitionList) {
+        this.urlDefinitionList = urlDefinitionList;
+        for (URLDefinition urlDefinition : this.urlDefinitionList) {
             urlDefinition.setUrlPattern(Pattern.compile(urlDefinition.getPath()));
         }
-        this.urlDefinitionList = urlDefinitionList;
     }
 
     public boolean matches(String method, String path) {

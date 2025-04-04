@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -9,13 +10,17 @@ import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
+import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
+import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
+import lombok.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
@@ -41,6 +47,7 @@ class CustomAuthenticationHandlerTest {
     private MeterRegistry meterRegistry;
     private RoutingContext routingContext;
     private AuthenticationProvider authenticator;
+    private URLMatcherUtil urlMatcherUtil;
 
     @BeforeEach
     void setUp() {
@@ -51,6 +58,7 @@ class CustomAuthenticationHandlerTest {
         meterRegistry = mock(MeterRegistry.class);
         routingContext = mock(RoutingContext.class);
         authenticator = mock(AuthenticationProvider.class);
+        urlMatcherUtil = new URLMatcherUtil(new ArrayList<>());
     }
 
     @Test
@@ -83,8 +91,27 @@ class CustomAuthenticationHandlerTest {
     }
 
     @Test
+    void handleAuthenticationWhenOrgIsAbsent() {
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
+        Org org = Org.of("testOrg");
+
+//        when(urlMatcherUtil.matches(anyString(), anyString())).thenReturn(false);
+
+        when(orgResolver.resolve(anyString())).thenReturn(org);
+        when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
+        when(routingContext.request().uri()).thenReturn("/test");
+        when(routingContext.request().method()).thenReturn(HttpMethod.GET);
+        when(routingContext.request().path()).thenReturn("/test");
+
+
+        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
+        assertThrows(UnAuthenticatedException.class, () -> handler.handle(routingContext));
+
+    }
+
+    @Test
     void handleAuthenticatesSuccessfully() {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
         Org org = Org.of("testOrg");
         UserContext userContext = new UserContext() {
             @Override
@@ -116,11 +143,53 @@ class CustomAuthenticationHandlerTest {
         verify(routingContext).next();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "/v1/orgs", "/v1/projects", "/v1/projects/asdf" })
+    void handleAuthenticatesSuccessfullyWhenOrgIsNotAvailable(String path) {
+        URLMatcherUtil urlMatcherUtil1 = new URLMatcherUtil(List.of(
+                new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST)), null),
+                new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)), null)
+        ));
+
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil1);
+        Org org = Org.of("testOrg");
+        UserContext userContext = new UserContext() {
+            @Override
+            public String getSubject() {
+                return "test:subject";
+            }
+
+            @Override
+            public boolean isExpired() {
+                return false;
+            }
+        };
+
+        when(orgResolver.resolve(anyString())).thenReturn(org);
+        when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
+        when(routingContext.request().path()).thenReturn(path);
+        when(routingContext.request().uri()).thenReturn(path);
+        when(routingContext.request().method()).thenReturn(HttpMethod.POST);
+        when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenReturn(
+                Future.succeededFuture(userContext)
+        );
+
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
+        typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
+
+        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
+
+        handler.handle(routingContext);
+
+        verify(routingContext).put(eq("userContext"), any(UserContext.class));
+        verify(routingContext).next();
+    }
+
     @Test
     void handleFailsAuthentication() {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
         Org org = Org.of("testOrg");
-        when(orgResolver.resolve(anyString())).thenReturn(org);
+//        when(orgResolver.resolve(anyString())).thenReturn(org);
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
         when(routingContext.request().uri()).thenReturn("/test");
         when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenReturn(
@@ -139,7 +208,7 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void handleThrowsBadRequestException() throws URISyntaxException {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
         when(routingContext.request().uri()).thenReturn("invalid_uri");
         when(orgResolver.resolve(anyString())).thenReturn(Org.of("testOrg"));

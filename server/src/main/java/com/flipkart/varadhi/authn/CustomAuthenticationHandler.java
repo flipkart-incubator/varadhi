@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.authn;
 
+import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -38,8 +40,9 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     private URLMatcherUtil orgExemptionURLMatcher;
 
-    public CustomAuthenticationHandler(AuthenticationProvider authenticationProvider) {
+    public CustomAuthenticationHandler(AuthenticationProvider authenticationProvider, URLMatcherUtil orgExemptionURLMatcher) {
         this.authenticationProvider = authenticationProvider;
+        this.orgExemptionURLMatcher = orgExemptionURLMatcher;
     }
 
     /**
@@ -101,9 +104,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
 
-        this.orgExemptionURLMatcher = new URLMatcherUtil(authenticationOptions.getOrgContextExemptionURLs());
-
-        return new CustomAuthenticationHandler(authenticationProvider);
+        return new CustomAuthenticationHandler(authenticationProvider, new URLMatcherUtil(authenticationOptions.getOrgContextExemptionURLs()));
     }
 
     @Override
@@ -147,7 +148,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             String.valueOf(routingContext.request().method()),
             routingContext.request().path()
         )) {
-            throw new BadRequestException("Org context missing in the request");
+            throw new UnAuthenticatedException("Org context missing in the request");
         }
 
         return DEFAULT_ORG;
