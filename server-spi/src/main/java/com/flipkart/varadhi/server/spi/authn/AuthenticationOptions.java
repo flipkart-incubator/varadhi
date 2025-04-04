@@ -7,6 +7,8 @@ import lombok.Data;
 
 import java.util.List;
 
+
+
 @Data
 @JsonIgnoreProperties (ignoreUnknown = true)
 public class AuthenticationOptions {
