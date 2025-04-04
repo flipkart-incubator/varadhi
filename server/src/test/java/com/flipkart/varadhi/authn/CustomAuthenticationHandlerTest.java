@@ -20,7 +20,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
-import lombok.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -95,7 +94,7 @@ class CustomAuthenticationHandlerTest {
         CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
         Org org = Org.of("testOrg");
 
-//        when(urlMatcherUtil.matches(anyString(), anyString())).thenReturn(false);
+        //        when(urlMatcherUtil.matches(anyString(), anyString())).thenReturn(false);
 
         when(orgResolver.resolve(anyString())).thenReturn(org);
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
@@ -144,12 +143,14 @@ class CustomAuthenticationHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "/v1/orgs", "/v1/projects", "/v1/projects/asdf" })
+    @ValueSource (strings = {"/v1/orgs", "/v1/projects", "/v1/projects/asdf"})
     void handleAuthenticatesSuccessfullyWhenOrgIsNotAvailable(String path) {
-        URLMatcherUtil urlMatcherUtil1 = new URLMatcherUtil(List.of(
+        URLMatcherUtil urlMatcherUtil1 = new URLMatcherUtil(
+            List.of(
                 new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST)), null),
                 new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)), null)
-        ));
+            )
+        );
 
         CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil1);
         Org org = Org.of("testOrg");
@@ -171,7 +172,7 @@ class CustomAuthenticationHandlerTest {
         when(routingContext.request().uri()).thenReturn(path);
         when(routingContext.request().method()).thenReturn(HttpMethod.POST);
         when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenReturn(
-                Future.succeededFuture(userContext)
+            Future.succeededFuture(userContext)
         );
 
         Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
@@ -189,7 +190,7 @@ class CustomAuthenticationHandlerTest {
     void handleFailsAuthentication() {
         CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
         Org org = Org.of("testOrg");
-//        when(orgResolver.resolve(anyString())).thenReturn(org);
+        //        when(orgResolver.resolve(anyString())).thenReturn(org);
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
         when(routingContext.request().uri()).thenReturn("/test");
         when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenReturn(
