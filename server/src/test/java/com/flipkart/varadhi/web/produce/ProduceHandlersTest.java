@@ -473,7 +473,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         // Create a VaradhiTopic with matching nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getNfrStrategy()).thenReturn(Optional.of(strategyKey));
+        when(topic.getNfrStrategy()).thenReturn(strategyKey);
         setupProjectAndFilters(projectName, "org1", orgFilters, topic);
 
         Multimap<String, String> headers = ArrayListMultimap.create();
@@ -502,7 +502,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         // Create a VaradhiTopic with an empty nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getNfrStrategy()).thenReturn(Optional.empty());
+        when(topic.getNfrStrategy()).thenReturn(null);
         setupProjectAndFilters(projectName, "org1", orgFilters, topic);
 
         Multimap<String, String> headers = ArrayListMultimap.create();
