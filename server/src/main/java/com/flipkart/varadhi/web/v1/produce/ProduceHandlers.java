@@ -190,7 +190,10 @@ public class ProduceHandlers implements RouteProvider {
         if (orgFilters != null && !orgFilters.getFilters().isEmpty()) {
             for (Map.Entry<String, Condition> entry : orgFilters.getFilters().entrySet()) {
                 //Check which NFR strategy is applicable
-                if (topic.getNfrStrategy().equals(entry.getKey()) && !entry.getValue().evaluate(message.getHeaders())) {
+                if (topic.getNfrStrategy() != null && topic.getNfrStrategy().equals(entry.getKey()) && !entry.getValue()
+                                                                                                             .evaluate(
+                                                                                                                 message.getHeaders()
+                                                                                                             )) {
                     return false;
                 }
             }
