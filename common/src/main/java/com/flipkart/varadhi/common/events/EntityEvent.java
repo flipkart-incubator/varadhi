@@ -5,8 +5,9 @@ import com.flipkart.varadhi.entities.auth.ResourceType;
 public record EntityEvent<T>(
     ResourceType resourceType,
     String resourceName,
-    ResourceOperation operation,
-    T resourceState
+    EventType operation,
+    T resource,
+    Runnable commiter
 ) {
     public EntityEvent {
         if (resourceType == null) {
@@ -20,12 +21,7 @@ public record EntityEvent<T>(
         }
     }
 
-    public static <T> EntityEvent<T> of(
-        ResourceType resourceType,
-        String resourceName,
-        ResourceOperation resourceOperation,
-        T resourceState
-    ) {
-        return new EntityEvent<>(resourceType, resourceName, resourceOperation, resourceState);
+    public void markAsProcessed() {
+        commiter.run();
     }
 }

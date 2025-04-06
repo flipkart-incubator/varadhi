@@ -1,32 +1,29 @@
 package com.flipkart.varadhi.events;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.flipkart.varadhi.cluster.MembershipListener;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.common.events.EntityEvent;
+import com.flipkart.varadhi.common.events.EntityEventListener;
 import com.flipkart.varadhi.common.exceptions.EventProcessingException;
-import com.flipkart.varadhi.controller.EntityEventProcessor;
+import com.flipkart.varadhi.controller.DefaultMetaStoreChangeListener;
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 @Slf4j
-public final class EventProcessor implements EntityEventProcessor {
+public final class EventProcessor implements EntityEventListener {
 
     private final EventProcessorConfig eventProcessorConfig;
     private final MessageExchange messageExchange;
@@ -41,6 +38,7 @@ public final class EventProcessor implements EntityEventProcessor {
     public static Future<EventProcessor> create(
         MessageExchange messageExchange,
         VaradhiClusterManager clusterManager,
+        MetaStore metaStore,
         EventProcessorConfig eventProcessorConfig
     ) {
         Promise<EventProcessor> promise = Promise.promise();
@@ -55,7 +53,7 @@ public final class EventProcessor implements EntityEventProcessor {
                 log.warn("No members found in cluster, processor will wait for members to join");
             }
 
-            processor.initialize();
+            processor.initialize(metaStore);
             processor.startCommitterThread();
 
             return Future.succeededFuture(processor);
@@ -72,8 +70,9 @@ public final class EventProcessor implements EntityEventProcessor {
         return promise.future();
     }
 
-    private void initialize() {
+    private void initialize(MetaStore metaStore) {
         isShutdown.set(false);
+        metaStore.registerEventListener(new DefaultMetaStoreChangeListener(metaStore, this));
     }
 
     private EventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
@@ -352,16 +351,12 @@ public final class EventProcessor implements EntityEventProcessor {
     }
 
     @Override
-    public <T> CompletableFuture<Void> process(EntityEvent<T> event) {
+    public void onChange(EntityEvent<?> event) {
         if (isShutdown.get()) {
-            return CompletableFuture.failedFuture(new EventProcessingException("EventProcessor is shutdown"));
+            throw new IllegalStateException("Change Listener has been stopped");
         }
-
         CompletableFuture<Void> completeFuture = new CompletableFuture<>();
-
         enqueueEventToAllNodes(event, completeFuture);
-
-        return completeFuture;
     }
 
     private void enqueueEventToAllNodes(EntityEvent<?> event, CompletableFuture<Void> completeFuture) {

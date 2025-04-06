@@ -1,5 +1,5 @@
 package com.flipkart.varadhi.common.events;
 
-public enum ResourceOperation {
+public enum EventType {
     INVALIDATE, UPSERT
 }
