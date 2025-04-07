@@ -19,6 +19,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.InternalServerErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -100,7 +101,7 @@ class CustomAuthenticationHandlerTest {
 
 
         when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
-        assertThrows(UnAuthenticatedException.class, () -> handler.handle(routingContext));
+        assertThrows(InternalServerErrorException.class, () -> handler.handle(routingContext));
 
     }
 
