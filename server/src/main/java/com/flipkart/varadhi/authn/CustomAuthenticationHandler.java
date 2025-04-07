@@ -87,7 +87,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             Class<?> providerClass = Class.forName(authenticationOptions.getAuthenticationProviderClassName());
             if (!AuthenticationProvider.class.isAssignableFrom(providerClass)) {
                 throw new InvalidConfigException(
-                    "Provider class " + providerClass.getName() + " does not implement Authenticator interface"
+                    "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
                 );
             }
             authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
