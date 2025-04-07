@@ -10,7 +10,6 @@ import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
-import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
 import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
@@ -46,7 +45,7 @@ class CustomAuthenticationHandlerTest {
     private MeterRegistry meterRegistry;
     private RoutingContext routingContext;
     private AuthenticationProvider authenticator;
-    private URLMatcherUtil urlMatcherUtil;
+
 
     @BeforeEach
     void setUp() {
@@ -57,7 +56,6 @@ class CustomAuthenticationHandlerTest {
         meterRegistry = mock(MeterRegistry.class);
         routingContext = mock(RoutingContext.class);
         authenticator = mock(AuthenticationProvider.class);
-        urlMatcherUtil = new URLMatcherUtil(new ArrayList<>());
     }
 
     @Test
@@ -80,7 +78,7 @@ class CustomAuthenticationHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource (strings = {"randomString", "com.flipkart.varadhi.RandomClass"})
+    @ValueSource (strings = {"randomString", "io.vertx.core.http.HttpMethod"})
     void providesHandlerFailedInvalidClassName(String value) {
         jsonObject.put("authenticationProviderClassName", value);
         assertThrows(
@@ -91,10 +89,8 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void handleAuthenticationWhenOrgIsAbsent() {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, new ArrayList<>());
         Org org = Org.of("testOrg");
-
-        //        when(urlMatcherUtil.matches(anyString(), anyString())).thenReturn(false);
 
         when(orgResolver.resolve(anyString())).thenReturn(org);
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
@@ -110,7 +106,7 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void handleAuthenticatesSuccessfully() {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, new ArrayList<>());
         Org org = Org.of("testOrg");
         UserContext userContext = new UserContext() {
             @Override
@@ -145,14 +141,12 @@ class CustomAuthenticationHandlerTest {
     @ParameterizedTest
     @ValueSource (strings = {"/v1/orgs", "/v1/projects", "/v1/projects/asdf"})
     void handleAuthenticatesSuccessfullyWhenOrgIsNotAvailable(String path) {
-        URLMatcherUtil urlMatcherUtil1 = new URLMatcherUtil(
-            List.of(
-                new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST))),
-                new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)))
-            )
+        List<URLDefinition> urlDefinitions = List.of(
+            new URLDefinition("^\\/v1\\/orgs$", List.of(String.valueOf(HttpMethod.POST))),
+            new URLDefinition("^\\/v1\\/projects.*$", List.of(String.valueOf(HttpMethod.POST)))
         );
 
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil1);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlDefinitions);
         Org org = Org.of("testOrg");
         UserContext userContext = new UserContext() {
             @Override
@@ -188,9 +182,7 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void handleFailsAuthentication() {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
-        Org org = Org.of("testOrg");
-        //        when(orgResolver.resolve(anyString())).thenReturn(org);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, new ArrayList<>());
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
         when(routingContext.request().uri()).thenReturn("/test");
         when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenReturn(
@@ -209,7 +201,7 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void handleThrowsBadRequestException() throws URISyntaxException {
-        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, urlMatcherUtil);
+        CustomAuthenticationHandler handler = new CustomAuthenticationHandler(authenticator, new ArrayList<>());
         when(routingContext.request()).thenReturn(mock(io.vertx.core.http.HttpServerRequest.class));
         when(routingContext.request().uri()).thenReturn("invalid_uri");
         when(orgResolver.resolve(anyString())).thenReturn(Org.of("testOrg"));

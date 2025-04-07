@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -10,7 +9,7 @@ import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
-import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
+import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -18,18 +17,21 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.InternalServerErrorException;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
 import static com.flipkart.varadhi.server.spi.vo.Constants.DEFAULT_ORG;
+import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 @NoArgsConstructor
@@ -37,14 +39,15 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 public class CustomAuthenticationHandler implements AuthenticationHandler, AuthenticationHandlerProvider {
     private AuthenticationProvider authenticationProvider;
 
-    private URLMatcherUtil orgExemptionURLMatcher;
+    private List<URLDefinition> orgExemptionURLs;
+
 
     public CustomAuthenticationHandler(
         AuthenticationProvider authenticationProvider,
-        URLMatcherUtil orgExemptionURLMatcher
+        List<URLDefinition> orgExemptionURLs
     ) {
         this.authenticationProvider = authenticationProvider;
-        this.orgExemptionURLMatcher = orgExemptionURLMatcher;
+        this.orgExemptionURLs = orgExemptionURLs;
     }
 
     /**
@@ -108,7 +111,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         return new CustomAuthenticationHandler(
             authenticationProvider,
-            new URLMatcherUtil(authenticationOptions.getOrgContextExemptionURLs())
+            authenticationOptions.getOrgContextExemptionURLs()
         );
     }
 
@@ -149,11 +152,12 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             }
         }
 
-        if (!orgExemptionURLMatcher.matches(
+        if (!anyMatch(
+            this.orgExemptionURLs,
             String.valueOf(routingContext.request().method()),
             routingContext.request().path()
         )) {
-            throw new UnAuthenticatedException("Org context missing in the request");
+            throw new InternalServerErrorException("Org context missing in the request");
         }
 
         return DEFAULT_ORG;

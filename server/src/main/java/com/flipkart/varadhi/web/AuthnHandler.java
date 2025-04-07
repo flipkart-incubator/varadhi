@@ -8,7 +8,6 @@ import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 
 import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
-import com.flipkart.varadhi.server.spi.utils.URLMatcherUtil;
 import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -23,6 +22,7 @@ import io.vertx.ext.web.RoutingContext;
 import java.util.List;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
+import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 public class AuthnHandler implements RouteConfigurator {
@@ -82,19 +82,19 @@ public class AuthnHandler implements RouteConfigurator {
 
     static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
         private final Handler<RoutingContext> wrappedHandler;
-        private final URLMatcherUtil whitelistedURLMatcher;
+        private final List<URLDefinition> whitelistedURLs;
 
         public AuthenticationHandlerWrapper(
             Handler<RoutingContext> wrappedHandler,
             List<URLDefinition> whitelistedURLs
         ) {
             this.wrappedHandler = wrappedHandler;
-            this.whitelistedURLMatcher = new URLMatcherUtil(whitelistedURLs);
+            this.whitelistedURLs = whitelistedURLs;
         }
 
         @Override
         public void handle(RoutingContext ctx) {
-            if (this.whitelistedURLMatcher.matches(String.valueOf(ctx.request().method()), ctx.request().path())) {
+            if (anyMatch(this.whitelistedURLs, String.valueOf(ctx.request().method()), ctx.request().path())) {
                 ctx.next();
             } else {
                 wrappedHandler.handle(ctx);

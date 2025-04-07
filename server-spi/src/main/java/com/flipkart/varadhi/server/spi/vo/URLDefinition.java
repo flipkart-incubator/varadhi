@@ -26,6 +26,17 @@ public class URLDefinition {
     @JsonIgnore
     private Pattern urlPattern;
 
+    public static boolean anyMatch(List<URLDefinition> urlDefinitions, String method, String path) {
+        for (URLDefinition urlDefinition : urlDefinitions) {
+            if (urlDefinition.getMethodList().contains(method) && urlDefinition.getUrlPattern()
+                                                                               .matcher(path)
+                                                                               .matches()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public URLDefinition(String path, List<String> methodList) {
         this.methodList = methodList;
         this.setPath(path);
