@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Org;
@@ -101,7 +102,7 @@ class CustomAuthenticationHandlerTest {
 
 
         when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
-        assertThrows(InternalServerErrorException.class, () -> handler.handle(routingContext));
+        assertThrows(ServerErrorException.class, () -> handler.handle(routingContext));
 
     }
 

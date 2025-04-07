@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.authn;
 
+import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -30,7 +31,6 @@ import java.util.Map;
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
-import static com.flipkart.varadhi.server.spi.vo.Constants.DEFAULT_ORG;
 import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
@@ -157,10 +157,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             String.valueOf(routingContext.request().method()),
             routingContext.request().path()
         )) {
-            throw new InternalServerErrorException("Org context missing in the request");
+            throw new ServerErrorException("Org context missing in the request");
         }
 
-        return DEFAULT_ORG;
+        return "";
     }
 
     private RequestContext createRequestContext(RoutingContext routingContext) throws URISyntaxException {
