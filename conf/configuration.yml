@@ -41,6 +41,7 @@ producerOptions:
   topicCacheBuilderSpec: ""
   metricEnabled: true
 
+
 authenticationOptions:
   configFile: "authn.yml"
   handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"

@@ -46,7 +46,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DEL
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CONSUME;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
@@ -112,14 +112,14 @@ public class SubscriptionHandlers implements RouteProvider {
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_CREATE)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
                 RouteDefinition.put("UpdateSubscription", "/:subscription")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_UPDATE)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::update),
                 RouteDefinition.delete("DeleteSubscription", "/:subscription")
                                .nonBlocking()

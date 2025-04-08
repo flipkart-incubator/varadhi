@@ -55,12 +55,12 @@ public class DlqHandlers implements RouteProvider {
                                .hasBody()
                                .bodyParser(this::setUnsidelineRequest)
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::enqueueUnsideline),
                 RouteDefinition.get("GetMessages", "")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::getMessages)
             )
         ).get();

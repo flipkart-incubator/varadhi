@@ -10,6 +10,7 @@ import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
+
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
@@ -32,12 +33,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
+    public Future<Boolean> init(ConfigFileResolver resolver, String configFile) {
         if (!this.initialised) {
-            this.configuration = YamlLoader.loadConfig(
-                authorizationOptions.getConfigFile(),
-                DefaultAuthorizationConfig.class
-            );
+            this.configuration = YamlLoader.loadConfig(configFile, DefaultAuthorizationConfig.class);
             this.configuration.getMetaStoreOptions()
                               .setConfigFile(
                                   resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
@@ -263,6 +261,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
                 );
             }
         }
+    }
+
+    @Override
+    public Future<Boolean> isSuperAdmin(UserContext userContext) {
+        return Future.succeededFuture(this.configuration.getSuperUsers().contains(userContext.getSubject()));
     }
 
     private record ResourceContext(ResourceType resourceType, String resourceId, String policyPath) {
