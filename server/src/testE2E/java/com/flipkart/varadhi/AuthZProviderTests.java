@@ -2,7 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;

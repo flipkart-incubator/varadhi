@@ -47,6 +47,11 @@ public class Constants {
     }
 
 
+    public static class ContextKeys {
+        public static final String USER_CONTEXT = "userContext";
+    }
+
+
     /**
      * QueryParams class contains constants for various query parameters.
      * This class is not meant to be instantiated.

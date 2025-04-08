@@ -1,0 +1,12 @@
+[versions]
+vertx = "4.5.10"
+guava = "33.3.1-jre"
+netty = "4.1.119.Final"
+
+[libraries]
+vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
+vertx-web = { group = "io.vertx", name = "vertx-web", version.ref = "vertx" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
+netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
+vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }

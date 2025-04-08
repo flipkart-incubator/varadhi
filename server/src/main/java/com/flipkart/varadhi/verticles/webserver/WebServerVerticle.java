@@ -282,7 +282,7 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     private void setupRouteConfigurators() {
-        AuthnHandler authnHandler = new AuthnHandler(vertx, configuration);
+        AuthnHandler authnHandler = new AuthnHandler(vertx, configuration, meterRegistry);
         AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
