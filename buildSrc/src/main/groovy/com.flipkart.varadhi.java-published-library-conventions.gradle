@@ -21,7 +21,12 @@ publishing {
 
     repositories {
         maven {
-            url = mavenPublishUrl
+            name = "CLOJARS"
+            url = "https://repo.clojars.org/repo"
+            credentials {
+                username = System.getenv("CLOJARS_USERNAME")
+                password = System.getenv("CLOJARS_PASSWORD")
+            }
         }
     }
 }
