@@ -2,12 +2,14 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.config.AuthenticationConfig;
+
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
 
+import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -18,11 +20,11 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
+import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 public class AuthnHandler implements RouteConfigurator {
@@ -31,7 +33,7 @@ public class AuthnHandler implements RouteConfigurator {
     public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry)
         throws InvalidConfigException {
 
-        AuthenticationConfig authenticationConfig = configuration.getAuthentication();
+        AuthenticationOptions authenticationConfig = configuration.getAuthenticationOptions();
         AuthenticationHandlerProvider provider;
 
         try {
@@ -39,8 +41,11 @@ public class AuthnHandler implements RouteConfigurator {
             if (authenticationConfig.getHandlerProviderClassName() == null || authenticationConfig
                                                                                                   .getHandlerProviderClassName()
                                                                                                   .isEmpty()) {
-                throw new InvalidConfigException("Authenticator class name is missing or empty in configuration");
+                throw new InvalidConfigException(
+                    "AuthenticationHandlerProvider class name is missing or empty in configuration"
+                );
             }
+            provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
 
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
             if (!AuthenticationHandlerProvider.class.isAssignableFrom(providerClass)) {
@@ -50,7 +55,6 @@ public class AuthnHandler implements RouteConfigurator {
                 );
             }
             provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
-
 
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
@@ -65,7 +69,9 @@ public class AuthnHandler implements RouteConfigurator {
         try {
             authenticationHandler = new AuthenticationHandlerWrapper(
                 provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of, meterRegistry),
-                authenticationConfig.getWhitelistedURLs()
+                (authenticationConfig.getWhitelistedURLs() != null) ?
+                    authenticationConfig.getWhitelistedURLs() :
+                    Collections.EMPTY_LIST
             );
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to create authentication handler", e);
@@ -80,29 +86,25 @@ public class AuthnHandler implements RouteConfigurator {
 
     static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
         private final Handler<RoutingContext> wrappedHandler;
-        private final List<Pattern> whitelistedURLPatterns;
+        private final List<URLDefinition> whitelistedURLs;
 
-        public AuthenticationHandlerWrapper(Handler<RoutingContext> wrappedHandler, List<String> whitelistedURLs) {
+        public AuthenticationHandlerWrapper(
+            Handler<RoutingContext> wrappedHandler,
+            List<URLDefinition> whitelistedURLs
+        ) {
             this.wrappedHandler = wrappedHandler;
-
-            whitelistedURLPatterns = whitelistedURLs.stream().map(pattern -> {
-                try {
-                    return Pattern.compile(pattern);
-                } catch (Exception e) {
-                    throw new InvalidConfigException("Invalid whitelist pattern: " + pattern, e);
-                }
-            }).collect(Collectors.toList());
+            this.whitelistedURLs = whitelistedURLs;
         }
 
         @Override
         public void handle(RoutingContext ctx) {
-            if (isWhitelisted(ctx.request().path())) {
+            if (anyMatch(this.whitelistedURLs, String.valueOf(ctx.request().method()), ctx.request().path())) {
                 ctx.next();
             } else {
                 wrappedHandler.handle(ctx);
                 User user = ctx.user();
 
-                if (user != null) {
+                if (user != null && ctx.get(USER_CONTEXT) == null) {
                     ctx.put(USER_CONTEXT, new UserContext() {
                         @Override
                         public String getSubject() {
@@ -119,17 +121,12 @@ public class AuthnHandler implements RouteConfigurator {
                 if (ctx.get(USER_CONTEXT) == null) {
                     ctx.fail(
                         UNAUTHORIZED.code(),
-                        new UnAuthenticatedException("User context not found for authenticated API")
+                        new UnAuthenticatedException(
+                            "Authentication failed: User context not found for path" + ctx.request().path()
+                        )
                     );
                 }
             }
-        }
-
-        private boolean isWhitelisted(String path) {
-            return this.whitelistedURLPatterns != null && this.whitelistedURLPatterns.stream()
-                                                                                     .anyMatch(
-                                                                                         e -> e.matcher(path).matches()
-                                                                                     );
         }
     }
 }

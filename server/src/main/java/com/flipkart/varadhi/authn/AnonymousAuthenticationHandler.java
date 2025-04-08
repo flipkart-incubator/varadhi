@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.spi.authn.AuthenticationHandlerProvider;
-import com.flipkart.varadhi.spi.utils.OrgResolver;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -11,6 +11,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 
 @Slf4j
 public class AnonymousAuthenticationHandler implements AuthenticationHandlerProvider {
@@ -20,7 +21,7 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
      * This handler should only be used in development or testing environments.
      *
      * @param vertx       The Vertx instance
-     * @param jsonObject  Configuration parameters (not used for anonymous auth)
+     * @param configObject  Configuration parameters (not used for anonymous auth)
      * @param orgResolver Organization resolver (not used for anonymous auth)
      * @return An AuthenticationHandler that allows all requests with an anonymous user
      */
@@ -28,7 +29,7 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
     @Override
     public AuthenticationHandler provideHandler(
         Vertx vertx,
-        JsonObject jsonObject,
+        JsonObject configObject,
         OrgResolver orgResolver,
         MeterRegistry meterRegistry
     ) {
@@ -36,7 +37,7 @@ public class AnonymousAuthenticationHandler implements AuthenticationHandlerProv
 
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {
             log.info("Anonymous access attempt from: {}", ctx.request().remoteAddress());
-            return Future.succeededFuture(User.fromName("anonymous"));
+            return Future.succeededFuture(User.fromName(ANONYMOUS_IDENTITY));
         });
     }
 }
