@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -110,7 +111,9 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         return new CustomAuthenticationHandler(
             authenticationProvider,
-            authenticationOptions.getOrgContextExemptionURLs()
+            authenticationOptions.getOrgContextExemptionURLs() != null ?
+                authenticationOptions.getOrgContextExemptionURLs() :
+                Collections.EMPTY_LIST
         );
     }
 

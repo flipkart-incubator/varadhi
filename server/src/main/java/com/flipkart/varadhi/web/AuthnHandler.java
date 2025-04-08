@@ -19,6 +19,7 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
 
+import java.util.Collections;
 import java.util.List;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
@@ -67,7 +68,9 @@ public class AuthnHandler implements RouteConfigurator {
         try {
             authenticationHandler = new AuthenticationHandlerWrapper(
                 provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of, meterRegistry),
-                authenticationConfig.getWhitelistedURLs()
+                (authenticationConfig.getWhitelistedURLs() != null) ?
+                    authenticationConfig.getWhitelistedURLs() :
+                    Collections.EMPTY_LIST
             );
         } catch (Exception e) {
             throw new InvalidConfigException("Failed to create authentication handler", e);
