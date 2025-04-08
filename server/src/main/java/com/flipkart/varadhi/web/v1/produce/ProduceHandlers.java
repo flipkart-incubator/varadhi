@@ -33,6 +33,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
@@ -104,7 +105,14 @@ public class ProduceHandlers implements RouteProvider {
         //TODO:: Add metrics for nfr
         if (isOrgFilterApplicableAndValid(messageToProduce, projectName, topicName)) {
             //early exit if org filter rules are followed
-            ctx.end(messageToProduce.getMessageId());
+            log.info(
+                String.format(
+                    "NFR filter matched topic name:%s message id:%s ",
+                    varadhiTopicName,
+                    messageToProduce.getMessageId()
+                )
+            );
+            ctx.endRequestWithResponse(messageToProduce.getMessageId());
             return;
         }
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
@@ -187,15 +195,18 @@ public class ProduceHandlers implements RouteProvider {
         Project project = projectService.getCachedProject(projectName);
         //TODO[IMP]:avoid zk interactions for org and topic + filters
         OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
-        VaradhiTopic topic = varadhiTopicService.get(topicName);
+        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
         String nfrStrategy = topic.getNfrStrategy();
         Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
             orgFilters.getFilters().get(nfrStrategy) :
             null;
-
         if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
             return true;
         }
         return false;
+    }
+
+    private String buildTopicName(String projectName, String topicName) {
+        return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 }
