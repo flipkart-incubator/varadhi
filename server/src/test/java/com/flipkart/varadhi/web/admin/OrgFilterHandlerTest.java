@@ -18,6 +18,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -79,22 +82,10 @@ public class OrgFilterHandlerTest extends WebTestBase {
     @Test
     public void testGetAll() throws Exception {
         String orgName = "org1";
-        String jsonUpdate = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterA": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    },
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters orgFilter = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        conditionMap.put("nameGroup.filterName", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters orgFilter = new OrgFilters(0, conditionMap);
         // Assume filters are set in the service
         when(orgService.getAllFilters(eq(orgName))).thenReturn(orgFilter);
 
@@ -131,39 +122,11 @@ public class OrgFilterHandlerTest extends WebTestBase {
     @Test
     public void testCreate() throws Exception {
         String orgName = "org1";
-        String jsonUpdate = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterA": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    },
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters inputFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
-
-        String jsonUpdateCreated = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterA": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    },
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters createdFilters = JsonMapper.getMapper().readValue(jsonUpdateCreated, OrgFilters.class);
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        conditionMap.put("nameGroup.filterName", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters inputFilters = new OrgFilters(0, conditionMap);
+        OrgFilters createdFilters = new OrgFilters(0, conditionMap);
 
 
         when(orgService.createFilter(eq(orgName), eq(inputFilters))).thenReturn(createdFilters);

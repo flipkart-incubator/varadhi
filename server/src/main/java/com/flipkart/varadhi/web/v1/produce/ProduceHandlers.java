@@ -102,8 +102,8 @@ public class ProduceHandlers implements RouteProvider {
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
         //NFR filtration and org level filters
         //TODO:: Add metrics for nfr
-        if (!applyOrgFilterRules(messageToProduce, projectName, topicName)) {
-            //early exit if org filter rules not followed
+        if (isOrgFilterApplicableAndValid(messageToProduce, projectName, topicName)) {
+            //early exit if org filter rules are followed
             ctx.end(messageToProduce.getMessageId());
             return;
         }
@@ -183,21 +183,19 @@ public class ProduceHandlers implements RouteProvider {
         return copy;
     }
 
-    public boolean applyOrgFilterRules(Message message, String projectName, String topicName) {
+    boolean isOrgFilterApplicableAndValid(Message message, String projectName, String topicName) {
         Project project = projectService.getCachedProject(projectName);
+        //TODO[IMP]:avoid zk interactions for org and topic + filters
         OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
         VaradhiTopic topic = varadhiTopicService.get(topicName);
-        if (orgFilters != null && !orgFilters.getFilters().isEmpty()) {
-            for (Map.Entry<String, Condition> entry : orgFilters.getFilters().entrySet()) {
-                //Check which NFR strategy is applicable
-                if (topic.getNfrStrategy() != null && topic.getNfrStrategy().equals(entry.getKey()) && !entry.getValue()
-                                                                                                             .evaluate(
-                                                                                                                 message.getHeaders()
-                                                                                                             )) {
-                    return false;
-                }
-            }
+        String nfrStrategy = topic.getNfrStrategy();
+        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
+            orgFilters.getFilters().get(nfrStrategy) :
+            null;
+
+        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
+            return true;
         }
-        return true;
+        return false;
     }
 }

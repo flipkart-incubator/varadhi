@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web.produce;
+package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
@@ -14,8 +14,6 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;

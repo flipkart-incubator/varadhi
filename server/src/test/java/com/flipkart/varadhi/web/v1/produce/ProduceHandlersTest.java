@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web.produce;
+package com.flipkart.varadhi.web.v1.produce;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -22,9 +22,8 @@ import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -426,7 +425,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     }
 
     @Test
-    public void testApplyOrgFilterRules_NullOrgFilters() {
+    public void testAreOrgFilterRules_NullOrgFilters() {
         String projectName = "proj1";
         String topicName = "topic1";
 
@@ -436,29 +435,29 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
-        assertTrue(result);
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        assertFalse(result);
     }
 
     @Test
-    public void testApplyOrgFilterRules_EmptyOrgFilters() {
+    public void testAreOrgFilterRules_EmptyOrgFilters() {
         String projectName = "proj1";
         String topicName = "topic1";
 
         OrgFilters emptyFilters = mock(OrgFilters.class);
-        when(emptyFilters.getFilters()).thenReturn(Collections.emptyMap());
+        when(emptyFilters.getFilters()).thenReturn(ImmutableMap.of());
         setupProjectAndFilters(projectName, "org1", emptyFilters, mock(VaradhiTopic.class));
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
-        assertTrue(result);
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        assertFalse(result);
     }
 
     @ParameterizedTest
     @ValueSource (booleans = {true, false})
-    public void testApplyOrgFilterRules_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
+    public void testIsOrgFilterApplicableAndValid_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
         String projectName = "proj1";
         String topicName = "topic1";
         String strategyKey = "STRATEGY1";
@@ -469,7 +468,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Map<String, Condition> filtersMap = new HashMap<>();
         filtersMap.put(strategyKey, condition);
         OrgFilters orgFilters = mock(OrgFilters.class);
-        when(orgFilters.getFilters()).thenReturn(filtersMap);
+        when(orgFilters.getFilters()).thenReturn(ImmutableMap.copyOf(filtersMap));
 
         // Create a VaradhiTopic with matching nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
@@ -480,14 +479,14 @@ public class ProduceHandlersTest extends ProduceTestBase {
         headers.put(strategyKey, "exists");
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
         // Verify that condition.evaluate is called with message headers.
         verify(condition, times(1)).evaluate(message.getHeaders());
         assertEquals(conditionEvaluatesToTrue, result);
     }
 
     @Test
-    public void testApplyOrgFilterRules_NoMatchingStrategy() {
+    public void testIsOrgFilterApplicableAndValid_NoMatchingStrategy() {
         String projectName = "proj1";
         String topicName = "topic1";
         String strategyKey = "STRATEGY1";
@@ -498,7 +497,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Map<String, Condition> filtersMap = new HashMap<>();
         filtersMap.put(strategyKey, condition);
         OrgFilters orgFilters = mock(OrgFilters.class);
-        when(orgFilters.getFilters()).thenReturn(filtersMap);
+        when(orgFilters.getFilters()).thenReturn(ImmutableMap.copyOf(filtersMap));
 
         // Create a VaradhiTopic with an empty nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
@@ -508,10 +507,10 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.applyOrgFilterRules(message, projectName, topicName);
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
         // Since the topic's nfrStrategy is not present, the condition should not be evaluated.
         verify(condition, never()).evaluate(any());
-        assertTrue(result);
+        assertFalse(result);
     }
 
 }
