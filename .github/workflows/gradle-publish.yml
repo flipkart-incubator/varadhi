@@ -39,6 +39,7 @@ jobs:
     # the publishing section of your build.gradle
     - name: Publish to Clojars repository
       run: ./gradlew publish
+      environment: jardeployment
       env:
         CLOJARS_USERNAME: flipkartoss
-        CLOJARS_PASSWORD: ${{ secrets.CLOJARS_TOKEN }}
+        CLOJARS_PASSWORD: ${{ secrets.DEPLOY_TOKEN }}
