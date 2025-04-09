@@ -21,7 +21,23 @@ publishing {
 
     repositories {
         maven {
-            url = mavenPublishUrl
+            name = "CLOJARS"
+            url = "https://repo.clojars.org"
+            credentials {
+                username = System.getenv("CLOJARS_USERNAME")
+                password = System.getenv("CLOJARS_PASSWORD")
+            }
+        }
+    }
+
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
         }
     }
 }

@@ -11,9 +11,9 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":producer"))
     implementation(project(":entities"))
-    implementation(project(":authz"))
     implementation(project(":controller"))
     implementation(project(":consumer"))
+    implementation(project(":server-spi"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.apache.logging.log4j:log4j-core")

@@ -41,9 +41,17 @@ producerOptions:
   topicCacheBuilderSpec: ""
   metricEnabled: true
 
-authenticationEnabled: true
-authentication:
-  user_header:
+authenticationOptions:
+  configFile: "authn.yml"
+  handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
+  orgContextExemptionURLs:
+    - path: ^\\/v1\\/orgs\$
+      methodList:
+        - POST
+  whitelistedURLs:
+    - path: ^\\/v1\\/health-check\$
+      methodList:
+        - GET
 
 authorizationEnabled: true
 
@@ -101,4 +109,3 @@ messageConfiguration:
   maxIdHeaderSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true
-

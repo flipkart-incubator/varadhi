@@ -12,7 +12,7 @@ import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
