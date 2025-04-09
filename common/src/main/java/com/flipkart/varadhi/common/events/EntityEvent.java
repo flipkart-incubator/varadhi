@@ -42,10 +42,10 @@ public record EntityEvent<T>(
      * Marks this event as processed by executing the committer callback if present.
      * This method should be called after the event has been successfully processed
      * by all relevant components in the system.
-     *
-     * @throws NullPointerException if the committer is null
      */
     public void markAsProcessed() {
-        commiter.run();
+        if (commiter != null) {
+            commiter.run();
+        }
     }
 }

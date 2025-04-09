@@ -6,29 +6,32 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
+/**
+ * Configuration for the EventProcessor component.
+ * <p>
+ * This class provides configuration parameters for controlling the behavior of the
+ * EventProcessor, including timeouts, retry policies, and thread naming.
+ * <p>
+ * It uses the builder pattern for easy construction and provides sensible defaults
+ * for all parameters.
+ */
 @Data
 @Builder
 @Slf4j
 public class EventProcessorConfig {
 
-    private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(100);
-    private static final Duration DEFAULT_MAX_RETRY_DELAY = Duration.ofSeconds(30);
+    // Default timeout values
     private static final Duration DEFAULT_CLUSTER_MEMBER_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(100);
     private static final int DEFAULT_MAX_BACKOFF_ATTEMPTS = 10;
     private static final long DEFAULT_MAX_BACKOFF_MS = 30000; // 30 seconds
     private static final long DEFAULT_EVENT_READY_CHECK_MS = 500; // 0.5 second
     private static final long DEFAULT_THREAD_JOIN_TIMEOUT_PRIMARY_MS = 5000; // 5 seconds
     private static final long DEFAULT_THREAD_JOIN_TIMEOUT_WORKER_MS = 1000; // 1 second
 
-    private static final String DEFAULT_EVENT_MANAGER_THREAD_NAME = "event-manager";
+    // Default thread names
     private static final String DEFAULT_EVENT_COMMITTER_THREAD_NAME = "event-committer";
     private static final String DEFAULT_NODE_PROCESSOR_THREAD_PREFIX = "node-processor-";
-
-    private final Duration shutdownTimeout;
-    private final Duration initialRetryDelay;
-    private final Duration maxRetryDelay;
-    private final String eventManagerThreadName;
 
     private final Duration clusterMemberTimeout;
     private final Duration retryDelay;
@@ -40,16 +43,13 @@ public class EventProcessorConfig {
     private final String eventCommitterThreadName;
     private final String nodeProcessorThreadPrefix;
 
-    private final double minJitterFactor;
-    private final double maxJitterFactor;
-
+    /**
+     * Creates a new EventProcessorConfig with default values.
+     *
+     * @return a new EventProcessorConfig with default values
+     */
     public static EventProcessorConfig getDefault() {
         return EventProcessorConfig.builder()
-                                   .shutdownTimeout(DEFAULT_SHUTDOWN_TIMEOUT)
-                                   .initialRetryDelay(DEFAULT_INITIAL_RETRY_DELAY)
-                                   .maxRetryDelay(DEFAULT_MAX_RETRY_DELAY)
-                                   .eventManagerThreadName(DEFAULT_EVENT_MANAGER_THREAD_NAME)
-
                                    .clusterMemberTimeout(DEFAULT_CLUSTER_MEMBER_TIMEOUT)
                                    .retryDelay(DEFAULT_INITIAL_RETRY_DELAY)
                                    .maxBackoffAttempts(DEFAULT_MAX_BACKOFF_ATTEMPTS)
@@ -59,34 +59,33 @@ public class EventProcessorConfig {
                                    .threadJoinTimeoutWorkerMs(DEFAULT_THREAD_JOIN_TIMEOUT_WORKER_MS)
                                    .eventCommitterThreadName(DEFAULT_EVENT_COMMITTER_THREAD_NAME)
                                    .nodeProcessorThreadPrefix(DEFAULT_NODE_PROCESSOR_THREAD_PREFIX)
-
-                                   .minJitterFactor(0.8)
-                                   .maxJitterFactor(1.2)
                                    .build();
     }
 
+    /**
+     * Gets the retry delay in milliseconds.
+     *
+     * @return the retry delay in milliseconds
+     */
     public long getRetryDelayMs() {
         return retryDelay.toMillis();
     }
 
+    /**
+     * Gets the cluster member timeout in milliseconds.
+     *
+     * @return the cluster member timeout in milliseconds
+     */
     public long getClusterMemberTimeoutMs() {
         return clusterMemberTimeout.toMillis();
     }
 
-    public long getShutdownTimeoutSeconds() {
-        return shutdownTimeout.getSeconds();
-    }
-
-    public long calculateRetryDelayMs(int retryCount) {
-        long baseDelay = Math.min(
-            initialRetryDelay.toMillis() * (1L << Math.min(retryCount, maxBackoffAttempts)),
-            maxRetryDelay.toMillis()
-        );
-
-        double jitter = minJitterFactor + Math.random() * (maxJitterFactor - minJitterFactor);
-        return (long)(baseDelay * jitter);
-    }
-
+    /**
+     * Generates a thread name for a node processor based on the hostname.
+     *
+     * @param hostname the hostname of the node
+     * @return the thread name for the node processor
+     */
     public String getNodeProcessorThreadName(String hostname) {
         return nodeProcessorThreadPrefix + hostname;
     }
