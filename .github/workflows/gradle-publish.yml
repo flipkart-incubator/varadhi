@@ -11,7 +11,7 @@ on: workflow_dispatch
 
 jobs:
   build:
-
+    environment: jardeployment
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,7 +39,6 @@ jobs:
     # the publishing section of your build.gradle
     - name: Publish to Clojars repository
       run: ./gradlew publish
-      environment: jardeployment
       env:
         CLOJARS_USERNAME: flipkartoss
         CLOJARS_PASSWORD: ${{ secrets.DEPLOY_TOKEN }}
