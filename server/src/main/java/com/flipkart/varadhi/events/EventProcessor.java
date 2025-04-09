@@ -265,21 +265,22 @@ public final class EventProcessor implements EntityEventListener {
             log.debug("Processing event {} for node {} (attempt {})", event.resourceName(), nodeId, attempts);
 
             ClusterMessage message = ClusterMessage.of(event);
-            ResponseMessage response = messageExchange.request(
-                    "resource-events",
-                    "process-event",
-                    message
-            ).orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS).get();
+            ResponseMessage response = messageExchange.request("resource-events", "process-event", message)
+                                                      .orTimeout(
+                                                          eventProcessorConfig.getClusterMemberTimeoutMs(),
+                                                          TimeUnit.MILLISECONDS
+                                                      )
+                                                      .get();
 
             if (response.getException() != null) {
                 throw response.getException();
             }
 
             log.debug(
-                    "Successfully processed event {} for node {} on attempt {}",
-                    event.resourceName(),
-                    nodeId,
-                    attempts
+                "Successfully processed event {} for node {} on attempt {}",
+                event.resourceName(),
+                nodeId,
+                attempts
             );
             return true;
         } catch (InterruptedException e) {
@@ -288,8 +289,7 @@ public final class EventProcessor implements EntityEventListener {
             return false;
         } catch (Exception e) {
             if (shouldContinue()) {
-                log.debug("Error processing event {} for node {}: {}",
-                        event.resourceName(), nodeId, e.getMessage());
+                log.debug("Error processing event {} for node {}: {}", event.resourceName(), nodeId, e.getMessage());
             }
             return false;
         }
@@ -308,11 +308,11 @@ public final class EventProcessor implements EntityEventListener {
         Duration backoff = calculateBackoffDuration(attempts);
 
         log.warn(
-                "Failed to process event {} for node {} (attempt {}), retrying in {} ms",
-                event.resourceName(),
-                nodeId,
-                attempts,
-                backoff.toMillis()
+            "Failed to process event {} for node {} (attempt {}), retrying in {} ms",
+            event.resourceName(),
+            nodeId,
+            attempts,
+            backoff.toMillis()
         );
 
         Thread.sleep(backoff);
@@ -327,11 +327,11 @@ public final class EventProcessor implements EntityEventListener {
      */
     private Duration calculateBackoffDuration(int attempt) {
         long delayMs = Math.min(
-                eventProcessorConfig.getRetryDelayMs() * (long)Math.pow(
-                        2,
-                        Math.min(eventProcessorConfig.getMaxBackoffAttempts(), attempt - 1)
-                ),
-                eventProcessorConfig.getMaxBackoffMs()
+            eventProcessorConfig.getRetryDelayMs() * (long)Math.pow(
+                2,
+                Math.min(eventProcessorConfig.getMaxBackoffAttempts(), attempt - 1)
+            ),
+            eventProcessorConfig.getMaxBackoffMs()
         );
         return Duration.ofMillis(delayMs);
     }
@@ -385,16 +385,18 @@ public final class EventProcessor implements EntityEventListener {
             boolean signaled = eventWrapper.awaitReady(eventProcessorConfig.getEventReadyCheckMs());
 
             if (!signaled && !eventWrapper.isCompleteForAllNodes() && !isShutdown.get()) {
-                log.trace("Waiting for event {} to complete: {}/{} nodes done",
-                        eventWrapper.event.resourceName(),
-                        eventWrapper.getCompletedNodeCount(),
-                        eventWrapper.getTotalNodeCount());
+                log.trace(
+                    "Waiting for event {} to complete: {}/{} nodes done",
+                    eventWrapper.event.resourceName(),
+                    eventWrapper.getCompletedNodeCount(),
+                    eventWrapper.getTotalNodeCount()
+                );
             }
         }
 
         if (isShutdown.get()) {
             eventWrapper.completeFuture.completeExceptionally(
-                    new EventProcessingException("Processing interrupted due to shutdown")
+                new EventProcessingException("Processing interrupted due to shutdown")
             );
             return;
         }
@@ -421,10 +423,10 @@ public final class EventProcessor implements EntityEventListener {
     private void handleRemainingEventsOnShutdown() {
         log.info("Event committer thread is shutting down");
 
-        inFlightEvents.forEach(wrapper ->
-                wrapper.completeFuture.completeExceptionally(
-                        new EventProcessingException("EventProcessor is shutting down")
-                )
+        inFlightEvents.forEach(
+            wrapper -> wrapper.completeFuture.completeExceptionally(
+                new EventProcessingException("EventProcessor is shutting down")
+            )
         );
 
         inFlightEvents.clear();

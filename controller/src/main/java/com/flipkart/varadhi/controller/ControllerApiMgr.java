@@ -1,10 +1,5 @@
 package com.flipkart.varadhi.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
@@ -19,9 +14,20 @@ import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.entities.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.cluster.AssignmentState;
+import com.flipkart.varadhi.entities.cluster.ConsumerState;
+import com.flipkart.varadhi.entities.cluster.OrderedOperation;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
