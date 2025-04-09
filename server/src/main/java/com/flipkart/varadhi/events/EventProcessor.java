@@ -1,11 +1,5 @@
 package com.flipkart.varadhi.events;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.flipkart.varadhi.cluster.MembershipListener;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
@@ -22,6 +16,30 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * The EventProcessor is responsible for distributing entity events to all nodes in the cluster
+ * and tracking their completion status. It uses virtual threads for improved performance and
+ * scalability in handling concurrent event processing across multiple nodes.
+ * <p>
+ * This class implements a distributed event processing system where:
+ * <ol>
+ *     <li>Events are distributed to all active cluster nodes</li>
+ *     <li>Each node processes events in its own virtual thread</li>
+ *     <li>A committer thread tracks completion status and completes futures when all nodes have processed an event</li>
+ *     <li>The system handles node joins/leaves dynamically</li>
+ * </ol>
+ */
 @Slf4j
 public final class EventProcessor implements EntityEventListener {
 
@@ -35,6 +53,15 @@ public final class EventProcessor implements EntityEventListener {
     private final BlockingQueue<EventWrapper> inFlightEvents;
     private Thread committerThread;
 
+    /**
+     * Creates and initializes a new EventProcessor.
+     *
+     * @param messageExchange      The message exchange for inter-node communication
+     * @param clusterManager       The cluster manager to track node membership
+     * @param metaStore            The metastore to register for entity events
+     * @param eventProcessorConfig Configuration for the event processor
+     * @return A future that completes when the EventProcessor is fully initialized
+     */
     public static Future<EventProcessor> create(
         MessageExchange messageExchange,
         VaradhiClusterManager clusterManager,
@@ -70,11 +97,24 @@ public final class EventProcessor implements EntityEventListener {
         return promise.future();
     }
 
+    /**
+     * Initializes the EventProcessor with the provided MetaStore.
+     * Registers a listener for entity events and sets the shutdown flag to false.
+     *
+     * @param metaStore The metastore to register for entity events
+     */
     private void initialize(MetaStore metaStore) {
         isShutdown.set(false);
         metaStore.registerEventListener(new DefaultMetaStoreChangeListener(metaStore, this));
     }
 
+    /**
+     * Creates a new EventProcessor instance with the given message exchange and configuration.
+     * This constructor initializes the internal data structures but does not start any threads.
+     *
+     * @param messageExchange      The message exchange for inter-node communication
+     * @param eventProcessorConfig Configuration for the event processor, or default if null
+     */
     private EventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
         this.messageExchange = messageExchange;
         this.eventProcessorConfig = eventProcessorConfig != null ?
@@ -86,7 +126,18 @@ public final class EventProcessor implements EntityEventListener {
         this.inFlightEvents = new LinkedBlockingQueue<>();
     }
 
+    /**
+     * Initializes event queues and virtual threads for all initial cluster members.
+     * Each member gets its own event queue and virtual thread for processing events.
+     *
+     * @param members List of initial cluster members
+     */
     private void initializeEventQueuesAndThreads(List<MemberInfo> members) {
+        if (members.isEmpty()) {
+            log.info("No initial members to initialize");
+            return;
+        }
+
         for (MemberInfo member : members) {
             String hostname = member.hostname();
 
@@ -102,213 +153,290 @@ public final class EventProcessor implements EntityEventListener {
 
             startNodeVirtualThread(member, queue);
         }
-        log.info("Initialized node queues and virtual threads, total active nodes: {}", nodeEventQueues.size());
+
+        log.info("Initialized event queues and virtual threads, total active nodes: {}", nodeEventQueues.size());
     }
 
+    /**
+     * Creates and starts a virtual thread for processing events for a specific node.
+     * The thread is named according to the configuration and the node's hostname.
+     *
+     * @param member The member information for the node
+     * @param queue  The event queue for the node
+     */
     private void startNodeVirtualThread(MemberInfo member, BlockingQueue<EventWrapper> queue) {
         String hostname = member.hostname();
         Thread virtualThread = Thread.ofVirtual()
                                      .name(eventProcessorConfig.getNodeProcessorThreadName(hostname))
-                                     .start(() -> {
-                                         log.info("Started virtual thread for node: {}", hostname);
-
-                                         while (!isShutdown.get()) {
-                                             try {
-                                                 EventWrapper eventWrapper = queue.take();
-                                                 log.debug(
-                                                     "Processing {} event for node {}",
-                                                     eventWrapper.event.resourceName(),
-                                                     hostname
-                                                 );
-
-                                                 processEventWithRetry(eventWrapper, member);
-
-                                                 eventWrapper.markNodeComplete(hostname);
-                                                 log.debug(
-                                                     "Node {} completed processing {} event",
-                                                     hostname,
-                                                     eventWrapper.event.resourceName()
-                                                 );
-                                             } catch (InterruptedException e) {
-                                                 log.info("Virtual thread for node {} was interrupted", hostname);
-                                                 Thread.currentThread().interrupt();
-                                                 break;
-                                             } catch (Exception e) {
-                                                 log.error("Error in virtual thread for node {}", hostname, e);
-                                             }
-                                         }
-                                         log.info("Virtual thread for node {} is shutting down", hostname);
-                                     });
+                                     .start(() -> processEventsForNode(member, queue, hostname));
 
         nodeVirtualThreads.put(hostname, virtualThread);
     }
 
+    /**
+     * Main processing loop for a node's virtual thread.
+     * Takes events from the node's queue, processes them, and marks them as complete.
+     * Continues until shutdown is requested or the thread is interrupted.
+     *
+     * @param member   The member information for the node
+     * @param queue    The event queue for the node
+     * @param hostname The hostname of the node
+     */
+    private void processEventsForNode(MemberInfo member, BlockingQueue<EventWrapper> queue, String hostname) {
+        log.info("Started virtual thread for node: {}", hostname);
+
+        try {
+            while (!isShutdown.get()) {
+                try {
+                    EventWrapper eventWrapper = queue.take();
+                    log.debug("Processing {} event for node {}", eventWrapper.event.resourceName(), hostname);
+
+                    processEventWithRetry(eventWrapper, member);
+
+                    eventWrapper.markNodeComplete(hostname);
+                    log.debug("Node {} completed processing {} event", hostname, eventWrapper.event.resourceName());
+                } catch (InterruptedException e) {
+                    log.info("Virtual thread for node {} was interrupted", hostname);
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    log.error("Error in virtual thread for node {}", hostname, e);
+                }
+            }
+        } finally {
+            log.info("Virtual thread for node {} is shutting down", hostname);
+        }
+    }
+
+    /**
+     * Processes an event for a node with retry logic.
+     * Attempts to process the event until successful or until shutdown/interruption.
+     * Uses exponential backoff between retry attempts.
+     *
+     * @param eventWrapper The event wrapper containing the event to process
+     * @param member       The member information for the node
+     */
     private void processEventWithRetry(EventWrapper eventWrapper, MemberInfo member) {
         EntityEvent<?> event = eventWrapper.event;
         boolean success = false;
         int attempts = 0;
         final String nodeId = member.hostname();
 
-        while (!success && !isShutdown.get() && !Thread.currentThread().isInterrupted()) {
+        while (shouldContinue() && !success) {
             attempts++;
+            success = attemptProcessEvent(event, nodeId, attempts);
 
-            try {
-                log.debug("Processing event {} for node {} (attempt {})", event.resourceName(), nodeId, attempts);
-
-                ClusterMessage message = ClusterMessage.of(event);
-                CompletableFuture<ResponseMessage> future = messageExchange.request(
-                    "resource-events",
-                    "process-event",
-                    message
-                ).orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS);
-
-                ResponseMessage response = future.get();
-                if (response.getException() != null) {
-                    throw response.getException();
-                }
-
-                success = true;
-                log.debug(
-                    "Successfully processed event {} for node {} on attempt {}",
-                    event.resourceName(),
-                    member.hostname(),
-                    attempts
-                );
-            } catch (Exception e) {
-                long backoffMs = Math.min(
-                    eventProcessorConfig.getRetryDelayMs() * (long)Math.pow(
-                        2,
-                        Math.min(eventProcessorConfig.getMaxBackoffAttempts(), attempts - 1)
-                    ),
-                    eventProcessorConfig.getMaxBackoffMs()
-                );
-
-                log.warn(
-                    "Failed to process event {} for node {} (attempt {}), retrying in {} ms: {}",
-                    event.resourceName(),
-                    nodeId,
-                    attempts,
-                    backoffMs,
-                    e.getMessage()
-                );
-
+            if (!success && shouldContinue()) {
                 try {
-                    CountDownLatch latch = new CountDownLatch(1);
-                    boolean completed = latch.await(backoffMs, TimeUnit.MILLISECONDS);
-                    if (!completed) {
-                        log.debug(
-                            "Retry delay of {} ms elapsed for event {}, continuing retry",
-                            backoffMs,
-                            event.resourceName()
-                        );
-                    }
-
-                    if (Thread.currentThread().isInterrupted()) {
-                        handleInterruption(event.resourceName(), nodeId);
-                    }
+                    performBackoffAndSleep(event, nodeId, attempts);
                 } catch (InterruptedException ie) {
-                    handleInterruption(event.resourceName(), nodeId);
+                    Thread.currentThread().interrupt();
+                    log.info("Retry interrupted for event {} on node {}", event.resourceName(), nodeId);
+                    break;
                 }
             }
         }
 
-        if (!success && !isShutdown.get() && !Thread.currentThread().isInterrupted()) {
+        if (!success && shouldContinue()) {
             log.warn("Event {} processing for node {} exited retry loop without success", event.resourceName(), nodeId);
         }
     }
 
-    private void handleInterruption(String resourceName, String nodeId) {
-        log.info("Retry interrupted for event {} on node {}", resourceName, nodeId);
-        Thread.currentThread().interrupt();
+    /**
+     * Checks if processing should continue based on shutdown state and thread interruption status.
+     *
+     * @return true if processing should continue, false otherwise
+     */
+    private boolean shouldContinue() {
+        return !isShutdown.get() && !Thread.currentThread().isInterrupted();
     }
 
+    /**
+     * Attempts to process an event for a node.
+     * Sends a request to the node and handles the response.
+     *
+     * @param event    The event to process
+     * @param nodeId   The ID of the node
+     * @param attempts The current attempt number
+     * @return true if processing was successful, false otherwise
+     */
+    private boolean attemptProcessEvent(EntityEvent<?> event, String nodeId, int attempts) {
+        try {
+            log.debug("Processing event {} for node {} (attempt {})", event.resourceName(), nodeId, attempts);
+
+            ClusterMessage message = ClusterMessage.of(event);
+            ResponseMessage response = messageExchange.request(
+                    "resource-events",
+                    "process-event",
+                    message
+            ).orTimeout(eventProcessorConfig.getClusterMemberTimeoutMs(), TimeUnit.MILLISECONDS).get();
+
+            if (response.getException() != null) {
+                throw response.getException();
+            }
+
+            log.debug(
+                    "Successfully processed event {} for node {} on attempt {}",
+                    event.resourceName(),
+                    nodeId,
+                    attempts
+            );
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.info("Event processing interrupted for {} on node {}", event.resourceName(), nodeId);
+            return false;
+        } catch (Exception e) {
+            if (shouldContinue()) {
+                log.debug("Error processing event {} for node {}: {}",
+                        event.resourceName(), nodeId, e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Performs backoff before retrying event processing.
+     * Uses exponential backoff with a maximum delay.
+     *
+     * @param event    The event being processed
+     * @param nodeId   The ID of the node
+     * @param attempts The current attempt number
+     * @throws InterruptedException if the thread is interrupted while sleeping
+     */
+    private void performBackoffAndSleep(EntityEvent<?> event, String nodeId, int attempts) throws InterruptedException {
+        Duration backoff = calculateBackoffDuration(attempts);
+
+        log.warn(
+                "Failed to process event {} for node {} (attempt {}), retrying in {} ms",
+                event.resourceName(),
+                nodeId,
+                attempts,
+                backoff.toMillis()
+        );
+
+        Thread.sleep(backoff);
+    }
+
+    /**
+     * Calculates the backoff duration for retry attempts using exponential backoff.
+     * The duration increases exponentially with each attempt, up to a maximum value.
+     *
+     * @param attempt The current attempt number
+     * @return The calculated backoff duration
+     */
+    private Duration calculateBackoffDuration(int attempt) {
+        long delayMs = Math.min(
+                eventProcessorConfig.getRetryDelayMs() * (long)Math.pow(
+                        2,
+                        Math.min(eventProcessorConfig.getMaxBackoffAttempts(), attempt - 1)
+                ),
+                eventProcessorConfig.getMaxBackoffMs()
+        );
+        return Duration.ofMillis(delayMs);
+    }
+
+    /**
+     * Creates and starts the committer thread as a virtual thread.
+     * The committer thread is responsible for tracking event completion across all nodes
+     * and completing the associated futures.
+     */
     private void startCommitterThread() {
-        committerThread = Thread.ofPlatform()
+        committerThread = Thread.ofVirtual()
                                 .name(eventProcessorConfig.getEventCommitterThreadName())
-                                .daemon(true)
-                                .priority(Thread.NORM_PRIORITY)
-                                .start(() -> {
-                                    log.info("Started event committer thread");
-
-                                    while (!isShutdown.get()) {
-                                        try {
-                                            processNextCompletableEvent();
-                                        } catch (InterruptedException e) {
-                                            log.info("Committer thread was interrupted");
-                                            Thread.currentThread().interrupt();
-                                            break;
-                                        } catch (Exception e) {
-                                            log.error("Error in committer thread", e);
-                                        }
-                                    }
-
-                                    handleRemainingEventsOnShutdown();
-                                });
+                                .start(this::runCommitterLoop);
     }
 
+    /**
+     * Main processing loop for the committer thread.
+     * Processes events that are ready for completion and handles exceptions.
+     * Continues until shutdown is requested or the thread is interrupted.
+     */
+    private void runCommitterLoop() {
+        log.info("Started event committer thread");
+
+        try {
+            while (!isShutdown.get()) {
+                try {
+                    processNextCompletableEvent();
+                } catch (InterruptedException e) {
+                    log.info("Committer thread was interrupted");
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    log.error("Error in committer thread", e);
+                }
+            }
+        } finally {
+            handleRemainingEventsOnShutdown();
+        }
+    }
+
+    /**
+     * Processes the next completable event from the queue.
+     * Waits for the event to be ready (completed by all nodes) before completing its future.
+     *
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
     private void processNextCompletableEvent() throws InterruptedException {
         EventWrapper eventWrapper = inFlightEvents.take();
 
-        synchronized (eventWrapper) {
-            while (!isEventReady(eventWrapper) && !isShutdown.get()) {
-                eventWrapper.wait(eventProcessorConfig.getEventReadyCheckMs());
+        while (!isEventReady(eventWrapper) && !isShutdown.get()) {
+            boolean signaled = eventWrapper.awaitReady(eventProcessorConfig.getEventReadyCheckMs());
+
+            if (!signaled && !eventWrapper.isCompleteForAllNodes() && !isShutdown.get()) {
+                log.trace("Waiting for event {} to complete: {}/{} nodes done",
+                        eventWrapper.event.resourceName(),
+                        eventWrapper.getCompletedNodeCount(),
+                        eventWrapper.getTotalNodeCount());
             }
         }
 
-        processEventIfAvailable(eventWrapper);
-    }
-
-    private boolean isEventReady(EventWrapper eventWrapper) {
-        return eventWrapper.isCompleteForAllNodes() || eventWrapper.hasNodesChanged();
-    }
-
-    private void processEventIfAvailable(EventWrapper eventWrapper) {
-        boolean removed = inFlightEvents.remove(eventWrapper);
-
-        if (!removed) {
-            log.warn(
-                "Event {} was not found in the queue, may have been processed by another thread",
-                eventWrapper.event.resourceName()
+        if (isShutdown.get()) {
+            eventWrapper.completeFuture.completeExceptionally(
+                    new EventProcessingException("Processing interrupted due to shutdown")
             );
             return;
         }
 
-        if (eventWrapper.hasNodesChanged()) {
-            handleNodesChanged(eventWrapper);
-        } else if (eventWrapper.isCompleteForAllNodes()) {
-            handleEventCompletion(eventWrapper);
-        } else {
-            handleShutdownInterruption(eventWrapper);
-        }
-    }
-
-    private void handleNodesChanged(EventWrapper eventWrapper) {
-        log.info("Nodes changed during processing of event {}, reprocessing", eventWrapper.event.resourceName());
-        enqueueEventToAllNodes(eventWrapper.event, eventWrapper.completeFuture);
-    }
-
-    private void handleEventCompletion(EventWrapper eventWrapper) {
         log.debug("Event {} processed by all nodes, completing", eventWrapper.event.resourceName());
         eventWrapper.completeFuture.complete(null);
     }
 
-    private void handleShutdownInterruption(EventWrapper eventWrapper) {
-        eventWrapper.completeFuture.completeExceptionally(
-            new EventProcessingException("Processing interrupted due to shutdown")
-        );
+    /**
+     * Checks if an event is ready for completion.
+     * An event is ready when it has been processed by all nodes.
+     *
+     * @param eventWrapper The event wrapper to check
+     * @return true if the event is ready for completion, false otherwise
+     */
+    private boolean isEventReady(EventWrapper eventWrapper) {
+        return eventWrapper.isCompleteForAllNodes();
     }
 
+    /**
+     * Handles remaining events during shutdown.
+     * Completes all in-flight events with exceptions to indicate shutdown.
+     */
     private void handleRemainingEventsOnShutdown() {
         log.info("Event committer thread is shutting down");
 
-        EventWrapper remaining;
-        while ((remaining = inFlightEvents.poll()) != null) {
-            remaining.completeFuture.completeExceptionally(
-                new EventProcessingException("EventProcessor is shutting down")
-            );
-        }
+        inFlightEvents.forEach(wrapper ->
+                wrapper.completeFuture.completeExceptionally(
+                        new EventProcessingException("EventProcessor is shutting down")
+                )
+        );
+
+        inFlightEvents.clear();
     }
 
+    /**
+     * Sets up a membership listener to handle node joins and leaves.
+     * When a node joins, a new event queue and virtual thread are created for it.
+     * When a node leaves, its events are marked as complete and its thread is interrupted.
+     *
+     * @param clusterManager The cluster manager to add the membership listener to
+     */
     private void setupMembershipListener(VaradhiClusterManager clusterManager) {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
@@ -320,8 +448,6 @@ public final class EventProcessor implements EntityEventListener {
                 nodeEventQueues.put(hostname, queue);
 
                 startNodeVirtualThread(memberInfo, queue);
-
-                inFlightEvents.forEach(EventWrapper::markNodesChanged);
 
                 return CompletableFuture.completedFuture(null);
             }
@@ -343,13 +469,18 @@ public final class EventProcessor implements EntityEventListener {
 
                 nodeEventQueues.remove(hostname);
 
-                inFlightEvents.forEach(EventWrapper::markNodesChanged);
-
                 return CompletableFuture.completedFuture(null);
             }
         });
     }
 
+    /**
+     * Handles entity change events by distributing them to all nodes.
+     * Creates a CompletableFuture that will be completed when all nodes have processed the event.
+     *
+     * @param event The entity event to process
+     * @throws IllegalStateException if the EventProcessor has been shut down
+     */
     @Override
     public void onChange(EntityEvent<?> event) {
         if (isShutdown.get()) {
@@ -359,6 +490,14 @@ public final class EventProcessor implements EntityEventListener {
         enqueueEventToAllNodes(event, completeFuture);
     }
 
+    /**
+     * Enqueues an event to all active nodes for processing.
+     * Creates an EventWrapper to track the event's processing status across all nodes.
+     * If no nodes are available, completes the future exceptionally.
+     *
+     * @param event          The entity event to enqueue
+     * @param completeFuture The future to complete when processing is done
+     */
     private void enqueueEventToAllNodes(EntityEvent<?> event, CompletableFuture<Void> completeFuture) {
         synchronized (nodeEventQueues) {
             Set<String> currentNodes = Set.copyOf(nodeEventQueues.keySet());
@@ -374,18 +513,12 @@ public final class EventProcessor implements EntityEventListener {
 
             inFlightEvents.add(eventWrapper);
 
-            boolean nodesChanged = !currentNodes.equals(Set.copyOf(nodeEventQueues.keySet()));
-            if (nodesChanged) {
-                eventWrapper.markNodesChanged();
-                return;
-            }
-
             for (String hostname : currentNodes) {
                 BlockingQueue<EventWrapper> nodeQueue = nodeEventQueues.get(hostname);
                 if (nodeQueue != null) {
                     nodeQueue.add(eventWrapper);
                 } else {
-                    eventWrapper.markNodesChanged();
+                    eventWrapper.markNodeComplete(hostname);
                 }
             }
 
@@ -393,33 +526,36 @@ public final class EventProcessor implements EntityEventListener {
         }
     }
 
+    /**
+     * Shuts down the EventProcessor and all its threads.
+     * Interrupts all threads, waits for them to complete, and clears all queues.
+     * This method is idempotent and can be called multiple times safely.
+     */
     public void close() {
         if (isShutdown.compareAndSet(false, true)) {
             log.info("Shutting down EventProcessor");
 
             try {
                 if (committerThread != null) {
+                    committerThread.interrupt();
                     committerThread.join(eventProcessorConfig.getThreadJoinTimeoutPrimaryMs());
                 }
 
-                if (committerThread != null && committerThread.isAlive()) {
-                    committerThread.interrupt();
-                }
-
-                for (Map.Entry<String, Thread> entry : nodeVirtualThreads.entrySet()) {
-                    String hostname = entry.getKey();
-                    Thread thread = entry.getValue();
+                nodeVirtualThreads.forEach((hostname, thread) -> {
                     log.debug("Interrupting virtual thread for node: {}", hostname);
                     thread.interrupt();
+                });
+
+                for (Thread thread : nodeVirtualThreads.values()) {
                     thread.join(eventProcessorConfig.getThreadJoinTimeoutWorkerMs());
                 }
+
+                nodeEventQueues.clear();
+                nodeVirtualThreads.clear();
             } catch (InterruptedException e) {
                 log.warn("Interrupted while waiting for threads to shut down", e);
                 Thread.currentThread().interrupt();
             }
-
-            nodeEventQueues.clear();
-            nodeVirtualThreads.clear();
 
             log.info("EventProcessor shutdown complete");
         }
