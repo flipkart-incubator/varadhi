@@ -1,18 +1,33 @@
 package com.flipkart.varadhi.controller;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
-import com.flipkart.varadhi.controller.impl.opexecutors.*;
-import com.flipkart.varadhi.core.cluster.entities.*;
-import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.entities.UnsidelineRequest;
-import com.flipkart.varadhi.entities.cluster.*;
-import com.flipkart.varadhi.core.cluster.*;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
+import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
+import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
+import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
+import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.ControllerConsumerApi;
+import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.entities.ShardAssignments;
+import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.cluster.AssignmentState;
+import com.flipkart.varadhi.entities.cluster.ConsumerState;
+import com.flipkart.varadhi.entities.cluster.OrderedOperation;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
@@ -45,44 +60,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
         String subId = subscription.getName();
         return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
                                 .thenCompose(assignments -> {
-                                    List<CompletableFuture<Optional<ConsumerState>>> shardFutures = assignments.stream()
-                                                                                                               .map(
-                                                                                                                   a -> {
-                                                                                                                       ConsumerApi consumer =
-                                                                                                                           consumerClientFactory.getInstance(
-                                                                                                                               a.getConsumerId()
-                                                                                                                           );
-                                                                                                                       return consumer.getConsumerState(
-                                                                                                                           subId,
-                                                                                                                           a.getShardId()
-                                                                                                                       )
-                                                                                                                                      .handle(
-                                                                                                                                          (
-                                                                                                                                              state,
-                                                                                                                                              t
-                                                                                                                                          ) -> {
-                                                                                                                                              if (t
-                                                                                                                                                  != null) {
-                                                                                                                                                  return Optional.<ConsumerState>empty();
-                                                                                                                                              }
-                                                                                                                                              return state;
-                                                                                                                                          }
-                                                                                                                                      );
-                                                                                                                   }
-                                                                                                               )
-                                                                                                               .toList();
-
-                                    return CompletableFuture.allOf(shardFutures.toArray(CompletableFuture[]::new))
-                                                            .thenApply(v -> {
-                                                                List<Optional<ConsumerState>> states =
-                                                                    new ArrayList<>();
-                                                                shardFutures.forEach(sf -> states.add(sf.join()));
-                                                                return getSubscriptionStatusFromShardStatus(
-                                                                    subscription,
-                                                                    assignments,
-                                                                    states
-                                                                );
-                                                            });
+                                    return getSubscriptionShardsState(subscription, assignments, subId);
                                 })
                                 .exceptionally(t -> {
                                     // If not temporary, then alternate needs to be provided to allow recovery from this.
@@ -93,6 +71,27 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                                         )
                                     );
                                 });
+    }
+
+    private CompletableFuture<SubscriptionState> getSubscriptionShardsState(
+        VaradhiSubscription subscription,
+        List<Assignment> assignments,
+        String subId
+    ) {
+        var shardFutures = assignments.stream().map(a -> {
+            var consumer = consumerClientFactory.getInstance(a.getConsumerId());
+            return consumer.getConsumerState(subId, a.getShardId()).handle((state, t) -> {
+                if (t != null) {
+                    return Optional.<ConsumerState>empty();
+                }
+                return state;
+            });
+        }).toList();
+        return CompletableFuture.allOf(shardFutures.toArray(CompletableFuture[]::new)).thenApply(v -> {
+            List<Optional<ConsumerState>> states = new ArrayList<>();
+            shardFutures.forEach(sf -> states.add(sf.join()));
+            return getSubscriptionStatusFromShardStatus(subscription, assignments, states);
+        });
     }
 
     private SubscriptionState getSubscriptionStatusFromShardStatus(

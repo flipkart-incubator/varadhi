@@ -1,11 +1,13 @@
 package com.flipkart.varadhi.db;
 
-import java.util.List;
-
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
@@ -14,7 +16,16 @@ import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.flipkart.varadhi.db.ZNode.*;
+import java.util.List;
+
+import static com.flipkart.varadhi.db.ZNode.EVENT;
+import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
+import static com.flipkart.varadhi.db.ZNode.ORG;
+import static com.flipkart.varadhi.db.ZNode.PROJECT;
+import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
+import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
+import static com.flipkart.varadhi.db.ZNode.TEAM;
+import static com.flipkart.varadhi.db.ZNode.TOPIC;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 /**
@@ -43,9 +54,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
      * <p>This constructor initializes the ZooKeeper-based metadata store and ensures
      * all required entity paths exist.
      *
-     * @param zkCurator the ZooKeeper curator framework instance, must not be null
-     * @throws IllegalArgumentException if zkCurator is null
-     * @throws MetaStoreException       if initialization fails or required paths cannot be created
+     * @throws MetaStoreException if initialization fails or required paths cannot be created
      */
     public VaradhiMetaStore(ZKMetaStore zkMetaStore) {
         this.zkMetaStore = zkMetaStore;
