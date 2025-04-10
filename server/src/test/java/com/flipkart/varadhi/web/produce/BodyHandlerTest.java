@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.web.produce;
 
-import com.flipkart.varadhi.Result;
+import java.util.concurrent.CompletableFuture;
+
+import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
@@ -12,11 +15,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletableFuture;
-
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.entities.StandardHeaders.FORWARDED_FOR;
-import static com.flipkart.varadhi.entities.StandardHeaders.MESSAGE_ID;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -46,8 +45,8 @@ public class BodyHandlerTest extends ProduceTestBase {
 
     @Test
     public void testProduceWithForBodySize() throws InterruptedException {
-        request.putHeader(MESSAGE_ID, messageId);
-        request.putHeader(FORWARDED_FOR, "host1, host2");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().msgId(), "host1, host2");
         payload = "0123456789".getBytes();
         String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);

@@ -1,54 +1,79 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.auth.AuthenticationOptions;
+import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.exceptions.VaradhiException;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.server.spi.authn.AuthenticationHandlerProvider;
+
+import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.server.spi.vo.URLDefinition;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
-import io.vertx.core.Future;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.AuthenticationHandler;
-import io.vertx.ext.web.handler.HttpException;
-import io.vertx.ext.web.handler.JWTAuthHandler;
-import io.vertx.ext.web.handler.SimpleAuthenticationHandler;
-import lombok.AllArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.util.Collections;
+import java.util.List;
 
-import static com.flipkart.varadhi.Constants.USER_ID_HEADER;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
+import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
+import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 
 public class AuthnHandler implements RouteConfigurator {
     private final AuthenticationHandlerWrapper authenticationHandler;
 
-    public AuthnHandler(Vertx vertx, AppConfiguration configuration) throws InvalidConfigException {
-        if (configuration.isAuthenticationEnabled()) {
-            // we do the wrapping to force vertx to consider this as USER handler and prevent imposing its own priority.
-            authenticationHandler = new AuthenticationHandlerWrapper(
-                switch (configuration.getAuthentication().getMechanism()) {
-                    case jwt -> createJWTHandler(
-                        vertx,
-                        configuration.getAuthentication().asConfig(AuthenticationOptions.JWTConfig.class)
-                    );
-                    case user_header -> createUserHeaderHandler();
-                }
+    public AuthnHandler(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry)
+        throws InvalidConfigException {
+
+        AuthenticationOptions authenticationConfig = configuration.getAuthenticationOptions();
+        AuthenticationHandlerProvider provider;
+
+        try {
+
+            if (authenticationConfig.getHandlerProviderClassName() == null || authenticationConfig
+                                                                                                  .getHandlerProviderClassName()
+                                                                                                  .isEmpty()) {
+                throw new InvalidConfigException(
+                    "AuthenticationHandlerProvider class name is missing or empty in configuration"
+                );
+            }
+
+            Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
+            if (!AuthenticationHandlerProvider.class.isAssignableFrom(providerClass)) {
+                throw new InvalidConfigException(
+                    "Provider class " + providerClass.getName()
+                                                 + " does not implement AuthenticationHandlerProvider interface"
+                );
+            }
+            provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
+
+
+        } catch (ClassNotFoundException e) {
+            throw new InvalidConfigException(
+                "Authentication handler provider class not found: " + authenticationConfig
+                                                                                          .getHandlerProviderClassName(),
+                e
             );
-        } else {
-            authenticationHandler = null;
+        } catch (Exception e) {
+            throw new InvalidConfigException("Failed to create authentication handler provider", e);
+        }
+
+        try {
+            authenticationHandler = new AuthenticationHandlerWrapper(
+                provider.provideHandler(vertx, JsonObject.mapFrom(authenticationConfig), Org::of, meterRegistry),
+                (authenticationConfig.getWhitelistedURLs() != null) ?
+                    authenticationConfig.getWhitelistedURLs() :
+                    Collections.EMPTY_LIST
+            );
+        } catch (Exception e) {
+            throw new InvalidConfigException("Failed to create authentication handler", e);
         }
     }
 
@@ -58,51 +83,49 @@ public class AuthnHandler implements RouteConfigurator {
         }
     }
 
-    JWTAuthHandler createJWTHandler(Vertx vertx, AuthenticationOptions.JWTConfig config) {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder().uri(new URI(config.getJwksUrl())).build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != HTTP_OK) {
-                throw new HttpException(response.statusCode(), response.body());
-            }
-
-            JsonArray jwkKeys = new JsonObject(response.body()).getJsonArray("keys");
-            if (null == jwkKeys) {
-                throw new VaradhiException(
-                    String.format("Invalid jwks url %s response. No jwk keys found.", config.getJwksUrl())
-                );
-            }
-
-            JWTAuthOptions jwtAuthOptions = new JWTAuthOptions();
-            for (int i = 0; i < jwkKeys.size(); ++i) {
-                jwtAuthOptions.addJwk(jwkKeys.getJsonObject(i));
-            }
-            jwtAuthOptions.setJWTOptions(config.getOptions());
-            JWTAuth provider = JWTAuth.create(vertx, jwtAuthOptions);
-            return JWTAuthHandler.create(provider);
-        } catch (Exception e) {
-            throw new VaradhiException("Failed to Initialise JWT Authentication handler.", e);
-        }
-    }
-
-    AuthenticationHandler createUserHeaderHandler() {
-        return SimpleAuthenticationHandler.create().authenticate(ctx -> {
-            String userName = ctx.request().getHeader(USER_ID_HEADER);
-            if (StringUtils.isBlank(userName)) {
-                return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "no user details present"));
-            }
-            return Future.succeededFuture(User.fromName(userName));
-        });
-    }
-
-    @AllArgsConstructor
     static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
         private final Handler<RoutingContext> wrappedHandler;
+        private final List<URLDefinition> whitelistedURLs;
+
+        public AuthenticationHandlerWrapper(
+            Handler<RoutingContext> wrappedHandler,
+            List<URLDefinition> whitelistedURLs
+        ) {
+            this.wrappedHandler = wrappedHandler;
+            this.whitelistedURLs = whitelistedURLs;
+        }
 
         @Override
         public void handle(RoutingContext ctx) {
-            wrappedHandler.handle(ctx);
+            if (anyMatch(this.whitelistedURLs, String.valueOf(ctx.request().method()), ctx.request().path())) {
+                ctx.next();
+            } else {
+                wrappedHandler.handle(ctx);
+                User user = ctx.user();
+
+                if (user != null && ctx.get(USER_CONTEXT) == null) {
+                    ctx.put(USER_CONTEXT, new UserContext() {
+                        @Override
+                        public String getSubject() {
+                            return user.subject();
+                        }
+
+                        @Override
+                        public boolean isExpired() {
+                            return user.expired();
+                        }
+                    });
+                }
+
+                if (ctx.get(USER_CONTEXT) == null) {
+                    ctx.fail(
+                        UNAUTHORIZED.code(),
+                        new UnAuthenticatedException(
+                            "Authentication failed: User context not found for path" + ctx.request().path()
+                        )
+                    );
+                }
+            }
         }
     }
 }

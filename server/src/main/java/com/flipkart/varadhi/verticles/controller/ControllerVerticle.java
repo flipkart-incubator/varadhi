@@ -1,5 +1,13 @@
 package com.flipkart.varadhi.verticles.controller;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.cluster.MembershipListener;
 import com.flipkart.varadhi.cluster.MessageExchange;
@@ -7,7 +15,6 @@ import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
-import com.flipkart.varadhi.controller.EventManager;
 import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
@@ -27,14 +34,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
-
 import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
 
 @Slf4j
@@ -43,7 +42,6 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
-    private EventManager eventManager;
     private EventProcessor eventProcessor;
 
     public ControllerVerticle(
@@ -82,19 +80,13 @@ public class ControllerVerticle extends AbstractVerticle {
                                                                  });
     }
 
-    private Future<Void> initializeEventSystem() {
-        try {
-            eventProcessor = new EventProcessor(
-                    clusterManager.getExchange(vertx),
-                    clusterManager,
-                    controllerConfig.getEventProcessorConfig()
-            );
-
-            eventManager = new EventManager(metaStoreProvider.getMetaStore(), eventProcessor);
-            return Future.succeededFuture();
-        } catch (Exception e) {
-            return Future.failedFuture(e);
-        }
+    private Future<EventProcessor> initializeEventSystem() {
+        return EventProcessor.create(
+            clusterManager.getExchange(vertx),
+            clusterManager,
+            metaStoreProvider.getMetaStore(),
+            controllerConfig.getEventProcessorConfig()
+        );
     }
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
@@ -213,7 +205,7 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     private void requeueInProgressOperation(ControllerApiMgr controllerApiMgr) {
-        List<SubscriptionOperation> pendingSubOps = getPendingSubOps(controllerApiMgr);
+        List<SubscriptionOperation> pendingSubOps = new java.util.ArrayList<>(getPendingSubOps(controllerApiMgr));
         pendingSubOps.sort(Comparator.comparing(SubscriptionOperation::getStartTime));
         log.info("Found {} inProgress operations.", pendingSubOps.size());
         pendingSubOps.forEach(subOp -> {
@@ -234,10 +226,6 @@ public class ControllerVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         try {
-            if (eventManager != null) {
-                eventManager.close();
-                eventManager = null;
-            }
             if (eventProcessor != null) {
                 eventProcessor.close();
                 eventProcessor = null;

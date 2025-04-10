@@ -9,5 +9,5 @@ public class ControllerConfig {
     private int retryIntervalInSeconds = 10;
     private int retryMinBackoffInSeconds = 10;
     private int retryMaxBackOffInSeconds = 60;
-    private final EventProcessorConfig eventProcessorConfig;
+    private EventProcessorConfig eventProcessorConfig;
 }

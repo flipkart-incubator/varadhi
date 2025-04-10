@@ -1,19 +1,18 @@
 package com.flipkart.varadhi.web.admin;
 
-import com.flipkart.varadhi.Constants;
+import java.util.Collections;
+import java.util.List;
+
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.Extensions;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
-import com.flipkart.varadhi.web.SpanProvider;
-import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
@@ -31,17 +30,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
-import java.util.List;
-
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 class TopicHandlersTest extends WebTestBase {

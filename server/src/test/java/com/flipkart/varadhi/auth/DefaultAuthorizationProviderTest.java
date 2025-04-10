@@ -1,12 +1,18 @@
 package com.flipkart.varadhi.auth;
 
-import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
+
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -17,12 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.stubbing.answers.ThrowsException;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.Set;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
 import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;

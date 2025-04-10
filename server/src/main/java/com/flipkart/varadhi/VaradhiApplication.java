@@ -1,19 +1,27 @@
 package com.flipkart.varadhi;
 
+import java.net.UnknownHostException;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
+import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
+import com.flipkart.varadhi.common.utils.HostUtils;
+import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.reflect.RecursiveFieldUpdater;
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
-import com.flipkart.varadhi.utils.HostUtils;
-import com.flipkart.varadhi.utils.JsonMapper;
 import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
@@ -36,24 +44,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.net.UnknownHostException;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 @Slf4j
 public class VaradhiApplication {
     public static void main(String[] args) {
 
         try {
             log.info("Starting VaradhiApplication");
-            HostUtils.initHostUtils();
 
             Pair<AppConfiguration, ConfigFileResolver> configReadResult = readConfiguration(args);
             AppConfiguration configuration = configReadResult.getLeft();
             ConfigFileResolver configResolver = configReadResult.getRight();
+
+            HostUtils.init();
+            StdHeaders.init(configuration.getMessageConfiguration().getStdHeaders());
 
             MemberInfo memberInfo = getMemberInfo(configuration.getMember());
             CoreServices services = new CoreServices(configuration, configResolver);

@@ -45,7 +45,7 @@ public final class ZNode {
     public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment");
     // TODO: Hierarchical or Flat?
     public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation");
-    public static final ZNodeKind EVENT = new ZNodeKind("Event");
+    public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent");
 
     public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";

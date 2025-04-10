@@ -1,21 +1,21 @@
 package com.flipkart.varadhi.auth;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.Role;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.utils.YamlLoader;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

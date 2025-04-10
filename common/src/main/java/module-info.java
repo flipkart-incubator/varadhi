@@ -1,4 +1,5 @@
 module com.flipkart.varadhi.common {
+
     requires static lombok;
     requires org.slf4j;
     requires com.google.common;
@@ -10,7 +11,7 @@ module com.flipkart.varadhi.common {
     requires com.fasterxml.jackson.module.paramnames;
     requires org.apache.commons.collections4;
 
-    exports com.flipkart.varadhi;
-    exports com.flipkart.varadhi.exceptions;
-    exports com.flipkart.varadhi.reflect;
+    exports com.flipkart.varadhi.common.exceptions;
+    exports com.flipkart.varadhi.common.reflect;
+    exports com.flipkart.varadhi.common;
 }

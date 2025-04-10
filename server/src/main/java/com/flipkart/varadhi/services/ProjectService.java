@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.VaradhiCache;
+import com.flipkart.varadhi.common.VaradhiCache;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;

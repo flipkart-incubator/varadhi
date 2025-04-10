@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.spi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
