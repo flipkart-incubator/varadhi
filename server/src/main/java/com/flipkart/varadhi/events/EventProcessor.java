@@ -560,7 +560,7 @@ public final class EventProcessor implements EntityEventListener {
          * @return true if all nodes have completed processing, false otherwise
          */
         boolean isCompleteForAllNodes() {
-            return !participantHosts.isEmpty() && completedHosts.containsAll(participantHosts);
+            return completedHosts.containsAll(participantHosts);
         }
 
         /**

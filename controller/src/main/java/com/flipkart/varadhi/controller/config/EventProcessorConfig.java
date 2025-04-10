@@ -24,7 +24,6 @@ public class EventProcessorConfig {
     private static final Duration DEFAULT_CLUSTER_MEMBER_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(100);
     private static final Duration DEFAULT_MAX_BACKOFF_MS = Duration.ofMillis(30000); // 30 seconds
-    private static final long DEFAULT_EVENT_READY_CHECK_MS = 500; // 0.5 second
     private static final long DEFAULT_TASK_JOIN_TIMEOUT_MS = 5000; // 5 seconds
 
     private final Duration clusterMemberTimeout;
