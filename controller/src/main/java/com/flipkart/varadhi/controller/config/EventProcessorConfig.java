@@ -38,10 +38,10 @@ public class EventProcessorConfig {
      */
     public static EventProcessorConfig getDefault() {
         return EventProcessorConfig.builder()
-                .clusterMemberTimeout(DEFAULT_CLUSTER_MEMBER_TIMEOUT)
-                .retryBackoff(DEFAULT_INITIAL_RETRY_DELAY)
-                .maxRetryBackoff(DEFAULT_MAX_BACKOFF_MS)
-                .tasksJoinTimeoutMs(DEFAULT_TASK_JOIN_TIMEOUT_MS)
-                .build();
+                                   .clusterMemberTimeout(DEFAULT_CLUSTER_MEMBER_TIMEOUT)
+                                   .retryBackoff(DEFAULT_INITIAL_RETRY_DELAY)
+                                   .maxRetryBackoff(DEFAULT_MAX_BACKOFF_MS)
+                                   .tasksJoinTimeoutMs(DEFAULT_TASK_JOIN_TIMEOUT_MS)
+                                   .build();
     }
 }

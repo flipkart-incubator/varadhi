@@ -13,10 +13,10 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
@@ -37,6 +37,7 @@ public class ProducerServiceTests {
     ProducerService service;
     ProducerFactory<StorageTopic> producerFactory;
     MeterRegistry meterRegistry;
+    MetaStore metaStore;
     TopicProvider topicProvider;
     Producer producer;
     Random random;
@@ -55,11 +56,7 @@ public class ProducerServiceTests {
         topicProvider = mock(TopicProvider.class);
         meterRegistry = new OtlpMeterRegistry();
 
-        service = new ProducerService(
-            region,
-            producerFactory::newProducer,
-            meterRegistry
-        );
+        service = new ProducerService(region, producerFactory::newProducer, meterRegistry, metaStore);
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
 

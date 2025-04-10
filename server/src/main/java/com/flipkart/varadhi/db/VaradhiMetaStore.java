@@ -214,10 +214,10 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         ZNode znode = ZNode.ofEntityType(TEAM);
 
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .filter(teamName -> teamName.startsWith(orgPrefix))
-                .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
-                .toList();
+                          .stream()
+                          .filter(teamName -> teamName.startsWith(orgPrefix))
+                          .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
+                          .toList();
     }
 
     /**
@@ -291,10 +291,10 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     public List<Project> getProjects(String teamName, String orgName) {
         ZNode znode = ZNode.ofEntityType(PROJECT);
         return zkMetaStore.listChildren(znode)
-                .stream()
-                .map(this::getProject)
-                .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
-                .toList();
+                          .stream()
+                          .map(this::getProject)
+                          .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
+                          .toList();
     }
 
     @Override

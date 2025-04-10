@@ -37,10 +37,7 @@ public class VaradhiCacheTests {
         String cacheSpec = "expireAfterWrite=3600s";
         entityProvider = spy(this);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        testCache = new VaradhiCache<>(
-            "test",
-            meterRegistry
-        );
+        testCache = new VaradhiCache<>("test", meterRegistry);
         getCounter = meterRegistry.counter("varadhi.cache.test.gets");
         loadCounter = meterRegistry.counter("varadhi.cache.test.loads");
         cacheSize = meterRegistry.find("varadhi.cache.test.size").gauge();
