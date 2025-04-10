@@ -48,7 +48,7 @@ ext {
     jctools_version = "4.0.5"
 
     hibernate_validator_version = "8.0.1.Final"
-    failsafe_version="3.3.2"
+    failsafe_version = "3.3.2"
 
     junit_version = "5.11.3"
     mockito_version = "5.14.2"
@@ -56,7 +56,7 @@ ext {
     awaitility_version = "4.2.2"
     jacoco_version = "0.8.10"
 
-    copyConfigToDir = {overridesFile, destination ->
+    copyConfigToDir = { overridesFile, destination ->
         return {
             overrides = loadProperties(overridesFile)
             if (!overrides) {
@@ -186,11 +186,13 @@ spotless {
         cleanthat()
         eclipse('4.33').configFile(file("$rootDir/codestyle.xml"))
         endWithNewline()
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**'
         // licenseHeader '/* Licensed under Apache-2.0 (C)$YEAR */'
     }
     json {
         target '**/*.json'
         simple().indentWithSpaces(4)
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**'
     }
 }
 

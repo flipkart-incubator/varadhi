@@ -1,8 +1,15 @@
 package com.flipkart.varadhi.events;
 
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -302,9 +309,8 @@ public final class EventProcessor implements EntityEventListener {
             this.member = member;
             this.retryPolicy = RetryPolicy.<String>builder()
                                           .withBackoff(
-                                              eventProcessorConfig.getRetryDelayMs(),
-                                              eventProcessorConfig.getMaxBackoffAttempts(),
-                                              ChronoUnit.MILLIS
+                                              eventProcessorConfig.getRetryBackoff(),
+                                              eventProcessorConfig.getMaxRetryBackoff()
                                           )
                                           .abortOn(InterruptedException.class)
                                           .abortIf((result, failure) -> failure != null && isShutdown.get())
@@ -368,7 +374,7 @@ public final class EventProcessor implements EntityEventListener {
             ClusterMessage message = ClusterMessage.of(event);
             ResponseMessage response = messageExchange.request(hostname, "entity-events", message)
                                                       .orTimeout(
-                                                          eventProcessorConfig.getClusterMemberTimeoutMs(),
+                                                          eventProcessorConfig.getClusterMemberTimeout().toMillis(),
                                                           TimeUnit.MILLISECONDS
                                                       )
                                                       .get();
