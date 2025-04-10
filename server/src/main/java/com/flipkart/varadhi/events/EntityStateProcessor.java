@@ -84,10 +84,12 @@ public final class EntityStateProcessor implements EventListener {
         VaradhiCache<String, Project> projectCache = projectService.getProjectCache();
         Objects.requireNonNull(projectCache, "Project cache cannot be null");
 
-        processors.put(ResourceType.PROJECT, createEventProcessor(
+        processors.put(
+            ResourceType.PROJECT,
+            createEventProcessor(
                 // UPSERT processor
                 (resourceName, resource) -> {
-                    Project project = (Project) resource;
+                    Project project = (Project)resource;
                     projectCache.put(resourceName, project);
                     log.info("Updated project state for: {}", resourceName);
                 },
@@ -97,23 +99,31 @@ public final class EntityStateProcessor implements EventListener {
                     log.info("Removed project state for: {}", resourceName);
                     return null;
                 }
-        ));
+            )
+        );
     }
 
     private void registerTopicProcessor(
-            ProducerService producerService,
-            String produceRegion,
-            Function<StorageTopic, Producer> producerProvider) {
+        ProducerService producerService,
+        String produceRegion,
+        Function<StorageTopic, Producer> producerProvider
+    ) {
 
-        VaradhiCache<StorageTopic, Producer> producerCache =
-                Objects.requireNonNull(producerService.getProducerCache(), "Producer cache cannot be null");
-        VaradhiCache<String, VaradhiTopic> topicCache =
-                Objects.requireNonNull(producerService.getInternalTopicCache(), "Topic cache cannot be null");
+        VaradhiCache<StorageTopic, Producer> producerCache = Objects.requireNonNull(
+            producerService.getProducerCache(),
+            "Producer cache cannot be null"
+        );
+        VaradhiCache<String, VaradhiTopic> topicCache = Objects.requireNonNull(
+            producerService.getInternalTopicCache(),
+            "Topic cache cannot be null"
+        );
 
-        processors.put(ResourceType.TOPIC, createEventProcessor(
+        processors.put(
+            ResourceType.TOPIC,
+            createEventProcessor(
                 // UPSERT handler
                 (resourceName, resource) -> {
-                    VaradhiTopic topic = (VaradhiTopic) resource;
+                    VaradhiTopic topic = (VaradhiTopic)resource;
                     topicCache.put(resourceName, topic);
 
                     InternalCompositeTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
@@ -139,7 +149,8 @@ public final class EntityStateProcessor implements EventListener {
                     log.info("Removed topic state for: {}", resourceName);
                     return null;
                 }
-        ));
+            )
+        );
     }
 
     /**
@@ -151,8 +162,9 @@ public final class EntityStateProcessor implements EventListener {
      * @return an event processor that delegates to the appropriate function based on event type
      */
     private <T> EntityEventProcessor<T> createEventProcessor(
-            BiConsumer<String, T> upsertProcessor,
-            Function<String, Void> invalidateProcessor) {
+        BiConsumer<String, T> upsertProcessor,
+        Function<String, Void> invalidateProcessor
+    ) {
         return (eventType, resourceName, resource) -> {
             try {
                 switch (eventType) {
@@ -163,9 +175,7 @@ public final class EntityStateProcessor implements EventListener {
                         }
                         upsertProcessor.accept(resourceName, resource);
                     }
-                    case INVALIDATE -> {
-                        invalidateProcessor.apply(resourceName);
-                    }
+                    case INVALIDATE -> invalidateProcessor.apply(resourceName);
                     default -> log.warn("Unsupported operation {} for resource: {}", eventType, resourceName);
                 }
             } catch (ClassCastException e) {
@@ -193,11 +203,16 @@ public final class EntityStateProcessor implements EventListener {
 
         try {
             @SuppressWarnings ("unchecked")
-            EntityEventProcessor<Object> handler = (EntityEventProcessor<Object>) processors.get(resourceType);
+            EntityEventProcessor<Object> handler = (EntityEventProcessor<Object>)processors.get(resourceType);
             handler.process(event.operation(), resourceName, event.resource());
         } catch (ClassCastException e) {
-            log.error("Type mismatch for {} operation on {}: {}. Expected resource type does not match actual type.",
-                    event.operation(), resourceType, resourceName, e);
+            log.error(
+                "Type mismatch for {} operation on {}: {}. Expected resource type does not match actual type.",
+                event.operation(),
+                resourceType,
+                resourceName,
+                e
+            );
             throw new IllegalArgumentException("Resource type mismatch for " + resourceType + ": " + resourceName, e);
         } catch (Exception e) {
             log.error("Failed to process {} operation for {}: {}", event.operation(), resourceType, resourceName, e);

@@ -48,11 +48,7 @@ public class TeamServiceTest {
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(
-            varadhiMetaStore,
-            "",
-            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
-        );
+        projectService = new ProjectService(varadhiMetaStore, new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         org1Team1 = Team.of("TestTeam1", org1.getName());

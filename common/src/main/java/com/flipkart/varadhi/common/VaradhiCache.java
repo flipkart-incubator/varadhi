@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.common;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -89,8 +91,9 @@ public final class VaradhiCache<K, V> {
      * @param key             the key with which the specified value is to be associated
      * @param mappingFunction the function to compute a value
      * @return the current (existing or computed) value associated with the specified key
-     * @throws NullPointerException if the specified key or mappingFunction is null,
-     *                              or if the mappingFunction returns null
+     * @throws NullPointerException      if the specified key or mappingFunction is null
+     * @throws ResourceNotFoundException if the mapping function throws this exception
+     * @throws VaradhiException          for other exceptions during value computation
      */
     public V getOrCompute(K key, Function<? super K, ? extends V> mappingFunction) {
         Objects.requireNonNull(key, "Key cannot be null");
@@ -105,17 +108,17 @@ public final class VaradhiCache<K, V> {
 
         try {
             missCounter.increment();
-            V newValue = Objects.requireNonNull(
-                    mappingFunction.apply(key),
-                    "Mapping function returned null for key: " + key
-            );
+            V newValue = mappingFunction.apply(key);
             cache.put(key, newValue);
             loadCounter.increment();
             log.debug("Computed and cached value for key: {}", key);
             return newValue;
-        } catch (Exception e) {
-            log.error("Error computing value for key: {}", key, e);
+        } catch (ResourceNotFoundException e) {
+            log.error("Resource not found for key: {}", key, e);
             throw e;
+        } catch (Exception e) {
+            log.error("Error finding resource: {}", key, e);
+            throw new VaradhiException(String.format("Error finding resource: %s", key), e);
         }
     }
 

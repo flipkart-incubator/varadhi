@@ -1,114 +1,146 @@
 package com.flipkart.varadhi.common;
 
-import static org.mockito.Mockito.*;
-
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
-
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.StandardException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-public class VaradhiCacheTests {
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+class VaradhiCacheTests {
 
     VaradhiCache<String, DummyData> testCache;
     MeterRegistry meterRegistry;
-    Counter getCounter;
+    Counter hitCounter;
+    Counter missCounter;
     Counter loadCounter;
-    Counter loadFailureCounter;
     Gauge cacheSize;
     VaradhiCacheTests entityProvider;
-    MockTicker ticker;
 
     @BeforeEach
-    public void PreTest() {
-        ticker = new MockTicker(System.nanoTime());
-        String cacheSpec = "expireAfterWrite=3600s";
+    void PreTest() {
         entityProvider = spy(this);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         testCache = new VaradhiCache<>("test", meterRegistry);
-        getCounter = meterRegistry.counter("varadhi.cache.test.gets");
-        loadCounter = meterRegistry.counter("varadhi.cache.test.loads");
-        cacheSize = meterRegistry.find("varadhi.cache.test.size").gauge();
-        loadFailureCounter = meterRegistry.counter("varadhi.cache.test.loadFailures");
+
+        Tags cacheTags = Tags.of("entity", "test");
+        hitCounter = meterRegistry.counter("varadhi.cache.operations", cacheTags.and("operation", "hit"));
+        missCounter = meterRegistry.counter("varadhi.cache.operations", cacheTags.and("operation", "miss"));
+        loadCounter = meterRegistry.counter("varadhi.cache.operations", cacheTags.and("operation", "load"));
+        cacheSize = meterRegistry.find("varadhi.cache.size").tags(cacheTags).gauge();
     }
 
-    private void validateCounters(int get, int load, int loadFailures, int size) {
-        Assertions.assertEquals(get, (int)getCounter.count());
+    private void validateCounters(int hit, int miss, int load, int size) {
+        Assertions.assertEquals(hit, (int)hitCounter.count());
+        Assertions.assertEquals(miss, (int)missCounter.count());
         Assertions.assertEquals(load, (int)loadCounter.count());
-        Assertions.assertEquals(loadFailures, (int)loadFailureCounter.count());
         Assertions.assertEquals(size, (int)cacheSize.value());
     }
 
     @Test
-    public void testGetData() {
-        DummyData data1 = testCache.get("key1");
+    void testGetData() {
+        DummyData data1 = testCache.getOrCompute("key1", entityProvider::getData);
         Assertions.assertEquals(1, (int)cacheSize.value());
-        DummyData data2 = testCache.get("key2");
-        Assertions.assertEquals(data1, testCache.get("key1"));
-        Assertions.assertEquals(data2, testCache.get("key2"));
-        Assertions.assertEquals(data1, testCache.get("key1"));
-        Assertions.assertEquals(data2, testCache.get("key2"));
-        validateCounters(6, 2, 0, 2);
+
+        DummyData data2 = testCache.getOrCompute("key2", entityProvider::getData);
+        Assertions.assertEquals(2, (int)cacheSize.value());
+
+        Assertions.assertEquals(data1, testCache.getOrCompute("key1", entityProvider::getData));
+        Assertions.assertEquals(data2, testCache.getOrCompute("key2", entityProvider::getData));
+        Assertions.assertEquals(data1, testCache.getOrCompute("key1", entityProvider::getData));
+        Assertions.assertEquals(data2, testCache.getOrCompute("key2", entityProvider::getData));
+
+        validateCounters(4, 2, 2, 2);
 
         verify(entityProvider, times(1)).getData("key1");
         verify(entityProvider, times(1)).getData("key2");
     }
 
     @Test
-    public void testGetDataKnownException() {
-        doThrow(new ResourceNotFoundException("Data not found.")).when(entityProvider).getData("key1");
+    void testGetDataWithException() {
+        doThrow(new ResourceNotFoundException("Resource not found.")).when(entityProvider).getData("key1");
+
         ResourceNotFoundException re = Assertions.assertThrows(
             ResourceNotFoundException.class,
-            () -> testCache.get("key1")
+            () -> testCache.getOrCompute("key1", entityProvider::getData)
         );
-        Assertions.assertEquals("Data not found.", re.getMessage());
-        validateCounters(1, 0, 1, 0);
+
+        Assertions.assertEquals("Resource not found.", re.getMessage());
+
+        validateCounters(0, 1, 0, 0);
     }
 
     @Test
-    public void testGetDataUnKnownException() {
-        doThrow(new RuntimeException("Load failure.")).when(entityProvider).getData("key1");
-        CustomException ce = Assertions.assertThrows(CustomException.class, () -> testCache.get("key1"));
-        Assertions.assertEquals("Failed to get data (key1): Load failure.", ce.getMessage());
-        Throwable realFailure = ce.getCause();
-        Assertions.assertEquals("Load failure.", realFailure.getMessage());
-        validateCounters(1, 0, 1, 0);
-    }
+    void testGetDataWithOtherException() {
+        doThrow(new CustomException("Load failure.")).when(entityProvider).getData("key1");
 
-    @Test
-    public void testDataExpiry() throws InterruptedException {
-        DummyData data1 = testCache.get("key1");
-        ticker.advance(3601, TimeUnit.SECONDS);
-        DummyData data2 = testCache.get("key1");
-        validateCounters(2, 2, 0, 1);
-        verify(entityProvider, times(2)).getData("key1");
-        Assertions.assertNotEquals(data1, data2);
-    }
-
-    @Test
-    public void testEntryRemovalOnDataExpiryWithLoaderException() throws InterruptedException {
-        testCache.get("key1");
-        validateCounters(1, 1, 0, 1);
-        ticker.advance(3601, TimeUnit.SECONDS);
-        Thread.sleep(1); // to ensure new version of DummyData().
-        doThrow(new ResourceNotFoundException("Data not found.")).when(entityProvider).getData("key1");
-        ResourceNotFoundException re = Assertions.assertThrows(
-            ResourceNotFoundException.class,
-            () -> testCache.get("key1")
+        VaradhiException ce = Assertions.assertThrows(
+            VaradhiException.class,
+            () -> testCache.getOrCompute("key1", entityProvider::getData)
         );
-        validateCounters(2, 1, 1, 0);
+
+        Assertions.assertEquals("Error finding resource: key1", ce.getMessage());
+
+        validateCounters(0, 1, 0, 0);
+    }
+
+    @Test
+    void testBasicOperations() {
+        DummyData data1 = new DummyData("key1");
+        testCache.put("key1", data1);
+
+        DummyData retrieved = testCache.get("key1");
+        Assertions.assertEquals(data1, retrieved);
+
+        validateCounters(1, 0, 0, 1);
+
+        testCache.invalidate("key1");
+        Assertions.assertNull(testCache.get("key1"));
+
+        validateCounters(1, 1, 0, 0);
+    }
+
+    @Test
+    void testPutAll() {
+        java.util.Map<String, DummyData> items = new java.util.HashMap<>();
+        items.put("key1", new DummyData("key1"));
+        items.put("key2", new DummyData("key2"));
+
+        testCache.putAll(items);
+
+        validateCounters(0, 0, 2, 2);
+
+        Assertions.assertEquals(items.get("key1"), testCache.get("key1"));
+        Assertions.assertEquals(items.get("key2"), testCache.get("key2"));
+
+        validateCounters(2, 0, 2, 2);
+    }
+
+    @Test
+    void testInvalidateAll() {
+        testCache.put("key1", new DummyData("key1"));
+        testCache.put("key2", new DummyData("key2"));
+
+        Assertions.assertEquals(2, testCache.size());
+
+        testCache.invalidateAll();
+
+        Assertions.assertEquals(0, testCache.size());
+        Assertions.assertFalse(testCache.containsKey("key1"));
+        Assertions.assertFalse(testCache.containsKey("key2"));
     }
 
     DummyData getData(String key) {
@@ -129,6 +161,5 @@ public class VaradhiCacheTests {
 
     @StandardException
     public static class CustomException extends VaradhiException {
-
     }
 }

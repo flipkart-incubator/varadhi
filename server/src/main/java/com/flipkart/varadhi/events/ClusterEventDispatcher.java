@@ -42,7 +42,8 @@ public final class ClusterEventDispatcher {
         if (message == null) {
             log.error("Received null message");
             return CompletableFuture.completedFuture(
-                    ResponseMessage.fromException(new IllegalArgumentException("Message cannot be null"), null));
+                ResponseMessage.fromException(new IllegalArgumentException("Message cannot be null"), null)
+            );
         }
 
         try {
@@ -50,11 +51,11 @@ public final class ClusterEventDispatcher {
             if (event == null) {
                 log.error("Failed to extract EntityEvent from message: {}", message.getId());
                 return CompletableFuture.completedFuture(
-                        message.getResponseMessage(new IllegalArgumentException("Invalid event data")));
+                    message.getResponseMessage(new IllegalArgumentException("Invalid event data"))
+                );
             }
 
-            log.debug("Dispatching {} event for {} {}",
-                    event.operation(), event.resourceType(), event.resourceName());
+            log.debug("Dispatching {} event for {} {}", event.operation(), event.resourceType(), event.resourceName());
 
             eventListener.processEvent(event);
             return CompletableFuture.completedFuture(ResponseMessage.fromPayload("OK", message.getId()));

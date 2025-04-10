@@ -95,7 +95,9 @@ public class ProducerService {
 
             // Build topic cache entries
             Map<String, VaradhiTopic> topicMap = topics.stream()
-                    .collect(Collectors.toMap(VaradhiTopic::getName, Function.identity()));
+                                                       .collect(
+                                                           Collectors.toMap(VaradhiTopic::getName, Function.identity())
+                                                       );
 
             // Build producer cache entries
             Map<StorageTopic, Producer> producerMap = new HashMap<>();
@@ -112,8 +114,11 @@ public class ProducerService {
             internalTopicCache.putAll(topicMap);
             producerCache.putAll(producerMap);
 
-            log.info("Successfully preloaded {} topics and {} producers into cache",
-                    topicMap.size(), producerMap.size());
+            log.info(
+                "Successfully preloaded {} topics and {} producers into cache",
+                topicMap.size(),
+                producerMap.size()
+            );
             promise.complete();
         } catch (Exception e) {
             log.error("Failed to preload topic and producer caches", e);
@@ -148,9 +153,7 @@ public class ProducerService {
             });
 
             if (!varadhiTopic.isActive()) {
-                throw new ResourceNotFoundException(
-                        String.format("Topic(%s) is inactive.", varadhiTopicName)
-                );
+                throw new ResourceNotFoundException(String.format("Topic(%s) is inactive.", varadhiTopicName));
             }
 
             InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
@@ -169,14 +172,20 @@ public class ProducerService {
             StorageTopic storageTopic = internalTopic.getTopicToProduce();
             Producer producer = producerCache.getOrCompute(storageTopic, this.producerProvider);
 
-            return produceToStorageProducer(
-                producer,
-                metricsEmitter,
-                storageTopic.getName(),
-                message
-            ).thenApply(result -> ProduceResult.of(message.getMessageId(), result));
-        } catch (VaradhiException e) {
+            return produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
+                result -> ProduceResult.of(message.getMessageId(), result)
+            );
+        } catch (ResourceNotFoundException e) {
             throw e;
+        } catch (VaradhiException e) {
+            throw new ProduceException(
+                String.format(
+                    "Produce failed due to internal error: %s. Caused by: %s",
+                    e.getMessage(),
+                    e.getCause().getMessage()
+                ),
+                e
+            );
         } catch (Exception e) {
             throw new ProduceException(String.format("Produce failed due to internal error: %s", e.getMessage()), e);
         }

@@ -9,6 +9,7 @@ dependencies {
     implementation("com.google.guava:guava")
     implementation("io.micrometer:micrometer-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("io.vertx:vertx-core")
     testImplementation("io.micrometer:micrometer-registry-otlp")
 
     testImplementation(testFixtures(project(":spi")))

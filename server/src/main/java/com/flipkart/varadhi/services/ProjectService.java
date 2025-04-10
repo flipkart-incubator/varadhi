@@ -65,7 +65,7 @@ public class ProjectService {
             }
 
             Map<String, Project> projectMap = projects.stream()
-                    .collect(Collectors.toMap(Project::getName, Function.identity()));
+                                                      .collect(Collectors.toMap(Project::getName, Function.identity()));
 
             projectCache.putAll(projectMap);
             log.info("Successfully preloaded {} projects into cache", projects.size());
