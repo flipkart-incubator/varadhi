@@ -1,10 +1,5 @@
 package com.flipkart.varadhi.common;
 
-import com.flipkart.varadhi.common.exceptions.VaradhiException;
-import com.google.common.base.Ticker;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;

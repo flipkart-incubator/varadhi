@@ -214,10 +214,10 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         ZNode znode = ZNode.ofEntityType(TEAM);
 
         return zkMetaStore.listChildren(znode)
-                          .stream()
-                          .filter(teamName -> teamName.startsWith(orgPrefix))
-                          .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
-                          .toList();
+                .stream()
+                .filter(teamName -> teamName.startsWith(orgPrefix))
+                .map(teamName -> teamName.split(RESOURCE_NAME_SEPARATOR)[1])
+                .toList();
     }
 
     /**
@@ -291,10 +291,16 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     public List<Project> getProjects(String teamName, String orgName) {
         ZNode znode = ZNode.ofEntityType(PROJECT);
         return zkMetaStore.listChildren(znode)
-                          .stream()
-                          .map(this::getProject)
-                          .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
-                          .toList();
+                .stream()
+                .map(this::getProject)
+                .filter(project -> matchesTeamAndOrg(project, teamName, orgName))
+                .toList();
+    }
+
+    @Override
+    public List<Project> getAllProjects() {
+        ZNode znode = ZNode.ofEntityType(PROJECT);
+        return zkMetaStore.listChildren(znode).stream().map(this::getProject).toList();
     }
 
     /**
@@ -395,6 +401,12 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         return zkMetaStore.listChildren(znode).stream().filter(name -> name.startsWith(projectPrefix)).toList();
     }
 
+    @Override
+    public List<VaradhiTopic> getAllTopics() {
+        ZNode znode = ZNode.ofEntityType(TOPIC);
+        return zkMetaStore.listChildren(znode).stream().map(this::getTopic).toList();
+    }
+
     /**
      * Checks if a topic exists.
      *
@@ -463,7 +475,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
     @Override
     public VaradhiSubscription getSubscription(String subscriptionName) {
         ZNode znode = ZNode.ofSubscription(subscriptionName);
-        return zkMetaStore.zkPathExist(znode);
+        return zkMetaStore.getZNodeDataAsPojo(znode, VaradhiSubscription.class);
     }
 
     /**

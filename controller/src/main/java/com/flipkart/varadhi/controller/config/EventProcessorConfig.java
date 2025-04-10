@@ -1,8 +1,5 @@
 package com.flipkart.varadhi.controller.config;
 
-import lombok.Builder;
-import lombok.Getter;
-
 import java.time.Duration;
 
 import lombok.Builder;
@@ -22,17 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 @Builder
 @Slf4j
 public class EventProcessorConfig {
-    private final int maxRetries; // Maximum number of retry attempts for failed events
-    private final long retryDelayMs; // Base delay between retry attempts
-    private final long clusterMemberTimeoutMs; // Maximum time to wait for cluster member response
-    private final int maxConcurrentProcessing; // Maximum number of events processed concurrently
-    private final Duration processingTimeout; // Maximum time allowed for complete event processing
 
     // Default timeout values
     private static final Duration DEFAULT_CLUSTER_MEMBER_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(100);
     private static final Duration DEFAULT_MAX_BACKOFF_MS = Duration.ofMillis(30000); // 30 seconds
-    private static final long DEFAULT_EVENT_READY_CHECK_MS = 500; // 0.5 second
     private static final long DEFAULT_TASK_JOIN_TIMEOUT_MS = 5000; // 5 seconds
 
     private final Duration clusterMemberTimeout;
@@ -47,10 +38,10 @@ public class EventProcessorConfig {
      */
     public static EventProcessorConfig getDefault() {
         return EventProcessorConfig.builder()
-                                   .clusterMemberTimeout(DEFAULT_CLUSTER_MEMBER_TIMEOUT)
-                                   .retryBackoff(DEFAULT_INITIAL_RETRY_DELAY)
-                                   .maxRetryBackoff(DEFAULT_MAX_BACKOFF_MS)
-                                   .tasksJoinTimeoutMs(DEFAULT_TASK_JOIN_TIMEOUT_MS)
-                                   .build();
+                .clusterMemberTimeout(DEFAULT_CLUSTER_MEMBER_TIMEOUT)
+                .retryBackoff(DEFAULT_INITIAL_RETRY_DELAY)
+                .maxRetryBackoff(DEFAULT_MAX_BACKOFF_MS)
+                .tasksJoinTimeoutMs(DEFAULT_TASK_JOIN_TIMEOUT_MS)
+                .build();
     }
 }

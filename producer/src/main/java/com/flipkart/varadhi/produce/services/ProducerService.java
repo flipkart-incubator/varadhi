@@ -2,10 +2,14 @@ package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.VaradhiCache;
-import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.flipkart.varadhi.entities.InternalCompositeTopic;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.spi.services.Producer;

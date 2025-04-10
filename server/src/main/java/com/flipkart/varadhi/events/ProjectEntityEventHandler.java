@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.events;
 
-import com.flipkart.varadhi.VaradhiCache;
+import com.flipkart.varadhi.common.VaradhiCache;
 import com.flipkart.varadhi.core.cluster.EntityEventHandler;
 import com.flipkart.varadhi.entities.EntityEvent;
 import com.flipkart.varadhi.entities.Project;

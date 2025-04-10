@@ -1,8 +1,5 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import java.util.*;
-import java.util.function.Function;
-
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
@@ -10,28 +7,12 @@ import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.core.cluster.EntityEventHandler;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.*;
-import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.spi.services.Producer;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
-import com.flipkart.varadhi.web.*;
-import com.flipkart.varadhi.events.EntityEventApiHandler;
 import com.flipkart.varadhi.events.CompositeEntityEventHandler;
+import com.flipkart.varadhi.events.EntityEventApiHandler;
 import com.flipkart.varadhi.events.ProjectEntityEventHandler;
 import com.flipkart.varadhi.events.TopicEntityEventHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
