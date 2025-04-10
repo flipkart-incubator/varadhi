@@ -42,6 +42,8 @@ public interface MetaStore {
 
     List<Project> getProjects(String teamName, String orgName);
 
+    List<Project> getAllProjects();
+
     boolean checkProjectExists(String projectName);
 
     void updateProject(Project project);
@@ -53,6 +55,8 @@ public interface MetaStore {
     VaradhiTopic getTopic(String topicName);
 
     List<String> getTopicNames(String projectName);
+
+    List<VaradhiTopic> getAllTopics();
 
     boolean checkTopicExists(String topicName);
 

@@ -57,11 +57,7 @@ class IamPolicyServiceTest {
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(
-            varadhiMetaStore,
-            "",
-            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
-        );
+        projectService = new ProjectService(varadhiMetaStore, new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
         iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore);
         org1 = Org.of("org1");
         org2 = Org.of("org2");

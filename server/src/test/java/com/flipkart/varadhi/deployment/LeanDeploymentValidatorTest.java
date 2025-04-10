@@ -73,11 +73,7 @@ public class LeanDeploymentValidatorTest {
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(
-            varadhiMetaStore,
-            appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
-            meterRegistry
-        );
+        projectService = new ProjectService(varadhiMetaStore, meterRegistry);
 
         deploymentValidator = new LeanDeploymentValidator(orgService, teamService, projectService);
     }
