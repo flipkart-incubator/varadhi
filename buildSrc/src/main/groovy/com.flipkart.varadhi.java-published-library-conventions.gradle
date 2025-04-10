@@ -1,7 +1,15 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
     // Apply the maven-publish to allow deploying to maven artifactories
+    id 'signing'
     id 'maven-publish'
+}
+
+signing {
+    def signingKey = System.getenv("GPG_SIGNING_KEY")
+    def signingPassword = System.getenv("GPG_SIGNING_PASSPHRASE")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications
 }
 
 publishing {
