@@ -10,6 +10,7 @@ module com.flipkart.varadhi.common {
     requires com.fasterxml.jackson.dataformat.yaml;
     requires com.fasterxml.jackson.module.paramnames;
     requires org.apache.commons.collections4;
+    requires com.github.benmanes.caffeine;
 
     exports com.flipkart.varadhi.common.exceptions;
     exports com.flipkart.varadhi.common.reflect;

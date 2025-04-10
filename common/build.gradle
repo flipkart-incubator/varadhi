@@ -13,6 +13,7 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jackson_version")
     implementation("io.micrometer:micrometer-core")
     implementation('org.hibernate:hibernate-validator:8.0.1.Final')
+    implementation("com.github.ben-manes.caffeine:caffeine:3.2.0")
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
 
     testFixturesApi("com.google.guava:guava:$guava_version")

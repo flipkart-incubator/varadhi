@@ -2,6 +2,8 @@ package com.flipkart.varadhi.common;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -9,12 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 /**
- * A thread-safe generic cache implementation with metrics support.
+ * A thread-safe generic cache implementation using Caffeine with metrics support.
  * This cache provides basic operations like get, put, invalidate with metrics tracking
  * for hits, misses, and size.
  *
@@ -31,7 +31,7 @@ public final class VaradhiCache<K, V> {
     private static final String OPERATION_MISS = "miss";
     private static final String OPERATION_LOAD = "load";
 
-    private final ConcurrentMap<K, V> cache;
+    private final Cache<K, V> cache;
     private final String cacheName;
     private final Counter hitCounter;
     private final Counter missCounter;
@@ -45,21 +45,22 @@ public final class VaradhiCache<K, V> {
      * @throws NullPointerException if cacheName or meterRegistry is null
      */
     public VaradhiCache(String cacheName, MeterRegistry meterRegistry) {
-        this.cache = new ConcurrentHashMap<>();
         this.cacheName = Objects.requireNonNull(cacheName, "Cache name cannot be null");
         Objects.requireNonNull(meterRegistry, "MeterRegistry cannot be null");
+
+        this.cache = Caffeine.newBuilder().recordStats().build();
 
         Tags cacheTags = Tags.of(TAG_CACHE_NAME, cacheName);
 
         // Register size metric with cache name tag
-        meterRegistry.gauge(METRIC_NAME_SIZE, cacheTags, cache, ConcurrentMap::size);
+        meterRegistry.gauge(METRIC_NAME_SIZE, cacheTags, cache, Cache::estimatedSize);
 
         // Register operation counters with appropriate tags
         this.hitCounter = meterRegistry.counter(METRIC_NAME_OPERATIONS, cacheTags.and(TAG_OPERATION, OPERATION_HIT));
         this.missCounter = meterRegistry.counter(METRIC_NAME_OPERATIONS, cacheTags.and(TAG_OPERATION, OPERATION_MISS));
         this.loadCounter = meterRegistry.counter(METRIC_NAME_OPERATIONS, cacheTags.and(TAG_OPERATION, OPERATION_LOAD));
 
-        log.debug("Initialized cache: {}", cacheName);
+        log.debug("Initialized Caffeine cache: {}", cacheName);
     }
 
     /**
@@ -70,11 +71,9 @@ public final class VaradhiCache<K, V> {
      * @throws NullPointerException if the specified key is null
      */
     public V get(K key) {
-        Objects.requireNonNull(key, "Key cannot be null");
-        V value = cache.get(key);
+        V value = cache.getIfPresent(key);
         if (value != null) {
-            hitCounter.increment();
-            log.trace("Cache hit for key: {}", key);
+            recordHit(key);
         } else {
             missCounter.increment();
             log.trace("Cache miss for key: {}", key);
@@ -96,13 +95,11 @@ public final class VaradhiCache<K, V> {
      * @throws VaradhiException          for other exceptions during value computation
      */
     public V getOrCompute(K key, Function<? super K, ? extends V> mappingFunction) {
-        Objects.requireNonNull(key, "Key cannot be null");
         Objects.requireNonNull(mappingFunction, "Mapping function cannot be null");
 
-        V value = cache.get(key);
+        V value = cache.getIfPresent(key);
         if (value != null) {
-            hitCounter.increment();
-            log.trace("Cache hit for key: {}", key);
+            recordHit(key);
             return value;
         }
 
@@ -123,6 +120,16 @@ public final class VaradhiCache<K, V> {
     }
 
     /**
+     * Records a cache hit for the specified key.
+     *
+     * @param key the key that was a cache hit
+     */
+    private void recordHit(K key) {
+        hitCounter.increment();
+        log.trace("Cache hit for key: {}", key);
+    }
+
+    /**
      * Associates the specified value with the specified key in this cache.
      *
      * @param key   the key with which the specified value is to be associated
@@ -130,8 +137,6 @@ public final class VaradhiCache<K, V> {
      * @throws NullPointerException if the specified key or value is null
      */
     public void put(K key, V value) {
-        Objects.requireNonNull(key, "Key cannot be null");
-        Objects.requireNonNull(value, "Value cannot be null");
         cache.put(key, value);
         log.trace("Added entry for key: {}", key);
     }
@@ -172,20 +177,16 @@ public final class VaradhiCache<K, V> {
      * @throws NullPointerException if the specified key is null
      */
     public void invalidate(K key) {
-        Objects.requireNonNull(key, "Key cannot be null");
-        V removed = cache.remove(key);
-        if (removed != null) {
-            log.trace("Invalidated entry for key: {}", key);
-        }
+        cache.invalidate(key);
+        log.trace("Invalidated entry for key: {}", key);
     }
 
     /**
      * Removes all entries from this cache.
      */
     public void invalidateAll() {
-        int size = cache.size();
-        cache.clear();
-        log.debug("Invalidated all {} entries in cache: {}", size, cacheName);
+        cache.invalidateAll();
+        log.debug("Invalidated all entries in cache: {}", cacheName);
     }
 
     /**
@@ -194,7 +195,7 @@ public final class VaradhiCache<K, V> {
      * @return the number of entries in this cache
      */
     public int size() {
-        return cache.size();
+        return (int)cache.estimatedSize();
     }
 
     /**
@@ -205,7 +206,6 @@ public final class VaradhiCache<K, V> {
      * @throws NullPointerException if the specified key is null
      */
     public boolean containsKey(K key) {
-        Objects.requireNonNull(key, "Key cannot be null");
-        return cache.containsKey(key);
+        return cache.getIfPresent(key) != null;
     }
 }
