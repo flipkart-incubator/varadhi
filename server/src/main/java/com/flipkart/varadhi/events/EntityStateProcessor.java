@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.events;
 
+import com.flipkart.varadhi.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.common.VaradhiCache;
 import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EventType;
-import com.flipkart.varadhi.core.cluster.EventListener;
 import com.flipkart.varadhi.entities.InternalCompositeTopic;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -18,6 +19,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -26,9 +28,12 @@ import java.util.function.Function;
  * <p>
  * This processor uses a functional approach to manage entity state updates for different resource types,
  * providing a clean and extensible way to handle entity events across the system.
+ * <p>
+ * The processor directly handles cluster messages containing entity events, extracting the events
+ * and processing them appropriately.
  */
 @Slf4j
-public final class EntityStateProcessor implements EventListener {
+public final class EntityStateProcessor {
 
     /**
      * Functional interface for handling different event types on a specific resource.
@@ -188,35 +193,78 @@ public final class EntityStateProcessor implements EventListener {
         };
     }
 
-    @Override
-    public void processEvent(EntityEvent<?> event) {
-        Objects.requireNonNull(event, "Event cannot be null");
-
-        ResourceType resourceType = event.resourceType();
-        if (!supportedTypes.contains(resourceType)) {
-            log.debug("Skipping unsupported resource type: {}", resourceType);
-            return;
+    /**
+     * Processes a cluster message containing an entity event.
+     * <p>
+     * This method extracts the entity event from the message, processes it,
+     * and returns an appropriate response message.
+     *
+     * @param message the cluster message containing the entity event
+     * @return a future that completes with the response message
+     */
+    public CompletableFuture<ResponseMessage> processEvent(ClusterMessage message) {
+        if (message == null) {
+            return createErrorResponse(null, "Message cannot be null", null);
         }
 
+        String messageId = message.getId();
+        EntityEvent<?> event;
+
+        try {
+            event = message.getData(EntityEvent.class);
+            if (event == null) {
+                return createErrorResponse(messageId, "Invalid event data", null);
+            }
+        } catch (Exception e) {
+            return createErrorResponse(messageId, "Failed to extract event data", e);
+        }
+
+        ResourceType resourceType = event.resourceType();
         String resourceName = event.resourceName();
+
+        if (!supportedTypes.contains(resourceType)) {
+            log.debug("Skipping unsupported resource type: {}", resourceType);
+            return CompletableFuture.completedFuture(ResponseMessage.fromPayload("Skipped", messageId));
+        }
+
         log.debug("Processing {} event for {} {}", event.operation(), resourceType, resourceName);
 
         try {
             @SuppressWarnings ("unchecked")
             EntityEventProcessor<Object> handler = (EntityEventProcessor<Object>)processors.get(resourceType);
             handler.process(event.operation(), resourceName, event.resource());
+            return CompletableFuture.completedFuture(ResponseMessage.fromPayload("OK", messageId));
         } catch (ClassCastException e) {
-            log.error(
-                "Type mismatch for {} operation on {}: {}. Expected resource type does not match actual type.",
-                event.operation(),
-                resourceType,
-                resourceName,
-                e
-            );
-            throw new IllegalArgumentException("Resource type mismatch for " + resourceType + ": " + resourceName, e);
+            String errorMsg = String.format("Resource type mismatch for %s: %s", resourceType, resourceName);
+            log.error("Type mismatch for {} operation on {}: {}", event.operation(), resourceType, resourceName, e);
+            return createErrorResponse(messageId, errorMsg, e);
         } catch (Exception e) {
             log.error("Failed to process {} operation for {}: {}", event.operation(), resourceType, resourceName, e);
-            throw e;
+            return createErrorResponse(messageId, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Creates an error response message with the given error details.
+     *
+     * @param messageId the ID of the original message, or null if not available
+     * @param errorMsg  the error message
+     * @param cause     the cause of the error, or null if not available
+     * @return a CompletableFuture containing the error response
+     */
+    private CompletableFuture<ResponseMessage> createErrorResponse(String messageId, String errorMsg, Throwable cause) {
+        Exception exception = cause instanceof Exception ex ? ex : new IllegalArgumentException(errorMsg, cause);
+
+        if (cause != null && !errorMsg.equals(cause.getMessage())) {
+            log.error(errorMsg, cause);
+        } else if (cause == null) {
+            log.error(errorMsg);
+        }
+
+        return CompletableFuture.completedFuture(
+            messageId != null ?
+                ResponseMessage.fromException(exception, messageId) :
+                ResponseMessage.fromException(exception, null)
+        );
     }
 }

@@ -7,11 +7,9 @@ import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.core.cluster.EventListener;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.events.ClusterEventDispatcher;
 import com.flipkart.varadhi.events.EntityStateProcessor;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -578,19 +576,17 @@ public class WebServerVerticle extends AbstractVerticle {
             Function<StorageTopic, Producer> producerProvider = messagingStackProvider
                                                                                       .getProducerFactory()::newProducer;
 
-            // Create event processor and dispatcher
-            EventListener stateProcessor = new EntityStateProcessor(
+            // Create event processor
+            EntityStateProcessor stateProcessor = new EntityStateProcessor(
                 serviceRegistry.get(ProjectService.class),
                 serviceRegistry.get(ProducerService.class),
                 verticleConfig.deployedRegion(),
                 producerProvider
             );
 
-            ClusterEventDispatcher eventDispatcher = new ClusterEventDispatcher(stateProcessor);
-
             // Register event handler with message router
             MessageRouter messageRouter = clusterManager.getRouter(vertx);
-            messageRouter.requestHandler(hostname, "entity-events", eventDispatcher::handleEvent);
+            messageRouter.requestHandler(hostname, "entity-events", stateProcessor::processEvent);
 
             log.info("Entity state processors initialized");
             promise.complete();
