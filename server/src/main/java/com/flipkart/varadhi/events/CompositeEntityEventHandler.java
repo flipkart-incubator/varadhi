@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.events;
 
+import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.core.cluster.EntityEventHandler;
-import com.flipkart.varadhi.entities.EntityEvent;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 

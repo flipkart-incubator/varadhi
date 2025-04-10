@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.events;
 
 import com.flipkart.varadhi.common.VaradhiCache;
+import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.core.cluster.EntityEventHandler;
-import com.flipkart.varadhi.entities.EntityEvent;
 import com.flipkart.varadhi.entities.InternalCompositeTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -47,7 +47,7 @@ public final class TopicEntityEventHandler implements EntityEventHandler {
         String topicName = event.resourceName();
         try {
             switch (event.operation()) {
-                case UPSERT -> handleUpsert(topicName, (VaradhiTopic) event.resourceState());
+                case UPSERT -> handleUpsert(topicName, (VaradhiTopic) event.resource());
                 case INVALIDATE -> handleInvalidate(topicName);
                 default -> log.warn("Unsupported operation {} for topic: {}", event.operation(), topicName);
             }

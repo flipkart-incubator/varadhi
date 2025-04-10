@@ -14,4 +14,5 @@ module com.flipkart.varadhi.common {
     exports com.flipkart.varadhi.common.exceptions;
     exports com.flipkart.varadhi.common.reflect;
     exports com.flipkart.varadhi.common;
+    exports com.flipkart.varadhi.common.events;
 }

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.events;
 
 import com.flipkart.varadhi.common.VaradhiCache;
+import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.core.cluster.EntityEventHandler;
-import com.flipkart.varadhi.entities.EntityEvent;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.ProjectService;
@@ -53,7 +53,7 @@ public class ProjectEntityEventHandler implements EntityEventHandler {
     }
 
     private void handleUpsert(String projectName, EntityEvent event) {
-        Project project = (Project) event.resourceState();
+        Project project = (Project) event.resource();
         Objects.requireNonNull(project, "Project state cannot be null for UPSERT operation");
 
         projectCache.put(projectName, project);

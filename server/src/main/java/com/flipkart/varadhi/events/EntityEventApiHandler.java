@@ -2,7 +2,7 @@ package com.flipkart.varadhi.events;
 
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
-import com.flipkart.varadhi.entities.EntityEvent;
+import com.flipkart.varadhi.common.events.EntityEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
