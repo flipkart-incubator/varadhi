@@ -42,3 +42,5 @@ jobs:
       env:
         CLOJARS_USERNAME: flipkartoss
         CLOJARS_PASSWORD: ${{ secrets.DEPLOY_TOKEN }}
+        GPG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        GPG_SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PWD }}
