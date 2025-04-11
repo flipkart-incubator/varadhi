@@ -16,7 +16,6 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -187,10 +186,19 @@ public class WebServerVerticle extends AbstractVerticle {
         // 2. metastore is RoleBindingMetastore
         // This is independent of Authorization is enabled or not
         if (isDefaultProvider) {
-            routes.addAll(
-                new IamPolicyHandlers(projectService, new IamPolicyService(metaStore, (IamPolicyMetaStore)metaStore))
-                                                                                                                     .get()
-            );
+            if (isIamPolicyStore) {
+                routes.addAll(
+                    new IamPolicyHandlers(
+                        projectService,
+                        new IamPolicyService(metaStore, metaStore.iamPolicyMetaStore())
+                    ).get()
+                );
+            } else {
+                log.error(
+                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
+                    metaStore.getClass().getName()
+                );
+            }
         } else {
             log.info("Builtin IamPolicyRoutes are ignored, as {} is used as AuthorizationProvider", authProviderName);
         }
