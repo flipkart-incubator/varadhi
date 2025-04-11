@@ -52,7 +52,8 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             CAPACITY_POLICY,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
 
@@ -75,7 +76,8 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
@@ -93,7 +95,8 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             Constants.DEFAULT_TOPIC_CAPACITY,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
 

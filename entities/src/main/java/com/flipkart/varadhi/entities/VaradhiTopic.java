@@ -17,6 +17,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
+    //Should it be list<String> ?
+    private final String nfrStrategy;
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -27,6 +29,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param capacity       the capacity policy of the topic
      * @param internalTopics the internal topics associated with this topic
      * @param status         the status of the topic
+     * @param nfrStrategy    the optional nfrStrategy
      */
     private VaradhiTopic(
         String name,
@@ -34,12 +37,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         boolean grouped,
         TopicCapacityPolicy capacity,
         Map<String, InternalCompositeTopic> internalTopics,
-        LifecycleStatus status
+        LifecycleStatus status,
+        String nfrStrategy
     ) {
         super(name, version);
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
+        this.nfrStrategy = nfrStrategy;
         this.status = status;
     }
 
@@ -51,7 +56,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param grouped   whether the topic is grouped
      * @param capacity  the capacity policy of the topic
      * @param actorCode the actor code indicating the reason for the state
-     *
      * @return a new VaradhiTopic instance
      */
     public static VaradhiTopic of(
@@ -61,13 +65,25 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TopicCapacityPolicy capacity,
         LifecycleStatus.ActorCode actorCode
     ) {
+        return of(project, name, grouped, capacity, actorCode, null);
+    }
+
+    public static VaradhiTopic of(
+        String project,
+        String name,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActorCode actorCode,
+        String nfrStrategy
+    ) {
         return new VaradhiTopic(
             buildTopicName(project, name),
             INITIAL_VERSION,
             grouped,
             capacity,
             new HashMap<>(),
-            new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode)
+            new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode),
+            nfrStrategy
         );
     }
 
@@ -76,7 +92,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      *
      * @param projectName the name of the project
      * @param topicName   the name of the topic
-     *
      * @return the constructed topic name
      */
     public static String buildTopicName(String projectName, String topicName) {
@@ -107,7 +122,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * Retrieves the produce topic for a specific region.
      *
      * @param region the region for which to retrieve the produce topic
-     *
      * @return the produce topic for the specified region
      */
     public InternalCompositeTopic getProduceTopicForRegion(String region) {

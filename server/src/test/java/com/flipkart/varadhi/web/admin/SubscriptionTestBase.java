@@ -66,7 +66,8 @@ public class SubscriptionTestBase extends WebTestBase {
         "topic1",
         "project1",
         null,
-        LifecycleStatus.ActorCode.SYSTEM_ACTION
+        LifecycleStatus.ActorCode.SYSTEM_ACTION,
+        "test"
     );
 
     @Mock

@@ -57,7 +57,8 @@ public class AuthZProviderTests extends E2EBase {
             "topic001",
             fkDefault.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         makeCreateRequest(getOrgsUri(), oPublic, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);

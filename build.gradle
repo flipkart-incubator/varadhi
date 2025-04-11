@@ -10,3 +10,7 @@ tasks.register('version') {
 }
 
 tasks.register("copyConfigForE2E", Copy, copyConfigToDir("setup/docker/config.overrides", "setup/docker/configs/varadhi-auto-generated"))
+
+tasks.named('spotlessJson') {
+    dependsOn tasks.named('copyConfigForE2E')
+}

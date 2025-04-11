@@ -20,7 +20,8 @@ class TopicResourceTest {
             "topicName",
             "projectName",
             new TopicCapacityPolicy(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         assertAll(
             () -> assertEquals("topicName", topicResource.getName()),
@@ -37,7 +38,8 @@ class TopicResourceTest {
             "topicName",
             "projectName",
             new TopicCapacityPolicy(),
-            LifecycleStatus.ActorCode.USER_ACTION
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "test"
         );
         assertAll(
             () -> assertEquals("topicName", topicResource.getName()),
@@ -73,7 +75,8 @@ class TopicResourceTest {
             "topicName",
             "projectName",
             new TopicCapacityPolicy(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
         assertAll(

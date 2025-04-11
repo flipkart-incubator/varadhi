@@ -1,18 +1,17 @@
-package com.flipkart.varadhi.web.produce;
+package com.flipkart.varadhi.web.v1.produce;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.StdHeaders;
-import com.flipkart.varadhi.entities.TopicState;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
@@ -23,8 +22,8 @@ import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -44,6 +43,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -327,6 +327,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         headers.add("aaa_multi_value1", "multi_value1_3");
         headers.add("bbb_multi_value1", "multi_value1_3");
         projectService = mock(ProjectService.class);
+        projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
@@ -339,6 +340,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
             producerService,
             preProduceHandler,
             projectService,
+            varadhiTopicService,
+            orgService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion
@@ -409,6 +412,105 @@ public class ProduceHandlersTest extends ProduceTestBase {
             "Request size exceeds allowed limit of 5242880 bytes.",
             ErrorResponse.class
         );
+    }
+
+
+    // Helper method to initialize common mocks.
+    private void setupProjectAndFilters(String projectName, String orgId, OrgFilters orgFilters, VaradhiTopic topic) {
+        Project project = mock(Project.class);
+        when(project.getOrg()).thenReturn(orgId);
+        when(projectService.getCachedProject(projectName)).thenReturn(project);
+        when(orgService.getAllFilters(orgId)).thenReturn(orgFilters);
+        when(varadhiTopicService.get(any())).thenReturn(topic);
+    }
+
+    @Test
+    public void testAreOrgFilterRules_NullOrgFilters() {
+        String projectName = "proj1";
+        String topicName = "topic1";
+
+        // Return null for orgFilters.
+        setupProjectAndFilters(projectName, "org1", null, mock(VaradhiTopic.class));
+
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        Message message = new SimpleMessage(new byte[] {}, headers);
+
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        assertFalse(result);
+    }
+
+    @Test
+    public void testAreOrgFilterRules_EmptyOrgFilters() {
+        String projectName = "proj1";
+        String topicName = "topic1";
+
+        OrgFilters emptyFilters = mock(OrgFilters.class);
+        when(emptyFilters.getFilters()).thenReturn(ImmutableMap.of());
+        setupProjectAndFilters(projectName, "org1", emptyFilters, mock(VaradhiTopic.class));
+
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        Message message = new SimpleMessage(new byte[] {}, headers);
+
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        assertFalse(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource (booleans = {true, false})
+    public void testIsOrgFilterApplicableAndValid_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
+        String projectName = "proj1";
+        String topicName = "topic1";
+        String strategyKey = "STRATEGY1";
+
+        // Create an OrgFilters with one filter mapping.
+        Condition condition = mock(Condition.class);
+        when(condition.evaluate(any())).thenReturn(conditionEvaluatesToTrue);
+        Map<String, Condition> filtersMap = new HashMap<>();
+        filtersMap.put(strategyKey, condition);
+        OrgFilters orgFilters = mock(OrgFilters.class);
+        when(orgFilters.getFilters()).thenReturn(ImmutableMap.copyOf(filtersMap));
+
+        // Create a VaradhiTopic with matching nfrStrategy.
+        VaradhiTopic topic = mock(VaradhiTopic.class);
+        when(topic.getNfrStrategy()).thenReturn(strategyKey);
+        setupProjectAndFilters(projectName, "org1", orgFilters, topic);
+
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put(strategyKey, "exists");
+        Message message = new SimpleMessage(new byte[] {}, headers);
+
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        // Verify that condition.evaluate is called with message headers.
+        verify(condition, times(1)).evaluate(message.getHeaders());
+        assertEquals(conditionEvaluatesToTrue, result);
+    }
+
+    @Test
+    public void testIsOrgFilterApplicableAndValid_NoMatchingStrategy() {
+        String projectName = "proj1";
+        String topicName = "topic1";
+        String strategyKey = "STRATEGY1";
+
+        // Create an OrgFilters with one filter mapping.
+        Condition condition = mock(Condition.class);
+        when(condition.evaluate(any())).thenReturn(false);
+        Map<String, Condition> filtersMap = new HashMap<>();
+        filtersMap.put(strategyKey, condition);
+        OrgFilters orgFilters = mock(OrgFilters.class);
+        when(orgFilters.getFilters()).thenReturn(ImmutableMap.copyOf(filtersMap));
+
+        // Create a VaradhiTopic with an empty nfrStrategy.
+        VaradhiTopic topic = mock(VaradhiTopic.class);
+        when(topic.getNfrStrategy()).thenReturn(null);
+        setupProjectAndFilters(projectName, "org1", orgFilters, topic);
+
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        Message message = new SimpleMessage(new byte[] {}, headers);
+
+        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        // Since the topic's nfrStrategy is not present, the condition should not be evaluated.
+        verify(condition, never()).evaluate(any());
+        assertFalse(result);
     }
 
 }

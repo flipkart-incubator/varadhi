@@ -54,7 +54,6 @@ public class ProducerServiceTests {
         producerFactory = mock(ProducerFactory.class);
         topicProvider = mock(TopicProvider.class);
         meterRegistry = new OtlpMeterRegistry();
-
         service = new ProducerService(
             region,
             new ProducerOptions(),
