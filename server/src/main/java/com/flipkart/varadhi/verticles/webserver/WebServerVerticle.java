@@ -179,12 +179,14 @@ public class WebServerVerticle extends AbstractVerticle {
             null :
             configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
-        boolean isIamPolicyStore = metaStore.iamPolicyMetaStore() == null;
+        boolean isIamPolicyStore = metaStore.iamPolicyMetaStore() != null;
         //TODO::Validate below specifically w.r.to lean deployment.
         // enable IamPolicy Routes, if
         // 1. provider class name is DefaultAuthorizationProvider, and
         // 2. metastore is RoleBindingMetastore
         // This is independent of Authorization is enabled or not
+        log.info(String.valueOf(isDefaultProvider));
+        log.info(String.valueOf(isIamPolicyStore));
         if (isDefaultProvider) {
             if (isIamPolicyStore) {
                 routes.addAll(
