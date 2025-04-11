@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.db.subscription;
+package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 

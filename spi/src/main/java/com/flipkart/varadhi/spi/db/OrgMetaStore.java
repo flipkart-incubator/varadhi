@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.db.org;
+package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.filters.OrgFilters;

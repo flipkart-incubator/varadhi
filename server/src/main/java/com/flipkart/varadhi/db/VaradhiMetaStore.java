@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.spi.db.IamPolicy.IamPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.org.OrgMetaStore;
-import com.flipkart.varadhi.spi.db.project.ProjectMetaStore;
-import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
-import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
-import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
+import com.flipkart.varadhi.spi.db.OrgMetaStore;
+import com.flipkart.varadhi.spi.db.ProjectMetaStore;
+import com.flipkart.varadhi.spi.db.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.TeamMetaStore;
+import com.flipkart.varadhi.spi.db.TopicMetaStore;
 
 /**
  * Implementation of the metadata store for Varadhi using ZooKeeper as the backend.

@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.db.team;
+package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.Team;
 

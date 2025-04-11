@@ -1,4 +1,4 @@
-ZOOKEEPER_URL=10.5.5.4:2181
-OTEL_URL=http://10.5.5.5:4318/v1/metrics
-PULSAR_URL=http://10.5.5.3:8080
+ZOOKEEPER_URL=0.0.0.0:2181
+OTEL_URL=http://0.0.0.0:4318/v1/metrics
+PULSAR_URL=http://0.0.0.0:8080
 MDC=\ [cid:%X{coroutine_id}]
