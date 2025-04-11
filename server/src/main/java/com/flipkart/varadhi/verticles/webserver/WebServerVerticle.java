@@ -187,19 +187,12 @@ public class WebServerVerticle extends AbstractVerticle {
         // 2. metastore is RoleBindingMetastore
         // This is independent of Authorization is enabled or not
         if (isDefaultProvider) {
-            if (isIamPolicyStore) {
                 routes.addAll(
                     new IamPolicyHandlers(
                         projectService,
                         new IamPolicyService(metaStore, (IamPolicyMetaStore)metaStore)
                     ).get()
                 );
-            } else {
-                log.error(
-                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
-                    metaStore.getClass().getName()
-                );
-            }
         } else {
             log.info("Builtin IamPolicyRoutes are ignored, as {} is used as AuthorizationProvider", authProviderName);
         }
