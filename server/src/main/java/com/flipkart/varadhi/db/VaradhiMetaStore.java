@@ -9,7 +9,6 @@ import com.flipkart.varadhi.spi.db.project.ProjectMetaStore;
 import com.flipkart.varadhi.spi.db.subscription.SubscriptionMetaStore;
 import com.flipkart.varadhi.spi.db.team.TeamMetaStore;
 import com.flipkart.varadhi.spi.db.topic.TopicMetaStore;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of the metadata store for Varadhi using ZooKeeper as the backend.
@@ -27,17 +26,11 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Events</li>
  * </ul>
  */
-@Slf4j
 public final class VaradhiMetaStore implements MetaStore {
     private final VaradhiMetaStoreImpl storeImpl;
     private final ZKMetaStore zkMetaStore;
 
     /**
-     * Constructs a new VaradhiMetaStore instance.
-     *
-     * <p>This constructor initializes the ZooKeeper-based metadata store and ensures
-     * all required entity paths exist.
-     *
      * @param zkMetaStore the ZooKeeper curator framework instance, must not be null
      * @throws IllegalArgumentException if zkCurator is null
      * @throws MetaStoreException       if initialization fails or required paths cannot be created
