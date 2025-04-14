@@ -4,6 +4,7 @@ import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EntityEventListener;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,11 +17,12 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A lean dispatcher for entity events to appropriate listeners.
  * <p>
- * This class routes entity events to registered listeners based on resource type.
- * It handles error cases gracefully and provides detailed logging.
+ * The dispatcher routes entity events to registered listeners based on resource type,
+ * handles error cases gracefully, and provides detailed logging for operational visibility.
  *
  * @see EntityEvent
  * @see EntityEventListener
+ * @see ResourceType
  */
 @Slf4j
 public final class EntityEventDispatcher {
@@ -44,22 +46,22 @@ public final class EntityEventDispatcher {
      */
     private EntityEventDispatcher(Map<ResourceType, EntityEventListener<?>> listeners) {
         this.listeners = Map.copyOf(listeners);
-        this.supportedTypes = this.listeners.keySet();
+        this.supportedTypes = Set.copyOf(this.listeners.keySet());
         log.info("Initialized EntityStateProcessor with supported types: {}", supportedTypes);
     }
 
     /**
      * Processes an entity event from a cluster message.
      * <p>
-     * This method extracts the entity event from the message, routes it to the
-     * appropriate listener, and returns a response message.
+     * This method extracts the entity event from the message, validates it,
+     * and routes it to the appropriate listener based on the resource type.
      *
      * @param message the cluster message containing the entity event
-     * @param <T>     the type of entity in the event
+     * @param <T>     the type of entity in the event, must extend MetaStoreEntity
      * @return a future that completes with the response message
      */
     @SuppressWarnings ("unchecked")
-    public <T> CompletableFuture<ResponseMessage> processEvent(ClusterMessage message) {
+    public <T extends MetaStoreEntity> CompletableFuture<ResponseMessage> processEvent(ClusterMessage message) {
         if (message == null) {
             return createErrorResponse(null, "Message cannot be null", null);
         }
@@ -143,13 +145,20 @@ public final class EntityEventDispatcher {
 
         /**
          * Registers a listener for a specific resource type.
+         * <p>
+         * If a listener is already registered for the specified resource type,
+         * it will be replaced with the new listener.
          *
          * @param resourceType the resource type to register the listener for
          * @param listener     the listener to register
-         * @param <T>          the type of resource the listener handles
+         * @param <T>          the type of resource the listener handles, must extend MetaStoreEntity
          * @return this builder for chaining
+         * @throws NullPointerException if resourceType or listener is null
          */
-        public <T> Builder withListener(ResourceType resourceType, EntityEventListener<T> listener) {
+        public <T extends MetaStoreEntity> Builder withListener(
+            ResourceType resourceType,
+            EntityEventListener<T> listener
+        ) {
             Objects.requireNonNull(resourceType, "Resource type cannot be null");
             Objects.requireNonNull(listener, "Listener cannot be null");
             listeners.put(resourceType, listener);
@@ -160,8 +169,12 @@ public final class EntityEventDispatcher {
          * Builds a new EntityEventDispatcher with the registered listeners.
          *
          * @return a new EntityEventDispatcher
+         * @throws IllegalStateException if no listeners are registered
          */
         public EntityEventDispatcher build() {
+            if (listeners.isEmpty()) {
+                throw new IllegalStateException("At least one listener must be registered");
+            }
             return new EntityEventDispatcher(listeners);
         }
     }

@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.produce.services;
 
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -7,10 +9,10 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
-import com.flipkart.varadhi.produce.providers.TopicProvider;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -29,17 +31,18 @@ import java.util.function.Function;
  * <p>
  * This service provides high-performance, thread-safe message production capabilities with:
  * <ul>
- *   <li>Efficient producer caching using Caffeine</li>
- *   <li>Asynchronous message production</li>
- *   <li>Comprehensive metrics collection</li>
- *   <li>Robust error handling</li>
+ *   <li>Efficient producer caching using Caffeine for optimal resource utilization</li>
+ *   <li>Fully asynchronous message production with CompletableFuture</li>
+ *   <li>Comprehensive metrics collection for monitoring and performance analysis</li>
+ *   <li>Robust error handling with detailed error messages</li>
  * </ul>
  * <p>
  * The service maintains a cache of producers for storage topics to optimize performance
- * and resource utilization. Producers are created on-demand and cached for reuse.
+ * and resource utilization. Producers are created on-demand and cached for reuse based on
+ * configurable TTL settings.
  */
 @Slf4j
-public class ProducerService {
+public final class ProducerService {
 
     /**
      * Cache of producers for storage topics.
@@ -52,44 +55,50 @@ public class ProducerService {
     private final String produceRegion;
 
     /**
-     * Provider for topic information.
+     * Registry of entity caches, used to look up topics by name.
      */
-    private final TopicProvider topicProvider;
+    private final EntityReadCacheRegistry cacheRegistry;
 
     /**
      * Creates a new ProducerService with default options.
+     * <p>
+     * This constructor uses the default producer options, which include a TTL of 60 minutes
+     * for cached producers.
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicProvider    provider for topic information
+     * @param cacheRegistry    registry containing entity caches, including the topic cache
      * @throws NullPointerException if any parameter is null
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        TopicProvider topicProvider
+        EntityReadCacheRegistry cacheRegistry
     ) {
-        this(produceRegion, producerProvider, topicProvider, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider, cacheRegistry, ProducerOptions.defaultOptions());
     }
 
     /**
      * Creates a new ProducerService with the specified options.
+     * <p>
+     * This constructor allows customization of producer options, such as the TTL for
+     * cached producers.
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicProvider    provider for topic information
+     * @param cacheRegistry    registry containing entity caches, including the topic cache
      * @param producerOptions  configuration options for producers
      * @throws NullPointerException if any parameter is null
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        TopicProvider topicProvider,
+        EntityReadCacheRegistry cacheRegistry,
         ProducerOptions producerOptions
     ) {
         this.produceRegion = Objects.requireNonNull(produceRegion, "Produce region cannot be null");
         Objects.requireNonNull(producerProvider, "Producer provider cannot be null");
-        this.topicProvider = Objects.requireNonNull(topicProvider, "Topic provider cannot be null");
+        this.cacheRegistry = Objects.requireNonNull(cacheRegistry, "Topic cache cannot be null");
         Objects.requireNonNull(producerOptions, "Producer options cannot be null");
 
         this.producerCache = Caffeine.newBuilder()
@@ -121,6 +130,7 @@ public class ProducerService {
      * @return a future that completes with the result of the produce operation
      * @throws ResourceNotFoundException if the topic does not exist or is not available in the region
      * @throws ProduceException          if production fails due to an internal error
+     * @throws NullPointerException      if any parameter is null
      */
     public CompletableFuture<ProduceResult> produceToTopic(
         Message message,
@@ -132,7 +142,8 @@ public class ProducerService {
         Objects.requireNonNull(metricsEmitter, "Metrics emitter cannot be null");
 
         try {
-            return Optional.ofNullable(topicProvider.getEntity(varadhiTopicName))
+            EntityReadCache<VaradhiTopic> topicCache = cacheRegistry.getCache(ResourceType.TOPIC);
+            return Optional.ofNullable(topicCache.getEntity(varadhiTopicName))
                            .filter(VaradhiTopic::isActive)
                            .map(topic -> produceToValidTopic(message, topic, metricsEmitter))
                            .orElseThrow(
@@ -190,7 +201,8 @@ public class ProducerService {
     /**
      * Gets a producer for the specified storage topic.
      * <p>
-     * First checks if the producer is already in the cache. If not, attempts to load it.
+     * This method first checks if the producer is already in the cache. If not, it attempts
+     * to load it using the producer provider function.
      *
      * @param storageTopic the storage topic to get a producer for
      * @return a future that completes with the producer
@@ -217,6 +229,13 @@ public class ProducerService {
 
     /**
      * Produces a message to a storage topic using the specified producer.
+     * <p>
+     * This method handles the details of producing to a specific storage topic, including:
+     * <ul>
+     *   <li>Measuring the latency of the produce operation</li>
+     *   <li>Emitting metrics for monitoring</li>
+     *   <li>Handling success and failure cases</li>
+     * </ul>
      *
      * @param producer       the producer to use
      * @param metricsEmitter emitter for production metrics

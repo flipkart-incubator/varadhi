@@ -1,9 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.DlqService;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -36,13 +37,17 @@ import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscrip
 public class DlqHandlers implements RouteProvider {
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
-    private final ProjectService projectService;
+    private final EntityReadCacheRegistry cacheRegistry;
     private final DlqService dlqService;
 
-    public DlqHandlers(DlqService dlqService, SubscriptionService subscriptionService, ProjectService projectService) {
+    public DlqHandlers(
+        DlqService dlqService,
+        SubscriptionService subscriptionService,
+        EntityReadCacheRegistry cacheRegistry
+    ) {
         this.dlqService = dlqService;
         this.subscriptionService = subscriptionService;
-        this.projectService = projectService;
+        this.cacheRegistry = cacheRegistry;
     }
 
     @Override
@@ -72,12 +77,13 @@ public class DlqHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        EntityReadCache<Project> projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectService.getCachedProject(projectName);
+        Project project = projectCache.getEntity(projectName);
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectService.getProject(topicNameSegments[0]);
+        Project topicProject = projectCache.getEntity(topicNameSegments[0]);
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),

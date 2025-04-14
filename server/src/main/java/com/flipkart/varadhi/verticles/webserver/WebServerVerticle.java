@@ -4,13 +4,13 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.produce.providers.TopicProvider;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.OrgService;
@@ -112,6 +112,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private final VerticleConfig verticleConfig;
+    private final EntityReadCacheRegistry cacheRegistry;
 
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
@@ -127,7 +128,8 @@ public class WebServerVerticle extends AbstractVerticle {
     public WebServerVerticle(
         AppConfiguration configuration,
         CoreServices services,
-        VaradhiClusterManager clusterManager
+        VaradhiClusterManager clusterManager,
+        EntityReadCacheRegistry cacheRegistry
     ) {
         this.configuration = Objects.requireNonNull(configuration, "Configuration cannot be null");
         this.configResolver = Objects.requireNonNull(services.getConfigResolver(), "ConfigFileResolver cannot be null");
@@ -143,6 +145,7 @@ public class WebServerVerticle extends AbstractVerticle {
         this.meterRegistry = Objects.requireNonNull(services.getMeterRegistry(), "MeterRegistry cannot be null");
         this.tracer = Objects.requireNonNull(services.getTracer("varadhi"), "Tracer cannot be null");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
+        this.cacheRegistry = Objects.requireNonNull(cacheRegistry, "CacheRegistry cannot be null");
     }
 
     /**
@@ -260,11 +263,10 @@ public class WebServerVerticle extends AbstractVerticle {
             // Initialize producer service
             Function<StorageTopic, Producer> producerProvider = messagingStackProvider
                                                                                       .getProducerFactory()::newProducer;
-            TopicProvider topicProvider = new TopicProvider(metaStore);
 
             serviceRegistry.register(
                 ProducerService.class,
-                new ProducerService(verticleConfig.deployedRegion(), producerProvider, topicProvider)
+                new ProducerService(verticleConfig.deployedRegion(), producerProvider, cacheRegistry)
             );
 
             log.info("Entity services setup completed");

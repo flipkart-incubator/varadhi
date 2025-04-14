@@ -71,7 +71,7 @@ class TopicHandlersTest extends WebTestBase {
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        doReturn(project).when(projectService).getCachedProject(project.getName());
+        doReturn(project).when(projectCache).getEntity(project.getName());
 
         setupRoutes();
     }

@@ -221,7 +221,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
      * @throws IllegalStateException if the EventProcessor has been shut down
      */
     @Override
-    public void onChange(EntityEvent<MetaStoreEntity> event) {
+    public void onChange(EntityEvent<? extends MetaStoreEntity> event) {
         if (isShutdown.get()) {
             throw new IllegalStateException("Change Listener has been stopped");
         }
@@ -561,7 +561,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
          * @return true if all nodes have completed processing, false otherwise
          */
         boolean isCompleteForAllNodes() {
-            return !participantHosts.isEmpty() && completedHosts.containsAll(participantHosts);
+            return completedHosts.containsAll(participantHosts);
         }
 
         /**

@@ -4,6 +4,7 @@ import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EntityEventListener;
 import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -32,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
 
     private final MetaStore metaStore;
-    private final EntityEventListener listener;
+    private final EntityEventListener<MetaStoreEntity> listener;
 
     /**
      * Handles MetaStore change events by converting them to EntityEvents.

@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -25,9 +27,11 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class ProjectHandlers implements RouteProvider {
     private final ProjectService projectService;
+    private final EntityReadCacheRegistry cacheRegistry;
 
-    public ProjectHandlers(ProjectService projectService) {
+    public ProjectHandlers(ProjectService projectService, EntityReadCacheRegistry cacheRegistry) {
         this.projectService = projectService;
+        this.cacheRegistry = cacheRegistry;
     }
 
     @Override
@@ -61,9 +65,10 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        EntityReadCache<Project> projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
         Project project = hasBody ?
             ctx.get(CONTEXT_KEY_BODY) :
-            projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
+            projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(project));
     }
 

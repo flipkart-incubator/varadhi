@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.common.events;
 
+import com.flipkart.varadhi.entities.MetaStoreEntity;
+
 /**
  * Listener interface for entity change events in Varadhi.
  * <p>
@@ -12,7 +14,7 @@ package com.flipkart.varadhi.common.events;
  * @see EntityEvent
  */
 @FunctionalInterface
-public interface EntityEventListener<T> {
+public interface EntityEventListener<T extends MetaStoreEntity> {
 
     /**
      * Called when an entity changes.
@@ -23,5 +25,5 @@ public interface EntityEventListener<T> {
      * @param event the event containing information about the entity change
      * @throws IllegalStateException if the listener is in a state where it cannot process events
      */
-    void onChange(EntityEvent<T> event);
+    void onChange(EntityEvent<? extends T> event);
 }

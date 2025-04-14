@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.common.utils.HostUtils;
@@ -12,9 +13,8 @@ import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.StdHeaders;
-import com.flipkart.varadhi.events.EventManager;
-import com.flipkart.varadhi.produce.providers.TopicProvider;
-import com.flipkart.varadhi.providers.ProjectProvider;
+import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.events.EntityEventManager;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -91,8 +91,13 @@ public class VaradhiApplication {
             CoreServices services = new CoreServices(configuration, configResolver);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
 
-            // Initialize event manager
-            initializeEventManager(services, clusterManager, memberInfo).compose(v -> {
+            // Initialize event registry and event manager
+            Future<EntityReadCacheRegistry> registryFuture = initializeEventManager(
+                services,
+                clusterManager,
+                memberInfo
+            );
+            registryFuture.compose(cacheRegistry -> {
                 log.info("Caches and event handlers initialized successfully");
 
                 // Get component verticles
@@ -100,7 +105,8 @@ public class VaradhiApplication {
                     configuration,
                     services,
                     clusterManager,
-                    memberInfo
+                    memberInfo,
+                    cacheRegistry
                 );
 
                 // Create clustered Vertx and deploy verticles
@@ -164,9 +170,9 @@ public class VaradhiApplication {
      * @param services       core services
      * @param clusterManager cluster manager
      * @param memberInfo     member information
-     * @return a future that completes when initialization is finished
+     * @return a future that completes with the initialized EntityReadCacheRegistry
      */
-    private static Future<Void> initializeEventManager(
+    private static Future<EntityReadCacheRegistry> initializeEventManager(
         CoreServices services,
         VaradhiClusterManager clusterManager,
         MemberInfo memberInfo
@@ -177,24 +183,33 @@ public class VaradhiApplication {
             // Create initialization Vertx instance
             Vertx initVertx = Vertx.vertx();
 
-            // Create providers
+            // Create registry and register caches
             MetaStore metaStore = services.getMetaStoreProvider().getMetaStore();
-            ProjectProvider projectProvider = new ProjectProvider(metaStore);
-            TopicProvider topicProvider = new TopicProvider(metaStore);
+            EntityReadCacheRegistry registry = new EntityReadCacheRegistry();
+
+            // Register project cache
+            registry.register(ResourceType.PROJECT, metaStore::getAllProjects);
+
+            // Register topic cache
+            registry.register(ResourceType.TOPIC, metaStore::getAllTopics);
 
             // Create and initialize entity event manager
-            EventManager eventManager = new EventManager(
-                projectProvider,
-                topicProvider,
+            EntityEventManager entityEventManager = new EntityEventManager(
+                registry,
                 clusterManager,
                 memberInfo,
                 initVertx
             );
 
-            return eventManager.initialize()
-                               .onFailure(
-                                   e -> log.error("Failed to initialize entity event manager: {}", e.getMessage(), e)
-                               );
+            return entityEventManager.initialize()
+                                     .onFailure(
+                                         e -> log.error(
+                                             "Failed to initialize entity event manager: {}",
+                                             e.getMessage(),
+                                             e
+                                         )
+                                     )
+                                     .map(v -> registry);
         } catch (Exception e) {
             log.error("Error setting up entity event manager: {}", e.getMessage(), e);
             return Future.failedFuture(e);
@@ -380,14 +395,15 @@ public class VaradhiApplication {
         AppConfiguration config,
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
-        MemberInfo memberInfo
+        MemberInfo memberInfo,
+        EntityReadCacheRegistry cacheRegistry
     ) {
         log.info("Creating verticles for components: {}", Arrays.toString(memberInfo.roles()));
 
         return Arrays.stream(memberInfo.roles())
                      .distinct()
                      .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                         case Server -> new WebServerVerticle(config, coreServices, clusterManager);
+                         case Server -> new WebServerVerticle(config, coreServices, clusterManager, cacheRegistry);
                          case Controller -> new ControllerVerticle(
                              config.getController(),
                              coreServices,
