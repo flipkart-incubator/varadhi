@@ -10,8 +10,6 @@ dependencies {
     implementation("io.vertx:vertx-micrometer-metrics")
     implementation('com.fasterxml.jackson.core:jackson-databind')
     implementation("org.apache.commons:commons-lang3")
-    implementation("org.apache.curator:curator-recipes:$curator_version")
-    implementation("org.apache.curator:curator-framework:$curator_version")
 
     testImplementation(testFixtures(project(":entities")))
     testImplementation(testFixtures(project(":core")))

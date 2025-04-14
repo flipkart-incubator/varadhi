@@ -18,6 +18,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
+import com.flipkart.varadhi.produce.providers.TopicProvider;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.DummyProducer;
@@ -64,6 +65,7 @@ class ProducerServiceTests {
     MeterRegistry meterRegistry;
     MetaStore metaStore;
     Producer producer;
+    TopicProvider topicProvider;
     Random random;
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
@@ -79,8 +81,9 @@ class ProducerServiceTests {
         producerFactory = mock(ProducerFactory.class);
         meterRegistry = new OtlpMeterRegistry();
         metaStore = mock(MetaStore.class);
+        topicProvider = new TopicProvider(metaStore);
 
-        service = new ProducerService(region, producerFactory::newProducer, meterRegistry, metaStore);
+        service = new ProducerService(region, producerFactory::newProducer, topicProvider);
         random = new Random();
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
     }
@@ -361,11 +364,11 @@ class ProducerServiceTests {
         return rc;
     }
 
-    public static class TopicProvider {
-        public VaradhiTopic get(String topicName) {
-            return null;
-        }
-    }
+    //    public static class TopicProvider {
+    //        public VaradhiTopic get(String topicName) {
+    //            return null;
+    //        }
+    //    }
 
 
     static class ResultCapture {

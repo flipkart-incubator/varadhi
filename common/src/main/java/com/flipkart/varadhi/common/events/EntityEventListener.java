@@ -12,7 +12,7 @@ package com.flipkart.varadhi.common.events;
  * @see EntityEvent
  */
 @FunctionalInterface
-public interface EntityEventListener {
+public interface EntityEventListener<T> {
 
     /**
      * Called when an entity changes.
@@ -23,5 +23,5 @@ public interface EntityEventListener {
      * @param event the event containing information about the entity change
      * @throws IllegalStateException if the listener is in a state where it cannot process events
      */
-    void onChange(EntityEvent<?> event);
+    void onChange(EntityEvent<T> event);
 }

@@ -3,16 +3,14 @@ package com.flipkart.varadhi.verticles.webserver;
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.MessageRouter;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.events.EntityStateProcessor;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.produce.providers.TopicProvider;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.OrgService;
@@ -113,7 +111,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MetaStore metaStore;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
-    private final MemberInfo memberInfo;
     private final VerticleConfig verticleConfig;
 
     // Services initialized during startup
@@ -126,13 +123,11 @@ public class WebServerVerticle extends AbstractVerticle {
      * @param configuration  the application configuration
      * @param services       the core services
      * @param clusterManager the cluster manager
-     * @param memberInfo     information about the current cluster member
      */
     public WebServerVerticle(
         AppConfiguration configuration,
         CoreServices services,
-        VaradhiClusterManager clusterManager,
-        MemberInfo memberInfo
+        VaradhiClusterManager clusterManager
     ) {
         this.configuration = Objects.requireNonNull(configuration, "Configuration cannot be null");
         this.configResolver = Objects.requireNonNull(services.getConfigResolver(), "ConfigFileResolver cannot be null");
@@ -147,7 +142,6 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         this.meterRegistry = Objects.requireNonNull(services.getMeterRegistry(), "MeterRegistry cannot be null");
         this.tracer = Objects.requireNonNull(services.getTracer("varadhi"), "Tracer cannot be null");
-        this.memberInfo = Objects.requireNonNull(memberInfo, "MemberInfo cannot be null");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
     }
 
@@ -186,7 +180,7 @@ public class WebServerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         log.info("Starting WebServer verticle");
 
-        setupEntityServices().compose(v -> initializeCaches()).compose(v -> setupEventHandlers()).compose(v -> {
+        setupEntityServices().compose(v -> {
             performValidations();
             return startHttpServer();
         }).onSuccess(v -> {
@@ -238,7 +232,7 @@ public class WebServerVerticle extends AbstractVerticle {
             // Initialize basic services
             serviceRegistry.register(OrgService.class, new OrgService(metaStore));
             serviceRegistry.register(TeamService.class, new TeamService(metaStore));
-            serviceRegistry.register(ProjectService.class, new ProjectService(metaStore, meterRegistry));
+            serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
 
             // Initialize topic service
             serviceRegistry.register(
@@ -266,9 +260,11 @@ public class WebServerVerticle extends AbstractVerticle {
             // Initialize producer service
             Function<StorageTopic, Producer> producerProvider = messagingStackProvider
                                                                                       .getProducerFactory()::newProducer;
+            TopicProvider topicProvider = new TopicProvider(metaStore);
+
             serviceRegistry.register(
                 ProducerService.class,
-                new ProducerService(verticleConfig.deployedRegion(), producerProvider, meterRegistry, metaStore)
+                new ProducerService(verticleConfig.deployedRegion(), producerProvider, topicProvider)
             );
 
             log.info("Entity services setup completed");
@@ -294,21 +290,6 @@ public class WebServerVerticle extends AbstractVerticle {
             );
             validator.validate(configuration.getRestOptions());
         }
-    }
-
-    /**
-     * Initializes caches for improved performance.
-     *
-     * @return a Future that completes when all caches are initialized
-     */
-    private Future<Void> initializeCaches() {
-        log.info("Starting cache initialization");
-        return serviceRegistry.get(ProjectService.class).preloadCache().compose(v -> {
-            log.info("Project cache preloaded successfully");
-            return serviceRegistry.get(ProducerService.class).preloadCache();
-        })
-                              .onSuccess(v -> log.info("All caches preloaded successfully"))
-                              .onFailure(e -> log.error("Cache preloading failed", e));
     }
 
     /**
@@ -557,44 +538,6 @@ public class WebServerVerticle extends AbstractVerticle {
             // Add failure handler
             route.failureHandler(defaultFailureHandler);
         }
-    }
-
-    /**
-     * Sets up event handlers for entity events.
-     *
-     * @return a Future that completes when event handlers are set up
-     */
-    @SuppressWarnings ("unchecked")
-    private Future<Void> setupEventHandlers() {
-        Promise<Void> promise = Promise.promise();
-
-        try {
-            log.info("Setting up event handlers");
-            String hostname = memberInfo.hostname();
-
-            // Create producer provider function
-            Function<StorageTopic, Producer> producerProvider = messagingStackProvider
-                                                                                      .getProducerFactory()::newProducer;
-
-            // Create event processor
-            EntityStateProcessor stateProcessor = new EntityStateProcessor(
-                serviceRegistry.get(ProjectService.class),
-                serviceRegistry.get(ProducerService.class),
-                verticleConfig.deployedRegion(),
-                producerProvider
-            );
-
-            // Register event handler with message router
-            MessageRouter messageRouter = clusterManager.getRouter(vertx);
-            messageRouter.requestHandler(hostname, "entity-events", stateProcessor::processEvent);
-
-            log.info("Entity state processors initialized");
-            promise.complete();
-        } catch (Exception e) {
-            log.error("Failed to setup event processors", e);
-            promise.fail(e);
-        }
-        return promise.future();
     }
 
     /**

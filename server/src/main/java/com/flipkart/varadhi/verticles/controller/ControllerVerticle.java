@@ -17,7 +17,7 @@ import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.events.EventProcessor;
+import com.flipkart.varadhi.events.EntityEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -42,7 +42,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
 
-    private EventProcessor eventProcessor;
+    private EntityEventProcessor entityEventProcessor;
 
     /**
      * Creates a new ControllerVerticle with the specified configuration and services.
@@ -117,9 +117,9 @@ public class ControllerVerticle extends AbstractVerticle {
         log.info("Stopping ControllerVerticle");
 
         try {
-            if (eventProcessor != null) {
-                eventProcessor.close();
-                eventProcessor = null;
+            if (entityEventProcessor != null) {
+                entityEventProcessor.close();
+                entityEventProcessor = null;
             }
             log.info("ControllerVerticle stopped successfully");
             stopPromise.complete();
@@ -134,14 +134,14 @@ public class ControllerVerticle extends AbstractVerticle {
      *
      * @return a Future that completes with the initialized EventProcessor
      */
-    private Future<EventProcessor> initializeEventSystem() {
-        return EventProcessor.create(
+    private Future<EntityEventProcessor> initializeEventSystem() {
+        return EntityEventProcessor.create(
             clusterManager.getExchange(vertx),
             clusterManager,
             metaStoreProvider.getMetaStore(),
             controllerConfig.getEventProcessorConfig()
         ).onSuccess(processor -> {
-            this.eventProcessor = processor;
+            this.entityEventProcessor = processor;
             log.info("Event processor initialized successfully");
         });
     }

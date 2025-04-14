@@ -1,17 +1,19 @@
 package com.flipkart.varadhi.produce.config;
 
-
-import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class ProducerOptions {
-    // Guava cache spec as defined at com.google.common.cache.CacheBuilderSpec.
-    @NotNull
-    String producerCacheBuilderSpec = "";
 
-    @NotNull
-    String topicCacheBuilderSpec = "";
+    @Builder.Default
+    private long producerCacheTtlSeconds = 3600;
 
-    boolean metricEnabled;
+    @Builder.Default
+    private boolean metricEnabled = true;
+
+    public static ProducerOptions defaultOptions() {
+        return ProducerOptions.builder().build();
+    }
 }
