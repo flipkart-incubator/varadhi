@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.entities.filters.StringConditions;
@@ -147,22 +146,10 @@ public class OrgFilterHandlerTest extends WebTestBase {
     public void testUpdate() throws Exception {
         String orgName = "org1";
         String filterName = "nameGroup.filterName";
-        String jsonUpdate = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterA": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    },
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters inputFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
+
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters inputFilters = new OrgFilters(0, conditionMap);
 
         // assume update does not return any entity
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getFilterByNameUrl(orgName, filterName));

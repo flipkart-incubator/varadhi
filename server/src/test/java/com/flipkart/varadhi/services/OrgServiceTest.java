@@ -1,18 +1,21 @@
 package com.flipkart.varadhi.services;
 
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
+import com.flipkart.varadhi.entities.filters.StringConditions;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -132,25 +135,15 @@ public class OrgServiceTest {
 
 
     @Test
-    public void testOrgFiltersOperations() throws JsonProcessingException {
+    public void testOrgFiltersOperations() {
         String orgName = "org1";
         // Create the organization
         Org org1 = Org.of(orgName);
         orgService.createOrg(org1);
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters orgFilters = new OrgFilters(0, conditionMap);
 
-        // Create OrgFilters using JSON (initially without filterA)
-        String jsonCreate = """
-            {
-                "version": 0,
-                "filters": {
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters orgFilters = JsonMapper.getMapper().readValue(jsonCreate, OrgFilters.class);
         orgService.createFilter(orgName, orgFilters);
 
         // Retrieve and verify that the created OrgFilters is not null
@@ -158,22 +151,11 @@ public class OrgServiceTest {
         assertNotNull(retrievedFilters);
 
         // Update the filter by adding a new filter named "filterA" via a new JSON
-        String jsonUpdate = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterA": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    },
-                    "nameGroup.filterName": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters updatedFilters = JsonMapper.getMapper().readValue(jsonUpdate, OrgFilters.class);
+        Map<String, Condition> conditionMap2 = new HashMap<>();
+        conditionMap2.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        conditionMap2.put("nameGroup.filterName", new StringConditions.ExistsCondition("X_abc"));
+
+        OrgFilters updatedFilters = new OrgFilters(0, conditionMap2);
         orgService.updateFilter(orgName, "filterA", updatedFilters);
 
         // Verify that "filterA" now exists
@@ -191,18 +173,9 @@ public class OrgServiceTest {
         orgService.createOrg(org);
 
         // Create OrgFilters using JSON
-        String json = """
-            {
-                "version": 0,
-                "filters": {
-                    "filterToDelete": {
-                        "op": "exists",
-                        "key": "X_abc"
-                    }
-                }
-            }
-            """;
-        OrgFilters orgFilters = JsonMapper.getMapper().readValue(json, OrgFilters.class);
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters orgFilters = new OrgFilters(0, conditionMap);
         orgService.createFilter(orgName, orgFilters);
 
         // Ensure the filter exists before deletion

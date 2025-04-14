@@ -26,7 +26,7 @@ import com.flipkart.varadhi.spi.db.TopicMetaStore;
  *   <li>Events</li>
  * </ul>
  */
-public final class VaradhiMetaStore implements MetaStore {
+public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore.Provider {
     private final VaradhiMetaStoreImpl storeImpl;
     private final ZKMetaStore zkMetaStore;
 
@@ -65,11 +65,6 @@ public final class VaradhiMetaStore implements MetaStore {
         return storeImpl;
     }
 
-    @Override
-    public IamPolicyMetaStore iamPolicyMetaStore() {
-        return storeImpl;
-    }
-
     /**
      * @param listener
      * @return
@@ -77,5 +72,13 @@ public final class VaradhiMetaStore implements MetaStore {
     @Override
     public boolean registerEventListener(MetaStoreEventListener listener) {
         return zkMetaStore.registerEventListener(listener);
+    }
+
+    /**
+     * @return
+     */
+    @Override
+    public IamPolicyMetaStore iamPolicyMetaStore() {
+        return storeImpl;
     }
 }

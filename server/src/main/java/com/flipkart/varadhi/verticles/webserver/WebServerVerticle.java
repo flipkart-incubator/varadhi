@@ -16,6 +16,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -179,20 +180,18 @@ public class WebServerVerticle extends AbstractVerticle {
             null :
             configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
-        boolean isIamPolicyStore = metaStore.iamPolicyMetaStore() != null;
+        boolean isIamPolicyStore = metaStore instanceof IamPolicyMetaStore.Provider;
         //TODO::Validate below specifically w.r.to lean deployment.
         // enable IamPolicy Routes, if
         // 1. provider class name is DefaultAuthorizationProvider, and
         // 2. metastore is RoleBindingMetastore
         // This is independent of Authorization is enabled or not
-        log.info(String.valueOf(isDefaultProvider));
-        log.info(String.valueOf(isIamPolicyStore));
         if (isDefaultProvider) {
             if (isIamPolicyStore) {
                 routes.addAll(
                     new IamPolicyHandlers(
                         projectService,
-                        new IamPolicyService(metaStore, metaStore.iamPolicyMetaStore())
+                        new IamPolicyService(metaStore, ((IamPolicyMetaStore.Provider)metaStore).iamPolicyMetaStore())
                     ).get()
                 );
             } else {

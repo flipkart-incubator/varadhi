@@ -15,7 +15,5 @@ public interface MetaStore {
 
     SubscriptionMetaStore subscriptionMetaStore();
 
-    IamPolicyMetaStore iamPolicyMetaStore();
-
     boolean registerEventListener(MetaStoreEventListener listener);
 }
