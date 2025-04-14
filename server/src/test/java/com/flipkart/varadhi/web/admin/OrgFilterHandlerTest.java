@@ -154,7 +154,7 @@ public class OrgFilterHandlerTest extends WebTestBase {
         // assume update does not return any entity
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getFilterByNameUrl(orgName, filterName));
         sendRequestWithEntity(request, inputFilters, null);
-        verify(orgService, times(1)).updateFilter(eq(orgName), eq(filterName), eq(inputFilters));
+        verify(orgService, times(1)).updateFilter(eq(orgName), eq(inputFilters));
     }
 
     @Test

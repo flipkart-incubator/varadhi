@@ -156,7 +156,7 @@ public class OrgServiceTest {
         conditionMap2.put("nameGroup.filterName", new StringConditions.ExistsCondition("X_abc"));
 
         OrgFilters updatedFilters = new OrgFilters(0, conditionMap2);
-        orgService.updateFilter(orgName, "filterA", updatedFilters);
+        orgService.updateFilter(orgName, updatedFilters);
 
         // Verify that "filterA" now exists
         assertTrue(orgService.filterExists(orgName, "filterA"));

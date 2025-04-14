@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 
 public class BodyHandlerTest extends ProduceTestBase {
@@ -34,7 +35,8 @@ public class BodyHandlerTest extends ProduceTestBase {
         setupFailureHandler(route);
 
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
-        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                                                           .produceToTopic(any(), any(), any(), anyBoolean());
         request = createRequest(HttpMethod.POST, topicPath);
     }
 

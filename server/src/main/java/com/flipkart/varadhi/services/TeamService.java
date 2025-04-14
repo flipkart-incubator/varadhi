@@ -16,57 +16,57 @@ public class TeamService {
     }
 
     public Team createTeam(Team team) {
-        boolean orgExists = metaStore.orgMetaStore().checkOrgExists(team.getOrg());
+        boolean orgExists = metaStore.orgMetaStore().exists(team.getOrg());
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", team.getOrg()));
         }
-        metaStore.teamMetaStore().createTeam(team);
+        metaStore.teamMetaStore().create(team);
         return team;
     }
 
     public Team getTeam(String teamName, String orgName) {
-        boolean orgExists = metaStore.orgMetaStore().checkOrgExists(orgName);
+        boolean orgExists = metaStore.orgMetaStore().exists(orgName);
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", orgName));
         }
-        return metaStore.teamMetaStore().getTeam(teamName, orgName);
+        return metaStore.teamMetaStore().get(teamName, orgName);
     }
 
 
     public List<Team> getTeams(String orgName) {
-        boolean orgExists = metaStore.orgMetaStore().checkOrgExists(orgName);
+        boolean orgExists = metaStore.orgMetaStore().exists(orgName);
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", orgName));
         }
-        return metaStore.teamMetaStore().getTeams(orgName);
+        return metaStore.teamMetaStore().getAll(orgName);
     }
 
     public List<Project> getProjects(String teamName, String orgName) {
-        boolean orgExists = metaStore.orgMetaStore().checkOrgExists(orgName);
+        boolean orgExists = metaStore.orgMetaStore().exists(orgName);
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", orgName));
         }
-        boolean teamExists = metaStore.teamMetaStore().checkTeamExists(teamName, orgName);
+        boolean teamExists = metaStore.teamMetaStore().exists(teamName, orgName);
         if (!teamExists) {
             throw new ResourceNotFoundException(
                 String.format("Team(%s) does not exists in the Org(%s).", teamName, orgName)
             );
         }
-        return metaStore.projectMetaStore().getProjects(teamName, orgName);
+        return metaStore.projectMetaStore().getAll(teamName, orgName);
     }
 
 
     public void deleteTeam(String teamName, String orgName) {
-        boolean orgExists = metaStore.orgMetaStore().checkOrgExists(orgName);
+        boolean orgExists = metaStore.orgMetaStore().exists(orgName);
         if (!orgExists) {
             throw new ResourceNotFoundException(String.format("Org(%s) not found.", orgName));
         }
-        List<Project> projectsInTeam = metaStore.projectMetaStore().getProjects(teamName, orgName);
+        List<Project> projectsInTeam = metaStore.projectMetaStore().getAll(teamName, orgName);
         if (projectsInTeam.size() > 0) {
             throw new InvalidOperationForResourceException(
                 String.format("Can not delete Team(%s) as it has associated Project(s).", teamName)
             );
         }
-        metaStore.teamMetaStore().deleteTeam(teamName, orgName);
+        metaStore.teamMetaStore().delete(teamName, orgName);
     }
 }

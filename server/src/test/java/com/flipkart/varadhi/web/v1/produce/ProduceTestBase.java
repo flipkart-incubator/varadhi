@@ -57,7 +57,7 @@ public class ProduceTestBase extends WebTestBase {
         doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
         VaradhiTopic topic = mock(VaradhiTopic.class);
         when(varadhiTopicService.get(any())).thenReturn(topic);
-        when(topic.getNfrStrategy()).thenReturn(null);
+        when(topic.getNfrFilterName()).thenReturn(null);
         produceHandlers = new ProduceHandlers(
             producerService,
             preProduceHandler,

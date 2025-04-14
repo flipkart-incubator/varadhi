@@ -4,12 +4,8 @@ import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.OrgMetaStore;
-import com.flipkart.varadhi.spi.db.ProjectMetaStore;
-import com.flipkart.varadhi.spi.db.SubscriptionMetaStore;
-import com.flipkart.varadhi.spi.db.TeamMetaStore;
-import com.flipkart.varadhi.spi.db.TopicMetaStore;
+import com.flipkart.varadhi.spi.db.*;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -81,15 +77,15 @@ class VaradhiTopicServiceTest {
     private PulsarStorageTopic pulsarStorageTopic;
 
     @Mock
-    private TopicMetaStore topicMetaStore;
+    private TopicStore topicStore;
     @Mock
-    private SubscriptionMetaStore subscriptionMetaStore;
+    private SubscriptionStore subscriptionStore;
     @Mock
-    private OrgMetaStore orgMetaStore;
+    private OrgStore orgStore;
     @Mock
-    private TeamMetaStore teamMetaStore;
+    private TeamStore teamStore;
     @Mock
-    private ProjectMetaStore projectMetaStore;
+    private ProjectStore projectStore;
 
     @BeforeEach
     public void setUp() {
@@ -103,11 +99,11 @@ class VaradhiTopicServiceTest {
         doReturn(pulsarStorageTopic).when(storageTopicFactory)
                                     .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
 
-        when(metaStore.topicMetaStore()).thenReturn(topicMetaStore);
-        when(metaStore.subscriptionMetaStore()).thenReturn(subscriptionMetaStore);
-        when(metaStore.orgMetaStore()).thenReturn(orgMetaStore);
-        when(metaStore.projectMetaStore()).thenReturn(projectMetaStore);
-        when(metaStore.teamMetaStore()).thenReturn(teamMetaStore);
+        when(metaStore.topicMetaStore()).thenReturn(topicStore);
+        when(metaStore.subscriptionMetaStore()).thenReturn(subscriptionStore);
+        when(metaStore.orgMetaStore()).thenReturn(orgStore);
+        when(metaStore.projectMetaStore()).thenReturn(projectStore);
+        when(metaStore.teamMetaStore()).thenReturn(teamStore);
     }
 
     @Test
@@ -115,7 +111,7 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         varadhiTopicService.create(varadhiTopic, project);
 
-        verify(metaStore.topicMetaStore(), times(1)).createTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).create(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
         verify(storageTopicFactory, times(1)).getTopic(
             vTopicName,
@@ -128,17 +124,16 @@ class VaradhiTopicServiceTest {
     @Test
     void createVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        doThrow(new VaradhiException("metaStore.topicMetaStore() error")).when(topicMetaStore)
-                                                                         .createTopic(varadhiTopic);
+        doThrow(new VaradhiException("metaStore.topicStore() error")).when(topicStore).create(varadhiTopic);
 
         Exception exception = assertThrows(
             VaradhiException.class,
             () -> varadhiTopicService.create(varadhiTopic, project)
         );
 
-        verify(metaStore.topicMetaStore(), times(1)).createTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).create(varadhiTopic);
         assertEquals(VaradhiException.class, exception.getClass());
-        assertEquals("metaStore.topicMetaStore() error", exception.getMessage());
+        assertEquals("metaStore.topicStore() error", exception.getMessage());
     }
 
     @Test
@@ -152,8 +147,8 @@ class VaradhiTopicServiceTest {
             () -> varadhiTopicService.create(varadhiTopic, project)
         );
 
-        verify(metaStore.topicMetaStore(), times(1)).createTopic(varadhiTopic);
-        verify(metaStore.topicMetaStore(), times(1)).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).create(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).update(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("StorageTopicService error", exception.getMessage());
@@ -165,13 +160,13 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         VaradhiTopic existingTopic = spy(varadhiTopic);
         doReturn(true).when(existingTopic).isRetriable();
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(existingTopic);
-        when(metaStore.topicMetaStore().checkTopicExists(varadhiTopic.getName())).thenReturn(true);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(existingTopic);
+        when(metaStore.topicMetaStore().exists(varadhiTopic.getName())).thenReturn(true);
 
         varadhiTopicService.create(varadhiTopic, project);
 
-        verify(metaStore.topicMetaStore(), never()).createTopic(varadhiTopic);
-        verify(metaStore.topicMetaStore(), times(2)).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), never()).create(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(2)).update(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
     }
 
@@ -186,7 +181,7 @@ class VaradhiTopicServiceTest {
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
-        verify(metaStore.topicMetaStore(), times(1)).deleteTopic(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), times(1)).delete(varadhiTopic.getName());
     }
 
     @Test
@@ -198,13 +193,13 @@ class VaradhiTopicServiceTest {
         );
 
         when(storageTopicService.exists(pulsarStorageTopic.getName())).thenReturn(false);
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
-        when(metaStore.projectMetaStore().getProject(project.getName())).thenReturn(project);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.projectMetaStore().get(project.getName())).thenReturn(project);
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
-        verify(metaStore.topicMetaStore(), times(1)).deleteTopic(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), times(1)).delete(varadhiTopic.getName());
     }
 
     @Test
@@ -215,8 +210,8 @@ class VaradhiTopicServiceTest {
             "message"
         );
 
-        doThrow(new VaradhiException("metaStore.topicMetaStore() deletion failed")).when(topicMetaStore)
-                                                                                   .deleteTopic(varadhiTopic.getName());
+        doThrow(new VaradhiException("metaStore.topicStore() deletion failed")).when(topicStore)
+                                                                               .delete(varadhiTopic.getName());
 
         Exception exception = assertThrows(
             VaradhiException.class,
@@ -224,18 +219,18 @@ class VaradhiTopicServiceTest {
         );
 
         verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
-        verify(metaStore.topicMetaStore(), times(1)).deleteTopic(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), times(1)).delete(varadhiTopic.getName());
         assertEquals(VaradhiException.class, exception.getClass());
-        assertEquals("metaStore.topicMetaStore() deletion failed", exception.getMessage());
+        assertEquals("metaStore.topicStore() deletion failed", exception.getMessage());
     }
 
     @Test
     void deleteVaradhiTopic_TopicInUse_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
 
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
-        when(metaStore.subscriptionMetaStore().getAllSubscriptionNames()).thenReturn(List.of("subscription1"));
-        when(metaStore.subscriptionMetaStore().getSubscription("subscription1")).thenReturn(subscription);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.subscriptionMetaStore().getAllNames()).thenReturn(List.of("subscription1"));
+        when(metaStore.subscriptionMetaStore().get("subscription1")).thenReturn(subscription);
         when(subscription.getTopic()).thenReturn(varadhiTopic.getName());
         when(subscription.getStatus()).thenReturn(status);
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
@@ -245,7 +240,7 @@ class VaradhiTopicServiceTest {
             () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, null)
         );
 
-        verify(metaStore.topicMetaStore(), never()).deleteTopic(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), never()).delete(varadhiTopic.getName());
         assertEquals(InvalidOperationForResourceException.class, exception.getClass());
         assertEquals("Cannot delete topic as it has existing subscriptions.", exception.getMessage());
     }
@@ -253,7 +248,7 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_NonExistentTopic_ThrowsException() {
         String nonExistentTopicName = "nonExistentTopic";
-        when(metaStore.topicMetaStore().getTopic(nonExistentTopicName)).thenThrow(
+        when(metaStore.topicMetaStore().get(nonExistentTopicName)).thenThrow(
             new ResourceNotFoundException("Topic not found")
         );
 
@@ -276,7 +271,7 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest);
 
-        verify(metaStore.topicMetaStore(), times(1)).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).update(varadhiTopic);
         assertFalse(varadhiTopic.isActive());
     }
 
@@ -287,25 +282,24 @@ class VaradhiTopicServiceTest {
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
             "message"
         );
-        doThrow(new VaradhiException("metaStore.topicMetaStore() update failed")).when(topicMetaStore)
-                                                                                 .updateTopic(varadhiTopic);
+        doThrow(new VaradhiException("metaStore.topicStore() update failed")).when(topicStore).update(varadhiTopic);
 
         Exception exception = assertThrows(
             VaradhiException.class,
             () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest)
         );
 
-        verify(metaStore.topicMetaStore(), times(1)).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).update(varadhiTopic);
         assertEquals(VaradhiException.class, exception.getClass());
-        assertEquals("metaStore.topicMetaStore() update failed", exception.getMessage());
+        assertEquals("metaStore.topicStore() update failed", exception.getMessage());
     }
 
     @Test
     void validateTopicForDeletion_SoftDeleteWithInactiveSubscriptions_Success() throws Exception {
         String topicName = "testTopic";
 
-        when(metaStore.subscriptionMetaStore().getAllSubscriptionNames()).thenReturn(List.of("subscription1"));
-        when(metaStore.subscriptionMetaStore().getSubscription("subscription1")).thenReturn(subscription);
+        when(metaStore.subscriptionMetaStore().getAllNames()).thenReturn(List.of("subscription1"));
+        when(metaStore.subscriptionMetaStore().get("subscription1")).thenReturn(subscription);
         when(subscription.getTopic()).thenReturn(topicName);
         when(subscription.getStatus()).thenReturn(status);
         when(status.getState()).thenReturn(LifecycleStatus.State.INACTIVE);
@@ -324,8 +318,8 @@ class VaradhiTopicServiceTest {
     void validateTopicForDeletion_SoftDeleteWithActiveSubscriptions_ThrowsException() throws Exception {
         String topicName = "testTopic";
 
-        when(metaStore.subscriptionMetaStore().getAllSubscriptionNames()).thenReturn(List.of("subscription1"));
-        when(metaStore.subscriptionMetaStore().getSubscription("subscription1")).thenReturn(subscription);
+        when(metaStore.subscriptionMetaStore().getAllNames()).thenReturn(List.of("subscription1"));
+        when(metaStore.subscriptionMetaStore().get("subscription1")).thenReturn(subscription);
         when(subscription.getTopic()).thenReturn(topicName);
         when(subscription.getStatus()).thenReturn(status);
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
@@ -349,8 +343,8 @@ class VaradhiTopicServiceTest {
     void validateTopicForDeletion_HardDeleteWithExistingSubscriptions_ThrowsException() throws Exception {
         String topicName = "testTopic";
 
-        when(metaStore.subscriptionMetaStore().getAllSubscriptionNames()).thenReturn(List.of("subscription1"));
-        when(metaStore.subscriptionMetaStore().getSubscription("subscription1")).thenReturn(subscription);
+        when(metaStore.subscriptionMetaStore().getAllNames()).thenReturn(List.of("subscription1"));
+        when(metaStore.subscriptionMetaStore().get("subscription1")).thenReturn(subscription);
         when(subscription.getTopic()).thenReturn(topicName);
         when(subscription.getStatus()).thenReturn(status);
         when(status.getState()).thenReturn(LifecycleStatus.State.CREATED);
@@ -372,7 +366,7 @@ class VaradhiTopicServiceTest {
 
     @Test
     void validateTopicForDeletion_DeleteWithNoSubscriptions_Success() throws Exception {
-        when(metaStore.subscriptionMetaStore().getAllSubscriptionNames()).thenReturn(List.of());
+        when(metaStore.subscriptionMetaStore().getAllNames()).thenReturn(List.of());
 
         Method method = VaradhiTopicService.class.getDeclaredMethod(
             "validateTopicForDeletion",
@@ -389,7 +383,7 @@ class VaradhiTopicServiceTest {
     void restoreVaradhiTopic_SuccessfulRestore() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
             "message"
@@ -397,14 +391,14 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.restore(varadhiTopic.getName(), actionRequest);
 
-        verify(metaStore.topicMetaStore(), times(1)).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), times(1)).update(varadhiTopic);
         Assertions.assertTrue(varadhiTopic.isActive());
     }
 
     @Test
     void restoreVaradhiTopic_AlreadyActive_ThrowsException() {
         VaradhiTopic varadhiTopic = spy(createVaradhiTopicMock());
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
         doReturn(true).when(varadhiTopic).isActive();
         ResourceActionRequest actionRequest = new ResourceActionRequest(
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
@@ -416,7 +410,7 @@ class VaradhiTopicServiceTest {
             () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
         );
 
-        verify(metaStore.topicMetaStore(), never()).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), never()).update(varadhiTopic);
         assertEquals(InvalidOperationForResourceException.class, exception.getClass());
         assertEquals("Topic default.testTopic is not deleted.", exception.getMessage());
     }
@@ -425,7 +419,7 @@ class VaradhiTopicServiceTest {
     void restoreVaradhiTopic_InvalidUser_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         varadhiTopic.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "message");
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
         ResourceActionRequest actionRequest = new ResourceActionRequest(
             LifecycleStatus.ActorCode.USER_ACTION,
             "message"
@@ -436,7 +430,7 @@ class VaradhiTopicServiceTest {
             () -> varadhiTopicService.restore(varadhiTopic.getName(), actionRequest)
         );
 
-        verify(metaStore.topicMetaStore(), never()).updateTopic(varadhiTopic);
+        verify(metaStore.topicMetaStore(), never()).update(varadhiTopic);
         assertEquals(InvalidOperationForResourceException.class, exception.getClass());
         assertEquals("Restoration denied. Only Varadhi Admin can restore this topic.", exception.getMessage());
     }
@@ -449,7 +443,7 @@ class VaradhiTopicServiceTest {
             "message"
         );
 
-        when(metaStore.topicMetaStore().getTopic(nonExistentTopicName)).thenThrow(
+        when(metaStore.topicMetaStore().get(nonExistentTopicName)).thenThrow(
             new ResourceNotFoundException("Topic not found")
         );
 
@@ -465,29 +459,29 @@ class VaradhiTopicServiceTest {
     @Test
     void checkVaradhiTopicExists_TopicExists_ReturnsTrue() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        when(metaStore.topicMetaStore().checkTopicExists(varadhiTopic.getName())).thenReturn(true);
+        when(metaStore.topicMetaStore().exists(varadhiTopic.getName())).thenReturn(true);
 
         boolean exists = varadhiTopicService.exists(varadhiTopic.getName());
 
         assertTrue(exists);
-        verify(metaStore.topicMetaStore(), times(1)).checkTopicExists(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), times(1)).exists(varadhiTopic.getName());
     }
 
     @Test
     void checkVaradhiTopicExists_TopicDoesNotExist_ReturnsFalse() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        when(metaStore.topicMetaStore().checkTopicExists(varadhiTopic.getName())).thenReturn(false);
+        when(metaStore.topicMetaStore().exists(varadhiTopic.getName())).thenReturn(false);
 
         boolean exists = varadhiTopicService.exists(varadhiTopic.getName());
 
         assertFalse(exists);
-        verify(metaStore.topicMetaStore(), times(1)).checkTopicExists(varadhiTopic.getName());
+        verify(metaStore.topicMetaStore(), times(1)).exists(varadhiTopic.getName());
     }
 
     @Test
     void getVaradhiTopic_TopicExists_ReturnsTopic() {
         VaradhiTopic varadhiTopic = spy(createVaradhiTopicMock());
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
         doReturn(true).when(varadhiTopic).isActive();
 
         VaradhiTopic retrievedTopic = varadhiTopicService.get(varadhiTopic.getName());
@@ -499,7 +493,7 @@ class VaradhiTopicServiceTest {
     @Test
     void getVaradhiTopic_TopicDoesNotExist_ThrowsException() {
         String nonExistentTopicName = "nonExistentTopic";
-        when(metaStore.topicMetaStore().getTopic(nonExistentTopicName)).thenThrow(
+        when(metaStore.topicMetaStore().get(nonExistentTopicName)).thenThrow(
             new ResourceNotFoundException("Topic not found")
         );
 
@@ -571,8 +565,8 @@ class VaradhiTopicServiceTest {
     private VaradhiTopic mockDeleteSetup() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         when(storageTopicService.exists(pulsarStorageTopic.getName())).thenReturn(true);
-        when(metaStore.topicMetaStore().getTopic(varadhiTopic.getName())).thenReturn(varadhiTopic);
-        when(metaStore.projectMetaStore().getProject(project.getName())).thenReturn(project);
+        when(metaStore.topicMetaStore().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
+        when(metaStore.projectMetaStore().get(project.getName())).thenReturn(project);
         return varadhiTopic;
     }
 
@@ -580,10 +574,10 @@ class VaradhiTopicServiceTest {
         if (topicNames.size() != topicStatuses.size()) {
             throw new IllegalArgumentException("Topic names and statuses lists must have the same size");
         }
-        when(metaStore.topicMetaStore().getTopicNames(projectName)).thenReturn(topicNames);
+        when(metaStore.topicMetaStore().getAllNames(projectName)).thenReturn(topicNames);
         for (int i = 0; i < topicNames.size(); i++) {
             VaradhiTopic topic = mock(VaradhiTopic.class);
-            when(metaStore.topicMetaStore().getTopic(topicNames.get(i))).thenReturn(topic);
+            when(metaStore.topicMetaStore().get(topicNames.get(i))).thenReturn(topic);
             when(topic.isActive()).thenReturn(topicStatuses.get(i));
         }
     }

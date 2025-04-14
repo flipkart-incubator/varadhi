@@ -10,7 +10,7 @@ import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.spi.db.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -24,7 +24,7 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
         ConsumerClientFactory clientFactory,
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
-        SubscriptionMetaStore metaStore
+        SubscriptionStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }
@@ -44,7 +44,7 @@ public class ReAssignOpExecutor extends SubscriptionStartShardExecutor {
     private CompletableFuture<Void> reAssignShard(SubscriptionOperation subOp) {
         SubscriptionOperation.ReassignShardData data = (SubscriptionOperation.ReassignShardData)subOp.getData();
         Assignment currentAssignment = data.getAssignment();
-        VaradhiSubscription subscription = subscriptionMetaStore.getSubscription(currentAssignment.getSubscriptionId());
+        VaradhiSubscription subscription = subscriptionStore.get(currentAssignment.getSubscriptionId());
         Map<Integer, ShardOperation> shardOps = operationMgr.getShardOps(subOp.getId());
         return assignmentManager.reAssignShard(currentAssignment, subscription, false).thenCompose(a -> {
             ConsumerApi consumer = getAssignedConsumer(a);

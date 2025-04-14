@@ -6,7 +6,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.spi.db.SubscriptionMetaStore;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +19,7 @@ public abstract class SubscriptionStartShardExecutor extends SubscriptionOpExecu
         ConsumerClientFactory clientFactory,
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
-        SubscriptionMetaStore metaStore
+        SubscriptionStore metaStore
     ) {
         super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
     }

@@ -56,19 +56,19 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
         try {
             switch (type) {
                 case TOPIC -> {
-                    VaradhiTopic topic = metaStore.topicMetaStore().getTopic(name);
+                    VaradhiTopic topic = metaStore.topicMetaStore().get(name);
                     log.debug("Retrieved topic {}, creating UPSERT event", name);
                     listener.onChange(new EntityEvent<>(type, name, EventType.UPSERT, topic, event::markAsProcessed));
                 }
                 case SUBSCRIPTION -> {
-                    VaradhiSubscription subscription = metaStore.subscriptionMetaStore().getSubscription(name);
+                    VaradhiSubscription subscription = metaStore.subscriptionMetaStore().get(name);
                     log.debug("Retrieved subscription {}, creating UPSERT event", name);
                     listener.onChange(
                         new EntityEvent<>(type, name, EventType.UPSERT, subscription, event::markAsProcessed)
                     );
                 }
                 case PROJECT -> {
-                    Project project = metaStore.projectMetaStore().getProject(name);
+                    Project project = metaStore.projectMetaStore().get(name);
                     log.debug("Retrieved project {}, creating UPSERT event", name);
                     listener.onChange(new EntityEvent<>(type, name, EventType.UPSERT, project, event::markAsProcessed));
                 }

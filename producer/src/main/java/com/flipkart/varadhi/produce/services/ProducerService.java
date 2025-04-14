@@ -85,7 +85,8 @@ public class ProducerService {
     public CompletableFuture<ProduceResult> produceToTopic(
         Message message,
         String varadhiTopicName,
-        ProducerMetricsEmitter metricsEmitter
+        ProducerMetricsEmitter metricsEmitter,
+        boolean dropMessageFromProduce
     ) {
         try {
             InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
@@ -100,6 +101,9 @@ public class ProducerService {
                 return CompletableFuture.completedFuture(
                     ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
                 );
+            }
+            if (dropMessageFromProduce) {
+                return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
             }
             Producer producer = producerCache.get(internalTopic.getTopicToProduce());
             return produceToStorageProducer(

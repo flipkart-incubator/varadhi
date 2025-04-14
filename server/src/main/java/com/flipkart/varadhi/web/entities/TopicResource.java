@@ -116,7 +116,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
             varadhiTopic.isGrouped(),
             varadhiTopic.getCapacity(),
             varadhiTopic.getStatus().getActorCode(),
-            varadhiTopic.getNfrStrategy()
+            varadhiTopic.getNfrFilterName()
         );
     }
 

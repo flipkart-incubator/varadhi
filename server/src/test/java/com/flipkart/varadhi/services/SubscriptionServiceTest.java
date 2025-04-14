@@ -25,11 +25,8 @@ import com.flipkart.varadhi.pulsar.config.PulsarConfig;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
-import com.flipkart.varadhi.spi.db.OrgMetaStore;
-import com.flipkart.varadhi.spi.db.ProjectMetaStore;
-import com.flipkart.varadhi.spi.db.SubscriptionMetaStore;
-import com.flipkart.varadhi.spi.db.TeamMetaStore;
-import com.flipkart.varadhi.spi.db.TopicMetaStore;
+import com.flipkart.varadhi.spi.db.*;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -84,11 +81,11 @@ class SubscriptionServiceTest {
     private VaradhiSubscription subscription1, subscription2;
 
     private static final String REQUESTED_BY = ANONYMOUS_IDENTITY;
-    private TopicMetaStore topicMetaStore;
-    private SubscriptionMetaStore subscriptionMetaStore;
-    private OrgMetaStore orgMetaStore;
-    private TeamMetaStore teamMetaStore;
-    private ProjectMetaStore projectMetaStore;
+    private TopicStore topicStore;
+    private SubscriptionStore subscriptionStore;
+    private OrgStore orgStore;
+    private TeamStore teamStore;
+    private ProjectStore projectStore;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -114,11 +111,11 @@ class SubscriptionServiceTest {
         zkCurator.start();
 
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        topicMetaStore = spy(varadhiMetaStore.topicMetaStore());
-        subscriptionMetaStore = spy(varadhiMetaStore.subscriptionMetaStore());
-        orgMetaStore = spy(varadhiMetaStore.orgMetaStore());
-        teamMetaStore = spy(varadhiMetaStore.teamMetaStore());
-        projectMetaStore = spy(varadhiMetaStore.projectMetaStore());
+        topicStore = spy(varadhiMetaStore.topicMetaStore());
+        subscriptionStore = spy(varadhiMetaStore.subscriptionMetaStore());
+        orgStore = spy(varadhiMetaStore.orgMetaStore());
+        teamStore = spy(varadhiMetaStore.teamMetaStore());
+        projectStore = spy(varadhiMetaStore.projectMetaStore());
 
 
         orgService = new OrgService(varadhiMetaStore.orgMetaStore(), varadhiMetaStore.teamMetaStore());
@@ -161,16 +158,16 @@ class SubscriptionServiceTest {
         doNothing().when(shardProvisioner).provision(any(), any());
 
         controllerRestApi = mock(ControllerRestApi.class);
-        when(varadhiMetaStore.subscriptionMetaStore()).thenReturn(subscriptionMetaStore);
-        when(varadhiMetaStore.topicMetaStore()).thenReturn(topicMetaStore);
-        when(varadhiMetaStore.projectMetaStore()).thenReturn(projectMetaStore);
-        when(varadhiMetaStore.orgMetaStore()).thenReturn(orgMetaStore);
-        when(varadhiMetaStore.teamMetaStore()).thenReturn(teamMetaStore);
+        when(varadhiMetaStore.subscriptionMetaStore()).thenReturn(subscriptionStore);
+        when(varadhiMetaStore.topicMetaStore()).thenReturn(topicStore);
+        when(varadhiMetaStore.projectMetaStore()).thenReturn(projectStore);
+        when(varadhiMetaStore.orgMetaStore()).thenReturn(orgStore);
+        when(varadhiMetaStore.teamMetaStore()).thenReturn(teamStore);
         subscriptionService = new SubscriptionService(
             shardProvisioner,
             controllerRestApi,
-            subscriptionMetaStore,
-            topicMetaStore
+            subscriptionStore,
+            topicStore
         );
     }
 
@@ -286,7 +283,7 @@ class SubscriptionServiceTest {
 
     @Test
     void getSubscriptionList_ValidProject_ReturnsCorrectSubscriptions() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
         subscriptionService.createSubscription(
@@ -305,9 +302,7 @@ class SubscriptionServiceTest {
     @Test
     void getSubscriptionList_MetaStoreFailure_ThrowsException() {
         String projectName = project1.getName();
-        when(subscriptionMetaStore.getSubscriptionNames(projectName)).thenThrow(
-            new RuntimeException("MetaStore listing failed")
-        );
+        when(subscriptionStore.getAllNames(projectName)).thenThrow(new RuntimeException("MetaStore listing failed"));
 
         Exception exception = assertThrows(
             RuntimeException.class,
@@ -315,54 +310,54 @@ class SubscriptionServiceTest {
         );
 
         assertEquals("MetaStore listing failed", exception.getMessage());
-        verify(subscriptionMetaStore, times(1)).getSubscriptionNames(projectName);
+        verify(subscriptionStore, times(1)).getAllNames(projectName);
     }
 
     @Test
     void getSubscriptionList_InactiveSubscriptionsAreFilteredOut() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
 
         subscription2.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription2);
+        subscriptionStore.update(subscription2);
 
-        when(subscriptionMetaStore.getSubscriptionNames(project1.getName())).thenReturn(
+        when(subscriptionStore.getAllNames(project1.getName())).thenReturn(
             List.of(subscription1.getName(), subscription2.getName())
         );
-        when(subscriptionMetaStore.getSubscription(subscription1.getName())).thenReturn(subscription1);
-        when(subscriptionMetaStore.getSubscription(subscription2.getName())).thenReturn(subscription2);
+        when(subscriptionStore.get(subscription1.getName())).thenReturn(subscription1);
+        when(subscriptionStore.get(subscription2.getName())).thenReturn(subscription2);
 
         List<String> actualSubscriptions = subscriptionService.getSubscriptionList(project1.getName(), false);
 
         assertEquals(List.of(subscription1.getName()), actualSubscriptions);
-        verify(subscriptionMetaStore, times(1)).getSubscriptionNames(project1.getName());
-        verify(subscriptionMetaStore, times(1)).getSubscription(subscription1.getName());
-        verify(subscriptionMetaStore, times(1)).getSubscription(subscription2.getName());
+        verify(subscriptionStore, times(1)).getAllNames(project1.getName());
+        verify(subscriptionStore, times(1)).get(subscription1.getName());
+        verify(subscriptionStore, times(1)).get(subscription2.getName());
     }
 
     @Test
     void listSubscriptions_IncludingInactive_ReturnsAllSubscriptions() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
 
         subscription2.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription2);
+        subscriptionStore.update(subscription2);
 
-        when(subscriptionMetaStore.getSubscriptionNames(project1.getName())).thenReturn(
+        when(subscriptionStore.getAllNames(project1.getName())).thenReturn(
             List.of(subscription1.getName(), subscription2.getName())
         );
 
         List<String> actualSubscriptions = subscriptionService.getSubscriptionList(project1.getName(), true);
 
         assertEquals(List.of(subscription1.getName(), subscription2.getName()), actualSubscriptions);
-        verify(subscriptionMetaStore, times(1)).getSubscriptionNames(project1.getName());
+        verify(subscriptionStore, times(1)).getAllNames(project1.getName());
     }
 
     @Test
     void getSubscription_ExistingSubscription_ReturnsCorrectSubscription() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription actualSubscription = subscriptionService.getSubscription(subscription1.getName());
@@ -386,9 +381,9 @@ class SubscriptionServiceTest {
     void getSubscription_InactiveSubscription_ReturnsCorrectSubscription() {
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
         subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription1);
+        subscriptionStore.update(subscription1);
 
-        when(subscriptionMetaStore.getSubscription(subscription1.getName())).thenReturn(subscription1);
+        when(subscriptionStore.get(subscription1.getName())).thenReturn(subscription1);
 
         VaradhiSubscription actualSubscription = subscriptionService.getSubscription(subscription1.getName());
 
@@ -398,8 +393,7 @@ class SubscriptionServiceTest {
     @Test
     void getSubscription_MetaStoreFailure_ThrowsException() {
         String subscriptionName = subscription1.getName();
-        doThrow(new RuntimeException("MetaStore retrieval failed")).when(subscriptionMetaStore)
-                                                                   .getSubscription(subscriptionName);
+        doThrow(new RuntimeException("MetaStore retrieval failed")).when(subscriptionStore).get(subscriptionName);
 
         Exception exception = assertThrows(
             RuntimeException.class,
@@ -407,24 +401,24 @@ class SubscriptionServiceTest {
         );
 
         assertEquals("MetaStore retrieval failed", exception.getMessage());
-        verify(subscriptionMetaStore, times(1)).getSubscription(subscriptionName);
+        verify(subscriptionStore, times(1)).get(subscriptionName);
     }
 
     @Test
     void createSubscription_ValidUngroupedTopic_CreatesSuccessfully() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
 
         VaradhiSubscription result = subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         assertSubscriptionsEqual(subscription1, result);
         assertSubscriptionsEqual(subscription1, subscriptionService.getSubscription(subscription1.getName()));
         verify(shardProvisioner, times(1)).provision(subscription1, project1);
-        verify(subscriptionMetaStore, times(1)).createSubscription(subscription1);
+        verify(subscriptionStore, times(1)).create(subscription1);
     }
 
     @Test
     void createSubscription_NonGroupedTopicWithGroupedSubscription_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         VaradhiSubscription subscription = createGroupedSubscription("Sub1", project1, unGroupedTopic);
 
         Exception exception = assertThrows(
@@ -441,8 +435,8 @@ class SubscriptionServiceTest {
 
     @Test
     void createSubscription_GroupedTopic_AllowsBothGroupedAndUngroupedSubscriptions() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
-        doReturn(groupedTopic).when(topicMetaStore).getTopic(groupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
+        doReturn(groupedTopic).when(topicStore).get(groupedTopic.getName());
 
         VaradhiSubscription unGroupedSub = createUngroupedSubscription("Sub1", project1, groupedTopic);
         VaradhiSubscription groupedSub = createGroupedSubscription("Sub2", project1, groupedTopic);
@@ -458,7 +452,7 @@ class SubscriptionServiceTest {
 
     @Test
     void createSubscription_ProvisionFailure_SetsStateToCreateFailed() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
 
         Exception exception = assertThrows(
@@ -468,32 +462,31 @@ class SubscriptionServiceTest {
 
         assertEquals("Provision failed", exception.getMessage());
         assertEquals(LifecycleStatus.State.CREATE_FAILED, subscription1.getStatus().getState());
-        verify(subscriptionMetaStore, times(1)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(1)).update(subscription1);
     }
 
     @Test
     void createSubscription_ExistingRetriableSubscription_UpdatesSubscription() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         subscription1.markCreateFailed("Subscription Creation Failed");
-        subscriptionMetaStore.updateSubscription(subscription1);
+        subscriptionStore.update(subscription1);
 
-        doReturn(true).when(subscriptionMetaStore).checkSubscriptionExists(subscription1.getName());
-        doReturn(subscription1).when(subscriptionMetaStore).getSubscription(subscription1.getName());
+        doReturn(true).when(subscriptionStore).exists(subscription1.getName());
+        doReturn(subscription1).when(subscriptionStore).get(subscription1.getName());
 
         assertDoesNotThrow(() -> subscriptionService.createSubscription(unGroupedTopic, subscription1, project1));
 
         verify(shardProvisioner, times(1)).deProvision(subscription1, project1);
-        verify(subscriptionMetaStore, times(4)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(4)).update(subscription1);
         verify(shardProvisioner, times(2)).provision(subscription1, project1);
     }
 
     @Test
     void createSubscription_MetaStoreFailure_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
-        doThrow(new RuntimeException("MetaStore creation failed")).when(subscriptionMetaStore)
-                                                                  .createSubscription(any());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
+        doThrow(new RuntimeException("MetaStore creation failed")).when(subscriptionStore).create(any());
 
         Exception exception = assertThrows(
             RuntimeException.class,
@@ -501,14 +494,14 @@ class SubscriptionServiceTest {
         );
 
         assertEquals("MetaStore creation failed", exception.getMessage());
-        verify(subscriptionMetaStore, times(1)).createSubscription(subscription1);
+        verify(subscriptionStore, times(1)).create(subscription1);
     }
 
     @Test
     void updateSubscription_ValidInput_UpdatesCorrectly(VertxTestContext ctx) {
         Checkpoint checkpoint = ctx.checkpoint(1);
 
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
@@ -532,7 +525,7 @@ class SubscriptionServiceTest {
     void updateSubscription_VersionConflict_ThrowsException(VertxTestContext ctx) {
         Checkpoint checkpoint = ctx.checkpoint(1);
 
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
@@ -560,7 +553,7 @@ class SubscriptionServiceTest {
     void updateSubscription_UnGroupedTopic_ThrowsException(VertxTestContext ctx) {
         Checkpoint checkpoint = ctx.checkpoint(1);
 
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createGroupedSubscription(
@@ -588,7 +581,7 @@ class SubscriptionServiceTest {
 
     @Test
     void updateSubscription_MetaStoreFailure_ThrowsRuntimeException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
@@ -601,7 +594,7 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(update.getName(), REQUESTED_BY);
 
-        doThrow(new RuntimeException("MetaStore update failed")).when(subscriptionMetaStore).updateSubscription(any());
+        doThrow(new RuntimeException("MetaStore update failed")).when(subscriptionStore).update(any());
 
         Exception exception = assertThrows(
             ExecutionException.class,
@@ -622,7 +615,7 @@ class SubscriptionServiceTest {
         assertEquals("MetaStore update failed", cause.getMessage());
 
         ArgumentCaptor<VaradhiSubscription> subscriptionCaptor = ArgumentCaptor.forClass(VaradhiSubscription.class);
-        verify(subscriptionMetaStore, times(2)).updateSubscription(subscriptionCaptor.capture());
+        verify(subscriptionStore, times(2)).update(subscriptionCaptor.capture());
         VaradhiSubscription capturedSubscription = subscriptionCaptor.getValue();
         assertEquals(update.getName(), capturedSubscription.getName());
         assertEquals(update.getVersion(), capturedSubscription.getVersion());
@@ -632,7 +625,7 @@ class SubscriptionServiceTest {
     void deleteSubscription_HardDelete_Success(VertxTestContext ctx) {
         Checkpoint checkpoint = ctx.checkpoint(1);
 
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         String subscriptionName = subscription1.getName();
@@ -664,7 +657,7 @@ class SubscriptionServiceTest {
 
     @Test
     void deleteSubscription_SoftDelete_UpdatesSubscriptionState() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> stoppedState = CompletableFuture.completedFuture(
@@ -687,14 +680,14 @@ class SubscriptionServiceTest {
             ).get()
         );
 
-        verify(subscriptionMetaStore, times(1)).updateSubscription(subscription1);
-        VaradhiSubscription updatedSubscription = subscriptionMetaStore.getSubscription(subscription1.getName());
+        verify(subscriptionStore, times(1)).update(subscription1);
+        VaradhiSubscription updatedSubscription = subscriptionStore.get(subscription1.getName());
         assertEquals(LifecycleStatus.State.INACTIVE, updatedSubscription.getStatus().getState());
     }
 
     @Test
     void deleteSubscription_ResourceNotStopped_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> activeState = CompletableFuture.completedFuture(
@@ -721,20 +714,20 @@ class SubscriptionServiceTest {
         Throwable cause = exception.getCause();
         assertEquals(IllegalArgumentException.class, cause.getClass());
         assertEquals("Cannot delete subscription in state: SubscriptionState(ASSIGNED, CONSUMING)", cause.getMessage());
-        verify(subscriptionMetaStore, never()).deleteSubscription(subscription1.getName());
+        verify(subscriptionStore, never()).delete(subscription1.getName());
     }
 
     @Test
     void deleteSubscription_MetaStoreFailure_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> stoppedState = CompletableFuture.completedFuture(
             SubscriptionState.forStopped()
         );
         doReturn(stoppedState).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
-        doThrow(new RuntimeException("MetaStore deletion failed")).when(subscriptionMetaStore)
-                                                                  .deleteSubscription(subscription1.getName());
+        doThrow(new RuntimeException("MetaStore deletion failed")).when(subscriptionStore)
+                                                                  .delete(subscription1.getName());
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
@@ -755,12 +748,12 @@ class SubscriptionServiceTest {
         Throwable cause = exception.getCause();
         assertEquals(RuntimeException.class, cause.getClass());
         assertEquals("MetaStore deletion failed", cause.getMessage());
-        verify(subscriptionMetaStore, times(1)).deleteSubscription(subscription1.getName());
+        verify(subscriptionStore, times(1)).delete(subscription1.getName());
     }
 
     @Test
     void deleteSubscription_DeProvisionFailure_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> stoppedState = CompletableFuture.completedFuture(
@@ -789,14 +782,14 @@ class SubscriptionServiceTest {
         assertEquals(RuntimeException.class, cause.getClass());
         assertEquals("DeProvision failed", cause.getMessage());
 
-        VaradhiSubscription updatedSubscription = subscriptionMetaStore.getSubscription(subscription1.getName());
+        VaradhiSubscription updatedSubscription = subscriptionStore.get(subscription1.getName());
         assertEquals(LifecycleStatus.State.DELETE_FAILED, updatedSubscription.getStatus().getState());
-        verify(subscriptionMetaStore, times(1)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(1)).update(subscription1);
     }
 
     @Test
     void deleteSubscription_AlreadySoftDeleted_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> stoppedState = CompletableFuture.completedFuture(
@@ -833,7 +826,7 @@ class SubscriptionServiceTest {
 
     @Test
     void deleteSubscription_HardDeleteAfterSoftDelete_Success() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionState> stoppedState = CompletableFuture.completedFuture(
@@ -866,12 +859,12 @@ class SubscriptionServiceTest {
         );
 
         assertDoesNotThrow(result::join);
-        verify(subscriptionMetaStore, times(1)).deleteSubscription(subscription1.getName());
+        verify(subscriptionStore, times(1)).delete(subscription1.getName());
     }
 
     @Test
     void startSubscription_SuccessfulStart() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionOperation> startFuture = CompletableFuture.completedFuture(
@@ -885,7 +878,7 @@ class SubscriptionServiceTest {
 
     @Test
     void stopSubscription_SuccessfulStop() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         CompletableFuture<SubscriptionOperation> stopFuture = CompletableFuture.completedFuture(
@@ -899,7 +892,7 @@ class SubscriptionServiceTest {
 
     @Test
     void startSubscription_NotProvisioned_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
 
         assertThrows(
@@ -919,7 +912,7 @@ class SubscriptionServiceTest {
 
     @Test
     void stopSubscription_NotProvisioned_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
 
         assertThrows(
@@ -939,11 +932,11 @@ class SubscriptionServiceTest {
 
     @Test
     void restoreSubscription_Success() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription1);
+        subscriptionStore.update(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
@@ -963,16 +956,16 @@ class SubscriptionServiceTest {
             VaradhiSubscription restoredSubscription = result.get();
             assertEquals(LifecycleStatus.State.CREATED, restoredSubscription.getStatus().getState());
         });
-        verify(subscriptionMetaStore, times(2)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(2)).update(subscription1);
     }
 
     @Test
     void restoreSubscription_UserNotAllowed_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription1);
+        subscriptionStore.update(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
@@ -989,20 +982,20 @@ class SubscriptionServiceTest {
 
         String expectedMessage = "Restoration denied. Only Varadhi Admin can restore this subscription.";
         assertEquals(expectedMessage, exception.getMessage());
-        verify(subscriptionMetaStore, times(2)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(2)).update(subscription1);
     }
 
     @Test
     void restoreSubscription_MetaStoreFailure_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         subscription1.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive subscription");
-        subscriptionMetaStore.updateSubscription(subscription1);
+        subscriptionStore.update(subscription1);
 
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerRestApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
-        doThrow(new RuntimeException("MetaStore update failed")).when(subscriptionMetaStore).updateSubscription(any());
+        doThrow(new RuntimeException("MetaStore update failed")).when(subscriptionStore).update(any());
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
             LifecycleStatus.ActorCode.SYSTEM_ACTION,
@@ -1019,12 +1012,12 @@ class SubscriptionServiceTest {
         Throwable cause = exception.getCause();
         assertEquals(RuntimeException.class, cause.getClass());
         assertEquals("MetaStore update failed", cause.getMessage());
-        verify(subscriptionMetaStore, times(2)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(2)).update(subscription1);
     }
 
     @Test
     void restoreSubscription_AlreadyWellProvisioned_ThrowsException() {
-        doReturn(unGroupedTopic).when(topicMetaStore).getTopic(unGroupedTopic.getName());
+        doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         ResourceActionRequest actionRequest = new ResourceActionRequest(
@@ -1041,7 +1034,7 @@ class SubscriptionServiceTest {
 
         String expectedMessage = "Subscription '%s' is already active.".formatted(subscription1.getName());
         assertEquals(expectedMessage, exception.getMessage());
-        verify(subscriptionMetaStore, times(1)).updateSubscription(subscription1);
+        verify(subscriptionStore, times(1)).update(subscription1);
     }
 
     private void assertSubscriptionsEqual(VaradhiSubscription expected, VaradhiSubscription actual) {

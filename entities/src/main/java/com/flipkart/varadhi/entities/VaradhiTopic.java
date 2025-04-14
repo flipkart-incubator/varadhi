@@ -17,8 +17,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final Map<String, InternalCompositeTopic> internalTopics;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
-    //Should it be list<String> ?
-    private final String nfrStrategy;
+    private final String nfrFilterName;
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -29,7 +28,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param capacity       the capacity policy of the topic
      * @param internalTopics the internal topics associated with this topic
      * @param status         the status of the topic
-     * @param nfrStrategy    the optional nfrStrategy
+     * @param nfrFilterName the name of the filter applied for NFR; {@code : null} if not set
      */
     private VaradhiTopic(
         String name,
@@ -38,13 +37,13 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TopicCapacityPolicy capacity,
         Map<String, InternalCompositeTopic> internalTopics,
         LifecycleStatus status,
-        String nfrStrategy
+        String nfrFilterName
     ) {
         super(name, version);
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
-        this.nfrStrategy = nfrStrategy;
+        this.nfrFilterName = nfrFilterName;
         this.status = status;
     }
 

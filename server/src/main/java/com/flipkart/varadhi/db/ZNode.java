@@ -14,7 +14,7 @@ import java.util.Objects;
  * <ul>
  *     <li>Entities: /varadhi/entities/[kind]/[name]</li>
  *     <li>Hierarchical Resources: /varadhi/entities/[kind]/[parent]:[name]</li>
- *     <li>Child Resources: /varadhi/entities/[kind]/[parent]/[kind]/[name]</li>
+ *     <li>Child Resources: /varadhi/entities/[kind]/[parent]/[kind]</li>
  * </ul>
  *
  * <p>Supported node kinds:

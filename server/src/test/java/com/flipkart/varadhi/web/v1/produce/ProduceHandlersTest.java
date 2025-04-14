@@ -70,7 +70,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
         setupFailureHandler(route);
         span = mock(Span.class);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
-        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                                                           .produceToTopic(any(), any(), any(), anyBoolean());
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         doReturn(span).when(span).setAttribute(anyString(), anyString());
     }
@@ -87,7 +88,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(
                                                                msgCapture.capture(),
                                                                eq(topicFullName),
-                                                               any()
+                                                               any(),
+                                                               anyBoolean()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -109,14 +111,14 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Assertions.assertTrue(capturedMessage.hasHeader("X_HEADER2"));
         messageIdObtained = sendRequestWithPayload(request, payload, String.class);
         Assertions.assertEquals(messageId, messageIdObtained);
-        verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any());
+        verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName), any(), anyBoolean());
     }
 
     @Test
     public void testProduceThrows() throws InterruptedException {
         String exceptionMessage = "Some random message.";
         doThrow(new ResourceNotFoundException(exceptionMessage)).when(producerService)
-                                                                .produceToTopic(any(), any(), any());
+                                                                .produceToTopic(any(), any(), any(), anyBoolean());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -143,7 +145,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                .produceToTopic(
                                                                    msgCapture.capture(),
                                                                    eq(topicFullName),
-                                                                   any()
+                                                                   any(),
+                                                                   anyBoolean()
                                                                );
             try {
                 sendRequestWithPayload(request, payload, d.status, d.message, ErrorResponse.class);
@@ -164,7 +167,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(
                                                                msgCapture.capture(),
                                                                eq(topicFullName),
-                                                               any()
+                                                               any(),
+                                                               anyBoolean()
                                                            );
         sendRequestWithPayload(
             request,
@@ -182,7 +186,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                                                  .produceToTopic(
                                                                                                      msgCapture.capture(),
                                                                                                      eq(topicFullName),
-                                                                                                     any()
+                                                                                                     any(),
+                                                                                                     anyBoolean()
                                                                                                  );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -192,7 +197,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                                         .produceToTopic(
                                                                                             msgCapture.capture(),
                                                                                             eq(topicFullName),
-                                                                                            any()
+                                                                                            any(),
+                                                                                            anyBoolean()
                                                                                         );
         sendRequestWithPayload(request, payload, 500, exceptionMessage, ErrorResponse.class);
     }
@@ -200,7 +206,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
     @Test
     public void testProduceProduceException() throws InterruptedException {
         String exceptionMessage = "Failed to Produce.";
-        doThrow(new ProduceException(exceptionMessage)).when(producerService).produceToTopic(any(), any(), any());
+        doThrow(new ProduceException(exceptionMessage)).when(producerService)
+                                                       .produceToTopic(any(), any(), any(), anyBoolean());
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -214,7 +221,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(
                                                                msgCapture.capture(),
                                                                eq(topicFullName),
-                                                               any()
+                                                               any(),
+                                                               anyBoolean()
                                                            );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -245,7 +253,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(
                                                                msgCapture.capture(),
                                                                eq(topicFullName),
-                                                               any()
+                                                               any(),
+                                                               anyBoolean()
                                                            );
         sendRequestWithPayload(request, payload, 404, "Project1 not found.", ErrorResponse.class);
     }
@@ -435,7 +444,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        boolean result = produceHandlers.applyOrgFilter(message, projectName, topicName);
         assertFalse(result);
     }
 
@@ -451,13 +460,13 @@ public class ProduceHandlersTest extends ProduceTestBase {
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        boolean result = produceHandlers.applyOrgFilter(message, projectName, topicName);
         assertFalse(result);
     }
 
     @ParameterizedTest
     @ValueSource (booleans = {true, false})
-    public void testIsOrgFilterApplicableAndValid_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
+    public void testApplyOrgFilter_MatchingStrategyCondition(boolean conditionEvaluatesToTrue) {
         String projectName = "proj1";
         String topicName = "topic1";
         String strategyKey = "STRATEGY1";
@@ -472,21 +481,21 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         // Create a VaradhiTopic with matching nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getNfrStrategy()).thenReturn(strategyKey);
+        when(topic.getNfrFilterName()).thenReturn(strategyKey);
         setupProjectAndFilters(projectName, "org1", orgFilters, topic);
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(strategyKey, "exists");
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        boolean result = produceHandlers.applyOrgFilter(message, projectName, topicName);
         // Verify that condition.evaluate is called with message headers.
         verify(condition, times(1)).evaluate(message.getHeaders());
         assertEquals(conditionEvaluatesToTrue, result);
     }
 
     @Test
-    public void testIsOrgFilterApplicableAndValid_NoMatchingStrategy() {
+    public void testApplyOrgFilter_NoMatchingStrategy() {
         String projectName = "proj1";
         String topicName = "topic1";
         String strategyKey = "STRATEGY1";
@@ -501,13 +510,13 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         // Create a VaradhiTopic with an empty nfrStrategy.
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getNfrStrategy()).thenReturn(null);
+        when(topic.getNfrFilterName()).thenReturn(null);
         setupProjectAndFilters(projectName, "org1", orgFilters, topic);
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         Message message = new SimpleMessage(new byte[] {}, headers);
 
-        boolean result = produceHandlers.isOrgFilterApplicableAndValid(message, projectName, topicName);
+        boolean result = produceHandlers.applyOrgFilter(message, projectName, topicName);
         // Since the topic's nfrStrategy is not present, the condition should not be evaluated.
         verify(condition, never()).evaluate(any());
         assertFalse(result);

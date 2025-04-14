@@ -45,7 +45,7 @@ public class OrgFilterHandler implements RouteProvider {
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateFilter", "/:orgFilterName")
+                RouteDefinition.put("UpdateFilter", "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)
@@ -92,9 +92,8 @@ public class OrgFilterHandler implements RouteProvider {
 
     public void update(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
-        orgService.updateFilter(orgName, filterName, filter);
+        orgService.updateFilter(orgName, filter);
         ctx.endApi();
     }
 
