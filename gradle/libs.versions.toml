@@ -10,3 +10,4 @@ guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
 netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
 vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }
+failsafe = { group = "dev.failsafe", name = "failsafe", version = "3.3.2" }

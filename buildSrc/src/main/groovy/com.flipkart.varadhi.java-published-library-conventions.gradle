@@ -1,7 +1,15 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
     // Apply the maven-publish to allow deploying to maven artifactories
+    id 'signing'
     id 'maven-publish'
+}
+
+signing {
+    def signingKey = System.getenv("GPG_SIGNING_KEY")
+    def signingPassword = System.getenv("GPG_SIGNING_PASSPHRASE")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications
 }
 
 publishing {
@@ -21,7 +29,23 @@ publishing {
 
     repositories {
         maven {
-            url = mavenPublishUrl
+            name = "CLOJARS"
+            url = "https://repo.clojars.org"
+            credentials {
+                username = System.getenv("CLOJARS_USERNAME")
+                password = System.getenv("CLOJARS_PASSWORD")
+            }
+        }
+    }
+
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
         }
     }
 }

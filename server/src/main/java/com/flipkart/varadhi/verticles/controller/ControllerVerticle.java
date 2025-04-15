@@ -1,25 +1,5 @@
 package com.flipkart.varadhi.verticles.controller;
 
-import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.cluster.*;
-import com.flipkart.varadhi.controller.OperationMgr;
-import com.flipkart.varadhi.controller.AssignmentManager;
-import com.flipkart.varadhi.controller.RetryPolicy;
-import com.flipkart.varadhi.controller.config.ControllerConfig;
-import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.core.cluster.entities.*;
-import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.controller.ControllerApiMgr;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -27,6 +7,32 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+
+import com.flipkart.varadhi.CoreServices;
+import com.flipkart.varadhi.cluster.MembershipListener;
+import com.flipkart.varadhi.cluster.MessageExchange;
+import com.flipkart.varadhi.cluster.MessageRouter;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.controller.AssignmentManager;
+import com.flipkart.varadhi.controller.ControllerApiMgr;
+import com.flipkart.varadhi.controller.OperationMgr;
+import com.flipkart.varadhi.controller.RetryPolicy;
+import com.flipkart.varadhi.controller.config.ControllerConfig;
+import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
+import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
+import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.entities.cluster.Assignment;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.events.EventProcessor;
+import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
 
@@ -36,6 +42,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
+    private EventProcessor eventProcessor;
 
     public ControllerVerticle(
         ControllerConfig config,
@@ -56,13 +63,30 @@ public class ControllerVerticle extends AbstractVerticle {
         ControllerApiHandler handler = new ControllerApiHandler(controllerApiMgr);
 
         //TODO::Assuming one controller node for time being. Leader election needs to be added.
-        onLeaderElected(controllerApiMgr, handler, messageRouter).onComplete(ar -> {
-            if (ar.failed()) {
-                startPromise.fail(ar.cause());
-            } else {
-                startPromise.complete();
-            }
-        });
+        onLeaderElected(controllerApiMgr, handler, messageRouter).compose(v -> initializeEventSystem())
+                                                                 .onComplete(ar -> {
+                                                                     if (ar.failed()) {
+                                                                         log.error(
+                                                                             "Failed to initialize controller",
+                                                                             ar.cause()
+                                                                         );
+                                                                         startPromise.fail(ar.cause());
+                                                                     } else {
+                                                                         log.info(
+                                                                             "Controller initialized successfully"
+                                                                         );
+                                                                         startPromise.complete();
+                                                                     }
+                                                                 });
+    }
+
+    private Future<EventProcessor> initializeEventSystem() {
+        return EventProcessor.create(
+            clusterManager.getExchange(vertx),
+            clusterManager,
+            metaStoreProvider.getMetaStore(),
+            controllerConfig.getEventProcessorConfig()
+        );
     }
 
     private ControllerApiMgr getControllerApiMgr(MessageExchange messageExchange) {
@@ -138,7 +162,7 @@ public class ControllerVerticle extends AbstractVerticle {
         }).onComplete(ar -> {
             if (ar.failed()) {
                 log.error("Failed to Start controller. Giving up leadership.", ar.cause());
-                abortLeaderShip();
+                abortLeadership();
             } else {
                 log.info("Leadership obtained successfully");
             }
@@ -195,13 +219,21 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
 
-    private void abortLeaderShip() {
+    private void abortLeadership() {
         throw new UnsupportedOperationException("abortLeaderShip to be implemented.");
     }
 
     @Override
     public void stop(Promise<Void> stopPromise) {
-        stopPromise.complete();
+        try {
+            if (eventProcessor != null) {
+                eventProcessor.close();
+                eventProcessor = null;
+            }
+            stopPromise.complete();
+        } catch (Exception e) {
+            stopPromise.fail(e);
+        }
     }
 
     private void setupApiHandlers(MessageRouter messageRouter, ControllerApiHandler handler) {
