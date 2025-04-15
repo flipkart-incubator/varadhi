@@ -26,7 +26,6 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 public class AuthorizationHandlerTests {
 
     private final AuthorizationHandlerBuilder authzHandlerBuilder = new AuthorizationHandlerBuilder(
-        List.of("a", "b"),
         new TestAuthorizationProvider()
     );
 

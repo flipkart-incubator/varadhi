@@ -12,7 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
-    private final SuperUserHandler superUserHandler;
 
     public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
         if (configuration.isAuthorizationEnabled()) {
@@ -20,7 +19,6 @@ public class AuthzHandler implements RouteConfigurator {
         } else {
             authorizationHandlerBuilder = null;
         }
-        superUserHandler = new SuperUserHandler(configuration);
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
@@ -28,7 +26,6 @@ public class AuthzHandler implements RouteConfigurator {
             routeDef.getAuthorizeOnActions()
                     .forEach(action -> route.handler(authorizationHandlerBuilder.build(action)));
         }
-        superUserHandler.configure(route, routeDef);
     }
 
     AuthorizationHandlerBuilder createAuthorizationHandler(
@@ -38,7 +35,6 @@ public class AuthzHandler implements RouteConfigurator {
         if (configuration.isAuthorizationEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
             return new AuthorizationHandlerBuilder(
-                configuration.getAuthorization().getSuperUsers(),
                 authorizationProvider
             );
         } else {
