@@ -21,6 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -55,9 +58,9 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
-     * Registry of entity caches, used to look up topics by name.
+     * Cache of entity read caches, indexed by resource type.
      */
-    private final EntityReadCacheRegistry cacheRegistry;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
 
     /**
      * Creates a new ProducerService with default options.
@@ -98,13 +101,17 @@ public final class ProducerService {
     ) {
         this.produceRegion = Objects.requireNonNull(produceRegion, "Produce region cannot be null");
         Objects.requireNonNull(producerProvider, "Producer provider cannot be null");
-        this.cacheRegistry = Objects.requireNonNull(cacheRegistry, "Topic cache cannot be null");
+        Objects.requireNonNull(cacheRegistry, "Topic cache cannot be null");
         Objects.requireNonNull(producerOptions, "Producer options cannot be null");
 
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
                                      .build(producerProvider::apply);
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.TOPIC, cacheRegistry.getCache(ResourceType.TOPIC));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
 
         log.debug(
             "Initialized ProducerService with lazy-loading producer cache (TTL: {}s)",
@@ -142,13 +149,14 @@ public final class ProducerService {
         Objects.requireNonNull(metricsEmitter, "Metrics emitter cannot be null");
 
         try {
-            EntityReadCache<VaradhiTopic> topicCache = cacheRegistry.getCache(ResourceType.TOPIC);
+            @SuppressWarnings ("unchecked")
+            EntityReadCache<VaradhiTopic> topicCache = (EntityReadCache<VaradhiTopic>)readCacheMap.get(
+                ResourceType.TOPIC
+            );
             VaradhiTopic topic = topicCache.getEntity(varadhiTopicName);
 
-            if (topic == null || !topic.isActive()) {
-                throw new ResourceNotFoundException(
-                    String.format("Topic(%s) not found or not active.", varadhiTopicName)
-                );
+            if (!topic.isActive()) {
+                throw new ResourceNotFoundException(String.format("Topic(%s) is not active.", varadhiTopicName));
             }
 
             return produceToValidTopic(message, topic, metricsEmitter);

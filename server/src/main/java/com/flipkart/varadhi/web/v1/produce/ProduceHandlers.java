@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.v1.produce;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +28,6 @@ import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
-import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,14 +44,32 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
-@AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProducerMetricHandler metricHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
-    private final EntityReadCacheRegistry cacheRegistry;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
+
+    public ProduceHandlers(
+        ProducerService producerService,
+        Handler<RoutingContext> preProduceHandler,
+        ProducerMetricHandler metricHandler,
+        MessageConfiguration msgConfig,
+        String produceRegion,
+        EntityReadCacheRegistry cacheRegistry
+    ) {
+        this.producerService = producerService;
+        this.preProduceHandler = preProduceHandler;
+        this.metricHandler = metricHandler;
+        this.msgConfig = msgConfig;
+        this.produceRegion = produceRegion;
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.PROJECT, cacheRegistry.getCache(ResourceType.PROJECT));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
+    }
 
     @Override
     public List<RouteDefinition> get() {
@@ -70,7 +89,8 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        EntityReadCache<Project> projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
         Project project = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(
             ResourceType.TOPIC,

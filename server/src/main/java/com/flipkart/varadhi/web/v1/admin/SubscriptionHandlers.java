@@ -27,6 +27,8 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,7 +67,7 @@ public class SubscriptionHandlers implements RouteProvider {
     private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
-    private final EntityReadCache<Project> projectCache;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
 
     /**
      * Constructs a new SubscriptionHandlers instance.
@@ -90,7 +92,10 @@ public class SubscriptionHandlers implements RouteProvider {
         this.propertyDefaultValueProviders = SubscriptionPropertyValidator.createPropertyDefaultValueProviders(
             restOptions
         );
-        this.projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.PROJECT, cacheRegistry.getCache(ResourceType.PROJECT));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
     }
 
     /**
@@ -166,6 +171,8 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the map of resource types to their hierarchies
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
         Project subscriptionProject = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(CONTEXT_KEY_BODY);
@@ -231,6 +238,9 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void create(RoutingContext ctx) {
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
+
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
         Project subProject = projectCache.getEntity(subscription.getProject());
@@ -278,6 +288,9 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void delete(RoutingContext ctx) {
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
+
         ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE)
                                                .stream()
                                                .map(ResourceDeletionType::fromValue)

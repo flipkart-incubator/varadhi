@@ -16,6 +16,8 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,11 +29,14 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class ProjectHandlers implements RouteProvider {
     private final ProjectService projectService;
-    private final EntityReadCacheRegistry cacheRegistry;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
 
     public ProjectHandlers(ProjectService projectService, EntityReadCacheRegistry cacheRegistry) {
         this.projectService = projectService;
-        this.cacheRegistry = cacheRegistry;
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.PROJECT, cacheRegistry.getCache(ResourceType.PROJECT));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
     }
 
     @Override
@@ -65,7 +70,8 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        EntityReadCache<Project> projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
         Project project = hasBody ?
             ctx.get(CONTEXT_KEY_BODY) :
             projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));

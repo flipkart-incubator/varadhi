@@ -21,6 +21,8 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +52,7 @@ public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final EntityReadCache<Project> projectCache;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
 
     /**
      * Constructs a new TopicHandlers instance.
@@ -66,7 +68,10 @@ public class TopicHandlers implements RouteProvider {
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
-        this.projectCache = cacheRegistry.getCache(ResourceType.PROJECT);
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.PROJECT, cacheRegistry.getCache(ResourceType.PROJECT));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
     }
 
     /**
@@ -117,6 +122,8 @@ public class TopicHandlers implements RouteProvider {
      * @return the map of resource types to resource hierarchies
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getEntity(projectName);
 
@@ -159,6 +166,8 @@ public class TopicHandlers implements RouteProvider {
 
         validateProjectName(projectName, topicResource);
 
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
         Project project = projectCache.getEntity(topicResource.getProject());
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
