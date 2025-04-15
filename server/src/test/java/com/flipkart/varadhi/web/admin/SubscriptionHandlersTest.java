@@ -62,10 +62,10 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         MockitoAnnotations.openMocks(this);
         subscriptionHandlers = new SubscriptionHandlers(
             subscriptionService,
-            projectService,
             topicService,
             subscriptionFactory,
-            new RestOptions()
+            new RestOptions(),
+            cacheRegistry
         );
         configureRoutes();
     }
@@ -137,7 +137,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         String errorMessage = "Project not found.";
 
-        doThrow(new ResourceNotFoundException(errorMessage)).when(projectService).getCachedProject(PROJECT.getName());
+        doThrow(new ResourceNotFoundException(errorMessage)).when(projectCache).getEntity(PROJECT.getName());
 
         ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, ErrorResponse.class);
 
@@ -269,7 +269,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=SOFT_DELETE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -297,7 +297,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=HARD_DELETE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -322,7 +322,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void deleteSubscription_NoDeletionType_UsesSoftDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, buildSubscriptionUrl("sub1", PROJECT));
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -350,7 +350,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=INVALID_TYPE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),

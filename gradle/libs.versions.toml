@@ -2,6 +2,7 @@
 vertx = "4.5.10"
 guava = "33.3.1-jre"
 netty = "4.1.119.Final"
+caffeine = "3.2.0"
 
 [libraries]
 vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
@@ -11,3 +12,4 @@ jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-datab
 netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
 vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }
 failsafe = { group = "dev.failsafe", name = "failsafe", version = "3.3.2" }
+caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }

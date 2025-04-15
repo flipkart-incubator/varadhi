@@ -45,7 +45,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         dlqService = mock(DlqService.class);
-        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, projectService);
+        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, cacheRegistry);
         Route routeUnsideline = router.post("/projects/:project/subscriptions/:subscription/dlq/messages/unsideline")
                                       .handler(bodyHandler)
                                       .handler(ctx -> {
@@ -74,7 +74,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -303,7 +303,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getEntity(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }

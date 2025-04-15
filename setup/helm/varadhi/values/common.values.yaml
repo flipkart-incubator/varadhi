@@ -58,8 +58,7 @@ varadhi:
       defaultTeam: "public"
       defaultProject: "public"
     producerOptions:
-      producerCacheBuilderSpec: ""
-      topicCacheBuilderSpec: ""
+      producerCacheTtlSeconds: 3600
       metricEnabled: true
     vertxOptions:
       eventLoopPoolSize: 1

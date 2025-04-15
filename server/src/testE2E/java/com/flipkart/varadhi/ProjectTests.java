@@ -89,7 +89,7 @@ public class ProjectTests extends E2EBase {
         makeGetRequest(
             getProjectUri(o3t1Project5),
             404,
-            String.format("Project(%s) not found.", o3t1Project5.getName()),
+            String.format("PROJECT(%s) not found", o3t1Project5.getName()),
             true
         );
 
@@ -119,7 +119,7 @@ public class ProjectTests extends E2EBase {
             getProjectCreateUri(),
             t1_o1t1Project1,
             400,
-            String.format("Project(%s) can not be moved across organisation.", t1_o1t1Project1.getName()),
+            String.format("Project(%s) cannot be moved across organization.", t1_o1t1Project1.getName()),
             true
         );
 
@@ -190,8 +190,8 @@ public class ProjectTests extends E2EBase {
     public void testProjectInvalidOps() {
         Project pCreated = makeCreateRequest(getProjectCreateUri(), o1t1Project1, 200);
         Project p1 = Project.of("prj1", "", "team_1", "org_1");
-        makeGetRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
-        makeDeleteRequest(getProjectUri(p1), 404, String.format("Project(%s) not found.", p1.getName()), true);
+        makeGetRequest(getProjectUri(p1), 404, String.format("PROJECT(%s) not found", p1.getName()), true);
+        makeDeleteRequest(getProjectUri(p1), 404, String.format("PROJECT(%s) not found", p1.getName()), true);
 
         p1 = Project.of("prj1", "", pCreated.getTeam(), "org_1");
         makeCreateRequest(

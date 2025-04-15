@@ -2,7 +2,6 @@ module com.flipkart.varadhi.common {
 
     requires static lombok;
     requires org.slf4j;
-    requires com.google.common;
     requires micrometer.core;
     requires com.flipkart.varadhi.entities;
     requires com.fasterxml.jackson.databind;
@@ -10,8 +9,10 @@ module com.flipkart.varadhi.common {
     requires com.fasterxml.jackson.dataformat.yaml;
     requires com.fasterxml.jackson.module.paramnames;
     requires org.apache.commons.collections4;
+    requires io.vertx.core;
 
     exports com.flipkart.varadhi.common.exceptions;
     exports com.flipkart.varadhi.common.reflect;
     exports com.flipkart.varadhi.common;
+    exports com.flipkart.varadhi.common.events;
 }

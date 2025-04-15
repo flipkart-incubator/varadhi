@@ -1,9 +1,13 @@
 package com.flipkart.varadhi.web.v1.produce;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
@@ -12,7 +16,6 @@ import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -25,7 +28,6 @@ import com.google.common.collect.Multimap;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
-import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,14 +44,32 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
-@AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
-    private final ProjectService projectService;
     private final ProducerMetricHandler metricHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
+    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
+
+    public ProduceHandlers(
+        ProducerService producerService,
+        Handler<RoutingContext> preProduceHandler,
+        ProducerMetricHandler metricHandler,
+        MessageConfiguration msgConfig,
+        String produceRegion,
+        EntityReadCacheRegistry cacheRegistry
+    ) {
+        this.producerService = producerService;
+        this.preProduceHandler = preProduceHandler;
+        this.metricHandler = metricHandler;
+        this.msgConfig = msgConfig;
+        this.produceRegion = produceRegion;
+
+        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
+        cacheMap.put(ResourceType.PROJECT, cacheRegistry.getCache(ResourceType.PROJECT));
+        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
+    }
 
     @Override
     public List<RouteDefinition> get() {
@@ -69,7 +89,9 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project project = projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
+        @SuppressWarnings ("unchecked")
+        EntityReadCache<Project> projectCache = (EntityReadCache<Project>)readCacheMap.get(ResourceType.PROJECT);
+        Project project = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(
             ResourceType.TOPIC,
             new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))

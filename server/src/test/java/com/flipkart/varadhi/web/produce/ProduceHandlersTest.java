@@ -237,7 +237,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testProduceForNonexistingProject() throws InterruptedException {
-        doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
+        doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectCache).getEntity("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
@@ -338,10 +338,10 @@ public class ProduceHandlersTest extends ProduceTestBase {
         produceHandlers = new ProduceHandlers(
             producerService,
             preProduceHandler,
-            projectService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
-            deployedRegion
+            deployedRegion,
+            cacheRegistry
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 

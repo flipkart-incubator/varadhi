@@ -54,16 +54,16 @@ public class ProduceTestBase extends WebTestBase {
         produceHandlers = new ProduceHandlers(
             producerService,
             preProduceHandler,
-            projectService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(),
-            deployedRegion
+            deployedRegion,
+            cacheRegistry
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
         Project project = Project.of("project1", "description", "team1", "org1");
-        doReturn(project).when(projectService).getCachedProject("project1");
+        doReturn(project).when(projectCache).getEntity("project1");
     }
 }
