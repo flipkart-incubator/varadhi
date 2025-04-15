@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 @Getter
 public class RouteDefinition {
     private final String name;
+    private final String handlerName;
     private final HttpMethod method;
     private final String path;
     private final Set<RouteBehaviour> behaviours;
@@ -34,8 +35,10 @@ public class RouteDefinition {
     private final HierarchyFunction hierarchyFunction;
     private final TelemetryType telemetryType;
 
+
     RouteDefinition(
         String name,
+        String handlerName,
         HttpMethod method,
         String path,
         Set<RouteBehaviour> behaviours,
@@ -48,6 +51,7 @@ public class RouteDefinition {
         TelemetryType telemetryType
     ) {
         this.name = name;
+        this.handlerName = handlerName;
         this.method = method;
         this.path = path;
         this.behaviours = behaviours;
@@ -60,29 +64,30 @@ public class RouteDefinition {
         this.telemetryType = telemetryType;
     }
 
-    public static Builder get(String name, String path) {
-        return new Builder(name, HttpMethod.GET, path);
+    public static Builder get(String name, String handlerName, String path) {
+        return new Builder(name, handlerName, HttpMethod.GET, path);
     }
 
-    public static Builder put(String name, String path) {
-        return new Builder(name, HttpMethod.PUT, path);
+    public static Builder put(String name, String handlerName, String path) {
+        return new Builder(name, handlerName, HttpMethod.PUT, path);
     }
 
-    public static Builder post(String name, String path) {
-        return new Builder(name, HttpMethod.POST, path);
+    public static Builder post(String name, String handlerName, String path) {
+        return new Builder(name, handlerName, HttpMethod.POST, path);
     }
 
-    public static Builder delete(String name, String path) {
-        return new Builder(name, HttpMethod.DELETE, path);
+    public static Builder delete(String name, String handlerName, String path) {
+        return new Builder(name, handlerName, HttpMethod.DELETE, path);
     }
 
-    public static Builder patch(String name, String path) {
-        return new Builder(name, HttpMethod.PATCH, path);
+    public static Builder patch(String name, String handlerName, String path) {
+        return new Builder(name, handlerName, HttpMethod.PATCH, path);
     }
 
     @RequiredArgsConstructor
     public static class Builder {
         private final String name;
+        private final String handlerName;
         private final HttpMethod method;
         private final String path;
         private boolean unAuthenticated;
@@ -166,6 +171,7 @@ public class RouteDefinition {
 
             return new RouteDefinition(
                 name,
+                handlerName,
                 method,
                 path,
                 behaviours,

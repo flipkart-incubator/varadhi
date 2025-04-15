@@ -1,3 +1,5 @@
+disabledRouteNames: []
+
 member:
   roles: [ "Server", "Controller", "Consumer" ]
   maxQps: 5000

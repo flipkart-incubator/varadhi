@@ -25,6 +25,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class TeamHandlers implements RouteProvider {
+    public static final String HANDLER_NAME = "TeamHandlers";
     private final TeamService teamService;
 
     public TeamHandlers(TeamService teamService) {
@@ -36,17 +37,21 @@ public class TeamHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs/:org/teams",
             List.of(
-                RouteDefinition.get("ListTeams", "").authorize(TEAM_LIST).build(this::getHierarchies, this::listTeams),
-                RouteDefinition.get("ListProjects", "/:team/projects")
+                RouteDefinition.get("ListTeams", HANDLER_NAME, "")
+                               .authorize(TEAM_LIST)
+                               .build(this::getHierarchies, this::listTeams),
+                RouteDefinition.get("ListProjects", HANDLER_NAME, "/:team/projects")
                                .authorize(PROJECT_LIST)
                                .build(this::getHierarchies, this::listProjects),
-                RouteDefinition.get("GetTeam", "/:team").authorize(TEAM_GET).build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateTeam", "")
+                RouteDefinition.get("GetTeam", HANDLER_NAME, "/:team")
+                               .authorize(TEAM_GET)
+                               .build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateTeam", HANDLER_NAME, "")
                                .hasBody()
                                .bodyParser(this::setTeam)
                                .authorize(TEAM_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("DeleteTeam", "/:team")
+                RouteDefinition.delete("DeleteTeam", HANDLER_NAME, "/:team")
                                .authorize(TEAM_DELETE)
                                .build(this::getHierarchies, this::delete)
             )

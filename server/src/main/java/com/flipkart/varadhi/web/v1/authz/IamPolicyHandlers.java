@@ -30,6 +30,8 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class IamPolicyHandlers implements RouteProvider {
 
+    public static final String HANDLER_NAME = "IamPolicyHandlers";
+
     private static final String ORG_POLICY_PATH = "orgs/:org/policy";
     private static final String TEAM_POLICY_PATH = "orgs/:org/teams/:team/policy";
     private static final String PROJECT_POLICY_PATH = "projects/:project/policy";
@@ -71,14 +73,14 @@ public class IamPolicyHandlers implements RouteProvider {
 
     private List<RouteDefinition> getHandlersFor(String path, ResourceType resourceType) {
         return List.of(
-            RouteDefinition.get("GetIAMPolicy", path)
+            RouteDefinition.get("GetIAMPolicy", HANDLER_NAME, path)
                            .authorize(IAM_POLICY_GET)
                            .build(this::getHierarchies, this.getIamPolicyHandler(resourceType)),
-            RouteDefinition.put("SetIAMPolicy", path)
+            RouteDefinition.put("SetIAMPolicy", HANDLER_NAME, path)
                            .hasBody()
                            .authorize(IAM_POLICY_SET)
                            .build(this::getHierarchies, this.setIamPolicyHandler(resourceType)),
-            RouteDefinition.delete("DeleteIAMPolicy", path)
+            RouteDefinition.delete("DeleteIAMPolicy", HANDLER_NAME, path)
                            .authorize(IAM_POLICY_DELETE)
                            .build(this::getHierarchies, this.deleteIamPolicyHandler(resourceType))
         );

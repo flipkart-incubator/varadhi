@@ -11,7 +11,6 @@ import com.flipkart.varadhi.entities.auth.*;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
-import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
 import com.flipkart.varadhi.spi.db.MetaStore;

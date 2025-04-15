@@ -56,6 +56,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
+    public static final String HANDLER_NAME = "SubscriptionHandlers";
 
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
@@ -102,38 +103,38 @@ public class SubscriptionHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions",
             List.of(
-                RouteDefinition.get("ListSubscriptions", "")
+                RouteDefinition.get("ListSubscriptions", HANDLER_NAME, "")
                                .authorize(SUBSCRIPTION_LIST)
                                .build(this::getHierarchies, this::list),
-                RouteDefinition.get("GetSubscription", "/:subscription")
+                RouteDefinition.get("GetSubscription", HANDLER_NAME, "/:subscription")
                                .authorize(SUBSCRIPTION_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateSubscription", "")
+                RouteDefinition.post("CreateSubscription", HANDLER_NAME, "")
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_CREATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateSubscription", "/:subscription")
+                RouteDefinition.put("UpdateSubscription", HANDLER_NAME, "/:subscription")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_UPDATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("DeleteSubscription", "/:subscription")
+                RouteDefinition.delete("DeleteSubscription", HANDLER_NAME, "/:subscription")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_DELETE)
                                .build(this::getHierarchies, this::delete),
-                RouteDefinition.patch("RestoreSubscription", "/:subscription/restore")
+                RouteDefinition.patch("RestoreSubscription", HANDLER_NAME, "/:subscription/restore")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::restore),
-                RouteDefinition.post("StartSubscription", "/:subscription/start")
+                RouteDefinition.post("StartSubscription", HANDLER_NAME, "/:subscription/start")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::start),
-                RouteDefinition.post("StopSubscription", "/:subscription/stop")
+                RouteDefinition.post("StopSubscription", HANDLER_NAME, "/:subscription/stop")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::stop)

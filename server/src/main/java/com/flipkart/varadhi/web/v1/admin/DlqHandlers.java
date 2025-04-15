@@ -34,6 +34,7 @@ import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscrip
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class DlqHandlers implements RouteProvider {
+    public static final String HANDLER_NAME = "DlqHandlers";
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
     private final ProjectService projectService;
@@ -50,14 +51,14 @@ public class DlqHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions/:subscription/dlq/messages",
             List.of(
-                RouteDefinition.post("Unsideline", "/unsideline")
+                RouteDefinition.post("Unsideline", HANDLER_NAME, "/unsideline")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setUnsidelineRequest)
                                .authorize(SUBSCRIPTION_GET)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::enqueueUnsideline),
-                RouteDefinition.get("GetMessages", "")
+                RouteDefinition.get("GetMessages", HANDLER_NAME, "")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_GET)
                                .authorize(TOPIC_SUBSCRIBE)

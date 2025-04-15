@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
-import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;

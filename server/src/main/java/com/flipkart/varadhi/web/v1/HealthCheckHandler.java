@@ -21,6 +21,8 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 @ExtensionMethod ({RoutingContextExtension.class})
 public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvider {
 
+    public static final String HANDLER_NAME = "HealthCheckHandler";
+
     // TODO: add appropriate checks
 
     private volatile int responseCode = HTTP_OK;
@@ -43,7 +45,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-            RouteDefinition.get("HealthCheck", "/v1/health-check")
+            RouteDefinition.get("HealthCheck", HANDLER_NAME, "/v1/health-check")
                            .unAuthenticated()
                            .logsDisabled()
                            .tracingDisabled()

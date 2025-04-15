@@ -24,6 +24,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgHandlers implements RouteProvider {
+    public static final String HANDLER_NAME = "OrgHandlers";
     private final OrgService orgService;
 
     public OrgHandlers(OrgService orgService) {
@@ -35,16 +36,18 @@ public class OrgHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs",
             List.of(
-                RouteDefinition.get("GetOrgs", "")
+                RouteDefinition.get("GetOrgs", HANDLER_NAME, "")
                                .authorize(ORG_LIST)
                                .build(this::getHierarchies, this::getOrganizations),
-                RouteDefinition.get("GetOrg", "/:org").authorize(ORG_GET).build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateOrg", "")
+                RouteDefinition.get("GetOrg", HANDLER_NAME, "/:org")
+                               .authorize(ORG_GET)
+                               .build(this::getHierarchies, this::get),
+                RouteDefinition.post("CreateOrg", HANDLER_NAME, "")
                                .hasBody()
                                .bodyParser(this::setOrg)
                                .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("DeleteOrg", "/:org")
+                RouteDefinition.delete("DeleteOrg", HANDLER_NAME, "/:org")
                                .authorize(ORG_DELETE)
                                .build(this::getHierarchies, this::delete)
             )

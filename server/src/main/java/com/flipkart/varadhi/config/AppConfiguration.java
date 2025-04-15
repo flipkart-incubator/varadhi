@@ -16,8 +16,14 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
+import java.util.List;
+import java.util.Map;
+
 @Getter
 public class AppConfiguration implements Validatable {
+
+    private List<String> disabledHandlers;
+
     @NotNull
     private VertxOptions vertxOptions;
 

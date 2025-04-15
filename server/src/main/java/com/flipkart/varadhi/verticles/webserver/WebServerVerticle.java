@@ -160,8 +160,15 @@ public class WebServerVerticle extends AbstractVerticle {
         routeDefinitions.addAll(getIamPolicyRoutes());
         routeDefinitions.addAll(getAdminApiRoutes());
         routeDefinitions.addAll(getProduceApiRoutes());
+
+        routeDefinitions = routeDefinitions.stream().filter(this::isRouteEnabled).toList();
+
         configureApiRoutes(router, routeDefinitions);
         return router;
+    }
+
+    private boolean isRouteEnabled(RouteDefinition routeDefinition) {
+        return !configuration.getDisabledHandlers().contains(routeDefinition.getHandlerName());
     }
 
     private List<RouteDefinition> getIamPolicyRoutes() {
