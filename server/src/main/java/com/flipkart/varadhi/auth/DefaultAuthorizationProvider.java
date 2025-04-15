@@ -8,6 +8,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
 import com.flipkart.varadhi.entities.auth.*;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
@@ -32,9 +33,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(ConfigFileResolver resolver, String configFile) {
+    public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions options) {
         if (!this.initialised) {
-            this.configuration = YamlLoader.loadConfig(configFile, DefaultAuthorizationConfig.class);
+            this.configuration = YamlLoader.loadConfig(options.getConfigFile(), DefaultAuthorizationConfig.class);
             this.configuration.getMetaStoreOptions()
                               .setConfigFile(
                                   resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
