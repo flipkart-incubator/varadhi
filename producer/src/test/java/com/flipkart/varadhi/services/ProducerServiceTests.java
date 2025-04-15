@@ -154,13 +154,15 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         String topicName = VaradhiTopic.buildTopicName(project.getName(), topic);
         doReturn(producer).when(producerFactory).newProducer(any());
-        when(topicReadCache.getEntity(topicName)).thenReturn(null);
+        when(topicReadCache.getEntity(topicName)).thenThrow(
+            new ResourceNotFoundException(String.format("TOPIC(%s) not found", topicName))
+        );
         ResourceNotFoundException ex = Assertions.assertThrows(
             ResourceNotFoundException.class,
             () -> service.produceToTopic(msg1, topicName, emitter)
         );
 
-        Assertions.assertEquals("Topic(project1.topic1) not found or not active.", ex.getMessage());
+        Assertions.assertEquals("TOPIC(project1.topic1) not found", ex.getMessage());
         verify(producer, never()).produceAsync(any());
     }
 

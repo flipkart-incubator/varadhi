@@ -91,33 +91,47 @@ public class VaradhiApplication {
             CoreServices services = new CoreServices(configuration, configResolver);
             VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
 
-            // Initialize event registry and event manager
-            Future<EntityReadCacheRegistry> registryFuture = initializeEventManager(
-                services,
-                clusterManager,
-                memberInfo
-            );
-            registryFuture.compose(cacheRegistry -> {
-                log.info("Caches and event handlers initialized successfully");
+            createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(
+                vertx -> initializeEventManager(services, clusterManager, memberInfo, vertx).map(cacheRegistry -> {
+                    log.info("Caches and event handlers initialized successfully");
 
-                // Get component verticles
-                Map<ComponentKind, Verticle> verticles = getComponentVerticles(
-                    configuration,
-                    services,
-                    clusterManager,
-                    memberInfo,
-                    cacheRegistry
-                );
+                    // Get component verticles
+                    Map<ComponentKind, Verticle> verticles = getComponentVerticles(
+                        configuration,
+                        services,
+                        clusterManager,
+                        memberInfo,
+                        cacheRegistry
+                    );
 
-                // Create clustered Vertx and deploy verticles
-                return createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(
-                    vertx -> deployVerticles(vertx, verticles)
-                );
-            }).onSuccess(v -> log.info("Started successfully on {}", memberInfo.hostname())).onFailure(t -> {
-                log.error("Failed to start on host {}: {}", memberInfo.hostname(), t.getMessage(), t);
-                log.error("Shutting down application");
-                System.exit(-1);
-            });
+                    // Return both for the next step
+                    return Pair.of(vertx, verticles);
+                })
+            )
+                                                                                     .compose(
+                                                                                         pair -> deployVerticles(
+                                                                                             pair.getLeft(),
+                                                                                             pair.getRight()
+                                                                                         )
+                                                                                     )
+                                                                                     .onSuccess(
+                                                                                         v -> log.info(
+                                                                                             "Started successfully on {}",
+                                                                                             memberInfo.hostname()
+                                                                                         )
+                                                                                     )
+                                                                                     .onFailure(t -> {
+                                                                                         log.error(
+                                                                                             "Failed to start on host {}: {}",
+                                                                                             memberInfo.hostname(),
+                                                                                             t.getMessage(),
+                                                                                             t
+                                                                                         );
+                                                                                         log.error(
+                                                                                             "Shutting down application"
+                                                                                         );
+                                                                                         System.exit(-1);
+                                                                                     });
         } catch (Exception e) {
             log.error("Failed to initialize: {}", e.getMessage(), e);
             log.error("Shutting down application");
@@ -170,19 +184,18 @@ public class VaradhiApplication {
      * @param services       core services
      * @param clusterManager cluster manager
      * @param memberInfo     member information
+     * @param vertx          the Vert.x instance to use for event handling
      * @return a future that completes with the initialized EntityReadCacheRegistry
      */
     private static Future<EntityReadCacheRegistry> initializeEventManager(
         CoreServices services,
         VaradhiClusterManager clusterManager,
-        MemberInfo memberInfo
+        MemberInfo memberInfo,
+        Vertx vertx
     ) {
         log.info("Initializing entity caches and event handlers");
 
         try {
-            // Create initialization Vertx instance
-            Vertx initVertx = Vertx.vertx();
-
             // Create registry and register caches
             MetaStore metaStore = services.getMetaStoreProvider().getMetaStore();
             EntityReadCacheRegistry registry = new EntityReadCacheRegistry();
@@ -194,12 +207,7 @@ public class VaradhiApplication {
             registry.register(ResourceType.TOPIC, metaStore::getAllTopics);
 
             // Create and initialize entity event manager
-            EntityEventManager entityEventManager = new EntityEventManager(
-                registry,
-                clusterManager,
-                memberInfo,
-                initVertx
-            );
+            EntityEventManager entityEventManager = new EntityEventManager(registry, clusterManager, memberInfo, vertx);
 
             return entityEventManager.initialize()
                                      .onFailure(

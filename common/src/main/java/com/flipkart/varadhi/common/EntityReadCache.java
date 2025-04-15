@@ -3,6 +3,7 @@ package com.flipkart.varadhi.common;
 import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EntityEventListener;
 import com.flipkart.varadhi.common.events.EventType;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.core.Future;
@@ -109,10 +110,15 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      * @param name the name of the entity to get
      * @return the entity with the given name, or null if not found
      * @throws NullPointerException if name is null
+     * @throws ResourceNotFoundException if the entity is not found
      */
     public T getEntity(String name) {
         Objects.requireNonNull(name, "Entity name cannot be null");
-        return entities.get(name);
+        T entity = entities.get(name);
+        if (entity == null) {
+            throw new ResourceNotFoundException(String.format("%s(%s) not found", resourceType.name(), name));
+        }
+        return entity;
     }
 
     /**

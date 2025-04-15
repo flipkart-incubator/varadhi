@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * A thread-safe registry for entity read caches in Varadhi.
@@ -144,7 +143,7 @@ public final class EntityReadCacheRegistry {
                                                                  )
                                                              )
                                            )
-                                           .collect(Collectors.toList());
+                                           .toList();
 
         Future.all(futures).onSuccess(v -> {
             log.info("Successfully preloaded all {} caches", caches.size());
