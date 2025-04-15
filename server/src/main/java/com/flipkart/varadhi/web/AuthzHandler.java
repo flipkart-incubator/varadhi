@@ -34,9 +34,7 @@ public class AuthzHandler implements RouteConfigurator {
     ) {
         if (configuration.isAuthorizationEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
-            return new AuthorizationHandlerBuilder(
-                authorizationProvider
-            );
+            return new AuthorizationHandlerBuilder(authorizationProvider);
         } else {
             return null;
         }
