@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
@@ -65,9 +66,8 @@ public class AuthorizationHandlerTests {
     }
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
-
         @Override
-        public Future<Boolean> init(ConfigFileResolver configFileResolver, String configFile) {
+        public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
             return Future.succeededFuture();
         }
 

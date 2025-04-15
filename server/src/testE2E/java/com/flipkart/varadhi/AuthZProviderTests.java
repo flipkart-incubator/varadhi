@@ -116,7 +116,7 @@ public class AuthZProviderTests extends E2EBase {
 
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
-        provider.init(c -> c, authorizationOptions.getConfigFile()).onSuccess(t -> checkpoint.flag());
+        provider.init(c -> c, authorizationOptions).onSuccess(t -> checkpoint.flag());
     }
 
     private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();
