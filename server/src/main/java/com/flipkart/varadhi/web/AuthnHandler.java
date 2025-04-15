@@ -45,7 +45,6 @@ public class AuthnHandler implements RouteConfigurator {
                     "AuthenticationHandlerProvider class name is missing or empty in configuration"
                 );
             }
-            provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
 
             Class<?> providerClass = Class.forName(authenticationConfig.getHandlerProviderClassName());
             if (!AuthenticationHandlerProvider.class.isAssignableFrom(providerClass)) {
