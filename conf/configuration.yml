@@ -1,4 +1,4 @@
-disabledRouteNames: []
+disabledHandlers: []
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
@@ -59,7 +59,7 @@ authenticationOptions:
 authorizationEnabled: true
 
 authorization:
-  superUsers: [ "thanos" ]
+  enabled: true
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
   configFile: "authorizationConfig.yml"
 

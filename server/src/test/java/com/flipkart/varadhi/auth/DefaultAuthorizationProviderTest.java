@@ -58,7 +58,7 @@ class DefaultAuthorizationProviderTest {
     @Test
     void testInit(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }));
@@ -81,7 +81,7 @@ class DefaultAuthorizationProviderTest {
 
         AuthorizationOptions opts = new AuthorizationOptions();
         opts.setConfigFile(configFile.toString());
-        Assertions.assertThrows(IllegalStateException.class, () -> provider.init(ID, opts.getConfigFile()));
+        Assertions.assertThrows(IllegalStateException.class, () -> provider.init(ID, opts));
     }
 
     @Test
@@ -108,7 +108,7 @@ class DefaultAuthorizationProviderTest {
             )
         ).when(iamPolicyService).getIamPolicy(resourceTypeCaptor.capture(), resourceIdCaptor.capture());
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -126,7 +126,7 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -143,7 +143,7 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -172,7 +172,7 @@ class DefaultAuthorizationProviderTest {
         ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -214,7 +214,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -248,7 +248,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -277,7 +277,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -306,7 +306,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -349,7 +349,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -378,7 +378,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -425,7 +425,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -458,7 +458,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
@@ -479,7 +479,7 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
-        provider.init(ID, authorizationOptions.getConfigFile()).onComplete(testContext.succeeding(t -> {
+        provider.init(ID, authorizationOptions).onComplete(testContext.succeeding(t -> {
             Assertions.assertTrue(t);
             checkpoint.flag();
         }))
