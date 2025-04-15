@@ -48,7 +48,6 @@ ext {
     jctools_version = "4.0.5"
 
     hibernate_validator_version = "8.0.1.Final"
-    failsafe_version = "3.3.2"
 
     junit_version = "5.11.3"
     mockito_version = "5.14.2"
@@ -134,7 +133,6 @@ dependencies {
 
         implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
         implementation("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
-        implementation("dev.failsafe:failsafe:$failsafe_version")
 
         testCompileOnly("org.projectlombok:lombok:$lombok_version")
         testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
