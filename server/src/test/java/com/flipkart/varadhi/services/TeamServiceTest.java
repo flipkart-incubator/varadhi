@@ -10,9 +10,6 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.jmx.JmxConfig;
-import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -48,7 +45,7 @@ public class TeamServiceTest {
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM));
+        projectService = new ProjectService(varadhiMetaStore);
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         org1Team1 = Team.of("TestTeam1", org1.getName());

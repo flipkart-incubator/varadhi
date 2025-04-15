@@ -5,6 +5,7 @@ import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.InternalCompositeTopic;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -21,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -143,15 +143,16 @@ public final class ProducerService {
 
         try {
             EntityReadCache<VaradhiTopic> topicCache = cacheRegistry.getCache(ResourceType.TOPIC);
-            return Optional.ofNullable(topicCache.getEntity(varadhiTopicName))
-                           .filter(VaradhiTopic::isActive)
-                           .map(topic -> produceToValidTopic(message, topic, metricsEmitter))
-                           .orElseThrow(
-                               () -> new ResourceNotFoundException(
-                                   String.format("Topic(%s) not found or not active.", varadhiTopicName)
-                               )
-                           );
-        } catch (ResourceNotFoundException | ProduceException e) {
+            VaradhiTopic topic = topicCache.getEntity(varadhiTopicName);
+
+            if (topic == null || !topic.isActive()) {
+                throw new ResourceNotFoundException(
+                    String.format("Topic(%s) not found or not active.", varadhiTopicName)
+                );
+            }
+
+            return produceToValidTopic(message, topic, metricsEmitter);
+        } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
             throw new ProduceException("Produce failed due to internal error: " + e.getMessage(), e);
@@ -173,29 +174,24 @@ public final class ProducerService {
         VaradhiTopic varadhiTopic,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        return Optional.ofNullable(varadhiTopic.getProduceTopicForRegion(produceRegion)).map(internalTopic -> {
-            if (!internalTopic.getTopicState().isProduceAllowed()) {
-                return CompletableFuture.completedFuture(
-                    ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
-                );
-            }
+        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
 
-            StorageTopic storageTopic = internalTopic.getTopicToProduce();
-            return getProducer(storageTopic).thenCompose(
-                producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message)
-                                                                                                               .thenApply(
-                                                                                                                   result -> ProduceResult.of(
-                                                                                                                       message.getMessageId(),
-                                                                                                                       result
-                                                                                                                   )
-                                                                                                               )
+        if (internalTopic == null) {
+            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
+        }
+
+        if (!internalTopic.getTopicState().isProduceAllowed()) {
+            return CompletableFuture.completedFuture(
+                ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
             );
-        })
-                       .orElseThrow(
-                           () -> new ResourceNotFoundException(
-                               String.format("Topic not found for region(%s).", produceRegion)
-                           )
-                       );
+        }
+
+        StorageTopic storageTopic = internalTopic.getTopicToProduce();
+        return getProducer(storageTopic).thenCompose(
+            producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
+                result -> ProduceResult.of(message.getMessageId(), result)
+            )
+        );
     }
 
     /**
@@ -207,7 +203,7 @@ public final class ProducerService {
      * @param storageTopic the storage topic to get a producer for
      * @return a future that completes with the producer
      */
-    private CompletableFuture<Producer> getProducer(StorageTopic storageTopic) {
+    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic) {
         Producer producer = producerCache.getIfPresent(storageTopic);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);

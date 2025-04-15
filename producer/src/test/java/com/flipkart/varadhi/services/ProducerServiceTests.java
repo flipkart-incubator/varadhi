@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 
@@ -49,6 +50,7 @@ import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_REMOTE_HOST;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_TEAM;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyLong;
@@ -131,14 +133,18 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         when(topicReadCache.getEntity(vt.getName())).thenReturn(vt);
+        doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new RuntimeException("Some random error.")).when(producer).produceAsync(msg1);
         // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
         // This is not expected in general.
-        ProduceException pe = Assertions.assertThrows(
-            ProduceException.class,
-            () -> service.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+        CompletableFuture<ProduceResult> future = service.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
         );
-        Assertions.assertEquals("Produce failed due to internal error: Some random error.", pe.getMessage());
+        CompletionException exception = Assertions.assertThrows(CompletionException.class, future::join);
+        assertTrue(exception.getCause() instanceof RuntimeException);
+        Assertions.assertEquals("Some random error.", exception.getCause().getMessage());
         verify(emitter, never()).emit(anyBoolean(), anyLong());
     }
 
@@ -157,23 +163,6 @@ class ProducerServiceTests {
         Assertions.assertEquals("Topic(project1.topic1) not found or not active.", ex.getMessage());
         verify(producer, never()).produceAsync(any());
     }
-
-    //    @Test
-    //    void testProduceWithUnknownExceptionInGetTopic() {
-    //        ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
-    //        Message msg1 = getMessage(0, 1, null, 0);
-    //        String topicName = VaradhiTopic.buildTopicName(project.getName(), topic);
-    //        RuntimeException cause = new RuntimeException("Unknown error.");
-    //        when(topicReadCache.getEntity(topicName)).thenReturn(null);
-    //        doReturn(producer).when(producerFactory).newProducer(any());
-    //        ProduceException e = Assertions.assertThrows(
-    //            ProduceException.class,
-    //            () -> service.produceToTopic(msg1, topicName, emitter)
-    //        );
-    //        Assertions.assertEquals("Produce failed due to internal error: Unknown error.", e.getMessage());
-    //        Assertions.assertEquals(cause, e.getCause().getCause());
-    //        verify(producer, never()).produceAsync(any());
-    //    }
 
     @Test
     void produceToBlockedTopic() throws InterruptedException {
@@ -232,12 +221,15 @@ class ProducerServiceTests {
             throw new RuntimeException("Unknown Error.");
         };
         ProducerService failingService = new ProducerService(region, failingProducerProvider, cacheRegistry);
-        ProduceException pe = Assertions.assertThrows(
-            ProduceException.class,
-            () -> failingService.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+        CompletableFuture<ProduceResult> future = failingService.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
         );
-        Assertions.assertTrue(pe.getMessage().contains("Produce failed due to internal error"));
-        Assertions.assertTrue(pe.getMessage().contains("Unknown Error."));
+        CompletionException exception = Assertions.assertThrows(CompletionException.class, future::join);
+        assertTrue(exception.getCause() instanceof ProduceException);
+        assertTrue(exception.getCause().getMessage().contains("Error getting producer for Topic(project1.topic1)"));
+        assertTrue(exception.getCause().getMessage().contains("Unknown Error."));
     }
 
     @Test
@@ -246,17 +238,20 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topic, project, region);
         when(topicReadCache.getEntity(vt.getName())).thenReturn(vt);
-        Function<StorageTopic, Producer> failingProducerProvider = storageTopic -> {
+        Function<StorageTopic, Producer> failingProducerProvider = st -> {
             throw new RuntimeException("Topic doesn't exist.");
         };
         ProducerService failingService = new ProducerService(region, failingProducerProvider, cacheRegistry);
-        RuntimeException re = Assertions.assertThrows(
-            RuntimeException.class,
-            () -> failingService.produceToTopic(msg1, VaradhiTopic.buildTopicName(project.getName(), topic), emitter)
+        CompletableFuture<ProduceResult> future = failingService.produceToTopic(
+            msg1,
+            VaradhiTopic.buildTopicName(project.getName(), topic),
+            emitter
         );
+        CompletionException exception = Assertions.assertThrows(CompletionException.class, future::join);
         verify(producer, never()).produceAsync(any());
-        Assertions.assertTrue(re.getMessage().contains("Produce failed due to internal error"));
-        Assertions.assertTrue(re.getMessage().contains("Topic doesn't exists."));
+        assertTrue(exception.getCause() instanceof ProduceException);
+        assertTrue(exception.getCause().getMessage().contains("Error getting producer for Topic(project1.topic1)"));
+        assertTrue(exception.getCause().getMessage().contains("Topic doesn't exist."));
     }
 
     @Test

@@ -73,7 +73,7 @@ public class LeanDeploymentValidatorTest {
 
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(varadhiMetaStore, meterRegistry);
+        projectService = new ProjectService(varadhiMetaStore);
 
         deploymentValidator = new LeanDeploymentValidator(orgService, teamService, projectService);
     }

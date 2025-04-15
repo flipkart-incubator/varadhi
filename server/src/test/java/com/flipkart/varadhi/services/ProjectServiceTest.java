@@ -9,9 +9,7 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
@@ -55,7 +53,7 @@ class ProjectServiceTest {
         orgService = new OrgService(varadhiMetaStore);
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        projectService = spy(new ProjectService(varadhiMetaStore, meterRegistry));
+        projectService = spy(new ProjectService(varadhiMetaStore));
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         o1t1 = Team.of("TestTeam1", org1.getName());
@@ -180,7 +178,7 @@ class ProjectServiceTest {
         orgService.createOrg(org2);
         Project orgUpdate = Project.of(o1t1p1.getName(), o1t1p1.getDescription(), o1t1p1.getTeam(), org2.getName());
 
-        argumentErr = String.format("Project(%s) can not be moved across organisation.", orgUpdate.getName());
+        argumentErr = String.format("Project(%s) cannot be moved across organization.", orgUpdate.getName());
         validateException(argumentErr, IllegalArgumentException.class, () -> projectService.updateProject(orgUpdate));
     }
 
@@ -197,35 +195,9 @@ class ProjectServiceTest {
         );
 
         Assertions.assertEquals(
-            String.format("Can not delete Project(%s), it has associated entities.", o1t1p2.getName()),
+            String.format("Cannot delete Project(%s), it has 1 associated topic(s).", o1t1p2.getName()),
             e.getMessage()
         );
-    }
-
-    @Test
-    void testGetCachedProject() {
-        Counter hitCounter = meterRegistry.counter(
-            "varadhi.cache.operations",
-            Tags.of("entity", "project", "operation", "hit")
-        );
-        Counter missCounter = meterRegistry.counter(
-            "varadhi.cache.operations",
-            Tags.of("entity", "project", "operation", "miss")
-        );
-        Counter loadCounter = meterRegistry.counter(
-            "varadhi.cache.operations",
-            Tags.of("entity", "project", "operation", "load")
-        );
-
-        projectService.createProject(o1t1p1);
-        projectService.createProject(o1t1p2);
-        for (int i = 0; i < 100; i++) {
-            projectService.getProjectWithCache(o1t1p1.getName());
-            projectService.getProjectWithCache(o1t1p2.getName());
-        }
-        Assertions.assertEquals(198, (int)hitCounter.count());
-        Assertions.assertEquals(2, (int)missCounter.count());
-        Assertions.assertEquals(2, (int)loadCounter.count());
     }
 
     interface MethodCaller {

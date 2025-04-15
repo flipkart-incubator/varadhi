@@ -403,20 +403,16 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Add topic, subscription, DLQ and health check routes
         routes.addAll(
-            new TopicHandlers(
-                varadhiTopicFactory,
-                serviceRegistry.get(VaradhiTopicService.class),
-                serviceRegistry.get(ProjectService.class)
-            ).get()
+            new TopicHandlers(varadhiTopicFactory, serviceRegistry.get(VaradhiTopicService.class), cacheRegistry).get()
         );
 
         routes.addAll(
             new SubscriptionHandlers(
                 serviceRegistry.get(SubscriptionService.class),
-                serviceRegistry.get(ProjectService.class),
                 serviceRegistry.get(VaradhiTopicService.class),
                 subscriptionFactory,
-                configuration.getRestOptions()
+                configuration.getRestOptions(),
+                cacheRegistry
             ).get()
         );
 
@@ -424,7 +420,7 @@ public class WebServerVerticle extends AbstractVerticle {
             new DlqHandlers(
                 serviceRegistry.get(DlqService.class),
                 serviceRegistry.get(SubscriptionService.class),
-                serviceRegistry.get(ProjectService.class)
+                cacheRegistry
             ).get()
         );
 
@@ -443,7 +439,7 @@ public class WebServerVerticle extends AbstractVerticle {
         if (!verticleConfig.isLeanDeployment()) {
             routes.addAll(new OrgHandlers(serviceRegistry.get(OrgService.class)).get());
             routes.addAll(new TeamHandlers(serviceRegistry.get(TeamService.class)).get());
-            routes.addAll(new ProjectHandlers(serviceRegistry.get(ProjectService.class)).get());
+            routes.addAll(new ProjectHandlers(serviceRegistry.get(ProjectService.class), cacheRegistry).get());
         }
         return routes;
     }
@@ -464,10 +460,10 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 preProduceHandler,
-                serviceRegistry.get(ProjectService.class),
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
-                verticleConfig.deployedRegion()
+                verticleConfig.deployedRegion(),
+                cacheRegistry
             ).get()
         );
     }
