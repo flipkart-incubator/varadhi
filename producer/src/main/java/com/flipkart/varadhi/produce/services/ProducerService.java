@@ -102,11 +102,7 @@ public class ProducerService {
                     ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
                 );
             }
-            if (applyOrgFilter(
-                message,
-                internalTopic.getTopicToProduce().getName(),
-                internalTopic.getTopicToProduce().getName()
-            )) {
+            if (applyOrgFilter()) {
                 return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
             }
             Producer producer = producerCache.get(internalTopic.getTopicToProduce());
@@ -145,7 +141,7 @@ public class ProducerService {
     }
 
 
-    private boolean applyOrgFilter(Message message, String projectName, String topicName) {
+    private boolean applyOrgFilter() {
         // TODO[IMP]: apply org filters
         //        Project project = projectService.getCachedProject(projectName);
         //        TODO[IMP]:avoid zk interactions for org and topic + filters
