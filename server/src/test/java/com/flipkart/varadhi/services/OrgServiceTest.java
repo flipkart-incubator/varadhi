@@ -159,10 +159,10 @@ public class OrgServiceTest {
         orgService.updateFilter(orgName, updatedFilters);
 
         // Verify that "filterA" now exists
-        assertTrue(orgService.filterExists(orgName, "filterA"));
+        assertNotNull(orgService.getFilter(orgName, "filterA"));
 
         // Verify that a non-existent filter returns false
-        assertFalse(orgService.filterExists(orgName, "nonExistent"));
+        assertNull(orgService.getFilter(orgName, "nonExistent"));
     }
 
     @Test

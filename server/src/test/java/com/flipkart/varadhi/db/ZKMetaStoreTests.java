@@ -77,7 +77,7 @@ public class ZKMetaStoreTests {
             ResourceNotFoundException.class,
             () -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class)
         );
-        Assertions.assertEquals(String.format("test(%s) not found.", data1.getName()), e.getMessage());
+        Assertions.assertEquals(String.format("test(%s) not found.", testKind.kind()), e.getMessage());
     }
 
     private ZNode getZnode(String name) {

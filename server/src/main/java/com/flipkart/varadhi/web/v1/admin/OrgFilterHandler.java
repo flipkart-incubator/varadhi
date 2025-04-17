@@ -50,9 +50,6 @@ public class OrgFilterHandler implements RouteProvider {
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.get("CheckFilterExists", "/:orgFilterName/exists")
-                               .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::exists),
                 RouteDefinition.delete("deleteFilter", "")
                                .authorize(ORG_DELETE)
                                .build(this::getHierarchies, this::delete)
@@ -95,13 +92,6 @@ public class OrgFilterHandler implements RouteProvider {
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
         orgService.updateFilter(orgName, filter);
         ctx.endApi();
-    }
-
-    public void exists(RoutingContext ctx) {
-        String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        String filterName = ctx.pathParam(PATH_PARAM_ORG_FILTER_NAME);
-        boolean exists = orgService.filterExists(orgName, filterName);
-        ctx.endApiWithResponse(exists);
     }
 
     public void delete(RoutingContext ctx) {

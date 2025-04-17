@@ -56,10 +56,6 @@ public class OrgService {
         return orgStore.getFilter(orgName);
     }
 
-    public boolean filterExists(String orgName, String filterName) {
-        return orgStore.getFilter(orgName).getFilters().get(filterName) != null;
-    }
-
     public void updateFilter(String orgName, OrgFilters orgFilters) {
         orgStore.updateFilter(orgName, orgFilters);
     }

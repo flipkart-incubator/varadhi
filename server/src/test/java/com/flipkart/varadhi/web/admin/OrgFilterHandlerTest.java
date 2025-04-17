@@ -53,9 +53,6 @@ public class OrgFilterHandlerTest extends WebTestBase {
                                         })
                                         .handler(wrapBlocking(orgFilterHandler::update));
         setupFailureHandler(routeUpdateFilter);
-        Route routeCheckExists = router.get("/v1/orgs/:org/filters/:orgFilterName/exists")
-                                       .handler(wrapBlocking(orgFilterHandler::exists));
-        setupFailureHandler(routeCheckExists);
         Route routeDeleteFilter = router.delete("/v1/orgs/:org/filters")
                                         .handler(wrapBlocking(orgFilterHandler::delete));
         setupFailureHandler(routeDeleteFilter);
@@ -67,10 +64,6 @@ public class OrgFilterHandlerTest extends WebTestBase {
 
     private String getFilterByNameUrl(String org, String filterName) {
         return String.join("/", basePath, org, "filters", filterName);
-    }
-
-    private String getFilterExistsUrl(String org, String filterName) {
-        return String.join("/", basePath, org, "filters", filterName, "exists");
     }
 
     @AfterEach
@@ -155,23 +148,6 @@ public class OrgFilterHandlerTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getFilterByNameUrl(orgName, filterName));
         sendRequestWithEntity(request, inputFilters, null);
         verify(orgService, times(1)).updateFilter(eq(orgName), eq(inputFilters));
-    }
-
-    @Test
-    public void testCheckIfNamedFilterExists() throws Exception {
-        String orgName = "org1";
-        String filterName = "myFilter";
-        when(orgService.filterExists(eq(orgName), eq(filterName))).thenReturn(true);
-
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getFilterExistsUrl(orgName, filterName));
-        Boolean exists = sendRequestWithoutPayload(request, Boolean.class);
-        Assertions.assertTrue(exists);
-        verify(orgService, times(1)).filterExists(eq(orgName), eq(filterName));
-
-        // Negative scenario
-        when(orgService.filterExists(eq(orgName), eq(filterName))).thenReturn(false);
-        exists = sendRequestWithoutPayload(request, Boolean.class);
-        Assertions.assertFalse(exists);
     }
 
     @Test

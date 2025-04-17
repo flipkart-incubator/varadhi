@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 
+
 @Slf4j
 public class ProducerService {
     private final VaradhiCache<StorageTopic, Producer> producerCache;
@@ -85,8 +86,7 @@ public class ProducerService {
     public CompletableFuture<ProduceResult> produceToTopic(
         Message message,
         String varadhiTopicName,
-        ProducerMetricsEmitter metricsEmitter,
-        boolean dropMessageFromProduce
+        ProducerMetricsEmitter metricsEmitter
     ) {
         try {
             InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
@@ -102,7 +102,11 @@ public class ProducerService {
                     ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
                 );
             }
-            if (dropMessageFromProduce) {
+            if (applyOrgFilter(
+                message,
+                internalTopic.getTopicToProduce().getName(),
+                internalTopic.getTopicToProduce().getName()
+            )) {
                 return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
             }
             Producer producer = producerCache.get(internalTopic.getTopicToProduce());
@@ -138,5 +142,22 @@ public class ProducerService {
             }
             return Result.of(result, throwable);
         });
+    }
+
+
+    private boolean applyOrgFilter(Message message, String projectName, String topicName) {
+        // TODO[IMP]: apply org filters
+        //        Project project = projectService.getCachedProject(projectName);
+        //        TODO[IMP]:avoid zk interactions for org and topic + filters
+        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
+        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
+        //        String nfrStrategy = topic.getNfrFilterName();
+        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
+        //                orgFilters.getFilters().get(nfrStrategy) :
+        //                null;
+        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
+        //            return true;
+        //        }
+        return false;
     }
 }

@@ -8,8 +8,6 @@ import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.filters.Condition;
-import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -33,7 +31,6 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
 import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
@@ -106,8 +103,7 @@ public class ProduceHandlers implements RouteProvider {
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
             messageToProduce,
             varadhiTopicName,
-            metricsEmitter,
-            applyOrgFilter(messageToProduce, projectName, topicName)
+            metricsEmitter
         );
         produceFuture.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
             if (null != produceResult) {
@@ -178,24 +174,5 @@ public class ProduceHandlers implements RouteProvider {
             }
         }
         return copy;
-    }
-
-    boolean applyOrgFilter(Message message, String projectName, String topicName) {
-        Project project = projectService.getCachedProject(projectName);
-        //TODO[IMP]:avoid zk interactions for org and topic + filters
-        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
-        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
-        String nfrStrategy = topic.getNfrFilterName();
-        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
-            orgFilters.getFilters().get(nfrStrategy) :
-            null;
-        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
-            return true;
-        }
-        return false;
-    }
-
-    private String buildTopicName(String projectName, String topicName) {
-        return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 }
