@@ -49,10 +49,7 @@ public class OrgFilterHandler implements RouteProvider {
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)
-                               .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("deleteFilter", "")
-                               .authorize(ORG_DELETE)
-                               .build(this::getHierarchies, this::delete)
+                               .build(this::getHierarchies, this::update)
             )
         ).get();
     }
@@ -91,12 +88,6 @@ public class OrgFilterHandler implements RouteProvider {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
         orgService.updateFilter(orgName, filter);
-        ctx.endApi();
-    }
-
-    public void delete(RoutingContext ctx) {
-        String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        orgService.deleteFilter(orgName);
         ctx.endApi();
     }
 }

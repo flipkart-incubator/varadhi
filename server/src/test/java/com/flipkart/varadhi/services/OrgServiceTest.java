@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -163,44 +161,6 @@ public class OrgServiceTest {
 
         // Verify that a non-existent filter returns false
         assertNull(orgService.getFilter(orgName, "nonExistent"));
-    }
-
-    @Test
-    public void testDeleteFilter() throws JsonProcessingException {
-        String orgName = "orgForDeleteFilter";
-        // Create the organization
-        Org org = Org.of(orgName);
-        orgService.createOrg(org);
-
-        // Create OrgFilters using JSON
-        Map<String, Condition> conditionMap = new HashMap<>();
-        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
-        OrgFilters orgFilters = new OrgFilters(0, conditionMap);
-        orgService.createFilter(orgName, orgFilters);
-
-        // Ensure the filter exists before deletion
-        assertNotNull(orgService.getAllFilters(orgName));
-
-        // Delete the filter
-        orgService.deleteFilter(orgName);
-
-        // After deletion, retrieval should throw a ResourceNotFoundException
-        ResourceNotFoundException exception = assertThrows(
-            ResourceNotFoundException.class,
-            () -> orgService.getAllFilters(orgName)
-        );
-        assertEquals("Filters(Filters) not found.", exception.getMessage());
-    }
-
-    @Test
-    public void testDeleteFilterForNonExistentOrg() {
-        // Attempt to delete filters for a non-existent org name should throw an exception
-        String nonExistentOrg = "nonExistentOrg";
-        ResourceNotFoundException exception = assertThrows(
-            ResourceNotFoundException.class,
-            () -> orgService.deleteFilter(nonExistentOrg)
-        );
-        assertEquals("Filters(Filters) not found.", exception.getMessage());
     }
 
 

@@ -53,9 +53,6 @@ public class OrgFilterHandlerTest extends WebTestBase {
                                         })
                                         .handler(wrapBlocking(orgFilterHandler::update));
         setupFailureHandler(routeUpdateFilter);
-        Route routeDeleteFilter = router.delete("/v1/orgs/:org/filters")
-                                        .handler(wrapBlocking(orgFilterHandler::delete));
-        setupFailureHandler(routeDeleteFilter);
     }
 
     private String getFilterBaseUrl(String org) {
@@ -148,19 +145,5 @@ public class OrgFilterHandlerTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, getFilterByNameUrl(orgName, filterName));
         sendRequestWithEntity(request, inputFilters, null);
         verify(orgService, times(1)).updateFilter(eq(orgName), eq(inputFilters));
-    }
-
-    @Test
-    public void testDeleteFilter() throws Exception {
-        String orgName = "org1";
-        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getFilterBaseUrl(orgName));
-        doNothing().when(orgService).deleteFilter(eq(orgName));
-        sendRequestWithoutPayload(request, null);
-        verify(orgService, times(1)).deleteFilter(eq(orgName));
-
-        // Negative case: deletion for non-existent filter
-        String errorMsg = "Org(" + orgName + ") filter not found.";
-        doThrow(new ResourceNotFoundException(errorMsg)).when(orgService).deleteFilter(eq(orgName));
-        sendRequestWithoutPayload(request, 404, errorMsg);
     }
 }
