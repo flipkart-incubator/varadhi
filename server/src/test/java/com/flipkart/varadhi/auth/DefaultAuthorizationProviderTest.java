@@ -65,7 +65,7 @@ class DefaultAuthorizationProviderTest {
     }
 
     @Test
-    void testInitNotImplIamPolicyMetaStoreShouldThrow() throws IOException {
+    void testInitNotImplIamPoliciesShouldThrow() throws IOException {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent = """
                     metaStoreOptions:

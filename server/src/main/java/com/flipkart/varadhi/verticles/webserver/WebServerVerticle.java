@@ -16,7 +16,7 @@ import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.*;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -117,17 +117,27 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private void setupEntityServices() {
         String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
-        orgService = new OrgService(metaStore);
+        orgService = new OrgService(metaStore.orgs(), metaStore.teams());
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
-        varadhiTopicService = new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore);
+        varadhiTopicService = new VaradhiTopicService(
+            messagingStackProvider.getStorageTopicService(),
+            metaStore.topics(),
+            metaStore.subscriptions(),
+            metaStore.projects()
+        );
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
         );
-        subscriptionService = new SubscriptionService(shardProvisioner, controllerClient, metaStore);
+        subscriptionService = new SubscriptionService(
+            shardProvisioner,
+            controllerClient,
+            metaStore.subscriptions(),
+            metaStore.topics()
+        );
         dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
 
     }
@@ -170,7 +180,7 @@ public class WebServerVerticle extends AbstractVerticle {
             null :
             configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
-        boolean isIamPolicyStore = metaStore instanceof IamPolicyMetaStore;
+        boolean isIamPolicyStore = metaStore instanceof IamPolicyStore.Provider;
         //TODO::Validate below specifically w.r.to lean deployment.
         // enable IamPolicy Routes, if
         // 1. provider class name is DefaultAuthorizationProvider, and
@@ -181,7 +191,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 routes.addAll(
                     new IamPolicyHandlers(
                         projectService,
-                        new IamPolicyService(metaStore, (IamPolicyMetaStore)metaStore)
+                        new IamPolicyService(metaStore, ((IamPolicyStore.Provider)metaStore).iamPolicies())
                     ).get()
                 );
             } else {
@@ -234,6 +244,7 @@ public class WebServerVerticle extends AbstractVerticle {
             routes.addAll(new OrgHandlers(orgService).get());
             routes.addAll(new TeamHandlers(teamService).get());
             routes.addAll(new ProjectHandlers(projectService).get());
+            routes.addAll(new OrgFilterHandler(orgService).get());
         }
         return routes;
     }
@@ -261,6 +272,8 @@ public class WebServerVerticle extends AbstractVerticle {
                 producerService,
                 preProduceHandler,
                 projectService,
+                varadhiTopicService,
+                orgService,
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
                 deployedRegion

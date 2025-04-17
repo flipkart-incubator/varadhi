@@ -12,7 +12,9 @@ import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -47,6 +49,8 @@ public class ProduceHandlers implements RouteProvider {
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
+    private final VaradhiTopicService varadhiTopicService;
+    private final OrgService orgService;
     private final ProducerMetricHandler metricHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;

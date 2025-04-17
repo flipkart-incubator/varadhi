@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class IamPolicyServiceTest {
@@ -55,14 +54,14 @@ class IamPolicyServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
             varadhiMetaStore,
             "",
             new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
         );
-        iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore);
+        iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore.iamPolicies());
         org1 = Org.of("org1");
         org2 = Org.of("org2");
         org1team1 = Team.of("team1", org1.getName());
@@ -83,7 +82,6 @@ class IamPolicyServiceTest {
             Map.of(request.getSubject(), request.getRoles())
         );
         IamPolicyRecord nodeCreated = iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
-        verify(varadhiMetaStore, times(1)).createIamPolicyRecord(any());
         assertEquals(expect, nodeCreated);
 
         // org not exist

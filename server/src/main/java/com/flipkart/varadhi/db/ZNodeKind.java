@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.db;
 
-import java.util.Objects;
-
 /**
  * Represents the type or kind of ZooKeeper node in the system.
  * <p>
@@ -13,7 +11,12 @@ import java.util.Objects;
  * var nodeKind = new ZNodeKind("topic");
  * }</pre>
  */
-public record ZNodeKind(String kind) {
+public record ZNodeKind(String kind, String pathFormat, boolean relative) {
+
+    public ZNodeKind(String kind, String pathFormat) {
+        this(kind, pathFormat, true);
+    }
+
     /**
      * Creates a new ZNodeKind instance with validation.
      *
@@ -21,9 +24,19 @@ public record ZNodeKind(String kind) {
      * @throws IllegalArgumentException if kind is blank
      */
     public ZNodeKind {
-        Objects.requireNonNull(kind, "kind cannot be null");
-        if (kind.isBlank()) {
-            throw new IllegalArgumentException("kind cannot be blank");
+        if (kind == null || kind.isBlank()) {
+            throw new NullPointerException("kind cannot be null / blank");
+        }
+        if (pathFormat == null || pathFormat.isBlank()) {
+            throw new IllegalArgumentException("path format cannot be null / blank");
+        }
+    }
+
+    public String resolvePath(String namespace, Object... args) {
+        if (relative) {
+            return (namespace + "/" + kind + "/" + pathFormat).formatted(args);
+        } else {
+            return (namespace + "/" + pathFormat).formatted(args);
         }
     }
 }

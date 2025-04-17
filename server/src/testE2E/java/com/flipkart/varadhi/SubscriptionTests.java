@@ -54,8 +54,14 @@ public class SubscriptionTests extends E2EBase {
         o1 = Org.of("public");
         o1t1 = Team.of("team1", o1.getName());
         o1t1p1 = Project.of("default", "", o1t1.getName(), o1t1.getOrg());
-        p1t1 = TopicResource.unGrouped("topic1", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION);
-        p1t2 = TopicResource.grouped("topic2", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION);
+        p1t1 = TopicResource.unGrouped(
+            "topic1",
+            o1t1p1.getName(),
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
+        );
+        p1t2 = TopicResource.grouped("topic2", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION, "test");
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
