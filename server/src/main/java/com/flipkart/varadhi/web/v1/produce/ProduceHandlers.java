@@ -98,8 +98,6 @@ public class ProduceHandlers implements RouteProvider {
         // however only required bytes are needed. Need to figure out the correct mechanism here.
         byte[] payload = ctx.body().buffer().getBytes();
         Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
-        //NFR filtration and org level filters
-        //TODO:: Add metrics for nfr
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
             messageToProduce,
             varadhiTopicName,
