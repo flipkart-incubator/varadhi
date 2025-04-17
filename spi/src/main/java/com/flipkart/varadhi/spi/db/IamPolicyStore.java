@@ -11,7 +11,7 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 public interface IamPolicyStore {
 
     interface Provider {
-        IamPolicyStore iamPolicyMetaStore();
+        IamPolicyStore iamPolicies();
     }
 
     void create(IamPolicyRecord iamPolicyRecord);

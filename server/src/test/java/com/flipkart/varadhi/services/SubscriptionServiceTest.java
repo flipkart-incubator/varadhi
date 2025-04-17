@@ -111,14 +111,14 @@ class SubscriptionServiceTest {
         zkCurator.start();
 
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        topicStore = spy(varadhiMetaStore.topicMetaStore());
-        subscriptionStore = spy(varadhiMetaStore.subscriptionMetaStore());
-        orgStore = spy(varadhiMetaStore.orgMetaStore());
-        teamStore = spy(varadhiMetaStore.teamMetaStore());
-        projectStore = spy(varadhiMetaStore.projectMetaStore());
+        topicStore = spy(varadhiMetaStore.topics());
+        subscriptionStore = spy(varadhiMetaStore.subscriptions());
+        orgStore = spy(varadhiMetaStore.orgs());
+        teamStore = spy(varadhiMetaStore.teams());
+        projectStore = spy(varadhiMetaStore.projects());
 
 
-        orgService = new OrgService(varadhiMetaStore.orgMetaStore(), varadhiMetaStore.teamMetaStore());
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
@@ -158,11 +158,11 @@ class SubscriptionServiceTest {
         doNothing().when(shardProvisioner).provision(any(), any());
 
         controllerRestApi = mock(ControllerRestApi.class);
-        when(varadhiMetaStore.subscriptionMetaStore()).thenReturn(subscriptionStore);
-        when(varadhiMetaStore.topicMetaStore()).thenReturn(topicStore);
-        when(varadhiMetaStore.projectMetaStore()).thenReturn(projectStore);
-        when(varadhiMetaStore.orgMetaStore()).thenReturn(orgStore);
-        when(varadhiMetaStore.teamMetaStore()).thenReturn(teamStore);
+        when(varadhiMetaStore.subscriptions()).thenReturn(subscriptionStore);
+        when(varadhiMetaStore.topics()).thenReturn(topicStore);
+        when(varadhiMetaStore.projects()).thenReturn(projectStore);
+        when(varadhiMetaStore.orgs()).thenReturn(orgStore);
+        when(varadhiMetaStore.teams()).thenReturn(teamStore);
         subscriptionService = new SubscriptionService(
             shardProvisioner,
             controllerRestApi,

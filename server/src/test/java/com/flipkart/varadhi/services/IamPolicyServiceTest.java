@@ -54,14 +54,14 @@ class IamPolicyServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore.orgMetaStore(), varadhiMetaStore.teamMetaStore());
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         projectService = new ProjectService(
             varadhiMetaStore,
             "",
             new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
         );
-        iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore.iamPolicyMetaStore());
+        iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore.iamPolicies());
         org1 = Org.of("org1");
         org2 = Org.of("org2");
         org1team1 = Team.of("team1", org1.getName());

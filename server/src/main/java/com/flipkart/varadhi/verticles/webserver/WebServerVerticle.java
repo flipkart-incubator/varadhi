@@ -117,14 +117,14 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private void setupEntityServices() {
         String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
-        orgService = new OrgService(metaStore.orgMetaStore(), metaStore.teamMetaStore());
+        orgService = new OrgService(metaStore.orgs(), metaStore.teams());
         teamService = new TeamService(metaStore);
         projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
         varadhiTopicService = new VaradhiTopicService(
             messagingStackProvider.getStorageTopicService(),
-            metaStore.topicMetaStore(),
-            metaStore.subscriptionMetaStore(),
-            metaStore.projectMetaStore()
+            metaStore.topics(),
+            metaStore.subscriptions(),
+            metaStore.projects()
         );
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
@@ -135,8 +135,8 @@ public class WebServerVerticle extends AbstractVerticle {
         subscriptionService = new SubscriptionService(
             shardProvisioner,
             controllerClient,
-            metaStore.subscriptionMetaStore(),
-            metaStore.topicMetaStore()
+            metaStore.subscriptions(),
+            metaStore.topics()
         );
         dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
 
@@ -191,7 +191,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 routes.addAll(
                     new IamPolicyHandlers(
                         projectService,
-                        new IamPolicyService(metaStore, ((IamPolicyStore.Provider)metaStore).iamPolicyMetaStore())
+                        new IamPolicyService(metaStore, ((IamPolicyStore.Provider)metaStore).iamPolicies())
                     ).get()
                 );
             } else {

@@ -104,7 +104,7 @@ public class ControllerVerticle extends AbstractVerticle {
         return new ControllerApiMgr(
             operationMgr,
             assigner,
-            metaStoreProvider.getMetaStore().subscriptionMetaStore(),
+            metaStoreProvider.getMetaStore().subscriptions(),
             consumerClientFactory
         );
     }

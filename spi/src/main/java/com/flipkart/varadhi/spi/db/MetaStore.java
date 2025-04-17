@@ -5,15 +5,16 @@ package com.flipkart.varadhi.spi.db;
  * Provides CRUD operations for organizations, teams, projects, topics, and subscriptions.
  */
 public interface MetaStore {
-    OrgStore orgMetaStore();
 
-    TeamStore teamMetaStore();
+    OrgStore orgs();
 
-    ProjectStore projectMetaStore();
+    TeamStore teams();
 
-    TopicStore topicMetaStore();
+    ProjectStore projects();
 
-    SubscriptionStore subscriptionMetaStore();
+    TopicStore topics();
+
+    SubscriptionStore subscriptions();
 
     boolean registerEventListener(MetaStoreEventListener listener);
 }

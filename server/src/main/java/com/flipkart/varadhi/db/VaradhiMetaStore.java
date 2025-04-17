@@ -71,7 +71,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
     }
 
 
-    OrgStore orgStore = new OrgStore() {
+    private final OrgStore orgStore = new OrgStore() {
         @Override
         public void create(Org org) {
             ZNode znode = ZNode.ofOrg(org.getName());
@@ -179,7 +179,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             zkMetaStore.deleteZNode(znode);
         }
     };
-    TeamStore teamStore = new TeamStore() {
+
+    private final TeamStore teamStore = new TeamStore() {
         /**
          * Creates a new team.
          *
@@ -272,7 +273,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             zkMetaStore.deleteZNode(znode);
         }
     };
-    ProjectStore projectStore = new ProjectStore() {
+
+    private final ProjectStore projectStore = new ProjectStore() {
         /**
          * Creates a new project.
          *
@@ -375,7 +377,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             return project.getTeam().equals(teamName) && project.getOrg().equals(orgName);
         }
     };
-    TopicStore topicStore = new TopicStore() {
+
+    private final TopicStore topicStore = new TopicStore() {
         /**
          * Creates a new topic.
          *
@@ -462,7 +465,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             zkMetaStore.deleteTrackedZNode(znode, ResourceType.TOPIC);
         }
     };
-    SubscriptionStore subscriptionStore = new SubscriptionStore() {
+
+    private final SubscriptionStore subscriptionStore = new SubscriptionStore() {
         /**
          * Creates a new subscription.
          *
@@ -560,7 +564,8 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             zkMetaStore.deleteTrackedZNode(znode, ResourceType.SUBSCRIPTION);
         }
     };
-    IamPolicyStore iamPolicyStore = new IamPolicyStore() {
+
+    private final IamPolicyStore iamPolicyStore = new IamPolicyStore() {
         /**
          * @param iamPolicyRecord
          */
@@ -638,27 +643,27 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
     };
 
     @Override
-    public OrgStore orgMetaStore() {
+    public OrgStore orgs() {
         return orgStore;
     }
 
     @Override
-    public TeamStore teamMetaStore() {
+    public TeamStore teams() {
         return teamStore;
     }
 
     @Override
-    public ProjectStore projectMetaStore() {
+    public ProjectStore projects() {
         return projectStore;
     }
 
     @Override
-    public TopicStore topicMetaStore() {
+    public TopicStore topics() {
         return topicStore;
     }
 
     @Override
-    public SubscriptionStore subscriptionMetaStore() {
+    public SubscriptionStore subscriptions() {
         return subscriptionStore;
     }
 
@@ -675,7 +680,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
      * @return
      */
     @Override
-    public IamPolicyStore iamPolicyMetaStore() {
+    public IamPolicyStore iamPolicies() {
         return iamPolicyStore;
     }
 }

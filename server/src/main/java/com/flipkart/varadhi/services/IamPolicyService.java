@@ -77,24 +77,24 @@ public class IamPolicyService {
             case ROOT -> throw new IllegalArgumentException(
                 "ROOT is implicit resource type. No Iam policies supported on it."
             );
-            case ORG -> metaStore.orgMetaStore().exists(resourceId);
+            case ORG -> metaStore.orgs().exists(resourceId);
             case TEAM -> {
                 // org:team
                 String[] segments = resourceId.split(":");
-                yield (segments.length == 2) && metaStore.teamMetaStore().exists(segments[1], segments[0]);
+                yield (segments.length == 2) && metaStore.teams().exists(segments[1], segments[0]);
             }
-            case PROJECT -> metaStore.projectMetaStore().exists(resourceId);
+            case PROJECT -> metaStore.projects().exists(resourceId);
             case TOPIC -> {
                 // project:topic
                 String[] segments = resourceId.split(":");
                 String varadhiTopicName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
-                yield (segments.length == 2) && metaStore.topicMetaStore().exists(varadhiTopicName);
+                yield (segments.length == 2) && metaStore.topics().exists(varadhiTopicName);
             }
             case SUBSCRIPTION -> {
                 // project:subscription
                 String[] segments = resourceId.split(":");
                 String subscriptionName = String.join(NAME_SEPARATOR, segments[0], segments[1]);
-                yield (segments.length == 2) && metaStore.subscriptionMetaStore().exists(subscriptionName);
+                yield (segments.length == 2) && metaStore.subscriptions().exists(subscriptionName);
             }
             case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
         };

@@ -61,7 +61,7 @@ public class ControllerApiMgrTest {
         operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20)));
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
         subscriptionStore = mock(SubscriptionStore.class);
-        when(metaStore.subscriptionMetaStore()).thenReturn(subscriptionStore);
+        when(metaStore.subscriptions()).thenReturn(subscriptionStore);
         controllerApiMgr = spy(
             new ControllerApiMgr(operationMgr, assignmentManager, subscriptionStore, consumerClientFactory)
         );
