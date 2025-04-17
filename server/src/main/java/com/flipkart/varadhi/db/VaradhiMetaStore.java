@@ -169,15 +169,6 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             zkMetaStore.createZNodeWithData(znode, namedFilter);
             return namedFilter;
         }
-
-        /**
-         * @param orgName
-         */
-        @Override
-        public void deleteFilter(String orgName) {
-            ZNode znode = ZNode.ofOrgNamedFilter(orgName);
-            zkMetaStore.deleteZNode(znode);
-        }
     };
 
     private final TeamStore teamStore = new TeamStore() {

@@ -63,8 +63,4 @@ public class OrgService {
     public OrgFilters createFilter(String orgName, OrgFilters orgFilter) {
         return orgStore.createFilter(orgName, orgFilter);
     }
-
-    public void deleteFilter(String orgName) {
-        orgStore.deleteFilter(orgName);
-    }
 }

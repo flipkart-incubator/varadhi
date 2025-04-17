@@ -30,7 +30,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
 
     @Setter
     private LifecycleStatus.ActorCode actorCode;
-    private final String nfrStrategy;
+    private final String nfrFilterName;
 
     /**
      * Constructs a new TopicResource instance.
@@ -49,14 +49,14 @@ public class TopicResource extends VersionedEntity implements Validatable {
         boolean grouped,
         TopicCapacityPolicy capacity,
         LifecycleStatus.ActorCode actorCode,
-        String nfrStrategy
+        String nfrFilterName
     ) {
         super(name, version);
         this.project = project;
         this.grouped = grouped;
         this.capacity = capacity;
         this.actorCode = actorCode;
-        this.nfrStrategy = nfrStrategy;
+        this.nfrFilterName = nfrFilterName;
     }
 
     /**
@@ -126,6 +126,6 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode, nfrStrategy);
+        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode, nfrFilterName);
     }
 }

@@ -21,6 +21,4 @@ public interface OrgStore {
     void updateFilter(String orgName, OrgFilters orgFilters);
 
     OrgFilters createFilter(String orgName, OrgFilters namedFilter);
-
-    void deleteFilter(String orgName);
 }
