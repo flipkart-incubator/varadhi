@@ -122,7 +122,7 @@ public final class ZNode {
 
     @VisibleForTesting
     static ZNode ofKind(ZNodeKind kind, String name) {
-        return new ZNode(kind.kind(), name, kind.resolvePath(ENTITIES_BASE_PATH, name));
+        return new ZNode(name, kind.kind(), kind.resolvePath(ENTITIES_BASE_PATH, name));
     }
 
     /**
