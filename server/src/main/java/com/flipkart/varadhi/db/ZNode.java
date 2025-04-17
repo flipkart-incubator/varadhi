@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.db;
 
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
 
 /**
@@ -119,8 +120,9 @@ public final class ZNode {
         }
     }
 
-    public static ZNode ofKind(ZNodeKind kind, Object... args) {
-        return new ZNode(kind.kind(), kind.kind(), kind.resolvePath(ENTITIES_BASE_PATH, args));
+    @VisibleForTesting
+    static ZNode ofKind(ZNodeKind kind, String name) {
+        return new ZNode(kind.kind(), name, kind.resolvePath(ENTITIES_BASE_PATH, name));
     }
 
     /**
