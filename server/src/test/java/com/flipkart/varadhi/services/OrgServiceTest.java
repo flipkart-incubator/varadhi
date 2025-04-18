@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.services;
 
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
@@ -9,6 +12,9 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
+import com.flipkart.varadhi.entities.filters.StringConditions;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -20,6 +26,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -40,7 +47,7 @@ public class OrgServiceTest {
         );
         zkCurator.start();
         VaradhiMetaStore varadhiMetaStore = new VaradhiMetaStore(new ZKMetaStore(zkCurator));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
     }
 
@@ -123,4 +130,38 @@ public class OrgServiceTest {
         List<Org> orgListNew = orgService.getOrgs();
         Assertions.assertTrue(orgListNew.contains(org));
     }
+
+
+    @Test
+    public void testOrgFiltersOperations() {
+        String orgName = "org1";
+        // Create the organization
+        Org org1 = Org.of(orgName);
+        orgService.createOrg(org1);
+        Map<String, Condition> conditionMap = new HashMap<>();
+        conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        OrgFilters orgFilters = new OrgFilters(0, conditionMap);
+
+        orgService.createFilter(orgName, orgFilters);
+
+        // Retrieve and verify that the created OrgFilters is not null
+        OrgFilters retrievedFilters = orgService.getAllFilters(orgName);
+        assertNotNull(retrievedFilters);
+
+        // Update the filter by adding a new filter named "filterA" via a new JSON
+        Map<String, Condition> conditionMap2 = new HashMap<>();
+        conditionMap2.put("filterA", new StringConditions.ExistsCondition("X_abc"));
+        conditionMap2.put("nameGroup.filterName", new StringConditions.ExistsCondition("X_abc"));
+
+        OrgFilters updatedFilters = new OrgFilters(0, conditionMap2);
+        orgService.updateFilter(orgName, updatedFilters);
+
+        // Verify that "filterA" now exists
+        assertNotNull(orgService.getFilter(orgName, "filterA"));
+
+        // Verify that a non-existent filter returns false
+        assertNull(orgService.getFilter(orgName, "nonExistent"));
+    }
+
+
 }

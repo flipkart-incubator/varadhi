@@ -1,8 +1,6 @@
-package com.flipkart.varadhi.web.produce;
+package com.flipkart.varadhi.web.v1.produce;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.Result;
@@ -10,9 +8,7 @@ import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.StdHeaders;
-import com.flipkart.varadhi.entities.TopicState;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
@@ -23,8 +19,6 @@ import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -44,6 +38,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -327,6 +322,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         headers.add("aaa_multi_value1", "multi_value1_3");
         headers.add("bbb_multi_value1", "multi_value1_3");
         projectService = mock(ProjectService.class);
+        projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
@@ -339,6 +335,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
             producerService,
             preProduceHandler,
             projectService,
+            varadhiTopicService,
+            orgService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion

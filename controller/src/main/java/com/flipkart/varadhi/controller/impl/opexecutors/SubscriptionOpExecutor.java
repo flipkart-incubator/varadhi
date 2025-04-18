@@ -10,7 +10,7 @@ import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,7 +24,7 @@ public abstract class SubscriptionOpExecutor implements OpExecutor<OrderedOperat
     final ConsumerClientFactory consumerClientFactory;
     final OperationMgr operationMgr;
     final AssignmentManager assignmentManager;
-    final MetaStore metaStore;
+    final SubscriptionStore subscriptionStore;
 
     public abstract CompletableFuture<Void> execute(OrderedOperation operation);
 

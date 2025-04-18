@@ -6,6 +6,8 @@ import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -14,7 +16,6 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +28,8 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 public class SubscriptionService {
-    private final MetaStore metaStore;
+    private final SubscriptionStore subscriptionStore;
+    private final TopicStore topicStore;
     private final ControllerRestApi controllerClient;
     private final ShardProvisioner shardProvisioner;
 
@@ -36,16 +38,18 @@ public class SubscriptionService {
      *
      * @param shardProvisioner the shard provisioner
      * @param controllerClient the controller REST API client
-     * @param metaStore        the meta store
+     * @param subscriptionStore        the meta store
      */
     public SubscriptionService(
         ShardProvisioner shardProvisioner,
         ControllerRestApi controllerClient,
-        MetaStore metaStore
+        SubscriptionStore subscriptionStore,
+        TopicStore topicStore
     ) {
         this.shardProvisioner = shardProvisioner;
-        this.metaStore = metaStore;
+        this.subscriptionStore = subscriptionStore;
         this.controllerClient = controllerClient;
+        this.topicStore = topicStore;
     }
 
     /**
@@ -57,13 +61,13 @@ public class SubscriptionService {
      * @return the list of subscription names
      */
     public List<String> getSubscriptionList(String projectName, boolean includeInactive) {
-        return metaStore.getSubscriptionNames(projectName)
-                        .stream()
-                        .filter(
-                            subscriptionName -> includeInactive || metaStore.getSubscription(subscriptionName)
-                                                                            .isActive()
-                        )
-                        .toList();
+        return subscriptionStore.getAllNames(projectName)
+                                .stream()
+                                .filter(
+                                    subscriptionName -> includeInactive || subscriptionStore.get(subscriptionName)
+                                                                                            .isActive()
+                                )
+                                .toList();
     }
 
     /**
@@ -74,7 +78,7 @@ public class SubscriptionService {
      * @return the subscription
      */
     public VaradhiSubscription getSubscription(String subscriptionName) {
-        return metaStore.getSubscription(subscriptionName);
+        return subscriptionStore.get(subscriptionName);
     }
 
     /**
@@ -95,7 +99,7 @@ public class SubscriptionService {
 
         try {
             if (!exists(subscription.getName())) {
-                metaStore.createSubscription(subscription);
+                subscriptionStore.create(subscription);
             } else {
                 VaradhiSubscription existingSubscription = getSubscription(subscription.getName());
                 if (!existingSubscription.isRetriable()) {
@@ -104,7 +108,7 @@ public class SubscriptionService {
                     );
                 }
                 shardProvisioner.deProvision(subscription, subProject);
-                metaStore.updateSubscription(subscription);
+                subscriptionStore.update(subscription);
             }
 
             shardProvisioner.provision(subscription, subProject);
@@ -171,7 +175,7 @@ public class SubscriptionService {
         validateVersionForUpdate(fromVersion, subscription.getVersion());
 
         subscription.setGrouped(grouped);
-        validateGroupedSubscription(metaStore.getTopic(subscription.getTopic()), subscription);
+        validateGroupedSubscription(topicStore.get(subscription.getTopic()), subscription);
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(state -> {
             subscription.setGrouped(grouped);
@@ -180,7 +184,7 @@ public class SubscriptionService {
             subscription.setRetryPolicy(retryPolicy);
             subscription.setConsumptionPolicy(consumptionPolicy);
 
-            metaStore.updateSubscription(subscription);
+            subscriptionStore.update(subscription);
             return subscription;
         });
     }
@@ -205,7 +209,7 @@ public class SubscriptionService {
         ResourceDeletionType deletionType,
         ResourceActionRequest actionRequest
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenAccept(state -> {
             if (!state.isStoppedSuccessfully()) {
@@ -237,7 +241,7 @@ public class SubscriptionService {
         String requestedBy,
         ResourceActionRequest actionRequest
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
 
         if (subscription.isActive()) {
             throw new InvalidOperationForResourceException(
@@ -262,7 +266,7 @@ public class SubscriptionService {
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(state -> {
             subscription.restore(actionRequest.actorCode(), actionRequest.message());
-            metaStore.updateSubscription(subscription);
+            subscriptionStore.update(subscription);
             log.info("Subscription '{}' restored successfully.", subscriptionName);
             return subscription;
         });
@@ -278,7 +282,7 @@ public class SubscriptionService {
      * @throws ResourceNotFoundException if the subscription is not found or in an invalid state
      */
     private VaradhiSubscription getValidatedSubscription(String subscriptionName) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
         if (!subscription.isActive()) {
             throw new ResourceNotFoundException(
                 String.format("Subscription '%s' not found or in invalid state.", subscriptionName)
@@ -336,7 +340,7 @@ public class SubscriptionService {
         String requestedBy,
         BiFunction<String, String, CompletableFuture<SubscriptionOperation>> operation
     ) {
-        VaradhiSubscription subscription = metaStore.getSubscription(subscriptionName);
+        VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
         if (!subscription.isActive()) {
             throw new InvalidOperationForResourceException(
                 String.format("Subscription '%s' is not well-provisioned for this operation.", subscription.getName())
@@ -359,10 +363,10 @@ public class SubscriptionService {
     ) {
         try {
             subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());
-            metaStore.updateSubscription(subscription);
+            subscriptionStore.update(subscription);
 
             shardProvisioner.deProvision(subscription, subProject);
-            metaStore.deleteSubscription(subscription.getName());
+            subscriptionStore.delete(subscription.getName());
             log.info("Subscription '{}' deleted successfully.", subscription.getName());
         } catch (Exception e) {
             log.error("Failed to hard delete subscription '{}'.", subscription.getName(), e);
@@ -380,7 +384,7 @@ public class SubscriptionService {
      */
     private void handleSoftDelete(VaradhiSubscription subscription, ResourceActionRequest actionRequest) {
         subscription.markInactive(actionRequest.actorCode(), actionRequest.message());
-        metaStore.updateSubscription(subscription);
+        subscriptionStore.update(subscription);
         log.info("Subscription '{}' marked inactive successfully.", subscription.getName());
     }
 
@@ -391,7 +395,7 @@ public class SubscriptionService {
      */
     private void updateSubscriptionState(VaradhiSubscription varadhiSubscription) {
         try {
-            metaStore.updateSubscription(varadhiSubscription);
+            subscriptionStore.update(varadhiSubscription);
         } catch (Exception e) {
             log.error("Failed to update subscription state: {}", varadhiSubscription.getName(), e);
         }
@@ -405,6 +409,6 @@ public class SubscriptionService {
      * @return true if the subscription exists, false otherwise
      */
     public boolean exists(String subscriptionName) {
-        return metaStore.checkSubscriptionExists(subscriptionName);
+        return subscriptionStore.exists(subscriptionName);
     }
 }
