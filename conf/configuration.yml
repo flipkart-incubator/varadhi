@@ -56,8 +56,6 @@ authenticationOptions:
       methodList:
         - GET
 
-authorizationEnabled: true
-
 authorization:
   enabled: true
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"

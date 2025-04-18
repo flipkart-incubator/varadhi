@@ -14,7 +14,7 @@ public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
     public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
-        if (configuration.isAuthorizationEnabled()) {
+        if (configuration.getAuthorization().isEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver);
         } else {
             authorizationHandlerBuilder = null;
@@ -32,7 +32,7 @@ public class AuthzHandler implements RouteConfigurator {
         AppConfiguration configuration,
         ConfigFileResolver resolver
     ) {
-        if (configuration.isAuthorizationEnabled()) {
+        if (configuration.getAuthorization().isEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
             return new AuthorizationHandlerBuilder(authorizationProvider);
         } else {

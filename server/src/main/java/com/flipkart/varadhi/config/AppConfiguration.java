@@ -41,8 +41,6 @@ public class AppConfiguration implements Validatable {
 
     private AuthenticationOptions authenticationOptions;
 
-    private boolean authorizationEnabled;
-
     private AuthorizationOptions authorization;
 
     @NotNull

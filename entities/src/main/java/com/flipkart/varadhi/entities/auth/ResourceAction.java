@@ -96,9 +96,9 @@ public enum ResourceAction {
     @Getter
     @RequiredArgsConstructor
     public enum Action {
-        CREATE("create"), UPDATE("update"), DELETE("delete"), GET("get"), LIST("list"), MIGRATE("migrate"), CONSUME(
-            "consume"
-        ), PRODUCE("produce"), SEEK("seek"), SET("set"), SUBSCRIBE("subscribe");
+        CREATE("create"), UPDATE("update"), DELETE("delete"), GET("get"),
+        LIST("list"), MIGRATE("migrate"),
+        PRODUCE("produce"), SEEK("seek"), SET("set"), SUBSCRIBE("subscribe");
 
         /**
          * The name of the action.
