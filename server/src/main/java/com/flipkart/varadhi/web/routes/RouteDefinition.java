@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Getter
 public class RouteDefinition {
-    public static final String DELIMITER = ":";
+    public static final String DELIMITER = "_";
     private final String methodName;
     private final String apiName;
 
@@ -43,7 +43,7 @@ public class RouteDefinition {
 
 
     RouteDefinition(
-        String methodName, //TODO rename : APIName, methodName
+        String methodName,
         String apiName,
         HttpMethod method,
         String path,
