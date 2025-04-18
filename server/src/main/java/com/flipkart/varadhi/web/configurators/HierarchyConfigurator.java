@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web;
+package com.flipkart.varadhi.web.configurators;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -14,8 +14,8 @@ import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARC
 
 
 @Slf4j
-public class HierarchyHandler implements RouteConfigurator {
-    public HierarchyHandler() {
+public class HierarchyConfigurator implements RouteConfigurator {
+    public HierarchyConfigurator() {
     }
 
     @Override

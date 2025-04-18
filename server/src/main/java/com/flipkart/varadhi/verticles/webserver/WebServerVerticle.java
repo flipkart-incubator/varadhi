@@ -28,6 +28,9 @@ import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
 import com.flipkart.varadhi.web.*;
+import com.flipkart.varadhi.web.configurators.*;
+import com.flipkart.varadhi.web.FailureHandler;
+import com.flipkart.varadhi.web.RequestBodyHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -299,8 +302,8 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     private void setupRouteConfigurators() {
-        AuthnHandler authnHandler = new AuthnHandler(vertx, configuration, meterRegistry);
-        AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
+        AuthnConfigurator authnConfigurator = new AuthnConfigurator(vertx, configuration, meterRegistry);
+        AuthzConfigurator authzConfigurator = new AuthzConfigurator(configuration, configResolver);
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
             meterRegistry
@@ -309,14 +312,14 @@ public class WebServerVerticle extends AbstractVerticle {
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
             configuration.getRestOptions().getPayloadSizeMax()
         );
-        RequestBodyParser bodyParser = new RequestBodyParser();
-        HierarchyHandler hierarchyHandler = new HierarchyHandler();
+        RequestBodyParsingConfigurator bodyParser = new RequestBodyParsingConfigurator();
+        HierarchyConfigurator hierarchyConfigurator = new HierarchyConfigurator();
         routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
-        routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnHandler);
+        routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnConfigurator);
         routeBehaviourConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
         routeBehaviourConfigurators.put(RouteBehaviour.parseBody, bodyParser);
-        routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyHandler);
-        routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzHandler);
+        routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyConfigurator);
+        routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzConfigurator);
     }
 
     private void configureApiRoutes(Router router, List<RouteDefinition> apiRoutes) {

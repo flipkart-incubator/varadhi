@@ -16,7 +16,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.google.common.collect.Multimap;
@@ -37,8 +37,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
-import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
