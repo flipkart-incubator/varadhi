@@ -46,7 +46,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
-    public static final String HANDLER_NAME = "TopicHandlers";
+    public static final String API_NAME = "Topic";
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
@@ -79,21 +79,21 @@ public class TopicHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/topics",
             List.of(
-                RouteDefinition.get("GetTopic", HANDLER_NAME, "/:topic")
+                RouteDefinition.get("get", API_NAME, "/:topic")
                                .authorize(TOPIC_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateTopic", HANDLER_NAME, "")
+                RouteDefinition.post("create", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setRequestBody)
                                .authorize(TOPIC_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("DeleteTopic", HANDLER_NAME, "/:topic")
+                RouteDefinition.delete("delete", API_NAME, "/:topic")
                                .authorize(TOPIC_DELETE)
                                .build(this::getHierarchies, this::delete),
-                RouteDefinition.get("ListTopics", HANDLER_NAME, "")
+                RouteDefinition.get("list", API_NAME, "")
                                .authorize(TOPIC_LIST)
                                .build(this::getHierarchies, this::listTopics),
-                RouteDefinition.patch("RestoreTopic", HANDLER_NAME, "/:topic/restore")
+                RouteDefinition.patch("restore", API_NAME, "/:topic/restore")
                                .authorize(TOPIC_UPDATE)
                                .build(this::getHierarchies, this::restore)
             )

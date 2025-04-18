@@ -25,7 +25,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgFilterHandler implements RouteProvider {
-    public static final String HANDLER_NAME = "OrgFilterHandler";
+    public static final String API_NAME = "OrgFilter";
     private final OrgService orgService;
 
     public OrgFilterHandler(OrgService orgService) {
@@ -37,18 +37,16 @@ public class OrgFilterHandler implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs/:org/filters",
             List.of(
-                RouteDefinition.get("GetFilters", HANDLER_NAME, "")
-                               .authorize(ORG_GET)
-                               .build(this::getHierarchies, this::getAll),
-                RouteDefinition.get("GetFilterByName", HANDLER_NAME, "/:orgFilterName")
+                RouteDefinition.get("list", API_NAME, "").authorize(ORG_GET).build(this::getHierarchies, this::getAll),
+                RouteDefinition.get("get", API_NAME, "/:orgFilterName")
                                .authorize(ORG_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateFilter", HANDLER_NAME, "")
+                RouteDefinition.post("create", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateFilter", HANDLER_NAME, "")
+                RouteDefinition.put("update", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)

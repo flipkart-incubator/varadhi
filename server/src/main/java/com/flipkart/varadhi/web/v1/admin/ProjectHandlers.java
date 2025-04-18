@@ -24,7 +24,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class ProjectHandlers implements RouteProvider {
-    public static final String HANDLER_NAME = "ProjectHandlers";
+    public static final String API_NAME = "Project";
     private final ProjectService projectService;
 
     public ProjectHandlers(ProjectService projectService) {
@@ -36,20 +36,20 @@ public class ProjectHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects",
             List.of(
-                RouteDefinition.get("GetProject", HANDLER_NAME, "/:project")
+                RouteDefinition.get("get", API_NAME, "/:project")
                                .authorize(PROJECT_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateProject", HANDLER_NAME, "")
+                RouteDefinition.post("create", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setProject)
                                .authorize(PROJECT_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateProject", HANDLER_NAME, "")
+                RouteDefinition.put("update", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setProject)
                                .authorize(PROJECT_UPDATE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("DeleteProject", HANDLER_NAME, "/:project")
+                RouteDefinition.delete("delete", API_NAME, "/:project")
                                .authorize(PROJECT_DELETE)
                                .build(this::getHierarchies, this::delete)
             )

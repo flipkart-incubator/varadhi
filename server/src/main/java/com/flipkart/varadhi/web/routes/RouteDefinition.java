@@ -22,8 +22,10 @@ import java.util.function.Consumer;
 @Slf4j
 @Getter
 public class RouteDefinition {
-    private final String name;
-    private final String handlerName;
+    public static final String DELIMITER = ":";
+    private final String methodName;
+    private final String apiName;
+
     private final HttpMethod method;
     private final String path;
     private final Set<RouteBehaviour> behaviours;
@@ -35,10 +37,14 @@ public class RouteDefinition {
     private final HierarchyFunction hierarchyFunction;
     private final TelemetryType telemetryType;
 
+    public String getName() {
+        return String.format("%s%s%s", apiName, DELIMITER, methodName);
+    }
+
 
     RouteDefinition(
-        String name,
-        String handlerName,
+        String methodName, //TODO rename : APIName, methodName
+        String apiName,
         HttpMethod method,
         String path,
         Set<RouteBehaviour> behaviours,
@@ -50,8 +56,8 @@ public class RouteDefinition {
         List<ResourceAction> authorizeOnActions,
         TelemetryType telemetryType
     ) {
-        this.name = name;
-        this.handlerName = handlerName;
+        this.methodName = methodName;
+        this.apiName = apiName;
         this.method = method;
         this.path = path;
         this.behaviours = behaviours;
@@ -86,8 +92,8 @@ public class RouteDefinition {
 
     @RequiredArgsConstructor
     public static class Builder {
-        private final String name;
-        private final String handlerName;
+        private final String methodName;
+        private final String apiName;
         private final HttpMethod method;
         private final String path;
         private boolean unAuthenticated;
@@ -170,8 +176,8 @@ public class RouteDefinition {
             }
 
             return new RouteDefinition(
-                name,
-                handlerName,
+                methodName,
+                apiName,
                 method,
                 path,
                 behaviours,

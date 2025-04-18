@@ -22,7 +22,7 @@ import java.util.Map;
 @Getter
 public class AppConfiguration implements Validatable {
 
-    private List<String> disabledHandlers;
+    private List<String> disabledAPIs;
 
     @NotNull
     private VertxOptions vertxOptions;

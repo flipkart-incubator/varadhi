@@ -46,7 +46,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
 @AllArgsConstructor
 public class ProduceHandlers implements RouteProvider {
-    public static final String HANDLER_NAME = "ProduceHandlers";
+    public static final String API_NAME = "Topic";
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProjectService projectService;
@@ -62,7 +62,7 @@ public class ProduceHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project",
             List.of(
-                RouteDefinition.post("Produce", HANDLER_NAME, "/topics/:topic/produce")
+                RouteDefinition.post("produce", API_NAME, "/topics/:topic/produce")
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()

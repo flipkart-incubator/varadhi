@@ -1,4 +1,4 @@
-disabledHandlers: []
+disabledAPIs: []
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
