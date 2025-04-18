@@ -9,12 +9,6 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 public class Constants {
     // Length of the random partition key
     public static final int RANDOM_PARTITION_KEY_LENGTH = 5;
-    // Context key for the body
-    public static final String CONTEXT_KEY_BODY = "varadhi.body";
-    // Context key for resource hierarchy
-    public static final String CONTEXT_KEY_RESOURCE_HIERARCHY = "varadhi.resourceHierarchy";
-    // Context key to check if the user is a super-user
-    public static final String CONTEXT_KEY_IS_SUPER_USER = "varadhi.isSuperUser";
 
     // TODO: This header is intended for testing purposes only. The "x_" prefix may result in it being sent to the destination during consumption.
     // Header for user ID, intended for testing purposes only
@@ -49,6 +43,10 @@ public class Constants {
 
     public static class ContextKeys {
         public static final String USER_CONTEXT = "userContext";
+        public static final String API_RESPONSE = "api-response";
+        public static final String IS_SUPER_USER = "varadhi.isSuperUser";
+        public static final String RESOURCE_HIERARCHY = "varadhi.resourceHierarchy";
+        public static final String REQUEST_BODY = "varadhi.body";
     }
 
 

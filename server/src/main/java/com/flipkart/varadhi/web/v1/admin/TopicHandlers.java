@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -107,7 +107,7 @@ public class TopicHandlers implements RouteProvider {
      */
     public void setRequestBody(RoutingContext ctx) {
         TopicResource topicResource = ctx.body().asValidatedPojo(TopicResource.class);
-        ctx.put(CONTEXT_KEY_BODY, topicResource);
+        ctx.put(REQUEST_BODY, topicResource);
     }
 
     /**
@@ -123,7 +123,7 @@ public class TopicHandlers implements RouteProvider {
         Project project = projectService.getCachedProject(projectName);
 
         if (hasBody) {
-            TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
+            TopicResource topicResource = ctx.get(REQUEST_BODY);
             return Map.of(ResourceType.TOPIC, new TopicHierarchy(project, topicResource.getName()));
         }
 
@@ -154,7 +154,7 @@ public class TopicHandlers implements RouteProvider {
         // TODO: Consider using Vertx ValidationHandlers to validate the request body.
         // TODO: Consider implementing rollback mechanisms for failure scenarios and ≠≠ kind of semantics for all operations.
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
+        TopicResource topicResource = ctx.get(REQUEST_BODY);
         String requestedBy = ctx.getIdentityOrDefault();
 
         topicResource.setActorCode(getActorCode(requestedBy));

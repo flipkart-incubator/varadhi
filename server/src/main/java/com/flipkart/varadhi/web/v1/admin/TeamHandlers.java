@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -60,12 +60,12 @@ public class TeamHandlers implements RouteProvider {
 
     public void setTeam(RoutingContext ctx) {
         Team team = ctx.body().asValidatedPojo(Team.class);
-        ctx.put(CONTEXT_KEY_BODY, team);
+        ctx.put(REQUEST_BODY, team);
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         if (hasBody) {
-            Team team = ctx.get(CONTEXT_KEY_BODY);
+            Team team = ctx.get(REQUEST_BODY);
             return Map.of(ResourceType.TEAM, new Hierarchies.TeamHierarchy(team.getOrg(), team.getName()));
         }
         String org = ctx.request().getParam(PATH_PARAM_ORG);
@@ -99,7 +99,7 @@ public class TeamHandlers implements RouteProvider {
 
     public void create(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        Team team = ctx.get(CONTEXT_KEY_BODY);
+        Team team = ctx.get(REQUEST_BODY);
         if (!orgName.equals(team.getOrg())) {
             throw new IllegalArgumentException("Specified org name is different from org name in url");
         }

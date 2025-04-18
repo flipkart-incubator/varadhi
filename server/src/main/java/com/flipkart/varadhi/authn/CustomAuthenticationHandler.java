@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.authn;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -30,7 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
 import static com.flipkart.varadhi.server.spi.vo.URLDefinition.anyMatch;
@@ -145,7 +146,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     private String readOrgNameFromContext(RoutingContext routingContext) {
 
-        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = routingContext.get(RESOURCE_HIERARCHY);
         if (typeHierarchyMap != null) {
             if (typeHierarchyMap.containsKey(ResourceType.ORG)) {
                 ResourceHierarchy hierarchy = typeHierarchyMap.get(ResourceType.ORG);

@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -154,7 +154,7 @@ public class SubscriptionHandlers implements RouteProvider {
             LifecycleStatus.ActorCode.ADMIN_ACTION :
             LifecycleStatus.ActorCode.USER_ACTION;
         subscriptionResource.setActorCode(actorCode);
-        ctx.put(CONTEXT_KEY_BODY, subscriptionResource);
+        ctx.put(REQUEST_BODY, subscriptionResource);
     }
 
     /**
@@ -168,7 +168,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project subscriptionProject = projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
         if (hasBody) {
-            SubscriptionResource subscriptionResource = ctx.get(CONTEXT_KEY_BODY);
+            SubscriptionResource subscriptionResource = ctx.get(REQUEST_BODY);
             Project topicProject = projectService.getProject(subscriptionResource.getTopicProject());
             return Map.ofEntries(
                 Map.entry(
@@ -349,7 +349,7 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the validated subscription resource
      */
     private SubscriptionResource getValidSubscriptionResource(RoutingContext ctx) {
-        SubscriptionResource subscription = ctx.get(CONTEXT_KEY_BODY);
+        SubscriptionResource subscription = ctx.get(REQUEST_BODY);
 
         boolean ignoreConstraints = ignoreConstraints(ctx);
         validateSuperUserConstraints(ctx, ignoreConstraints);

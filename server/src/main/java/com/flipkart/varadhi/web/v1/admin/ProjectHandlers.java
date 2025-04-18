@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
@@ -58,12 +58,12 @@ public class ProjectHandlers implements RouteProvider {
 
     public void setProject(RoutingContext ctx) {
         Project project = ctx.body().asValidatedPojo(Project.class);
-        ctx.put(CONTEXT_KEY_BODY, project);
+        ctx.put(REQUEST_BODY, project);
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = hasBody ?
-            ctx.get(CONTEXT_KEY_BODY) :
+            ctx.get(REQUEST_BODY) :
             projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(project));
     }
@@ -75,7 +75,7 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        Project project = ctx.get(CONTEXT_KEY_BODY);
+        Project project = ctx.get(REQUEST_BODY);
         Project createdProject = projectService.createProject(project);
         ctx.endApiWithResponse(createdProject);
     }
@@ -87,7 +87,7 @@ public class ProjectHandlers implements RouteProvider {
     }
 
     public void update(RoutingContext ctx) {
-        Project project = ctx.get(CONTEXT_KEY_BODY);
+        Project project = ctx.get(REQUEST_BODY);
         Project updatedProject = projectService.updateProject(project);
         ctx.endApiWithResponse(updatedProject);
     }

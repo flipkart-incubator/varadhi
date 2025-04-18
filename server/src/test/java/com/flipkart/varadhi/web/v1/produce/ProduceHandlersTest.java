@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.mockito.ArgumentMatchers.eq;
@@ -55,7 +55,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         route.handler(bodyHandler).handler(ctx -> {
-            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
+            ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
         }).handler(ctx -> {
             requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));

@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 
 
 @Slf4j
@@ -24,7 +24,7 @@ public class HierarchyConfigurator implements RouteConfigurator {
             boolean hasParsedBody = routeDef.getBehaviours().contains(RouteBehaviour.parseBody);
             Map<ResourceType, ResourceHierarchy> hierarchies = routeDef.getHierarchyFunction()
                                                                        .getHierarchies(ctx, hasParsedBody);
-            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchies);
+            ctx.put(RESOURCE_HIERARCHY, hierarchies);
             ctx.next();
         });
     }
