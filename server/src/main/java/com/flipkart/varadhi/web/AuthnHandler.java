@@ -2,6 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
 import com.flipkart.varadhi.config.AppConfiguration;
+
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -53,7 +54,6 @@ public class AuthnHandler implements RouteConfigurator {
                 );
             }
             provider = (AuthenticationHandlerProvider)providerClass.getDeclaredConstructor().newInstance();
-
 
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(

@@ -46,7 +46,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DEL
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CONSUME;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
@@ -56,6 +56,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
+    public static final String API_NAME = "SubscriptionHandlers";
 
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
@@ -102,38 +103,38 @@ public class SubscriptionHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions",
             List.of(
-                RouteDefinition.get("ListSubscriptions", "")
+                RouteDefinition.get("list", API_NAME, "")
                                .authorize(SUBSCRIPTION_LIST)
                                .build(this::getHierarchies, this::list),
-                RouteDefinition.get("GetSubscription", "/:subscription")
+                RouteDefinition.get("get", API_NAME, "/:subscription")
                                .authorize(SUBSCRIPTION_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateSubscription", "")
+                RouteDefinition.post("create", API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_CREATE)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateSubscription", "/:subscription")
+                RouteDefinition.put("update", API_NAME, "/:subscription")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_UPDATE)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("DeleteSubscription", "/:subscription")
+                RouteDefinition.delete("delete", API_NAME, "/:subscription")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_DELETE)
                                .build(this::getHierarchies, this::delete),
-                RouteDefinition.patch("RestoreSubscription", "/:subscription/restore")
+                RouteDefinition.patch("restore", API_NAME, "/:subscription/restore")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::restore),
-                RouteDefinition.post("StartSubscription", "/:subscription/start")
+                RouteDefinition.post("start", API_NAME, "/:subscription/start")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::start),
-                RouteDefinition.post("StopSubscription", "/:subscription/stop")
+                RouteDefinition.post("stop", API_NAME, "/:subscription/stop")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::stop)

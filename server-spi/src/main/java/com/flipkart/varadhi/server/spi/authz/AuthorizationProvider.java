@@ -11,6 +11,8 @@ public interface AuthorizationProvider {
 
     Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource);
 
+    Future<Boolean> isSuperAdmin(UserContext userContext);
+
     class NoAuthorizationProvider implements AuthorizationProvider {
 
         @Override
@@ -20,7 +22,12 @@ public interface AuthorizationProvider {
 
         @Override
         public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-            return Future.succeededFuture(false);
+            return Future.succeededFuture(true);
+        }
+
+        @Override
+        public Future<Boolean> isSuperAdmin(UserContext userContext) {
+            return Future.succeededFuture(true);
         }
     }
 }

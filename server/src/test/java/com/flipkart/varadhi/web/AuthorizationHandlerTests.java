@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
+
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
@@ -26,7 +27,6 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 public class AuthorizationHandlerTests {
 
     private final AuthorizationHandlerBuilder authzHandlerBuilder = new AuthorizationHandlerBuilder(
-        List.of("a", "b"),
         new TestAuthorizationProvider()
     );
 
@@ -83,6 +83,11 @@ public class AuthorizationHandlerTests {
             } else {
                 return Future.succeededFuture(false);
             }
+        }
+
+        @Override
+        public Future<Boolean> isSuperAdmin(UserContext userContext) {
+            return Future.succeededFuture(List.of("a", "b").contains(userContext.getSubject()));
         }
     }
 }

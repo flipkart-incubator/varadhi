@@ -38,7 +38,7 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
     @Override
     public void configure(Route route, RouteDefinition routeDef) {
         route.handler(ctx -> {
-            addRequestSpanAndLog(ctx, routeDef.getName(), routeDef.getTelemetryType());
+            addRequestSpanAndLog(ctx, routeDef.getMethodName(), routeDef.getTelemetryType());
             ctx.next();
         });
     }
