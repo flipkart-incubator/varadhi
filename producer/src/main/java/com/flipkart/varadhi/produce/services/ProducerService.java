@@ -237,7 +237,6 @@ public final class ProducerService {
         });
     }
 
-
     private boolean applyOrgFilter() {
         // TODO[IMP]: apply org filters
         //        Project project = projectService.getCachedProject(projectName);

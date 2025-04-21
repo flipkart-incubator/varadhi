@@ -183,12 +183,12 @@ public class VaradhiApplication {
         // Create futures for cache creation and preloading
         Future<EntityReadCache<Project>> projectCacheFuture = EntityReadCache.create(
             ResourceType.PROJECT,
-            metaStore::getAllProjects
+            metaStore.projects()::getAll
         );
 
         Future<EntityReadCache<VaradhiTopic>> topicCacheFuture = EntityReadCache.create(
             ResourceType.TOPIC,
-            metaStore::getAllTopics
+            metaStore.topics()::getAll
         );
 
         // Combine futures and register caches when they're ready

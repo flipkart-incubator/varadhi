@@ -43,7 +43,7 @@ class IamPolicyServiceTest {
 
 
     @BeforeEach
-    public void PreTest() throws Exception {
+    void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
         zkCurator = CuratorFrameworkFactory.newClient(
             zkCuratorTestingServer.getConnectString(),

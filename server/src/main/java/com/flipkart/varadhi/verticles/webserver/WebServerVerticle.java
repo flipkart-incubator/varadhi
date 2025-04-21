@@ -225,9 +225,12 @@ public class WebServerVerticle extends AbstractVerticle {
         // Initialize topic service
         serviceRegistry.register(
             VaradhiTopicService.class,
-            new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore.topics(),
-                    metaStore.subscriptions(),
-                    metaStore.projects())
+            new VaradhiTopicService(
+                messagingStackProvider.getStorageTopicService(),
+                metaStore.topics(),
+                metaStore.subscriptions(),
+                metaStore.projects()
+            )
         );
 
         // Initialize controller client and related services
@@ -240,8 +243,7 @@ public class WebServerVerticle extends AbstractVerticle {
         // Initialize subscription and DLQ services
         serviceRegistry.register(
             SubscriptionService.class,
-            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(),
-                    metaStore.topics())
+            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(), metaStore.topics())
         );
         serviceRegistry.register(
             DlqService.class,
@@ -455,8 +457,6 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 preProduceHandler,
-                    varadhiTopicService,
-                    orgService,
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),

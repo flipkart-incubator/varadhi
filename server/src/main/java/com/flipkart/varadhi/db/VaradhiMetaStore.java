@@ -3,7 +3,11 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Org;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
@@ -19,7 +23,14 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.db.ZNode.*;
+import static com.flipkart.varadhi.db.ZNode.EVENT;
+import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
+import static com.flipkart.varadhi.db.ZNode.ORG;
+import static com.flipkart.varadhi.db.ZNode.PROJECT;
+import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
+import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
+import static com.flipkart.varadhi.db.ZNode.TEAM;
+import static com.flipkart.varadhi.db.ZNode.TOPIC;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
 
 /**
@@ -147,7 +158,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
          * Updates a named filter within a specified organization.
          *
          * @param orgName    the name of the organization
-         * @return the updated named filter
+         * @param orgFilters the named filter to update
          */
         @Override
         public void updateFilter(String orgName, OrgFilters orgFilters) {
@@ -321,7 +332,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
          * @throws MetaStoreException if there's an error during retrieval
          */
         @Override
-        public List<Project> getAllProjects() {
+        public List<Project> getAll() {
             ZNode znode = ZNode.ofEntityType(PROJECT);
             return zkMetaStore.listChildren(znode).stream().map(this::get).toList();
         }
@@ -433,7 +444,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
          * @throws MetaStoreException if there's an error during retrieval
          */
         @Override
-        public List<VaradhiTopic> getAllTopics() {
+        public List<VaradhiTopic> getAll() {
             ZNode znode = ZNode.ofEntityType(TOPIC);
             return zkMetaStore.listChildren(znode).stream().map(this::get).toList();
         }
@@ -582,9 +593,6 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
 
     private final IamPolicyStore iamPolicyStore = new IamPolicyStore() {
         /**
-         * @param iamPolicyRecord
-         */
-        /**
          * Creates a new IAM policy record in the metadata store.
          *
          * @param iamPolicyRecord the IAM policy record to create
@@ -682,18 +690,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         return subscriptionStore;
     }
 
-    /**
-     * @param listener
-     * @return
-     */
     @Override
     public boolean registerEventListener(MetaStoreEventListener listener) {
         return zkMetaStore.registerEventListener(listener);
     }
 
-    /**
-     * @return
-     */
     @Override
     public IamPolicyStore iamPolicies() {
         return iamPolicyStore;
