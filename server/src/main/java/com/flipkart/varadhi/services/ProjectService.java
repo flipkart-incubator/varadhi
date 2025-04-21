@@ -43,7 +43,7 @@ public class ProjectService {
         log.info("Creating project: {}", project.getName());
         validateProjectDependencies(project);
 
-        metaStore.createProject(project);
+        metaStore.projects().create(project);
         return project;
     }
 
@@ -55,7 +55,7 @@ public class ProjectService {
      */
     private void validateProjectDependencies(Project project) {
         // Check if org exists
-        if (!metaStore.checkOrgExists(project.getOrg())) {
+        if (!metaStore.orgs().exists(project.getOrg())) {
             throw new ResourceNotFoundException(
                 String.format(
                     "Org(%s) not found. For Project creation, associated Org and Team should exist.",
@@ -65,7 +65,7 @@ public class ProjectService {
         }
 
         // Check if team exists
-        if (!metaStore.checkTeamExists(project.getTeam(), project.getOrg())) {
+        if (!metaStore.teams().exists(project.getTeam(), project.getOrg())) {
             throw new ResourceNotFoundException(
                 String.format(
                     "Team(%s) not found. For Project creation, associated Org and Team should exist.",
@@ -83,7 +83,7 @@ public class ProjectService {
      * @throws ResourceNotFoundException if the project does not exist
      */
     public Project getProject(String projectName) {
-        return metaStore.getProject(projectName);
+        return metaStore.projects().get(projectName);
     }
 
     /**
@@ -104,7 +104,7 @@ public class ProjectService {
         Project existingProject = getProject(project.getName());
         validateProjectUpdate(project, existingProject);
 
-        metaStore.updateProject(project);
+        metaStore.projects().update(project);
         return project;
     }
 
@@ -154,7 +154,7 @@ public class ProjectService {
         log.info("Deleting project: {}", projectName);
         validateProjectDeletion(projectName);
 
-        metaStore.deleteProject(projectName);
+        metaStore.projects().delete(projectName);
     }
 
     /**
@@ -165,7 +165,7 @@ public class ProjectService {
      */
     private void validateProjectDeletion(String projectName) {
         // Check for topics
-        List<String> topicNames = metaStore.getTopicNames(projectName);
+        List<String> topicNames = metaStore.topics().getAllNames(projectName);
         if (!topicNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                 String.format(
@@ -177,7 +177,7 @@ public class ProjectService {
         }
 
         // Check for subscriptions
-        List<String> subscriptionNames = metaStore.getSubscriptionNames(projectName);
+        List<String> subscriptionNames = metaStore.subscriptions().getAllNames(projectName);
         if (!subscriptionNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
                 String.format(

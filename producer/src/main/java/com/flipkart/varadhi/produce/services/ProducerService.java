@@ -160,6 +160,10 @@ public final class ProducerService {
             );
         }
 
+        if (applyOrgFilter()) {
+            return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
+        }
+
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
         return getProducer(storageTopic).thenCompose(
             producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
@@ -231,5 +235,22 @@ public final class ProducerService {
             }
             return Result.of(result, throwable);
         });
+    }
+
+
+    private boolean applyOrgFilter() {
+        // TODO[IMP]: apply org filters
+        //        Project project = projectService.getCachedProject(projectName);
+        //        TODO[IMP]:avoid zk interactions for org and topic + filters
+        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
+        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
+        //        String nfrStrategy = topic.getNfrFilterName();
+        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
+        //                orgFilters.getFilters().get(nfrStrategy) :
+        //                null;
+        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
+        //            return true;
+        //        }
+        return false;
     }
 }

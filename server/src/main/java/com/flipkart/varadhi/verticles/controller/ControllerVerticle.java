@@ -146,7 +146,7 @@ public class ControllerVerticle extends AbstractVerticle {
             meterRegistry
         );
 
-        return new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore(), consumerClientFactory);
+        return new ControllerApiMgr(operationMgr, assigner, metaStoreProvider.getMetaStore().subscriptions(), consumerClientFactory);
     }
 
     /**

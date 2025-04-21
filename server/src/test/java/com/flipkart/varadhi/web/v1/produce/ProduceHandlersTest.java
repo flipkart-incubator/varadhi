@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web.produce;
+package com.flipkart.varadhi.web.v1.produce;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,6 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 

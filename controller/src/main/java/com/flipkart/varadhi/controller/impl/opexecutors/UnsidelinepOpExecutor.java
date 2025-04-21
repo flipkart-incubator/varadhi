@@ -11,7 +11,7 @@ import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -25,9 +25,9 @@ public class UnsidelinepOpExecutor extends SubscriptionOpExecutor {
         ConsumerClientFactory clientFactory,
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
-        MetaStore metaStore
+        SubscriptionStore subscriptionStore
     ) {
-        super(subscription, clientFactory, operationMgr, assignmentManager, metaStore);
+        super(subscription, clientFactory, operationMgr, assignmentManager, subscriptionStore);
     }
 
     @Override

@@ -20,7 +20,7 @@ import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
+import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -43,6 +43,7 @@ import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
+import com.flipkart.varadhi.web.v1.admin.OrgFilterHandler;
 import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
@@ -217,14 +218,16 @@ public class WebServerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
         // Initialize basic services
-        serviceRegistry.register(OrgService.class, new OrgService(metaStore));
+        serviceRegistry.register(OrgService.class, new OrgService(metaStore.orgs(), metaStore.teams()));
         serviceRegistry.register(TeamService.class, new TeamService(metaStore));
         serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
 
         // Initialize topic service
         serviceRegistry.register(
             VaradhiTopicService.class,
-            new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore)
+            new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore.topics(),
+                    metaStore.subscriptions(),
+                    metaStore.projects())
         );
 
         // Initialize controller client and related services
@@ -237,7 +240,8 @@ public class WebServerVerticle extends AbstractVerticle {
         // Initialize subscription and DLQ services
         serviceRegistry.register(
             SubscriptionService.class,
-            new SubscriptionService(shardProvisioner, controllerClient, metaStore)
+            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(),
+                    metaStore.topics())
         );
         serviceRegistry.register(
             DlqService.class,
@@ -337,11 +341,11 @@ public class WebServerVerticle extends AbstractVerticle {
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
 
         if (isDefaultProvider) {
-            if (metaStore instanceof IamPolicyMetaStore iamPolicyMetaStore) {
+            if (metaStore instanceof IamPolicyStore.Provider iamPolicyMetaStore) {
                 routes.addAll(
                     new IamPolicyHandlers(
                         serviceRegistry.get(ProjectService.class),
-                        new IamPolicyService(metaStore, iamPolicyMetaStore)
+                        new IamPolicyService(metaStore, iamPolicyMetaStore.iamPolicies())
                     ).get()
                 );
             } else {
@@ -430,6 +434,7 @@ public class WebServerVerticle extends AbstractVerticle {
                     cacheRegistry.getCache(ResourceType.PROJECT)
                 ).get()
             );
+            routes.addAll(new OrgFilterHandler(serviceRegistry.get(OrgService.class)).get());
         }
         return routes;
     }
@@ -450,6 +455,8 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 preProduceHandler,
+                    varadhiTopicService,
+                    orgService,
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),

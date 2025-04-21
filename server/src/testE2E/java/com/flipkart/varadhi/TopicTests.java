@@ -55,7 +55,8 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
 
@@ -80,7 +81,8 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
 
@@ -97,13 +99,15 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         TopicResource topic2 = TopicResource.unGrouped(
             topicName,
             o2t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
 
         TopicResource r1 = makeCreateRequest(getTopicsUri(o1t1Project1), topic1, 200);
@@ -134,7 +138,8 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
 

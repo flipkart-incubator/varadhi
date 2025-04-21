@@ -8,6 +8,7 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -50,7 +51,7 @@ class ProjectServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
         projectService = spy(new ProjectService(varadhiMetaStore));
@@ -187,8 +188,9 @@ class ProjectServiceTest {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
-
-        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
+        TopicStore topicStore = mock(TopicStore.class);
+        when(varadhiMetaStore.topics()).thenReturn(topicStore);
+        when(topicStore.getAllNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
         InvalidOperationForResourceException e = Assertions.assertThrows(
             InvalidOperationForResourceException.class,
             () -> projectService.deleteProject(o1t1p2.getName())

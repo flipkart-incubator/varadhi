@@ -1,20 +1,13 @@
 package com.flipkart.varadhi.db;
 
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Getter;
-
-import java.util.Objects;
 
 /**
  * Represents a ZooKeeper node in the Varadhi system.
  * <p>
  * This class provides a type-safe way to handle ZooKeeper paths and node types.
  * It follows a hierarchical structure for different entity types and their sequences.
- *
- * <p>The path structure follows these patterns:
- * <ul>
- *     <li>Entities: /varadhi/entities/[kind]/[name]</li>
- *     <li>Hierarchical Resources: /varadhi/entities/[kind]/[parent]:[name]</li>
- * </ul>
  *
  * <p>Supported node kinds:
  * <ul>
@@ -35,21 +28,26 @@ import java.util.Objects;
  */
 @Getter
 public final class ZNode {
-    public static final ZNodeKind ORG = new ZNodeKind("Org");
-    public static final ZNodeKind TEAM = new ZNodeKind("Team");
-    public static final ZNodeKind PROJECT = new ZNodeKind("Project");
-    public static final ZNodeKind TOPIC = new ZNodeKind("Topic");
-    public static final ZNodeKind IAM_POLICY = new ZNodeKind("IamPolicy");
-    public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription");
-    public static final ZNodeKind SUB_OP = new ZNodeKind("SubOperation");
-    public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment");
-    // TODO: Hierarchical or Flat?
-    public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation");
-    public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent");
 
     public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
-    public static final String ZK_PATH_SEPARATOR = "/";
+
+    public static final ZNodeKind ORG = new ZNodeKind("Org", "%s");
+    public static final ZNodeKind ORG_FILTER = new ZNodeKind("Filters", "Org/%s/Filters", false);
+
+    /*
+     *   /Team/{org_name}:{team_name}
+     */
+    public static final ZNodeKind TEAM = new ZNodeKind("Team", "%s" + RESOURCE_NAME_SEPARATOR + "%s");
+    public static final ZNodeKind PROJECT = new ZNodeKind("Project", "%s");
+    public static final ZNodeKind TOPIC = new ZNodeKind("Topic", "%s");
+    public static final ZNodeKind IAM_POLICY = new ZNodeKind("IamPolicy", "%s");
+    public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription", "%s");
+    public static final ZNodeKind SUB_OP = new ZNodeKind("SubOperation", "%s");
+    public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment", "%s");
+    // TODO: Hierarchical or Flat?
+    public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation", "%s");
+    public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent", "%s");
 
     private final String name;
     private final String kind;
@@ -57,139 +55,74 @@ public final class ZNode {
 
     /**
      * Constructs a ZNode instance with the provided builder.
-     *
-     * @param builder The builder containing the node properties
      */
-    private ZNode(Builder builder) {
-        this.name = builder.name;
-        this.kind = builder.kind;
-        this.path = builder.path;
-    }
-
-    /**
-     * Builder class for creating ZNode instances.
-     * Provides a fluent interface for setting node properties.
-     */
-    public static class Builder {
-        private String name;
-        private String kind;
-        private String path;
-        private String parent;
-        private ZNodeKind zNodeKind;
-
-        /**
-         * Sets the ZNodeKind for this node.
-         *
-         * @param znodeKind The kind of node to create
-         * @return The builder instance for method chaining
-         * @throws NullPointerException if znodeKind is null
-         */
-        public Builder withZNodeKind(ZNodeKind znodeKind) {
-            this.zNodeKind = Objects.requireNonNull(znodeKind, "zNodeKind cannot be null");
-            this.kind = znodeKind.kind();
-            return this;
-        }
-
-        /**
-         * Sets the name for this node.
-         *
-         * @param name The name of the node
-         * @return The builder instance for method chaining
-         * @throws NullPointerException if name is null
-         */
-        public Builder withName(String name) {
-            this.name = Objects.requireNonNull(name, "name cannot be null");
-            return this;
-        }
-
-        /**
-         * Sets the parent for this node, used in hierarchical resources.
-         *
-         * @param parent The parent resource name
-         * @return The builder instance for method chaining
-         * @throws NullPointerException if parent is null
-         */
-        public Builder withParent(String parent) {
-            this.parent = Objects.requireNonNull(parent, "parent cannot be null");
-            return this;
-        }
-
-        /**
-         * Builds the ZNode instance with the configured properties.
-         *
-         * @return A new ZNode instance
-         * @throws NullPointerException if required properties are not set
-         */
-        public ZNode build() {
-            Objects.requireNonNull(zNodeKind, "zNodeKind must be set");
-
-            if (parent != null) {
-                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, getResourceFQDN(parent, name));
-            } else if (name != null) {
-                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind, name);
-            } else {
-                this.name = kind;
-                this.path = String.join(ZK_PATH_SEPARATOR, ENTITIES_BASE_PATH, kind);
-            }
-
-            return new ZNode(this);
-        }
+    private ZNode(String name, String kind, String path) {
+        this.name = name;
+        this.kind = kind;
+        this.path = path;
     }
 
     public static ZNode ofOrg(String orgName) {
-        return new Builder().withZNodeKind(ORG).withName(orgName).build();
+        return new ZNode(orgName, ORG.kind(), ORG.resolvePath(ENTITIES_BASE_PATH, orgName));
+    }
+
+    public static ZNode ofOrgNamedFilter(String orgName) {
+        return new ZNode(ORG_FILTER.kind(), ORG_FILTER.kind(), ORG_FILTER.resolvePath(ENTITIES_BASE_PATH, orgName));
     }
 
     public static ZNode ofTeam(String orgName, String teamName) {
-        return new Builder().withZNodeKind(TEAM).withName(teamName).withParent(orgName).build();
+        return new ZNode(teamName, TEAM.kind(), TEAM.resolvePath(ENTITIES_BASE_PATH, orgName, teamName));
     }
 
     public static ZNode ofProject(String projectName) {
-        return new Builder().withZNodeKind(PROJECT).withName(projectName).build();
+        return new ZNode(projectName, PROJECT.kind(), PROJECT.resolvePath(ENTITIES_BASE_PATH, projectName));
     }
 
     public static ZNode ofTopic(String topicName) {
-        return new Builder().withZNodeKind(TOPIC).withName(topicName).build();
+        return new ZNode(topicName, TOPIC.kind(), TOPIC.resolvePath(ENTITIES_BASE_PATH, topicName));
     }
 
     public static ZNode ofIamPolicy(String authResourceId) {
-        return new Builder().withZNodeKind(IAM_POLICY).withName(authResourceId).build();
+        return new ZNode(authResourceId, IAM_POLICY.kind(), IAM_POLICY.resolvePath(ENTITIES_BASE_PATH, authResourceId));
     }
 
     public static ZNode ofSubscription(String subscriptionName) {
-        return new Builder().withZNodeKind(SUBSCRIPTION).withName(subscriptionName).build();
+        return new ZNode(
+            subscriptionName,
+            SUBSCRIPTION.kind(),
+            SUBSCRIPTION.resolvePath(ENTITIES_BASE_PATH, subscriptionName)
+        );
     }
 
     public static ZNode ofSubOperation(String operationId) {
-        return new Builder().withZNodeKind(SUB_OP).withName(operationId).build();
+        return new ZNode(operationId, SUB_OP.kind(), SUB_OP.resolvePath(ENTITIES_BASE_PATH, operationId));
     }
 
     public static ZNode ofShardOperation(String operationId) {
-        return new Builder().withZNodeKind(SHARD_OP).withName(operationId).build();
+        return new ZNode(operationId, SHARD_OP.kind(), SHARD_OP.resolvePath(ENTITIES_BASE_PATH, operationId));
     }
 
     public static ZNode ofAssignment(String assignment) {
-        return new Builder().withZNodeKind(ASSIGNMENT).withName(assignment).build();
+        return new ZNode(assignment, ASSIGNMENT.kind(), ASSIGNMENT.resolvePath(ENTITIES_BASE_PATH, assignment));
     }
 
-    public static ZNode ofKind(ZNodeKind zNodeKind, String name) {
-        return new Builder().withZNodeKind(zNodeKind).withName(name).build();
+    public static ZNode ofEntityChange(String changeNodeName) {
+        return new ZNode(changeNodeName, EVENT.kind(), EVENT.resolvePath(ENTITIES_BASE_PATH, changeNodeName));
     }
 
     public static ZNode ofEntityType(ZNodeKind kind) {
-        return new Builder().withZNodeKind(kind).build();
+        if (kind.relative()) {
+            return new ZNode(kind.kind(), kind.kind(), ENTITIES_BASE_PATH + "/" + kind.kind());
+        } else {
+            throw new IllegalArgumentException(
+                "The base path of zNodeKind: %s with absolute path does not makes sense.".formatted(kind)
+            );
+        }
     }
 
-    /**
-     * Constructs a fully qualified domain name (FQDN) for a resource.
-     *
-     * @param parentName   The name of the parent resource
-     * @param resourceName The name of the resource
-     * @return The FQDN as a string in the format "parentName:resourceName"
-     * @throws NullPointerException if either parameter is null
-     */
-    public static String getResourceFQDN(String parentName, String resourceName) {
-        return String.join(RESOURCE_NAME_SEPARATOR, parentName, resourceName);
+    @VisibleForTesting
+    static ZNode ofKind(ZNodeKind kind, String name) {
+        return new ZNode(name, kind.kind(), kind.resolvePath(ENTITIES_BASE_PATH, name));
     }
 
     /**

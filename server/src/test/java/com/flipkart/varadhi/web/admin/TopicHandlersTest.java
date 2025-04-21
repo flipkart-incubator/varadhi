@@ -243,7 +243,8 @@ class TopicHandlersTest extends WebTestBase {
             TOPIC_NAME,
             project.getName(),
             Constants.DEFAULT_TOPIC_CAPACITY,
-            LifecycleStatus.ActorCode.USER_ACTION
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "test"
         );
     }
 

@@ -8,11 +8,11 @@ import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.auth.Role;
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
-import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
-import com.flipkart.varadhi.spi.db.IamPolicyMetaStore;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -65,10 +65,9 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         try {
             metaStoreProvider.init(options);
             MetaStore store = metaStoreProvider.getMetaStore();
-
-            if (!(store instanceof IamPolicyMetaStore)) {
+            if (!(store instanceof IamPolicyStore.Provider)) {
                 throw new IllegalStateException(
-                    String.format("Provider %s must implement IamPolicyMetaStore", options.getProviderClassName())
+                    String.format("Provider %s must implement IamPolicyStore", options.getProviderClassName())
                 );
             }
 
@@ -76,7 +75,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
                 "Successfully initialized authorization service with provider: {}",
                 options.getProviderClassName()
             );
-            return new IamPolicyService(store, (IamPolicyMetaStore)store);
+            return new IamPolicyService(store, ((IamPolicyStore.Provider)store).iamPolicies());
         } catch (Exception e) {
             cleanupProvider();
             throw new IllegalStateException("Failed to initialize authorization service", e);

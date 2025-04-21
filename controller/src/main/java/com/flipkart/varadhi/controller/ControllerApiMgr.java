@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
@@ -21,7 +22,6 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
-import com.flipkart.varadhi.spi.db.MetaStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -35,24 +35,24 @@ import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerApi {
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
-    private final MetaStore metaStore;
+    private final SubscriptionStore subscriptionStore;
     private final OperationMgr operationMgr;
 
     public ControllerApiMgr(
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
-        MetaStore metaStore,
+        SubscriptionStore subscriptionStore,
         ConsumerClientFactory consumerClientFactory
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.assignmentManager = assignmentManager;
-        this.metaStore = metaStore;
+        this.subscriptionStore = subscriptionStore;
         this.operationMgr = operationMgr;
     }
 
     @Override
     public CompletableFuture<SubscriptionState> getSubscriptionState(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> subscriptionStore.get(subscriptionId))
                                 .thenCompose(this::getSubscriptionState);
     }
 
@@ -117,7 +117,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     @Override
     public CompletableFuture<SubscriptionOperation> startSubscription(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> subscriptionStore.get(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     if (!AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
                                         throw new InvalidOperationForResourceException(
@@ -136,7 +136,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                                             consumerClientFactory,
                                             operationMgr,
                                             assignmentManager,
-                                            metaStore
+                                            subscriptionStore
                                         )
                                     );
                                     return operation;
@@ -145,7 +145,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
 
     @Override
     public CompletableFuture<SubscriptionOperation> stopSubscription(String subscriptionId, String requestedBy) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> subscriptionStore.get(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     // This means that partially assigned subscriptions can be stopped.
                                     if (AssignmentState.NOT_ASSIGNED.equals(ss.getAssignmentState())) {
@@ -165,7 +165,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                                             consumerClientFactory,
                                             operationMgr,
                                             assignmentManager,
-                                            metaStore
+                                            subscriptionStore
                                         )
                                     );
                                     return operation;
@@ -208,7 +208,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
         UnsidelineRequest request,
         String requestedBy
     ) {
-        return CompletableFuture.supplyAsync(() -> metaStore.getSubscription(subscriptionId))
+        return CompletableFuture.supplyAsync(() -> subscriptionStore.get(subscriptionId))
                                 .thenCompose(subscription -> getSubscriptionState(subscription).thenApply(ss -> {
                                     if (!ss.isRunningSuccessfully()) {
                                         throw new InvalidOperationForResourceException(
@@ -227,7 +227,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                                             consumerClientFactory,
                                             operationMgr,
                                             assignmentManager,
-                                            metaStore
+                                            subscriptionStore
                                         )
                                     );
                                     return operation;
@@ -256,7 +256,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
             assignments.forEach(assignment -> {
                 log.info("Assignment {} needs to be re-assigned", assignment);
                 SubscriptionOperation operation = SubscriptionOperation.reAssignShardOp(assignment, SYSTEM_IDENTITY);
-                VaradhiSubscription subscription = metaStore.getSubscription(assignment.getSubscriptionId());
+                VaradhiSubscription subscription = subscriptionStore.get(assignment.getSubscriptionId());
                 operationMgr.createAndEnqueue(
                     operation,
                     new ReAssignOpExecutor(
@@ -264,7 +264,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                         consumerClientFactory,
                         operationMgr,
                         assignmentManager,
-                        metaStore
+                        subscriptionStore
                     )
                 );
             });
@@ -292,7 +292,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     }
 
     public void retryOperation(SubscriptionOperation operation) {
-        VaradhiSubscription subscription = metaStore.getSubscription(operation.getData().getSubscriptionId());
+        VaradhiSubscription subscription = subscriptionStore.get(operation.getData().getSubscriptionId());
         OpExecutor<OrderedOperation> executor = getOpExecutor(operation, subscription);
         operationMgr.enqueue(operation, executor);
     }
@@ -303,16 +303,28 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
     ) {
         //TODO::Better handling needed
         if (operation.getData() instanceof SubscriptionOperation.StartData) {
-            return new StartOpExecutor(subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore);
+            return new StartOpExecutor(
+                subscription,
+                consumerClientFactory,
+                operationMgr,
+                assignmentManager,
+                subscriptionStore
+            );
         } else if (operation.getData() instanceof SubscriptionOperation.StopData) {
-            return new StopOpExecutor(subscription, consumerClientFactory, operationMgr, assignmentManager, metaStore);
+            return new StopOpExecutor(
+                subscription,
+                consumerClientFactory,
+                operationMgr,
+                assignmentManager,
+                subscriptionStore
+            );
         } else if (operation.getData() instanceof SubscriptionOperation.ReassignShardData) {
             return new ReAssignOpExecutor(
                 subscription,
                 consumerClientFactory,
                 operationMgr,
                 assignmentManager,
-                metaStore
+                subscriptionStore
             );
         } else if (operation.getData() instanceof SubscriptionOperation.UnsidelineData) {
             return new UnsidelinepOpExecutor(
@@ -320,7 +332,7 @@ public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerAp
                 consumerClientFactory,
                 operationMgr,
                 assignmentManager,
-                metaStore
+                subscriptionStore
             );
         } else {
             throw new IllegalArgumentException("Can't get OpExecutor for Operation %s.".formatted(operation.getData()));

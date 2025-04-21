@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+
 /**
  * Represents a topic resource in the Varadhi system.
  */
@@ -29,6 +30,7 @@ public class TopicResource extends VersionedEntity implements Validatable {
 
     @Setter
     private LifecycleStatus.ActorCode actorCode;
+    private final String nfrFilterName;
 
     /**
      * Constructs a new TopicResource instance.
@@ -46,13 +48,15 @@ public class TopicResource extends VersionedEntity implements Validatable {
         String project,
         boolean grouped,
         TopicCapacityPolicy capacity,
-        LifecycleStatus.ActorCode actorCode
+        LifecycleStatus.ActorCode actorCode,
+        String nfrFilterName
     ) {
         super(name, version);
         this.project = project;
         this.grouped = grouped;
         this.capacity = capacity;
         this.actorCode = actorCode;
+        this.nfrFilterName = nfrFilterName;
     }
 
     /**
@@ -69,9 +73,10 @@ public class TopicResource extends VersionedEntity implements Validatable {
         String name,
         String project,
         TopicCapacityPolicy capacity,
-        LifecycleStatus.ActorCode actorCode
+        LifecycleStatus.ActorCode actorCode,
+        String nfrStrategy
     ) {
-        return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actorCode);
+        return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actorCode, nfrStrategy);
     }
 
     /**
@@ -88,9 +93,10 @@ public class TopicResource extends VersionedEntity implements Validatable {
         String name,
         String project,
         TopicCapacityPolicy capacity,
-        LifecycleStatus.ActorCode actorCode
+        LifecycleStatus.ActorCode actorCode,
+        String nfrStrategy
     ) {
-        return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actorCode);
+        return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actorCode, nfrStrategy);
     }
 
     /**
@@ -109,7 +115,8 @@ public class TopicResource extends VersionedEntity implements Validatable {
             topicResourceInfo[0],
             varadhiTopic.isGrouped(),
             varadhiTopic.getCapacity(),
-            varadhiTopic.getStatus().getActorCode()
+            varadhiTopic.getStatus().getActorCode(),
+            varadhiTopic.getNfrFilterName()
         );
     }
 
@@ -119,6 +126,6 @@ public class TopicResource extends VersionedEntity implements Validatable {
      * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode);
+        return VaradhiTopic.of(project, getName(), grouped, capacity, actorCode, nfrFilterName);
     }
 }
