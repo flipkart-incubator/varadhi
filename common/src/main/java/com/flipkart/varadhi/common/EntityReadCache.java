@@ -58,13 +58,38 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      *
      * @param resourceType the type of resource managed by this provider
      * @param entityLoader the strategy for loading all entities
-     * @throws NullPointerException if resourceType or entityTypeName is null
      */
-    public EntityReadCache(ResourceType resourceType, Supplier<List<T>> entityLoader) {
-        this.resourceType = Objects.requireNonNull(resourceType, "Resource type cannot be null");
-        this.entityLoader = Objects.requireNonNull(entityLoader, "Entity loader cannot be null");
+    EntityReadCache(ResourceType resourceType, Supplier<List<T>> entityLoader) {
+        this.resourceType = resourceType;
+        this.entityLoader = entityLoader;
         this.entities = new ConcurrentHashMap<>();
-        log.debug("Initialized {} provider", resourceType);
+    }
+
+    /**
+     * Creates a new entity cache, and preloads it.
+     * <p>
+     * This factory method handles the complete lifecycle of cache creation:
+     * <ol>
+     *   <li>Creates a new cache instance</li>
+     *   <li>Preloads the cache with initial data</li>
+     * </ol>
+     *
+     * @param <T> the entity type managed by the cache
+     * @param resourceType the type of resource managed by this provider
+     * @param entityLoader the strategy for loading entities
+     * @return a future that completes with the created and preloaded cache
+     * @throws NullPointerException if any parameter is null
+     */
+    public static <T extends MetaStoreEntity> Future<EntityReadCache<T>> create(
+        ResourceType resourceType,
+        Supplier<List<T>> entityLoader
+    ) {
+        Objects.requireNonNull(resourceType, "Resource type cannot be null");
+        Objects.requireNonNull(entityLoader, "Entity loader cannot be null");
+
+        EntityReadCache<T> cache = new EntityReadCache<>(resourceType, entityLoader);
+
+        return cache.preload().map(v -> cache);
     }
 
     /**
@@ -82,22 +107,16 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
         Promise<Void> promise = Promise.promise();
 
         try {
-            log.info("Starting to preload {}", resourceType.toString());
+            log.info("Preloading {}", resourceType);
             List<T> entityList = entityLoader.get();
-
-            if (entityList.isEmpty()) {
-                log.info("No {} found to preload", resourceType);
-                promise.complete();
-                return promise.future();
-            }
 
             Map<String, T> entityMap = entityList.stream().collect(Collectors.toMap(T::getName, Function.identity()));
 
             entities.putAll(entityMap);
-            log.info("Successfully preloaded {} {}", entityList.size(), resourceType);
+            log.info("Preloaded {} {}", entityList.size(), resourceType);
             promise.complete();
         } catch (Exception e) {
-            log.error("Failed to preload {}", resourceType.toString(), e);
+            log.error("Failed to preload {}: {}", resourceType, e.getMessage());
             promise.fail(e);
         }
 
@@ -138,29 +157,13 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
         String entityName = event.resourceName();
         EventType operation = event.operation();
 
-        switch (operation) {
-            case UPSERT -> {
-                T entity = event.resource();
-                if (entity != null) {
-                    entities.put(entityName, entity);
-                    log.debug("Updated {} in local cache: {}", resourceType.toString(), entityName);
-                } else {
-                    log.warn(
-                        "Received UPSERT event with null resource for {}: {}",
-                        resourceType.toString(),
-                        entityName
-                    );
-                }
+        if (operation == EventType.UPSERT) {
+            T entity = event.resource();
+            if (entity != null) {
+                entities.put(entityName, entity);
             }
-            case INVALIDATE -> {
-                T removed = entities.remove(entityName);
-                if (removed != null) {
-                    log.debug("Removed {} from local cache: {}", resourceType.toString(), entityName);
-                } else {
-                    log.warn("Attempted to remove non-existent {} from cache: {}", resourceType.toString(), entityName);
-                }
-            }
-            default -> log.warn("Unsupported operation {} for {}: {}", operation, resourceType.toString(), entityName);
+        } else if (operation == EventType.INVALIDATE) {
+            entities.remove(entityName);
         }
     }
 }

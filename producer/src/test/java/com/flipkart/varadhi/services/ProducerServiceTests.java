@@ -2,7 +2,6 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -17,7 +16,6 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
@@ -70,7 +68,6 @@ class ProducerServiceTests {
     MeterRegistry meterRegistry;
     MetaStore metaStore;
     Producer producer;
-    EntityReadCacheRegistry cacheRegistry;
     EntityReadCache<VaradhiTopic> topicReadCache;
     Random random;
     String topic = "topic1";
@@ -88,13 +85,11 @@ class ProducerServiceTests {
         meterRegistry = new OtlpMeterRegistry();
         metaStore = mock(MetaStore.class);
         topicReadCache = mock(EntityReadCache.class);
-        cacheRegistry = new EntityReadCacheRegistry();
-        cacheRegistry.register(ResourceType.TOPIC, topicReadCache);
 
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
         when(producerFactory.newProducer(any())).thenReturn(producer);
 
-        service = new ProducerService(region, producerFactory::newProducer, cacheRegistry);
+        service = new ProducerService(region, producerFactory::newProducer, topicReadCache);
         random = new Random();
     }
 
@@ -222,7 +217,7 @@ class ProducerServiceTests {
         Function<StorageTopic, Producer> failingProducerProvider = storageTopic -> {
             throw new RuntimeException("Unknown Error.");
         };
-        ProducerService failingService = new ProducerService(region, failingProducerProvider, cacheRegistry);
+        ProducerService failingService = new ProducerService(region, failingProducerProvider, topicReadCache);
         CompletableFuture<ProduceResult> future = failingService.produceToTopic(
             msg1,
             VaradhiTopic.buildTopicName(project.getName(), topic),
@@ -243,7 +238,7 @@ class ProducerServiceTests {
         Function<StorageTopic, Producer> failingProducerProvider = st -> {
             throw new RuntimeException("Topic doesn't exist.");
         };
-        ProducerService failingService = new ProducerService(region, failingProducerProvider, cacheRegistry);
+        ProducerService failingService = new ProducerService(region, failingProducerProvider, topicReadCache);
         CompletableFuture<ProduceResult> future = failingService.produceToTopic(
             msg1,
             VaradhiTopic.buildTopicName(project.getName(), topic),

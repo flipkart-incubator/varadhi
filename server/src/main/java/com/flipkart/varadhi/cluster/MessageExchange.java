@@ -54,7 +54,6 @@ public class MessageExchange {
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
         CompletableFuture<ResponseMessage> future = new CompletableFuture<>();
         String apiPath = getPath(routeName, apiName, RouteMethod.REQUEST);
-        log.info("SENDING REQUEST to address: {}", apiPath);
         try {
             vertxEventBus.request(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions, ar -> {
                 if (ar.succeeded()) {

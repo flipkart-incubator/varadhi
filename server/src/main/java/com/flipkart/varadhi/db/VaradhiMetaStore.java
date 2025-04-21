@@ -297,6 +297,12 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
                           .toList();
     }
 
+    /**
+     * Retrieves all projects in the metastore.
+     *
+     * @return list of all projects
+     * @throws MetaStoreException if there's an error during retrieval
+     */
     @Override
     public List<Project> getAllProjects() {
         ZNode znode = ZNode.ofEntityType(PROJECT);
@@ -401,6 +407,12 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyMetaStore {
         return zkMetaStore.listChildren(znode).stream().filter(name -> name.startsWith(projectPrefix)).toList();
     }
 
+    /**
+     * Retrieves all topic in the metastore.
+     *
+     * @return list of all topics
+     * @throws MetaStoreException if there's an error during retrieval
+     */
     @Override
     public List<VaradhiTopic> getAllTopics() {
         ZNode znode = ZNode.ofEntityType(TOPIC);

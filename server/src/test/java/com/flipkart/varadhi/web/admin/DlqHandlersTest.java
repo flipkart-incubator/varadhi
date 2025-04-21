@@ -45,7 +45,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         dlqService = mock(DlqService.class);
-        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, cacheRegistry);
+        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, projectCache);
         Route routeUnsideline = router.post("/projects/:project/subscriptions/:subscription/dlq/messages/unsideline")
                                       .handler(bodyHandler)
                                       .handler(ctx -> {

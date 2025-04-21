@@ -9,6 +9,7 @@ import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.DlqService;
@@ -131,21 +132,15 @@ public class WebServerVerticle extends AbstractVerticle {
         VaradhiClusterManager clusterManager,
         EntityReadCacheRegistry cacheRegistry
     ) {
-        this.configuration = Objects.requireNonNull(configuration, "Configuration cannot be null");
-        this.configResolver = Objects.requireNonNull(services.getConfigResolver(), "ConfigFileResolver cannot be null");
-        this.clusterManager = Objects.requireNonNull(clusterManager, "ClusterManager cannot be null");
-        this.messagingStackProvider = Objects.requireNonNull(
-            services.getMessagingStackProvider(),
-            "MessagingStackProvider cannot be null"
-        );
-        this.metaStore = Objects.requireNonNull(
-            services.getMetaStoreProvider().getMetaStore(),
-            "MetaStore cannot be null"
-        );
-        this.meterRegistry = Objects.requireNonNull(services.getMeterRegistry(), "MeterRegistry cannot be null");
-        this.tracer = Objects.requireNonNull(services.getTracer("varadhi"), "Tracer cannot be null");
+        this.configuration = configuration;
+        this.configResolver = services.getConfigResolver();
+        this.clusterManager = clusterManager;
+        this.messagingStackProvider = services.getMessagingStackProvider();
+        this.metaStore = services.getMetaStoreProvider().getMetaStore();
+        this.meterRegistry = services.getMeterRegistry();
+        this.tracer = services.getTracer("varadhi");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
-        this.cacheRegistry = Objects.requireNonNull(cacheRegistry, "CacheRegistry cannot be null");
+        this.cacheRegistry = cacheRegistry;
     }
 
     /**
@@ -202,16 +197,8 @@ public class WebServerVerticle extends AbstractVerticle {
     public void stop(Promise<Void> stopPromise) {
         log.info("Stopping HttpServer");
         if (httpServer != null) {
-            httpServer.close(h -> {
-                if (h.succeeded()) {
-                    log.info("HttpServer stopped successfully");
-                } else {
-                    log.warn("HttpServer stop operation failed", h.cause());
-                }
-                stopPromise.complete();
-            });
+            httpServer.close(stopPromise);
         } else {
-            log.info("HttpServer was not running");
             stopPromise.complete();
         }
     }
@@ -224,58 +211,52 @@ public class WebServerVerticle extends AbstractVerticle {
      */
     @SuppressWarnings ("unchecked")
     private Future<Void> setupEntityServices() {
-        Promise<Void> promise = Promise.promise();
+        log.info("Setting up entity services");
 
-        try {
-            log.info("Setting up entity services");
+        // Create message exchange for communication
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-            // Create message exchange for communication
-            MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        // Initialize basic services
+        serviceRegistry.register(OrgService.class, new OrgService(metaStore));
+        serviceRegistry.register(TeamService.class, new TeamService(metaStore));
+        serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
 
-            // Initialize basic services
-            serviceRegistry.register(OrgService.class, new OrgService(metaStore));
-            serviceRegistry.register(TeamService.class, new TeamService(metaStore));
-            serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
+        // Initialize topic service
+        serviceRegistry.register(
+            VaradhiTopicService.class,
+            new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore)
+        );
 
-            // Initialize topic service
-            serviceRegistry.register(
-                VaradhiTopicService.class,
-                new VaradhiTopicService(messagingStackProvider.getStorageTopicService(), metaStore)
-            );
+        // Initialize controller client and related services
+        ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
+        ShardProvisioner shardProvisioner = new ShardProvisioner(
+            messagingStackProvider.getStorageSubscriptionService(),
+            messagingStackProvider.getStorageTopicService()
+        );
 
-            // Initialize controller client and related services
-            ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
-            ShardProvisioner shardProvisioner = new ShardProvisioner(
-                messagingStackProvider.getStorageSubscriptionService(),
-                messagingStackProvider.getStorageTopicService()
-            );
+        // Initialize subscription and DLQ services
+        serviceRegistry.register(
+            SubscriptionService.class,
+            new SubscriptionService(shardProvisioner, controllerClient, metaStore)
+        );
+        serviceRegistry.register(
+            DlqService.class,
+            new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
+        );
 
-            // Initialize subscription and DLQ services
-            serviceRegistry.register(
-                SubscriptionService.class,
-                new SubscriptionService(shardProvisioner, controllerClient, metaStore)
-            );
-            serviceRegistry.register(
-                DlqService.class,
-                new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
-            );
+        // Initialize producer service
+        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
-            // Initialize producer service
-            Function<StorageTopic, Producer> producerProvider = messagingStackProvider
-                                                                                      .getProducerFactory()::newProducer;
+        serviceRegistry.register(
+            ProducerService.class,
+            new ProducerService(
+                verticleConfig.deployedRegion(),
+                producerProvider,
+                cacheRegistry.getCache(ResourceType.TOPIC)
+            )
+        );
 
-            serviceRegistry.register(
-                ProducerService.class,
-                new ProducerService(verticleConfig.deployedRegion(), producerProvider, cacheRegistry)
-            );
-
-            log.info("Entity services setup completed");
-            promise.complete();
-        } catch (Exception e) {
-            promise.fail(e);
-        }
-
-        return promise.future();
+        return Future.succeededFuture();
     }
 
     /**
@@ -403,7 +384,11 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Add topic, subscription, DLQ and health check routes
         routes.addAll(
-            new TopicHandlers(varadhiTopicFactory, serviceRegistry.get(VaradhiTopicService.class), cacheRegistry).get()
+            new TopicHandlers(
+                varadhiTopicFactory,
+                serviceRegistry.get(VaradhiTopicService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
         );
 
         routes.addAll(
@@ -412,7 +397,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 serviceRegistry.get(VaradhiTopicService.class),
                 subscriptionFactory,
                 configuration.getRestOptions(),
-                cacheRegistry
+                cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
 
@@ -420,7 +405,7 @@ public class WebServerVerticle extends AbstractVerticle {
             new DlqHandlers(
                 serviceRegistry.get(DlqService.class),
                 serviceRegistry.get(SubscriptionService.class),
-                cacheRegistry
+                cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
 
@@ -439,7 +424,12 @@ public class WebServerVerticle extends AbstractVerticle {
         if (!verticleConfig.isLeanDeployment()) {
             routes.addAll(new OrgHandlers(serviceRegistry.get(OrgService.class)).get());
             routes.addAll(new TeamHandlers(serviceRegistry.get(TeamService.class)).get());
-            routes.addAll(new ProjectHandlers(serviceRegistry.get(ProjectService.class), cacheRegistry).get());
+            routes.addAll(
+                new ProjectHandlers(
+                    serviceRegistry.get(ProjectService.class),
+                    cacheRegistry.getCache(ResourceType.PROJECT)
+                ).get()
+            );
         }
         return routes;
     }
@@ -463,7 +453,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
-                cacheRegistry
+                cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
     }

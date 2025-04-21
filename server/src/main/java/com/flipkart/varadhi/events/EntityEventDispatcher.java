@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
  * A lean dispatcher for entity events to appropriate listeners.
  * <p>
  * The dispatcher routes entity events to registered listeners based on resource type,
- * handles error cases gracefully, and provides detailed logging for operational visibility.
+ * handles error cases gracefully.
  *
  * @see EntityEvent
  * @see EntityEventListener
@@ -50,7 +50,6 @@ public final class EntityEventDispatcher {
     private EntityEventDispatcher(Map<ResourceType, EntityEventListener<?>> listeners) {
         this.listeners = Map.copyOf(listeners);
         this.supportedTypes = Set.copyOf(this.listeners.keySet());
-        log.info("Initialized EntityStateProcessor with supported types: {}", supportedTypes);
     }
 
     /**
@@ -65,52 +64,22 @@ public final class EntityEventDispatcher {
      */
     @SuppressWarnings ("unchecked")
     public <T extends MetaStoreEntity> CompletableFuture<ResponseMessage> processEvent(ClusterMessage message) {
-        if (message == null) {
-            return createErrorResponse(null, "Message cannot be null", null);
-        }
-
         String messageId = message.getId();
-        EntityEvent<?> rawEvent;
-        EntityEvent<T> event;
 
         try {
-            rawEvent = message.getData(EntityEvent.class);
-            if (rawEvent == null) {
-                return createErrorResponse(messageId, "Invalid event data", null);
+            EntityEvent<?> rawEvent = message.getData(EntityEvent.class);
+            ResourceType resourceType = rawEvent.resourceType();
+
+            if (!supportedTypes.contains(resourceType)) {
+                return CompletableFuture.completedFuture(ResponseMessage.fromPayload("Skipped", messageId));
             }
-        } catch (Exception e) {
-            return createErrorResponse(messageId, "Failed to extract event data", e);
-        }
 
-        ResourceType resourceType = rawEvent.resourceType();
-
-        if (!supportedTypes.contains(resourceType)) {
-            log.debug("Skipping unsupported resource type: {}", resourceType);
-            return CompletableFuture.completedFuture(ResponseMessage.fromPayload("Skipped", messageId));
-        }
-
-        String resourceName = rawEvent.resourceName();
-        log.debug("Processing {} event for {} {}", rawEvent.operation(), resourceType, resourceName);
-
-        try {
             EntityEventListener<T> listener = (EntityEventListener<T>)listeners.get(resourceType);
-
-            Object rawResource = rawEvent.resource();
-            T typedResource = null;
-
-            if (rawResource != null) {
-                if (rawResource instanceof Map) {
-                    String json = JsonMapper.jsonSerialize(rawResource);
-                    Class<T> entityClass = getEntityClassForResourceType(resourceType);
-                    typedResource = JsonMapper.jsonDeserialize(json, entityClass);
-                } else if (rawResource instanceof MetaStoreEntity) {
-                    typedResource = (T)rawResource;
-                }
-            }
+            T typedResource = convertResource(rawEvent.resource(), resourceType);
 
             EntityEvent<T> typedEvent = new EntityEvent<>(
                 resourceType,
-                resourceName,
+                rawEvent.resourceName(),
                 rawEvent.operation(),
                 typedResource,
                 rawEvent.commiter()
@@ -118,48 +87,27 @@ public final class EntityEventDispatcher {
 
             listener.onChange(typedEvent);
             return CompletableFuture.completedFuture(ResponseMessage.fromPayload("OK", messageId));
-        } catch (ClassCastException e) {
-            String errorMsg = String.format("Resource type mismatch for %s of type %s", resourceName, resourceType);
-            log.error(
-                "Type mismatch for {} event on resource {}: {}",
-                rawEvent.operation(),
-                resourceType,
-                resourceName,
-                e
-            );
-            return createErrorResponse(messageId, errorMsg, e);
         } catch (Exception e) {
-            log.error("Failed to process {} operation for {}: {}", rawEvent.operation(), resourceType, resourceName, e);
-            return createErrorResponse(messageId, e.getMessage(), e);
+            return CompletableFuture.completedFuture(ResponseMessage.fromException(e, messageId));
         }
     }
 
     /**
-     * Creates an error response with the given error details.
-     * <p>
-     * This method handles various error cases and ensures proper logging.
+     * Converts a raw resource object to the appropriate entity type.
      *
-     * @param messageId the ID of the original message, or null if not available
-     * @param errorMsg  the error message
-     * @param cause     the cause of the error, or null if not available
-     * @return a future that completes with the error response
+     * @param rawResource  the raw resource object
+     * @param resourceType the type of resource
+     * @param <T>          the entity type
+     * @return the converted entity
+     * @throws IllegalArgumentException if the resource cannot be converted
      */
-    private CompletableFuture<ResponseMessage> createErrorResponse(String messageId, String errorMsg, Throwable cause) {
-        Exception exception = switch (cause) {
-            case Exception ex -> ex;
-            case null -> new IllegalArgumentException(errorMsg);
-            default -> new IllegalArgumentException(errorMsg, cause);
-        };
-
-        if (cause == null) {
-            log.error(errorMsg);
-        } else if (errorMsg.equals(cause.getMessage())) {
-            log.error(errorMsg, cause);
-        } else {
-            log.error("{}: {}", errorMsg, cause.getMessage(), cause);
+    @SuppressWarnings ("unchecked")
+    private <T extends MetaStoreEntity> T convertResource(Object rawResource, ResourceType resourceType) {
+        if (rawResource instanceof Map) {
+            String json = JsonMapper.jsonSerialize(rawResource);
+            return JsonMapper.jsonDeserialize(json, getEntityClassForResourceType(resourceType));
         }
-
-        return CompletableFuture.completedFuture(ResponseMessage.fromException(exception, messageId));
+        return (T)rawResource;
     }
 
     /**

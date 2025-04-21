@@ -56,7 +56,6 @@ public class MessageRouter {
 
     public void requestHandler(String routeName, String apiName, RequestHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.REQUEST);
-        log.info("REGISTERING HANDLER at address: {}", apiPath);
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
             log.debug("Received msg via - request({}, {})", apiPath, msg.getId());

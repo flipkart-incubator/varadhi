@@ -67,7 +67,7 @@ class TopicHandlersTest extends WebTestBase {
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         doReturn(project).when(projectCache).getEntity(project.getName());
 
-        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, cacheRegistry);
+        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);
 
         setupRoutes();
     }

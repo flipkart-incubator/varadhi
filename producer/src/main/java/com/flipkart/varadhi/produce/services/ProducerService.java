@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.produce.services;
 
 import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -10,7 +9,6 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -21,10 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -58,9 +52,9 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
-     * Cache of entity read caches, indexed by resource type.
+     * Cache for VaradhiTopic entities.
      */
-    private final Map<ResourceType, EntityReadCache<?>> readCacheMap;
+    private final EntityReadCache<VaradhiTopic> topicCache;
 
     /**
      * Creates a new ProducerService with default options.
@@ -70,15 +64,14 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param cacheRegistry    registry containing entity caches, including the topic cache
-     * @throws NullPointerException if any parameter is null
+     * @param topicCache       cache for VaradhiTopic entities
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCacheRegistry cacheRegistry
+        EntityReadCache<VaradhiTopic> topicCache
     ) {
-        this(produceRegion, producerProvider, cacheRegistry, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
@@ -89,34 +82,22 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param cacheRegistry    registry containing entity caches, including the topic cache
+     * @param topicCache       cache for VaradhiTopic entities
      * @param producerOptions  configuration options for producers
-     * @throws NullPointerException if any parameter is null
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCacheRegistry cacheRegistry,
+        EntityReadCache<VaradhiTopic> topicCache,
         ProducerOptions producerOptions
     ) {
-        this.produceRegion = Objects.requireNonNull(produceRegion, "Produce region cannot be null");
-        Objects.requireNonNull(producerProvider, "Producer provider cannot be null");
-        Objects.requireNonNull(cacheRegistry, "Topic cache cannot be null");
-        Objects.requireNonNull(producerOptions, "Producer options cannot be null");
+        this.produceRegion = produceRegion;
+        this.topicCache = topicCache;
 
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
                                      .build(producerProvider::apply);
-
-        Map<ResourceType, EntityReadCache<?>> cacheMap = new EnumMap<>(ResourceType.class);
-        cacheMap.put(ResourceType.TOPIC, cacheRegistry.getCache(ResourceType.TOPIC));
-        this.readCacheMap = Collections.unmodifiableMap(cacheMap);
-
-        log.debug(
-            "Initialized ProducerService with lazy-loading producer cache (TTL: {}s)",
-            producerOptions.getProducerCacheTtlSeconds()
-        );
     }
 
     /**
@@ -137,34 +118,19 @@ public final class ProducerService {
      * @return a future that completes with the result of the produce operation
      * @throws ResourceNotFoundException if the topic does not exist or is not available in the region
      * @throws ProduceException          if production fails due to an internal error
-     * @throws NullPointerException      if any parameter is null
      */
     public CompletableFuture<ProduceResult> produceToTopic(
         Message message,
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        Objects.requireNonNull(message, "Message cannot be null");
-        Objects.requireNonNull(varadhiTopicName, "Topic name cannot be null");
-        Objects.requireNonNull(metricsEmitter, "Metrics emitter cannot be null");
+        VaradhiTopic topic = topicCache.getEntity(varadhiTopicName);
 
-        try {
-            @SuppressWarnings ("unchecked")
-            EntityReadCache<VaradhiTopic> topicCache = (EntityReadCache<VaradhiTopic>)readCacheMap.get(
-                ResourceType.TOPIC
-            );
-            VaradhiTopic topic = topicCache.getEntity(varadhiTopicName);
-
-            if (!topic.isActive()) {
-                throw new ResourceNotFoundException(String.format("Topic(%s) is not active.", varadhiTopicName));
-            }
-
-            return produceToValidTopic(message, topic, metricsEmitter);
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ProduceException("Produce failed due to internal error: " + e.getMessage(), e);
+        if (!topic.isActive()) {
+            throw new ResourceNotFoundException(String.format("Topic(%s) is not active.", varadhiTopicName));
         }
+
+        return produceToValidTopic(message, topic, metricsEmitter);
     }
 
     /**
@@ -218,15 +184,13 @@ public final class ProducerService {
         }
 
         try {
-            producer = producerCache.get(storageTopic);
-            return CompletableFuture.completedFuture(producer);
+            return CompletableFuture.completedFuture(producerCache.get(storageTopic));
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
                 storageTopic.getName(),
                 e.getMessage()
             );
-            log.error(errorMsg, e);
             return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
         }
     }

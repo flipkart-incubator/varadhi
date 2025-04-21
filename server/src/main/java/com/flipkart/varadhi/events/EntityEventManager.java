@@ -11,8 +11,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Objects;
-
 import static com.flipkart.varadhi.common.Constants.ENTITY_EVENTS_HANDLER;
 
 /**
@@ -41,7 +39,7 @@ public final class EntityEventManager {
     private final EntityReadCacheRegistry cacheRegistry;
 
     /**
-     * Cluster manager for inter-node communication.
+     * Cluster manager for internode communication.
      */
     private final VaradhiClusterManager clusterManager;
 
@@ -62,7 +60,6 @@ public final class EntityEventManager {
      * @param clusterManager the cluster manager for internode communication
      * @param memberInfo     information about the current cluster member
      * @param vertx          the Vert.x instance for event handling
-     * @throws NullPointerException if any parameter is null
      */
     public EntityEventManager(
         EntityReadCacheRegistry cacheRegistry,
@@ -70,41 +67,21 @@ public final class EntityEventManager {
         MemberInfo memberInfo,
         Vertx vertx
     ) {
-        this.cacheRegistry = Objects.requireNonNull(cacheRegistry, "Cache registry cannot be null");
-        this.clusterManager = Objects.requireNonNull(clusterManager, "ClusterManager cannot be null");
-        this.memberInfo = Objects.requireNonNull(memberInfo, "MemberInfo cannot be null");
-        this.vertx = Objects.requireNonNull(vertx, "Vertx cannot be null");
+        this.cacheRegistry = cacheRegistry;
+        this.clusterManager = clusterManager;
+        this.memberInfo = memberInfo;
+        this.vertx = vertx;
     }
 
     /**
-     * Initializes caches and sets up event handlers.
+     * Initializes the event handling system.
      * <p>
-     * This method performs the following operations in sequence:
-     * <ol>
-     *   <li>Preloads all entity caches for improved performance</li>
-     *   <li>Sets up event handlers for entity events</li>
-     * </ol>
+     * This method sets up event handlers for all registered entity caches.
      *
      * @return a future that completes when initialization is finished
      */
     public Future<Void> initialize() {
-        log.info("Starting cache and event handler initialization");
-
-        return preloadCaches().compose(this::setupEventHandlers)
-                              .onSuccess(v -> log.info("Initialization completed successfully"))
-                              .onFailure(e -> log.error("Initialization failed: {}", e.getMessage(), e));
-    }
-
-    /**
-     * Preloads entity caches for improved performance.
-     * <p>
-     * This method preloads all registered entity caches in parallel. It leverages the cache registry's
-     * preloading capabilities and provides detailed logging of the process.
-     *
-     * @return a future that completes when cache preloading is finished
-     */
-    private Future<Void> preloadCaches() {
-        return cacheRegistry.preloadAll();
+        return setupEventHandlers();
     }
 
     /**
@@ -114,16 +91,13 @@ public final class EntityEventManager {
      * registered entity caches and registers it with the message router for
      * distributed event processing.
      *
-     * @param unused ignored parameter to maintain the compose chain
      * @return a future that completes when event handlers are set up
      */
-    private Future<Void> setupEventHandlers(Void unused) {
+    private Future<Void> setupEventHandlers() {
         Promise<Void> promise = Promise.promise();
+        String hostname = memberInfo.hostname();
 
         try {
-            log.info("Setting up event handlers");
-            String hostname = memberInfo.hostname();
-
             // Create event dispatcher builder
             EntityEventDispatcher.Builder builder = new EntityEventDispatcher.Builder();
 
@@ -163,12 +137,8 @@ public final class EntityEventManager {
     private int registerCacheListeners(EntityEventDispatcher.Builder builder) {
         int listenersAdded = 0;
 
-        // Get all available resource types
-        ResourceType[] resourceTypes = ResourceType.values();
-        log.debug("Registering listeners for {} resource types", resourceTypes.length);
-
         // Register listeners for each resource type with a registered cache
-        for (ResourceType type : resourceTypes) {
+        for (ResourceType type : ResourceType.values()) {
             try {
                 EntityReadCache<?> cache = cacheRegistry.getCache(type);
                 builder.withListener(type, cache);

@@ -57,7 +57,7 @@ public class ProduceTestBase extends WebTestBase {
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
-            cacheRegistry
+            projectCache
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

@@ -2,6 +2,7 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
+import com.flipkart.varadhi.common.EntityReadCache;
 import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
@@ -12,7 +13,9 @@ import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.events.EntityEventManager;
 import com.flipkart.varadhi.spi.ConfigFile;
@@ -44,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
@@ -73,72 +77,51 @@ public class VaradhiApplication {
      *
      * @param args command-line arguments, where the first argument must be the path to the configuration file
      */
-    public static void main(String[] args) {
-        log.info("Starting Varadhi Application");
+    public static void main(String[] args) throws UnknownHostException {
+        // Read configuration
+        Pair<AppConfiguration, ConfigFileResolver> configReadResult = readConfiguration(args);
+        AppConfiguration configuration = configReadResult.getLeft();
+        ConfigFileResolver configResolver = configReadResult.getRight();
 
-        try {
-            // Read configuration
-            Pair<AppConfiguration, ConfigFileResolver> configReadResult = readConfiguration(args);
-            AppConfiguration configuration = configReadResult.getLeft();
-            ConfigFileResolver configResolver = configReadResult.getRight();
+        // Initialize host utilities and standard headers
+        HostUtils.init();
+        StdHeaders.init(configuration.getMessageConfiguration().getStdHeaders());
 
-            // Initialize host utilities and standard headers
-            HostUtils.init();
-            StdHeaders.init(configuration.getMessageConfiguration().getStdHeaders());
+        // Set up member info and core services
+        MemberInfo memberInfo = getMemberInfo(configuration.getMember());
+        CoreServices services = new CoreServices(configuration, configResolver);
+        VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
 
-            // Set up member info and core services
-            MemberInfo memberInfo = getMemberInfo(configuration.getMember());
-            CoreServices services = new CoreServices(configuration, configResolver);
-            VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
+        Future<Pair<Vertx, Map<ComponentKind, Verticle>>> initFuture = createClusteredVertx(
+            configuration,
+            clusterManager,
+            services,
+            memberInfo
+        ).compose(vertx -> initializeEventManager(services, clusterManager, memberInfo, vertx).map(cacheRegistry -> {
+            log.info("Caches and event handlers initialized successfully");
 
-            createClusteredVertx(configuration, clusterManager, services, memberInfo).compose(
-                vertx -> initializeEventManager(services, clusterManager, memberInfo, vertx).map(cacheRegistry -> {
-                    log.info("Caches and event handlers initialized successfully");
+            // Get component verticles
+            Map<ComponentKind, Verticle> verticles = getComponentVerticles(
+                configuration,
+                services,
+                clusterManager,
+                memberInfo,
+                cacheRegistry
+            );
 
-                    // Get component verticles
-                    Map<ComponentKind, Verticle> verticles = getComponentVerticles(
-                        configuration,
-                        services,
-                        clusterManager,
-                        memberInfo,
-                        cacheRegistry
-                    );
+            // Return both for the next step
+            return Pair.of(vertx, verticles);
+        }));
 
-                    // Return both for the next step
-                    return Pair.of(vertx, verticles);
-                })
-            )
-                                                                                     .compose(
-                                                                                         pair -> deployVerticles(
-                                                                                             pair.getLeft(),
-                                                                                             pair.getRight()
-                                                                                         )
-                                                                                     )
-                                                                                     .onSuccess(
-                                                                                         v -> log.info(
-                                                                                             "Started successfully on {}",
-                                                                                             memberInfo.hostname()
-                                                                                         )
-                                                                                     )
-                                                                                     .onFailure(t -> {
-                                                                                         log.error(
-                                                                                             "Failed to start on host {}: {}",
-                                                                                             memberInfo.hostname(),
-                                                                                             t.getMessage(),
-                                                                                             t
-                                                                                         );
-                                                                                         log.error(
-                                                                                             "Shutting down application"
-                                                                                         );
-                                                                                         System.exit(-1);
-                                                                                     });
-        } catch (Exception e) {
-            log.error("Failed to initialize: {}", e.getMessage(), e);
-            log.error("Shutting down application");
-            System.exit(-1);
-        }
+        // Deploy verticles and handle success/failure
+        initFuture.compose(pair -> deployVerticles(pair.getLeft(), pair.getRight()))
+                  .onSuccess(v -> log.info("Started successfully on {}", memberInfo.hostname()))
+                  .onFailure(t -> {
+                      log.error("Failed to start: {}", t.getMessage());
+                      System.exit(-1);
+                  });
 
-        // TODO: check need for shutdown hook
+        // TODO: Check need for shutdown hook
     }
 
     /**
@@ -193,35 +176,33 @@ public class VaradhiApplication {
         MemberInfo memberInfo,
         Vertx vertx
     ) {
-        log.info("Initializing entity caches and event handlers");
+        // Create registry and prepare cache creation futures
+        MetaStore metaStore = services.getMetaStoreProvider().getMetaStore();
+        EntityReadCacheRegistry registry = new EntityReadCacheRegistry();
 
-        try {
-            // Create registry and register caches
-            MetaStore metaStore = services.getMetaStoreProvider().getMetaStore();
-            EntityReadCacheRegistry registry = new EntityReadCacheRegistry();
+        // Create futures for cache creation and preloading
+        Future<EntityReadCache<Project>> projectCacheFuture = EntityReadCache.create(
+            ResourceType.PROJECT,
+            metaStore::getAllProjects
+        );
 
-            // Register project cache
-            registry.register(ResourceType.PROJECT, metaStore::getAllProjects);
+        Future<EntityReadCache<VaradhiTopic>> topicCacheFuture = EntityReadCache.create(
+            ResourceType.TOPIC,
+            metaStore::getAllTopics
+        );
 
-            // Register topic cache
-            registry.register(ResourceType.TOPIC, metaStore::getAllTopics);
+        // Combine futures and register caches when they're ready
+        return Future.all(projectCacheFuture, topicCacheFuture).map(v -> {
+            // Register preloaded caches
+            registry.register(ResourceType.PROJECT, projectCacheFuture.result());
+            registry.register(ResourceType.TOPIC, topicCacheFuture.result());
 
+            return registry;
+        }).compose(reg -> {
             // Create and initialize entity event manager
-            EntityEventManager entityEventManager = new EntityEventManager(registry, clusterManager, memberInfo, vertx);
-
-            return entityEventManager.initialize()
-                                     .onFailure(
-                                         e -> log.error(
-                                             "Failed to initialize entity event manager: {}",
-                                             e.getMessage(),
-                                             e
-                                         )
-                                     )
-                                     .map(v -> registry);
-        } catch (Exception e) {
-            log.error("Error setting up entity event manager: {}", e.getMessage(), e);
-            return Future.failedFuture(e);
-        }
+            EntityEventManager entityEventManager = new EntityEventManager(reg, clusterManager, memberInfo, vertx);
+            return entityEventManager.initialize().map(v -> reg);
+        });
     }
 
     /**
@@ -250,18 +231,13 @@ public class VaradhiApplication {
 
         // Configure metrics options
         MeterRegistry meterRegistry = services.getMeterRegistry();
-        MicrometerMetricsOptions metricsOptions = new MicrometerMetricsOptions().setFactory(
-            new MicrometerMetricsFactory(meterRegistry)
-        )
-                                                                                .setMetricsNaming(
-                                                                                    MetricsNaming.v4Names()
-                                                                                )
-                                                                                .setRegistryName("default")
-                                                                                .addDisabledMetricsCategory(
-                                                                                    MetricsDomain.HTTP_SERVER
-                                                                                )
-                                                                                .setJvmMetricsEnabled(true)
-                                                                                .setEnabled(true);
+        MicrometerMetricsOptions metricsOptions = new MicrometerMetricsOptions();
+        metricsOptions.setFactory(new MicrometerMetricsFactory(meterRegistry))
+                      .setMetricsNaming(MetricsNaming.v4Names())
+                      .setRegistryName("default")
+                      .addDisabledMetricsCategory(MetricsDomain.HTTP_SERVER)
+                      .setJvmMetricsEnabled(true)
+                      .setEnabled(true);
 
         // Configure Vert.x options
         VertxOptions vertxOptions = config.getVertxOptions()
@@ -287,23 +263,16 @@ public class VaradhiApplication {
      * @return a future that completes when all verticles are deployed
      */
     private static Future<Void> deployVerticles(Vertx vertx, Map<ComponentKind, Verticle> verticles) {
-        log.info("Deploying {} verticles", verticles.size());
-
         return Future.all(verticles.entrySet().stream().map(entry -> {
             ComponentKind kind = entry.getKey();
             Verticle verticle = entry.getValue();
 
             return vertx.deployVerticle(verticle).onComplete(ar -> {
-                if (ar.succeeded()) {
-                    log.info("Component '{}' started", kind);
-                } else {
-                    log.error("Component '{}' failed to start: {}", kind, ar.cause().getMessage(), ar.cause());
+                if (!ar.succeeded()) {
+                    log.error("Component '{}' failed to start: {}", kind, ar.cause().getMessage());
                 }
             });
-        }).toList()).map(v -> {
-            log.info("All verticles deployed");
-            return null;
-        });
+        }).toList()).mapEmpty();
     }
 
     /**
@@ -334,6 +303,7 @@ public class VaradhiApplication {
     public static AppConfiguration readConfigFromFile(String filePath) throws InvalidConfigException {
         log.info("Loading configuration from {}", filePath);
         Vertx vertx = Vertx.vertx();
+        ConfigRetriever retriever = null;
 
         try {
             ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file")
@@ -342,20 +312,19 @@ public class VaradhiApplication {
                                                                    .setConfig(new JsonObject().put("path", filePath));
 
             ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore);
-            ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
+            retriever = ConfigRetriever.create(vertx, options);
 
-            try {
-                JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
-                AppConfiguration configuration = content.mapTo(AppConfiguration.class);
-                configuration.validate();
+            JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
 
-                return configuration;
-            } catch (Exception e) {
-                throw new InvalidConfigException("Failed to load Application Configuration", e);
-            } finally {
+            AppConfiguration configuration = content.mapTo(AppConfiguration.class);
+            configuration.validate();
+            return configuration;
+        } catch (Exception e) {
+            throw new InvalidConfigException("Failed to load Application Configuration", e);
+        } finally {
+            if (retriever != null) {
                 retriever.close();
             }
-        } finally {
             vertx.close();
         }
     }

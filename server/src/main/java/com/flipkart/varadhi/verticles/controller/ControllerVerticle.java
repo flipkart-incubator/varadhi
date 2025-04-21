@@ -50,20 +50,16 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param config         the controller configuration
      * @param coreServices   the core services
      * @param clusterManager the cluster manager
-     * @throws NullPointerException if any parameter is null
      */
     public ControllerVerticle(
         ControllerConfig config,
         CoreServices coreServices,
         VaradhiClusterManager clusterManager
     ) {
-        this.controllerConfig = Objects.requireNonNull(config, "Controller config cannot be null");
-        this.clusterManager = Objects.requireNonNull(clusterManager, "Cluster manager cannot be null");
-        this.metaStoreProvider = Objects.requireNonNull(
-            coreServices.getMetaStoreProvider(),
-            "MetaStore provider cannot be null"
-        );
-        this.meterRegistry = Objects.requireNonNull(coreServices.getMeterRegistry(), "Meter registry cannot be null");
+        this.controllerConfig = config;
+        this.clusterManager = clusterManager;
+        this.metaStoreProvider = coreServices.getMetaStoreProvider();
+        this.meterRegistry = coreServices.getMeterRegistry();
     }
 
     /**
@@ -74,37 +70,28 @@ public class ControllerVerticle extends AbstractVerticle {
      */
     @Override
     public void start(Promise<Void> startPromise) {
-        log.info("Starting ControllerVerticle");
+        // Initialize controller components
+        MessageRouter messageRouter = clusterManager.getRouter(vertx);
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        try {
-            // Initialize controller components
-            MessageRouter messageRouter = clusterManager.getRouter(vertx);
-            MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        // Create controller API manager and handler
+        ControllerApiMgr controllerApiMgr = createControllerApiMgr(messageExchange);
+        ControllerApiHandler apiHandler = new ControllerApiHandler(controllerApiMgr);
 
-            // Create controller API manager and handler
-            ControllerApiMgr controllerApiMgr = createControllerApiMgr(messageExchange);
-            ControllerApiHandler apiHandler = new ControllerApiHandler(controllerApiMgr);
-
-            // Assume leadership and initialize event system
-            onLeaderElected(controllerApiMgr, apiHandler, messageRouter).compose(v -> initializeEventSystem())
-                                                                        .onComplete(ar -> {
-                                                                            if (ar.succeeded()) {
-                                                                                log.info(
-                                                                                    "Controller initialized successfully"
-                                                                                );
-                                                                                startPromise.complete();
-                                                                            } else {
-                                                                                log.error(
-                                                                                    "Failed to initialize controller",
-                                                                                    ar.cause()
-                                                                                );
-                                                                                startPromise.fail(ar.cause());
-                                                                            }
-                                                                        });
-        } catch (Exception e) {
-            log.error("Error during ControllerVerticle startup", e);
-            startPromise.fail(e);
-        }
+        // Assume leadership and initialize event system
+        onLeaderElected(controllerApiMgr, apiHandler, messageRouter).compose(v -> initializeEventSystem())
+                                                                    .onComplete(ar -> {
+                                                                        if (ar.succeeded()) {
+                                                                            log.info("Controller started successfully");
+                                                                            startPromise.complete();
+                                                                        } else {
+                                                                            log.error(
+                                                                                "Failed to start controller: {}",
+                                                                                ar.cause().getMessage()
+                                                                            );
+                                                                            startPromise.fail(ar.cause());
+                                                                        }
+                                                                    });
     }
 
     /**
@@ -114,19 +101,11 @@ public class ControllerVerticle extends AbstractVerticle {
      */
     @Override
     public void stop(Promise<Void> stopPromise) {
-        log.info("Stopping ControllerVerticle");
-
-        try {
-            if (entityEventProcessor != null) {
-                entityEventProcessor.close();
-                entityEventProcessor = null;
-            }
-            log.info("ControllerVerticle stopped successfully");
-            stopPromise.complete();
-        } catch (Exception e) {
-            log.error("Error during ControllerVerticle shutdown", e);
-            stopPromise.fail(e);
+        if (entityEventProcessor != null) {
+            entityEventProcessor.close();
+            entityEventProcessor = null;
         }
+        stopPromise.complete();
     }
 
     /**
@@ -140,10 +119,7 @@ public class ControllerVerticle extends AbstractVerticle {
             clusterManager,
             metaStoreProvider.getMetaStore(),
             controllerConfig.getEventProcessorConfig()
-        ).onSuccess(processor -> {
-            this.entityEventProcessor = processor;
-            log.info("Event processor initialized successfully");
-        });
+        ).onSuccess(processor -> this.entityEventProcessor = processor);
     }
 
     /**
@@ -215,7 +191,6 @@ public class ControllerVerticle extends AbstractVerticle {
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
-                                 log.error("Failed to assume leadership", e);
                                  abortLeadership();
                              });
     }
@@ -236,8 +211,6 @@ public class ControllerVerticle extends AbstractVerticle {
                                                      .filter(memberInfo -> memberInfo.hasRole(ComponentKind.Consumer))
                                                      .map(ConsumerNode::new)
                                                      .toList();
-
-        log.info("Found {} consumer nodes in the cluster", consumerNodes.size());
 
         if (consumerNodes.isEmpty()) {
             return Future.succeededFuture(List.of());
@@ -295,10 +268,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
         getUnavailableConsumers(controllerApiMgr, activeConsumerSet).forEach(consumerId -> {
             log.info("Marking consumer {} as left", consumerId);
-            controllerApiMgr.consumerNodeLeft(consumerId).exceptionally(e -> {
-                log.error("Failed to mark consumer {} as left: {}", consumerId, e.getMessage());
-                return null;
-            });
+            controllerApiMgr.consumerNodeLeft(consumerId);
         });
     }
 
@@ -337,15 +307,9 @@ public class ControllerVerticle extends AbstractVerticle {
         }
 
         // Sort operations by start time to maintain order
-        pendingOps.stream().sorted(Comparator.comparing(SubscriptionOperation::getStartTime)).forEach(op -> {
-            try {
-                controllerApiMgr.retryOperation(op);
-                log.info("Requeued pending operation: {}", op);
-            } catch (Exception e) {
-                log.error("Failed to requeue operation {}: {}", op, e.getMessage());
-            }
-        });
-
+        pendingOps.stream()
+                  .sorted(Comparator.comparing(SubscriptionOperation::getStartTime))
+                  .forEach(controllerApiMgr::retryOperation);
         log.info("Requeued {} pending operations", pendingOps.size());
     }
 
@@ -356,7 +320,6 @@ public class ControllerVerticle extends AbstractVerticle {
      * transfers controller responsibilities to another node without disrupting service.
      */
     private void abortLeadership() {
-        log.error("Aborting leadership due to initialization failure");
         throw new IllegalStateException("Failed to initialize controller, aborting leadership");
     }
 

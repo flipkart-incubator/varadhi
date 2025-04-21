@@ -341,7 +341,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
-            cacheRegistry
+            projectCache
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 

@@ -65,7 +65,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             topicService,
             subscriptionFactory,
             new RestOptions(),
-            cacheRegistry
+            projectCache
         );
         configureRoutes();
     }

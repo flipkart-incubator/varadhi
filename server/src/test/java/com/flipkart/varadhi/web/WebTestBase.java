@@ -12,10 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -48,7 +46,6 @@ public class WebTestBase {
     protected Router router;
     protected BodyHandler bodyHandler;
     protected FailureHandler failureHandler;
-    protected EntityReadCacheRegistry cacheRegistry;
     protected EntityReadCache<Project> projectCache;
     protected EntityReadCache<VaradhiTopic> topicCache;
 
@@ -68,16 +65,8 @@ public class WebTestBase {
     }
 
     public void setUp() throws InterruptedException {
-        // Initialize the cache registry
-        cacheRegistry = new EntityReadCacheRegistry();
-
-        // Create and register the project cache
         projectCache = mock(EntityReadCache.class);
-        cacheRegistry.register(ResourceType.PROJECT, projectCache);
-
-        // Create and register the topic cache
         topicCache = mock(EntityReadCache.class);
-        cacheRegistry.register(ResourceType.TOPIC, topicCache);
 
         vertx = Vertx.vertx();
         router = Router.router(vertx);
