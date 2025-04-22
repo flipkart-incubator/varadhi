@@ -77,6 +77,8 @@ public class AuthZProviderTests extends E2EBase {
     private static void setupProvider(Checkpoint checkpoint) throws IOException {
         String configContent = """
             ---
+            superUsers: [ "thanos" ]
+            
             metaStoreOptions:
               providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
               configFile: "metastore.yml"
