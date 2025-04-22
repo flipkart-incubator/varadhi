@@ -73,7 +73,7 @@ public class AuthorizationHandlerTests {
 
         @Override
         public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-            if (List.of("superman", "manager", "architect").contains(userContext.getSubject())) {
+            if (List.of("a", "superman", "manager", "architect").contains(userContext.getSubject())) {
                 return Future.succeededFuture(true);
             } else if (List.of("alice", "bob", "intern").contains(userContext.getSubject()) && action.toString()
                                                                                                      .endsWith("get")) {

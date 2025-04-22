@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -46,7 +48,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class TopicHandlers implements RouteProvider {
-    public static final String API_NAME = "Topic";
+    private static final String API_NAME = "TOPIC";
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
@@ -79,21 +81,19 @@ public class TopicHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/topics",
             List.of(
-                RouteDefinition.get("get", API_NAME, "/:topic")
+                RouteDefinition.get(GET, API_NAME, "/:topic")
                                .authorize(TOPIC_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("create", API_NAME, "")
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setRequestBody)
                                .authorize(TOPIC_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("delete", API_NAME, "/:topic")
+                RouteDefinition.delete(DELETE, API_NAME, "/:topic")
                                .authorize(TOPIC_DELETE)
                                .build(this::getHierarchies, this::delete),
-                RouteDefinition.get("list", API_NAME, "")
-                               .authorize(TOPIC_LIST)
-                               .build(this::getHierarchies, this::listTopics),
-                RouteDefinition.patch("restore", API_NAME, "/:topic/restore")
+                RouteDefinition.get(LIST, API_NAME, "").authorize(TOPIC_LIST).build(this::getHierarchies, this::list),
+                RouteDefinition.patch(RESTORE, API_NAME, "/:topic/restore")
                                .authorize(TOPIC_UPDATE)
                                .build(this::getHierarchies, this::restore)
             )
@@ -203,7 +203,7 @@ public class TopicHandlers implements RouteProvider {
      * @param ctx the routing context
      *            - includeInactive: query parameter to include inactive or soft-deleted topics
      */
-    public void listTopics(RoutingContext ctx) {
+    public void list(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE)
                                      .stream()

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -13,10 +14,11 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.common.Constants.*;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
@@ -56,7 +58,7 @@ public class AuthorizationHandlerBuilder {
         @Override
         public void handle(RoutingContext ctx) {
             UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
-            Map<ResourceType, ResourceHierarchy> hierarchies = ctx.get(ContextKeys.RESOURCE_HIERARCHY);
+            Map<ResourceType, ResourceHierarchy> hierarchies = ctx.get(Constants.ContextKeys.RESOURCE_HIERARCHY);
             ResourceHierarchy hierarchy = hierarchies.getOrDefault(authorizationOnAction.getResourceType(), null);
             if (null == hierarchy) {
                 ctx.fail(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set."));
@@ -80,14 +82,8 @@ public class AuthorizationHandlerBuilder {
                 return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set"));
             }
 
-            return provider.isSuperAdmin(userContext).compose(authorized -> {
-                if (Boolean.TRUE.equals(authorized)) {
-                    return Future.succeededFuture();
-                } else {
-                    String resourcePath = resourceHierarchy.getResourcePath();
-                    return authorizedInternal(userContext, authorizationOnAction, resourcePath);
-                }
-            });
+            String resourcePath = resourceHierarchy.getResourcePath();
+            return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }
     }
 }

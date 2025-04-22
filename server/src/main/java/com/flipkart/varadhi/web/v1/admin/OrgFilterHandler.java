@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FILTER_NAME;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -25,7 +27,8 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgFilterHandler implements RouteProvider {
-    public static final String API_NAME = "OrgFilter";
+    private static final String API_NAME = "ORG_FILTER";
+
     private final OrgService orgService;
 
     public OrgFilterHandler(OrgService orgService) {
@@ -37,16 +40,16 @@ public class OrgFilterHandler implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs/:org/filters",
             List.of(
-                RouteDefinition.get("list", API_NAME, "").authorize(ORG_GET).build(this::getHierarchies, this::getAll),
-                RouteDefinition.get("get", API_NAME, "/:orgFilterName")
+                RouteDefinition.get(LIST, API_NAME, "").authorize(ORG_GET).build(this::getHierarchies, this::list),
+                RouteDefinition.get(GET, API_NAME, "/:orgFilterName")
                                .authorize(ORG_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("create", API_NAME, "")
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("update", API_NAME, "")
+                RouteDefinition.put(UPDATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setNamedFilter)
                                .authorize(ORG_UPDATE)
@@ -65,7 +68,7 @@ public class OrgFilterHandler implements RouteProvider {
         return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(orgName));
     }
 
-    public void getAll(RoutingContext ctx) {
+    public void list(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filters = orgService.getAllFilters(orgName);
         ctx.endApiWithResponse(filters);

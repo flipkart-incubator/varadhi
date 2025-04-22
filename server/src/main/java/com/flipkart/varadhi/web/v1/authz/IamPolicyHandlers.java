@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.*;
 import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -30,7 +31,8 @@ import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class IamPolicyHandlers implements RouteProvider {
 
-    public static final String API_NAME = "IAM";
+    private static final String API_NAME = "IAM";
+
 
     private static final String ORG_POLICY_PATH = "orgs/:org/policy";
     private static final String TEAM_POLICY_PATH = "orgs/:org/teams/:team/policy";
@@ -73,16 +75,16 @@ public class IamPolicyHandlers implements RouteProvider {
 
     private List<RouteDefinition> getHandlersFor(String path, ResourceType resourceType) {
         return List.of(
-            RouteDefinition.get("get", API_NAME, path)
+            RouteDefinition.get(GET, API_NAME, path)
                            .authorize(IAM_POLICY_GET)
-                           .build(this::getHierarchies, this.getIamPolicyHandler(resourceType)),
-            RouteDefinition.put("set", API_NAME, path)
+                           .build(this::getHierarchies, this.get(resourceType)),
+            RouteDefinition.put(SET, API_NAME, path)
                            .hasBody()
                            .authorize(IAM_POLICY_SET)
-                           .build(this::getHierarchies, this.setIamPolicyHandler(resourceType)),
-            RouteDefinition.delete("delete", API_NAME, path)
+                           .build(this::getHierarchies, this.set(resourceType)),
+            RouteDefinition.delete(DELETE, API_NAME, path)
                            .authorize(IAM_POLICY_DELETE)
-                           .build(this::getHierarchies, this.deleteIamPolicyHandler(resourceType))
+                           .build(this::getHierarchies, this.delete(resourceType))
         );
     }
 
@@ -118,7 +120,7 @@ public class IamPolicyHandlers implements RouteProvider {
         return Map.of(ResourceType.IAM_POLICY, new IamPolicyHierarchy(new RootHierarchy()));
     }
 
-    public Handler<RoutingContext> getIamPolicyHandler(ResourceType resourceType) {
+    public Handler<RoutingContext> get(ResourceType resourceType) {
         return routingContext -> {
             String policyId = getResourceIdFromPath(routingContext, resourceType);
             IamPolicyResponse response = toResponse(iamPolicyService.getIamPolicy(resourceType, policyId));
@@ -126,7 +128,7 @@ public class IamPolicyHandlers implements RouteProvider {
         };
     }
 
-    public Handler<RoutingContext> setIamPolicyHandler(ResourceType resourceType) {
+    public Handler<RoutingContext> set(ResourceType resourceType) {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             IamPolicyRequest policyForSubject = routingContext.body().asValidatedPojo(IamPolicyRequest.class);
@@ -137,7 +139,7 @@ public class IamPolicyHandlers implements RouteProvider {
         };
     }
 
-    public Handler<RoutingContext> deleteIamPolicyHandler(ResourceType resourceType) {
+    public Handler<RoutingContext> delete(ResourceType resourceType) {
         return routingContext -> {
             String resourceId = getResourceIdFromPath(routingContext, resourceType);
             iamPolicyService.deleteIamPolicy(resourceType, resourceId);
