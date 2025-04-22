@@ -31,9 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
-
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
-
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -118,7 +116,6 @@ public class SubscriptionHandlers implements RouteProvider {
                                .authorize(SUBSCRIPTION_CREATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
-
                 RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
                                .nonBlocking()
                                .hasBody()

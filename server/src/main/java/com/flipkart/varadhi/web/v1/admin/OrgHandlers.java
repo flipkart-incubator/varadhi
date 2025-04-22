@@ -18,7 +18,6 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
-
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
@@ -27,7 +26,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgHandlers implements RouteProvider {
     private static final String API_NAME = "ORG";
-
     private final OrgService orgService;
 
     public OrgHandlers(OrgService orgService) {

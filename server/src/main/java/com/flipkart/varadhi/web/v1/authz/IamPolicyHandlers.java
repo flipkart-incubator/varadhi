@@ -33,7 +33,6 @@ public class IamPolicyHandlers implements RouteProvider {
 
     private static final String API_NAME = "IAM";
 
-
     private static final String ORG_POLICY_PATH = "orgs/:org/policy";
     private static final String TEAM_POLICY_PATH = "orgs/:org/teams/:team/policy";
     private static final String PROJECT_POLICY_PATH = "projects/:project/policy";

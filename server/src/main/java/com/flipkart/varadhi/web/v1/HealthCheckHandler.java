@@ -46,7 +46,6 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-
             RouteDefinition.get(GET, API_NAME, "/v1/health-check")
                            .unAuthenticated()
                            .logsDisabled()

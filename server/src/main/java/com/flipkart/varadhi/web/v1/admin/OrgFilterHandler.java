@@ -19,7 +19,6 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
-
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FILTER_NAME;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -28,7 +27,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgFilterHandler implements RouteProvider {
     private static final String API_NAME = "ORG_FILTER";
-
     private final OrgService orgService;
 
     public OrgFilterHandler(OrgService orgService) {
@@ -68,7 +66,7 @@ public class OrgFilterHandler implements RouteProvider {
         return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(orgName));
     }
 
-    public void list(RoutingContext ctx) {
+    public void getAll(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filters = orgService.getAllFilters(orgName);
         ctx.endApiWithResponse(filters);
