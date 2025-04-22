@@ -1,22 +1,24 @@
 package com.flipkart.varadhi.verticles.webserver;
 
-import java.util.*;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
-import com.flipkart.varadhi.services.*;
+import com.flipkart.varadhi.services.DlqService;
+import com.flipkart.varadhi.services.IamPolicyService;
+import com.flipkart.varadhi.services.OrgService;
+import com.flipkart.varadhi.services.ProjectService;
+import com.flipkart.varadhi.services.SubscriptionService;
+import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -27,21 +29,33 @@ import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
+
 import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.configurators.*;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.RequestBodyHandler;
+
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.*;
+import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
+import com.flipkart.varadhi.web.v1.admin.OrgFilterHandler;
+import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
+import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
+import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
+import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
+import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
-import io.vertx.core.*;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
@@ -49,32 +63,75 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RoutingContextExtension.class})
 public class WebServerVerticle extends AbstractVerticle {
-    private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new HashMap<>();
+
+    /**
+     * Holds configuration data for the WebServer verticle
+     */
+    private record VerticleConfig(
+        String deployedRegion,
+        TopicCapacityPolicy defaultTopicCapacity,
+        boolean isLeanDeployment
+    ) {
+        /**
+         * Creates a VerticleConfig from the application configuration.
+         *
+         * @param configuration the application configuration
+         * @return a new VerticleConfig instance
+         */
+        static VerticleConfig fromConfig(AppConfiguration configuration) {
+            return new VerticleConfig(
+                configuration.getRestOptions().getDeployedRegion(),
+                configuration.getRestOptions().getDefaultTopicCapacity(),
+                configuration.getFeatureFlags().isLeanDeployment()
+            );
+        }
+    }
+
+    // Immutable configuration and core services
+    private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new ConcurrentHashMap<>();
     private final AppConfiguration configuration;
     private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
+    @SuppressWarnings ("rawtypes")
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
-    private OrgService orgService;
-    private TeamService teamService;
-    private ProjectService projectService;
-    private VaradhiTopicService varadhiTopicService;
-    private SubscriptionService subscriptionService;
-    private DlqService dlqService;
+    private final VerticleConfig verticleConfig;
+    private final EntityReadCacheRegistry cacheRegistry;
+    private final List<Pattern> disableAPIPatterns;
+
+    // Services initialized during startup
+    private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
 
-    private List<Pattern> disableAPIPatterns;
-
+    /**
+     * Creates a new WebServerVerticle with the specified configuration and services.
+     *
+     * @param configuration  the application configuration
+     * @param services       the core services
+     * @param clusterManager the cluster manager
+     */
     public WebServerVerticle(
         AppConfiguration configuration,
         CoreServices services,
-        VaradhiClusterManager clusterManager
+        VaradhiClusterManager clusterManager,
+        EntityReadCacheRegistry cacheRegistry
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -83,15 +140,23 @@ public class WebServerVerticle extends AbstractVerticle {
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
-
+        this.verticleConfig = VerticleConfig.fromConfig(configuration);
+        this.cacheRegistry = cacheRegistry;
         this.disableAPIPatterns = configuration.getDisabledAPIs()
                                                .stream()
                                                .map(Pattern::compile)
                                                .collect(Collectors.toList());
     }
 
+    /**
+     * Wraps a handler in a blocking execution context using virtual threads.
+     * This allows handlers to perform blocking operations without affecting the event loop.
+     *
+     * @param vertx         the Vert.x instance
+     * @param apiEndHandler the handler to wrap
+     * @return a handler that executes the original handler in a virtual thread
+     */
     public static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
-        // no try/catch around apiEndHandler.handle as executeBlocking does the same and fails the future.
         return ctx -> {
             Future<Void> future = vertx.executeBlocking(() -> {
                 apiEndHandler.handle(ctx);
@@ -99,7 +164,7 @@ public class WebServerVerticle extends AbstractVerticle {
             });
             future.onComplete(resultHandler -> {
                 if (resultHandler.succeeded()) {
-                    if (null == ctx.getApiResponse()) {
+                    if (ctx.getApiResponse() == null) {
                         ctx.endRequest();
                     } else {
                         ctx.endRequestWithResponse(ctx.getApiResponse());
@@ -111,112 +176,185 @@ public class WebServerVerticle extends AbstractVerticle {
         };
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void start(Promise<Void> startPromise) {
-        setupEntityServices();
-        performValidations();
-        startHttpServer(startPromise);
-    }
+        log.info("Starting WebServer verticle");
 
-    @Override
-    public void stop(Promise<Void> stopPromise) {
-        log.info("HttpServer Stopping.");
-        httpServer.close(h -> {
-            log.info("HttpServer Stopped.");
-            stopPromise.complete();
+        setupEntityServices().compose(v -> {
+            performValidations();
+            return startHttpServer();
+        }).onSuccess(v -> {
+            log.info("WebServer verticle started successfully");
+            startPromise.complete();
+        }).onFailure(e -> {
+            log.error("Failed to start WebServer verticle", e);
+            startPromise.fail(e);
         });
     }
 
-    private void setupEntityServices() {
-        String projectCacheSpec = configuration.getRestOptions().getProjectCacheBuilderSpec();
-        orgService = new OrgService(metaStore.orgs(), metaStore.teams());
-        teamService = new TeamService(metaStore);
-        projectService = new ProjectService(metaStore, projectCacheSpec, meterRegistry);
-        varadhiTopicService = new VaradhiTopicService(
-            messagingStackProvider.getStorageTopicService(),
-            metaStore.topics(),
-            metaStore.subscriptions(),
-            metaStore.projects()
-        );
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void stop(Promise<Void> stopPromise) {
+        log.info("Stopping HttpServer");
+        if (httpServer != null) {
+            httpServer.close(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
+    }
+
+    /**
+     * Initializes all entity services required by the web server.
+     * Uses a builder pattern for cleaner initialization.
+     *
+     * @return a Future that completes when all services are initialized
+     */
+    @SuppressWarnings ("unchecked")
+    private Future<Void> setupEntityServices() {
+        log.info("Setting up entity services");
+
+        // Create message exchange for communication
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
+
+        // Initialize basic services
+        serviceRegistry.register(OrgService.class, new OrgService(metaStore.orgs(), metaStore.teams()));
+        serviceRegistry.register(TeamService.class, new TeamService(metaStore));
+        serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
+
+        // Initialize topic service
+        serviceRegistry.register(
+            VaradhiTopicService.class,
+            new VaradhiTopicService(
+                messagingStackProvider.getStorageTopicService(),
+                metaStore.topics(),
+                metaStore.subscriptions(),
+                metaStore.projects()
+            )
+        );
+
+        // Initialize controller client and related services
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
         );
-        subscriptionService = new SubscriptionService(
-            shardProvisioner,
-            controllerClient,
-            metaStore.subscriptions(),
-            metaStore.topics()
-        );
-        dlqService = new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange));
 
+        // Initialize subscription and DLQ services
+        serviceRegistry.register(
+            SubscriptionService.class,
+            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(), metaStore.topics())
+        );
+        serviceRegistry.register(
+            DlqService.class,
+            new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
+        );
+
+        // Initialize producer service
+        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
+
+        serviceRegistry.register(
+            ProducerService.class,
+            new ProducerService(
+                verticleConfig.deployedRegion(),
+                producerProvider,
+                cacheRegistry.getCache(ResourceType.TOPIC)
+            )
+        );
+
+        return Future.succeededFuture();
     }
 
+    /**
+     * Performs validation checks based on the deployment configuration.
+     */
     private void performValidations() {
-        if (configuration.getFeatureFlags().isLeanDeployment()) {
+        if (verticleConfig.isLeanDeployment()) {
+            log.info("Performing lean deployment validations");
             // Its sync execution for time being, can be changed to Async.
-            LeanDeploymentValidator validator = new LeanDeploymentValidator(orgService, teamService, projectService);
+            LeanDeploymentValidator validator = new LeanDeploymentValidator(
+                serviceRegistry.get(OrgService.class),
+                serviceRegistry.get(TeamService.class),
+                serviceRegistry.get(ProjectService.class)
+            );
             validator.validate(configuration.getRestOptions());
         }
     }
 
-    private void startHttpServer(Promise<Void> startPromise) {
+    /**
+     * Starts the HTTP server with the configured routes.
+     *
+     * @return a Future that completes when the server is started
+     */
+    private Future<Void> startHttpServer() {
         Router router = createApiRouter();
-        httpServer = vertx.createHttpServer(configuration.getHttpServerOptions()).requestHandler(router).listen(h -> {
-            if (h.succeeded()) {
-                log.info("HttpServer Started.");
-                startPromise.complete();
-            } else {
-                log.warn("HttpServer Start Failed." + h.cause());
-                startPromise.fail("HttpServer Start Failed." + h.cause());
-            }
-        });
+        httpServer = vertx.createHttpServer(configuration.getHttpServerOptions()).requestHandler(router);
+
+        return httpServer.listen()
+                         .onSuccess(server -> log.info("HttpServer started on port {}", server.actualPort()))
+                         .onFailure(cause -> log.error("HttpServer start failed: {}", cause.getMessage()))
+                         .mapEmpty();
     }
 
+    /**
+     * Creates the API router with all configured routes.
+     *
+     * @return the configured Router instance
+     */
     private Router createApiRouter() {
         Router router = Router.router(vertx);
-        List<RouteDefinition> routeDefinitions = new ArrayList<>();
         setupRouteConfigurators();
+
+        // Collect all route definitions
+        List<RouteDefinition> routeDefinitions = new ArrayList<>();
         routeDefinitions.addAll(getIamPolicyRoutes());
         routeDefinitions.addAll(getAdminApiRoutes());
         routeDefinitions.addAll(getProduceApiRoutes());
 
         routeDefinitions = routeDefinitions.stream().filter(this::isRouteEnabled).toList();
 
+        // Configure all routes
         configureApiRoutes(router, routeDefinitions);
         return router;
     }
 
+    /**
+     * Determines if a route should be enabled based on configured disable patterns.
+     *
+     * @param routeDefinition the route definition to check
+     * @return true if the route should be enabled, false otherwise
+     */
     private boolean isRouteEnabled(RouteDefinition routeDefinition) {
-        return this.disableAPIPatterns.stream()
-                                      .noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
+        return disableAPIPatterns.stream().noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
     }
 
+    /**
+     * Gets IAM policy routes based on the configured authorization provider.
+     *
+     * @return a list of IAM policy route definitions
+     */
     private List<RouteDefinition> getIamPolicyRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
         String authProviderName = configuration.getAuthorization() == null ?
             null :
             configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
-        boolean isIamPolicyStore = metaStore instanceof IamPolicyStore.Provider;
-        //TODO::Validate below specifically w.r.to lean deployment.
-        // enable IamPolicy Routes, if
-        // 1. provider class name is DefaultAuthorizationProvider, and
-        // 2. metastore is RoleBindingMetastore
-        // This is independent of Authorization is enabled or not
+
         if (isDefaultProvider) {
-            if (isIamPolicyStore) {
+            if (metaStore instanceof IamPolicyStore.Provider iamPolicyMetaStore) {
                 routes.addAll(
                     new IamPolicyHandlers(
-                        projectService,
-                        new IamPolicyService(metaStore, ((IamPolicyStore.Provider)metaStore).iamPolicies())
+                        serviceRegistry.get(ProjectService.class),
+                        new IamPolicyService(metaStore, iamPolicyMetaStore.iamPolicies())
                     ).get()
                 );
             } else {
                 log.error(
-                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected RoleBindingMetaStore, found {}",
+                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected IamPolicyMetaStore, found {}",
                     metaStore.getClass().getName()
                 );
             }
@@ -226,81 +364,112 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    /**
+     * Gets all admin API routes.
+     *
+     * @return a list of admin API route definitions
+     */
     @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
-        TopicCapacityPolicy defaultTopicCapacity = configuration.getRestOptions().getDefaultTopicCapacity();
-        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
+
+        // Create factories
         VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
             messagingStackProvider.getStorageTopicFactory(),
-            deployedRegion,
-            defaultTopicCapacity
+            verticleConfig.deployedRegion(),
+            verticleConfig.defaultTopicCapacity()
         );
+
         VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(
             messagingStackProvider.getStorageTopicService(),
             messagingStackProvider.getSubscriptionFactory(),
             messagingStackProvider.getStorageTopicFactory(),
-            deployedRegion
+            verticleConfig.deployedRegion()
         );
+
+        // Add management entity routes if not in lean deployment
         routes.addAll(getManagementEntitiesApiRoutes());
-        routes.addAll(new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectService).get());
+
+        // Add topic, subscription, DLQ and health check routes
         routes.addAll(
-            new SubscriptionHandlers(
-                subscriptionService,
-                projectService,
-                varadhiTopicService,
-                subscriptionFactory,
-                configuration.getRestOptions()
+            new TopicHandlers(
+                varadhiTopicFactory,
+                serviceRegistry.get(VaradhiTopicService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
-        routes.addAll(new DlqHandlers(dlqService, subscriptionService, projectService).get());
+
+        routes.addAll(
+            new SubscriptionHandlers(
+                serviceRegistry.get(SubscriptionService.class),
+                serviceRegistry.get(VaradhiTopicService.class),
+                subscriptionFactory,
+                configuration.getRestOptions(),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
+        );
+
+        routes.addAll(
+            new DlqHandlers(
+                serviceRegistry.get(DlqService.class),
+                serviceRegistry.get(SubscriptionService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
+        );
+
         routes.addAll(new HealthCheckHandler().get());
+
         return routes;
     }
 
+    /**
+     * Gets management entity API routes based on deployment configuration.
+     *
+     * @return a list of management entity route definitions
+     */
     private List<RouteDefinition> getManagementEntitiesApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
-        if (!configuration.getFeatureFlags().isLeanDeployment()) {
-            routes.addAll(new OrgHandlers(orgService).get());
-            routes.addAll(new TeamHandlers(teamService).get());
-            routes.addAll(new ProjectHandlers(projectService).get());
-            routes.addAll(new OrgFilterHandler(orgService).get());
+        if (!verticleConfig.isLeanDeployment()) {
+            routes.addAll(new OrgHandlers(serviceRegistry.get(OrgService.class)).get());
+            routes.addAll(new TeamHandlers(serviceRegistry.get(TeamService.class)).get());
+            routes.addAll(
+                new ProjectHandlers(
+                    serviceRegistry.get(ProjectService.class),
+                    cacheRegistry.getCache(ResourceType.PROJECT)
+                ).get()
+            );
+            routes.addAll(new OrgFilterHandler(serviceRegistry.get(OrgService.class)).get());
         }
         return routes;
     }
 
-    @SuppressWarnings ("unchecked")
+    /**
+     * Gets produce API routes.
+     *
+     * @return a list of produce API route definitions
+     */
     private List<RouteDefinition> getProduceApiRoutes() {
-        String deployedRegion = configuration.getRestOptions().getDeployedRegion();
-        Function<String, VaradhiTopic> topicProvider = varadhiTopicService::get;
         PreProduceHandler preProduceHandler = new PreProduceHandler();
-        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
-
-        ProducerService producerService = new ProducerService(
-            deployedRegion,
-            configuration.getProducerOptions(),
-            producerProvider,
-            topicProvider,
-            meterRegistry
-        );
         ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
             configuration.getProducerOptions().isMetricEnabled(),
             meterRegistry
         );
+
         return new ArrayList<>(
             new ProduceHandlers(
-                producerService,
+                serviceRegistry.get(ProducerService.class),
                 preProduceHandler,
-                projectService,
-                varadhiTopicService,
-                orgService,
                 producerMetricsHandler,
                 configuration.getMessageConfiguration(),
-                deployedRegion
+                verticleConfig.deployedRegion(),
+                cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
     }
 
+    /**
+     * Sets up route configurators for different route behaviors.
+     */
     private void setupRouteConfigurators() {
         AuthnConfigurator authnConfigurator = new AuthnConfigurator(vertx, configuration, meterRegistry);
         AuthzConfigurator authzConfigurator = new AuthzConfigurator(configuration, configResolver);
@@ -308,12 +477,15 @@ public class WebServerVerticle extends AbstractVerticle {
             new SpanProvider(tracer),
             meterRegistry
         );
+
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
             configuration.getRestOptions().getPayloadSizeMax()
         );
+
         RequestBodyParsingConfigurator bodyParser = new RequestBodyParsingConfigurator();
         HierarchyConfigurator hierarchyConfigurator = new HierarchyConfigurator();
+
         routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
         routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnConfigurator);
         routeBehaviourConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
@@ -322,30 +494,82 @@ public class WebServerVerticle extends AbstractVerticle {
         routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzConfigurator);
     }
 
+    /**
+     * Configures API routes with the appropriate handlers and behaviors.
+     *
+     * @param router    the router to configure
+     * @param apiRoutes the list of route definitions to configure
+     */
     private void configureApiRoutes(Router router, List<RouteDefinition> apiRoutes) {
-        log.info("Configuring API routes.");
+        log.info("Configuring {} API routes", apiRoutes.size());
         FailureHandler defaultFailureHandler = new FailureHandler();
+
         for (RouteDefinition def : apiRoutes) {
             Route route = router.route().method(def.getMethod()).path(def.getPath());
+
+            // Sort behaviors by order and apply them
             RouteBehaviour[] behaviours = def.getBehaviours().toArray(new RouteBehaviour[0]);
             Arrays.sort(behaviours, Comparator.comparingInt(RouteBehaviour::getOrder));
+
             for (RouteBehaviour behaviour : behaviours) {
-                RouteConfigurator routeConfigurator = routeBehaviourConfigurators.getOrDefault(behaviour, null);
-                if (null != routeConfigurator) {
-                    routeConfigurator.configure(route, def);
+                RouteConfigurator configurator = routeBehaviourConfigurators.get(behaviour);
+                if (configurator != null) {
+                    configurator.configure(route, def);
                 } else {
                     String errMsg = String.format("No RouteBehaviourProvider configured for %s.", behaviour);
                     log.error(errMsg);
                     throw new IllegalStateException(errMsg);
                 }
             }
+
+            // Add pre-handlers
             def.getPreHandlers().forEach(route::handler);
+
+            // Add main handler (blocking or non-blocking)
             if (def.isBlockingEndHandler()) {
                 route.handler(wrapBlockingExecution(vertx, def.getEndReqHandler()));
             } else {
                 route.handler(def.getEndReqHandler());
             }
+
+            // Add failure handler
             route.failureHandler(defaultFailureHandler);
+        }
+    }
+
+    /**
+     * Service registry for managing service instances.
+     * Provides type-safe access to services.
+     */
+    private static class ServiceRegistry {
+        private final Map<Class<?>, Object> services = new HashMap<>();
+
+        /**
+         * Registers a service instance with its class type.
+         *
+         * @param <T>     the service type
+         * @param clazz   the service class
+         * @param service the service instance
+         */
+        <T> void register(Class<T> clazz, T service) {
+            services.put(clazz, Objects.requireNonNull(service, "Service cannot be null"));
+        }
+
+        /**
+         * Gets a service instance by its class type.
+         *
+         * @param <T>   the service type
+         * @param clazz the service class
+         * @return the service instance
+         * @throws IllegalStateException if the service is not registered
+         */
+        @SuppressWarnings ("unchecked")
+        <T> T get(Class<T> clazz) {
+            Object service = services.get(clazz);
+            if (service == null) {
+                throw new IllegalStateException("Service not registered: " + clazz.getName());
+            }
+            return (T)service;
         }
     }
 }

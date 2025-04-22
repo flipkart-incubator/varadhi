@@ -62,10 +62,10 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         MockitoAnnotations.openMocks(this);
         subscriptionHandlers = new SubscriptionHandlers(
             subscriptionService,
-            projectService,
             topicService,
             subscriptionFactory,
-            new RestOptions()
+            new RestOptions(),
+            projectCache
         );
         configureRoutes();
     }
@@ -105,6 +105,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
 
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(vTopic).when(topicService).get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
 
@@ -135,9 +136,9 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void createSubscription_NonExistentProject_ThrowsNotFoundException() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT));
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
-        String errorMessage = "Project not found.";
+        String errorMessage = "PROJECT(project1) not found";
 
-        doThrow(new ResourceNotFoundException(errorMessage)).when(projectService).getCachedProject(PROJECT.getName());
+        doThrow(new ResourceNotFoundException(errorMessage)).when(projectCache).getOrThrow(PROJECT.getName());
 
         ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, ErrorResponse.class);
 
@@ -269,7 +270,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=SOFT_DELETE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -297,7 +298,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=HARD_DELETE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -322,7 +323,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void deleteSubscription_NoDeletionType_UsesSoftDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, buildSubscriptionUrl("sub1", PROJECT));
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -350,7 +351,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=INVALID_TYPE"
         );
 
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),

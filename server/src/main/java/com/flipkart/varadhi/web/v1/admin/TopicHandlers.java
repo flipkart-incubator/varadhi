@@ -1,17 +1,17 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.common.EntityReadCache;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
+import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
@@ -51,23 +51,23 @@ public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final ProjectService projectService;
+    private final EntityReadCache<Project> projectCache;
 
     /**
      * Constructs a new TopicHandlers instance.
      *
      * @param varadhiTopicFactory the factory for creating VaradhiTopic instances
      * @param varadhiTopicService the service for managing VaradhiTopic instances
-     * @param projectService      the service for managing projects
+     * @param projectCache        the entity read cache for projects
      */
     public TopicHandlers(
         VaradhiTopicFactory varadhiTopicFactory,
         VaradhiTopicService varadhiTopicService,
-        ProjectService projectService
+        EntityReadCache<Project> projectCache
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
-        this.projectService = projectService;
+        this.projectCache = projectCache;
     }
 
     /**
@@ -119,7 +119,7 @@ public class TopicHandlers implements RouteProvider {
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectService.getCachedProject(projectName);
+        Project project = projectCache.getOrThrow(projectName);
 
         if (hasBody) {
             TopicResource topicResource = ctx.get(REQUEST_BODY);
@@ -160,7 +160,7 @@ public class TopicHandlers implements RouteProvider {
 
         validateProjectName(projectName, topicResource);
 
-        Project project = projectService.getCachedProject(topicResource.getProject());
+        Project project = projectCache.getOrThrow(topicResource.getProject());
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic, project);

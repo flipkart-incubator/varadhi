@@ -19,6 +19,9 @@ public class Constants {
     // System identity constant
     public static final String SYSTEM_IDENTITY = "System";
 
+    // Handler name for entity events.
+    public static final String ENTITY_EVENTS_HANDLER = "entity-events";
+
     private Constants() {
         // Private constructor to prevent instantiation
     }

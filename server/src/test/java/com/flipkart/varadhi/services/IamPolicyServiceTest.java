@@ -12,9 +12,6 @@ import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.jmx.JmxConfig;
-import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -46,7 +43,7 @@ class IamPolicyServiceTest {
 
 
     @BeforeEach
-    public void PreTest() throws Exception {
+    void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
         zkCurator = CuratorFrameworkFactory.newClient(
             zkCuratorTestingServer.getConnectString(),
@@ -56,11 +53,7 @@ class IamPolicyServiceTest {
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
         orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(
-            varadhiMetaStore,
-            "",
-            new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM)
-        );
+        projectService = new ProjectService(varadhiMetaStore);
         iamPolicyService = new IamPolicyService(varadhiMetaStore, varadhiMetaStore.iamPolicies());
         org1 = Org.of("org1");
         org2 = Org.of("org2");
