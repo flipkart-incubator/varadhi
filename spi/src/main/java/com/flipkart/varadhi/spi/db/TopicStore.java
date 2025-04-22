@@ -11,6 +11,8 @@ public interface TopicStore {
 
     List<String> getAllNames(String projectName);
 
+    List<VaradhiTopic> getAll();
+
     boolean exists(String topicName);
 
     void update(VaradhiTopic topic);

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.common.events;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 
 /**
@@ -18,7 +19,8 @@ public record EntityEvent<T>(
     String resourceName,
     EventType operation,
     T resource,
-    Runnable commiter
+    int version,
+    @JsonIgnore Runnable commiter
 ) {
     /**
      * Constructs a new EntityEvent with validation of required fields.
@@ -35,6 +37,9 @@ public record EntityEvent<T>(
         }
         if (operation == null) {
             throw new IllegalArgumentException("operation cannot be null");
+        }
+        if (version < 0) {
+            throw new IllegalArgumentException("version cannot be negative");
         }
     }
 

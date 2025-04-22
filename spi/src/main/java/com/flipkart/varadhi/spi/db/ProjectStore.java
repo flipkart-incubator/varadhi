@@ -11,6 +11,8 @@ public interface ProjectStore {
 
     List<Project> getAll(String teamName, String orgName);
 
+    List<Project> getAll();
+
     boolean exists(String projectName);
 
     void update(Project project);

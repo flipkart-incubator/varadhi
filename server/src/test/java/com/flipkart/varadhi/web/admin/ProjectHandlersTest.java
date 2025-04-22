@@ -36,7 +36,7 @@ public class ProjectHandlersTest extends WebTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         projectService = mock(ProjectService.class);
-        projectHandlers = new ProjectHandlers(projectService);
+        projectHandlers = new ProjectHandlers(projectService, projectCache);
 
         Route routeCreate = router.post("/projects").handler(bodyHandler).handler(ctx -> {
             projectHandlers.setProject(ctx);

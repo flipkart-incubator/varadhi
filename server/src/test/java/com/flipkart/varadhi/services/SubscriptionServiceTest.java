@@ -121,7 +121,7 @@ class SubscriptionServiceTest {
         orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        projectService = new ProjectService(varadhiMetaStore, "", meterRegistry);
+        projectService = new ProjectService(varadhiMetaStore);
     }
 
     private void setupTestData() {

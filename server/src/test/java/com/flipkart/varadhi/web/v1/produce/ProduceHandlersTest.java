@@ -1,14 +1,13 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
@@ -35,12 +34,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.entities.TopicState.*;
+import static com.flipkart.varadhi.entities.TopicState.Blocked;
+import static com.flipkart.varadhi.entities.TopicState.Replicating;
+import static com.flipkart.varadhi.entities.TopicState.Throttled;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class ProduceHandlersTest extends ProduceTestBase {
     Span span;
@@ -232,7 +244,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testProduceForNonexistingProject() throws InterruptedException {
-        doThrow(new ResourceNotFoundException("Project1 not found.")).when(projectService).getCachedProject("project1");
+        doThrow(new ResourceNotFoundException("PROJECT(project1) not found")).when(projectCache).getOrThrow("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
@@ -242,7 +254,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                eq(topicFullName),
                                                                any()
                                                            );
-        sendRequestWithPayload(request, payload, 404, "Project1 not found.", ErrorResponse.class);
+        sendRequestWithPayload(request, payload, 404, "PROJECT(project1) not found", ErrorResponse.class);
     }
 
     @Test
@@ -322,7 +334,6 @@ public class ProduceHandlersTest extends ProduceTestBase {
         headers.add("aaa_multi_value1", "multi_value1_3");
         headers.add("bbb_multi_value1", "multi_value1_3");
         projectService = mock(ProjectService.class);
-        projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
@@ -334,12 +345,10 @@ public class ProduceHandlersTest extends ProduceTestBase {
         produceHandlers = new ProduceHandlers(
             producerService,
             preProduceHandler,
-            projectService,
-            varadhiTopicService,
-            orgService,
             metricHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
-            deployedRegion
+            deployedRegion,
+            projectCache
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 

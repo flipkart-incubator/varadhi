@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web;
 import static io.vertx.core.http.HttpMethod.*;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -10,6 +11,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import org.junit.jupiter.api.BeforeAll;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -42,6 +46,8 @@ public class WebTestBase {
     protected Router router;
     protected BodyHandler bodyHandler;
     protected FailureHandler failureHandler;
+    protected EntityReadCache<Project> projectCache;
+    protected EntityReadCache<VaradhiTopic> topicCache;
 
     protected static final int DEFAULT_PORT = 9090;
     protected static final String DEFAULT_HOST = "localhost";
@@ -59,6 +65,9 @@ public class WebTestBase {
     }
 
     public void setUp() throws InterruptedException {
+        projectCache = mock(EntityReadCache.class);
+        topicCache = mock(EntityReadCache.class);
+
         vertx = Vertx.vertx();
         router = Router.router(vertx);
         server = vertx.createHttpServer(getHttpServerOptions());

@@ -27,12 +27,15 @@ import com.flipkart.varadhi.common.exceptions.EventProcessingException;
 import com.flipkart.varadhi.controller.DefaultMetaStoreChangeListener;
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.vertx.core.Future;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.flipkart.varadhi.common.Constants.ENTITY_EVENTS_HANDLER;
 
 /**
  * The EventProcessor is responsible for distributing entity events to all nodes in the cluster
@@ -49,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @ExtensionMethod ({Extensions.LockExtensions.class})
-public final class EventProcessor implements EntityEventListener {
+public final class EntityEventProcessor implements EntityEventListener<MetaStoreEntity> {
 
     public static final String EVENT_SENDER_TASK_NAME_FORMAT = "event-sender-%s";
     public static final String EVENT_COMMITTER_TASK_NAME = "event-committer";
@@ -74,13 +77,13 @@ public final class EventProcessor implements EntityEventListener {
      * @param eventProcessorConfig Configuration for the event processor
      * @return A future that completes when the EventProcessor is fully initialized
      */
-    public static Future<EventProcessor> create(
+    public static Future<EntityEventProcessor> create(
         MessageExchange messageExchange,
         VaradhiClusterManager clusterManager,
         MetaStore metaStore,
         EventProcessorConfig eventProcessorConfig
     ) {
-        EventProcessor processor = new EventProcessor(messageExchange, eventProcessorConfig);
+        EntityEventProcessor processor = new EntityEventProcessor(messageExchange, eventProcessorConfig);
 
         processor.setupMembershipListener(clusterManager);
 
@@ -100,7 +103,7 @@ public final class EventProcessor implements EntityEventListener {
      * @param messageExchange      The message exchange for inter-node communication
      * @param eventProcessorConfig Configuration for the event processor, or default if null
      */
-    private EventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
+    private EntityEventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
         this.messageExchange = messageExchange;
         this.eventProcessorConfig = eventProcessorConfig != null ?
             eventProcessorConfig :
@@ -218,7 +221,7 @@ public final class EventProcessor implements EntityEventListener {
      * @throws IllegalStateException if the EventProcessor has been shut down
      */
     @Override
-    public void onChange(EntityEvent<?> event) {
+    public void onChange(EntityEvent<? extends MetaStoreEntity> event) {
         if (isShutdown.get()) {
             throw new IllegalStateException("Change Listener has been stopped");
         }
@@ -233,9 +236,7 @@ public final class EventProcessor implements EntityEventListener {
      * @param event          The entity event to enqueue
      */
     private void handle(EntityEvent<?> event) {
-        CompletableFuture<Void> promise = new CompletableFuture<>().thenAccept(r -> {
-            event.markAsProcessed();
-        });
+        CompletableFuture<Void> promise = new CompletableFuture<>().thenAccept(r -> event.markAsProcessed());
 
         membershipChangeLock.lockAndRun(() -> {
             Set<String> currentNodes = Set.copyOf(memberEventQueues.keySet());
@@ -372,7 +373,7 @@ public final class EventProcessor implements EntityEventListener {
         private String sendEvent(EntityEvent<?> event, String hostname) throws Exception {
 
             ClusterMessage message = ClusterMessage.of(event);
-            ResponseMessage response = messageExchange.request(hostname, "entity-events", message)
+            ResponseMessage response = messageExchange.request(hostname, ENTITY_EVENTS_HANDLER, message)
                                                       .orTimeout(
                                                           eventProcessorConfig.getClusterMemberTimeout().toMillis(),
                                                           TimeUnit.MILLISECONDS

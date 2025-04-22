@@ -64,6 +64,14 @@ public class AuthZProviderTests extends E2EBase {
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamAsh, 200);
         makeCreateRequest(getProjectCreateUri(), fkDefault, 200);
+
+        // Add a small delay to allow the project cache to be updated
+        try {
+            Thread.sleep(500); // 500ms delay
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         makeCreateRequest(getTopicsUri(fkDefault), fkTopic001, 200);
         bootstrapRoleBindings();
         setupProvider(checkpoint);
