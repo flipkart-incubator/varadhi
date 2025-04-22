@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.admin;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.utils.JsonMapper;
@@ -66,7 +65,7 @@ class TopicHandlersTest extends WebTestBase {
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        doReturn(Optional.of(project)).when(projectCache).getEntity(project.getName());
+        doReturn(project).when(projectCache).getOrThrow(project.getName());
 
         topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);
 

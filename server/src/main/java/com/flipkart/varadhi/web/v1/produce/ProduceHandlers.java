@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.common.EntityReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Message;
@@ -89,15 +88,7 @@ public class ProduceHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project project = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT))
-                                      .orElseThrow(
-                                          () -> new ResourceNotFoundException(
-                                              String.format(
-                                                  "PROJECT(%s) not found",
-                                                  ctx.request().getParam(PATH_PARAM_PROJECT)
-                                              )
-                                          )
-                                      );
+        Project project = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
         return Map.of(
             ResourceType.TOPIC,
             new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))

@@ -37,7 +37,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
@@ -245,7 +244,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testProduceForNonexistingProject() throws InterruptedException {
-        doReturn(Optional.empty()).when(projectCache).getEntity("project1");
+        doThrow(new ResourceNotFoundException("PROJECT(project1) not found")).when(projectCache).getOrThrow("project1");
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));

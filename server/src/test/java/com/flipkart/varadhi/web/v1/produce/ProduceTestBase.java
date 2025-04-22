@@ -18,8 +18,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Optional;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
@@ -75,6 +73,6 @@ public class ProduceTestBase extends WebTestBase {
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
         Project project = Project.of("project1", "description", "team1", "org1");
-        doReturn(Optional.of(project)).when(projectCache).getEntity("project1");
+        doReturn(project).when(projectCache).getOrThrow("project1");
     }
 }

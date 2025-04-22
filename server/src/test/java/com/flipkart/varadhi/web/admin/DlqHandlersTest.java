@@ -25,7 +25,6 @@ import org.mockito.ArgumentCaptor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -75,7 +74,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(Optional.of(PROJECT)).when(projectCache).getEntity(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -304,7 +303,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(Optional.of(PROJECT)).when(projectCache).getEntity(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }
