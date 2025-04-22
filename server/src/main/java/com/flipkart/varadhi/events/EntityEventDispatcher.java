@@ -1,21 +1,28 @@
 package com.flipkart.varadhi.events;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import com.flipkart.varadhi.cluster.MessageRouter;
+import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.common.EntityReadCacheRegistry;
 import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EntityEventListener;
 import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import static com.flipkart.varadhi.common.Constants.ENTITY_EVENTS_HANDLER;
 
 /**
  * A lean dispatcher for entity events to appropriate listeners.
@@ -127,44 +134,27 @@ public final class EntityEventDispatcher {
         };
     }
 
-    /**
-     * Builder for creating an EntityEventDispatcher with various listeners.
-     */
-    public static class Builder {
+    public static void bindToClusterEntityEvents(
+        Vertx vertx,
+        MemberInfo memberInfo,
+        VaradhiClusterManager clusterManager,
+        EntityReadCacheRegistry cacheRegistry
+    ) {
+        String hostname = memberInfo.hostname();
+        EntityEventDispatcher dispatcher = build(cacheRegistry);
+        int listenersAdded = dispatcher.supportedTypes.size();
 
-        private final Map<ResourceType, EntityEventListener<?>> listeners = new EnumMap<>(ResourceType.class);
+        MessageRouter messageRouter = clusterManager.getRouter(vertx);
+        messageRouter.requestHandler(hostname, ENTITY_EVENTS_HANDLER, dispatcher::processEvent);
 
-        /**
-         * Registers a listener for a specific resource type.
-         * <p>
-         * If a listener is already registered for the specified resource type,
-         * it will be replaced with the new listener.
-         *
-         * @param resourceType the resource type to register the listener for
-         * @param listener     the listener to register
-         * @param <T>          the type of resource the listener handles, must extend MetaStoreEntity
-         * @throws NullPointerException if resourceType or listener is null
-         */
-        public <T extends MetaStoreEntity> void withListener(
-            ResourceType resourceType,
-            EntityEventListener<T> listener
-        ) {
-            Objects.requireNonNull(resourceType, "Resource type cannot be null");
-            Objects.requireNonNull(listener, "Listener cannot be null");
-            listeners.put(resourceType, listener);
-        }
+        log.info("Entity event handlers initialized with {} listeners", listenersAdded);
+    }
 
-        /**
-         * Builds a new EntityEventDispatcher with the registered listeners.
-         *
-         * @return a new EntityEventDispatcher
-         * @throws IllegalStateException if no listeners are registered
-         */
-        public EntityEventDispatcher build() {
-            if (listeners.isEmpty()) {
-                throw new IllegalStateException("At least one listener must be registered");
-            }
-            return new EntityEventDispatcher(listeners);
-        }
+    static EntityEventDispatcher build(EntityReadCacheRegistry cacheRegistry) {
+        return new EntityEventDispatcher(
+            cacheRegistry.getRegisteredResourceTypes()
+                         .stream()
+                         .collect(Collectors.toMap(Function.identity(), cacheRegistry::getCache))
+        );
     }
 }

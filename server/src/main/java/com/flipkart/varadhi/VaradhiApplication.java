@@ -17,7 +17,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.events.EntityEventManager;
+import com.flipkart.varadhi.events.EntityEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -196,12 +196,8 @@ public class VaradhiApplication {
             // Register preloaded caches
             registry.register(ResourceType.PROJECT, projectCacheFuture.result());
             registry.register(ResourceType.TOPIC, topicCacheFuture.result());
-
+            EntityEventDispatcher.bindToClusterEntityEvents(vertx, memberInfo, clusterManager, registry);
             return registry;
-        }).compose(reg -> {
-            // Create and initialize entity event manager
-            EntityEventManager entityEventManager = new EntityEventManager(reg, clusterManager, memberInfo, vertx);
-            return entityEventManager.initialize().map(v -> reg);
         });
     }
 
