@@ -7,7 +7,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -78,19 +78,22 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      * @param <T> the entity type managed by the cache
      * @param resourceType the type of resource managed by this provider
      * @param entityLoader the strategy for loading entities
+     * @param vertx the Vert.x instance to use for non-blocking operations
      * @return a future that completes with the created and preloaded cache
      * @throws NullPointerException if any parameter is null
      */
     public static <T extends MetaStoreEntity> Future<EntityReadCache<T>> create(
         ResourceType resourceType,
-        Supplier<List<T>> entityLoader
+        Supplier<List<T>> entityLoader,
+        Vertx vertx
     ) {
         Objects.requireNonNull(resourceType, "Resource type cannot be null");
         Objects.requireNonNull(entityLoader, "Entity loader cannot be null");
+        Objects.requireNonNull(vertx, "Vertx instance cannot be null");
 
         EntityReadCache<T> cache = new EntityReadCache<>(resourceType, entityLoader);
 
-        return cache.preload().map(v -> cache);
+        return cache.preload(vertx).map(v -> cache);
     }
 
     /**
@@ -101,27 +104,22 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      * <p>
      * The operation is performed asynchronously and returns a {@link Future} that
      * completes when the preload operation is finished.
+     * <p>
+     * This implementation uses Vert.x's executeBlocking to avoid blocking the event loop
+     * during the potentially expensive entity loading operation.
      *
+     * @param vertx the Vert.x instance to use for non-blocking operations
      * @return a future that completes when the preload operation is finished
      */
-    private Future<Void> preload() {
-        Promise<Void> promise = Promise.promise();
+    private Future<Void> preload(Vertx vertx) {
+        log.info("Preloading {}", resourceType);
 
-        try {
-            log.info("Preloading {}", resourceType);
-            List<T> entityList = entityLoader.get();
-
+        return vertx.executeBlocking(entityLoader::get, false).<Void>map(entityList -> {
             Map<String, T> entityMap = entityList.stream().collect(Collectors.toMap(T::getName, Function.identity()));
-
             entities.putAll(entityMap);
             log.info("Preloaded {} {}", entityList.size(), resourceType);
-            promise.complete();
-        } catch (Exception e) {
-            log.error("Failed to preload {}: {}", resourceType, e.getMessage());
-            promise.fail(e);
-        }
-
-        return promise.future();
+            return null;
+        }).onFailure(e -> log.error("Failed to preload {}: {}", resourceType, e.getMessage()));
     }
 
     /**
@@ -139,12 +137,12 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      *
      * @param name the name of the entity to get. Must not be null.
      * @return the entity with the given name.
-     * @throws com.flipkart.varadhi.common.exceptions.ResourceNotFoundException if the entity is not found
+     * @throws ResourceNotFoundException if the entity is not found
      */
     public T getOrThrow(String name) {
         T entity = entities.get(name);
         if (entity == null) {
-            throw new ResourceNotFoundException("%s(%s) not found".formatted(resourceType, name));
+            throw new ResourceNotFoundException("%s(%s) not found".formatted(resourceType.name(), name));
         }
         return entity;
     }
@@ -156,7 +154,7 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      * It processes events based on their operation type:
      * <ul>
      *   <li>{@link EventType#UPSERT}: Adds or updates an entity in the cache if the event version
-     *      is greater than or equal to the current cached entity's version</li>
+     *      is greater than the current cached entity's version</li>
      *   <li>{@link EventType#INVALIDATE}: Removes an entity from the cache</li>
      * </ul>
      *
@@ -170,10 +168,12 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
         if (operation == EventType.UPSERT) {
             T entity = event.resource();
             if (entity != null) {
-                T existingEntity = entities.get(entityName);
-                if (existingEntity == null || event.version() > existingEntity.getVersion()) {
-                    entities.put(entityName, entity);
-                }
+                entities.compute(entityName, (key, existingEntity) -> {
+                    if (existingEntity == null || event.version() > existingEntity.getVersion()) {
+                        return entity;
+                    }
+                    return existingEntity;
+                });
             }
         } else if (operation == EventType.INVALIDATE) {
             entities.remove(entityName);
