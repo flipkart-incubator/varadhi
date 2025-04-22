@@ -103,7 +103,7 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      *
      * @return a future that completes when the preload operation is finished
      */
-    public Future<Void> preload() {
+    private Future<Void> preload() {
         Promise<Void> promise = Promise.promise();
 
         try {
