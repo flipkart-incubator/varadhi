@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.authn;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;

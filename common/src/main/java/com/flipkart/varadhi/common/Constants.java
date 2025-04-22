@@ -50,6 +50,31 @@ public class Constants {
     }
 
 
+    public static class MethodNames {
+        public static final String GET = "GET";
+        public static final String CREATE = "CREATE";
+        public static final String UPDATE = "UPDATE";
+        public static final String DELETE = "DELETE";
+        public static final String LIST = "LIST";
+
+        public static final String SET = "SET";
+
+        public static final String RESTORE = "RESTORE";
+
+        public static final String UNSIDELINE = "UNSIDELINE";
+        public static final String LIST_MESSAGES = "LIST_MESSAGES";
+
+        public static final String START = "START";
+        public static final String STOP = "STOP";
+
+        public static final String LIST_PROJECTS = "LIST_PROJECTS";
+
+        private MethodNames() {
+            // Private constructor to prevent instantiation
+        }
+    }
+
+
     /**
      * QueryParams class contains constants for various query parameters.
      * This class is not meant to be instantiated.

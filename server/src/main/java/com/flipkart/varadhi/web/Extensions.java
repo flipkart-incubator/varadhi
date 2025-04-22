@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -182,9 +181,7 @@ public class Extensions {
         public static Map<String, String> getRequestAttributes(RoutingContext ctx) {
             Map<String, String> requestAttributes = new HashMap<>();
             Map<ResourceType, ResourceHierarchy> empty = Map.of();
-            ctx.get(RESOURCE_HIERARCHY, empty)
-               .values()
-               .forEach(h -> requestAttributes.putAll(h.getAttributes()));
+            ctx.get(RESOURCE_HIERARCHY, empty).values().forEach(h -> requestAttributes.putAll(h.getAttributes()));
             return requestAttributes;
         }
     }
