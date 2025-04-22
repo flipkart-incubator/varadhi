@@ -170,7 +170,7 @@ public class SubscriptionHandlers implements RouteProvider {
         Project subscriptionProject = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(REQUEST_BODY);
-            Project topicProject = projectService.getProject(subscriptionResource.getTopicProject());
+            Project topicProject = projectCache.getOrThrow(subscriptionResource.getTopicProject());
 
             return Map.ofEntries(
                 Map.entry(

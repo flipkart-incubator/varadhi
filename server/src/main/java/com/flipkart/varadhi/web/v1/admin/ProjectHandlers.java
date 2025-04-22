@@ -70,7 +70,7 @@ public class ProjectHandlers implements RouteProvider {
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = hasBody ?
             ctx.get(REQUEST_BODY) :
-            projectService.getCachedProject(ctx.request().getParam(PATH_PARAM_PROJECT));
+            projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
 
         return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(project));
     }
