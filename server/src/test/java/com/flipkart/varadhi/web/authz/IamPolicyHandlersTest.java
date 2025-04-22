@@ -44,19 +44,17 @@ public class IamPolicyHandlersTest extends WebTestBase {
         iamPolicyHandlers = new IamPolicyHandlers(projectService, iamPolicyService);
 
         Route routeGetIamPolicy = router.get(AUTHZ_ORG_POLICY)
-                                        .handler(wrapBlocking(iamPolicyHandlers.getIamPolicyHandler(ResourceType.ORG)));
+                                        .handler(wrapBlocking(iamPolicyHandlers.get(ResourceType.ORG)));
         setupFailureHandler(routeGetIamPolicy);
 
         Route routeSetIamPolicy = router.put(AUTHZ_ORG_POLICY)
                                         .handler(bodyHandler)
-                                        .handler(wrapBlocking(iamPolicyHandlers.setIamPolicyHandler(ResourceType.ORG)));
+                                        .handler(wrapBlocking(iamPolicyHandlers.set(ResourceType.ORG)));
         setupFailureHandler(routeSetIamPolicy);
 
         Route routeDelIamPolicy = router.delete(AUTHZ_ORG_POLICY)
                                         .handler(bodyHandler)
-                                        .handler(
-                                            wrapBlocking(iamPolicyHandlers.deleteIamPolicyHandler(ResourceType.ORG))
-                                        );
+                                        .handler(wrapBlocking(iamPolicyHandlers.delete(ResourceType.ORG)));
         setupFailureHandler(routeDelIamPolicy);
     }
 

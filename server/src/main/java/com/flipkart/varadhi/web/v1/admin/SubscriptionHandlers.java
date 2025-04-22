@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -56,7 +58,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
-    public static final String API_NAME = "SubscriptionHandlers";
+    private static final String API_NAME = "SUBSCRIPTION";
 
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
@@ -103,38 +105,38 @@ public class SubscriptionHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions",
             List.of(
-                RouteDefinition.get("list", API_NAME, "")
+                RouteDefinition.get(LIST, API_NAME, "")
                                .authorize(SUBSCRIPTION_LIST)
                                .build(this::getHierarchies, this::list),
-                RouteDefinition.get("get", API_NAME, "/:subscription")
+                RouteDefinition.get(GET, API_NAME, "/:subscription")
                                .authorize(SUBSCRIPTION_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("create", API_NAME, "")
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_CREATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("update", API_NAME, "/:subscription")
+                RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setSubscription)
                                .authorize(SUBSCRIPTION_UPDATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("delete", API_NAME, "/:subscription")
+                RouteDefinition.delete(DELETE, API_NAME, "/:subscription")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_DELETE)
                                .build(this::getHierarchies, this::delete),
-                RouteDefinition.patch("restore", API_NAME, "/:subscription/restore")
+                RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::restore),
-                RouteDefinition.post("start", API_NAME, "/:subscription/start")
+                RouteDefinition.post(START, API_NAME, "/:subscription/start")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::start),
-                RouteDefinition.post("stop", API_NAME, "/:subscription/stop")
+                RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .build(this::getHierarchies, this::stop)

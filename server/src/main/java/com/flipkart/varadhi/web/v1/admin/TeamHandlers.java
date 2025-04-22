@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -25,7 +27,8 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class TeamHandlers implements RouteProvider {
-    public static final String API_NAME = "Team";
+    private static final String API_NAME = "TEAM";
+
     private final TeamService teamService;
 
     public TeamHandlers(TeamService teamService) {
@@ -37,21 +40,17 @@ public class TeamHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs/:org/teams",
             List.of(
-                RouteDefinition.get("list", API_NAME, "")
-                               .authorize(TEAM_LIST)
-                               .build(this::getHierarchies, this::listTeams),
-                RouteDefinition.get("list", API_NAME, "/:team/projects")
+                RouteDefinition.get(LIST, API_NAME, "").authorize(TEAM_LIST).build(this::getHierarchies, this::list),
+                RouteDefinition.get(LIST_PROJECTS, API_NAME, "/:team/projects")
                                .authorize(PROJECT_LIST)
                                .build(this::getHierarchies, this::listProjects),
-                RouteDefinition.get("get", API_NAME, "/:team")
-                               .authorize(TEAM_GET)
-                               .build(this::getHierarchies, this::get),
-                RouteDefinition.post("create", API_NAME, "")
+                RouteDefinition.get(GET, API_NAME, "/:team").authorize(TEAM_GET).build(this::getHierarchies, this::get),
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setTeam)
                                .authorize(TEAM_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("delete", API_NAME, "/:team")
+                RouteDefinition.delete(DELETE, API_NAME, "/:team")
                                .authorize(TEAM_DELETE)
                                .build(this::getHierarchies, this::delete)
             )
@@ -77,7 +76,7 @@ public class TeamHandlers implements RouteProvider {
     }
 
 
-    public void listTeams(RoutingContext ctx) {
+    public void list(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         List<Team> teams = teamService.getTeams(orgName);
         ctx.endApiWithResponse(teams);

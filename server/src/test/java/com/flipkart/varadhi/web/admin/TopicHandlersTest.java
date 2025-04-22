@@ -87,7 +87,7 @@ class TopicHandlersTest extends WebTestBase {
 
         router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
 
-        router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
+        router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::list));
 
         router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
 
@@ -153,7 +153,7 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     @Test
-    void listTopics_WithTopicsAvailable_ShouldReturnAllTopics() throws InterruptedException {
+    void listTopics_WithTopicsAvailable_ShouldReturnAll() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
@@ -167,7 +167,7 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     @Test
-    void listTopics_WithIncludeInactive_ShouldReturnAllTopicsIncludingInactive() throws InterruptedException {
+    void listTopics_WithIncludeInactive_ShouldReturnAllIncludingInactive() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), true);

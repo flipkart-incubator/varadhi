@@ -80,14 +80,8 @@ public class AuthorizationHandlerBuilder {
                 return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set"));
             }
 
-            return provider.isSuperAdmin(userContext).compose(authorized -> {
-                if (Boolean.TRUE.equals(authorized)) {
-                    return Future.succeededFuture();
-                } else {
-                    String resourcePath = resourceHierarchy.getResourcePath();
-                    return authorizedInternal(userContext, authorizationOnAction, resourcePath);
-                }
-            });
+            String resourcePath = resourceHierarchy.getResourcePath();
+            return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }
     }
 }
