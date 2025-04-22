@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.LIST_MESSAGES;
+import static com.flipkart.varadhi.common.Constants.MethodNames.UNSIDELINE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT;
@@ -41,6 +43,8 @@ import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscrip
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class DlqHandlers implements RouteProvider {
+    private static final String API_NAME = "DLQ";
+
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
     private final EntityReadCache<Project> projectCache;
@@ -61,18 +65,18 @@ public class DlqHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions/:subscription/dlq/messages",
             List.of(
-                RouteDefinition.post("Unsideline", "/unsideline")
+                RouteDefinition.post(UNSIDELINE, API_NAME, "/unsideline")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setUnsidelineRequest)
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::enqueueUnsideline),
-                RouteDefinition.get("GetMessages", "")
+                RouteDefinition.get(LIST_MESSAGES, API_NAME, "")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
-                               .build(this::getHierarchies, this::getMessages)
+                               .authorize(TOPIC_SUBSCRIBE)
+                               .build(this::getHierarchies, this::listMessages)
             )
         ).get();
     }
@@ -114,7 +118,7 @@ public class DlqHandlers implements RouteProvider {
         ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
-    public void getMessages(RoutingContext ctx) {
+    public void listMessages(RoutingContext ctx) {
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String limitStr = ctx.request().getParam("limit");
         int limit = limitStr == null ?

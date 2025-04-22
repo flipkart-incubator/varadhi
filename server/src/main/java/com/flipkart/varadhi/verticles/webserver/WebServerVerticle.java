@@ -75,6 +75,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RoutingContextExtension.class})
@@ -120,6 +122,8 @@ public class WebServerVerticle extends AbstractVerticle {
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
 
+    private List<Pattern> disableAPIPatterns;
+
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
      *
@@ -142,6 +146,11 @@ public class WebServerVerticle extends AbstractVerticle {
         this.tracer = services.getTracer("varadhi");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
         this.cacheRegistry = cacheRegistry;
+
+        this.disableAPIPatterns = configuration.getDisabledAPIs()
+                .stream()
+                .map(Pattern::compile)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -311,9 +320,16 @@ public class WebServerVerticle extends AbstractVerticle {
         routeDefinitions.addAll(getAdminApiRoutes());
         routeDefinitions.addAll(getProduceApiRoutes());
 
+        routeDefinitions = routeDefinitions.stream().filter(this::isRouteEnabled).toList();
+
         // Configure all routes
         configureApiRoutes(router, routeDefinitions);
         return router;
+    }
+
+    private boolean isRouteEnabled(RouteDefinition routeDefinition) {
+        return this.disableAPIPatterns.stream()
+                .noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
     }
 
     /**

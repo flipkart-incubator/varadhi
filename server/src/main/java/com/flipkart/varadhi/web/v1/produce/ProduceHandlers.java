@@ -47,6 +47,7 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
 public class ProduceHandlers implements RouteProvider {
+    private static final String API_NAME = "TOPIC";
     private final ProducerService producerService;
     private final Handler<RoutingContext> preProduceHandler;
     private final ProducerMetricHandler metricHandler;
@@ -76,7 +77,7 @@ public class ProduceHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project",
             List.of(
-                RouteDefinition.post("Produce", "/topics/:topic/produce")
+                RouteDefinition.post("produce", API_NAME, "/topics/:topic/produce")
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()

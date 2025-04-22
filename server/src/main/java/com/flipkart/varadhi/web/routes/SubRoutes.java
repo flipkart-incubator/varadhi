@@ -9,7 +9,8 @@ public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implem
         return subRoutes.stream()
                         .map(
                             r -> new RouteDefinition(
-                                r.getName(),
+                                r.getMethodName(),
+                                r.getApiName(),
                                 r.getMethod(),
                                 basePath + r.getPath(),
                                 r.getBehaviours(),

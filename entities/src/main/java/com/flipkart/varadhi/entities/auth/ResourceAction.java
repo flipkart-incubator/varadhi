@@ -46,9 +46,9 @@ public enum ResourceAction {
     TOPIC_CREATE(ResourceType.TOPIC, Action.CREATE), TOPIC_UPDATE(ResourceType.TOPIC, Action.UPDATE), TOPIC_DELETE(
         ResourceType.TOPIC,
         Action.DELETE
-    ), TOPIC_GET(ResourceType.TOPIC, Action.GET), TOPIC_LIST(ResourceType.PROJECT, Action.LIST), TOPIC_CONSUME(
+    ), TOPIC_GET(ResourceType.TOPIC, Action.GET), TOPIC_LIST(ResourceType.PROJECT, Action.LIST), TOPIC_SUBSCRIBE(
         ResourceType.TOPIC,
-        Action.CONSUME
+        Action.SUBSCRIBE
     ), TOPIC_PRODUCE(ResourceType.TOPIC, Action.PRODUCE),
 
     /**
@@ -96,9 +96,9 @@ public enum ResourceAction {
     @Getter
     @RequiredArgsConstructor
     public enum Action {
-        CREATE("create"), UPDATE("update"), DELETE("delete"), GET("get"), LIST("list"), MIGRATE("migrate"), CONSUME(
-            "consume"
-        ), PRODUCE("produce"), SEEK("seek"), SET("set");
+        CREATE("create"), UPDATE("update"), DELETE("delete"), GET("get"), LIST("list"), MIGRATE("migrate"), PRODUCE(
+            "produce"
+        ), SEEK("seek"), SET("set"), SUBSCRIBE("subscribe");
 
         /**
          * The name of the action.

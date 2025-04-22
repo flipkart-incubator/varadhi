@@ -13,8 +13,6 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,14 +22,9 @@ import static java.net.HttpURLConnection.*;
 @Slf4j
 public class AuthorizationHandlerBuilder {
 
-    private final List<String> superUsers = new ArrayList<>();
-
     private final AuthorizationProvider provider;
 
-    public AuthorizationHandlerBuilder(List<String> superUsers, AuthorizationProvider provider) {
-        if (superUsers != null) {
-            this.superUsers.addAll(superUsers);
-        }
+    public AuthorizationHandlerBuilder(AuthorizationProvider provider) {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
     }
 
@@ -87,9 +80,6 @@ public class AuthorizationHandlerBuilder {
                 return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set"));
             }
 
-            if (superUsers.contains(userContext.getSubject())) {
-                return Future.succeededFuture();
-            }
             String resourcePath = resourceHierarchy.getResourcePath();
             return authorizedInternal(userContext, authorizationOnAction, resourcePath);
         }

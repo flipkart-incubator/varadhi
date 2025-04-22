@@ -18,7 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
+
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_DELETE;
@@ -28,6 +31,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_UPDATE;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class ProjectHandlers implements RouteProvider {
+    private static final String API_NAME = "PROJECT";
     private final ProjectService projectService;
     private final EntityReadCache<Project> projectCache;
 
@@ -41,20 +45,20 @@ public class ProjectHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects",
             List.of(
-                RouteDefinition.get("GetProject", "/:project")
+                RouteDefinition.get(GET, API_NAME, "/:project")
                                .authorize(PROJECT_GET)
                                .build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateProject", "")
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setProject)
                                .authorize(PROJECT_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.put("UpdateProject", "")
+                RouteDefinition.put(UPDATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setProject)
                                .authorize(PROJECT_UPDATE)
                                .build(this::getHierarchies, this::update),
-                RouteDefinition.delete("DeleteProject", "/:project")
+                RouteDefinition.delete(DELETE, API_NAME, "/:project")
                                .authorize(PROJECT_DELETE)
                                .build(this::getHierarchies, this::delete)
             )

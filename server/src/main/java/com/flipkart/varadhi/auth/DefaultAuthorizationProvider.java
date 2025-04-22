@@ -97,6 +97,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         if (!initialised) {
             throw new IllegalStateException("Default Authorization Provider is not initialised.");
         }
+
+        if (Boolean.TRUE.equals(isSuperAdmin(userContext))) {
+            return Future.succeededFuture(true);
+        }
+
         List<Pair<ResourceType, ResourceContext>> leafToRootResourceIds = generateResourceContextHierarchy(
             action,
             resource
@@ -266,6 +271,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
                 );
             }
         }
+    }
+
+    private Boolean isSuperAdmin(UserContext userContext) {
+        return this.configuration.getSuperUsers().contains(userContext.getSubject());
     }
 
     private record ResourceContext(ResourceType resourceType, String resourceId, String policyPath) {

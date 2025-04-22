@@ -12,15 +12,13 @@ import org.apache.commons.lang3.StringUtils;
 
 public class AuthzHandler implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
-    private final SuperUserHandler superUserHandler;
 
     public AuthzHandler(AppConfiguration configuration, ConfigFileResolver resolver) throws InvalidConfigException {
-        if (configuration.isAuthorizationEnabled()) {
+        if (configuration.getAuthorization().isEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver);
         } else {
             authorizationHandlerBuilder = null;
         }
-        superUserHandler = new SuperUserHandler(configuration);
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
@@ -28,19 +26,15 @@ public class AuthzHandler implements RouteConfigurator {
             routeDef.getAuthorizeOnActions()
                     .forEach(action -> route.handler(authorizationHandlerBuilder.build(action)));
         }
-        superUserHandler.configure(route, routeDef);
     }
 
     AuthorizationHandlerBuilder createAuthorizationHandler(
         AppConfiguration configuration,
         ConfigFileResolver resolver
     ) {
-        if (configuration.isAuthorizationEnabled()) {
+        if (configuration.getAuthorization().isEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(configuration, resolver);
-            return new AuthorizationHandlerBuilder(
-                configuration.getAuthorization().getSuperUsers(),
-                authorizationProvider
-            );
+            return new AuthorizationHandlerBuilder(authorizationProvider);
         } else {
             return null;
         }

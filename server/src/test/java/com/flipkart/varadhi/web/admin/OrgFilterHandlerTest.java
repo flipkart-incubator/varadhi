@@ -35,7 +35,7 @@ public class OrgFilterHandlerTest extends WebTestBase {
         orgFilterHandler = new OrgFilterHandler(orgService);
 
         // Register filter endpoints under /v1/orgs/:org/filters
-        Route routeGetFilters = router.get("/v1/orgs/:org/filters").handler(wrapBlocking(orgFilterHandler::getAll));
+        Route routeGetFilters = router.get("/v1/orgs/:org/filters").handler(wrapBlocking(orgFilterHandler::list));
         setupFailureHandler(routeGetFilters);
         Route routeGetFilterByName = router.get("/v1/orgs/:org/filters/:orgFilterName")
                                            .handler(wrapBlocking(orgFilterHandler::get));
@@ -69,7 +69,7 @@ public class OrgFilterHandlerTest extends WebTestBase {
     }
 
     @Test
-    public void testGetAll() throws Exception {
+    public void testList() throws Exception {
         String orgName = "org1";
         Map<String, Condition> conditionMap = new HashMap<>();
         conditionMap.put("filterA", new StringConditions.ExistsCondition("X_abc"));

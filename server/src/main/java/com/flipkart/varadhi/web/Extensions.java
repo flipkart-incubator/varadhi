@@ -182,6 +182,7 @@ public class Extensions {
         public static Map<String, String> getRequestAttributes(RoutingContext ctx) {
             Map<String, String> requestAttributes = new HashMap<>();
             Map<ResourceType, ResourceHierarchy> empty = Map.of();
+
             ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY, empty)
                .values()
                .forEach(h -> requestAttributes.putAll(h.getAttributes()));
