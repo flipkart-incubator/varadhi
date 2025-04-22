@@ -288,25 +288,18 @@ public class WebServerVerticle extends AbstractVerticle {
      */
     private Future<Void> startHttpServer() {
         Promise<Void> promise = Promise.promise();
-
-        try {
-            Router router = createApiRouter();
-            httpServer = vertx.createHttpServer(configuration.getHttpServerOptions())
-                              .requestHandler(router)
-                              .listen(result -> {
-                                  if (result.succeeded()) {
-                                      log.info("HttpServer started on port {}", result.result().actualPort());
-                                      promise.complete();
-                                  } else {
-                                      log.error("HttpServer start failed: {}", result.cause().getMessage());
-                                      promise.fail(result.cause());
-                                  }
-                              });
-        } catch (Exception e) {
-            log.error("Failed to start HTTP server", e);
-            promise.fail(e);
-        }
-
+        Router router = createApiRouter();
+        httpServer = vertx.createHttpServer(configuration.getHttpServerOptions())
+                .requestHandler(router)
+                .listen(result -> {
+                    if (result.succeeded()) {
+                        log.info("HttpServer started on port {}", result.result().actualPort());
+                        promise.complete();
+                    } else {
+                        log.error("HttpServer start failed: {}", result.cause().getMessage());
+                        promise.fail(result.cause());
+                    }
+                });
         return promise.future();
     }
 
