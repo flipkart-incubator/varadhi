@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
@@ -117,7 +118,12 @@ public class TopicHandlers implements RouteProvider {
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectCache.getEntity(projectName);
+        Project project = projectCache.getEntity(projectName)
+                                      .orElseThrow(
+                                          () -> new ResourceNotFoundException(
+                                              String.format("PROJECT(%s) not found", projectName)
+                                          )
+                                      );
 
         if (hasBody) {
             TopicResource topicResource = ctx.get(CONTEXT_KEY_BODY);
@@ -158,7 +164,12 @@ public class TopicHandlers implements RouteProvider {
 
         validateProjectName(projectName, topicResource);
 
-        Project project = projectCache.getEntity(topicResource.getProject());
+        Project project = projectCache.getEntity(topicResource.getProject())
+                                      .orElseThrow(
+                                          () -> new ResourceNotFoundException(
+                                              String.format("PROJECT(%s) not found", topicResource.getProject())
+                                          )
+                                      );
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic, project);

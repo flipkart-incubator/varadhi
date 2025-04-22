@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
@@ -83,11 +84,21 @@ public class DlqHandlers implements RouteProvider {
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectCache.getEntity(projectName);
+        Project project = projectCache.getEntity(projectName)
+                                      .orElseThrow(
+                                          () -> new ResourceNotFoundException(
+                                              String.format("PROJECT(%s) not found", projectName)
+                                          )
+                                      );
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getEntity(topicNameSegments[0]);
+        Project topicProject = projectCache.getEntity(topicNameSegments[0])
+                                           .orElseThrow(
+                                               () -> new ResourceNotFoundException(
+                                                   String.format("PROJECT(%s) not found", topicNameSegments[0])
+                                               )
+                                           );
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),

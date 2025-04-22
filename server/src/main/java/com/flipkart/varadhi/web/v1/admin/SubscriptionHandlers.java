@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.LifecycleStatus;
@@ -165,10 +166,26 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the map of resource types to their hierarchies
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project subscriptionProject = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT));
+        Project subscriptionProject = projectCache.getEntity(ctx.request().getParam(PATH_PARAM_PROJECT))
+                                                  .orElseThrow(
+                                                      () -> new ResourceNotFoundException(
+                                                          String.format(
+                                                              "PROJECT(%s) not found",
+                                                              ctx.request().getParam(PATH_PARAM_PROJECT)
+                                                          )
+                                                      )
+                                                  );
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(CONTEXT_KEY_BODY);
-            Project topicProject = projectCache.getEntity(subscriptionResource.getTopicProject());
+            Project topicProject = projectCache.getEntity(subscriptionResource.getTopicProject())
+                                               .orElseThrow(
+                                                   () -> new ResourceNotFoundException(
+                                                       String.format(
+                                                           "PROJECT(%s) not found",
+                                                           subscriptionResource.getTopicProject()
+                                                       )
+                                                   )
+                                               );
             return Map.ofEntries(
                 Map.entry(
                     ResourceType.SUBSCRIPTION,
@@ -184,7 +201,12 @@ public class SubscriptionHandlers implements RouteProvider {
 
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getEntity(topicNameSegments[0]);
+        Project topicProject = projectCache.getEntity(topicNameSegments[0])
+                                           .orElseThrow(
+                                               () -> new ResourceNotFoundException(
+                                                   String.format("PROJECT(%s) not found", topicNameSegments[0])
+                                               )
+                                           );
         String topicName = topicNameSegments[1];
 
         return Map.ofEntries(
@@ -232,7 +254,12 @@ public class SubscriptionHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
-        Project subProject = projectCache.getEntity(subscription.getProject());
+        Project subProject = projectCache.getEntity(subscription.getProject())
+                                         .orElseThrow(
+                                             () -> new ResourceNotFoundException(
+                                                 String.format("PROJECT(%s) not found", subscription.getProject())
+                                             )
+                                         );
 
         VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
             subscription,
@@ -287,7 +314,12 @@ public class SubscriptionHandlers implements RouteProvider {
         ctx.handleResponse(
             subscriptionService.deleteSubscription(
                 getSubscriptionFqn(ctx),
-                projectCache.getEntity(ctx.pathParam(PATH_PARAM_PROJECT)),
+                projectCache.getEntity(ctx.pathParam(PATH_PARAM_PROJECT))
+                            .orElseThrow(
+                                () -> new ResourceNotFoundException(
+                                    String.format("PROJECT(%s) not found", ctx.pathParam(PATH_PARAM_PROJECT))
+                                )
+                            ),
                 ctx.getIdentityOrDefault(),
                 deletionType,
                 actionRequest

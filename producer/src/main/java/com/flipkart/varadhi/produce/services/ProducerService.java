@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -124,13 +125,13 @@ public final class ProducerService {
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        VaradhiTopic topic = topicCache.getEntity(varadhiTopicName);
+        Optional<VaradhiTopic> topic = topicCache.getEntity(varadhiTopicName);
 
-        if (!topic.isActive()) {
+        if (topic.isEmpty() || !topic.get().isActive()) {
             throw new ResourceNotFoundException(String.format("Topic(%s) is not active.", varadhiTopicName));
         }
 
-        return produceToValidTopic(message, topic, metricsEmitter);
+        return produceToValidTopic(message, topic.get(), metricsEmitter);
     }
 
     /**
