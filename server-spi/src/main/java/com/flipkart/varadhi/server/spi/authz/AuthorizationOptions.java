@@ -3,12 +3,11 @@ package com.flipkart.varadhi.server.spi.authz;
 import com.flipkart.varadhi.spi.ConfigFile;
 import lombok.Data;
 
-import java.util.List;
 
 @Data
 public class AuthorizationOptions {
 
-    private List<String> superUsers;
+    private boolean enabled;
 
     /**
      * Fully qualified package path to the class implementing AuthorizationProvider interface.

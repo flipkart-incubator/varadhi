@@ -1,4 +1,8 @@
+
+
 ---
+superUsers: [ "thanos" ]
+
 metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.utils.MockMetaStoreProvider"
   configFile: ""

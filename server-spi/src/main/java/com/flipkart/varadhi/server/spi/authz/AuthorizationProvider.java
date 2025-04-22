@@ -20,7 +20,7 @@ public interface AuthorizationProvider {
 
         @Override
         public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-            return Future.succeededFuture(false);
+            return Future.succeededFuture(true);
         }
     }
 }

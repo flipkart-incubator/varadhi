@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.spi.ConfigFileResolver;
+
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
@@ -26,7 +27,6 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 public class AuthorizationHandlerTests {
 
     private final AuthorizationHandlerBuilder authzHandlerBuilder = new AuthorizationHandlerBuilder(
-        List.of("a", "b"),
         new TestAuthorizationProvider()
     );
 
@@ -73,7 +73,7 @@ public class AuthorizationHandlerTests {
 
         @Override
         public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-            if (List.of("superman", "manager", "architect").contains(userContext.getSubject())) {
+            if (List.of("a", "superman", "manager", "architect").contains(userContext.getSubject())) {
                 return Future.succeededFuture(true);
             } else if (List.of("alice", "bob", "intern").contains(userContext.getSubject()) && action.toString()
                                                                                                      .endsWith("get")) {

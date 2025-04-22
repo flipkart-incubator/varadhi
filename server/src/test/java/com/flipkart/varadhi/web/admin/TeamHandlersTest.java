@@ -47,7 +47,7 @@ public class TeamHandlersTest extends WebTestBase {
         setupFailureHandler(routeCreate);
         Route routeGet = router.get("/orgs/:org/teams/:team").handler(wrapBlocking(teamHandlers::get));
         setupFailureHandler(routeGet);
-        Route routeList = router.get("/orgs/:org/teams").handler(wrapBlocking(teamHandlers::listTeams));
+        Route routeList = router.get("/orgs/:org/teams").handler(wrapBlocking(teamHandlers::list));
         setupFailureHandler(routeList);
         Route routeProjectList = router.get("/orgs/:org/teams/:team/projects")
                                        .handler(wrapBlocking(teamHandlers::listProjects));
@@ -129,13 +129,13 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamsUrl(o1.getName()));
         doReturn(teamList).when(teamService).getTeams(o1.getName());
 
-        List<Team> teamListObtained = listTeams(request);
+        List<Team> teamListObtained = list(request);
         Assertions.assertEquals(teamList.size(), teamListObtained.size());
         Assertions.assertArrayEquals(teamList.toArray(), teamListObtained.toArray());
         verify(teamService, times(1)).getTeams(o1.getName());
     }
 
-    List<Team> listTeams(HttpRequest<Buffer> request) throws Exception {
+    List<Team> list(HttpRequest<Buffer> request) throws Exception {
         HttpResponse<Buffer> response = sendRequest(request, null);
         return jsonDeserialize(response.bodyAsString(), List.class, Team.class);
     }

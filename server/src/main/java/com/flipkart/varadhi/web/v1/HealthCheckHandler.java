@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1;
 
-
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -15,11 +14,14 @@ import lombok.experimental.ExtensionMethod;
 import java.util.List;
 import java.util.Map;
 
+import static com.flipkart.varadhi.common.Constants.MethodNames.GET;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 @ExtensionMethod ({RoutingContextExtension.class})
 public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvider {
+
+    private static final String API_NAME = "HEALTH_CHECK";
 
     // TODO: add appropriate checks
 
@@ -43,7 +45,7 @@ public class HealthCheckHandler implements Handler<RoutingContext>, RouteProvide
     @Override
     public List<RouteDefinition> get() {
         return List.of(
-            RouteDefinition.get("HealthCheck", "/v1/health-check")
+            RouteDefinition.get(GET, API_NAME, "/v1/health-check")
                            .unAuthenticated()
                            .logsDisabled()
                            .tracingDisabled()

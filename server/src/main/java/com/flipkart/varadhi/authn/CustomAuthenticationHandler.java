@@ -11,6 +11,7 @@ import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.server.spi.utils.OrgResolver;
 import com.flipkart.varadhi.server.spi.vo.URLDefinition;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -18,6 +19,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
+
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
