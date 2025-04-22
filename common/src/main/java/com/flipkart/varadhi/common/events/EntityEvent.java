@@ -19,6 +19,7 @@ public record EntityEvent<T>(
     String resourceName,
     EventType operation,
     T resource,
+    int version,
     @JsonIgnore Runnable commiter
 ) {
     /**
@@ -36,6 +37,9 @@ public record EntityEvent<T>(
         }
         if (operation == null) {
             throw new IllegalArgumentException("operation cannot be null");
+        }
+        if (version < 0) {
+            throw new IllegalArgumentException("version cannot be negative");
         }
     }
 

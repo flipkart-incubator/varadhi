@@ -146,9 +146,9 @@ public class WebServerVerticle extends AbstractVerticle {
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
         this.cacheRegistry = cacheRegistry;
         this.disableAPIPatterns = configuration.getDisabledAPIs()
-                .stream()
-                .map(Pattern::compile)
-                .collect(Collectors.toList());
+                                               .stream()
+                                               .map(Pattern::compile)
+                                               .collect(Collectors.toList());
     }
 
     /**
@@ -332,8 +332,7 @@ public class WebServerVerticle extends AbstractVerticle {
      * @return true if the route should be enabled, false otherwise
      */
     private boolean isRouteEnabled(RouteDefinition routeDefinition) {
-        return disableAPIPatterns.stream()
-                .noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
+        return disableAPIPatterns.stream().noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
     }
 
     /**

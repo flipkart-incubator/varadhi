@@ -59,25 +59,50 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                 case TOPIC -> {
                     VaradhiTopic topic = metaStore.topics().get(name);
                     log.debug("Retrieved topic {}, creating UPSERT event", name);
-                    listener.onChange(new EntityEvent<>(type, name, EventType.UPSERT, topic, event::markAsProcessed));
+                    listener.onChange(
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            topic,
+                            topic.getVersion(),
+                            event::markAsProcessed
+                        )
+                    );
                 }
                 case SUBSCRIPTION -> {
                     VaradhiSubscription subscription = metaStore.subscriptions().get(name);
                     log.debug("Retrieved subscription {}, creating UPSERT event", name);
                     listener.onChange(
-                        new EntityEvent<>(type, name, EventType.UPSERT, subscription, event::markAsProcessed)
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            subscription,
+                            subscription.getVersion(),
+                            event::markAsProcessed
+                        )
                     );
                 }
                 case PROJECT -> {
                     Project project = metaStore.projects().get(name);
                     log.debug("Retrieved project {}, creating UPSERT event", name);
-                    listener.onChange(new EntityEvent<>(type, name, EventType.UPSERT, project, event::markAsProcessed));
+                    listener.onChange(
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            project,
+                            project.getVersion(),
+                            event::markAsProcessed
+                        )
+                    );
                 }
                 default -> throw new IllegalArgumentException("Unsupported resource type: " + type);
             }
         } catch (ResourceNotFoundException e) {
             log.debug("Resource not found, creating INVALIDATE event for {} {}", type, name);
-            listener.onChange(new EntityEvent<>(type, name, EventType.INVALIDATE, null, event::markAsProcessed));
+            listener.onChange(new EntityEvent<>(type, name, EventType.INVALIDATE, null, 0, event::markAsProcessed));
         }
     }
 }

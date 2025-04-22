@@ -37,7 +37,7 @@ import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CONSUME;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j

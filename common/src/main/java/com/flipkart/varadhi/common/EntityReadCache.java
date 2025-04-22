@@ -141,7 +141,8 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
      * This method is thread-safe due to the underlying ConcurrentHashMap.
      * It processes events based on their operation type:
      * <ul>
-     *   <li>{@link EventType#UPSERT}: Adds or updates an entity in the cache</li>
+     *   <li>{@link EventType#UPSERT}: Adds or updates an entity in the cache if the event version
+     *      is greater than or equal to the current cached entity's version</li>
      *   <li>{@link EventType#INVALIDATE}: Removes an entity from the cache</li>
      * </ul>
      *
@@ -155,7 +156,10 @@ public class EntityReadCache<T extends MetaStoreEntity> implements EntityEventLi
         if (operation == EventType.UPSERT) {
             T entity = event.resource();
             if (entity != null) {
-                entities.put(entityName, entity);
+                T existingEntity = entities.get(entityName);
+                if (existingEntity == null || event.version() > existingEntity.getVersion()) {
+                    entities.put(entityName, entity);
+                }
             }
         } else if (operation == EventType.INVALIDATE) {
             entities.remove(entityName);

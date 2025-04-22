@@ -89,6 +89,7 @@ public final class EntityEventDispatcher {
                 rawEvent.resourceName(),
                 rawEvent.operation(),
                 typedResource,
+                rawEvent.version(),
                 rawEvent.commiter()
             );
 
