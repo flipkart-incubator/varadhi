@@ -117,12 +117,11 @@ public class WebServerVerticle extends AbstractVerticle {
     private final Tracer tracer;
     private final VerticleConfig verticleConfig;
     private final EntityReadCacheRegistry cacheRegistry;
+    private final List<Pattern> disableAPIPatterns;
 
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
-
-    private List<Pattern> disableAPIPatterns;
 
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
@@ -146,7 +145,6 @@ public class WebServerVerticle extends AbstractVerticle {
         this.tracer = services.getTracer("varadhi");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
         this.cacheRegistry = cacheRegistry;
-
         this.disableAPIPatterns = configuration.getDisabledAPIs()
                 .stream()
                 .map(Pattern::compile)
@@ -327,8 +325,14 @@ public class WebServerVerticle extends AbstractVerticle {
         return router;
     }
 
+    /**
+     * Determines if a route should be enabled based on configured disable patterns.
+     *
+     * @param routeDefinition the route definition to check
+     * @return true if the route should be enabled, false otherwise
+     */
     private boolean isRouteEnabled(RouteDefinition routeDefinition) {
-        return this.disableAPIPatterns.stream()
+        return disableAPIPatterns.stream()
                 .noneMatch(pattern -> pattern.matcher(routeDefinition.getName()).matches());
     }
 
