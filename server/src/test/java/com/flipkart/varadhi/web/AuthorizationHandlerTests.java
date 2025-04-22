@@ -37,8 +37,7 @@ public class AuthorizationHandlerTests {
 
         authzHandlerBuilder.build(ResourceAction.TOPIC_CREATE)
                            .authorize(testUser("a", false), new ProjectHierarchy(prj))
-                           .onComplete(testCtx.succeeding(v ->
-                                   checks.flag()));
+                           .onComplete(testCtx.succeeding(v -> checks.flag()));
 
         authzHandlerBuilder.build(ResourceAction.SUBSCRIPTION_DELETE)
                            .authorize(testUser("a", true), new SubscriptionHierarchy(prj, "s1"))
