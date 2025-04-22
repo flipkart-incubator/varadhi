@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG_FILTER_NAME;
@@ -58,7 +58,7 @@ public class OrgFilterHandler implements RouteProvider {
 
     public void setNamedFilter(RoutingContext ctx) {
         OrgFilters namedFilter = ctx.body().asPojo(OrgFilters.class);
-        ctx.put(CONTEXT_KEY_BODY, namedFilter);
+        ctx.put(REQUEST_BODY, namedFilter);
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
@@ -81,14 +81,14 @@ public class OrgFilterHandler implements RouteProvider {
 
     public void create(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
+        OrgFilters filter = ctx.get(REQUEST_BODY);
         OrgFilters createdFilter = orgService.createFilter(orgName, filter);
         ctx.endApiWithResponse(createdFilter);
     }
 
     public void update(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
-        OrgFilters filter = ctx.get(CONTEXT_KEY_BODY);
+        OrgFilters filter = ctx.get(REQUEST_BODY);
         orgService.updateFilter(orgName, filter);
         ctx.endApi();
     }

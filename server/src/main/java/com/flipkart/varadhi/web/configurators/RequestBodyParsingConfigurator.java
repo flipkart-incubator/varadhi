@@ -1,5 +1,6 @@
-package com.flipkart.varadhi.web;
+package com.flipkart.varadhi.web.configurators;
 
+import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.vertx.ext.web.Route;
@@ -9,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
-public class RequestBodyParser implements RouteConfigurator {
+public class RequestBodyParsingConfigurator implements RouteConfigurator {
 
     @Override
     public void configure(Route route, RouteDefinition routeDef) {

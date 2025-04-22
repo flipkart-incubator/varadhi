@@ -11,7 +11,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

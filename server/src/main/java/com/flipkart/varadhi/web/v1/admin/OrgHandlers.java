@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
@@ -53,12 +53,12 @@ public class OrgHandlers implements RouteProvider {
 
     public void setOrg(RoutingContext ctx) {
         Org org = ctx.body().asValidatedPojo(Org.class);
-        ctx.put(CONTEXT_KEY_BODY, org);
+        ctx.put(REQUEST_BODY, org);
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         if (hasBody) {
-            Org org = ctx.get(CONTEXT_KEY_BODY);
+            Org org = ctx.get(REQUEST_BODY);
             return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(org.getName()));
         }
         String org = ctx.request().getParam(PATH_PARAM_ORG);
@@ -81,7 +81,7 @@ public class OrgHandlers implements RouteProvider {
     }
 
     public void create(RoutingContext ctx) {
-        Org org = ctx.get(CONTEXT_KEY_BODY);
+        Org org = ctx.get(REQUEST_BODY);
         Org createdorg = orgService.createOrg(org);
         ctx.endApiWithResponse(createdorg);
     }

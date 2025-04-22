@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -28,7 +28,7 @@ public class BodyHandlerTest extends ProduceTestBase {
         super.setUp();
         bodyHandler.setBodyLimit(20);
         route.handler(bodyHandler).handler(ctx -> {
-            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
+            ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
         }).handler(produceHandlers::produce);
         setupFailureHandler(route);

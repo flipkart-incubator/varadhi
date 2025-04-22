@@ -50,10 +50,6 @@ authenticationOptions:
     - path: ^\\/v1\\/orgs\$
       methodList:
         - POST
-  whitelistedURLs:
-    - path: ^\\/v1\\/health-check\$
-      methodList:
-        - GET
 
 authorization:
   enabled: true
