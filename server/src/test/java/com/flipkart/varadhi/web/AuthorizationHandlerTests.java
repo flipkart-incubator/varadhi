@@ -37,7 +37,8 @@ public class AuthorizationHandlerTests {
 
         authzHandlerBuilder.build(ResourceAction.TOPIC_CREATE)
                            .authorize(testUser("a", false), new ProjectHierarchy(prj))
-                           .onComplete(testCtx.succeeding(v -> checks.flag()));
+                           .onComplete(testCtx.succeeding(v ->
+                                   checks.flag()));
 
         authzHandlerBuilder.build(ResourceAction.SUBSCRIPTION_DELETE)
                            .authorize(testUser("a", true), new SubscriptionHierarchy(prj, "s1"))
@@ -73,7 +74,7 @@ public class AuthorizationHandlerTests {
 
         @Override
         public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-            if (List.of("superman", "manager", "architect").contains(userContext.getSubject())) {
+            if (List.of("a", "superman", "manager", "architect").contains(userContext.getSubject())) {
                 return Future.succeededFuture(true);
             } else if (List.of("alice", "bob", "intern").contains(userContext.getSubject()) && action.toString()
                                                                                                      .endsWith("get")) {
