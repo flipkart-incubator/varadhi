@@ -78,7 +78,7 @@ public class AuthZProviderTests extends E2EBase {
         String configContent = """
             ---
             superUsers: [ "thanos" ]
-            
+
             metaStoreOptions:
               providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
               configFile: "metastore.yml"
