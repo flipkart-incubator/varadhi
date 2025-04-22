@@ -134,6 +134,21 @@ public final class EntityEventDispatcher {
         };
     }
 
+    /**
+     * Binds an EntityEventDispatcher to cluster entity events.
+     * <p>
+     * This method creates an EntityEventDispatcher from the provided cache registry and
+     * registers it with the cluster's message router to handle entity events. It uses
+     * the member's hostname to route events to the appropriate handler.
+     * <p>
+     * The dispatcher will handle events for all resource types registered in the cache registry.
+     *
+     * @param vertx          the Vert.x instance for handling asynchronous operations
+     * @param memberInfo     information about the current cluster member
+     * @param clusterManager the cluster manager for inter-node communication
+     * @param cacheRegistry  the registry containing entity caches that will act as event listeners
+     * @throws NullPointerException if any parameter is null
+     */
     public static void bindToClusterEntityEvents(
         Vertx vertx,
         MemberInfo memberInfo,
@@ -150,6 +165,17 @@ public final class EntityEventDispatcher {
         log.info("Entity event handlers initialized with {} listeners", listenersAdded);
     }
 
+    /**
+     * Builds an EntityEventDispatcher from the provided cache registry.
+     * <p>
+     * This method creates a new EntityEventDispatcher that will use the entity caches
+     * in the registry as event listeners. It maps each registered resource type to its
+     * corresponding cache, which implements the EntityEventListener interface.
+     *
+     * @param cacheRegistry the registry containing entity caches that will act as event listeners
+     * @return a new EntityEventDispatcher configured with listeners from the cache registry
+     * @throws NullPointerException if cacheRegistry is null
+     */
     static EntityEventDispatcher build(EntityReadCacheRegistry cacheRegistry) {
         return new EntityEventDispatcher(
             cacheRegistry.getRegisteredResourceTypes()

@@ -4,7 +4,10 @@ import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -65,6 +68,14 @@ public final class EntityReadCacheRegistry {
                        .orElseThrow(() -> new IllegalStateException("No cache registered for resource type: " + type));
     }
 
+    /**
+     * Returns a set of all resource types that have registered caches.
+     * <p>
+     * This method returns a defensive copy of the internal set of resource types,
+     * so modifications to the returned set will not affect the registry.
+     *
+     * @return a set containing all resource types with registered caches
+     */
     public Set<ResourceType> getRegisteredResourceTypes() {
         return new HashSet<>(caches.keySet());
     }
