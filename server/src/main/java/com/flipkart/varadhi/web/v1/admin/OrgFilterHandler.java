@@ -66,7 +66,7 @@ public class OrgFilterHandler implements RouteProvider {
         return Map.of(ResourceType.ORG, new Hierarchies.OrgHierarchy(orgName));
     }
 
-    public void getAll(RoutingContext ctx) {
+    public void list(RoutingContext ctx) {
         String orgName = ctx.pathParam(PATH_PARAM_ORG);
         OrgFilters filters = orgService.getAllFilters(orgName);
         ctx.endApiWithResponse(filters);
