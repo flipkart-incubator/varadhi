@@ -174,6 +174,21 @@ public class AuthZProviderTests extends E2EBase {
     }
 
     @Test
+    public void testIsAuthorized_SuperUserAccess(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        // Super user should be authorized for any action on any resource
+        provider.isAuthorized(
+            testUser("thanos", false),
+            ResourceAction.TOPIC_GET,
+            "public/team_rocket/default/topic001"
+        ).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }));
+    }
+
+    @Test
     public void testIsAuthorized_UserNotAuthorizedOnResource(VertxTestContext testContext) {
         Checkpoint checkpoint = testContext.checkpoint(1);
 
