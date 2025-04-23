@@ -2,6 +2,7 @@ package com.flipkart.varadhi.produce.services;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,9 +40,41 @@ import lombok.extern.slf4j.Slf4j;
 public final class ProducerService {
 
     /**
+     * A record that serves as a cache key for producers.
+     *
+     * @param varadhiTopicName the full name of the Varadhi topic
+     * @param storageTopic     the storage topic instance
+     */
+    private record ProducerCacheKey(String varadhiTopicName, StorageTopic storageTopic) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+            ProducerCacheKey that = (ProducerCacheKey)o;
+            return Objects.equals(varadhiTopicName, that.varadhiTopicName) && Objects.equals(
+                storageTopic.getName(),
+                that.storageTopic.getName()
+            );
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(varadhiTopicName, storageTopic.getName());
+        }
+
+        @Override
+        public String toString() {
+            return "ProducerCacheKey[varadhiTopic=" + varadhiTopicName + ", storageTopic=" + storageTopic.getName()
+                   + "]";
+        }
+    }
+
+    /**
      * Cache of producers for storage topics.
      */
-    private final LoadingCache<StorageTopic, Producer> producerCache;
+    private final LoadingCache<ProducerCacheKey, Producer> producerCache;
 
     /**
      * The region where messages are produced.
@@ -94,7 +127,7 @@ public final class ProducerService {
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(producerProvider::apply);
+                                     .build(key -> producerProvider.apply(key.storageTopic()));
     }
 
     /**
@@ -164,7 +197,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(storageTopic).thenCompose(
+        return getProducer(storageTopic, varadhiTopic.getName()).thenCompose(
             producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
                 result -> ProduceResult.of(message.getMessageId(), result)
             )
@@ -177,17 +210,19 @@ public final class ProducerService {
      * This method first checks if the producer is already in the cache. If not, it attempts
      * to load it using the producer provider function.
      *
-     * @param storageTopic the storage topic to get a producer for
+     * @param storageTopic     the storage topic to get a producer for
+     * @param varadhiTopicName the name of the Varadhi topic (used for caching)
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic) {
-        Producer producer = producerCache.getIfPresent(storageTopic);
+    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic, String varadhiTopicName) {
+        ProducerCacheKey key = new ProducerCacheKey(varadhiTopicName, storageTopic);
+        Producer producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
 
         try {
-            return CompletableFuture.completedFuture(producerCache.get(storageTopic));
+            return CompletableFuture.completedFuture(producerCache.get(key));
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
