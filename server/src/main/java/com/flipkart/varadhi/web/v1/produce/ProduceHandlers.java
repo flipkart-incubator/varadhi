@@ -75,7 +75,7 @@ public class ProduceHandlers implements RouteProvider {
     private final String produceRegion;
     private final EntityReadCache<Project> projectCache;
 
-    private ProducerMetricsEmitter producerMetricsEmitter;
+    private final ThreadLocal<ProducerMetricsEmitter> producerMetricsEmitter = new ThreadLocal<>();
     private final ThreadLocal<HttpApiMetricsEmitter> httpApiMetricsEmitter = new ThreadLocal<>();
 
     /**
@@ -170,7 +170,7 @@ public class ProduceHandlers implements RouteProvider {
         produceAttributes.put(TAG_TOPIC, topicName);
         produceAttributes.put(TAG_REGION, produceRegion);
         produceAttributes.put(TAG_IDENTITY, produceIdentity);
-        producerMetricsEmitter = producerMetricHandler.getEmitter(produceAttributes);
+        producerMetricsEmitter.set(producerMetricHandler.getEmitter(produceAttributes));
 
         // Set up HTTP API metrics
         String apiName = "produce";
@@ -211,7 +211,7 @@ public class ProduceHandlers implements RouteProvider {
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
             messageToProduce,
             varadhiTopicName,
-            producerMetricsEmitter
+            producerMetricsEmitter.get()
         );
 
         produceFuture.whenComplete(
@@ -298,7 +298,7 @@ public class ProduceHandlers implements RouteProvider {
      * @param failure      The exception if the operation failed, null if successful
      */
     private void emitProducerMetrics(long totalLatency, Throwable failure) {
-        producerMetricsEmitter.emit(
+        producerMetricsEmitter.get().emit(
             true,
             totalLatency,
             0,
@@ -361,7 +361,7 @@ public class ProduceHandlers implements RouteProvider {
             enrichHeaders(compliantHeaders, ctx.getIdentityOrDefault());
             return new SimpleMessage(payload, compliantHeaders);
         } catch (Exception e) {
-            producerMetricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.SERIALIZE);
+            producerMetricsEmitter.get().emit(false, 0, 0, 0, false, ProducerErrorType.SERIALIZE);
             throw e;
         }
     }
