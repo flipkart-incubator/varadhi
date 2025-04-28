@@ -45,9 +45,9 @@ public final class HttpApiMetricsHandler {
      * @return an HttpApiMetricsEmitter instance
      */
     public HttpApiMetricsEmitter getEmitter(String apiName, List<Tag> tags) {
-        return isMetricEnabled
-                ? new HttpApiMetricsEmitterImpl(meterRegistry, apiName, tags)
-                : new HttpApiMetricsEmitterNoOpImpl();
+        return isMetricEnabled ?
+            new HttpApiMetricsEmitterImpl(meterRegistry, apiName, tags) :
+            new HttpApiMetricsEmitterNoOpImpl();
     }
 
     /**
@@ -58,9 +58,10 @@ public final class HttpApiMetricsHandler {
      * @return an HttpApiMetricsEmitter instance
      */
     public HttpApiMetricsEmitter getEmitter(String apiName, Map<String, String> attributes) {
-        List<Tag> tags = attributes.entrySet().stream()
-                .map(entry -> Tag.of(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList());
+        List<Tag> tags = attributes.entrySet()
+                                   .stream()
+                                   .map(entry -> Tag.of(entry.getKey(), entry.getValue()))
+                                   .collect(Collectors.toList());
         return getEmitter(apiName, tags);
     }
 }

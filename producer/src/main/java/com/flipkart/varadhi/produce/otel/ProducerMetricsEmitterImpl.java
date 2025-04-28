@@ -103,35 +103,38 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
         for (ProducerErrorType errorType : ProducerErrorType.values()) {
             List<Tag> errorTags = new ArrayList<>(baseTags);
             errorTags.add(Tag.of(TAG_ERROR_TYPE, errorType.getValue()));
-            failedMessagesCounters.put(errorType, Counter.builder(METRIC_PREFIX + "failed")
-                    .tags(errorTags)
-                    .description("Number of failed message productions")
-                    .register(meterRegistry));
+            failedMessagesCounters.put(
+                errorType,
+                Counter.builder(METRIC_PREFIX + "failed")
+                       .tags(errorTags)
+                       .description("Number of failed message productions")
+                       .register(meterRegistry)
+            );
         }
     }
 
     private void initializeLatencyTimers(List<Tag> baseTags) {
         this.e2eLatencyTimer = Timer.builder(METRIC_PREFIX + "latency")
-                .tags(baseTags)
-                .description("End-to-end message production latency")
-                .publishPercentiles(config.getLatencyPercentiles())
-                .publishPercentileHistogram(config.isEnableHistogram())
-                .register(meterRegistry);
+                                    .tags(baseTags)
+                                    .description("End-to-end message production latency")
+                                    .publishPercentiles(config.getLatencyPercentiles())
+                                    .publishPercentileHistogram(config.isEnableHistogram())
+                                    .register(meterRegistry);
 
         this.storageLatencyTimer = Timer.builder(METRIC_PREFIX + "latency.storage")
-                .tags(baseTags)
-                .description("Storage write latency")
-                .publishPercentiles(config.getLatencyPercentiles())
-                .publishPercentileHistogram(config.isEnableHistogram())
-                .register(meterRegistry);
+                                        .tags(baseTags)
+                                        .description("Storage write latency")
+                                        .publishPercentiles(config.getLatencyPercentiles())
+                                        .publishPercentileHistogram(config.isEnableHistogram())
+                                        .register(meterRegistry);
     }
 
     private void initializeSizeDistribution(List<Tag> baseTags) {
         this.messageSizeDistribution = DistributionSummary.builder(METRIC_PREFIX + "size")
-                .tags(baseTags)
-                .description("Message size distribution")
-                .baseUnit("bytes")
-                .register(meterRegistry);
+                                                          .tags(baseTags)
+                                                          .description("Message size distribution")
+                                                          .baseUnit("bytes")
+                                                          .register(meterRegistry);
     }
 
     private void initializeThroughputCounters() {
@@ -153,18 +156,18 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
 
     private void registerMessageThroughputGauge(List<Tag> baseTags, boolean filtered, AtomicLong counter) {
         Gauge.builder(METRIC_PREFIX + "throughput", counter, this::calculateMessageRate)
-                .tags(baseTags)
-                .tag(TAG_FILTERED, String.valueOf(filtered))
-                .description(filtered ? "Filtered message production rate" : "Message production rate")
-                .register(meterRegistry);
+             .tags(baseTags)
+             .tag(TAG_FILTERED, String.valueOf(filtered))
+             .description(filtered ? "Filtered message production rate" : "Message production rate")
+             .register(meterRegistry);
     }
 
     private void registerByteThroughputGauge(List<Tag> baseTags, boolean filtered, AtomicLong counter) {
         Gauge.builder(METRIC_PREFIX + "throughput.bytes", counter, this::calculateByteRate)
-                .tags(baseTags)
-                .tag(TAG_FILTERED, String.valueOf(filtered))
-                .description(filtered ? "Filtered byte production rate" : "Byte production rate")
-                .register(meterRegistry);
+             .tags(baseTags)
+             .tag(TAG_FILTERED, String.valueOf(filtered))
+             .description(filtered ? "Filtered byte production rate" : "Byte production rate")
+             .register(meterRegistry);
     }
 
     /**
@@ -173,8 +176,14 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
      * @throws IllegalArgumentException if latencies are negative or message size is invalid
      */
     @Override
-    public void emit(boolean succeeded, long producerLatency, long storageLatency,
-                     int messageSize, boolean filtered, ProducerErrorType errorType) {
+    public void emit(
+        boolean succeeded,
+        long producerLatency,
+        long storageLatency,
+        int messageSize,
+        boolean filtered,
+        ProducerErrorType errorType
+    ) {
         validateMetricValues(producerLatency, storageLatency, messageSize);
 
         if (filtered) {
@@ -193,9 +202,8 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
     private void validateMetricValues(long producerLatency, long storageLatency, int messageSize) {
         if (producerLatency < 0 || storageLatency < 0) {
             throw new IllegalArgumentException(
-                    "Latency values must be non-negative. " +
-                            "Producer latency: " + producerLatency +
-                            ", Storage latency: " + storageLatency
+                "Latency values must be non-negative. " + "Producer latency: " + producerLatency + ", Storage latency: "
+                                               + storageLatency
             );
         }
         if (messageSize < 0) {
@@ -235,17 +243,12 @@ public final class ProducerMetricsEmitterImpl implements ProducerMetricsEmitter 
     }
 
     private double calculateRate(AtomicLong counter) {
-        return (double) counter.get() / config.getThroughputRefreshInterval().toSeconds();
+        return (double)counter.get() / config.getThroughputRefreshInterval().toSeconds();
     }
 
     private void scheduleThroughputReset() {
         long intervalMillis = config.getThroughputRefreshInterval().toMillis();
-        scheduler.scheduleAtFixedRate(
-                this::resetCounters,
-                intervalMillis,
-                intervalMillis,
-                TimeUnit.MILLISECONDS
-        );
+        scheduler.scheduleAtFixedRate(this::resetCounters, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
     }
 
     private void resetCounters() {

@@ -31,7 +31,7 @@ public class ProducerMetricsConfig {
      * Common percentiles are: 0.5 (median), 0.75, 0.90, 0.95, 0.99, 0.999
      */
     @NotNull
-    @Size(min = 1, message = "At least one percentile value is required")
+    @Size (min = 1, message = "At least one percentile value is required")
     @Builder.Default
     private double[] latencyPercentiles = {0.5, 0.75, 0.90, 0.95, 0.99, 0.999};
 
@@ -47,7 +47,7 @@ public class ProducerMetricsConfig {
      * This affects the granularity of throughput measurements.
      */
     @NotNull
-    @Positive(message = "Throughput refresh interval must be positive")
+    @Positive (message = "Throughput refresh interval must be positive")
     @Builder.Default
     private Duration throughputRefreshInterval = Duration.ofSeconds(10);
 

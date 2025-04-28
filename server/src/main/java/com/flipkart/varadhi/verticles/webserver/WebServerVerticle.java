@@ -449,8 +449,8 @@ public class WebServerVerticle extends AbstractVerticle {
 
     private HttpApiMetricsHandler createHttpApiMetricsHandler() {
         return new HttpApiMetricsHandler(
-                true, // Enable metrics by default, or read from configuration
-                meterRegistry
+            true, // Enable metrics by default, or read from configuration
+            meterRegistry
         );
     }
 

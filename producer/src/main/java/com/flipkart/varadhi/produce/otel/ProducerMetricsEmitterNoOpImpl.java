@@ -31,8 +31,14 @@ public final class ProducerMetricsEmitterNoOpImpl implements ProducerMetricsEmit
      * @param errorType       the type of error if the operation failed (ignored)
      */
     @Override
-    public void emit(boolean succeeded, long producerLatency, long storageLatency,
-                     int messageSize, boolean filtered, ProducerErrorType errorType) {
+    public void emit(
+        boolean succeeded,
+        long producerLatency,
+        long storageLatency,
+        int messageSize,
+        boolean filtered,
+        ProducerErrorType errorType
+    ) {
         // Intentionally empty - no metrics are recorded
     }
 

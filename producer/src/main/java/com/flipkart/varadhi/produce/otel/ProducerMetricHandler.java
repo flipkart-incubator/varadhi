@@ -26,7 +26,11 @@ public final class ProducerMetricHandler {
      * @param meterRegistry   the registry for recording metrics
      * @param metricsConfig   configuration for producer metrics
      */
-    public ProducerMetricHandler(boolean isMetricEnabled, MeterRegistry meterRegistry, ProducerMetricsConfig metricsConfig) {
+    public ProducerMetricHandler(
+        boolean isMetricEnabled,
+        MeterRegistry meterRegistry,
+        ProducerMetricsConfig metricsConfig
+    ) {
         this.isMetricEnabled = isMetricEnabled;
         this.meterRegistry = meterRegistry;
         this.metricsConfig = metricsConfig;
@@ -41,8 +45,8 @@ public final class ProducerMetricHandler {
      * @return a ProducerMetricsEmitter instance
      */
     public ProducerMetricsEmitter getEmitter(Map<String, String> produceAttributes) {
-        return isMetricEnabled
-                ? new ProducerMetricsEmitterImpl(meterRegistry, metricsConfig, produceAttributes)
-                : new ProducerMetricsEmitterNoOpImpl();
+        return isMetricEnabled ?
+            new ProducerMetricsEmitterImpl(meterRegistry, metricsConfig, produceAttributes) :
+            new ProducerMetricsEmitterNoOpImpl();
     }
 }

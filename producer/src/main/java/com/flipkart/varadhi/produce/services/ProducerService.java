@@ -20,8 +20,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -131,6 +129,7 @@ public final class ProducerService {
         Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
 
         if (topic.isEmpty() || !topic.get().isActive()) {
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.TOPIC_NOT_FOUND);
             throw new ResourceNotFoundException(
                 "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
             );
@@ -157,14 +156,19 @@ public final class ProducerService {
         InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
 
         if (internalTopic == null) {
-            metricsEmitter.emit(false, 0, 0, 0,
-                    false, ProducerErrorType.TOPIC_NOT_FOUND);
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.TOPIC_NOT_FOUND);
             throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
         }
 
         if (!internalTopic.getTopicState().isProduceAllowed()) {
-            metricsEmitter.emit(false, 0, 0, 0,
-                    true, ProducerErrorMapper.mapTopicStateToErrorType(internalTopic.getTopicState()));
+            metricsEmitter.emit(
+                false,
+                0,
+                0,
+                0,
+                true,
+                ProducerErrorMapper.mapTopicStateToErrorType(internalTopic.getTopicState())
+            );
             return CompletableFuture.completedFuture(
                 ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
             );
@@ -206,8 +210,7 @@ public final class ProducerService {
                 storageTopic.getName(),
                 e.getMessage()
             );
-            metricsEmitter.emit(false, 0, 0, 0,
-                    false, ProducerErrorMapper.mapToProducerErrorType(e));
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorMapper.mapToProducerErrorType(e));
             return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
         }
     }
@@ -235,14 +238,18 @@ public final class ProducerService {
         Message message
     ) {
         return producer.produceAsync(message).handle((result, throwable) -> {
-            long storageLatency = result != null ? ((PulsarOffset)result).getStorageLatencyMs() : 0;
+            long storageLatency = 0;
+            if (result instanceof PulsarOffset pulsaroffset) {
+                storageLatency = pulsaroffset.getStorageLatencyMs();
+            }
+
             metricsEmitter.emit(
-                    result != null,
-                    0,
-                    storageLatency,
-                    message.getPayload().length,
-                    false,
-                    throwable != null ? ProducerErrorMapper.mapToProducerErrorType(throwable) : null
+                result != null,
+                0,
+                storageLatency,
+                message.getPayload().length,
+                false,
+                throwable != null ? ProducerErrorMapper.mapToProducerErrorType(throwable) : null
             );
             if (throwable != null) {
                 log.debug(

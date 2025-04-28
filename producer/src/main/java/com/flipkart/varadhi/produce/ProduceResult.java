@@ -49,7 +49,9 @@ public class ProduceResult {
     public static ProduceResult ofNonProducingTopic(String messageId, TopicState topicState) {
         if (topicState.isProduceAllowed()) {
             throw new IllegalStateException(
-                    "Incorrect Topic state handling. Topic can produce message(s) in its current state(%s).".formatted(topicState)
+                "Incorrect Topic state handling. Topic can produce message(s) in its current state(%s).".formatted(
+                    topicState
+                )
             );
         }
         return new ProduceResult(messageId, topicState.getProduceStatus(), null, null);

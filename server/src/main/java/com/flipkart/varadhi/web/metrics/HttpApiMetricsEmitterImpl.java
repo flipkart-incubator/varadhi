@@ -110,18 +110,20 @@ public final class HttpApiMetricsEmitterImpl implements HttpApiMetricsEmitter {
      */
     private void recordMetrics(List<Tag> tags) {
         // Record latency
-        timerSample.stop(Timer.builder(METRIC_PREFIX + "latency")
-                .tags(tags)
-                .description("API request latency")
-                .publishPercentiles(0.5, 0.75, 0.90, 0.95, 0.99, 0.999)
-                .register(meterRegistry));
+        timerSample.stop(
+            Timer.builder(METRIC_PREFIX + "latency")
+                 .tags(tags)
+                 .description("API request latency")
+                 .publishPercentiles(0.5, 0.75, 0.90, 0.95, 0.99, 0.999)
+                 .register(meterRegistry)
+        );
 
         // Record request count
         Counter.builder(METRIC_PREFIX + "total")
-                .tags(tags)
-                .description("Total number of API requests")
-                .register(meterRegistry)
-                .increment();
+               .tags(tags)
+               .description("Total number of API requests")
+               .register(meterRegistry)
+               .increment();
     }
 
     /**
@@ -131,10 +133,10 @@ public final class HttpApiMetricsEmitterImpl implements HttpApiMetricsEmitter {
      */
     private void recordErrorMetrics(List<Tag> tags) {
         Counter.builder(METRIC_PREFIX + "errors")
-                .tags(tags)
-                .description("Total number of API errors")
-                .register(meterRegistry)
-                .increment();
+               .tags(tags)
+               .description("Total number of API errors")
+               .register(meterRegistry)
+               .increment();
     }
 
     @Override

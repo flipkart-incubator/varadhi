@@ -34,8 +34,14 @@ public interface ProducerMetricsEmitter extends AutoCloseable {
      * @param errorType       the type of error if the operation failed, null if successful
      * @throws IllegalArgumentException if latencies are negative or message size is invalid
      */
-    void emit(boolean succeeded, long producerLatency, long storageLatency, int messageSize,
-              boolean filtered, ProducerErrorType errorType);
+    void emit(
+        boolean succeeded,
+        long producerLatency,
+        long storageLatency,
+        int messageSize,
+        boolean filtered,
+        ProducerErrorType errorType
+    );
 
     /**
      * Closes this metrics emitter and releases any system resources associated with it.

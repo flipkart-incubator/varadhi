@@ -17,9 +17,11 @@ import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.produce.config.ProducerMetricsConfig;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -51,6 +53,7 @@ import static com.flipkart.varadhi.common.Constants.Tags.TAG_TEAM;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -141,7 +144,7 @@ class ProducerServiceTests {
         CompletionException exception = Assertions.assertThrows(CompletionException.class, future::join);
         assertTrue(exception.getCause() instanceof RuntimeException);
         Assertions.assertEquals("Some random error.", exception.getCause().getMessage());
-        verify(emitter, never()).emit(anyBoolean(), anyLong());
+        verify(emitter, never()).emit(anyBoolean(), anyLong(), anyLong(), anyInt(), anyBoolean(), any());
     }
 
     @Test
@@ -278,11 +281,23 @@ class ProducerServiceTests {
     @Test
     void testMetricEmitFailureNotIgnored() throws InterruptedException {
         ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
-        doThrow(new RuntimeException("Failed to send metric.")).when(emitter).emit(anyBoolean(), anyLong());
+        doThrow(new RuntimeException("Failed to send metric.")).when(emitter)
+                                                               .emit(
+                                                                   anyBoolean(),
+                                                                   anyLong(),
+                                                                   anyLong(),
+                                                                   anyInt(),
+                                                                   anyBoolean(),
+                                                                   any()
+                                                               );
         Message msg1 = getMessage(0, 1, null, 10);
         VaradhiTopic vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         doReturn(producer).when(producerFactory).newProducer(any());
+
+        PulsarOffset offset = mock(PulsarOffset.class);
+        when(offset.getStorageLatencyMs()).thenReturn(0L);
+
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
             VaradhiTopic.buildTopicName(project.getName(), topic),
@@ -292,7 +307,7 @@ class ProducerServiceTests {
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
         verify(producer, times(1)).produceAsync(eq(msg1));
-        verify(emitter, times(1)).emit(anyBoolean(), anyLong());
+        verify(emitter, times(1)).emit(anyBoolean(), anyLong(), anyLong(), anyInt(), anyBoolean(), any());
         // Exception gets wrapped in CompletionException.
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
@@ -342,7 +357,7 @@ class ProducerServiceTests {
         produceAttributes.put(TAG_TOPIC, topic);
         produceAttributes.put(TAG_IDENTITY, "ANONYMOUS");
         produceAttributes.put(TAG_REMOTE_HOST, "remoteHost");
-        return new ProducerMetricsEmitterImpl(meterRegistry, 0, produceAttributes);
+        return new ProducerMetricsEmitterImpl(meterRegistry, ProducerMetricsConfig.getDefault(), produceAttributes);
     }
 
     public String getMessageId() {

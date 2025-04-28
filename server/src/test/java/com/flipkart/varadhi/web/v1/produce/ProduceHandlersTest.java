@@ -17,6 +17,8 @@ import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsEmitterNoOpImpl;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.google.common.collect.Multimap;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -44,9 +46,9 @@ import static com.flipkart.varadhi.entities.TopicState.Blocked;
 import static com.flipkart.varadhi.entities.TopicState.Replicating;
 import static com.flipkart.varadhi.entities.TopicState.Throttled;
 import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -341,11 +343,14 @@ public class ProduceHandlersTest extends ProduceTestBase {
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
-        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
+        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(any());
+        HttpApiMetricsHandler httpApiMetricsHandler = mock(HttpApiMetricsHandler.class);
+        doReturn(new HttpApiMetricsEmitterNoOpImpl()).when(httpApiMetricsHandler).getEmitter(anyString(), anyMap());
         produceHandlers = new ProduceHandlers(
             producerService,
             preProduceHandler,
             metricHandler,
+            httpApiMetricsHandler,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
             projectCache

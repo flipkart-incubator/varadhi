@@ -202,17 +202,31 @@ public class ProduceHandlers implements RouteProvider {
      * @param messageToProduce The message to be produced
      * @param varadhiTopicName The fully qualified topic name
      */
-    private void handleProduceToTopic(RoutingContext ctx, long requestStartTime,
-                                      Message messageToProduce, String varadhiTopicName) {
+    private void handleProduceToTopic(
+        RoutingContext ctx,
+        long requestStartTime,
+        Message messageToProduce,
+        String varadhiTopicName
+    ) {
         CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
-                messageToProduce,
-                varadhiTopicName,
-                producerMetricsEmitter
+            messageToProduce,
+            varadhiTopicName,
+            producerMetricsEmitter
         );
 
-        produceFuture.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext(v ->
-                handleProduceCompletion(ctx, requestStartTime, messageToProduce,
-                        varadhiTopicName, produceResult, failure)));
+        produceFuture.whenComplete(
+            (produceResult, failure) -> ctx.vertx()
+                                           .runOnContext(
+                                               v -> handleProduceCompletion(
+                                                   ctx,
+                                                   requestStartTime,
+                                                   messageToProduce,
+                                                   varadhiTopicName,
+                                                   produceResult,
+                                                   failure
+                                               )
+                                           )
+        );
     }
 
     /**
@@ -226,9 +240,14 @@ public class ProduceHandlers implements RouteProvider {
      * @param produceResult    The result of the produce operation, null if failed
      * @param failure          The exception if the operation failed, null if successful
      */
-    private void handleProduceCompletion(RoutingContext ctx, long requestStartTime,
-                                         Message messageToProduce, String varadhiTopicName,
-                                         ProduceResult produceResult, Throwable failure) {
+    private void handleProduceCompletion(
+        RoutingContext ctx,
+        long requestStartTime,
+        Message messageToProduce,
+        String varadhiTopicName,
+        ProduceResult produceResult,
+        Throwable failure
+    ) {
         long totalLatency = System.currentTimeMillis() - requestStartTime;
         emitProducerMetrics(totalLatency, failure);
 
@@ -236,8 +255,12 @@ public class ProduceHandlers implements RouteProvider {
             if (produceResult != null) {
                 handleProduceResult(ctx, produceResult);
             } else {
-                log.error("produceToTopic({}, {}) failed unexpectedly.",
-                        messageToProduce.getMessageId(), varadhiTopicName, failure);
+                log.error(
+                    "produceToTopic({}, {}) failed unexpectedly.",
+                    messageToProduce.getMessageId(),
+                    varadhiTopicName,
+                    failure
+                );
                 ctx.endRequestWithException(failure);
             }
         } finally {
@@ -276,12 +299,12 @@ public class ProduceHandlers implements RouteProvider {
      */
     private void emitProducerMetrics(long totalLatency, Throwable failure) {
         producerMetricsEmitter.emit(
-                true,
-                totalLatency,
-                0,
-                0,
-                false,
-                failure != null ? ProducerErrorMapper.mapToProducerErrorType(failure) : null
+            true,
+            totalLatency,
+            0,
+            0,
+            false,
+            failure != null ? ProducerErrorMapper.mapToProducerErrorType(failure) : null
         );
     }
 
@@ -297,8 +320,8 @@ public class ProduceHandlers implements RouteProvider {
             ctx.endRequestWithResponse(produceResult.getMessageId());
         } else {
             ctx.endRequestWithStatusAndErrorMsg(
-                    getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
-                    produceResult.getFailureReason()
+                getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
+                produceResult.getFailureReason()
             );
         }
     }
@@ -339,7 +362,7 @@ public class ProduceHandlers implements RouteProvider {
             return new SimpleMessage(payload, compliantHeaders);
         } catch (Exception e) {
             producerMetricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.SERIALIZE);
-            return null;
+            throw e;
         }
     }
 
@@ -372,10 +395,13 @@ public class ProduceHandlers implements RouteProvider {
         boolean filterNonCompliant = msgConfig.isFilterNonCompliantHeaders();
         List<String> allowedPrefixes = msgConfig.getStdHeaders().allowedPrefix();
 
-        headers.entries().stream()
-                .filter(entry -> !filterNonCompliant ||
-                        allowedPrefixes.stream().anyMatch(entry.getKey().toUpperCase()::startsWith))
-                .forEach(entry -> copy.put(entry.getKey().toUpperCase(), entry.getValue()));
+        headers.entries()
+               .stream()
+               .filter(
+                   entry -> !filterNonCompliant || allowedPrefixes.stream()
+                                                                  .anyMatch(entry.getKey().toUpperCase()::startsWith)
+               )
+               .forEach(entry -> copy.put(entry.getKey().toUpperCase(), entry.getValue()));
 
         return copy;
     }

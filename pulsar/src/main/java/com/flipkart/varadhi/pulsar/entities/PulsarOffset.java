@@ -29,6 +29,14 @@ public final class PulsarOffset implements Offset {
     private long storageLatencyMs;
 
     /**
+     * Default constructor for Jackson deserialization.
+     */
+    public PulsarOffset() {
+        this.messageId = null;
+        this.storageLatencyMs = 0;
+    }
+
+    /**
      * Constructs a PulsarOffset with the specified MessageId.
      *
      * @param messageId the Pulsar message identifier
@@ -70,11 +78,7 @@ public final class PulsarOffset implements Offset {
      * @throws NumberFormatException if any of the string parameters cannot be parsed to numbers
      */
     public static MessageId fromParts(String ledgerId, String entryId, String partitionId) {
-        return new MessageIdImpl(
-                Long.parseLong(ledgerId),
-                Long.parseLong(entryId),
-                Integer.parseInt(partitionId)
-        );
+        return new MessageIdImpl(Long.parseLong(ledgerId), Long.parseLong(entryId), Integer.parseInt(partitionId));
     }
 
     /**
@@ -101,8 +105,10 @@ public final class PulsarOffset implements Offset {
         }
 
         throw new IllegalArgumentException(
-                "Cannot compare different Offset types. Expected: %s, but got: %s"
-                        .formatted(PulsarOffset.class.getName(), o.getClass().getName())
+            "Cannot compare different Offset types. Expected: %s, but got: %s".formatted(
+                PulsarOffset.class.getName(),
+                o.getClass().getName()
+            )
         );
     }
 
