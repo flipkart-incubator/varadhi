@@ -14,12 +14,15 @@ import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsEmitterNoOpImpl;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -56,7 +59,9 @@ public class ProduceTestBase extends WebTestBase {
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
-        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(anyInt(), any());
+        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(any());
+        HttpApiMetricsHandler httpApiMetricsHandler = mock(HttpApiMetricsHandler.class);
+        doReturn(new HttpApiMetricsEmitterNoOpImpl()).when(httpApiMetricsHandler).getEmitter(anyString(), anyMap());
         VaradhiTopic topic = mock(VaradhiTopic.class);
         when(varadhiTopicService.get(any())).thenReturn(topic);
         when(topic.getNfrFilterName()).thenReturn(null);
@@ -64,6 +69,7 @@ public class ProduceTestBase extends WebTestBase {
             producerService,
             preProduceHandler,
             metricHandler,
+            httpApiMetricsHandler,
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
             projectCache

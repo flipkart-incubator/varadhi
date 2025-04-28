@@ -45,8 +45,8 @@ public class PulsarOffsetTest {
     @Test
     public void NullNotComparable() {
         PulsarOffset p1 = new PulsarOffset(MessageId.earliest);
-        IllegalArgumentException ae = Assertions.assertThrows(IllegalArgumentException.class, () -> p1.compareTo(null));
-        Assertions.assertEquals("Can not compare null Offset.", ae.getMessage());
+        NullPointerException ae = Assertions.assertThrows(NullPointerException.class, () -> p1.compareTo(null));
+        Assertions.assertEquals("Cannot compare with null Offset", ae.getMessage());
     }
 
     @Test
@@ -56,7 +56,7 @@ public class PulsarOffsetTest {
         IllegalArgumentException ae = Assertions.assertThrows(IllegalArgumentException.class, () -> p1.compareTo(dp1));
         Assertions.assertEquals(
             String.format(
-                "Can not compare different Offset types. Expected Offset is %s, given  %s.",
+                "Cannot compare different Offset types. Expected: %s, but got: %s",
                 p1.getClass().getName(),
                 dp1.getClass().getName()
             ),

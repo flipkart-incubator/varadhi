@@ -17,6 +17,9 @@ public class ProducerOptions {
     @Builder.Default
     private boolean metricEnabled = true;
 
+    @Builder.Default
+    private ProducerMetricsConfig metricsConfig = ProducerMetricsConfig.getDefault();
+
     public static ProducerOptions defaultOptions() {
         return ProducerOptions.builder().build();
     }

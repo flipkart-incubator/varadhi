@@ -38,6 +38,7 @@ import com.flipkart.varadhi.web.RequestBodyHandler;
 import com.flipkart.varadhi.web.RequestBodyParser;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
+import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -446,6 +447,13 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    private HttpApiMetricsHandler createHttpApiMetricsHandler() {
+        return new HttpApiMetricsHandler(
+            true, // Enable metrics by default, or read from configuration
+            meterRegistry
+        );
+    }
+
     /**
      * Gets produce API routes.
      *
@@ -455,14 +463,17 @@ public class WebServerVerticle extends AbstractVerticle {
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
             configuration.getProducerOptions().isMetricEnabled(),
-            meterRegistry
+            meterRegistry,
+            configuration.getProducerOptions().getMetricsConfig()
         );
+        HttpApiMetricsHandler httpApiMetricsHandler = createHttpApiMetricsHandler();
 
         return new ArrayList<>(
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 preProduceHandler,
                 producerMetricsHandler,
+                httpApiMetricsHandler,
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
                 cacheRegistry.getCache(ResourceType.PROJECT)

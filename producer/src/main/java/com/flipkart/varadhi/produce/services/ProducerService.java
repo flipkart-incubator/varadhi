@@ -1,24 +1,29 @@
 package com.flipkart.varadhi.produce.services;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
 import com.flipkart.varadhi.common.EntityReadCache;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.InternalCompositeTopic;
+import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.produce.ProducerErrorMapper;
+import com.flipkart.varadhi.produce.config.ProducerErrorType;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
+import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * Service responsible for producing messages to topics in Varadhi.
@@ -124,6 +129,7 @@ public final class ProducerService {
         Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
 
         if (topic.isEmpty() || !topic.get().isActive()) {
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.TOPIC_NOT_FOUND);
             throw new ResourceNotFoundException(
                 "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
             );
@@ -150,10 +156,19 @@ public final class ProducerService {
         InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
 
         if (internalTopic == null) {
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.TOPIC_NOT_FOUND);
             throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
         }
 
         if (!internalTopic.getTopicState().isProduceAllowed()) {
+            metricsEmitter.emit(
+                false,
+                0,
+                0,
+                0,
+                true,
+                ProducerErrorMapper.mapTopicStateToErrorType(internalTopic.getTopicState())
+            );
             return CompletableFuture.completedFuture(
                 ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
             );
@@ -164,7 +179,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(storageTopic).thenCompose(
+        return getProducer(storageTopic, metricsEmitter).thenCompose(
             producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
                 result -> ProduceResult.of(message.getMessageId(), result)
             )
@@ -177,10 +192,11 @@ public final class ProducerService {
      * This method first checks if the producer is already in the cache. If not, it attempts
      * to load it using the producer provider function.
      *
-     * @param storageTopic the storage topic to get a producer for
+     * @param storageTopic   the storage topic to get a producer for
+     * @param metricsEmitter emitter for production metrics
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic) {
+    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic, ProducerMetricsEmitter metricsEmitter) {
         Producer producer = producerCache.getIfPresent(storageTopic);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
@@ -194,6 +210,7 @@ public final class ProducerService {
                 storageTopic.getName(),
                 e.getMessage()
             );
+            metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorMapper.mapToProducerErrorType(e));
             return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
         }
     }
@@ -220,10 +237,20 @@ public final class ProducerService {
         String topicName,
         Message message
     ) {
-        Instant startTime = Instant.now();
         return producer.produceAsync(message).handle((result, throwable) -> {
-            Duration latency = Duration.between(startTime, Instant.now());
-            metricsEmitter.emit(result != null, latency.toMillis());
+            long storageLatency = 0;
+            if (result instanceof PulsarOffset pulsaroffset) {
+                storageLatency = pulsaroffset.getStorageLatencyMs();
+            }
+
+            metricsEmitter.emit(
+                result != null,
+                0,
+                storageLatency,
+                message.getPayload().length,
+                false,
+                throwable != null ? ProducerErrorMapper.mapToProducerErrorType(throwable) : null
+            );
             if (throwable != null) {
                 log.debug(
                     "Produce Message({}) to StorageTopic({}) failed.",
