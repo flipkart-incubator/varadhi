@@ -50,8 +50,6 @@ import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
 /**
  * Handles HTTP requests for message production to topics in the Varadhi messaging system.
  * This class implements the RouteProvider interface to define routes for message production endpoints.
