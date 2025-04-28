@@ -298,14 +298,15 @@ public class ProduceHandlers implements RouteProvider {
      * @param failure      The exception if the operation failed, null if successful
      */
     private void emitProducerMetrics(long totalLatency, Throwable failure) {
-        producerMetricsEmitter.get().emit(
-            true,
-            totalLatency,
-            0,
-            0,
-            false,
-            failure != null ? ProducerErrorMapper.mapToProducerErrorType(failure) : null
-        );
+        producerMetricsEmitter.get()
+                              .emit(
+                                  true,
+                                  totalLatency,
+                                  0,
+                                  0,
+                                  false,
+                                  failure != null ? ProducerErrorMapper.mapToProducerErrorType(failure) : null
+                              );
     }
 
     /**
