@@ -1,27 +1,61 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.common.VaradhiCache;
-import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import io.micrometer.core.instrument.MeterRegistry;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.Objects;
 
+/**
+ * Service for managing projects in Varadhi.
+ * <p>
+ * This service provides methods for creating, retrieving, updating, and deleting projects.
+ */
+@Slf4j
 public class ProjectService {
-    private final MetaStore metaStore;
-    private final VaradhiCache<String, Project> projectCache;
 
-    public ProjectService(MetaStore metaStore, String cacheSpec, MeterRegistry meterRegistry) {
-        this.metaStore = metaStore;
-        this.projectCache = buildProjectCache(cacheSpec, this::getProject, meterRegistry);
+    /**
+     * The metadata store for persistent storage of projects.
+     */
+    private final MetaStore metaStore;
+
+    /**
+     * Creates a new ProjectService with the specified MetaStore.
+     *
+     * @param metaStore     the MetaStore for persistent storage
+     * @throws NullPointerException if metaStore is null
+     */
+    public ProjectService(MetaStore metaStore) {
+        this.metaStore = Objects.requireNonNull(metaStore, "MetaStore cannot be null");
     }
 
+    /**
+     * Creates a new project.
+     *
+     * @param project the project to create
+     * @return the created project
+     * @throws ResourceNotFoundException if the org or team does not exist
+     */
     public Project createProject(Project project) {
-        boolean orgExists = metaStore.checkOrgExists(project.getOrg());
-        if (!orgExists) {
+        log.info("Creating project: {}", project.getName());
+        validateProjectDependencies(project);
+
+        metaStore.projects().create(project);
+        return project;
+    }
+
+    /**
+     * Validates that the organization and team specified in the project exist.
+     *
+     * @param project the project to validate
+     * @throws ResourceNotFoundException if the org or team does not exist
+     */
+    private void validateProjectDependencies(Project project) {
+        // Check if org exists
+        if (!metaStore.orgs().exists(project.getOrg())) {
             throw new ResourceNotFoundException(
                 String.format(
                     "Org(%s) not found. For Project creation, associated Org and Team should exist.",
@@ -29,8 +63,9 @@ public class ProjectService {
                 )
             );
         }
-        boolean teamExists = metaStore.checkTeamExists(project.getTeam(), project.getOrg());
-        if (!teamExists) {
+
+        // Check if team exists
+        if (!metaStore.teams().exists(project.getTeam(), project.getOrg())) {
             throw new ResourceNotFoundException(
                 String.format(
                     "Team(%s) not found. For Project creation, associated Org and Team should exist.",
@@ -38,31 +73,66 @@ public class ProjectService {
                 )
             );
         }
-        metaStore.createProject(project);
+    }
+
+    /**
+     * Retrieves a project by name from the MetaStore.
+     *
+     * @param projectName the name of the project to retrieve
+     * @return the project
+     * @throws ResourceNotFoundException if the project does not exist
+     */
+    public Project getProject(String projectName) {
+        return metaStore.projects().get(projectName);
+    }
+
+    /**
+     * Updates an existing project.
+     * <p>
+     * This method validates the update operation to ensure it is valid and
+     * there are no conflicts.
+     *
+     * @param project the project with updated information
+     * @return the updated project
+     * @throws IllegalArgumentException             if the project cannot be updated
+     * @throws InvalidOperationForResourceException if there is a version conflict
+     * @throws ResourceNotFoundException            if the project does not exist
+     */
+    public Project updateProject(Project project) {
+        log.info("Updating project: {}", project.getName());
+
+        Project existingProject = getProject(project.getName());
+        validateProjectUpdate(project, existingProject);
+
+        metaStore.projects().update(project);
         return project;
     }
 
-    public Project getProject(String projectName) {
-        return metaStore.getProject(projectName);
-    }
-
-    public Project getCachedProject(String projectName) {
-        return projectCache.get(projectName);
-    }
-
-    public Project updateProject(Project project) {
-        Project existingProject = metaStore.getProject(project.getName());
+    /**
+     * Validates that a project update operation is valid.
+     *
+     * @param project         the project with updated information
+     * @param existingProject the existing project
+     * @throws IllegalArgumentException             if the project cannot be updated
+     * @throws InvalidOperationForResourceException if there is a version conflict
+     */
+    private void validateProjectUpdate(Project project, Project existingProject) {
+        // Check if org is being changed
         if (!project.getOrg().equals(existingProject.getOrg())) {
             throw new IllegalArgumentException(
-                String.format("Project(%s) can not be moved across organisation.", project.getName())
+                String.format("Project(%s) cannot be moved across organization.", project.getName())
             );
         }
+
+        // Check if there are any changes
         if (project.getTeam().equals(existingProject.getTeam()) && project.getDescription()
                                                                           .equals(existingProject.getDescription())) {
             throw new IllegalArgumentException(
                 String.format("Project(%s) has same team name and description. Nothing to update.", project.getName())
             );
         }
+
+        // Check for version conflict
         if (project.getVersion() != existingProject.getVersion()) {
             throw new InvalidOperationForResourceException(
                 String.format(
@@ -71,52 +141,51 @@ public class ProjectService {
                 )
             );
         }
-        metaStore.updateProject(project);
-        return project;
     }
 
+    /**
+     * Deletes a project by name after validating that it has no dependencies.
+     *
+     * @param projectName the name of the project to delete
+     * @throws InvalidOperationForResourceException if the project has associated entities
+     * @throws ResourceNotFoundException            if the project does not exist
+     */
     public void deleteProject(String projectName) {
-        validateDelete(projectName);
-        metaStore.deleteProject(projectName);
+        log.info("Deleting project: {}", projectName);
+        validateProjectDeletion(projectName);
+
+        metaStore.projects().delete(projectName);
     }
 
-    private void validateDelete(String projectName) {
-        ensureNoTopicExist(projectName);
-        ensureNoSubscriptionExist(projectName);
-    }
-
-    private void ensureNoTopicExist(String projectName) {
-        List<String> varadhiTopicNames = metaStore.getTopicNames(projectName);
-        if (!varadhiTopicNames.isEmpty()) {
+    /**
+     * Validates that a project can be deleted by checking for dependencies.
+     *
+     * @param projectName the name of the project to validate
+     * @throws InvalidOperationForResourceException if the project has associated entities
+     */
+    private void validateProjectDeletion(String projectName) {
+        // Check for topics
+        List<String> topicNames = metaStore.topics().getAllNames(projectName);
+        if (!topicNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
-                String.format("Can not delete Project(%s), it has associated entities.", projectName)
+                String.format(
+                    "Cannot delete Project(%s), it has %d associated topic(s).",
+                    projectName,
+                    topicNames.size()
+                )
             );
         }
-    }
 
-    private void ensureNoSubscriptionExist(String projectName) {
-        List<String> varadhiSubscriptionNames = metaStore.getSubscriptionNames(projectName);
-        if (!varadhiSubscriptionNames.isEmpty()) {
+        // Check for subscriptions
+        List<String> subscriptionNames = metaStore.subscriptions().getAllNames(projectName);
+        if (!subscriptionNames.isEmpty()) {
             throw new InvalidOperationForResourceException(
-                String.format("Can not delete Project(%s), it has associated subscription entities.", projectName)
+                String.format(
+                    "Cannot delete Project(%s), it has %d associated subscription(s).",
+                    projectName,
+                    subscriptionNames.size()
+                )
             );
         }
-    }
-
-    private VaradhiCache<String, Project> buildProjectCache(
-        String cacheSpec,
-        Function<String, Project> projectProvider,
-        MeterRegistry meterRegistry
-    ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            projectProvider,
-            (projectName, exception) -> new ResourceNotFoundException(
-                String.format("Failed to get project(%s). %s", projectName, exception.getMessage()),
-                exception
-            ),
-            "project",
-            meterRegistry
-        );
     }
 }

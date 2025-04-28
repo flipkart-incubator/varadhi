@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
@@ -24,6 +25,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class OrgHandlers implements RouteProvider {
+    private static final String API_NAME = "ORG";
     private final OrgService orgService;
 
     public OrgHandlers(OrgService orgService) {
@@ -35,16 +37,14 @@ public class OrgHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/orgs",
             List.of(
-                RouteDefinition.get("GetOrgs", "")
-                               .authorize(ORG_LIST)
-                               .build(this::getHierarchies, this::getOrganizations),
-                RouteDefinition.get("GetOrg", "/:org").authorize(ORG_GET).build(this::getHierarchies, this::get),
-                RouteDefinition.post("CreateOrg", "")
+                RouteDefinition.get(LIST, API_NAME, "").authorize(ORG_LIST).build(this::getHierarchies, this::list),
+                RouteDefinition.get(GET, API_NAME, "/:org").authorize(ORG_GET).build(this::getHierarchies, this::get),
+                RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setOrg)
                                .authorize(ORG_CREATE)
                                .build(this::getHierarchies, this::create),
-                RouteDefinition.delete("DeleteOrg", "/:org")
+                RouteDefinition.delete(DELETE, API_NAME, "/:org")
                                .authorize(ORG_DELETE)
                                .build(this::getHierarchies, this::delete)
             )
@@ -69,7 +69,7 @@ public class OrgHandlers implements RouteProvider {
     }
 
 
-    public void getOrganizations(RoutingContext ctx) {
+    public void list(RoutingContext ctx) {
         List<Org> organizations = orgService.getOrgs();
         ctx.endApiWithResponse(organizations);
     }

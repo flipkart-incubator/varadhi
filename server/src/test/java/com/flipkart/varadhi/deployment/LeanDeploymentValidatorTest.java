@@ -71,13 +71,9 @@ public class LeanDeploymentValidatorTest {
         appConfiguration = YamlLoader.loadConfig("test/configuration.yml", AppConfiguration.class);
 
 
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
-        projectService = new ProjectService(
-            varadhiMetaStore,
-            appConfiguration.getRestOptions().getProjectCacheBuilderSpec(),
-            meterRegistry
-        );
+        projectService = new ProjectService(varadhiMetaStore);
 
         deploymentValidator = new LeanDeploymentValidator(orgService, teamService, projectService);
     }

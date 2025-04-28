@@ -560,7 +560,7 @@ public class ZKMetaStore implements AutoCloseable {
             var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, resourceType.name(), resourceName, "");
             log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, resourceType);
 
-            var eventsPath = ZNode.ofKind(EVENT, nodeName).getPath();
+            var eventsPath = ZNode.ofEntityChange(nodeName).getPath();
             return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(eventsPath);
         } catch (Exception e) {
             throw new MetaStoreException(

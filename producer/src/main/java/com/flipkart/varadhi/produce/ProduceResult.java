@@ -55,6 +55,10 @@ public class ProduceResult {
         return new ProduceResult(messageId, topicState.getProduceStatus(), null, null);
     }
 
+    public static ProduceResult ofFilteredMessage(String messageId) {
+        return new ProduceResult(messageId, ProduceStatus.Filtered, null, null);
+    }
+
     /**
      * Checks if the produce operation was successful.
      *

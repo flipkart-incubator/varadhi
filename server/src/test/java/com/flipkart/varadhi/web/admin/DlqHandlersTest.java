@@ -45,7 +45,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         dlqService = mock(DlqService.class);
-        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, projectService);
+        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, projectCache);
         Route routeUnsideline = router.post("/projects/:project/subscriptions/:subscription/dlq/messages/unsideline")
                                       .handler(bodyHandler)
                                       .handler(ctx -> {
@@ -56,7 +56,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         setupFailureHandler(routeUnsideline);
 
         Route routeGetMessages = router.get("/projects/:project/subscriptions/:subscription/dlq/messages")
-                                       .handler(dlqHandlers::getMessages);
+                                       .handler(dlqHandlers::listMessages);
         setupFailureHandler(routeGetMessages);
         objectMapper = JsonMapper.getMapper();
         objectMapper.registerSubtypes(new NamedType(PulsarOffset.class, "PulsarOffset"));
@@ -74,7 +74,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -190,13 +190,13 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     }
 
     @Test
-    void testDlqGetMessages() throws Exception {
+    void testDlqListMessages() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            getMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", -1)
+            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", -1)
         );
         ArgumentCaptor<DlqPageMarker> captor = ArgumentCaptor.forClass(DlqPageMarker.class);
-        VaradhiSubscription subscription = setupSubscriptionForGetMessages();
+        VaradhiSubscription subscription = setupSubscriptionForListMessages();
 
         List<DlqMessage> shard1Messages = List.of(createDlqMessage(1), createDlqMessage(2), createDlqMessage(1));
         List<DlqMessage> shard2Messages = List.of(createDlqMessage(3), createDlqMessage(3), createDlqMessage(4));
@@ -226,7 +226,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     }
 
     @Test
-    void testDlqGetMessagesFromMarker() throws Exception {
+    void testDlqListMessagesFromMarker() throws Exception {
         List<DlqMessage> shard1Messages = List.of(createDlqMessage(1), createDlqMessage(2), createDlqMessage(1));
         List<DlqMessage> shard2Messages = List.of(createDlqMessage(3), createDlqMessage(3), createDlqMessage(4));
         DlqPageMarker pageMarker = new DlqPageMarker(new HashMap<>());
@@ -241,10 +241,10 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            getMessagesUrl("sub12", PROJECT, 0, pageMarker.toString(), -1)
+            listMessagesUrl("sub12", PROJECT, 0, pageMarker.toString(), -1)
         );
         ArgumentCaptor<DlqPageMarker> captor = ArgumentCaptor.forClass(DlqPageMarker.class);
-        VaradhiSubscription subscription = setupSubscriptionForGetMessages();
+        VaradhiSubscription subscription = setupSubscriptionForListMessages();
 
         CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
         doAnswer(invocationOnMock -> {
@@ -263,47 +263,47 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
 
     @Test
-    void testDlqGetMessagesInvalidLimit() throws Exception {
+    void testDlqListMessagesInvalidLimit() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            getMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", 5000)
+            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", 5000)
         );
-        setupSubscriptionForGetMessages();
+        setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Limit cannot be more than 100.");
     }
 
     @Test
-    void testDlqGetMessagesNoCriteria() throws Exception {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getMessagesUrl("sub12", PROJECT, 0, "", -1));
-        setupSubscriptionForGetMessages();
+    void testDlqListMessagesNoCriteria() throws Exception {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, listMessagesUrl("sub12", PROJECT, 0, "", -1));
+        setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "At least one get messages criteria needs to be specified.");
     }
 
     @Test
-    void testDlqGetMessagesMultipleCriteria() throws Exception {
+    void testDlqListMessagesMultipleCriteria() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            getMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "1=mId:1:2:3", -1)
+            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "1=mId:1:2:3", -1)
         );
-        setupSubscriptionForGetMessages();
+        setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Only one of the get messages criteria should be specified.");
     }
 
     @Test
-    void testDlqGetMessagesInvalidNextPageMarker() throws Exception {
+    void testDlqListMessagesInvalidNextPageMarker() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            getMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "mId:1:2:3", -1)
+            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "mId:1:2:3", -1)
         );
-        setupSubscriptionForGetMessages();
+        setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Invalid page marker: mId:1:2:3");
     }
 
-    private VaradhiSubscription setupSubscriptionForGetMessages() {
+    private VaradhiSubscription setupSubscriptionForListMessages() {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectService).getCachedProject(PROJECT.getName());
+        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }
@@ -338,7 +338,13 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         return String.join("/", buildSubscriptionUrl(subscriptionName, project), "dlq", "messages", "unsideline");
     }
 
-    private String getMessagesUrl(String subscriptionName, Project project, long failedAt, String nextPage, int limit) {
+    private String listMessagesUrl(
+        String subscriptionName,
+        Project project,
+        long failedAt,
+        String nextPage,
+        int limit
+    ) {
         StringBuilder sb = new StringBuilder(
             String.join("/", buildSubscriptionUrl(subscriptionName, project), "dlq", "messages")
         );

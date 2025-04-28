@@ -1,12 +1,14 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.DlqService;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
 import com.flipkart.varadhi.web.entities.DlqPageMarker;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -23,26 +25,38 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.LIST_MESSAGES;
+import static com.flipkart.varadhi.common.Constants.MethodNames.UNSIDELINE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
-import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.*;
+import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT;
+import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT;
+import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
+import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
+import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.entities.Hierarchies.*;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class DlqHandlers implements RouteProvider {
+    private static final String API_NAME = "DLQ";
+
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
-    private final ProjectService projectService;
+    private final EntityReadCache<Project> projectCache;
     private final DlqService dlqService;
 
-    public DlqHandlers(DlqService dlqService, SubscriptionService subscriptionService, ProjectService projectService) {
+    public DlqHandlers(
+        DlqService dlqService,
+        SubscriptionService subscriptionService,
+        EntityReadCache<Project> projectCache
+    ) {
         this.dlqService = dlqService;
         this.subscriptionService = subscriptionService;
-        this.projectService = projectService;
+        this.projectCache = projectCache;
     }
 
     @Override
@@ -50,18 +64,18 @@ public class DlqHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/subscriptions/:subscription/dlq/messages",
             List.of(
-                RouteDefinition.post("Unsideline", "/unsideline")
+                RouteDefinition.post(UNSIDELINE, API_NAME, "/unsideline")
                                .nonBlocking()
                                .hasBody()
                                .bodyParser(this::setUnsidelineRequest)
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::enqueueUnsideline),
-                RouteDefinition.get("GetMessages", "")
+                RouteDefinition.get(LIST_MESSAGES, API_NAME, "")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_GET)
-                               .authorize(TOPIC_CONSUME)
-                               .build(this::getHierarchies, this::getMessages)
+                               .authorize(TOPIC_SUBSCRIBE)
+                               .build(this::getHierarchies, this::listMessages)
             )
         ).get();
     }
@@ -73,11 +87,11 @@ public class DlqHandlers implements RouteProvider {
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectService.getCachedProject(projectName);
+        Project project = projectCache.getOrThrow(projectName);
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectService.getProject(topicNameSegments[0]);
+        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]);
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
@@ -93,7 +107,7 @@ public class DlqHandlers implements RouteProvider {
         ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
-    public void getMessages(RoutingContext ctx) {
+    public void listMessages(RoutingContext ctx) {
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String limitStr = ctx.request().getParam("limit");
         int limit = limitStr == null ?

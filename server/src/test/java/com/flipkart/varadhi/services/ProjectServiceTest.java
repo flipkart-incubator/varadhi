@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.services;
 
-import java.util.List;
-
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -10,8 +8,8 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
 import io.micrometer.jmx.JmxMeterRegistry;
@@ -23,10 +21,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
+import java.util.List;
 
-public class ProjectServiceTest {
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
+class ProjectServiceTest {
 
     TestingServer zkCuratorTestingServer;
     OrgService orgService;
@@ -41,7 +42,7 @@ public class ProjectServiceTest {
     Project o1t1p1, o1t1p2, o2t1p1;
 
     @BeforeEach
-    public void PreTest() throws Exception {
+    void PreTest() throws Exception {
         zkCuratorTestingServer = new TestingServer();
         zkCurator = spy(
             CuratorFrameworkFactory.newClient(
@@ -51,10 +52,10 @@ public class ProjectServiceTest {
         );
         zkCurator.start();
         varadhiMetaStore = spy(new VaradhiMetaStore(new ZKMetaStore(zkCurator)));
-        orgService = new OrgService(varadhiMetaStore);
+        orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
         teamService = new TeamService(varadhiMetaStore);
         meterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
-        projectService = spy(new ProjectService(varadhiMetaStore, "", meterRegistry));
+        projectService = spy(new ProjectService(varadhiMetaStore));
         org1 = Org.of("TestOrg1");
         org2 = Org.of("TestOrg2");
         o1t1 = Team.of("TestTeam1", org1.getName());
@@ -68,7 +69,7 @@ public class ProjectServiceTest {
     }
 
     @Test
-    public void testCreateProject() {
+    void testCreateProject() {
         Project o1t1p1Created = projectService.createProject(o1t1p1);
         Project o1t1p1Get = projectService.getProject(o1t1p1.getName());
         Assertions.assertEquals(o1t1p1, o1t1p1Created);
@@ -122,7 +123,7 @@ public class ProjectServiceTest {
 
 
     @Test
-    public void testGetProject() {
+    void testGetProject() {
         Project dummyP1 = Project.of("dummyP", "", o1t1.getName(), "dummyOrg");
         validateResourceNotFound(
             String.format("Project(%s) not found.", dummyP1.getName()),
@@ -131,7 +132,7 @@ public class ProjectServiceTest {
     }
 
     @Test
-    public void testUpdateProject() {
+    void testUpdateProject() {
         projectService.createProject(o1t1p1);
         o1t1p1.setDescription("Some Description");
         int initialVersion = o1t1p1.getVersion();
@@ -179,40 +180,27 @@ public class ProjectServiceTest {
         orgService.createOrg(org2);
         Project orgUpdate = Project.of(o1t1p1.getName(), o1t1p1.getDescription(), o1t1p1.getTeam(), org2.getName());
 
-        argumentErr = String.format("Project(%s) can not be moved across organisation.", orgUpdate.getName());
+        argumentErr = String.format("Project(%s) cannot be moved across organization.", orgUpdate.getName());
         validateException(argumentErr, IllegalArgumentException.class, () -> projectService.updateProject(orgUpdate));
     }
 
     @Test
-    public void testDeleteProject() {
+    void testDeleteProject() {
         projectService.createProject(o1t1p1);
         projectService.createProject(o1t1p2);
         projectService.deleteProject(o1t1p2.getName());
-
-        doReturn(List.of("Dummy1")).when(varadhiMetaStore).getTopicNames(o1t1p2.getName());
+        TopicStore topicStore = mock(TopicStore.class);
+        when(varadhiMetaStore.topics()).thenReturn(topicStore);
+        when(topicStore.getAllNames(o1t1p2.getName())).thenReturn(List.of("Dummy1"));
         InvalidOperationForResourceException e = Assertions.assertThrows(
             InvalidOperationForResourceException.class,
             () -> projectService.deleteProject(o1t1p2.getName())
         );
 
         Assertions.assertEquals(
-            String.format("Can not delete Project(%s), it has associated entities.", o1t1p2.getName()),
+            String.format("Cannot delete Project(%s), it has 1 associated topic(s).", o1t1p2.getName()),
             e.getMessage()
         );
-    }
-
-    @Test
-    public void testGetCachedProject() {
-        Counter getCounter = meterRegistry.counter("varadhi.cache.project.gets");
-        Counter loadCounter = meterRegistry.counter("varadhi.cache.project.loads");
-        projectService.createProject(o1t1p1);
-        projectService.createProject(o1t1p2);
-        for (int i = 0; i < 100; i++) {
-            projectService.getCachedProject(o1t1p1.getName());
-            projectService.getCachedProject(o1t1p2.getName());
-        }
-        Assertions.assertEquals(200, (int)getCounter.count());
-        Assertions.assertEquals(2, (int)loadCounter.count());
     }
 
     interface MethodCaller {

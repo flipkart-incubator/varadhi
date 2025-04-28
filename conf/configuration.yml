@@ -1,3 +1,5 @@
+disabledAPIs: []
+
 member:
   roles: [ "Server", "Controller", "Consumer" ]
   maxQps: 5000
@@ -37,9 +39,9 @@ restOptions:
   defaultProject: "public"
 
 producerOptions:
-  producerCacheBuilderSpec: ""
-  topicCacheBuilderSpec: ""
+  producerCacheTtlSeconds: 3600
   metricEnabled: true
+
 
 authenticationOptions:
   configFile: "authn.yml"
@@ -53,10 +55,8 @@ authenticationOptions:
       methodList:
         - GET
 
-authorizationEnabled: true
-
 authorization:
-  superUsers: [ "thanos" ]
+  enabled: true
   providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
   configFile: "authorizationConfig.yml"
 

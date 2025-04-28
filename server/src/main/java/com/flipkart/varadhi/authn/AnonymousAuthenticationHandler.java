@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 
-
 @Slf4j
 public class AnonymousAuthenticationHandler implements AuthenticationHandlerProvider {
 

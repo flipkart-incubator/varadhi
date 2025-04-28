@@ -1,186 +1,236 @@
 package com.flipkart.varadhi.produce.services;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+
+import com.flipkart.varadhi.common.EntityReadCache;
 import com.flipkart.varadhi.common.Result;
-import com.flipkart.varadhi.common.VaradhiCache;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.exceptions.VaradhiException;
-import com.flipkart.varadhi.entities.InternalCompositeTopic;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerErrorMapper;
 import com.flipkart.varadhi.produce.config.ProducerErrorType;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
-import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.services.Producer;
-import io.micrometer.core.instrument.MeterRegistry;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
 /**
- * Service responsible for managing message production to topics in the Varadhi messaging system.
- * Provides caching of producers and topics, and handles message production with metrics tracking.
- *
- * <p>This service implements thread-safe message production with the following features:
+ * Service responsible for producing messages to topics in Varadhi.
+ * <p>
+ * This service provides high-performance, thread-safe message production capabilities with:
  * <ul>
- *   <li>Producer and topic caching for improved performance</li>
- *   <li>Metrics collection for monitoring and alerting</li>
- *   <li>Asynchronous message production with CompletableFuture</li>
- *   <li>Comprehensive error handling and reporting</li>
+ *   <li>Efficient producer caching using Caffeine for optimal resource utilization</li>
+ *   <li>Fully asynchronous message production with CompletableFuture</li>
+ *   <li>Comprehensive metrics collection for monitoring and performance analysis</li>
+ *   <li>Robust error handling with detailed error messages</li>
  * </ul>
+ * <p>
+ * The service maintains a cache of producers for storage topics to optimize performance
+ * and resource utilization. Producers are created on-demand and cached for reuse based on
+ * configurable TTL settings.
  */
 @Slf4j
-public class ProducerService {
-    private final VaradhiCache<StorageTopic, Producer> producerCache;
-    private final VaradhiCache<String, VaradhiTopic> internalTopicCache;
+public final class ProducerService {
+
+    /**
+     * Cache of producers for storage topics.
+     */
+    private final LoadingCache<StorageTopic, Producer> producerCache;
+
+    /**
+     * The region where messages are produced.
+     */
     private final String produceRegion;
 
     /**
-     * Constructs a new ProducerService with the specified configuration and dependencies.
+     * Cache for VaradhiTopic entities.
+     */
+    private final EntityReadCache<VaradhiTopic> topicCache;
+
+    /**
+     * Creates a new ProducerService with default options.
+     * <p>
+     * This constructor uses the default producer options, which include a TTL of 60 minutes
+     * for cached producers.
      *
-     * @param produceRegion    The region identifier where messages will be produced
-     * @param producerOptions  Configuration options for producer behavior
-     * @param producerProvider Factory function for creating new producers
-     * @param topicProvider    Function to retrieve topic information
-     * @param meterRegistry    Registry for metrics collection
+     * @param produceRegion    the region where messages are produced
+     * @param producerProvider function to create producers for storage topics
+     * @param topicCache       cache for VaradhiTopic entities
      */
     public ProducerService(
         String produceRegion,
-        ProducerOptions producerOptions,
         Function<StorageTopic, Producer> producerProvider,
-        Function<String, VaradhiTopic> topicProvider,
-        MeterRegistry meterRegistry
+        EntityReadCache<VaradhiTopic> topicCache
     ) {
-        this.internalTopicCache = setupTopicCache(
-            producerOptions.getTopicCacheBuilderSpec(),
-            topicProvider,
-            meterRegistry
-        );
-        this.producerCache = setupProducerCache(
-            producerOptions.getProducerCacheBuilderSpec(),
-            producerProvider,
-            meterRegistry
-        );
-        this.produceRegion = produceRegion;
+        this(produceRegion, producerProvider, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
-     * Sets up the topic cache with specified configuration.
-     */
-    private VaradhiCache<String, VaradhiTopic> setupTopicCache(
-        String cacheSpec,
-        Function<String, VaradhiTopic> topicProvider,
-        MeterRegistry meterRegistry
-    ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            topicProvider,
-            (topicName, failure) -> new ProduceException(
-                String.format("Failed to get produce Topic(%s). %s", topicName, failure.getMessage()),
-                failure
-            ),
-            "topic",
-            meterRegistry
-        );
-    }
-
-    /**
-     * Sets up the producer cache with specified configuration.
-     */
-    private VaradhiCache<StorageTopic, Producer> setupProducerCache(
-        String cacheSpec,
-        Function<StorageTopic, Producer> producerProvider,
-        MeterRegistry meterRegistry
-    ) {
-        return new VaradhiCache<>(
-            cacheSpec,
-            producerProvider,
-            (storageTopic, failure) -> new ProduceException(
-                String.format(
-                    "Failed to create Pulsar producer for Topic(%s). %s",
-                    storageTopic.getName(),
-                    failure.getMessage()
-                ),
-                failure
-            ),
-            "producer",
-            meterRegistry
-        );
-    }
-
-    /**
-     * Produces a message to the specified topic asynchronously.
+     * Creates a new ProducerService with the specified options.
+     * <p>
+     * This constructor allows customization of producer options, such as the TTL for
+     * cached producers.
      *
-     * @param message          The message to produce
-     * @param varadhiTopicName The fully qualified topic name
-     * @param metricsEmitter   Emitter for tracking production metrics
-     * @return A future containing the result of the produce operation
-     * @throws ResourceNotFoundException if the topic is not found
-     * @throws ProduceException          if there's an error during production
+     * @param produceRegion    the region where messages are produced
+     * @param producerProvider function to create producers for storage topics
+     * @param topicCache       cache for VaradhiTopic entities
+     * @param producerOptions  configuration options for producers
+     */
+    public ProducerService(
+        String produceRegion,
+        Function<StorageTopic, Producer> producerProvider,
+        EntityReadCache<VaradhiTopic> topicCache,
+        ProducerOptions producerOptions
+    ) {
+        this.produceRegion = produceRegion;
+        this.topicCache = topicCache;
+
+        this.producerCache = Caffeine.newBuilder()
+                                     .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
+                                     .recordStats()
+                                     .build(producerProvider::apply);
+    }
+
+    /**
+     * Produces a message to the specified Varadhi topic.
+     * <p>
+     * This method handles the entire process of producing a message, including:
+     * <ul>
+     *   <li>Validating the topic exists and is active</li>
+     *   <li>Checking if production is allowed to the topic</li>
+     *   <li>Obtaining the appropriate producer</li>
+     *   <li>Sending the message asynchronously</li>
+     *   <li>Collecting metrics</li>
+     * </ul>
+     *
+     * @param message          the message to produce
+     * @param varadhiTopicName the name of the Varadhi topic to produce to
+     * @param metricsEmitter   emitter for production metrics
+     * @return a future that completes with the result of the produce operation
+     * @throws ResourceNotFoundException if the topic does not exist or is not available in the region
+     * @throws ProduceException          if production fails due to an internal error
      */
     public CompletableFuture<ProduceResult> produceToTopic(
         Message message,
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
+        Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
+
+        if (topic.isEmpty() || !topic.get().isActive()) {
+            throw new ResourceNotFoundException(
+                "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
+            );
+        }
+
+        return produceToValidTopic(message, topic.get(), metricsEmitter);
+    }
+
+    /**
+     * Produces a message to a valid Varadhi topic.
+     *
+     * @param message        the message to produce
+     * @param varadhiTopic   the Varadhi topic to produce to
+     * @param metricsEmitter emitter for production metrics
+     * @return a future that completes with the result of the produce operation
+     * @throws ResourceNotFoundException if the topic is not available in the region
+     * @throws ProduceException          if production fails due to an internal error
+     */
+    private CompletableFuture<ProduceResult> produceToValidTopic(
+        Message message,
+        VaradhiTopic varadhiTopic,
+        ProducerMetricsEmitter metricsEmitter
+    ) {
+        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(produceRegion);
+
+        if (internalTopic == null) {
+            metricsEmitter.emit(false, 0, 0, 0,
+                    false, ProducerErrorType.TOPIC_NOT_FOUND);
+            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
+        }
+
+        if (!internalTopic.getTopicState().isProduceAllowed()) {
+            metricsEmitter.emit(false, 0, 0, 0,
+                    true, ProducerErrorMapper.mapTopicStateToErrorType(internalTopic.getTopicState()));
+            return CompletableFuture.completedFuture(
+                ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
+            );
+        }
+
+        if (applyOrgFilter()) {
+            return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
+        }
+
+        StorageTopic storageTopic = internalTopic.getTopicToProduce();
+        return getProducer(storageTopic).thenCompose(
+            producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
+                result -> ProduceResult.of(message.getMessageId(), result)
+            )
+        );
+    }
+
+    /**
+     * Gets a producer for the specified storage topic.
+     * <p>
+     * This method first checks if the producer is already in the cache. If not, it attempts
+     * to load it using the producer provider function.
+     *
+     * @param storageTopic the storage topic to get a producer for
+     * @return a future that completes with the producer
+     */
+    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic) {
+        Producer producer = producerCache.getIfPresent(storageTopic);
+        if (producer != null) {
+            return CompletableFuture.completedFuture(producer);
+        }
+
         try {
-            InternalCompositeTopic internalTopic = internalTopicCache.get(varadhiTopicName)
-                                                                     .getProduceTopicForRegion(produceRegion);
-
-            if (internalTopic == null) {
-                metricsEmitter.emit(false, 0, 0, 0,
-                        false, ProducerErrorType.TOPIC_NOT_FOUND);
-                throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
-            }
-
-            if (!internalTopic.getTopicState().isProduceAllowed()) {
-                metricsEmitter.emit(false, 0, 0, 0,
-                        true, ProducerErrorMapper.mapTopicStateToErrorType(internalTopic.getTopicState()));
-                return CompletableFuture.completedFuture(
-                    ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
-                );
-            }
-            Producer producer = producerCache.get(internalTopic.getTopicToProduce());
-            return produceToStorageProducer(
-                producer,
-                metricsEmitter,
-                internalTopic.getTopicToProduce().getName(),
-                message
-            ).thenApply(result -> ProduceResult.of(message.getMessageId(), result));
-        } catch (VaradhiException e) {
+            return CompletableFuture.completedFuture(producerCache.get(storageTopic));
+        } catch (Exception e) {
+            String errorMsg = String.format(
+                "Error getting producer for Topic(%s): %s",
+                storageTopic.getName(),
+                e.getMessage()
+            );
             metricsEmitter.emit(false, 0, 0, 0,
                     false, ProducerErrorMapper.mapToProducerErrorType(e));
-            throw e;
-        } catch (Exception e) {
-            metricsEmitter.emit(false, 0, 0, 0,
-                    false, ProducerErrorType.INTERNAL);
-            throw new ProduceException(String.format("Produce failed due to internal error: %s", e.getMessage()), e);
+            return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
         }
     }
 
     /**
-     * Asynchronously produces a message to the storage layer through the specified producer.
-     * Handles metrics emission and error logging for the produce operation.
+     * Produces a message to a storage topic using the specified producer.
+     * <p>
+     * This method handles the details of producing to a specific storage topic, including:
+     * <ul>
+     *   <li>Measuring the latency of the produce operation</li>
+     *   <li>Emitting metrics for monitoring</li>
+     *   <li>Handling success and failure cases</li>
+     * </ul>
      *
-     * @param producer       The storage producer instance to use
-     * @param metricsEmitter The metrics emitter for tracking production metrics
-     * @param topic          The name of the topic being produced to
-     * @param message        The message to be produced
-     * @return A CompletableFuture containing the Result with either an Offset or an error
+     * @param producer       the producer to use
+     * @param metricsEmitter emitter for production metrics
+     * @param topicName      the name of the storage topic
+     * @param message        the message to produce
+     * @return a future that completes with the result of the produce operation
      */
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
         Producer producer,
         ProducerMetricsEmitter metricsEmitter,
-        String topic,
+        String topicName,
         Message message
     ) {
+        Instant startTime = Instant.now();
         return producer.produceAsync(message).handle((result, throwable) -> {
+            Duration latency = Duration.between(startTime, Instant.now());
             long storageLatency = result != null ? ((PulsarOffset)result).getStorageLatencyMs() : 0;
             metricsEmitter.emit(
                     result != null,
@@ -191,9 +241,30 @@ public class ProducerService {
                     throwable != null ? ProducerErrorMapper.mapToProducerErrorType(throwable) : null
             );
             if (throwable != null) {
-                log.debug("Produce Message({}) to StorageTopic({}) failed.", message.getMessageId(), topic, throwable);
+                log.debug(
+                    "Produce Message({}) to StorageTopic({}) failed.",
+                    message.getMessageId(),
+                    topicName,
+                    throwable
+                );
             }
             return Result.of(result, throwable);
         });
+    }
+
+    private boolean applyOrgFilter() {
+        // TODO[IMP]: apply org filters
+        //        Project project = projectService.getCachedProject(projectName);
+        //        TODO[IMP]:avoid zk interactions for org and topic + filters
+        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
+        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
+        //        String nfrStrategy = topic.getNfrFilterName();
+        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
+        //                orgFilters.getFilters().get(nfrStrategy) :
+        //                null;
+        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
+        //            return true;
+        //        }
+        return false;
     }
 }

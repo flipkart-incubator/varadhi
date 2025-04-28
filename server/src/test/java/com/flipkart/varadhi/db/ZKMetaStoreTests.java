@@ -44,7 +44,7 @@ public class ZKMetaStoreTests {
             )
         );
         zkCuratorFramework.start();
-        testKind = new ZNodeKind("test");
+        testKind = new ZNodeKind("test", "%s");
         zkMetaStore = new ZKMetaStore(zkCuratorFramework);
         zkMetaStore.createZNode(ZNode.ofEntityType(testKind));
         data1 = new TestData("test-node1", 0, "sample-testing-node1");
@@ -77,7 +77,7 @@ public class ZKMetaStoreTests {
             ResourceNotFoundException.class,
             () -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class)
         );
-        Assertions.assertEquals(String.format("test(%s) not found.", data1.getName()), e.getMessage());
+        Assertions.assertEquals(String.format("%s(%s) not found.", testKind.kind(), data1.getName()), e.getMessage());
     }
 
     private ZNode getZnode(String name) {
@@ -223,7 +223,7 @@ public class ZKMetaStoreTests {
             () -> zkMetaStore.listChildren(zn1)
         );
 
-        ZNodeKind testKind2 = new ZNodeKind("test2");
+        ZNodeKind testKind2 = new ZNodeKind("test2", "%s");
         ZNode zn2 = ZNode.ofEntityType(testKind2);
         ResourceNotFoundException e = Assertions.assertThrows(
             ResourceNotFoundException.class,

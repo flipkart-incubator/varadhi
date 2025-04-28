@@ -44,7 +44,7 @@ public class OrgHandlersTest extends WebTestBase {
         setupFailureHandler(routeGet);
         Route routeDelete = router.delete("/orgs/:org").handler(wrapBlocking(orgHandlers::delete));
         setupFailureHandler(routeDelete);
-        Route routeList = router.get("/orgs").handler(wrapBlocking(orgHandlers::getOrganizations));
+        Route routeList = router.get("/orgs").handler(wrapBlocking(orgHandlers::list));
         setupFailureHandler(routeList);
     }
 

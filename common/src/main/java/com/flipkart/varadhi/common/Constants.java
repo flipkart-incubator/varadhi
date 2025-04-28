@@ -25,6 +25,9 @@ public class Constants {
     // System identity constant
     public static final String SYSTEM_IDENTITY = "System";
 
+    // Handler name for entity events.
+    public static final String ENTITY_EVENTS_HANDLER = "entity-events";
+
     private Constants() {
         // Private constructor to prevent instantiation
     }
@@ -39,6 +42,7 @@ public class Constants {
         public static final String PATH_PARAM_PROJECT = "project";
         public static final String PATH_PARAM_TOPIC = "topic";
         public static final String PATH_PARAM_SUBSCRIPTION = "subscription";
+        public static final String PATH_PARAM_ORG_FILTER_NAME = "orgFilterName";
 
         private PathParams() {
             // Private constructor to prevent instantiation
@@ -48,6 +52,31 @@ public class Constants {
 
     public static class ContextKeys {
         public static final String USER_CONTEXT = "userContext";
+    }
+
+
+    public static class MethodNames {
+        public static final String GET = "GET";
+        public static final String CREATE = "CREATE";
+        public static final String UPDATE = "UPDATE";
+        public static final String DELETE = "DELETE";
+        public static final String LIST = "LIST";
+
+        public static final String SET = "SET";
+
+        public static final String RESTORE = "RESTORE";
+
+        public static final String UNSIDELINE = "UNSIDELINE";
+        public static final String LIST_MESSAGES = "LIST_MESSAGES";
+
+        public static final String START = "START";
+        public static final String STOP = "STOP";
+
+        public static final String LIST_PROJECTS = "LIST_PROJECTS";
+
+        private MethodNames() {
+            // Private constructor to prevent instantiation
+        }
     }
 
 

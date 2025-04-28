@@ -1,8 +1,0 @@
-plugins {
-    id 'com.flipkart.varadhi.java-published-library-conventions'
-}
-
-dependencies {
-    api(project(":entities"))
-    implementation("io.vertx:vertx-core")
-}

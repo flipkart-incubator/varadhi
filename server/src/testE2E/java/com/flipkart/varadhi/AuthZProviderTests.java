@@ -57,12 +57,21 @@ public class AuthZProviderTests extends E2EBase {
             "topic001",
             fkDefault.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            "test"
         );
         makeCreateRequest(getOrgsUri(), oPublic, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamRocket, 200);
         makeCreateRequest(getTeamsUri(oPublic.getName()), fkTeamAsh, 200);
         makeCreateRequest(getProjectCreateUri(), fkDefault, 200);
+
+        // Add a small delay to allow the project cache to be updated
+        try {
+            Thread.sleep(500); // 500ms delay
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         makeCreateRequest(getTopicsUri(fkDefault), fkTopic001, 200);
         bootstrapRoleBindings();
         setupProvider(checkpoint);
@@ -76,6 +85,8 @@ public class AuthZProviderTests extends E2EBase {
     private static void setupProvider(Checkpoint checkpoint) throws IOException {
         String configContent = """
             ---
+            superUsers: [ "thanos" ]
+
             metaStoreOptions:
               providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
               configFile: "metastore.yml"
@@ -168,6 +179,21 @@ public class AuthZProviderTests extends E2EBase {
     private static void deleteIamPolicy(String targetUrl) {
         Response response = makeHttpDeleteRequest(targetUrl);
         Assertions.assertNotNull(response);
+    }
+
+    @Test
+    public void testIsAuthorized_SuperUserAccess(VertxTestContext testContext) {
+        Checkpoint checkpoint = testContext.checkpoint(1);
+
+        // Super user should be authorized for any action on any resource
+        provider.isAuthorized(
+            testUser("thanos", false),
+            ResourceAction.TOPIC_GET,
+            "public/team_rocket/default/topic001"
+        ).onComplete(testContext.succeeding(t -> {
+            Assertions.assertTrue(t);
+            checkpoint.flag();
+        }));
     }
 
     @Test

@@ -9,7 +9,6 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.*;
@@ -26,7 +25,6 @@ import lombok.experimental.ExtensionMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -45,7 +43,6 @@ class TopicHandlersTest extends WebTestBase {
 
     private final Project project = Project.of(DEFAULT_PROJECT_NAME, "", TEAM_NAME, ORG_NAME);
 
-    @InjectMocks
     private TopicHandlers topicHandlers;
 
     @Mock
@@ -53,9 +50,6 @@ class TopicHandlersTest extends WebTestBase {
 
     @Mock
     private VaradhiTopicFactory varadhiTopicFactory;
-
-    @Mock
-    private ProjectService projectService;
 
     @Mock
     private SpanProvider spanProvider;
@@ -66,12 +60,14 @@ class TopicHandlersTest extends WebTestBase {
     private RequestTelemetryConfigurator requestTelemetryConfigurator;
 
     @BeforeEach
-    public void PreTest() throws InterruptedException {
+    void PreTest() throws InterruptedException {
         MockitoAnnotations.openMocks(this);
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        doReturn(project).when(projectService).getCachedProject(project.getName());
+        doReturn(project).when(projectCache).getOrThrow(project.getName());
+
+        topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);
 
         setupRoutes();
     }
@@ -87,7 +83,7 @@ class TopicHandlersTest extends WebTestBase {
 
         router.get("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::get));
 
-        router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::listTopics));
+        router.get("/projects/:project/topics").handler(bodyHandler).handler(wrapBlocking(topicHandlers::list));
 
         router.delete("/projects/:project/topics/:topic").handler(wrapBlocking(topicHandlers::delete));
 
@@ -153,7 +149,7 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     @Test
-    void listTopics_WithTopicsAvailable_ShouldReturnAllTopics() throws InterruptedException {
+    void listTopics_WithTopicsAvailable_ShouldReturnAll() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
@@ -167,7 +163,7 @@ class TopicHandlersTest extends WebTestBase {
     }
 
     @Test
-    void listTopics_WithIncludeInactive_ShouldReturnAllTopicsIncludingInactive() throws InterruptedException {
+    void listTopics_WithIncludeInactive_ShouldReturnAllIncludingInactive() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
         doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), true);
@@ -247,7 +243,8 @@ class TopicHandlersTest extends WebTestBase {
             TOPIC_NAME,
             project.getName(),
             Constants.DEFAULT_TOPIC_CAPACITY,
-            LifecycleStatus.ActorCode.USER_ACTION
+            LifecycleStatus.ActorCode.USER_ACTION,
+            "test"
         );
     }
 
