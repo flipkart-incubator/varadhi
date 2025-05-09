@@ -12,6 +12,8 @@ import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -49,8 +51,17 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
+     * Cache for Varad
+     */
+    private final EntityReadCache<OrgDetails> orgCache;
+    /**
+     * Cache for Varad
+     */
+    private final EntityReadCache<Project> projectCache;
+    /**
      * Cache for VaradhiTopic entities.
      */
+
     private final EntityReadCache<VaradhiTopic> topicCache;
 
     /**
@@ -64,11 +75,13 @@ public final class ProducerService {
      * @param topicCache       cache for VaradhiTopic entities
      */
     public ProducerService(
-        String produceRegion,
-        Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache
+            String produceRegion,
+            Function<StorageTopic, Producer> producerProvider,
+            EntityReadCache<OrgDetails> orgCache,
+            EntityReadCache<Project> projectCache,
+            EntityReadCache<VaradhiTopic> topicCache
     ) {
-        this(produceRegion, producerProvider, topicCache, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider,orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
@@ -83,14 +96,17 @@ public final class ProducerService {
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
-        String produceRegion,
-        Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache,
-        ProducerOptions producerOptions
+            String produceRegion,
+            Function<StorageTopic, Producer> producerProvider,
+            EntityReadCache<OrgDetails> orgCache,
+            EntityReadCache<Project> projectCache,
+            EntityReadCache<VaradhiTopic> topicCache,
+            ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
         this.topicCache = topicCache;
-
+        this.projectCache = projectCache;
+        this.orgCache = orgCache;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -159,7 +175,7 @@ public final class ProducerService {
             );
         }
 
-        if (applyOrgFilter()) {
+        if (applyOrgFilter(varadhiTopic)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
         }
 
@@ -236,19 +252,31 @@ public final class ProducerService {
         });
     }
 
-    private boolean applyOrgFilter() {
-        // TODO[IMP]: apply org filters
-        //        Project project = projectService.getCachedProject(projectName);
-        //        TODO[IMP]:avoid zk interactions for org and topic + filters
-        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
-        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
-        //        String nfrStrategy = topic.getNfrFilterName();
-        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
-        //                orgFilters.getFilters().get(nfrStrategy) :
-        //                null;
-        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
-        //            return true;
-        //        }
-        return false;
+    private boolean applyOrgFilter(String projectName, String topicName, Message message) {
+        Optional<Project> projectOptional = projectCache.get(projectName);
+        if (projectOptional.isEmpty()) {
+            return false;
+        }
+        Project project = projectOptional.get();
+
+        Optional<VaradhiTopic> topicOptional = topicCache.get(VaradhiTopic.buildTopicName(projectName, topicName));
+        if (topicOptional.isEmpty()) {
+            return false;
+        }
+        VaradhiTopic varadhiTopic = topicOptional.get();
+
+        Optional<OrgDetails> orgDetailsOptional = orgCache.get(project.getOrg());
+        if (orgDetailsOptional.isEmpty()) {
+            return false;
+        }
+        OrgDetails orgDetails = orgDetailsOptional.get();
+
+        String nfrStrategy = varadhiTopic.getNfrFilterName();
+        Condition condition = Optional.ofNullable(orgDetails.getOrgFilters())
+                .map(OrgFilters::getFilters)
+                .map(filters -> filters.get(nfrStrategy))
+                .orElse(null);
+
+        return nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders());
     }
 }
