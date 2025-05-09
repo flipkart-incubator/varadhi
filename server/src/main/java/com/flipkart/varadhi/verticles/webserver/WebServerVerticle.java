@@ -76,16 +76,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
-@ExtensionMethod({Extensions.RoutingContextExtension.class})
+@ExtensionMethod ({Extensions.RoutingContextExtension.class})
 public class WebServerVerticle extends AbstractVerticle {
 
     /**
      * Holds configuration data for the WebServer verticle
      */
     private record VerticleConfig(
-            String deployedRegion,
-            TopicCapacityPolicy defaultTopicCapacity,
-            boolean isLeanDeployment
+        String deployedRegion,
+        TopicCapacityPolicy defaultTopicCapacity,
+        boolean isLeanDeployment
     ) {
         /**
          * Creates a VerticleConfig from the application configuration.
@@ -95,9 +95,9 @@ public class WebServerVerticle extends AbstractVerticle {
          */
         static VerticleConfig fromConfig(AppConfiguration configuration) {
             return new VerticleConfig(
-                    configuration.getRestOptions().getDeployedRegion(),
-                    configuration.getRestOptions().getDefaultTopicCapacity(),
-                    configuration.getFeatureFlags().isLeanDeployment()
+                configuration.getRestOptions().getDeployedRegion(),
+                configuration.getRestOptions().getDefaultTopicCapacity(),
+                configuration.getFeatureFlags().isLeanDeployment()
             );
         }
     }
@@ -107,7 +107,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final AppConfiguration configuration;
     private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings ("rawtypes")
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
     private final MeterRegistry meterRegistry;
@@ -128,10 +128,10 @@ public class WebServerVerticle extends AbstractVerticle {
      * @param clusterManager the cluster manager
      */
     public WebServerVerticle(
-            AppConfiguration configuration,
-            CoreServices services,
-            VaradhiClusterManager clusterManager,
-            EntityReadCacheRegistry cacheRegistry
+        AppConfiguration configuration,
+        CoreServices services,
+        VaradhiClusterManager clusterManager,
+        EntityReadCacheRegistry cacheRegistry
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -143,9 +143,9 @@ public class WebServerVerticle extends AbstractVerticle {
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
         this.cacheRegistry = cacheRegistry;
         this.disableAPIPatterns = configuration.getDisabledAPIs()
-                .stream()
-                .map(Pattern::compile)
-                .collect(Collectors.toList());
+                                               .stream()
+                                               .map(Pattern::compile)
+                                               .collect(Collectors.toList());
     }
 
     /**
@@ -214,7 +214,7 @@ public class WebServerVerticle extends AbstractVerticle {
      *
      * @return a Future that completes when all services are initialized
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     private Future<Void> setupEntityServices() {
         log.info("Setting up entity services");
 
@@ -228,44 +228,44 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize topic service
         serviceRegistry.register(
-                VaradhiTopicService.class,
-                new VaradhiTopicService(
-                        messagingStackProvider.getStorageTopicService(),
-                        metaStore.topics(),
-                        metaStore.subscriptions(),
-                        metaStore.projects()
-                )
+            VaradhiTopicService.class,
+            new VaradhiTopicService(
+                messagingStackProvider.getStorageTopicService(),
+                metaStore.topics(),
+                metaStore.subscriptions(),
+                metaStore.projects()
+            )
         );
 
         // Initialize controller client and related services
         ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
-                messagingStackProvider.getStorageSubscriptionService(),
-                messagingStackProvider.getStorageTopicService()
+            messagingStackProvider.getStorageSubscriptionService(),
+            messagingStackProvider.getStorageTopicService()
         );
 
         // Initialize subscription and DLQ services
         serviceRegistry.register(
-                SubscriptionService.class,
-                new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(), metaStore.topics())
+            SubscriptionService.class,
+            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(), metaStore.topics())
         );
         serviceRegistry.register(
-                DlqService.class,
-                new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
+            DlqService.class,
+            new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
         );
 
         // Initialize producer service
         Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
 
         serviceRegistry.register(
-                ProducerService.class,
-                new ProducerService(
-                        verticleConfig.deployedRegion(),
-                        producerProvider,
-                        cacheRegistry.getCache(ResourceType.PROJECT),
-                        cacheRegistry.getCache(ResourceType.ORG_DETAILS),
-                        cacheRegistry.getCache(ResourceType.TOPIC)
-                )
+            ProducerService.class,
+            new ProducerService(
+                verticleConfig.deployedRegion(),
+                producerProvider,
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                cacheRegistry.getCache(ResourceType.ORG),
+                cacheRegistry.getCache(ResourceType.TOPIC)
+            )
         );
 
         return Future.succeededFuture();
@@ -279,9 +279,9 @@ public class WebServerVerticle extends AbstractVerticle {
             log.info("Performing lean deployment validations");
             // Its sync execution for time being, can be changed to Async.
             LeanDeploymentValidator validator = new LeanDeploymentValidator(
-                    serviceRegistry.get(OrgService.class),
-                    serviceRegistry.get(TeamService.class),
-                    serviceRegistry.get(ProjectService.class)
+                serviceRegistry.get(OrgService.class),
+                serviceRegistry.get(TeamService.class),
+                serviceRegistry.get(ProjectService.class)
             );
             validator.validate(configuration.getRestOptions());
         }
@@ -297,9 +297,9 @@ public class WebServerVerticle extends AbstractVerticle {
         httpServer = vertx.createHttpServer(configuration.getHttpServerOptions()).requestHandler(router);
 
         return httpServer.listen()
-                .onSuccess(server -> log.info("HttpServer started on port {}", server.actualPort()))
-                .onFailure(cause -> log.error("HttpServer start failed: {}", cause.getMessage()))
-                .mapEmpty();
+                         .onSuccess(server -> log.info("HttpServer started on port {}", server.actualPort()))
+                         .onFailure(cause -> log.error("HttpServer start failed: {}", cause.getMessage()))
+                         .mapEmpty();
     }
 
     /**
@@ -342,22 +342,22 @@ public class WebServerVerticle extends AbstractVerticle {
     private List<RouteDefinition> getIamPolicyRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
         String authProviderName = configuration.getAuthorization() == null ?
-                null :
-                configuration.getAuthorization().getProviderClassName();
+            null :
+            configuration.getAuthorization().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
 
         if (isDefaultProvider) {
             if (metaStore instanceof IamPolicyStore.Provider iamPolicyMetaStore) {
                 routes.addAll(
-                        new IamPolicyHandlers(
-                                serviceRegistry.get(ProjectService.class),
-                                new IamPolicyService(metaStore, iamPolicyMetaStore.iamPolicies())
-                        ).get()
+                    new IamPolicyHandlers(
+                        serviceRegistry.get(ProjectService.class),
+                        new IamPolicyService(metaStore, iamPolicyMetaStore.iamPolicies())
+                    ).get()
                 );
             } else {
                 log.error(
-                        "Incorrect Metastore for DefaultAuthorizationProvider. Expected IamPolicyMetaStore, found {}",
-                        metaStore.getClass().getName()
+                    "Incorrect Metastore for DefaultAuthorizationProvider. Expected IamPolicyMetaStore, found {}",
+                    metaStore.getClass().getName()
                 );
             }
         } else {
@@ -371,22 +371,22 @@ public class WebServerVerticle extends AbstractVerticle {
      *
      * @return a list of admin API route definitions
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
 
         // Create factories
         VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
-                messagingStackProvider.getStorageTopicFactory(),
-                verticleConfig.deployedRegion(),
-                verticleConfig.defaultTopicCapacity()
+            messagingStackProvider.getStorageTopicFactory(),
+            verticleConfig.deployedRegion(),
+            verticleConfig.defaultTopicCapacity()
         );
 
         VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(
-                messagingStackProvider.getStorageTopicService(),
-                messagingStackProvider.getSubscriptionFactory(),
-                messagingStackProvider.getStorageTopicFactory(),
-                verticleConfig.deployedRegion()
+            messagingStackProvider.getStorageTopicService(),
+            messagingStackProvider.getSubscriptionFactory(),
+            messagingStackProvider.getStorageTopicFactory(),
+            verticleConfig.deployedRegion()
         );
 
         // Add management entity routes if not in lean deployment
@@ -394,29 +394,29 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Add topic, subscription, DLQ and health check routes
         routes.addAll(
-                new TopicHandlers(
-                        varadhiTopicFactory,
-                        serviceRegistry.get(VaradhiTopicService.class),
-                        cacheRegistry.getCache(ResourceType.PROJECT)
-                ).get()
+            new TopicHandlers(
+                varadhiTopicFactory,
+                serviceRegistry.get(VaradhiTopicService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
         );
 
         routes.addAll(
-                new SubscriptionHandlers(
-                        serviceRegistry.get(SubscriptionService.class),
-                        serviceRegistry.get(VaradhiTopicService.class),
-                        subscriptionFactory,
-                        configuration.getRestOptions(),
-                        cacheRegistry.getCache(ResourceType.PROJECT)
-                ).get()
+            new SubscriptionHandlers(
+                serviceRegistry.get(SubscriptionService.class),
+                serviceRegistry.get(VaradhiTopicService.class),
+                subscriptionFactory,
+                configuration.getRestOptions(),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
         );
 
         routes.addAll(
-                new DlqHandlers(
-                        serviceRegistry.get(DlqService.class),
-                        serviceRegistry.get(SubscriptionService.class),
-                        cacheRegistry.getCache(ResourceType.PROJECT)
-                ).get()
+            new DlqHandlers(
+                serviceRegistry.get(DlqService.class),
+                serviceRegistry.get(SubscriptionService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
         );
 
         routes.addAll(new HealthCheckHandler().get());
@@ -435,10 +435,10 @@ public class WebServerVerticle extends AbstractVerticle {
             routes.addAll(new OrgHandlers(serviceRegistry.get(OrgService.class)).get());
             routes.addAll(new TeamHandlers(serviceRegistry.get(TeamService.class)).get());
             routes.addAll(
-                    new ProjectHandlers(
-                            serviceRegistry.get(ProjectService.class),
-                            cacheRegistry.getCache(ResourceType.PROJECT)
-                    ).get()
+                new ProjectHandlers(
+                    serviceRegistry.get(ProjectService.class),
+                    cacheRegistry.getCache(ResourceType.PROJECT)
+                ).get()
             );
             routes.addAll(new OrgFilterHandler(serviceRegistry.get(OrgService.class)).get());
         }
@@ -453,19 +453,19 @@ public class WebServerVerticle extends AbstractVerticle {
     private List<RouteDefinition> getProduceApiRoutes() {
         PreProduceHandler preProduceHandler = new PreProduceHandler();
         ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
-                configuration.getProducerOptions().isMetricEnabled(),
-                meterRegistry
+            configuration.getProducerOptions().isMetricEnabled(),
+            meterRegistry
         );
 
         return new ArrayList<>(
-                new ProduceHandlers(
-                        serviceRegistry.get(ProducerService.class),
-                        preProduceHandler,
-                        producerMetricsHandler,
-                        configuration.getMessageConfiguration(),
-                        verticleConfig.deployedRegion(),
-                        cacheRegistry.getCache(ResourceType.PROJECT)
-                ).get()
+            new ProduceHandlers(
+                serviceRegistry.get(ProducerService.class),
+                preProduceHandler,
+                producerMetricsHandler,
+                configuration.getMessageConfiguration(),
+                verticleConfig.deployedRegion(),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
         );
     }
 
@@ -476,13 +476,13 @@ public class WebServerVerticle extends AbstractVerticle {
         AuthnConfigurator authnConfigurator = new AuthnConfigurator(vertx, configuration, meterRegistry);
         AuthzConfigurator authzConfigurator = new AuthzConfigurator(configuration, configResolver, meterRegistry);
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
-                new SpanProvider(tracer),
-                meterRegistry
+            new SpanProvider(tracer),
+            meterRegistry
         );
 
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
-                configuration.getRestOptions().getPayloadSizeMax()
+            configuration.getRestOptions().getPayloadSizeMax()
         );
 
         RequestBodyParsingConfigurator bodyParser = new RequestBodyParsingConfigurator();
@@ -565,13 +565,13 @@ public class WebServerVerticle extends AbstractVerticle {
          * @return the service instance
          * @throws IllegalStateException if the service is not registered
          */
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings ("unchecked")
         <T> T get(Class<T> clazz) {
             Object service = services.get(clazz);
             if (service == null) {
                 throw new IllegalStateException("Service not registered: " + clazz.getName());
             }
-            return (T) service;
+            return (T)service;
         }
     }
 }

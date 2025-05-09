@@ -6,6 +6,7 @@ import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
@@ -57,56 +58,59 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                     VaradhiTopic topic = metaStore.topics().get(name);
                     log.debug("Retrieved topic {}, creating UPSERT event", name);
                     listener.onChange(
-                            new EntityEvent<>(
-                                    type,
-                                    name,
-                                    EventType.UPSERT,
-                                    topic,
-                                    topic.getVersion(),
-                                    event::markAsProcessed
-                            )
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            topic,
+                            topic.getVersion(),
+                            event::markAsProcessed
+                        )
                     );
                 }
                 case SUBSCRIPTION -> {
                     VaradhiSubscription subscription = metaStore.subscriptions().get(name);
                     log.debug("Retrieved subscription {}, creating UPSERT event", name);
                     listener.onChange(
-                            new EntityEvent<>(
-                                    type,
-                                    name,
-                                    EventType.UPSERT,
-                                    subscription,
-                                    subscription.getVersion(),
-                                    event::markAsProcessed
-                            )
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            subscription,
+                            subscription.getVersion(),
+                            event::markAsProcessed
+                        )
                     );
                 }
                 case PROJECT -> {
                     Project project = metaStore.projects().get(name);
                     log.debug("Retrieved project {}, creating UPSERT event", name);
                     listener.onChange(
-                            new EntityEvent<>(
-                                    type,
-                                    name,
-                                    EventType.UPSERT,
-                                    project,
-                                    project.getVersion(),
-                                    event::markAsProcessed
-                            )
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            project,
+                            project.getVersion(),
+                            event::markAsProcessed
+                        )
                     );
                 }
                 case ORG -> {
-                    OrgDetails orgDetails = metaStore.orgs().getOrgDetails(name);
+                    Org org = metaStore.orgs().get(name);
+                    OrgFilters orgFilters = metaStore.orgs().getFilter(name);
                     log.debug("Retrieved org details {}, creating UPSERT event", name);
+                    // Wrap the Org object in OrgDetails
+                    OrgDetails orgDetails = new OrgDetails(org, orgFilters);
                     listener.onChange(
-                            new EntityEvent<>(
-                                    type,
-                                    name,
-                                    EventType.UPSERT,
-                                    orgDetails,
-                                    orgDetails.getOrg().getVersion(),
-                                    event::markAsProcessed
-                            )
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            orgDetails,
+                            org.getVersion(),
+                            event::markAsProcessed
+                        )
                     );
                 }
                 default -> throw new IllegalArgumentException("Unsupported resource type: " + type);

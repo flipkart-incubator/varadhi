@@ -23,5 +23,5 @@ public interface OrgStore {
 
     OrgFilters createFilter(String orgName, OrgFilters namedFilter);
 
-    OrgDetails getOrgDetails(String orgName);
+    List<OrgDetails> getAllOrgDetails();
 }

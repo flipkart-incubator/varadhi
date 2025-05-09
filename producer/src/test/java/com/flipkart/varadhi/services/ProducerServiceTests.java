@@ -84,7 +84,7 @@ class ProducerServiceTests {
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
         when(producerFactory.newProducer(any())).thenReturn(producer);
 
-        service = new ProducerService(region, producerFactory::newProducer, orgCache, projectCache,topicReadCache);
+        service = new ProducerService(region, producerFactory::newProducer, orgCache, projectCache, topicReadCache);
         random = new Random();
     }
 
@@ -210,7 +210,13 @@ class ProducerServiceTests {
         Function<StorageTopic, Producer> failingProducerProvider = storageTopic -> {
             throw new RuntimeException("Unknown Error.");
         };
-        ProducerService failingService = new ProducerService(region, failingProducerProvider, orgCache, projectCache, topicReadCache);
+        ProducerService failingService = new ProducerService(
+            region,
+            failingProducerProvider,
+            orgCache,
+            projectCache,
+            topicReadCache
+        );
         CompletableFuture<ProduceResult> future = failingService.produceToTopic(
             msg1,
             VaradhiTopic.buildTopicName(project.getName(), topic),
@@ -231,7 +237,13 @@ class ProducerServiceTests {
         Function<StorageTopic, Producer> failingProducerProvider = st -> {
             throw new RuntimeException("Topic doesn't exist.");
         };
-        ProducerService failingService = new ProducerService(region, failingProducerProvider, orgCache, projectCache, topicReadCache);
+        ProducerService failingService = new ProducerService(
+            region,
+            failingProducerProvider,
+            orgCache,
+            projectCache,
+            topicReadCache
+        );
         CompletableFuture<ProduceResult> future = failingService.produceToTopic(
             msg1,
             VaradhiTopic.buildTopicName(project.getName(), topic),

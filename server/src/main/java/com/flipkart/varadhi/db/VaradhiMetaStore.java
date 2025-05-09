@@ -99,13 +99,15 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             return zkMetaStore.getZNodeDataAsPojo(znode, Org.class);
         }
 
-        public OrgDetails getOrgDetails(String orgName) {
-            ZNode orgNode = ZNode.ofOrg(orgName);
-            ZNode orgFilterNode = ZNode.ofOrgNamedFilter(orgName);
-            Org org = zkMetaStore.getZNodeDataAsPojo(orgNode, Org.class);
-            OrgFilters orgFilters = zkMetaStore.getZNodeDataAsPojo(orgFilterNode, OrgFilters.class);
-            return new OrgDetails(org, orgFilters);
+        @Override
+        public List<OrgDetails> getAllOrgDetails() {
+            return zkMetaStore.listChildren(ZNode.ofEntityType(ORG)).stream().map(this::get).map(org -> {
+                ZNode orgFilterNode = ZNode.ofOrgNamedFilter(org.getName());
+                OrgFilters orgFilters = zkMetaStore.getZNodeDataAsPojo(orgFilterNode, OrgFilters.class);
+                return new OrgDetails(org, orgFilters);
+            }).toList();
         }
+
         /**
          * Retrieves all organizations.
          *
