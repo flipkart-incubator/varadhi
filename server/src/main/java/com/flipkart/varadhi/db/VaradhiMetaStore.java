@@ -3,11 +3,7 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
@@ -103,6 +99,13 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             return zkMetaStore.getZNodeDataAsPojo(znode, Org.class);
         }
 
+        public OrgDetails getOrgDetails(String orgName) {
+            ZNode orgNode = ZNode.ofOrg(orgName);
+            ZNode orgFilterNode = ZNode.ofOrgNamedFilter(orgName);
+            Org org = zkMetaStore.getZNodeDataAsPojo(orgNode, Org.class);
+            OrgFilters orgFilters = zkMetaStore.getZNodeDataAsPojo(orgFilterNode, OrgFilters.class);
+            return new OrgDetails(org, orgFilters);
+        }
         /**
          * Retrieves all organizations.
          *
