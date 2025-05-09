@@ -75,13 +75,13 @@ public final class ProducerService {
      * @param topicCache       cache for VaradhiTopic entities
      */
     public ProducerService(
-            String produceRegion,
-            Function<StorageTopic, Producer> producerProvider,
-            EntityReadCache<OrgDetails> orgCache,
-            EntityReadCache<Project> projectCache,
-            EntityReadCache<VaradhiTopic> topicCache
+        String produceRegion,
+        Function<StorageTopic, Producer> producerProvider,
+        EntityReadCache<OrgDetails> orgCache,
+        EntityReadCache<Project> projectCache,
+        EntityReadCache<VaradhiTopic> topicCache
     ) {
-        this(produceRegion, producerProvider,orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider, orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
@@ -96,12 +96,12 @@ public final class ProducerService {
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
-            String produceRegion,
-            Function<StorageTopic, Producer> producerProvider,
-            EntityReadCache<OrgDetails> orgCache,
-            EntityReadCache<Project> projectCache,
-            EntityReadCache<VaradhiTopic> topicCache,
-            ProducerOptions producerOptions
+        String produceRegion,
+        Function<StorageTopic, Producer> producerProvider,
+        EntityReadCache<OrgDetails> orgCache,
+        EntityReadCache<Project> projectCache,
+        EntityReadCache<VaradhiTopic> topicCache,
+        ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
         this.topicCache = topicCache;
@@ -175,7 +175,7 @@ public final class ProducerService {
             );
         }
 
-        if (applyOrgFilter(varadhiTopic)) {
+        if (applyOrgFilter(varadhiTopic.getProjectName(), varadhiTopic.getName(), message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
         }
 
@@ -273,9 +273,9 @@ public final class ProducerService {
 
         String nfrStrategy = varadhiTopic.getNfrFilterName();
         Condition condition = Optional.ofNullable(orgDetails.getOrgFilters())
-                .map(OrgFilters::getFilters)
-                .map(filters -> filters.get(nfrStrategy))
-                .orElse(null);
+                                      .map(OrgFilters::getFilters)
+                                      .map(filters -> filters.get(nfrStrategy))
+                                      .orElse(null);
 
         return nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders());
     }

@@ -2,6 +2,7 @@ package com.flipkart.varadhi.entities;
 
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import lombok.Getter;
+
 @Getter
 
 public class OrgDetails extends MetaStoreEntity {
