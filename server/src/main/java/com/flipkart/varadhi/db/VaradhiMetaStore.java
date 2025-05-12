@@ -86,12 +86,12 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         }
 
         /**
-         * Retrieves an organization by its name.
+         * Retrieves the organization entity for the specified organization name.
          *
-         * @param orgName the name of the organization
-         * @return the organization entity
-         * @throws ResourceNotFoundException if organization doesn't exist
-         * @throws MetaStoreException        if there's an error during retrieval
+         * @param orgName the name of the organization to retrieve
+         * @return the corresponding Org entity
+         * @throws ResourceNotFoundException if the organization does not exist
+         * @throws MetaStoreException if an error occurs during retrieval from the metadata store
          */
         @Override
         public Org get(String orgName) {
@@ -99,6 +99,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
             return zkMetaStore.getZNodeDataAsPojo(znode, Org.class);
         }
 
+        /**
+         * Retrieves all organizations along with their associated named filters.
+         *
+         * @return a list of OrgDetails objects, each containing an organization and its filters
+         */
         @Override
         public List<OrgDetails> getAllOrgDetails() {
             return zkMetaStore.listChildren(ZNode.ofEntityType(ORG)).stream().map(this::get).map(org -> {

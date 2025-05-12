@@ -34,13 +34,9 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
     private final EntityEventListener<MetaStoreEntity> listener;
 
     /**
-     * Handles MetaStore change events by converting them to EntityEvents.
+     * Processes a MetaStore change event by translating it into an EntityEvent and forwarding it to the registered listener.
      * <p>
-     * This method attempts to retrieve the current state of the resource from the MetaStore.
-     * If the resource exists, it creates an UPSERT event with the resource data.
-     * If the resource doesn't exist (ResourceNotFoundException), it creates an INVALIDATE event.
-     * <p>
-     * The method supports TOPIC, SUBSCRIPTION, and PROJECT resource types.
+     * For supported resource types (TOPIC, SUBSCRIPTION, PROJECT, ORG), retrieves the current resource state from the MetaStore and emits an UPSERT event with the resource data. For ORG, includes associated filters in the event. If the resource does not exist, emits an INVALIDATE event. Unsupported resource types result in an IllegalArgumentException.
      *
      * @param event the MetaStore change event to process
      * @throws IllegalArgumentException if the resource type is not supported

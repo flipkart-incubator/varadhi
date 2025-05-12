@@ -160,12 +160,11 @@ public class VaradhiApplication {
     }
 
     /**
-     * Initializes the EventManager to set up caches and event handlers.
+     * Initializes entity caches and event handlers for projects, topics, and organizations.
      *
-     * @param services       core services
-     * @param clusterManager cluster manager
-     * @param memberInfo     member information
-     * @param vertx          the Vert.x instance to use for event handling
+     * Creates and preloads read caches for project, topic, and organization details using the meta store,
+     * registers them in an entity cache registry, and binds the registry to cluster entity events.
+     *
      * @return a future that completes with the initialized EntityReadCacheRegistry
      */
     private static Future<EntityReadCacheRegistry> initializeEventManager(

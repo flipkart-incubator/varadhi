@@ -65,14 +65,13 @@ public final class ProducerService {
     private final EntityReadCache<VaradhiTopic> topicCache;
 
     /**
-     * Creates a new ProducerService with default options.
-     * <p>
-     * This constructor uses the default producer options, which include a TTL of 60 minutes
-     * for cached producers.
+     * Initializes a ProducerService with default producer options and entity caches.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param produceRegion the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param orgCache cache for organization details
+     * @param projectCache cache for project entities
+     * @param topicCache cache for VaradhiTopic entities
      */
     public ProducerService(
         String produceRegion,
@@ -85,15 +84,11 @@ public final class ProducerService {
     }
 
     /**
-     * Creates a new ProducerService with the specified options.
-     * <p>
-     * This constructor allows customization of producer options, such as the TTL for
-     * cached producers.
+     * Initializes a ProducerService with custom producer options and caches for organizations, projects, and topics.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param produceRegion the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
-     * @param producerOptions  configuration options for producers
+     * @param producerOptions configuration options for producers, including cache TTL
      */
     public ProducerService(
         String produceRegion,
@@ -149,14 +144,16 @@ public final class ProducerService {
     }
 
     /**
-     * Produces a message to a valid Varadhi topic.
+     * Asynchronously produces a message to the specified Varadhi topic after validating topic state and applying organizational filters.
      *
-     * @param message        the message to produce
-     * @param varadhiTopic   the Varadhi topic to produce to
+     * If the topic is not available in the configured region, a {@code ResourceNotFoundException} is thrown. If production is not allowed on the topic, or if the message is filtered by organizational policy, the returned future completes with a corresponding {@code ProduceResult}. Otherwise, the message is produced asynchronously and the future completes with the result.
+     *
+     * @param message the message to be produced
+     * @param varadhiTopic the Varadhi topic to produce to
      * @param metricsEmitter emitter for production metrics
      * @return a future that completes with the result of the produce operation
      * @throws ResourceNotFoundException if the topic is not available in the region
-     * @throws ProduceException          if production fails due to an internal error
+     * @throws ProduceException if producer retrieval fails
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(
         Message message,
@@ -215,20 +212,13 @@ public final class ProducerService {
     }
 
     /**
-     * Produces a message to a storage topic using the specified producer.
-     * <p>
-     * This method handles the details of producing to a specific storage topic, including:
-     * <ul>
-     *   <li>Measuring the latency of the produce operation</li>
-     *   <li>Emitting metrics for monitoring</li>
-     *   <li>Handling success and failure cases</li>
-     * </ul>
+     * Asynchronously produces a message to the specified storage topic using the given producer.
      *
-     * @param producer       the producer to use
-     * @param metricsEmitter emitter for production metrics
-     * @param topicName      the name of the storage topic
-     * @param message        the message to produce
-     * @return a future that completes with the result of the produce operation
+     * Emits production metrics and returns a future containing the result, including the message offset on success or error details on failure.
+     *
+     * @param topicName the name of the storage topic to produce to
+     * @param message the message to be produced
+     * @return a future that completes with the result of the produce operation, containing the offset or error
      */
     private CompletableFuture<Result<Offset>> produceToStorageProducer(
         Producer producer,
@@ -252,6 +242,11 @@ public final class ProducerService {
         });
     }
 
+    /**
+     * Determines whether a message should be filtered out based on organization-level filter conditions for the specified project and topic.
+     *
+     * Returns {@code true} if the message matches the organization's filter condition associated with the topic's non-functional requirement (NFR) strategy; otherwise, returns {@code false}.
+     */
     private boolean applyOrgFilter(String projectName, String topicName, Message message) {
         Optional<Project> projectOptional = projectCache.get(projectName);
         if (projectOptional.isEmpty()) {

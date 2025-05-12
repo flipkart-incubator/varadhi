@@ -212,10 +212,13 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     /**
-     * Initializes all entity services required by the web server.
-     * Uses a builder pattern for cleaner initialization.
+     * Initializes and registers all core entity services required by the web server.
      *
-     * @return a Future that completes when all services are initialized
+     * This method sets up services for organizations, teams, projects, topics, subscriptions, dead-letter queues, and producers,
+     * wiring them with the necessary dependencies such as meta store components, messaging stack providers, controller clients,
+     * and relevant caches. All services are registered in the internal service registry for later retrieval.
+     *
+     * @return a Future that completes successfully when all services have been initialized and registered
      */
     @SuppressWarnings ("unchecked")
     private Future<Void> setupEntityServices() {

@@ -19,9 +19,27 @@ public interface OrgStore {
 
     OrgFilters getFilter(String orgName);
 
-    void updateFilter(String orgName, OrgFilters orgFilters);
+    /**
+ * Updates the filter settings for the specified organization.
+ *
+ * @param orgName the name of the organization whose filters are to be updated
+ * @param orgFilters the new filter settings to apply
+ */
+void updateFilter(String orgName, OrgFilters orgFilters);
 
-    OrgFilters createFilter(String orgName, OrgFilters namedFilter);
+    /**
+ * Creates and associates a new filter with the specified organization.
+ *
+ * @param orgName the name of the organization
+ * @param namedFilter the filter settings to associate with the organization
+ * @return the created filter associated with the organization
+ */
+OrgFilters createFilter(String orgName, OrgFilters namedFilter);
 
-    List<OrgDetails> getAllOrgDetails();
+    /**
+ * Retrieves detailed information for all organizations.
+ *
+ * @return a list of OrgDetails objects representing each organization
+ */
+List<OrgDetails> getAllOrgDetails();
 }
