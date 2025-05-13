@@ -15,7 +15,7 @@ import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.google.common.collect.Multimap;
@@ -39,11 +39,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.entities.TopicState.Blocked;
-import static com.flipkart.varadhi.entities.TopicState.Replicating;
-import static com.flipkart.varadhi.entities.TopicState.Throttled;
-import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.entities.TopicState.*;
+import static com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
@@ -68,7 +67,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         route.handler(bodyHandler).handler(ctx -> {
-            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
+            ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
         }).handler(ctx -> {
             requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));

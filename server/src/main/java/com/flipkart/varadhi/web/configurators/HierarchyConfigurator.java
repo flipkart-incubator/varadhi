@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web;
+package com.flipkart.varadhi.web.configurators;
 
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -10,12 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 
 
 @Slf4j
-public class HierarchyHandler implements RouteConfigurator {
-    public HierarchyHandler() {
+public class HierarchyConfigurator implements RouteConfigurator {
+    public HierarchyConfigurator() {
     }
 
     @Override
@@ -24,7 +24,7 @@ public class HierarchyHandler implements RouteConfigurator {
             boolean hasParsedBody = routeDef.getBehaviours().contains(RouteBehaviour.parseBody);
             Map<ResourceType, ResourceHierarchy> hierarchies = routeDef.getHierarchyFunction()
                                                                        .getHierarchies(ctx, hasParsedBody);
-            ctx.put(CONTEXT_KEY_RESOURCE_HIERARCHY, hierarchies);
+            ctx.put(RESOURCE_HIERARCHY, hierarchies);
             ctx.next();
         });
     }

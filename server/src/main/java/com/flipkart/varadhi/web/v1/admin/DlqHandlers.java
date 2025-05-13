@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_BODY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.LIST_MESSAGES;
 import static com.flipkart.varadhi.common.Constants.MethodNames.UNSIDELINE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -82,7 +82,7 @@ public class DlqHandlers implements RouteProvider {
 
     public void setUnsidelineRequest(RoutingContext ctx) {
         UnsidelineRequest request = ctx.body().asPojo(UnsidelineRequest.class);
-        ctx.put(CONTEXT_KEY_BODY, request);
+        ctx.put(REQUEST_BODY, request);
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
@@ -100,7 +100,7 @@ public class DlqHandlers implements RouteProvider {
     }
 
     public void enqueueUnsideline(RoutingContext ctx) {
-        UnsidelineRequest unsidelineRequest = ctx.get(CONTEXT_KEY_BODY);
+        UnsidelineRequest unsidelineRequest = ctx.get(REQUEST_BODY);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         log.info("Unsideline requested for Subscription:{}", subscription.getName());
         validateUnsidelineCriteria(subscription, unsidelineRequest);
