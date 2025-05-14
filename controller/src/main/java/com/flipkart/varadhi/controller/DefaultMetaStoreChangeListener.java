@@ -4,11 +4,9 @@ import com.flipkart.varadhi.common.events.EntityEvent;
 import com.flipkart.varadhi.common.events.EntityEventListener;
 import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
@@ -94,6 +92,23 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                             EventType.UPSERT,
                             project,
                             project.getVersion(),
+                            event::markAsProcessed
+                        )
+                    );
+                }
+                case ORG -> {
+                    Org org = metaStore.orgs().get(name);
+                    OrgFilters orgFilters = metaStore.orgs().getFilter(name);
+                    log.debug("Retrieved org details {}, creating UPSERT event", name);
+                    // Wrap the Org object in OrgDetails
+                    OrgDetails orgDetails = new OrgDetails(org, orgFilters);
+                    listener.onChange(
+                        new EntityEvent<>(
+                            type,
+                            name,
+                            EventType.UPSERT,
+                            orgDetails,
+                            org.getVersion(),
                             event::markAsProcessed
                         )
                     );
