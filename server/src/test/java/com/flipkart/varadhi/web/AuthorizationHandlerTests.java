@@ -8,6 +8,7 @@ import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
@@ -67,7 +68,11 @@ public class AuthorizationHandlerTests {
 
     static class TestAuthorizationProvider implements AuthorizationProvider {
         @Override
-        public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
+        public Future<Boolean> init(
+            ConfigFileResolver resolver,
+            AuthorizationOptions authorizationOptions,
+            MeterRegistry meterRegistry
+        ) {
             return Future.succeededFuture();
         }
 

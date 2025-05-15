@@ -18,6 +18,7 @@ import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +39,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
+    public Future<Boolean> init(
+        ConfigFileResolver resolver,
+        AuthorizationOptions authorizationOptions,
+        MeterRegistry meterRegistry
+    ) {
         if (!this.initialised) {
             this.configuration = YamlLoader.loadConfig(
                 authorizationOptions.getConfigFile(),
