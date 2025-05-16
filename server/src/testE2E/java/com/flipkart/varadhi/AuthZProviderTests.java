@@ -10,6 +10,8 @@ import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -44,6 +46,8 @@ public class AuthZProviderTests extends E2EBase {
 
     public static DefaultAuthorizationProvider provider = new DefaultAuthorizationProvider();
     public static AuthorizationOptions authorizationOptions;
+
+    public static MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @BeforeAll
     public static void setup(VertxTestContext testContext) throws IOException, InterruptedException {
@@ -127,7 +131,7 @@ public class AuthZProviderTests extends E2EBase {
 
         authorizationOptions = new AuthorizationOptions();
         authorizationOptions.setConfigFile(configFile.toString());
-        provider.init(c -> c, authorizationOptions).onSuccess(t -> checkpoint.flag());
+        provider.init(c -> c, authorizationOptions, meterRegistry).onSuccess(t -> checkpoint.flag());
     }
 
     private static ConcurrentHashMap<String, Runnable> policyCleanupHandlers = new ConcurrentHashMap<>();
