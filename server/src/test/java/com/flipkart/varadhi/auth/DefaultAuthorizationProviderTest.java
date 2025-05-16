@@ -14,6 +14,7 @@ import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -52,7 +53,7 @@ class DefaultAuthorizationProviderTest {
         authorizationOptions.setConfigFile("testAuthorizationConfig.yml");
 
         provider = spy(new DefaultAuthorizationProvider());
-        meterRegistry = mock(MeterRegistry.class);
+        meterRegistry = new SimpleMeterRegistry();
         iamPolicyService = mock(
             IamPolicyService.class,
             new ThrowsException(new ResourceNotFoundException("resource not found"))

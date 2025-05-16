@@ -107,11 +107,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
 
+        if (!initialised) {
+            throw new IllegalStateException("Default Authorization Provider is not initialised.");
+        }
         return isAuthorisedTimer.record(() -> {
-            if (!initialised) {
-                throw new IllegalStateException("Default Authorization Provider is not initialised.");
-            }
-
             if (Boolean.TRUE.equals(isSuperAdmin(userContext))) {
                 return Future.succeededFuture(true);
             }
