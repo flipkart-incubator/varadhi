@@ -25,24 +25,17 @@ import static java.net.HttpURLConnection.*;
 public class AuthorizationHandlerBuilder {
 
     private final AuthorizationProvider provider;
-    private final Timer successTimer;
-    private final Timer failureTimer;
+    private final Timer timer;
 
     private final MeterRegistry meterRegistry;
 
     public AuthorizationHandlerBuilder(AuthorizationProvider provider, MeterRegistry meterRegistry) {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
         this.meterRegistry = Objects.requireNonNull(meterRegistry, "Meter registry is null");
-        this.successTimer = Timer.builder("authorization.success.time")
-                                 .description("Time taken to check user authorization")
-                                 .tag("method", "isAuthorized")
-                                 .tag("status", "success")
-                                 .register(meterRegistry);
-        this.failureTimer = Timer.builder("authorization.failure.time")
-                                 .description("Time taken to check user authorization")
-                                 .tag("method", "isAuthorized")
-                                 .tag("status", "failed")
-                                 .register(meterRegistry);
+        this.timer = Timer.builder("authorization.timer")
+                          .description("Time taken to check user authorization")
+                          .tag("method", "isAuthorized")
+                          .register(this.meterRegistry);
     }
 
     public AuthorizationHandler build(ResourceAction authorizationOnResource) {
@@ -50,10 +43,10 @@ public class AuthorizationHandlerBuilder {
     }
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
-        Timer.Sample sample = Timer.start(meterRegistry);
+        Timer.Sample clock = Timer.start(meterRegistry);
         return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
             if (Boolean.FALSE.equals(authorized)) {
-                sample.stop(failureTimer);
+                clock.stop(this.timer);
                 return Future.failedFuture(
                     new HttpException(
                         HTTP_FORBIDDEN,
@@ -62,11 +55,11 @@ public class AuthorizationHandlerBuilder {
                     )
                 );
             } else {
-                sample.stop(successTimer);
+                clock.stop(this.timer);
                 return Future.succeededFuture();
             }
         }, t -> {
-            sample.stop(failureTimer);
+            clock.stop(this.timer);
             return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization"));
         });
 
