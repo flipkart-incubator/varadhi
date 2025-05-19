@@ -34,15 +34,15 @@ public class AuthorizationHandlerBuilder {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
         this.meterRegistry = Objects.requireNonNull(meterRegistry, "Meter registry is null");
         this.successTimer = Timer.builder("authorization.success.time")
-                .description("Time taken to check user authorization")
-                .tag("method", "isAuthorized")
-                .tag("status", "success")
-                .register(meterRegistry);
+                                 .description("Time taken to check user authorization")
+                                 .tag("method", "isAuthorized")
+                                 .tag("status", "success")
+                                 .register(meterRegistry);
         this.failureTimer = Timer.builder("authorization.failure.time")
-                .description("Time taken to check user authorization")
-                .tag("method", "isAuthorized")
-                .tag("status", "failed")
-                .register(meterRegistry);
+                                 .description("Time taken to check user authorization")
+                                 .tag("method", "isAuthorized")
+                                 .tag("status", "failed")
+                                 .register(meterRegistry);
     }
 
     public AuthorizationHandler build(ResourceAction authorizationOnResource) {
@@ -52,20 +52,20 @@ public class AuthorizationHandlerBuilder {
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
         Timer.Sample sample = Timer.start(meterRegistry);
         return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
-           if (Boolean.FALSE.equals(authorized)) {
-               sample.stop(failureTimer);
-               return Future.failedFuture(
-                   new HttpException(
-                       HTTP_FORBIDDEN,
-                       "user is not authorized to perform action '" + action.toString() + "' on resource '"
-                                       + resourcePath + "'"
-                   )
-               );
-           } else {
-               sample.stop(successTimer);
-               return Future.succeededFuture();
-           }
-       }, t -> {
+            if (Boolean.FALSE.equals(authorized)) {
+                sample.stop(failureTimer);
+                return Future.failedFuture(
+                    new HttpException(
+                        HTTP_FORBIDDEN,
+                        "user is not authorized to perform action '" + action.toString() + "' on resource '"
+                                        + resourcePath + "'"
+                    )
+                );
+            } else {
+                sample.stop(successTimer);
+                return Future.succeededFuture();
+            }
+        }, t -> {
             sample.stop(failureTimer);
             return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization"));
         });
