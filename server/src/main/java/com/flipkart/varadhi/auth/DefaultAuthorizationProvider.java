@@ -19,7 +19,6 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +37,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private IamPolicyService iamPolicyService;
     private MetaStoreProvider metaStoreProvider;
     private volatile boolean initialised = false;
-    private Timer isAuthorisedTimer;
 
     @Override
     public Future<Boolean> init(
@@ -56,9 +54,6 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
                                   resolver.resolve(this.configuration.getMetaStoreOptions().getConfigFile())
                               );
             getAuthZService();
-            isAuthorisedTimer = Timer.builder("varadhi.authz.isAuthorized")
-                                     .description("Time taken to check if user is authorized")
-                                     .register(meterRegistry);
             this.initialised = true;
         }
         return Future.succeededFuture(true);
@@ -110,29 +105,28 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         if (!initialised) {
             throw new IllegalStateException("Default Authorization Provider is not initialised.");
         }
-        return isAuthorisedTimer.record(() -> {
-            if (Boolean.TRUE.equals(isSuperAdmin(userContext))) {
-                return Future.succeededFuture(true);
-            }
+        if (Boolean.TRUE.equals(isSuperAdmin(userContext))) {
+            return Future.succeededFuture(true);
+        }
 
-            List<Pair<ResourceType, ResourceContext>> leafToRootResourceIds = generateResourceContextHierarchy(
-                action,
-                resource
-            );
-            if (leafToRootResourceIds.isEmpty()) {
-                return Future.succeededFuture(false);
-            }
+        List<Pair<ResourceType, ResourceContext>> leafToRootResourceIds = generateResourceContextHierarchy(
+            action,
+            resource
+        );
+        if (leafToRootResourceIds.isEmpty()) {
+            return Future.succeededFuture(false);
+        }
 
-            boolean isAuthorized = leafToRootResourceIds.stream()
-                                                        .anyMatch(
-                                                            pair -> isAuthorizedInternal(
-                                                                userContext.getSubject(),
-                                                                action,
-                                                                pair.getValue()
-                                                            )
-                                                        );
-            return Future.succeededFuture(isAuthorized);
-        });
+        boolean isAuthorized = leafToRootResourceIds.stream()
+                                                    .anyMatch(
+                                                        pair -> isAuthorizedInternal(
+                                                            userContext.getSubject(),
+                                                            action,
+                                                            pair.getValue()
+                                                        )
+                                                    );
+        return Future.succeededFuture(isAuthorized);
+
     }
 
     /**

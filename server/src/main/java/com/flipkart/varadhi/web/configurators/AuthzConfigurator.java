@@ -42,7 +42,7 @@ public class AuthzConfigurator implements RouteConfigurator {
                 resolver,
                 meterRegistry
             );
-            return new AuthorizationHandlerBuilder(authorizationProvider);
+            return new AuthorizationHandlerBuilder(authorizationProvider, meterRegistry);
         } else {
             return null;
         }

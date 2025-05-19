@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.Checkpoint;
@@ -28,7 +29,8 @@ import static com.flipkart.varadhi.entities.TestUser.testUser;
 public class AuthorizationHandlerTests {
 
     private final AuthorizationHandlerBuilder authzHandlerBuilder = new AuthorizationHandlerBuilder(
-        new TestAuthorizationProvider()
+        new TestAuthorizationProvider(),
+        new SimpleMeterRegistry()
     );
 
     @Test

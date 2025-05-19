@@ -7,6 +7,8 @@ import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -23,9 +25,13 @@ import static java.net.HttpURLConnection.*;
 public class AuthorizationHandlerBuilder {
 
     private final AuthorizationProvider provider;
+    private final Timer isAuthorisedTimer;
 
-    public AuthorizationHandlerBuilder(AuthorizationProvider provider) {
+    public AuthorizationHandlerBuilder(AuthorizationProvider provider, MeterRegistry meterRegistry) {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
+        this.isAuthorisedTimer = Timer.builder("varadhi.authz.isAuthorized")
+                                      .description("Time taken to check if user is authorized")
+                                      .register(meterRegistry);
     }
 
     public AuthorizationHandler build(ResourceAction authorizationOnResource) {
@@ -33,19 +39,22 @@ public class AuthorizationHandlerBuilder {
     }
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
-        return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
-            if (Boolean.FALSE.equals(authorized)) {
-                return Future.failedFuture(
-                    new HttpException(
-                        HTTP_FORBIDDEN,
-                        "user is not authorized to perform action '" + action.toString() + "' on resource '"
-                                        + resourcePath + "'"
-                    )
-                );
-            } else {
-                return Future.succeededFuture();
-            }
-        }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
+        return isAuthorisedTimer.record(
+            () -> provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
+                if (Boolean.FALSE.equals(authorized)) {
+                    return Future.failedFuture(
+                        new HttpException(
+                            HTTP_FORBIDDEN,
+                            "user is not authorized to perform action '" + action.toString() + "' on resource '"
+                                            + resourcePath + "'"
+                        )
+                    );
+                } else {
+                    return Future.succeededFuture();
+                }
+            }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")))
+        );
+
     }
 
     @AllArgsConstructor
