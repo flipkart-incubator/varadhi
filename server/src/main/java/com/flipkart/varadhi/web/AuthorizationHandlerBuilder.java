@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.FutureExtensions;
 import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
@@ -14,6 +15,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.AllArgsConstructor;
+import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.Objects;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
+@ExtensionMethod ({FutureExtensions.class})
 public class AuthorizationHandlerBuilder {
 
     private final AuthorizationProvider provider;
@@ -44,9 +47,9 @@ public class AuthorizationHandlerBuilder {
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
         Timer.Sample clock = Timer.start(meterRegistry);
+
         return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
             if (Boolean.FALSE.equals(authorized)) {
-                clock.stop(this.timer);
                 return Future.failedFuture(
                     new HttpException(
                         HTTP_FORBIDDEN,
@@ -54,15 +57,11 @@ public class AuthorizationHandlerBuilder {
                                         + resourcePath + "'"
                     )
                 );
-            } else {
-                clock.stop(this.timer);
-                return Future.succeededFuture();
             }
-        }, t -> {
-            clock.stop(this.timer);
-            return Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization"));
-        });
-
+            return Future.succeededFuture();
+        }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")))
+                       .record(clock, timer)
+                       .mapEmpty();
     }
 
     @AllArgsConstructor

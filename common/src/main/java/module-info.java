@@ -10,6 +10,7 @@ module com.flipkart.varadhi.common {
     requires com.fasterxml.jackson.module.paramnames;
     requires org.apache.commons.collections4;
     requires io.vertx.core;
+    requires com.google.common;
 
     exports com.flipkart.varadhi.common.exceptions;
     exports com.flipkart.varadhi.common.reflect;

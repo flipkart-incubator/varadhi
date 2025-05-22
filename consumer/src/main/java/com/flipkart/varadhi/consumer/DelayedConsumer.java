@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.consumer.concurrent.Context;
-import com.flipkart.varadhi.consumer.concurrent.FutureExtensions;
+import com.flipkart.varadhi.common.FutureExtensions;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
