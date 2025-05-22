@@ -48,20 +48,24 @@ public class AuthorizationHandlerBuilder {
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
         Timer.Sample clock = Timer.start(meterRegistry);
 
-        return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
-            if (Boolean.FALSE.equals(authorized)) {
-                return Future.failedFuture(
-                    new HttpException(
+        return provider.isAuthorized(userContext, action, resourcePath).andThen(ar -> {
+            if (ar.succeeded()) {
+                Boolean authorized = ar.result();
+                if (Boolean.FALSE.equals(authorized)) {
+                    throw new HttpException(
                         HTTP_FORBIDDEN,
-                        "user is not authorized to perform action '" + action.toString() + "' on resource '"
-                                        + resourcePath + "'"
-                    )
-                );
+                        String.format(
+                            "User %s is not authorized to perform action %s on resource %s",
+                            userContext.getSubject(),
+                            action,
+                            resourcePath
+                        )
+                    );
+                }
+            } else {
+                throw new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization");
             }
-            return Future.succeededFuture();
-        }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")))
-                       .record(clock, timer)
-                       .mapEmpty();
+        }).record(clock, timer).mapEmpty();
     }
 
     @AllArgsConstructor
