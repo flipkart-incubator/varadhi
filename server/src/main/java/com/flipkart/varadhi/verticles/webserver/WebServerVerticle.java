@@ -262,6 +262,8 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProducerService(
                 verticleConfig.deployedRegion(),
                 producerProvider,
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                cacheRegistry.getCache(ResourceType.ORG),
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
