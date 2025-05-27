@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.FutureExtensions;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j

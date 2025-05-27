@@ -4,12 +4,12 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
+import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.DlqService;
@@ -113,7 +113,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private final VerticleConfig verticleConfig;
-    private final EntityReadCacheRegistry cacheRegistry;
+    private final ResourceReadCacheRegistry cacheRegistry;
     private final List<Pattern> disableAPIPatterns;
 
     // Services initialized during startup
@@ -131,7 +131,7 @@ public class WebServerVerticle extends AbstractVerticle {
         AppConfiguration configuration,
         CoreServices services,
         VaradhiClusterManager clusterManager,
-        EntityReadCacheRegistry cacheRegistry
+        ResourceReadCacheRegistry cacheRegistry
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -262,8 +262,8 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProducerService(
                 verticleConfig.deployedRegion(),
                 producerProvider,
-                cacheRegistry.getCache(ResourceType.PROJECT),
                 cacheRegistry.getCache(ResourceType.ORG),
+                cacheRegistry.getCache(ResourceType.PROJECT),
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );

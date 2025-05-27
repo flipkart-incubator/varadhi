@@ -21,13 +21,13 @@ import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.common.Extensions;
-import com.flipkart.varadhi.common.events.EntityEvent;
-import com.flipkart.varadhi.common.events.EntityEventListener;
+import com.flipkart.varadhi.common.events.ResourceEvent;
+import com.flipkart.varadhi.common.events.ResourceEventListener;
 import com.flipkart.varadhi.common.exceptions.EventProcessingException;
 import com.flipkart.varadhi.controller.DefaultMetaStoreChangeListener;
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
-import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -52,7 +52,7 @@ import static com.flipkart.varadhi.common.Constants.ENTITY_EVENTS_HANDLER;
  */
 @Slf4j
 @ExtensionMethod ({Extensions.LockExtensions.class})
-public final class EntityEventProcessor implements EntityEventListener<MetaStoreEntity> {
+public final class ResourceEventProcessor implements ResourceEventListener<Resource> {
 
     public static final String EVENT_SENDER_TASK_NAME_FORMAT = "event-sender-%s";
     public static final String EVENT_COMMITTER_TASK_NAME = "event-committer";
@@ -77,13 +77,13 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
      * @param eventProcessorConfig Configuration for the event processor
      * @return A future that completes when the EventProcessor is fully initialized
      */
-    public static Future<EntityEventProcessor> create(
+    public static Future<ResourceEventProcessor> create(
         MessageExchange messageExchange,
         VaradhiClusterManager clusterManager,
         MetaStore metaStore,
         EventProcessorConfig eventProcessorConfig
     ) {
-        EntityEventProcessor processor = new EntityEventProcessor(messageExchange, eventProcessorConfig);
+        ResourceEventProcessor processor = new ResourceEventProcessor(messageExchange, eventProcessorConfig);
 
         processor.setupMembershipListener(clusterManager);
 
@@ -103,7 +103,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
      * @param messageExchange      The message exchange for inter-node communication
      * @param eventProcessorConfig Configuration for the event processor, or default if null
      */
-    private EntityEventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
+    private ResourceEventProcessor(MessageExchange messageExchange, EventProcessorConfig eventProcessorConfig) {
         this.messageExchange = messageExchange;
         this.eventProcessorConfig = eventProcessorConfig != null ?
             eventProcessorConfig :
@@ -221,7 +221,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
      * @throws IllegalStateException if the EventProcessor has been shut down
      */
     @Override
-    public void onChange(EntityEvent<? extends MetaStoreEntity> event) {
+    public void onChange(ResourceEvent<? extends Resource> event) {
         if (isShutdown.get()) {
             throw new IllegalStateException("Change Listener has been stopped");
         }
@@ -235,7 +235,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
      *
      * @param event          The entity event to enqueue
      */
-    private void handle(EntityEvent<?> event) {
+    private void handle(ResourceEvent<?> event) {
         CompletableFuture<Void> promise = new CompletableFuture<>().thenAccept(r -> event.markAsProcessed());
 
         membershipChangeLock.lockAndRun(() -> {
@@ -370,7 +370,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
          * @param hostname The ID of the node
          * @return string response from the node
          */
-        private String sendEvent(EntityEvent<?> event, String hostname) throws Exception {
+        private String sendEvent(ResourceEvent<?> event, String hostname) throws Exception {
 
             ClusterMessage message = ClusterMessage.of(event);
             ResponseMessage response = messageExchange.request(hostname, ENTITY_EVENTS_HANDLER, message)
@@ -475,7 +475,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
         /**
          * The entity event being processed.
          */
-        final EntityEvent<?> event;
+        final ResourceEvent<?> event;
 
         /**
          * Set of node hostnames that need to process this event.
@@ -510,7 +510,7 @@ public final class EntityEventProcessor implements EntityEventListener<MetaStore
          * @param promise               The future to complete when all nodes have processed the event
          * @throws NullPointerException if any parameter is null
          */
-        public EventWrapper(EntityEvent<?> event, Set<String> participantHosts, CompletableFuture<Void> promise) {
+        public EventWrapper(ResourceEvent<?> event, Set<String> participantHosts, CompletableFuture<Void> promise) {
             this.event = Objects.requireNonNull(event, "Event cannot be null");
             this.promise = Objects.requireNonNull(promise, "promise cannot be null");
 

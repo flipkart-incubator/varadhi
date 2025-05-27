@@ -1,12 +1,13 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
@@ -60,9 +61,9 @@ class ProducerServiceTests {
     MeterRegistry meterRegistry;
     MetaStore metaStore;
     Producer producer;
-    EntityReadCache<Project> projectCache;
-    EntityReadCache<VaradhiTopic> topicReadCache;
-    EntityReadCache<OrgDetails> orgCache;
+    ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicReadCache;
+    ResourceReadCache<OrgDetails> orgCache;
     Random random;
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
@@ -78,9 +79,9 @@ class ProducerServiceTests {
         producerFactory = mock(ProducerFactory.class);
         meterRegistry = new OtlpMeterRegistry();
         metaStore = mock(MetaStore.class);
-        topicReadCache = mock(EntityReadCache.class);
-        projectCache = mock(EntityReadCache.class);
-        orgCache = mock(EntityReadCache.class);
+        topicReadCache = mock(ResourceReadCache.class);
+        projectCache = mock(ResourceReadCache.class);
+        orgCache = mock(ResourceReadCache.class);
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
         when(producerFactory.newProducer(any())).thenReturn(producer);
 
@@ -92,9 +93,9 @@ class ProducerServiceTests {
     void testProduceMessage() throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 10);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
 
-        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+        when(topicReadCache.get(any())).thenReturn(Optional.of(vt));
 
         doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
@@ -121,7 +122,7 @@ class ProducerServiceTests {
     void testProduceWhenProduceAsyncThrows() {
         ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
         Message msg1 = getMessage(0, 1, null, 10);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         doReturn(producer).when(producerFactory).newProducer(any());
         doThrow(new RuntimeException("Some random error.")).when(producer).produceAsync(msg1);
@@ -186,7 +187,7 @@ class ProducerServiceTests {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
-        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(Resource.of(vt, EntityType.TOPIC)));
         doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
@@ -205,7 +206,7 @@ class ProducerServiceTests {
     void testProduceWithUnknownExceptionInGetProducer() {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         Function<StorageTopic, Producer> failingProducerProvider = storageTopic -> {
             throw new RuntimeException("Unknown Error.");
@@ -232,7 +233,7 @@ class ProducerServiceTests {
     void testProduceWithKnownExceptionInGetProducer() {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         Function<StorageTopic, Producer> failingProducerProvider = st -> {
             throw new RuntimeException("Topic doesn't exist.");
@@ -260,7 +261,7 @@ class ProducerServiceTests {
     void testProduceWithProducerFailure() throws InterruptedException {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         doReturn(producer).when(producerFactory).newProducer(any());
 
@@ -286,7 +287,7 @@ class ProducerServiceTests {
         ProducerMetricsEmitter emitter = mock(ProducerMetricsEmitter.class);
         doThrow(new RuntimeException("Failed to send metric.")).when(emitter).emit(anyBoolean(), anyLong());
         Message msg1 = getMessage(0, 1, null, 10);
-        VaradhiTopic vt = getTopic(topic, project, region);
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
@@ -303,8 +304,8 @@ class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
-    public VaradhiTopic getTopic(String name, Project project, String region) {
-        return getTopic(TopicState.Producing, name, project, region);
+    public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
+        return Resource.of(getTopic(TopicState.Producing, name, project, region), EntityType.TOPIC);
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {

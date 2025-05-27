@@ -5,10 +5,8 @@ import java.util.List;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.utils.JsonMapper;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.*;
@@ -66,7 +64,8 @@ class TopicHandlersTest extends WebTestBase {
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        doReturn(project).when(projectCache).getOrThrow(project.getName());
+        Resource.EntityResource<Project> projectResource = Resource.of(project, EntityType.PROJECT);
+        doReturn(projectResource).when(projectCache).getOrThrow(any());
 
         topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);
 

@@ -38,12 +38,12 @@ class ResourceActionTest {
     @Test
     void resourceType_ReturnsCorrectResourceType() {
         assertAll(
-            () -> assertEquals(ResourceType.ORG, ResourceAction.ORG_CREATE.getResourceType()),
-            () -> assertEquals(ResourceType.TEAM, ResourceAction.TEAM_UPDATE.getResourceType()),
-            () -> assertEquals(ResourceType.PROJECT, ResourceAction.PROJECT_DELETE.getResourceType()),
-            () -> assertEquals(ResourceType.TOPIC, ResourceAction.TOPIC_GET.getResourceType()),
-            () -> assertEquals(ResourceType.PROJECT, ResourceAction.SUBSCRIPTION_LIST.getResourceType()),
-            () -> assertEquals(ResourceType.IAM_POLICY, ResourceAction.IAM_POLICY_SET.getResourceType())
+            () -> assertEquals(EntityType.ORG, ResourceAction.ORG_CREATE.getEntityType()),
+            () -> assertEquals(EntityType.TEAM, ResourceAction.TEAM_UPDATE.getEntityType()),
+            () -> assertEquals(EntityType.PROJECT, ResourceAction.PROJECT_DELETE.getEntityType()),
+            () -> assertEquals(EntityType.TOPIC, ResourceAction.TOPIC_GET.getEntityType()),
+            () -> assertEquals(EntityType.PROJECT, ResourceAction.SUBSCRIPTION_LIST.getEntityType()),
+            () -> assertEquals(EntityType.IAM_POLICY, ResourceAction.IAM_POLICY_SET.getEntityType())
         );
     }
 

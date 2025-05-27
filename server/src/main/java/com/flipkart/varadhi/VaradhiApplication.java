@@ -2,8 +2,9 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.cluster.custom.VaradhiZkClusterManager;
-import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
+import com.flipkart.varadhi.common.OrgReadCache;
+import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.common.utils.HostUtils;
@@ -14,7 +15,7 @@ import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.events.EntityEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
@@ -166,9 +167,9 @@ public class VaradhiApplication {
      * @param clusterManager cluster manager
      * @param memberInfo     member information
      * @param vertx          the Vert.x instance to use for event handling
-     * @return a future that completes with the initialized EntityReadCacheRegistry
+     * @return a future that completes with the initialized ResourceReadCacheRegistry
      */
-    private static Future<EntityReadCacheRegistry> initializeEventManager(
+    private static Future<ResourceReadCacheRegistry> initializeEventManager(
         CoreServices services,
         VaradhiClusterManager clusterManager,
         MemberInfo memberInfo,
@@ -176,22 +177,25 @@ public class VaradhiApplication {
     ) {
         // Create registry and prepare cache creation futures
         MetaStore metaStore = services.getMetaStoreProvider().getMetaStore();
-        EntityReadCacheRegistry registry = new EntityReadCacheRegistry();
+        ResourceReadCacheRegistry registry = new ResourceReadCacheRegistry();
 
         // Create futures for cache creation and preloading
-        Future<EntityReadCache<Project>> projectCacheFuture = EntityReadCache.create(
+        Future<ResourceReadCache<Resource.EntityResource<Project>>> projectCacheFuture = ResourceReadCache.create(
             ResourceType.PROJECT,
-            metaStore.projects()::getAll,
+            () -> metaStore.projects()
+                           .getAll()
+                           .stream()
+                           .map(project -> Resource.of(project, EntityType.PROJECT))
+                           .toList(),
             vertx
         );
-
-        Future<EntityReadCache<VaradhiTopic>> topicCacheFuture = EntityReadCache.create(
+        Future<ResourceReadCache<Resource.EntityResource<VaradhiTopic>>> topicCacheFuture = ResourceReadCache.create(
             ResourceType.TOPIC,
-            metaStore.topics()::getAll,
+            () -> metaStore.topics().getAll().stream().map(topic -> Resource.of(topic, EntityType.TOPIC)).toList(),
             vertx
         );
 
-        Future<EntityReadCache<OrgDetails>> orgCacheFuture = EntityReadCache.create(
+        Future<OrgReadCache> orgCacheFuture = OrgReadCache.createOrgReadCache(
             ResourceType.ORG,
             metaStore.orgs()::getAllOrgDetails,
             vertx
@@ -377,7 +381,7 @@ public class VaradhiApplication {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         MemberInfo memberInfo,
-        EntityReadCacheRegistry cacheRegistry
+        ResourceReadCacheRegistry cacheRegistry
     ) {
         log.info("Creating verticles for components: {}", Arrays.toString(memberInfo.roles()));
 

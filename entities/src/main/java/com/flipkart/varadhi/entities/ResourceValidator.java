@@ -5,7 +5,7 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.regex.Pattern;
 
-public class ResourceValidator implements ConstraintValidator<ValidateResource, VersionedEntity> {
+public class ResourceValidator implements ConstraintValidator<ValidateResource, Versioned> {
     String regExp;
     int minLength;
     int maxLength;
@@ -20,7 +20,7 @@ public class ResourceValidator implements ConstraintValidator<ValidateResource, 
     }
 
     @Override
-    public boolean isValid(VersionedEntity value, ConstraintValidatorContext context) {
+    public boolean isValid(Versioned value, ConstraintValidatorContext context) {
         if (null == value.getName() || value.getName().isBlank()) {
             return allowNullOrBlank;
         }

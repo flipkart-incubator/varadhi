@@ -44,7 +44,7 @@ public class OperationMgr {
      * - Task are keyed by orderingKey -- which is unique for the given entity (derived from its unique id). An entity
      * can
      * have multiple tasks waiting be executed. However only one will be executing at any given instance.
-     * - Tasks for different entities can be executed in parallel. Parallelism is controlled via number of threads
+     * - Tasks for different resource can be executed in parallel. Parallelism is controlled via number of threads
      * in the executor service.
      * - Task at the head of the Task queue will be in progress and rest will be waiting.
      * enqueueOpTask -- adds the operation to the queue. If it is only task, it will be immediately scheduled for

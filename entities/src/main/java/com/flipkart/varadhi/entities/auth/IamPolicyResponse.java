@@ -2,7 +2,7 @@ package com.flipkart.varadhi.entities.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.flipkart.varadhi.entities.VersionedEntity;
+import com.flipkart.varadhi.entities.Versioned;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -11,7 +11,7 @@ import java.util.Set;
 
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class IamPolicyResponse extends VersionedEntity {
+public class IamPolicyResponse extends Versioned {
     private final Map<String, Set<String>> roleBindings;
 
     @JsonCreator

@@ -9,7 +9,7 @@ import lombok.Setter;
  */
 @Getter
 @EqualsAndHashCode (exclude = "version")
-public abstract class VersionedEntity {
+public abstract class Versioned {
     public static final int INITIAL_VERSION = 0;
     public static final String NAME_SEPARATOR = ".";
     public static final String NAME_SEPARATOR_REGEX = "\\.";
@@ -19,12 +19,12 @@ public abstract class VersionedEntity {
     @Setter
     private int version;
 
-    protected VersionedEntity(String name, int version) {
+    protected Versioned(String name, int version) {
         this.name = name;
         this.version = version;
     }
 
-    protected VersionedEntity(String name) {
+    protected Versioned(String name) {
         this(name, INITIAL_VERSION);
     }
 }

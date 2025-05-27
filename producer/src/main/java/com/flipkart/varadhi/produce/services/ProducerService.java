@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -86,16 +86,16 @@ public final class ProducerService {
     /**
      * Cache for Varad
      */
-    private final EntityReadCache<OrgDetails> orgCache;
+    private final ResourceReadCache<OrgDetails> orgCache;
     /**
      * Cache for Varad
      */
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     /**
-     * Cache for VaradhiTopic entities.
+     * Cache for VaradhiTopic resource.
      */
 
-    private final EntityReadCache<VaradhiTopic> topicCache;
+    private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     /**
      * Creates a new ProducerService with default options.
@@ -105,14 +105,14 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<OrgDetails> orgCache,
-        EntityReadCache<Project> projectCache,
-        EntityReadCache<VaradhiTopic> topicCache
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
     ) {
         this(produceRegion, producerProvider, orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
     }
@@ -125,15 +125,15 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<OrgDetails> orgCache,
-        EntityReadCache<Project> projectCache,
-        EntityReadCache<VaradhiTopic> topicCache,
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
         ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
@@ -170,15 +170,15 @@ public final class ProducerService {
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
+        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(varadhiTopicName);
 
-        if (topic.isEmpty() || !topic.get().isActive()) {
+        if (topic.isEmpty() || !topic.get().getEntity().isActive()) {
             throw new ResourceNotFoundException(
                 "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
             );
         }
 
-        return produceToValidTopic(message, topic.get(), metricsEmitter);
+        return produceToValidTopic(message, topic.get().getEntity(), metricsEmitter);
     }
 
     /**
@@ -288,17 +288,19 @@ public final class ProducerService {
     }
 
     private boolean applyOrgFilter(String projectName, String topicName, Message message) {
-        Optional<Project> projectOptional = projectCache.get(projectName);
+        Optional<Resource.EntityResource<Project>> projectOptional = projectCache.get(projectName);
         if (projectOptional.isEmpty()) {
             return false;
         }
-        Project project = projectOptional.get();
+        Project project = projectOptional.get().getEntity();
 
-        Optional<VaradhiTopic> topicOptional = topicCache.get(VaradhiTopic.buildTopicName(projectName, topicName));
+        Optional<Resource.EntityResource<VaradhiTopic>> topicOptional = topicCache.get(
+            VaradhiTopic.buildTopicName(projectName, topicName)
+        );
         if (topicOptional.isEmpty()) {
             return false;
         }
-        VaradhiTopic varadhiTopic = topicOptional.get();
+        VaradhiTopic varadhiTopic = topicOptional.get().getEntity();
 
         Optional<OrgDetails> orgDetailsOptional = orgCache.get(project.getOrg());
         if (orgDetailsOptional.isEmpty()) {

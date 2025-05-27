@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.entities.auth;
 
-public enum ResourceType {
+public enum EntityType {
 
-    ROOT("root"), ORG("org"), TEAM("team"), PROJECT("project"), TOPIC("topic"), SUBSCRIPTION(
+    ROOT("root"), ORG("org"), ORG_FILTER("org_filter"), TEAM("team"), PROJECT("project"), TOPIC("topic"), SUBSCRIPTION(
         "subscription"
     ), IAM_POLICY("iam_policy");
 
     private final String type;
 
-    ResourceType(String type) {
+    EntityType(String type) {
         this.type = type;
     }
 

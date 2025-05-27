@@ -3,6 +3,10 @@ package com.flipkart.varadhi.auth;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
+import com.flipkart.varadhi.entities.auth.*;
+import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.ResourceType;
@@ -101,10 +105,10 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
      */
     @Override
     public Future<Boolean> isAuthorized(UserContext userContext, ResourceAction action, String resource) {
-
         if (!initialised) {
             throw new IllegalStateException("Default Authorization Provider is not initialised.");
         }
+
         if (Boolean.TRUE.equals(isSuperAdmin(userContext))) {
             return Future.succeededFuture(true);
         }

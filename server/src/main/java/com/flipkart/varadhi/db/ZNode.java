@@ -29,7 +29,7 @@ import lombok.Getter;
 @Getter
 public final class ZNode {
 
-    public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
+    public static final String ENTITIES_BASE_PATH = "/varadhi/resource";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
 
     public static final ZNodeKind ORG = new ZNodeKind("Org", "%s");

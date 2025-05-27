@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createGroupedSubscription;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createUngroupedSubscription;

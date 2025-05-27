@@ -1,10 +1,11 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_DELETE;
@@ -30,9 +32,12 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.PROJECT_UPDATE;
 public class ProjectHandlers implements RouteProvider {
     private static final String API_NAME = "PROJECT";
     private final ProjectService projectService;
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
-    public ProjectHandlers(ProjectService projectService, EntityReadCache<Project> projectCache) {
+    public ProjectHandlers(
+        ProjectService projectService,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache
+    ) {
         this.projectService = projectService;
         this.projectCache = projectCache;
     }

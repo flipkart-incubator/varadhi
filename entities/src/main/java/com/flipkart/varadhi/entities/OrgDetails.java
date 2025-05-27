@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 
-public class OrgDetails extends MetaStoreEntity {
+public class OrgDetails extends Resource {
     Org org;
     OrgFilters orgFilters;
 

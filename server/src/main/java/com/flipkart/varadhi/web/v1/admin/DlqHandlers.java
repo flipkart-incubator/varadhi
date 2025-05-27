@@ -1,11 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.UnsidelineRequest;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
@@ -34,7 +31,7 @@ import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNS
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
 import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
@@ -46,13 +43,13 @@ public class DlqHandlers implements RouteProvider {
 
     private static final long UNSPECIFIED_TS = 0L;
     private final SubscriptionService subscriptionService;
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     private final DlqService dlqService;
 
     public DlqHandlers(
         DlqService dlqService,
         SubscriptionService subscriptionService,
-        EntityReadCache<Project> projectCache
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
         this.dlqService = dlqService;
         this.subscriptionService = subscriptionService;
@@ -85,17 +82,17 @@ public class DlqHandlers implements RouteProvider {
         ctx.put(REQUEST_BODY, request);
     }
 
-    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+    public Map<EntityType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectCache.getOrThrow(projectName);
+        Project project = projectCache.getOrThrow(projectName).getEntity();
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]);
+        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
-            Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
-            Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
+            Map.entry(EntityType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
+            Map.entry(EntityType.TOPIC, new TopicHierarchy(topicProject, topicName))
         );
     }
 

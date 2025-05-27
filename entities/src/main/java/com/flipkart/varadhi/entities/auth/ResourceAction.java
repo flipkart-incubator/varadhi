@@ -13,67 +13,67 @@ public enum ResourceAction {
     /**
      * Actions related to organization resources.
      */
-    ORG_CREATE(ResourceType.ORG, Action.CREATE), ORG_UPDATE(ResourceType.ORG, Action.UPDATE), ORG_DELETE(
-        ResourceType.ORG,
+    ORG_CREATE(EntityType.ORG, Action.CREATE), ORG_UPDATE(EntityType.ORG, Action.UPDATE), ORG_DELETE(
+        EntityType.ORG,
         Action.DELETE
-    ), ORG_GET(ResourceType.ORG, Action.GET), ORG_LIST(ResourceType.ROOT, Action.LIST), ORG_PROJECT_MIGRATE(
-        ResourceType.ORG,
+    ), ORG_GET(EntityType.ORG, Action.GET), ORG_LIST(EntityType.ROOT, Action.LIST), ORG_PROJECT_MIGRATE(
+        EntityType.ORG,
         Action.MIGRATE
     ),
 
     /**
      * Actions related to team resources.
      */
-    TEAM_CREATE(ResourceType.TEAM, Action.CREATE), TEAM_UPDATE(ResourceType.TEAM, Action.UPDATE), TEAM_DELETE(
-        ResourceType.TEAM,
+    TEAM_CREATE(EntityType.TEAM, Action.CREATE), TEAM_UPDATE(EntityType.TEAM, Action.UPDATE), TEAM_DELETE(
+        EntityType.TEAM,
         Action.DELETE
-    ), TEAM_GET(ResourceType.TEAM, Action.GET), TEAM_LIST(ResourceType.ORG, Action.LIST),
+    ), TEAM_GET(EntityType.TEAM, Action.GET), TEAM_LIST(EntityType.ORG, Action.LIST),
 
     /**
      * Actions related to project resources.
      */
-    PROJECT_CREATE(ResourceType.PROJECT, Action.CREATE), PROJECT_UPDATE(
-        ResourceType.PROJECT,
+    PROJECT_CREATE(EntityType.PROJECT, Action.CREATE), PROJECT_UPDATE(
+        EntityType.PROJECT,
         Action.UPDATE
-    ), PROJECT_DELETE(ResourceType.PROJECT, Action.DELETE), PROJECT_GET(ResourceType.PROJECT, Action.GET), PROJECT_LIST(
-        ResourceType.TEAM,
+    ), PROJECT_DELETE(EntityType.PROJECT, Action.DELETE), PROJECT_GET(EntityType.PROJECT, Action.GET), PROJECT_LIST(
+        EntityType.TEAM,
         Action.LIST
     ),
 
     /**
      * Actions related to topic resources.
      */
-    TOPIC_CREATE(ResourceType.TOPIC, Action.CREATE), TOPIC_UPDATE(ResourceType.TOPIC, Action.UPDATE), TOPIC_DELETE(
-        ResourceType.TOPIC,
+    TOPIC_CREATE(EntityType.TOPIC, Action.CREATE), TOPIC_UPDATE(EntityType.TOPIC, Action.UPDATE), TOPIC_DELETE(
+        EntityType.TOPIC,
         Action.DELETE
-    ), TOPIC_GET(ResourceType.TOPIC, Action.GET), TOPIC_LIST(ResourceType.PROJECT, Action.LIST), TOPIC_SUBSCRIBE(
-        ResourceType.TOPIC,
+    ), TOPIC_GET(EntityType.TOPIC, Action.GET), TOPIC_LIST(EntityType.PROJECT, Action.LIST), TOPIC_SUBSCRIBE(
+        EntityType.TOPIC,
         Action.SUBSCRIBE
-    ), TOPIC_PRODUCE(ResourceType.TOPIC, Action.PRODUCE),
+    ), TOPIC_PRODUCE(EntityType.TOPIC, Action.PRODUCE),
 
     /**
      * Actions related to subscription resources.
      */
-    SUBSCRIPTION_CREATE(ResourceType.SUBSCRIPTION, Action.CREATE), SUBSCRIPTION_UPDATE(
-        ResourceType.SUBSCRIPTION,
+    SUBSCRIPTION_CREATE(EntityType.SUBSCRIPTION, Action.CREATE), SUBSCRIPTION_UPDATE(
+        EntityType.SUBSCRIPTION,
         Action.UPDATE
-    ), SUBSCRIPTION_DELETE(ResourceType.SUBSCRIPTION, Action.DELETE), SUBSCRIPTION_GET(
-        ResourceType.SUBSCRIPTION,
+    ), SUBSCRIPTION_DELETE(EntityType.SUBSCRIPTION, Action.DELETE), SUBSCRIPTION_GET(
+        EntityType.SUBSCRIPTION,
         Action.GET
-    ), SUBSCRIPTION_LIST(ResourceType.PROJECT, Action.LIST), SUBSCRIPTION_SEEK(ResourceType.SUBSCRIPTION, Action.SEEK),
+    ), SUBSCRIPTION_LIST(EntityType.PROJECT, Action.LIST), SUBSCRIPTION_SEEK(EntityType.SUBSCRIPTION, Action.SEEK),
 
     /**
      * Actions related to IAM policy resources.
      */
-    IAM_POLICY_GET(ResourceType.IAM_POLICY, Action.GET), IAM_POLICY_SET(
-        ResourceType.IAM_POLICY,
+    IAM_POLICY_GET(EntityType.IAM_POLICY, Action.GET), IAM_POLICY_SET(
+        EntityType.IAM_POLICY,
         Action.SET
-    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE);
+    ), IAM_POLICY_DELETE(EntityType.IAM_POLICY, Action.DELETE);
 
     /**
      * The type of resource associated with the action.
      */
-    private final ResourceType resourceType;
+    private final EntityType entityType;
 
     /**
      * The action to be performed on the resource.
@@ -87,7 +87,7 @@ public enum ResourceAction {
      */
     @Override
     public String toString() {
-        return String.format("%s.%s", resourceType, action);
+        return String.format("%s.%s", entityType, action);
     }
 
     /**
