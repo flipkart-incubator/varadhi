@@ -93,7 +93,10 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
         Objects.requireNonNull(vertx, "Vertx instance cannot be null");
 
         ResourceReadCache<T> cache = new ResourceReadCache<>(resourceType, entityLoader);
+        return preload(cache, vertx);
+    }
 
+    public static <T extends Resource, C extends ResourceReadCache<T>> Future<C> preload(C cache, Vertx vertx) {
         return cache.preload(vertx).map(v -> cache);
     }
 

@@ -195,11 +195,8 @@ public class VaradhiApplication {
             vertx
         );
 
-        Future<OrgReadCache> orgCacheFuture = OrgReadCache.createOrgReadCache(
-            ResourceType.ORG,
-            metaStore.orgs()::getAllOrgDetails,
-            vertx
-        );
+        Future<OrgReadCache> orgCacheFuture = ResourceReadCache.preload( new OrgReadCache(ResourceType.ORG,
+                metaStore.orgs()::getAllOrgDetails),vertx);
 
 
         // Combine futures and register caches when they're ready

@@ -4,12 +4,9 @@ import com.flipkart.varadhi.common.events.ResourceEvent;
 import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.entities.OrgDetails;
 import com.flipkart.varadhi.entities.ResourceType;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -45,19 +42,5 @@ public class OrgReadCache extends ResourceReadCache<OrgDetails> {
             log.info("Invalidating OrgDetails: {}", entityName);
             resource.remove(entityName);
         }
-    }
-
-    public static Future<OrgReadCache> createOrgReadCache(
-        ResourceType resourceType,
-        Supplier<List<OrgDetails>> entityLoader,
-        Vertx vertx
-    ) {
-        Objects.requireNonNull(resourceType, "Resource type cannot be null");
-        Objects.requireNonNull(entityLoader, "Entity loader cannot be null");
-        Objects.requireNonNull(vertx, "Vertx instance cannot be null");
-
-        OrgReadCache cache = new OrgReadCache(resourceType, entityLoader);
-
-        return cache.preload(vertx).map(v -> cache);
     }
 }
