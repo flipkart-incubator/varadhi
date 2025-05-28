@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.DlqService;
@@ -74,7 +75,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
+        Resource.EntityResource<Project> project = Resource.of(PROJECT, EntityType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -303,7 +305,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
+        Resource.EntityResource<Project> project = Resource.of(PROJECT, EntityType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }

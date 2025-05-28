@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Set;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;

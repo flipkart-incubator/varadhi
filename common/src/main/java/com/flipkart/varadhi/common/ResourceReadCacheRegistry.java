@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.common;
 
-import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.Resource;
+import com.flipkart.varadhi.entities.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashSet;
@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * A thread-safe registry for entity read caches in Varadhi.
  * <p>
- * This registry provides centralized management of {@link EntityReadCache} instances,
+ * This registry provides centralized management of {@link ResourceReadCache} instances,
  * allowing for:
  * <ul>
  *   <li>Dynamic registration and retrieval of caches by resource type</li>
@@ -24,12 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * using {@link ConcurrentHashMap} for thread-safe operations without explicit locking.
  */
 @Slf4j
-public final class EntityReadCacheRegistry {
+public final class ResourceReadCacheRegistry {
 
     /**
      * Thread-safe storage for entity caches, indexed by resource type.
      */
-    private final Map<ResourceType, EntityReadCache<?>> caches = new ConcurrentHashMap<>();
+    private final Map<ResourceType, ResourceReadCache<?>> caches = new ConcurrentHashMap<>();
 
     /**
      * Registers an entity cache for the specified resource type.
@@ -43,7 +43,10 @@ public final class EntityReadCacheRegistry {
      * @return this registry instance for method chaining
      * @throws IllegalStateException if a cache is already registered for the specified type
      */
-    public <T extends MetaStoreEntity> EntityReadCacheRegistry register(ResourceType type, EntityReadCache<T> cache) {
+    public <T extends Resource> ResourceReadCacheRegistry register(
+        ResourceType type,
+        ResourceReadCache<? extends Resource> cache
+    ) {
         if (caches.containsKey(type)) {
             throw new IllegalStateException("Cache already registered for resource type: " + type);
         }
@@ -62,9 +65,9 @@ public final class EntityReadCacheRegistry {
      * @throws IllegalStateException if no cache is registered for the specified type
      */
     @SuppressWarnings ("unchecked")
-    public <T extends MetaStoreEntity> EntityReadCache<T> getCache(ResourceType type) {
+    public <T extends Resource> ResourceReadCache<T> getCache(ResourceType type) {
         return Optional.ofNullable(caches.get(type))
-                       .map(cache -> (EntityReadCache<T>)cache)
+                       .map(cache -> (ResourceReadCache<T>)cache)
                        .orElseThrow(() -> new IllegalStateException("No cache registered for resource type: " + type));
     }
 

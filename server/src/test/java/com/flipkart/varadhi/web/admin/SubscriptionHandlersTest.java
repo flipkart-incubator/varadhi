@@ -1,12 +1,9 @@
 package com.flipkart.varadhi.web.admin;
 
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.entities.SubscriptionResource;
@@ -68,6 +65,8 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             projectCache
         );
         configureRoutes();
+        Resource.EntityResource<Project> project = Resource.of(PROJECT, EntityType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
     }
 
     private void configureRoutes() {
@@ -105,7 +104,6 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
 
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(vTopic).when(topicService).get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
 
@@ -270,7 +268,6 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=SOFT_DELETE"
         );
 
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -298,7 +295,6 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=HARD_DELETE"
         );
 
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -323,7 +319,6 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void deleteSubscription_NoDeletionType_UsesSoftDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, buildSubscriptionUrl("sub1", PROJECT));
 
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
@@ -351,7 +346,6 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT) + "?deletionType=INVALID_TYPE"
         );
 
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),

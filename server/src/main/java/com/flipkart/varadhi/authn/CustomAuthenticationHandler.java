@@ -2,7 +2,7 @@ package com.flipkart.varadhi.authn;
 
 import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.server.spi.RequestContext;

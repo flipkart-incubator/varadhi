@@ -1,12 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
@@ -26,6 +21,7 @@ import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -33,8 +29,8 @@ import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCL
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Hierarchies.ProjectHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
@@ -51,7 +47,7 @@ public class TopicHandlers implements RouteProvider {
 
     private final VaradhiTopicFactory varadhiTopicFactory;
     private final VaradhiTopicService varadhiTopicService;
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
     /**
      * Constructs a new TopicHandlers instance.
@@ -63,7 +59,7 @@ public class TopicHandlers implements RouteProvider {
     public TopicHandlers(
         VaradhiTopicFactory varadhiTopicFactory,
         VaradhiTopicService varadhiTopicService,
-        EntityReadCache<Project> projectCache
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
         this.varadhiTopicService = varadhiTopicService;
@@ -119,7 +115,7 @@ public class TopicHandlers implements RouteProvider {
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectCache.getOrThrow(projectName);
+        Project project = projectCache.getOrThrow(projectName).getEntity();
 
         if (hasBody) {
             TopicResource topicResource = ctx.get(REQUEST_BODY);
@@ -160,7 +156,7 @@ public class TopicHandlers implements RouteProvider {
 
         validateProjectName(projectName, topicResource);
 
-        Project project = projectCache.getOrThrow(topicResource.getProject());
+        Project project = projectCache.getOrThrow(topicResource.getProject()).getEntity();
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
         varadhiTopicService.create(varadhiTopic, project);

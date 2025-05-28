@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 
 public class TopicTests extends E2EBase {
 

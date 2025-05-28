@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.db;
 
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.auth.EntityType;
 
 /**
  * Represents a change event in the metadata store.
@@ -21,10 +21,10 @@ public interface MetaStoreChangeEvent {
     /**
      * Retrieves the type of the resource that was modified.
      *
-     * @return the {@link ResourceType} of the modified resource
+     * @return the {@link EntityType} of the modified resource
      * @throws IllegalStateException if the resource type is not available
      */
-    ResourceType getResourceType();
+    EntityType getEntityType();
 
     /**
      * Marks the event as processed, indicating that all necessary actions

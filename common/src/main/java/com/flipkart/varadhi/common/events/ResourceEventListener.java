@@ -1,20 +1,20 @@
 package com.flipkart.varadhi.common.events;
 
-import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.Resource;
 
 /**
  * Listener interface for entity change events in Varadhi.
  * <p>
  * This interface defines a callback mechanism for components that need to be notified
- * when entities change. Implementations of this interface can register
+ * when resource change. Implementations of this interface can register
  * with event sources to receive notifications about entity changes.
  * <p>
- * This is a functional interface whose functional method is {@link #onChange(EntityEvent)}.
+ * This is a functional interface whose functional method is {@link #onChange(ResourceEvent)}.
  *
- * @see EntityEvent
+ * @see ResourceEvent
  */
 @FunctionalInterface
-public interface EntityEventListener<T extends MetaStoreEntity> {
+public interface ResourceEventListener<T extends Resource> {
 
     /**
      * Called when an entity changes.
@@ -25,5 +25,5 @@ public interface EntityEventListener<T extends MetaStoreEntity> {
      * @param event the event containing information about the entity change
      * @throws IllegalStateException if the listener is in a state where it cannot process events
      */
-    void onChange(EntityEvent<? extends T> event);
+    void onChange(ResourceEvent<? extends T> event);
 }

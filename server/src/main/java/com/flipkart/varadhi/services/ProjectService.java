@@ -147,7 +147,7 @@ public class ProjectService {
      * Deletes a project by name after validating that it has no dependencies.
      *
      * @param projectName the name of the project to delete
-     * @throws InvalidOperationForResourceException if the project has associated entities
+     * @throws InvalidOperationForResourceException if the project has associated resource
      * @throws ResourceNotFoundException            if the project does not exist
      */
     public void deleteProject(String projectName) {
@@ -161,7 +161,7 @@ public class ProjectService {
      * Validates that a project can be deleted by checking for dependencies.
      *
      * @param projectName the name of the project to validate
-     * @throws InvalidOperationForResourceException if the project has associated entities
+     * @throws InvalidOperationForResourceException if the project has associated resource
      */
     private void validateProjectDeletion(String projectName) {
         // Check for topics

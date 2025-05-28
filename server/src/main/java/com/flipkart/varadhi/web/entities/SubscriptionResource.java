@@ -17,7 +17,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Subscription name. Check naming constraints.", max = 64)
-public class SubscriptionResource extends VersionedEntity implements Validatable {
+public class SubscriptionResource extends Versioned implements Validatable {
 
     @NotBlank
     private final String project;

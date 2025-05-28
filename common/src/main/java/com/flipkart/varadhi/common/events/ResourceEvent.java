@@ -1,12 +1,13 @@
 package com.flipkart.varadhi.common.events;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.Resource;
+import com.flipkart.varadhi.entities.ResourceType;
 
 /**
  * Represents an immutable event related to an entity in Varadhi.
  * <p>
- * This record encapsulates information about changes to entities in Varadhi,
+ * This record encapsulates information about changes to resource in Varadhi,
  * providing details about what resource was modified, how it was modified, and the
  * actual resource data. It also includes a mechanism to mark the event as processed.
  * <p>
@@ -14,7 +15,7 @@ import com.flipkart.varadhi.entities.auth.ResourceType;
  *
  * @param <T> the type of resource this event carries
  */
-public record EntityEvent<T>(
+public record ResourceEvent<T extends Resource>(
     ResourceType resourceType,
     String resourceName,
     EventType operation,
@@ -23,12 +24,12 @@ public record EntityEvent<T>(
     @JsonIgnore Runnable commiter
 ) {
     /**
-     * Constructs a new EntityEvent with validation of required fields.
+     * Constructs a new ResourceEvent with validation of required fields.
      *
      * @throws IllegalArgumentException if resourceType is null, resourceName is null or blank,
      *                                  or operation is null
      */
-    public EntityEvent {
+    public ResourceEvent {
         if (resourceType == null) {
             throw new IllegalArgumentException("resourceType cannot be null");
         }
