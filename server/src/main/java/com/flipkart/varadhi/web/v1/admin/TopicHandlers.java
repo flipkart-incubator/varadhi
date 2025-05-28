@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
