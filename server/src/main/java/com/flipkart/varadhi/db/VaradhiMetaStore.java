@@ -31,7 +31,7 @@ import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 
 /**
  * Implementation of the metadata store for Varadhi using ZooKeeper as the backend.
- * This class provides operations for managing organizational resource
+ * This class provides operations for managing organizational entities
  * and their associated metadata.
  *
  * <p>The store maintains hierarchical data for:

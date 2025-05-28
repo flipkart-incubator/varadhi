@@ -53,7 +53,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     /**
      * The strategy for loading all resource.
      */
-    private final Supplier<List<T>> entityLoader;
+    private final Supplier<List<T>> resourceLoader;
 
     /**
      * Creates a new entity cache for the specified resource type with the provided loading strategy.
@@ -63,7 +63,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      */
     ResourceReadCache(ResourceType resourceType, Supplier<List<T>> resourceLoader) {
         this.resourceType = resourceType;
-        this.entityLoader = resourceLoader;
+        this.resourceLoader = resourceLoader;
         this.resource = new ConcurrentHashMap<>();
     }
 
@@ -78,21 +78,21 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      *
      * @param <T> the entity type managed by the cache
      * @param resourceType the type of resource managed by this provider
-     * @param entityLoader the strategy for loading resource
+     * @param resourceLoader the strategy for loading resource
      * @param vertx the Vert.x instance to use for non-blocking operations
      * @return a future that completes with the created and preloaded cache
      * @throws NullPointerException if any parameter is null
      */
     public static <T extends Resource> Future<ResourceReadCache<T>> create(
         ResourceType resourceType,
-        Supplier<List<T>> entityLoader,
+        Supplier<List<T>> resourceLoader,
         Vertx vertx
     ) {
         Objects.requireNonNull(resourceType, "Resource type cannot be null");
-        Objects.requireNonNull(entityLoader, "Entity loader cannot be null");
+        Objects.requireNonNull(resourceLoader, "Resource loader cannot be null");
         Objects.requireNonNull(vertx, "Vertx instance cannot be null");
 
-        ResourceReadCache<T> cache = new ResourceReadCache<>(resourceType, entityLoader);
+        ResourceReadCache<T> cache = new ResourceReadCache<>(resourceType, resourceLoader);
         return preload(cache, vertx);
     }
 
@@ -118,7 +118,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     Future<Void> preload(Vertx vertx) {
         log.info("Preloading {}", resourceType);
 
-        return vertx.executeBlocking(entityLoader::get, false).<Void>map(entityList -> {
+        return vertx.executeBlocking(resourceLoader::get, false).<Void>map(entityList -> {
             Map<String, T> entityMap = entityList.stream().collect(Collectors.toMap(T::getName, Function.identity()));
             resource.putAll(entityMap);
             log.info("Preloaded {} {}", entityList.size(), resourceType);
@@ -137,29 +137,29 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     }
 
     /**
-     * Returns the entity with the given name.
+     * Returns the resource with the given name.
      *
-     * @param name the name of the entity to get. Must not be null.
-     * @return the entity with the given name.
-     * @throws ResourceNotFoundException if the entity is not found
+     * @param name the name of the resource to get. Must not be null.
+     * @return the resource with the given name.
+     * @throws ResourceNotFoundException if the resource is not found
      */
     public T getOrThrow(String name) {
-        T entity = resource.get(name);
-        if (entity == null) {
+        T resourceData = resource.get(name);
+        if (resourceData == null) {
             throw new ResourceNotFoundException("%s(%s) not found".formatted(resourceType.name(), name));
         }
-        return entity;
+        return resourceData;
     }
 
     /**
-     * Handles entity change events by updating the in-memory cache.
+     * Handles resource change events by updating the in-memory cache.
      * <p>
      * This method is thread-safe due to the underlying ConcurrentHashMap.
      * It processes events based on their operation type:
      * <ul>
-     *   <li>{@link EventType#UPSERT}: Adds or updates an entity in the cache if the event version
-     *      is greater than the current cached entity's version</li>
-     *   <li>{@link EventType#INVALIDATE}: Removes an entity from the cache</li>
+     *   <li>{@link EventType#UPSERT}: Adds or updates resource in the cache if the event version
+     *      is greater than the current cached resource's version</li>
+     *   <li>{@link EventType#INVALIDATE}: Removes resource from the cache</li>
      * </ul>
      *
      * @param event the entity event to handle
@@ -170,13 +170,13 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
         EventType operation = event.operation();
 
         if (operation == EventType.UPSERT) {
-            T entity = event.resource();
-            if (entity != null) {
-                resource.compute(entityName, (key, existingEntity) -> {
-                    if (existingEntity == null || event.version() > existingEntity.getVersion()) {
-                        return entity;
+            T eventData = event.resource();
+            if (eventData != null) {
+                resource.compute(entityName, (key, existingResource) -> {
+                    if (existingResource == null || event.version() > existingResource.getVersion()) {
+                        return eventData;
                     }
-                    return existingEntity;
+                    return existingResource;
                 });
             }
         } else if (operation == EventType.INVALIDATE) {

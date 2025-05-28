@@ -4,7 +4,6 @@ import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -81,10 +80,10 @@ public class ProduceHandlers implements RouteProvider {
         ).get();
     }
 
-    public Map<EntityType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
         return Map.of(
-            EntityType.TOPIC,
+            ResourceType.TOPIC,
             new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))
         );
     }

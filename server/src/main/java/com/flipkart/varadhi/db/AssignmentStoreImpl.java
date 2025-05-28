@@ -11,7 +11,7 @@ import static com.flipkart.varadhi.db.ZNode.ASSIGNMENT;
 
 /**
  * ZooKeeper-based implementation of the AssignmentStore interface.
- * Manages persistence and retrieval of Assignment resource in ZooKeeper.
+ * Manages persistence and retrieval of Assignment entity in ZooKeeper.
  */
 public final class AssignmentStoreImpl implements AssignmentStore {
     private static final String SEPARATOR = ":";

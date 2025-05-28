@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
@@ -21,14 +21,14 @@ public class IamPolicyService {
         this.iamPolicyStore = iamPolicyStore;
     }
 
-    private IamPolicyRecord createIamPolicyRecord(String resourceId, EntityType entityType) {
-        if (!isResourceValid(resourceId, entityType)) {
+    private IamPolicyRecord createIamPolicyRecord(String resourceId, ResourceType resourceType) {
+        if (!isResourceValid(resourceId, resourceType)) {
             throw new IllegalArgumentException(
-                "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, entityType)
+                "Invalid resource id(%s) for resource type(%s).".formatted(resourceId, resourceType)
             );
         }
         IamPolicyRecord policyRecord = new IamPolicyRecord(
-            getAuthResourceFQN(entityType, resourceId),
+            getAuthResourceFQN(resourceType, resourceId),
             0,
             new HashMap<>()
         );
@@ -36,26 +36,26 @@ public class IamPolicyService {
         return policyRecord;
     }
 
-    public IamPolicyRecord getIamPolicy(EntityType entityType, String resourceId) {
-        return iamPolicyStore.get(getAuthResourceFQN(entityType, resourceId));
+    public IamPolicyRecord getIamPolicy(ResourceType resourceType, String resourceId) {
+        return iamPolicyStore.get(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    public IamPolicyRecord setIamPolicy(EntityType entityType, String resourceId, IamPolicyRequest binding) {
-        IamPolicyRecord policyRecord = createOrGetIamPolicyRecord(resourceId, entityType);
+    public IamPolicyRecord setIamPolicy(ResourceType resourceType, String resourceId, IamPolicyRequest binding) {
+        IamPolicyRecord policyRecord = createOrGetIamPolicyRecord(resourceId, resourceType);
         policyRecord.setRoleAssignment(binding.getSubject(), binding.getRoles());
         return updateIamPolicyRecord(policyRecord);
     }
 
-    public void deleteIamPolicy(EntityType entityType, String resourceId) {
-        iamPolicyStore.delete(getAuthResourceFQN(entityType, resourceId));
+    public void deleteIamPolicy(ResourceType resourceType, String resourceId) {
+        iamPolicyStore.delete(getAuthResourceFQN(resourceType, resourceId));
     }
 
-    private IamPolicyRecord createOrGetIamPolicyRecord(String resourceId, EntityType entityType) {
-        boolean exists = iamPolicyStore.exists(getAuthResourceFQN(entityType, resourceId));
+    private IamPolicyRecord createOrGetIamPolicyRecord(String resourceId, ResourceType resourceType) {
+        boolean exists = iamPolicyStore.exists(getAuthResourceFQN(resourceType, resourceId));
         if (!exists) {
-            return createIamPolicyRecord(resourceId, entityType);
+            return createIamPolicyRecord(resourceId, resourceType);
         }
-        return iamPolicyStore.get(getAuthResourceFQN(entityType, resourceId));
+        return iamPolicyStore.get(getAuthResourceFQN(resourceType, resourceId));
     }
 
     private IamPolicyRecord updateIamPolicyRecord(IamPolicyRecord iamPolicyRecord) {
@@ -72,12 +72,12 @@ public class IamPolicyService {
         return iamPolicyRecord;
     }
 
-    private boolean isResourceValid(String resourceId, EntityType entityType) {
-        return switch (entityType) {
+    private boolean isResourceValid(String resourceId, ResourceType resourceType) {
+        return switch (resourceType) {
             case ROOT -> throw new IllegalArgumentException(
                 "ROOT is implicit resource type. No Iam policies supported on it."
             );
-            case ORG, ORG_FILTER -> metaStore.orgs().exists(resourceId);
+            case ORG -> metaStore.orgs().exists(resourceId);
             case TEAM -> {
                 // org:team
                 String[] segments = resourceId.split(":");

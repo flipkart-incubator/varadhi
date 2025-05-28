@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.services.IamPolicyService;
@@ -102,12 +102,12 @@ class DefaultAuthorizationProviderTest {
         Checkpoint checkpoint = testContext.checkpoint(2);
         String userName = "abc";
         String resourceId = "flipkart";
-        var resourceTypeCaptor = ArgumentCaptor.forClass(EntityType.class);
+        var resourceTypeCaptor = ArgumentCaptor.forClass(ResourceType.class);
         var resourceIdCaptor = ArgumentCaptor.forClass(String.class);
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.ORG, resourceId),
+                getAuthResourceFQN(ResourceType.ORG, resourceId),
                 1,
                 Map.of(userName, Set.of("org.admin"))
             )
@@ -120,7 +120,7 @@ class DefaultAuthorizationProviderTest {
                 .compose(t -> provider.isAuthorized(testUser(userName, false), ResourceAction.ORG_UPDATE, resourceId))
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
-                    assertEquals(EntityType.ORG, resourceTypeCaptor.getValue());
+                    assertEquals(ResourceType.ORG, resourceTypeCaptor.getValue());
                     assertEquals(resourceId, resourceIdCaptor.getValue());
                     checkpoint.flag();
                 }));
@@ -170,11 +170,11 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TEAM, resourceId),
+                getAuthResourceFQN(ResourceType.TEAM, resourceId),
                 1,
                 Map.of(userName, Set.of("team.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TEAM), resourceIdCaptor.capture());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), resourceIdCaptor.capture());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
         provider.init(ID, authorizationOptions, meterRegistry).onComplete(testContext.succeeding(t -> {
@@ -188,8 +188,8 @@ class DefaultAuthorizationProviderTest {
                     Assertions.assertTrue(t);
                     assertEquals(resourceId, resourceIdCaptor.getValue());
                     // since is auth was true on team, we should not check for org
-                    verify(iamPolicyService, times(1)).getIamPolicy(eq(EntityType.TEAM), eq(resourceId));
-                    verify(iamPolicyService, times(0)).getIamPolicy(eq(EntityType.ORG), eq("flipkart"));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.TEAM), eq(resourceId));
+                    verify(iamPolicyService, times(0)).getIamPolicy(eq(ResourceType.ORG), eq("flipkart"));
                     checkpoint.flag();
                 }));
     }
@@ -203,19 +203,19 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TEAM, resourceId),
+                getAuthResourceFQN(ResourceType.TEAM, resourceId),
                 1,
                 Map.of(userName, Set.of("team.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TEAM), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.ORG, "flipkart"),
+                getAuthResourceFQN(ResourceType.ORG, "flipkart"),
                 1,
                 Map.of(userName, Set.of("org.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.ORG), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.ORG), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -228,8 +228,8 @@ class DefaultAuthorizationProviderTest {
                 )
                 .onComplete(testContext.succeeding(t -> {
                     Assertions.assertTrue(t);
-                    verify(iamPolicyService, times(1)).getIamPolicy(eq(EntityType.TEAM), eq(resourceId));
-                    verify(iamPolicyService, times(1)).getIamPolicy(eq(EntityType.ORG), eq("flipkart"));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.TEAM), eq(resourceId));
+                    verify(iamPolicyService, times(1)).getIamPolicy(eq(ResourceType.ORG), eq("flipkart"));
                     checkpoint.flag();
                 }));
     }
@@ -241,15 +241,15 @@ class DefaultAuthorizationProviderTest {
         String resourcePath = "flipkart/team_a/proj_a";
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TEAM, "flipkart:team_a"),
+                getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
                 1,
                 Map.of(userName, Set.of("team.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TEAM), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
-        doReturn(new IamPolicyRecord(getAuthResourceFQN(EntityType.PROJECT, "proj_a"), 1, Map.of())).when(
+        doReturn(new IamPolicyRecord(getAuthResourceFQN(ResourceType.PROJECT, "proj_a"), 1, Map.of())).when(
             iamPolicyService
-        ).getIamPolicy(eq(EntityType.PROJECT), anyString());
+        ).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -274,11 +274,11 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TEAM, "flipkart:team_a"),
+                getAuthResourceFQN(ResourceType.TEAM, "flipkart:team_a"),
                 1,
                 Map.of(userName, Set.of("team.reader", "project.writer"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TEAM), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TEAM), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -303,11 +303,11 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.PROJECT, "proj_a"),
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
                 1,
                 Map.of(userName, Set.of("project.writer", "topic.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.PROJECT), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -332,25 +332,25 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.PROJECT, "proj_a"),
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
                 1,
                 Map.of(userName, Set.of("project.writer", "topic.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.PROJECT), eq("proj_a"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), eq("proj_a"));
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TOPIC, "proj_a:topic_a"),
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
                 1,
                 Map.of(userName, Set.of("topic.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TOPIC), eq("proj_a:topic_a"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TOPIC, "proj_a:topic_b"),
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_b"),
                 1,
                 Map.of(userName, Set.of("topic.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TOPIC), eq("proj_a:topic_b"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -375,11 +375,11 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.SUBSCRIPTION, "sub_a"),
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "sub_a"),
                 1,
                 Map.of(userName, Set.of("project.writer", "subscription.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.SUBSCRIPTION), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), anyString());
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -408,25 +408,25 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.PROJECT, "proj_a"),
+                getAuthResourceFQN(ResourceType.PROJECT, "proj_a"),
                 1,
                 Map.of(userName, Set.of("project.writer", "subscription.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.PROJECT), anyString());
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.PROJECT), anyString());
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.SUBSCRIPTION, "proj_a:sub_a"),
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
                 1,
                 Map.of(userName, Set.of("subscription.reader"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.SUBSCRIPTION), eq("proj_a:sub_a"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_a"));
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.SUBSCRIPTION, "proj_a:sub_a"),
+                getAuthResourceFQN(ResourceType.SUBSCRIPTION, "proj_a:sub_a"),
                 1,
                 Map.of(userName, Set.of("subscription.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.SUBSCRIPTION), eq("proj_a:sub_b"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.SUBSCRIPTION), eq("proj_a:sub_b"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 
@@ -455,11 +455,11 @@ class DefaultAuthorizationProviderTest {
 
         doReturn(
             new IamPolicyRecord(
-                getAuthResourceFQN(EntityType.TOPIC, "proj_a:topic_a"),
+                getAuthResourceFQN(ResourceType.TOPIC, "proj_a:topic_a"),
                 1,
                 Map.of(userName, Set.of("topic.admin"))
             )
-        ).when(iamPolicyService).getIamPolicy(eq(EntityType.TOPIC), eq("proj_a:topic_a"));
+        ).when(iamPolicyService).getIamPolicy(eq(ResourceType.TOPIC), eq("proj_a:topic_a"));
 
         doReturn(iamPolicyService).when(provider).getAuthZService();
 

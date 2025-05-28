@@ -161,10 +161,10 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the map of resource types to their hierarchies
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project subscriptionProject = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
+        Project subscriptionProject = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(REQUEST_BODY);
-            Project topicProject = projectCache.getOrThrow(subscriptionResource.getTopicProject());
+            Project topicProject = projectCache.getOrThrow(subscriptionResource.getTopicProject()).getEntity();
 
             return Map.ofEntries(
                 Map.entry(
@@ -229,7 +229,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
-        Project subProject = projectCache.getOrThrow(subscription.getProject());
+        Project subProject = projectCache.getOrThrow(subscription.getProject()).getEntity();
 
         VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
             subscription,

@@ -8,8 +8,8 @@ import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import org.apache.curator.framework.CuratorFramework;
@@ -70,20 +70,20 @@ class IamPolicyServiceTest {
         orgService.createOrg(org1);
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         IamPolicyRecord expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.ORG, resourceId),
+            getAuthResourceFQN(ResourceType.ORG, resourceId),
             0,
             Map.of(request.getSubject(), request.getRoles())
         );
-        IamPolicyRecord nodeCreated = iamPolicyService.setIamPolicy(EntityType.ORG, resourceId, request);
+        IamPolicyRecord nodeCreated = iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
         assertEquals(expect, nodeCreated);
 
         // org not exist
         var ior = assertThrowsExactly(
             IllegalArgumentException.class,
-            () -> iamPolicyService.setIamPolicy(EntityType.ORG, org2.getName(), request)
+            () -> iamPolicyService.setIamPolicy(ResourceType.ORG, org2.getName(), request)
         );
         assertEquals(
-            String.format("Invalid resource id(%s) for resource type(%s).", org2.getName(), EntityType.ORG),
+            String.format("Invalid resource id(%s) for resource type(%s).", org2.getName(), ResourceType.ORG),
             ior.getMessage()
         );
 
@@ -92,20 +92,20 @@ class IamPolicyServiceTest {
         resourceId = org1.getName() + ":" + org1team1.getName();
         IamPolicyRequest request2 = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.TEAM, resourceId),
+            getAuthResourceFQN(ResourceType.TEAM, resourceId),
             0,
             Map.of(request2.getSubject(), request2.getRoles())
         );
-        nodeCreated = iamPolicyService.setIamPolicy(EntityType.TEAM, resourceId, request);
+        nodeCreated = iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, request);
         assertEquals(expect, nodeCreated);
 
         // wrong team name
         ior = assertThrowsExactly(
             IllegalArgumentException.class,
-            () -> iamPolicyService.setIamPolicy(EntityType.TEAM, org2team1.getName(), request2)
+            () -> iamPolicyService.setIamPolicy(ResourceType.TEAM, org2team1.getName(), request2)
         );
         assertEquals(
-            String.format("Invalid resource id(%s) for resource type(%s).", org2team1.getName(), EntityType.TEAM),
+            String.format("Invalid resource id(%s) for resource type(%s).", org2team1.getName(), ResourceType.TEAM),
             ior.getMessage()
         );
 
@@ -114,20 +114,20 @@ class IamPolicyServiceTest {
         resourceId = proj1.getName();
         IamPolicyRequest request3 = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.PROJECT, resourceId),
+            getAuthResourceFQN(ResourceType.PROJECT, resourceId),
             0,
             Map.of(request3.getSubject(), request3.getRoles())
         );
-        nodeCreated = iamPolicyService.setIamPolicy(EntityType.PROJECT, resourceId, request3);
+        nodeCreated = iamPolicyService.setIamPolicy(ResourceType.PROJECT, resourceId, request3);
         assertEquals(expect, nodeCreated);
 
         // wrong project name
         ior = assertThrowsExactly(
             IllegalArgumentException.class,
-            () -> iamPolicyService.setIamPolicy(EntityType.PROJECT, proj2.getName(), request3)
+            () -> iamPolicyService.setIamPolicy(ResourceType.PROJECT, proj2.getName(), request3)
         );
         assertEquals(
-            String.format("Invalid resource id(%s) for resource type(%s).", proj2.getName(), EntityType.PROJECT),
+            String.format("Invalid resource id(%s) for resource type(%s).", proj2.getName(), ResourceType.PROJECT),
             ior.getMessage()
         );
     }
@@ -138,29 +138,29 @@ class IamPolicyServiceTest {
         String resourceId = org1.getName();
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
         IamPolicyRecord expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.ORG, resourceId),
+            getAuthResourceFQN(ResourceType.ORG, resourceId),
             0,
             Map.of(request.getSubject(), request.getRoles())
         );
-        iamPolicyService.setIamPolicy(EntityType.ORG, resourceId, request);
-        IamPolicyRecord get = iamPolicyService.getIamPolicy(EntityType.ORG, resourceId);
+        iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
+        IamPolicyRecord get = iamPolicyService.getIamPolicy(ResourceType.ORG, resourceId);
         assertEquals(expect, get);
 
         teamService.createTeam(org1team1);
         resourceId = org1.getName() + ":" + org1team1.getName();
         expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.TEAM, resourceId),
+            getAuthResourceFQN(ResourceType.TEAM, resourceId),
             0,
             Map.of(request.getSubject(), request.getRoles())
         );
-        iamPolicyService.setIamPolicy(EntityType.TEAM, resourceId, request);
-        get = iamPolicyService.getIamPolicy(EntityType.TEAM, resourceId);
+        iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, request);
+        get = iamPolicyService.getIamPolicy(ResourceType.TEAM, resourceId);
         assertEquals(expect, get);
 
         // non existent
         assertThrowsExactly(
             ResourceNotFoundException.class,
-            () -> iamPolicyService.getIamPolicy(EntityType.ORG, org2.getName())
+            () -> iamPolicyService.getIamPolicy(ResourceType.ORG, org2.getName())
         );
     }
 
@@ -169,16 +169,16 @@ class IamPolicyServiceTest {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
-        iamPolicyService.setIamPolicy(EntityType.ORG, resourceId, request);
+        iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
 
         // update node
         IamPolicyRecord expect = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.ORG, resourceId),
+            getAuthResourceFQN(ResourceType.ORG, resourceId),
             1,
             Map.of("usr1", Set.of("role1"))
         );
         IamPolicyRequest update = new IamPolicyRequest("usr1", Set.of("role1"));
-        IamPolicyRecord updated = iamPolicyService.setIamPolicy(EntityType.ORG, resourceId, update);
+        IamPolicyRecord updated = iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, update);
         assertEquals(expect, updated);
     }
 
@@ -187,19 +187,19 @@ class IamPolicyServiceTest {
         orgService.createOrg(org1);
         String resourceId = org1.getName();
         IamPolicyRequest request = new IamPolicyRequest("usr1", Set.of("role1", "role2"));
-        iamPolicyService.setIamPolicy(EntityType.ORG, resourceId, request);
-        assertNotNull(iamPolicyService.getIamPolicy(EntityType.ORG, org1.getName()));
+        iamPolicyService.setIamPolicy(ResourceType.ORG, resourceId, request);
+        assertNotNull(iamPolicyService.getIamPolicy(ResourceType.ORG, org1.getName()));
 
-        iamPolicyService.deleteIamPolicy(EntityType.ORG, org1.getName());
+        iamPolicyService.deleteIamPolicy(ResourceType.ORG, org1.getName());
         assertThrowsExactly(
             ResourceNotFoundException.class,
-            () -> iamPolicyService.getIamPolicy(EntityType.ORG, org1.getName())
+            () -> iamPolicyService.getIamPolicy(ResourceType.ORG, org1.getName())
         );
 
         // delete on non existing
         assertThrowsExactly(
             ResourceNotFoundException.class,
-            () -> iamPolicyService.deleteIamPolicy(EntityType.ORG, org2.getName())
+            () -> iamPolicyService.deleteIamPolicy(ResourceType.ORG, org2.getName())
         );
     }
 
@@ -208,7 +208,7 @@ class IamPolicyServiceTest {
         // create and update new node
         orgService.createOrg(org1);
         IamPolicyRecord org1NodeExpected = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.ORG, org1.getName()),
+            getAuthResourceFQN(ResourceType.ORG, org1.getName()),
             1,
             Map.of("user1", Set.of("role1", "role2"))
         );
@@ -216,73 +216,73 @@ class IamPolicyServiceTest {
         // since node is not created, should throw exception on get
         assertThrows(
             ResourceNotFoundException.class,
-            () -> iamPolicyService.getIamPolicy(EntityType.ORG, org1.getName())
+            () -> iamPolicyService.getIamPolicy(ResourceType.ORG, org1.getName())
         );
 
         // now we update the role assignment
-        IamPolicyRecord gotNode = iamPolicyService.setIamPolicy(EntityType.ORG, org1.getName(), org1Upd);
+        IamPolicyRecord gotNode = iamPolicyService.setIamPolicy(ResourceType.ORG, org1.getName(), org1Upd);
         assertEquals(org1NodeExpected, gotNode);
 
         // now we should be able to get the node
-        assertDoesNotThrow(() -> iamPolicyService.getIamPolicy(EntityType.ORG, org1.getName()));
+        assertDoesNotThrow(() -> iamPolicyService.getIamPolicy(ResourceType.ORG, org1.getName()));
 
         // update existing node
         org1NodeExpected.setRoleAssignment("user2", Set.of("role1", "role2"));
         org1NodeExpected.setVersion(2);
         IamPolicyRequest org1Upd2 = new IamPolicyRequest("user2", Set.of("role1", "role2"));
-        gotNode = iamPolicyService.setIamPolicy(EntityType.ORG, org1.getName(), org1Upd2);
+        gotNode = iamPolicyService.setIamPolicy(ResourceType.ORG, org1.getName(), org1Upd2);
         assertEquals(org1NodeExpected, gotNode);
 
         // update existing subject
         org1NodeExpected.setRoleAssignment("user1", Set.of("role3"));
         org1NodeExpected.setVersion(3);
         IamPolicyRequest org1Upd3 = new IamPolicyRequest("user1", Set.of("role3"));
-        gotNode = iamPolicyService.setIamPolicy(EntityType.ORG, org1.getName(), org1Upd3);
+        gotNode = iamPolicyService.setIamPolicy(ResourceType.ORG, org1.getName(), org1Upd3);
         assertEquals(org1NodeExpected, gotNode);
 
         // check delete subject
         org1NodeExpected.setRoleAssignment("user1", Set.of());
         org1NodeExpected.setVersion(4);
         IamPolicyRequest org1Upd4 = new IamPolicyRequest("user1", Set.of());
-        gotNode = iamPolicyService.setIamPolicy(EntityType.ORG, org1.getName(), org1Upd4);
+        gotNode = iamPolicyService.setIamPolicy(ResourceType.ORG, org1.getName(), org1Upd4);
         assertEquals(org1NodeExpected, gotNode);
 
         // new node on team resource
         teamService.createTeam(org1team1);
         String resourceId = org1.getName() + ":" + org1team1.getName();
         IamPolicyRecord org1team1NodeExpected = new IamPolicyRecord(
-            getAuthResourceFQN(EntityType.TEAM, resourceId),
+            getAuthResourceFQN(ResourceType.TEAM, resourceId),
             1,
             Map.of()
         );
         org1team1NodeExpected.setRoleAssignment("user1", Set.of("role1", "role2"));
         IamPolicyRequest org1team1Upd = new IamPolicyRequest("user1", Set.of("role1", "role2"));
-        iamPolicyService.setIamPolicy(EntityType.TEAM, resourceId, org1team1Upd);
-        gotNode = iamPolicyService.setIamPolicy(EntityType.TEAM, resourceId, org1team1Upd);
+        iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, org1team1Upd);
+        gotNode = iamPolicyService.setIamPolicy(ResourceType.TEAM, resourceId, org1team1Upd);
         assertEquals(org1team1NodeExpected, gotNode);
 
         // should not modify org node
-        IamPolicyRecord org1Node = iamPolicyService.getIamPolicy(EntityType.ORG, org1.getName());
+        IamPolicyRecord org1Node = iamPolicyService.getIamPolicy(ResourceType.ORG, org1.getName());
         assertNotEquals(org1team1NodeExpected, org1Node);
 
         // try to update node with invalid resourceId
         IamPolicyRequest invalidUpd = new IamPolicyRequest("user1", Set.of("role1", "role2"));
         var ior = assertThrowsExactly(
             IllegalArgumentException.class,
-            () -> iamPolicyService.setIamPolicy(EntityType.ORG, "invalid", invalidUpd)
+            () -> iamPolicyService.setIamPolicy(ResourceType.ORG, "invalid", invalidUpd)
         );
         assertEquals(
-            String.format("Invalid resource id(%s) for resource type(%s).", "invalid", EntityType.ORG),
+            String.format("Invalid resource id(%s) for resource type(%s).", "invalid", ResourceType.ORG),
             ior.getMessage()
         );
 
         IamPolicyRequest incorrectUpdate = new IamPolicyRequest("user1", Set.of("role1", "role2"));
         ior = assertThrowsExactly(
             IllegalArgumentException.class,
-            () -> iamPolicyService.setIamPolicy(EntityType.TEAM, org1.getName(), incorrectUpdate)
+            () -> iamPolicyService.setIamPolicy(ResourceType.TEAM, org1.getName(), incorrectUpdate)
         );
         assertEquals(
-            String.format("Invalid resource id(%s) for resource type(%s).", org1.getName(), EntityType.TEAM),
+            String.format("Invalid resource id(%s) for resource type(%s).", org1.getName(), ResourceType.TEAM),
             ior.getMessage()
         );
     }

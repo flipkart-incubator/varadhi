@@ -32,17 +32,17 @@ import static com.flipkart.varadhi.db.ZNode.EVENT;
 /**
  * A ZooKeeper-based implementation of the metadata store.
  *
- * <p>This class provides persistent storage and retrieval of metadata resource using ZooKeeper,
+ * <p>This class provides persistent storage and retrieval of metadata entities using ZooKeeper,
  * with support for:
  * <ul>
- *   <li>Versioned resource</li>
+ *   <li>Versioned entities</li>
  *   <li>Atomic transactions</li>
  *   <li>Event notifications</li>
  *   <li>Hierarchical data organization</li>
  * </ul>
  *
  * <h2>Version Management</h2>
- * <p>For resource extending {@code VaradhiResource}, version management has the following characteristics:
+ * <p>For entities extending {@code MetaStoreEntity}, version management has the following characteristics:
  * <ul>
  *   <li>ZooKeeper's stat object version is considered the source of truth</li>
  *   <li>Data object versions are always overwritten with stat versions during create/get/update operations</li>

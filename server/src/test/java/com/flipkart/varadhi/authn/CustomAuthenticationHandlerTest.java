@@ -5,7 +5,7 @@ import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
@@ -127,8 +127,8 @@ class CustomAuthenticationHandlerTest {
             Future.succeededFuture(userContext)
         );
 
-        Map<EntityType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
-        typeHierarchyMap.put(EntityType.ORG, new Hierarchies.OrgHierarchy("tmp"));
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
+        typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
         when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 
@@ -169,8 +169,8 @@ class CustomAuthenticationHandlerTest {
             Future.succeededFuture(userContext)
         );
 
-        Map<EntityType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
-        typeHierarchyMap.put(EntityType.ORG, new Hierarchies.OrgHierarchy("tmp"));
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
+        typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
         when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(null);
 
@@ -189,8 +189,8 @@ class CustomAuthenticationHandlerTest {
             Future.failedFuture(new Exception("Authentication failed"))
         );
 
-        Map<EntityType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
-        typeHierarchyMap.put(EntityType.ORG, new Hierarchies.OrgHierarchy("tmp"));
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
+        typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
         when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 
@@ -207,8 +207,8 @@ class CustomAuthenticationHandlerTest {
         when(orgResolver.resolve(anyString())).thenReturn(Org.of("testOrg"));
         when(authenticator.authenticate(anyString(), any(RequestContext.class))).thenThrow(BadRequestException.class);
 
-        Map<EntityType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
-        typeHierarchyMap.put(EntityType.ORG, new Hierarchies.OrgHierarchy("tmp"));
+        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
+        typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
         when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 

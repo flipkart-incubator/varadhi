@@ -116,7 +116,7 @@ public class TopicHandlers implements RouteProvider {
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
-        Project project = projectCache.getOrThrow(projectName);
+        Project project = projectCache.getOrThrow(projectName).getEntity();
 
         if (hasBody) {
             TopicResource topicResource = ctx.get(REQUEST_BODY);

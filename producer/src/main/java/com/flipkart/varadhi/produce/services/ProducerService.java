@@ -208,7 +208,7 @@ public final class ProducerService {
             );
         }
 
-        if (applyOrgFilter(varadhiTopic.getProjectName(), varadhiTopic.getName(), message)) {
+        if (applyOrgFilter(varadhiTopic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
         }
 
@@ -287,22 +287,14 @@ public final class ProducerService {
         });
     }
 
-    private boolean applyOrgFilter(String projectName, String topicName, Message message) {
-        Optional<Resource.EntityResource<Project>> projectOptional = projectCache.get(projectName);
+    private boolean applyOrgFilter(VaradhiTopic varadhiTopic, Message message) {
+        var projectOptional = projectCache.get(varadhiTopic.getProjectName());
         if (projectOptional.isEmpty()) {
             return false;
         }
         Project project = projectOptional.get().getEntity();
 
-        Optional<Resource.EntityResource<VaradhiTopic>> topicOptional = topicCache.get(
-            VaradhiTopic.buildTopicName(projectName, topicName)
-        );
-        if (topicOptional.isEmpty()) {
-            return false;
-        }
-        VaradhiTopic varadhiTopic = topicOptional.get().getEntity();
-
-        Optional<OrgDetails> orgDetailsOptional = orgCache.get(project.getOrg());
+        var orgDetailsOptional = orgCache.get(project.getOrg());
         if (orgDetailsOptional.isEmpty()) {
             return false;
         }

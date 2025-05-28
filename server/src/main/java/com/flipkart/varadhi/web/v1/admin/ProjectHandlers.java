@@ -1,11 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.ResourceReadCache;
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Resource;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -75,7 +71,7 @@ public class ProjectHandlers implements RouteProvider {
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = hasBody ?
             ctx.get(REQUEST_BODY) :
-            projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
+            projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
 
         return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(project));
     }

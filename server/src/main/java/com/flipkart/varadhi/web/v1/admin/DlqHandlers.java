@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
@@ -82,7 +81,7 @@ public class DlqHandlers implements RouteProvider {
         ctx.put(REQUEST_BODY, request);
     }
 
-    public Map<EntityType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
+    public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
@@ -91,8 +90,8 @@ public class DlqHandlers implements RouteProvider {
         Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
         String topicName = topicNameSegments[1];
         return Map.ofEntries(
-            Map.entry(EntityType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
-            Map.entry(EntityType.TOPIC, new TopicHierarchy(topicProject, topicName))
+            Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
+            Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
         );
     }
 

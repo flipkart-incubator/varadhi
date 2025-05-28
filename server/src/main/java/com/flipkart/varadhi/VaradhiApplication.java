@@ -16,7 +16,7 @@ import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.EntityType;
-import com.flipkart.varadhi.events.EntityEventDispatcher;
+import com.flipkart.varadhi.events.ResourceEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -195,17 +195,19 @@ public class VaradhiApplication {
             vertx
         );
 
-        Future<OrgReadCache> orgCacheFuture = ResourceReadCache.preload( new OrgReadCache(ResourceType.ORG,
-                metaStore.orgs()::getAllOrgDetails),vertx);
+        Future<OrgReadCache> orgCacheFuture = ResourceReadCache.preload(
+            new OrgReadCache(ResourceType.ORG, metaStore.orgs()::getAllOrgDetails),
+            vertx
+        );
 
 
         // Combine futures and register caches when they're ready
-        return Future.all(projectCacheFuture, topicCacheFuture).map(v -> {
+        return Future.all(projectCacheFuture, topicCacheFuture, orgCacheFuture).map(v -> {
             // Register preloaded caches
             registry.register(ResourceType.PROJECT, projectCacheFuture.result());
             registry.register(ResourceType.TOPIC, topicCacheFuture.result());
             registry.register(ResourceType.ORG, orgCacheFuture.result());
-            EntityEventDispatcher.bindToClusterEntityEvents(vertx, memberInfo, clusterManager, registry);
+            ResourceEventDispatcher.bindToClusterEntityEvents(vertx, memberInfo, clusterManager, registry);
             return registry;
         });
     }

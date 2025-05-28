@@ -14,8 +14,4 @@ public class OrgDetails extends Resource {
         this.org = org;
         this.orgFilters = orgFilters;
     }
-
-    protected OrgDetails(String name, int version) {
-        super(name, version);
-    }
 }

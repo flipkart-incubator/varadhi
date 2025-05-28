@@ -15,8 +15,8 @@ import com.flipkart.varadhi.common.events.ResourceEvent;
 import com.flipkart.varadhi.common.events.ResourceEventListener;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
-import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.Resource;
+import com.flipkart.varadhi.entities.ResourceType;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,10 +30,10 @@ import static com.flipkart.varadhi.common.Constants.ENTITY_EVENTS_HANDLER;
  *
  * @see ResourceEvent
  * @see ResourceEventListener
- * @see EntityType
+ * @see ResourceType
  */
 @Slf4j
-public final class EntityEventDispatcher {
+public final class ResourceEventDispatcher {
 
     /**
      * Map of resource types to their corresponding event listeners.
@@ -48,11 +48,11 @@ public final class EntityEventDispatcher {
     private final Set<ResourceType> supportedTypes;
 
     /**
-     * Creates a new EntityEventDispatcher with the specified listeners.
+     * Creates a new ResourceEventDispatcher with the specified listeners.
      *
      * @param listeners a map of resource types to their corresponding event listeners
      */
-    private EntityEventDispatcher(Map<ResourceType, ResourceEventListener<?>> listeners) {
+    private ResourceEventDispatcher(Map<ResourceType, ResourceEventListener<?>> listeners) {
         this.listeners = Map.copyOf(listeners);
         this.supportedTypes = Set.copyOf(this.listeners.keySet());
     }
@@ -73,17 +73,17 @@ public final class EntityEventDispatcher {
 
         try {
             ResourceEvent<?> rawEvent = message.getData(ResourceEvent.class);
-            ResourceType entityType = rawEvent.resourceType();
+            ResourceType resourceType = rawEvent.resourceType();
 
-            if (!supportedTypes.contains(entityType)) {
+            if (!supportedTypes.contains(resourceType)) {
                 return CompletableFuture.completedFuture(ResponseMessage.fromPayload("Skipped", messageId));
             }
 
-            ResourceEventListener<T> listener = (ResourceEventListener<T>)listeners.get(entityType);
-            T typedResource = convertResource(rawEvent.resource(), entityType);
+            ResourceEventListener<T> listener = (ResourceEventListener<T>)listeners.get(resourceType);
+            T typedResource = convertResource(rawEvent.resource(), resourceType);
 
             ResourceEvent<T> typedEvent = new ResourceEvent<>(
-                entityType,
+                resourceType,
                 rawEvent.resourceName(),
                 rawEvent.operation(),
                 typedResource,
@@ -111,21 +111,21 @@ public final class EntityEventDispatcher {
     private <T extends Resource> T convertResource(Object rawResource, ResourceType resourceType) {
         if (rawResource instanceof Map) {
             String json = JsonMapper.jsonSerialize(rawResource);
-            return JsonMapper.jsonDeserialize(json, getEntityClassForResourceType(resourceType));
+            return JsonMapper.jsonDeserialize(json, getResourceClass(resourceType));
         }
         return (T)rawResource;
     }
 
     /**
      * Returns the resource class for the given resource type.
-     * This method maps EntityType enum values to their corresponding entity classes.
+     * This method maps ResourceType enum values to their corresponding entity classes.
      *
      * @param resourceType the resource type
      * @return the entity class for the resource type
      * @throws IllegalArgumentException if the resource type is not supported
      */
     @SuppressWarnings ("unchecked")
-    private <T extends Resource> Class<T> getEntityClassForResourceType(ResourceType resourceType) {
+    private <T extends Resource> Class<T> getResourceClass(ResourceType resourceType) {
         return switch (resourceType) {
             case PROJECT, TOPIC -> (Class<T>)Resource.EntityResource.class;
             default -> throw new IllegalArgumentException("Unsupported resource type: " + resourceType);
@@ -133,9 +133,9 @@ public final class EntityEventDispatcher {
     }
 
     /**
-     * Binds an EntityEventDispatcher to cluster entity events.
+     * Binds an ResourceEventDispatcher to cluster entity events.
      * <p>
-     * This method creates an EntityEventDispatcher from the provided cache registry and
+     * This method creates an ResourceEventDispatcher from the provided cache registry and
      * registers it with the cluster's message router to handle entity events. It uses
      * the member's hostname to route events to the appropriate handler.
      * <p>
@@ -154,7 +154,7 @@ public final class EntityEventDispatcher {
         ResourceReadCacheRegistry cacheRegistry
     ) {
         String hostname = memberInfo.hostname();
-        EntityEventDispatcher dispatcher = build(cacheRegistry);
+        ResourceEventDispatcher dispatcher = build(cacheRegistry);
         int listenersAdded = dispatcher.supportedTypes.size();
 
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
@@ -164,18 +164,18 @@ public final class EntityEventDispatcher {
     }
 
     /**
-     * Builds an EntityEventDispatcher from the provided cache registry.
+     * Builds an ResourceEventDispatcher from the provided cache registry.
      * <p>
-     * This method creates a new EntityEventDispatcher that will use the entity caches
+     * This method creates a new ResourceEventDispatcher that will use the entity caches
      * in the registry as event listeners. It maps each registered resource type to its
      * corresponding cache, which implements the ResourceEventListener interface.
      *
      * @param cacheRegistry the registry containing entity caches that will act as event listeners
-     * @return a new EntityEventDispatcher configured with listeners from the cache registry
+     * @return a new ResourceEventDispatcher configured with listeners from the cache registry
      * @throws NullPointerException if cacheRegistry is null
      */
-    static EntityEventDispatcher build(ResourceReadCacheRegistry cacheRegistry) {
-        return new EntityEventDispatcher(
+    static ResourceEventDispatcher build(ResourceReadCacheRegistry cacheRegistry) {
+        return new ResourceEventDispatcher(
             cacheRegistry.getRegisteredResourceTypes()
                          .stream()
                          .collect(Collectors.toMap(Function.identity(), cacheRegistry::getCache))
