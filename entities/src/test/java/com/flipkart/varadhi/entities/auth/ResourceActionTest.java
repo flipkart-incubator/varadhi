@@ -8,17 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ResourceActionTest {
 
-    //    @Test
-    //    void toString_ReturnsCorrectFormat() {
-    //        assertAll(
-    //            () -> assertEquals("varadhi.org.create", ResourceAction.ORG_CREATE.toString()),
-    //            () -> assertEquals("varadhi.team.update", ResourceAction.TEAM_UPDATE.toString()),
-    //            () -> assertEquals("varadhi.project.delete", ResourceAction.PROJECT_DELETE.toString()),
-    //            () -> assertEquals("varadhi.topic.get", ResourceAction.TOPIC_GET.toString()),
-    //            () -> assertEquals("varadhi.project.list", ResourceAction.SUBSCRIPTION_LIST.toString()),
-    //            () -> assertEquals("varadhi.iam_policy.set", ResourceAction.IAM_POLICY_SET.toString())
-    //        );
-    //    }
+    @Test
+    void toString_ReturnsCorrectFormat() {
+        assertAll(
+            () -> assertEquals("varadhi.org.create", ResourceAction.ORG_CREATE.toString()),
+            () -> assertEquals("varadhi.team.update", ResourceAction.TEAM_UPDATE.toString()),
+            () -> assertEquals("varadhi.project.delete", ResourceAction.PROJECT_DELETE.toString()),
+            () -> assertEquals("varadhi.topic.get", ResourceAction.TOPIC_GET.toString()),
+            () -> assertEquals("varadhi.project.list", ResourceAction.SUBSCRIPTION_LIST.toString()),
+            () -> assertEquals("varadhi.iam_policy.set", ResourceAction.IAM_POLICY_SET.toString())
+        );
+    }
 
     @Test
     void actionName_ReturnsCorrectActionName() {

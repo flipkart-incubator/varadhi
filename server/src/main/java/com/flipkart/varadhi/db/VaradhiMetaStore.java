@@ -4,7 +4,7 @@ import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;

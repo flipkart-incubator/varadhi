@@ -7,7 +7,7 @@ import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;

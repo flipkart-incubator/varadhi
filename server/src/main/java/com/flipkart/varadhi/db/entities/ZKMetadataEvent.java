@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.db.entities;
 
 import com.flipkart.varadhi.db.ZKMetaStore;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
 
 import java.util.Objects;

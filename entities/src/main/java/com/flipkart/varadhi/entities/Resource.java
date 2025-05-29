@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.auth.EntityType;
 import lombok.Getter;
 
 /**

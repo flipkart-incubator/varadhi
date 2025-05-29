@@ -15,7 +15,7 @@ import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.events.ResourceEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;

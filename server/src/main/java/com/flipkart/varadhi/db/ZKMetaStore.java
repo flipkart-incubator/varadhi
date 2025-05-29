@@ -6,7 +6,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.db.entities.ZKMetadataEvent;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;

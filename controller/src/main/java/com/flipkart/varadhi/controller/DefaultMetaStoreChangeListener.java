@@ -5,7 +5,7 @@ import com.flipkart.varadhi.common.events.ResourceEventListener;
 import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;

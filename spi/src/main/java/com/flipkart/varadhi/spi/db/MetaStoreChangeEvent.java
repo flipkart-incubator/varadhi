@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.db;
 
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 
 /**
  * Represents a change event in the metadata store.

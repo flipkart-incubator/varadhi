@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.admin;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.entities.SubscriptionResource;

@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;

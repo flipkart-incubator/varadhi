@@ -88,7 +88,7 @@ public enum ResourceAction {
      */
     @Override
     public String toString() {
-        return String.format("varadhi.%s.%s", resourceType.toString(), action);
+        return String.format("%s.%s", resourceType.toString(), action);
     }
 
     /**

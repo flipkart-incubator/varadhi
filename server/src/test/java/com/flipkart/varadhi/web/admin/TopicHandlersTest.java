@@ -6,7 +6,7 @@ import java.util.List;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.auth.EntityType;
+import com.flipkart.varadhi.entities.EntityType;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.*;
