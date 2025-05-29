@@ -4,10 +4,9 @@ import com.flipkart.varadhi.entities.filters.OrgFilters;
 import lombok.Getter;
 
 @Getter
-
 public class OrgDetails extends Resource {
-    Org org;
-    OrgFilters orgFilters;
+    private final Org org;
+    private final OrgFilters orgFilters;
 
     public OrgDetails(Org org, OrgFilters orgFilters) {
         super(org.getName(), org.getVersion());
