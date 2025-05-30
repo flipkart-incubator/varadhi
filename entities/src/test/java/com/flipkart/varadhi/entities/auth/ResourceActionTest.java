@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities.auth;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.Versioned;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class SubscriptionOperation extends MetaStoreEntity implements OrderedOperation {
+public class SubscriptionOperation extends Versioned implements OrderedOperation {
     private final String requestedBy;
     private final long startTime;
     private final OpData data;

@@ -17,7 +17,7 @@ import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.events.EntityEventProcessor;
+import com.flipkart.varadhi.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -42,7 +42,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final ControllerConfig controllerConfig;
 
-    private EntityEventProcessor entityEventProcessor;
+    private ResourceEventProcessor entityEventProcessor;
 
     /**
      * Creates a new ControllerVerticle with the specified configuration and services.
@@ -113,8 +113,8 @@ public class ControllerVerticle extends AbstractVerticle {
      *
      * @return a Future that completes with the initialized EventProcessor
      */
-    private Future<EntityEventProcessor> initializeEventSystem() {
-        return EntityEventProcessor.create(
+    private Future<ResourceEventProcessor> initializeEventSystem() {
+        return ResourceEventProcessor.create(
             clusterManager.getExchange(vertx),
             clusterManager,
             metaStoreProvider.getMetaStore(),

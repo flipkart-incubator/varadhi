@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities.auth;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -87,7 +88,7 @@ public enum ResourceAction {
      */
     @Override
     public String toString() {
-        return String.format("%s.%s", resourceType, action);
+        return String.format("%s.%s", resourceType.toString(), action);
     }
 
     /**

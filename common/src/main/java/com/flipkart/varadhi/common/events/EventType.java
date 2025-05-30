@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.common.events;
 
 /**
- * Represents the types of operations that can be performed on entities in Varadhi.
+ * Represents the types of operations that can be performed on resource in Varadhi.
  * <p>
  * This enum defines the standard event types that can be associated with entity changes,
  * allowing components to determine how to process these events based on their type.
  *
- * @see EntityEvent
+ * @see ResourceEvent
  */
 public enum EventType {
 

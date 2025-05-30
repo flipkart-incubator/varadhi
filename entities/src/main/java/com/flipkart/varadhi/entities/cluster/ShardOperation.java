@@ -13,7 +13,7 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class ShardOperation extends MetaStoreEntity implements Operation {
+public class ShardOperation extends Versioned implements Operation {
     private final OpData opData;
     private long startTime;
     private long endTime;

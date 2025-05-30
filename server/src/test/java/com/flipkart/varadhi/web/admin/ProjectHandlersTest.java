@@ -156,7 +156,7 @@ public class ProjectHandlersTest extends WebTestBase {
         doThrow(new ResourceNotFoundException(notFoundError)).when(projectService).deleteProject(p1.getName());
         sendRequestWithoutPayload(request, 404, notFoundError);
 
-        String invalidOpError = String.format("Can not delete Project(%s), it has associated entities.", p1.getName());
+        String invalidOpError = String.format("Can not delete Project(%s), it has associated resource.", p1.getName());
         doThrow(new InvalidOperationForResourceException(invalidOpError)).when(projectService)
                                                                          .deleteProject(p1.getName());
         sendRequestWithoutPayload(request, 409, invalidOpError);

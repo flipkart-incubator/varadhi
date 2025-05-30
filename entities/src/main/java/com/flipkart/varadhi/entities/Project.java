@@ -20,7 +20,7 @@ public class Project extends MetaStoreEntity implements Validatable {
     private String description;
 
     private Project(String name, int version, String description, String team, String org) {
-        super(name, version);
+        super(name, version, MetaStoreEntityType.PROJECT);
         this.description = description;
         this.team = team;
         this.org = org;

@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.authz;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;

@@ -24,7 +24,7 @@ import java.util.List;
 
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 

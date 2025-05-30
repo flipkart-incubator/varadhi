@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.VersionedEntity;
+import com.flipkart.varadhi.entities.Versioned;
 import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,7 +18,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
-public class TopicResource extends VersionedEntity implements Validatable {
+public class TopicResource extends Versioned implements Validatable {
 
     @NotBlank
     private final String project;

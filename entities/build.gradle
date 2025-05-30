@@ -11,4 +11,5 @@ dependencies {
 
     testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
     testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
+    testImplementation(testFixtures(project(":common")))
 }

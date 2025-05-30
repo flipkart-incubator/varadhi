@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.TeamService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_ORG;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TEAM;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;

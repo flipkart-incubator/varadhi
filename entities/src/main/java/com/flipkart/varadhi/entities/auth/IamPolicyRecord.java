@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities.auth;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -24,7 +25,7 @@ public class IamPolicyRecord extends MetaStoreEntity {
         @JsonProperty ("version") int version,
         @JsonProperty ("roleBindings") Map<String, Set<String>> roleBindings
     ) {
-        super(name, version);
+        super(name, version, MetaStoreEntityType.IAM_POLICY);
         this.roleBindings = new HashMap<>();
         this.roleBindings.putAll(roleBindings);
     }
