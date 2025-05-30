@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.entities.cluster;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.Versioned;
 import lombok.Value;
 
 import java.util.Objects;
 
 @Value
-public class Assignment extends MetaStoreEntity {
+public class Assignment extends Versioned {
     private static final String NAME_SEPARATOR = ":";
     String subscriptionId;
     int shardId;

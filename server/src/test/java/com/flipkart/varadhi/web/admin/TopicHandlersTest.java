@@ -6,7 +6,7 @@ import java.util.List;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.EntityType;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.*;
@@ -64,7 +64,7 @@ class TopicHandlersTest extends WebTestBase {
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        Resource.EntityResource<Project> projectResource = Resource.of(project, EntityType.PROJECT);
+        Resource.EntityResource<Project> projectResource = Resource.of(project, MetaStoreEntityType.PROJECT, ResourceType.PROJECT);
         doReturn(projectResource).when(projectCache).getOrThrow(any());
 
         topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);

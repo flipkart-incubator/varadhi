@@ -15,7 +15,7 @@ import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.EntityType;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.events.ResourceEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
@@ -185,13 +185,13 @@ public class VaradhiApplication {
             () -> metaStore.projects()
                            .getAll()
                            .stream()
-                           .map(project -> Resource.of(project, EntityType.PROJECT))
+                           .map(project -> Resource.of(project, MetaStoreEntityType.PROJECT, ResourceType.PROJECT))
                            .toList(),
             vertx
         );
         Future<ResourceReadCache<Resource.EntityResource<VaradhiTopic>>> topicCacheFuture = ResourceReadCache.create(
             ResourceType.TOPIC,
-            () -> metaStore.topics().getAll().stream().map(topic -> Resource.of(topic, EntityType.TOPIC)).toList(),
+            () -> metaStore.topics().getAll().stream().map(topic -> Resource.of(topic, MetaStoreEntityType.TOPIC, ResourceType.TOPIC)).toList(),
             vertx
         );
 

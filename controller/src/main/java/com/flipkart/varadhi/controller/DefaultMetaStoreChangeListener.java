@@ -5,7 +5,7 @@ import com.flipkart.varadhi.common.events.ResourceEventListener;
 import com.flipkart.varadhi.common.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.EntityType;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreChangeEvent;
@@ -48,7 +48,7 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
 
     @Override
     public void onEvent(MetaStoreChangeEvent event) {
-        EntityType type = event.getEntityType();
+        MetaStoreEntityType type = event.getEntityType();
         String name = event.getResourceName();
 
         log.debug("Processing MetaStore change event for {} {}", type, name);
@@ -90,13 +90,13 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
             }
         } catch (ResourceNotFoundException e) {
             log.debug("Resource not found, creating INVALIDATE event for {} {}", type, name);
-            if (type == EntityType.TOPIC) {
+            if (type == MetaStoreEntityType.TOPIC) {
                 processInvalidateEvent(ResourceType.TOPIC, name, event::markAsProcessed);
-            } else if (type == EntityType.SUBSCRIPTION) {
+            } else if (type == MetaStoreEntityType.SUBSCRIPTION) {
                 processInvalidateEvent(ResourceType.SUBSCRIPTION, name, event::markAsProcessed);
-            } else if (type == EntityType.PROJECT) {
+            } else if (type == MetaStoreEntityType.PROJECT) {
                 processInvalidateEvent(ResourceType.PROJECT, name, event::markAsProcessed);
-            } else if (type == EntityType.ORG) {
+            } else if (type == MetaStoreEntityType.ORG) {
                 processInvalidateEvent(ResourceType.ORG, name, event::markAsProcessed);
             }
         }
@@ -106,7 +106,7 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
         ResourceType resourceType,
         String name,
         T entity,
-        EntityType entityType,
+        MetaStoreEntityType metaStoreEntityType,
         Runnable committer
     ) {
         listener.onChange(
@@ -114,7 +114,7 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                 resourceType,
                 name,
                 EventType.UPSERT,
-                Resource.of(entity, entityType),
+                Resource.of(entity, metaStoreEntityType, resourceType),
                 entity.getVersion(),
                 committer
             )

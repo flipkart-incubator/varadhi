@@ -58,13 +58,13 @@ public final class ResourceEventDispatcher {
     }
 
     /**
-     * Processes an entity event from a cluster message.
+     * Processes resource event from a cluster message.
      * <p>
-     * This method extracts the entity event from the message, validates it,
+     * This method extracts the resource event from the message, validates it,
      * and routes it to the appropriate listener based on the resource type.
      *
-     * @param message the cluster message containing the entity event
-     * @param <T>     the type of entity in the event, must extend MetaStoreEntity
+     * @param message the cluster message containing the resource event
+     * @param <T>     the type of resource in the event, must extend Resource
      * @return a future that completes with the response message
      */
     @SuppressWarnings ("unchecked")
@@ -127,8 +127,7 @@ public final class ResourceEventDispatcher {
     @SuppressWarnings ("unchecked")
     private <T extends Resource> Class<T> getResourceClass(ResourceType resourceType) {
         return switch (resourceType) {
-            case PROJECT, TOPIC -> (Class<T>)Resource.EntityResource.class;
-            default -> throw new IllegalArgumentException("Unsupported resource type: " + resourceType);
+            default ->  (Class<T>)Resource.EntityResource.class;
         };
     }
 

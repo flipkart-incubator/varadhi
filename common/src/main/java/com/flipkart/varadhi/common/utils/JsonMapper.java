@@ -44,7 +44,7 @@ public class JsonMapper {
         try {
             return mapper.readValue(data, clazz);
         } catch (JsonProcessingException e) {
-            log.error("Failed to jsonDeserialize({}): {}", data, e);
+            log.error("Failed to jsonDeserialize({}): {}", data, e.getStackTrace());
             throw new VaradhiException(e);
         }
     }

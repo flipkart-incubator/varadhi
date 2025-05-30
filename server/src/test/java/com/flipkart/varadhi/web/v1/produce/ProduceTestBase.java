@@ -2,11 +2,8 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Resource;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.EntityType;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
@@ -75,7 +72,7 @@ public class ProduceTestBase extends WebTestBase {
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
         Project project = Project.of("project1", "description", "team1", "org1");
-        Resource.EntityResource<Project> projectResource = Resource.of(project, EntityType.PROJECT);
+        Resource.EntityResource<Project> projectResource = Resource.of(project, MetaStoreEntityType.PROJECT, ResourceType.PROJECT);
         doReturn(projectResource).when(projectCache).getOrThrow(project.getName());
     }
 }

@@ -6,7 +6,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.JsonMapper;
 import com.flipkart.varadhi.db.entities.ZKMetadataEvent;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.entities.EntityType;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;
@@ -131,20 +131,20 @@ public class ZKMetaStore implements AutoCloseable {
      * @param <T>          Type of the MetaStoreEntity
      * @param znode        The ZNode to create
      * @param dataObject   The entity to store in the ZNode
-     * @param entityType The type of resource being created
+     * @param metaStoreEntityType The type of resource being created
      * @throws DuplicateResourceException if the ZNode already exists
      * @throws MetaStoreException         if creation fails
      */
     public <T extends MetaStoreEntity> void createTrackedZNodeWithData(
         ZNode znode,
         T dataObject,
-        EntityType entityType
+        MetaStoreEntityType metaStoreEntityType
     ) {
         try {
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
             var ops = List.of(
                 zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData),
-                createChangeEventZNode(znode.getName(), entityType)
+                createChangeEventZNode(znode.getName(), metaStoreEntityType)
             );
 
             zkCurator.transaction().forOperations(ops);
@@ -212,7 +212,7 @@ public class ZKMetaStore implements AutoCloseable {
      * @param <T>          Type of the MetaStoreEntity
      * @param znode        The ZNode to update
      * @param dataObject   The entity containing the new data
-     * @param entityType The type of resource being updated
+     * @param metaStoreEntityType The type of resource being updated
      * @throws ResourceNotFoundException            if the ZNode does not exist
      * @throws InvalidOperationForResourceException if there's a version conflict
      * @throws MetaStoreException                   for other update failures
@@ -220,7 +220,7 @@ public class ZKMetaStore implements AutoCloseable {
     public <T extends MetaStoreEntity> void updateTrackedZNodeWithData(
         ZNode znode,
         T dataObject,
-        EntityType entityType
+        MetaStoreEntityType metaStoreEntityType
     ) {
         try {
             byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
@@ -230,7 +230,7 @@ public class ZKMetaStore implements AutoCloseable {
                          .setData()
                          .withVersion(dataObject.getVersion())
                          .forPath(znode.getPath(), jsonData),
-                createChangeEventZNode(znode.getName(), entityType)
+                createChangeEventZNode(znode.getName(), metaStoreEntityType)
             );
 
             var results = zkCurator.transaction().forOperations(ops);
@@ -307,9 +307,9 @@ public class ZKMetaStore implements AutoCloseable {
         try {
             var stat = new Stat();
             byte[] jsonData = zkCurator.getData().storingStatIn(stat).forPath(znode.getPath());
-            var resource = JsonMapper.jsonDeserialize(new String(jsonData, StandardCharsets.UTF_8), pojoClazz);
-            resource.setVersion(stat.getVersion());
-            return resource;
+            var res = JsonMapper.jsonDeserialize(new String(jsonData, StandardCharsets.UTF_8), pojoClazz);
+            res.setVersion(stat.getVersion());
+            return res;
         } catch (KeeperException.NoNodeException e) {
             throw new ResourceNotFoundException(
                 String.format("%s(%s) not found.", znode.getKind(), znode.getName()),
@@ -361,15 +361,15 @@ public class ZKMetaStore implements AutoCloseable {
      * This operation is performed atomically in a transaction.
      *
      * @param znode        The ZNode to delete
-     * @param entityType The type of resource being deleted
+     * @param metaStoreEntityType The type of resource being deleted
      * @throws ResourceNotFoundException if the ZNode does not exist
      * @throws MetaStoreException        if there's an error during the transaction
      */
-    public void deleteTrackedZNode(ZNode znode, EntityType entityType) {
+    public void deleteTrackedZNode(ZNode znode, MetaStoreEntityType metaStoreEntityType) {
         try {
             var ops = List.of(
                 zkCurator.transactionOp().delete().forPath(znode.getPath()),
-                createChangeEventZNode(znode.getName(), entityType)
+                createChangeEventZNode(znode.getName(), metaStoreEntityType)
             );
             zkCurator.transaction().forOperations(ops);
         } catch (Exception e) {
@@ -552,19 +552,19 @@ public class ZKMetaStore implements AutoCloseable {
      * The node name follows the format: event-{resourceType}-{resourceName}-{sequence}
      *
      * @param resourceName Name of the resource being tracked
-     * @param entityType Type of the resource being tracked
+     * @param metaStoreEntityType Type of the resource being tracked
      * @throws MetaStoreException if the creation operation fails
      */
-    private CuratorOp createChangeEventZNode(String resourceName, EntityType entityType) {
+    private CuratorOp createChangeEventZNode(String resourceName, MetaStoreEntityType metaStoreEntityType) {
         try {
-            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, entityType.name(), resourceName, "");
-            log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, entityType);
+            var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, metaStoreEntityType.name(), resourceName, "");
+            log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, metaStoreEntityType);
 
             var eventsPath = ZNode.ofEntityChange(nodeName).getPath();
             return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(eventsPath);
         } catch (Exception e) {
             throw new MetaStoreException(
-                String.format("Failed to create event znode for resource %s of type %s", resourceName, entityType),
+                String.format("Failed to create event znode for resource %s of type %s", resourceName, metaStoreEntityType),
                 e
             );
         }
@@ -640,7 +640,7 @@ public class ZKMetaStore implements AutoCloseable {
             var name = Path.of(path).getFileName().toString();
             var parts = name.split(EVENT_DELIMITER, 4);
             if (parts.length >= 4 && EVENT_PREFIX.equals(parts[0])) {
-                var event = new ZKMetadataEvent(path, parts[2], EntityType.valueOf(parts[1].toUpperCase()), this);
+                var event = new ZKMetadataEvent(path, parts[2], MetaStoreEntityType.valueOf(parts[1].toUpperCase()), this);
                 listener.onEvent(event);
             }
         } catch (Exception e) {
