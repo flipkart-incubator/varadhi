@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import io.vertx.core.buffer.Buffer;
 
 /*

@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.utils;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 
 public final class IamPolicyHelper {
     private IamPolicyHelper() {

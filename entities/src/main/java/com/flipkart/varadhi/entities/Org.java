@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
@@ -7,8 +9,10 @@ import lombok.Value;
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Org name. Check naming constraints.")
 public class Org extends MetaStoreEntity implements Validatable {
-    private Org(String name, int version) {
-        super(name, version);
+
+    @JsonCreator
+    public Org(@JsonProperty ("name") String name, @JsonProperty ("version") int version) {
+        super(name, version, MetaStoreEntityType.ORG);
     }
 
     public static Org of(String name) {

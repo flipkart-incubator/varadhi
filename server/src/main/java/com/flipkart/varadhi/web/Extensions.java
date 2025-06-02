@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.utils.JsonSeqStream;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
@@ -20,10 +20,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.flipkart.varadhi.common.Constants.*;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_IS_SUPER_USER;
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
-
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 
 public class Extensions {
     public static final String ANONYMOUS_IDENTITY = "Anonymous";
@@ -149,13 +148,13 @@ public class Extensions {
 
         // Finish blocking handler by calling this for setting the API response.
         public static <T> void endApiWithResponse(RoutingContext ctx, T response) {
-            ctx.put("api-response", response);
+            ctx.put(ContextKeys.API_RESPONSE, response);
         }
 
 
         // Finish blocking handler by calling this for without setting API response.
         public static void endApi(RoutingContext ctx) {
-            ctx.remove("api-response");
+            ctx.remove(ContextKeys.API_RESPONSE);
         }
 
 
@@ -176,16 +175,13 @@ public class Extensions {
         // This can be used to make certain actions conditional on superuser in addition to regular authz checks.
         // e.g. allow subscriptions properties to be updated beyond configured permissible limits.
         public static boolean isSuperUser(RoutingContext ctx) {
-            return ctx.get(CONTEXT_KEY_IS_SUPER_USER, false);
+            return ctx.get(ContextKeys.IS_SUPER_USER, false);
         }
 
         public static Map<String, String> getRequestAttributes(RoutingContext ctx) {
             Map<String, String> requestAttributes = new HashMap<>();
             Map<ResourceType, ResourceHierarchy> empty = Map.of();
-
-            ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY, empty)
-               .values()
-               .forEach(h -> requestAttributes.putAll(h.getAttributes()));
+            ctx.get(RESOURCE_HIERARCHY, empty).values().forEach(h -> requestAttributes.putAll(h.getAttributes()));
             return requestAttributes;
         }
     }

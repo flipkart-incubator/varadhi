@@ -3,19 +3,22 @@ package com.flipkart.varadhi.auth;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.config.DefaultAuthorizationConfig;
-import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
-import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.entities.auth.ResourceType;
-import com.flipkart.varadhi.entities.auth.Role;
-import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
+import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.entities.auth.Role;
+import com.flipkart.varadhi.entities.auth.UserContext;
+
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
+
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +39,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     private volatile boolean initialised = false;
 
     @Override
-    public Future<Boolean> init(ConfigFileResolver resolver, AuthorizationOptions authorizationOptions) {
+    public Future<Boolean> init(
+        ConfigFileResolver resolver,
+        AuthorizationOptions authorizationOptions,
+        MeterRegistry meterRegistry
+    ) {
         if (!this.initialised) {
             this.configuration = YamlLoader.loadConfig(
                 authorizationOptions.getConfigFile(),
@@ -110,15 +117,16 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
             return Future.succeededFuture(false);
         }
 
-        boolean result = leafToRootResourceIds.stream()
-                                              .anyMatch(
-                                                  pair -> isAuthorizedInternal(
-                                                      userContext.getSubject(),
-                                                      action,
-                                                      pair.getValue()
-                                                  )
-                                              );
-        return Future.succeededFuture(result);
+        boolean isAuthorized = leafToRootResourceIds.stream()
+                                                    .anyMatch(
+                                                        pair -> isAuthorizedInternal(
+                                                            userContext.getSubject(),
+                                                            action,
+                                                            pair.getValue()
+                                                        )
+                                                    );
+        return Future.succeededFuture(isAuthorized);
+
     }
 
     /**

@@ -2,16 +2,14 @@ package com.flipkart.varadhi.web.v1.produce;
 
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.metrics.HttpApiMetricsEmitterNoOpImpl;
@@ -79,6 +77,7 @@ public class ProduceTestBase extends WebTestBase {
         messageId = "messageId1";
         payload = "somerandomdata".getBytes();
         Project project = Project.of("project1", "description", "team1", "org1");
-        doReturn(project).when(projectCache).getOrThrow("project1");
+        Resource.EntityResource<Project> projectResource = Resource.of(project, ResourceType.PROJECT);
+        doReturn(projectResource).when(projectCache).getOrThrow(project.getName());
     }
 }

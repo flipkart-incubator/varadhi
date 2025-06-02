@@ -1,7 +1,6 @@
-package com.flipkart.varadhi.entities.auth;
+package com.flipkart.varadhi.entities;
 
 public enum ResourceType {
-
     ROOT("root"), ORG("org"), TEAM("team"), PROJECT("project"), TOPIC("topic"), SUBSCRIPTION(
         "subscription"
     ), IAM_POLICY("iam_policy");

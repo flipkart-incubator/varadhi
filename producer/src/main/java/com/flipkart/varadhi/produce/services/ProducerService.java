@@ -1,14 +1,18 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.InternalCompositeTopic;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerErrorMapper;
 import com.flipkart.varadhi.produce.config.ProducerErrorType;
@@ -19,11 +23,6 @@ import com.flipkart.varadhi.spi.services.Producer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 /**
  * Service responsible for producing messages to topics in Varadhi.
@@ -44,9 +43,41 @@ import java.util.function.Function;
 public final class ProducerService {
 
     /**
+     * A record that serves as a cache key for producers.
+     *
+     * @param varadhiTopicName the full name of the Varadhi topic
+     * @param storageTopic     the storage topic instance
+     */
+    private record ProducerCacheKey(String varadhiTopicName, StorageTopic storageTopic) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+            ProducerCacheKey that = (ProducerCacheKey)o;
+            return Objects.equals(varadhiTopicName, that.varadhiTopicName) && Objects.equals(
+                storageTopic.getName(),
+                that.storageTopic.getName()
+            );
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(varadhiTopicName, storageTopic.getName());
+        }
+
+        @Override
+        public String toString() {
+            return "ProducerCacheKey[varadhiTopic=" + varadhiTopicName + ", storageTopic=" + storageTopic.getName()
+                   + "]";
+        }
+    }
+
+    /**
      * Cache of producers for storage topics.
      */
-    private final LoadingCache<StorageTopic, Producer> producerCache;
+    private final LoadingCache<ProducerCacheKey, Producer> producerCache;
 
     /**
      * The region where messages are produced.
@@ -54,9 +85,18 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
-     * Cache for VaradhiTopic entities.
+     * Cache for Varad
      */
-    private final EntityReadCache<VaradhiTopic> topicCache;
+    private final ResourceReadCache<OrgDetails> orgCache;
+    /**
+     * Cache for Varad
+     */
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    /**
+     * Cache for VaradhiTopic resource.
+     */
+
+    private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     /**
      * Creates a new ProducerService with default options.
@@ -66,14 +106,16 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
     ) {
-        this(produceRegion, producerProvider, topicCache, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider, orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
@@ -84,22 +126,25 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache,
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
         ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
         this.topicCache = topicCache;
-
+        this.projectCache = projectCache;
+        this.orgCache = orgCache;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(producerProvider::apply);
+                                     .build(key -> producerProvider.apply(key.storageTopic()));
     }
 
     /**
@@ -126,16 +171,16 @@ public final class ProducerService {
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
+        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(varadhiTopicName);
 
-        if (topic.isEmpty() || !topic.get().isActive()) {
+        if (topic.isEmpty() || !topic.get().getEntity().isActive()) {
             metricsEmitter.emit(false, 0, 0, 0, false, ProducerErrorType.TOPIC_NOT_FOUND);
             throw new ResourceNotFoundException(
                 "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
             );
         }
 
-        return produceToValidTopic(message, topic.get(), metricsEmitter);
+        return produceToValidTopic(message, topic.get().getEntity(), metricsEmitter);
     }
 
     /**
@@ -174,12 +219,12 @@ public final class ProducerService {
             );
         }
 
-        if (applyOrgFilter()) {
+        if (applyOrgFilter(varadhiTopic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(storageTopic, metricsEmitter).thenCompose(
+        return getProducer(storageTopic, varadhiTopic.getName(), metricsEmitter).thenCompose(
             producer -> produceToStorageProducer(producer, metricsEmitter, storageTopic.getName(), message).thenApply(
                 result -> ProduceResult.of(message.getMessageId(), result)
             )
@@ -193,17 +238,23 @@ public final class ProducerService {
      * to load it using the producer provider function.
      *
      * @param storageTopic   the storage topic to get a producer for
+     * @param varadhiTopicName the name of the Varadhi topic (used for caching)
      * @param metricsEmitter emitter for production metrics
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer> getProducer(StorageTopic storageTopic, ProducerMetricsEmitter metricsEmitter) {
-        Producer producer = producerCache.getIfPresent(storageTopic);
+    public CompletableFuture<Producer> getProducer(
+        StorageTopic storageTopic,
+        String varadhiTopicName,
+        ProducerMetricsEmitter metricsEmitter
+    ) {
+        ProducerCacheKey key = new ProducerCacheKey(varadhiTopicName, storageTopic);
+        Producer producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
 
         try {
-            return CompletableFuture.completedFuture(producerCache.get(storageTopic));
+            return CompletableFuture.completedFuture(producerCache.get(key));
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
@@ -263,19 +314,25 @@ public final class ProducerService {
         });
     }
 
-    private boolean applyOrgFilter() {
-        // TODO[IMP]: apply org filters
-        //        Project project = projectService.getCachedProject(projectName);
-        //        TODO[IMP]:avoid zk interactions for org and topic + filters
-        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
-        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
-        //        String nfrStrategy = topic.getNfrFilterName();
-        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
-        //                orgFilters.getFilters().get(nfrStrategy) :
-        //                null;
-        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
-        //            return true;
-        //        }
-        return false;
+    private boolean applyOrgFilter(VaradhiTopic varadhiTopic, Message message) {
+        var projectOptional = projectCache.get(varadhiTopic.getProjectName());
+        if (projectOptional.isEmpty()) {
+            return false;
+        }
+        Project project = projectOptional.get().getEntity();
+
+        var orgDetailsOptional = orgCache.get(project.getOrg());
+        if (orgDetailsOptional.isEmpty()) {
+            return false;
+        }
+        OrgDetails orgDetails = orgDetailsOptional.get();
+
+        String nfrStrategy = varadhiTopic.getNfrFilterName();
+        Condition condition = Optional.ofNullable(orgDetails.getOrgFilters())
+                                      .map(OrgFilters::getFilters)
+                                      .map(filters -> filters.get(nfrStrategy))
+                                      .orElse(null);
+
+        return nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders());
     }
 }

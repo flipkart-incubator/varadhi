@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.web;
+package com.flipkart.varadhi.web.configurators;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.TelemetryType;

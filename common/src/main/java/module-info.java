@@ -5,9 +5,7 @@ module com.flipkart.varadhi.common {
     requires micrometer.core;
     requires com.flipkart.varadhi.entities;
     requires com.fasterxml.jackson.databind;
-    requires com.fasterxml.jackson.datatype.jdk8;
     requires com.fasterxml.jackson.dataformat.yaml;
-    requires com.fasterxml.jackson.module.paramnames;
     requires org.apache.commons.collections4;
     requires io.vertx.core;
 

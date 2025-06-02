@@ -3,13 +3,9 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -20,6 +16,7 @@ import com.flipkart.varadhi.spi.db.ProjectStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TeamStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -31,7 +28,7 @@ import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
 import static com.flipkart.varadhi.db.ZNode.TEAM;
 import static com.flipkart.varadhi.db.ZNode.TOPIC;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 
 /**
  * Implementation of the metadata store for Varadhi using ZooKeeper as the backend.
@@ -49,6 +46,7 @@ import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
  *   <li>Events</li>
  * </ul>
  */
+@Slf4j
 public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provider {
     private final ZKMetaStore zkMetaStore;
 
@@ -101,6 +99,20 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         public Org get(String orgName) {
             ZNode znode = ZNode.ofOrg(orgName);
             return zkMetaStore.getZNodeDataAsPojo(znode, Org.class);
+        }
+
+        @Override
+        public List<OrgDetails> getAllOrgDetails() {
+            return zkMetaStore.listChildren(ZNode.ofEntityType(ORG)).stream().map(this::get).map(org -> {
+                ZNode orgFilterNode = ZNode.ofOrgNamedFilter(org.getName());
+                OrgFilters orgFilters = null;
+                try {
+                    orgFilters = zkMetaStore.getZNodeDataAsPojo(orgFilterNode, OrgFilters.class);
+                } catch (ResourceNotFoundException e) {
+                    // Fallback to null.
+                }
+                return new OrgDetails(org, orgFilters);
+            }).toList();
         }
 
         /**
@@ -289,7 +301,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void create(Project project) {
             ZNode znode = ZNode.ofProject(project.getName());
-            zkMetaStore.createTrackedZNodeWithData(znode, project, ResourceType.PROJECT);
+            zkMetaStore.createTrackedZNodeWithData(znode, project, MetaStoreEntityType.PROJECT);
         }
 
         /**
@@ -362,7 +374,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void update(Project project) {
             ZNode znode = ZNode.ofProject(project.getName());
-            zkMetaStore.updateTrackedZNodeWithData(znode, project, ResourceType.PROJECT);
+            zkMetaStore.updateTrackedZNodeWithData(znode, project, MetaStoreEntityType.PROJECT);
         }
 
         /**
@@ -376,7 +388,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void delete(String projectName) {
             ZNode znode = ZNode.ofProject(projectName);
-            zkMetaStore.deleteTrackedZNode(znode, ResourceType.PROJECT);
+            zkMetaStore.deleteTrackedZNode(znode, MetaStoreEntityType.PROJECT);
         }
 
         /**
@@ -405,7 +417,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void create(VaradhiTopic topic) {
             ZNode znode = ZNode.ofTopic(topic.getName());
-            zkMetaStore.createTrackedZNodeWithData(znode, topic, ResourceType.TOPIC);
+            zkMetaStore.createTrackedZNodeWithData(znode, topic, MetaStoreEntityType.TOPIC);
         }
 
         /**
@@ -474,7 +486,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void update(VaradhiTopic topic) {
             ZNode znode = ZNode.ofTopic(topic.getName());
-            zkMetaStore.updateTrackedZNodeWithData(znode, topic, ResourceType.TOPIC);
+            zkMetaStore.updateTrackedZNodeWithData(znode, topic, MetaStoreEntityType.TOPIC);
         }
 
         /**
@@ -488,7 +500,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void delete(String topicName) {
             ZNode znode = ZNode.ofTopic(topicName);
-            zkMetaStore.deleteTrackedZNode(znode, ResourceType.TOPIC);
+            zkMetaStore.deleteTrackedZNode(znode, MetaStoreEntityType.TOPIC);
         }
     };
 
@@ -505,7 +517,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void create(VaradhiSubscription subscription) {
             ZNode znode = ZNode.ofSubscription(subscription.getName());
-            zkMetaStore.createTrackedZNodeWithData(znode, subscription, ResourceType.SUBSCRIPTION);
+            zkMetaStore.createTrackedZNodeWithData(znode, subscription, MetaStoreEntityType.SUBSCRIPTION);
         }
 
         /**
@@ -574,7 +586,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void update(VaradhiSubscription subscription) {
             ZNode znode = ZNode.ofSubscription(subscription.getName());
-            zkMetaStore.updateTrackedZNodeWithData(znode, subscription, ResourceType.SUBSCRIPTION);
+            zkMetaStore.updateTrackedZNodeWithData(znode, subscription, MetaStoreEntityType.SUBSCRIPTION);
         }
 
         /**
@@ -587,7 +599,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         @Override
         public void delete(String subscriptionName) {
             ZNode znode = ZNode.ofSubscription(subscriptionName);
-            zkMetaStore.deleteTrackedZNode(znode, ResourceType.SUBSCRIPTION);
+            zkMetaStore.deleteTrackedZNode(znode, MetaStoreEntityType.SUBSCRIPTION);
         }
     };
 

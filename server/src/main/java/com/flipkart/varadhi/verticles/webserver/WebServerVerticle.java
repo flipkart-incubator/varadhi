@@ -4,12 +4,12 @@ import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.cluster.MessageExchange;
 import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.common.EntityReadCacheRegistry;
+import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
 import com.flipkart.varadhi.produce.services.ProducerService;
 import com.flipkart.varadhi.services.DlqService;
@@ -29,11 +29,10 @@ import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
-import com.flipkart.varadhi.web.AuthnHandler;
-import com.flipkart.varadhi.web.AuthzHandler;
-import com.flipkart.varadhi.web.Extensions;
+
+import com.flipkart.varadhi.web.*;
+import com.flipkart.varadhi.web.configurators.*;
 import com.flipkart.varadhi.web.FailureHandler;
-import com.flipkart.varadhi.web.HierarchyHandler;
 import com.flipkart.varadhi.web.RequestBodyHandler;
 import com.flipkart.varadhi.web.RequestBodyParser;
 import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
@@ -117,7 +116,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private final VerticleConfig verticleConfig;
-    private final EntityReadCacheRegistry cacheRegistry;
+    private final ResourceReadCacheRegistry cacheRegistry;
     private final List<Pattern> disableAPIPatterns;
 
     // Services initialized during startup
@@ -135,7 +134,7 @@ public class WebServerVerticle extends AbstractVerticle {
         AppConfiguration configuration,
         CoreServices services,
         VaradhiClusterManager clusterManager,
-        EntityReadCacheRegistry cacheRegistry
+        ResourceReadCacheRegistry cacheRegistry
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -266,6 +265,8 @@ public class WebServerVerticle extends AbstractVerticle {
             new ProducerService(
                 verticleConfig.deployedRegion(),
                 producerProvider,
+                cacheRegistry.getCache(ResourceType.ORG),
+                cacheRegistry.getCache(ResourceType.PROJECT),
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
@@ -485,8 +486,8 @@ public class WebServerVerticle extends AbstractVerticle {
      * Sets up route configurators for different route behaviors.
      */
     private void setupRouteConfigurators() {
-        AuthnHandler authnHandler = new AuthnHandler(vertx, configuration, meterRegistry);
-        AuthzHandler authzHandler = new AuthzHandler(configuration, configResolver);
+        AuthnConfigurator authnConfigurator = new AuthnConfigurator(vertx, configuration, meterRegistry);
+        AuthzConfigurator authzConfigurator = new AuthzConfigurator(configuration, configResolver, meterRegistry);
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
             meterRegistry
@@ -496,16 +497,16 @@ public class WebServerVerticle extends AbstractVerticle {
         RequestBodyHandler requestBodyHandler = new RequestBodyHandler(
             configuration.getRestOptions().getPayloadSizeMax()
         );
-        RequestBodyParser bodyParser = new RequestBodyParser();
-        HierarchyHandler hierarchyHandler = new HierarchyHandler();
 
-        // Register all route configurators
+        RequestBodyParsingConfigurator bodyParser = new RequestBodyParsingConfigurator();
+        HierarchyConfigurator hierarchyConfigurator = new HierarchyConfigurator();
+
         routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
-        routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnHandler);
+        routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnConfigurator);
         routeBehaviourConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
         routeBehaviourConfigurators.put(RouteBehaviour.parseBody, bodyParser);
-        routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyHandler);
-        routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzHandler);
+        routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyConfigurator);
+        routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzConfigurator);
     }
 
     /**

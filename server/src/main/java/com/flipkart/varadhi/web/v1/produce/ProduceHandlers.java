@@ -1,16 +1,9 @@
 package com.flipkart.varadhi.web.v1.produce;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.ProduceStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.StdHeaders;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerErrorMapper;
 import com.flipkart.varadhi.produce.config.ProducerErrorType;
@@ -73,7 +66,7 @@ public class ProduceHandlers implements RouteProvider {
     private final HttpApiMetricsHandler httpApiMetricsHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
     private final ThreadLocal<ProducerMetricsEmitter> producerMetricsEmitter = new ThreadLocal<>();
     private final ThreadLocal<HttpApiMetricsEmitter> httpApiMetricsEmitter = new ThreadLocal<>();
@@ -109,7 +102,7 @@ public class ProduceHandlers implements RouteProvider {
      * @return Map of resource type to resource hierarchy
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project project = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
+        Project project = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
         return Map.of(
             ResourceType.TOPIC,
             new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PATH_PARAM_TOPIC))

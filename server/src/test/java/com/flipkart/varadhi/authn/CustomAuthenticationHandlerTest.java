@@ -5,7 +5,7 @@ import com.flipkart.varadhi.common.exceptions.ServerErrorException;
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import com.flipkart.varadhi.server.spi.RequestContext;
 import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
+import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -99,7 +99,7 @@ class CustomAuthenticationHandlerTest {
         when(routingContext.request().path()).thenReturn("/test");
 
 
-        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
+        when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(null);
         assertThrows(ServerErrorException.class, () -> handler.handle(routingContext));
 
     }
@@ -130,7 +130,7 @@ class CustomAuthenticationHandlerTest {
         Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
         typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
-        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
+        when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 
         handler.handle(routingContext);
 
@@ -172,7 +172,7 @@ class CustomAuthenticationHandlerTest {
         Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
         typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
-        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(null);
+        when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(null);
 
         handler.handle(routingContext);
 
@@ -192,7 +192,7 @@ class CustomAuthenticationHandlerTest {
         Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
         typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
-        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
+        when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 
         handler.handle(routingContext);
 
@@ -210,7 +210,7 @@ class CustomAuthenticationHandlerTest {
         Map<ResourceType, ResourceHierarchy> typeHierarchyMap = new HashMap<>();
         typeHierarchyMap.put(ResourceType.ORG, new Hierarchies.OrgHierarchy("tmp"));
 
-        when(routingContext.get(CONTEXT_KEY_RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
+        when(routingContext.get(RESOURCE_HIERARCHY)).thenReturn(typeHierarchyMap);
 
         assertThrows(BadRequestException.class, () -> handler.handle(routingContext));
     }

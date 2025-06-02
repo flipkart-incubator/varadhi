@@ -4,14 +4,12 @@ import java.util.Collections;
 import java.util.List;
 
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.utils.JsonMapper;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.JsonMapper;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.*;
+import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
@@ -28,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static com.flipkart.varadhi.web.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
+import static com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -65,7 +63,8 @@ class TopicHandlersTest extends WebTestBase {
         super.setUp();
         doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
         requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        doReturn(project).when(projectCache).getOrThrow(project.getName());
+        Resource.EntityResource<Project> projectResource = Resource.of(project, ResourceType.PROJECT);
+        doReturn(projectResource).when(projectCache).getOrThrow(any());
 
         topicHandlers = new TopicHandlers(varadhiTopicFactory, varadhiTopicService, projectCache);
 

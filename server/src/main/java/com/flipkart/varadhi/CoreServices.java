@@ -1,6 +1,6 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;

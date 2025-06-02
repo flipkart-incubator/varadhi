@@ -1,31 +1,44 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.FutureExtensions;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.AllArgsConstructor;
+import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.common.Constants.CONTEXT_KEY_RESOURCE_HIERARCHY;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
+@ExtensionMethod ({FutureExtensions.class})
 public class AuthorizationHandlerBuilder {
 
     private final AuthorizationProvider provider;
+    private final Timer timer;
 
-    public AuthorizationHandlerBuilder(AuthorizationProvider provider) {
+    private final MeterRegistry meterRegistry;
+
+    public AuthorizationHandlerBuilder(AuthorizationProvider provider, MeterRegistry meterRegistry) {
         this.provider = Objects.requireNonNull(provider, "Authorization Provider is null");
+        this.meterRegistry = Objects.requireNonNull(meterRegistry, "Meter registry is null");
+        this.timer = Timer.builder("authorization.timer")
+                          .description("Time taken to check user authorization")
+                          .tag("method", "isAuthorized")
+                          .register(this.meterRegistry);
     }
 
     public AuthorizationHandler build(ResourceAction authorizationOnResource) {
@@ -33,19 +46,26 @@ public class AuthorizationHandlerBuilder {
     }
 
     private Future<Void> authorizedInternal(UserContext userContext, ResourceAction action, String resourcePath) {
-        return provider.isAuthorized(userContext, action, resourcePath).compose(authorized -> {
-            if (Boolean.FALSE.equals(authorized)) {
-                return Future.failedFuture(
-                    new HttpException(
+        Timer.Sample clock = Timer.start(meterRegistry);
+
+        return provider.isAuthorized(userContext, action, resourcePath).andThen(ar -> {
+            if (ar.succeeded()) {
+                Boolean authorized = ar.result();
+                if (Boolean.FALSE.equals(authorized)) {
+                    throw new HttpException(
                         HTTP_FORBIDDEN,
-                        "user is not authorized to perform action '" + action.toString() + "' on resource '"
-                                        + resourcePath + "'"
-                    )
-                );
+                        String.format(
+                            "User %s is not authorized to perform action %s on resource %s",
+                            userContext.getSubject(),
+                            action,
+                            resourcePath
+                        )
+                    );
+                }
             } else {
-                return Future.succeededFuture();
+                throw new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization");
             }
-        }, t -> Future.failedFuture(new HttpException(HTTP_INTERNAL_ERROR, "failed to get user authorization")));
+        }).record(clock, timer).mapEmpty();
     }
 
     @AllArgsConstructor
@@ -56,7 +76,7 @@ public class AuthorizationHandlerBuilder {
         @Override
         public void handle(RoutingContext ctx) {
             UserContext user = ctx.user() == null ? null : new VertxUserContext(ctx.user());
-            Map<ResourceType, ResourceHierarchy> hierarchies = ctx.get(CONTEXT_KEY_RESOURCE_HIERARCHY);
+            Map<ResourceType, ResourceHierarchy> hierarchies = ctx.get(Constants.ContextKeys.RESOURCE_HIERARCHY);
             ResourceHierarchy hierarchy = hierarchies.getOrDefault(authorizationOnAction.getResourceType(), null);
             if (null == hierarchy) {
                 ctx.fail(new HttpException(HTTP_INTERNAL_ERROR, "resource hierarchy is not set."));

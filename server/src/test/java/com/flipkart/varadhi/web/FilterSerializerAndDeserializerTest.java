@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;

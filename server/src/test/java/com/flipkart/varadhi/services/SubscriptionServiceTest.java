@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createGroupedSubscription;
 import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createUngroupedSubscription;

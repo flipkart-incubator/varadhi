@@ -58,7 +58,7 @@ public class VaradhiSubscription extends LifecycleEntity {
         LifecycleStatus status,
         Map<String, String> properties
     ) {
-        super(name, version);
+        super(name, version, MetaStoreEntityType.SUBSCRIPTION);
         this.project = validateNotNullOrEmpty(project, "Project");
         this.topic = validateNotNullOrEmpty(topic, "Topic");
         this.description = description;
