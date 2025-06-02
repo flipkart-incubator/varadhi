@@ -1,16 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.services.SubscriptionService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
 import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
@@ -32,6 +24,7 @@ import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
+
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
@@ -40,8 +33,8 @@ import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCL
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
 import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.VersionedEntity.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
@@ -66,7 +59,7 @@ public class SubscriptionHandlers implements RouteProvider {
     private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
-    private final EntityReadCache<Project> projectCache;
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
     /**
      * Constructs a new SubscriptionHandlers instance.
@@ -82,7 +75,7 @@ public class SubscriptionHandlers implements RouteProvider {
         VaradhiTopicService topicService,
         VaradhiSubscriptionFactory subscriptionFactory,
         RestOptions restOptions,
-        EntityReadCache<Project> projectCache
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
         this.subscriptionService = subscriptionService;
         this.topicService = topicService;
@@ -167,10 +160,10 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the map of resource types to their hierarchies
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project subscriptionProject = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT));
+        Project subscriptionProject = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
         if (hasBody) {
             SubscriptionResource subscriptionResource = ctx.get(REQUEST_BODY);
-            Project topicProject = projectCache.getOrThrow(subscriptionResource.getTopicProject());
+            Project topicProject = projectCache.getOrThrow(subscriptionResource.getTopicProject()).getEntity();
 
             return Map.ofEntries(
                 Map.entry(
@@ -187,7 +180,7 @@ public class SubscriptionHandlers implements RouteProvider {
 
         VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]);
+        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
         String topicName = topicNameSegments[1];
 
         return Map.ofEntries(
@@ -235,7 +228,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         VaradhiTopic subscribedTopic = getSubscribedTopic(subscription);
-        Project subProject = projectCache.getOrThrow(subscription.getProject());
+        Project subProject = projectCache.getOrThrow(subscription.getProject()).getEntity();
 
         VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
             subscription,
@@ -290,7 +283,7 @@ public class SubscriptionHandlers implements RouteProvider {
         ctx.handleResponse(
             subscriptionService.deleteSubscription(
                 getSubscriptionFqn(ctx),
-                projectCache.getOrThrow(ctx.pathParam(PATH_PARAM_PROJECT)),
+                projectCache.getOrThrow(ctx.pathParam(PATH_PARAM_PROJECT)).getEntity(),
                 ctx.getIdentityOrDefault(),
                 deletionType,
                 actionRequest

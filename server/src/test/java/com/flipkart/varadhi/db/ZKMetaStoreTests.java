@@ -1,13 +1,10 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.*;
@@ -28,7 +25,7 @@ import static org.mockito.Mockito.*;
 public class ZKMetaStoreTests {
 
     CuratorFramework zkCuratorFramework;
-    TestData data1;
+    Org data1;
     ZNode zn;
     private TestingServer zkCuratorTestingServer;
     private ZKMetaStore zkMetaStore;
@@ -47,7 +44,7 @@ public class ZKMetaStoreTests {
         testKind = new ZNodeKind("test", "%s");
         zkMetaStore = new ZKMetaStore(zkCuratorFramework);
         zkMetaStore.createZNode(ZNode.ofEntityType(testKind));
-        data1 = new TestData("test-node1", 0, "sample-testing-node1");
+        data1 = Org.of("test-node1");
         zn = getZnode(data1.getName());
     }
 
@@ -60,10 +57,10 @@ public class ZKMetaStoreTests {
 
     @Test
     public void testZKData() {
-        TestData data2 = new TestData("test-node2", 0, "sample-testing-node2");
+        Org data2 = new Org("test-node2", 0);
         zkMetaStore.createZNodeWithData(ZNode.ofKind(testKind, data1.getName()), data1);
 
-        TestData g_data1 = zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class);
+        Org g_data1 = zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), Org.class);
         Assertions.assertEquals(data1, g_data1);
 
         zkMetaStore.createZNodeWithData(ZNode.ofKind(testKind, data2.getName()), data2);
@@ -75,7 +72,7 @@ public class ZKMetaStoreTests {
 
         ResourceNotFoundException e = Assertions.assertThrows(
             ResourceNotFoundException.class,
-            () -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), TestData.class)
+            () -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofKind(testKind, data1.getName()), Org.class)
         );
         Assertions.assertEquals(String.format("%s(%s) not found.", testKind.kind(), data1.getName()), e.getMessage());
     }
@@ -166,14 +163,14 @@ public class ZKMetaStoreTests {
         validateException(
             ResourceNotFoundException.class,
             String.format("%s(%s) not found.", zn.getKind(), zn.getName()),
-            () -> zkMetaStore.getZNodeDataAsPojo(zn, TestData.class)
+            () -> zkMetaStore.getZNodeDataAsPojo(zn, Org.class)
         );
 
         doThrow(new KeeperException.AuthFailedException()).when(builder).forPath(any());
         validateException(
             MetaStoreException.class,
             String.format("Failed to find %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
-            () -> zkMetaStore.getZNodeDataAsPojo(zn, TestData.class)
+            () -> zkMetaStore.getZNodeDataAsPojo(zn, Org.class)
         );
     }
 
@@ -242,19 +239,5 @@ public class ZKMetaStoreTests {
 
     interface MethodCaller {
         void call();
-    }
-
-
-    @Setter
-    @Getter
-    @EqualsAndHashCode (callSuper = true)
-    public static class TestData extends MetaStoreEntity {
-
-        String data;
-
-        public TestData(String name, int version, String data) {
-            super(name, version);
-            this.data = data;
-        }
     }
 }

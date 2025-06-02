@@ -7,7 +7,7 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.services.DlqService;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.web.ErrorResponse;
 import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
 import com.flipkart.varadhi.web.entities.DlqPageMarker;
@@ -74,7 +74,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
+        Resource.EntityResource<Project> project = Resource.of(PROJECT, ResourceType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -303,7 +304,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
         VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        doReturn(PROJECT).when(projectCache).getOrThrow(PROJECT.getName());
+        Resource.EntityResource<Project> project = Resource.of(PROJECT, ResourceType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }

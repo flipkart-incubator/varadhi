@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import lombok.*;
 
@@ -36,7 +37,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
         int retryAttempt,
         List<OpResult> results
     ) {
-        super(operationId, version);
+        super(operationId, version, MetaStoreEntityType.SUBSCRIPTION_OPERATION);
         this.requestedBy = requestedBy;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -46,7 +47,7 @@ public class SubscriptionOperation extends MetaStoreEntity implements OrderedOpe
     }
 
     SubscriptionOperation(OpData data, String requestedBy) {
-        super(data.operationId, 0);
+        super(data.operationId, 0, MetaStoreEntityType.SUBSCRIPTION_OPERATION);
         this.requestedBy = requestedBy;
         this.startTime = System.currentTimeMillis();
         this.endTime = 0;

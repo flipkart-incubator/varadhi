@@ -11,15 +11,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import com.flipkart.varadhi.common.EntityReadCache;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.BeforeAll;
 
 import com.fasterxml.jackson.databind.JavaType;
-import com.flipkart.varadhi.common.utils.JsonMapper;
-import com.flipkart.varadhi.entities.StdHeaders;
-import com.flipkart.varadhi.entities.TestStdHeaders;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 
 import io.vertx.core.AsyncResult;
@@ -46,8 +43,8 @@ public class WebTestBase {
     protected Router router;
     protected BodyHandler bodyHandler;
     protected FailureHandler failureHandler;
-    protected EntityReadCache<Project> projectCache;
-    protected EntityReadCache<VaradhiTopic> topicCache;
+    protected ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    protected ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     protected static final int DEFAULT_PORT = 9090;
     protected static final String DEFAULT_HOST = "localhost";
@@ -65,8 +62,8 @@ public class WebTestBase {
     }
 
     public void setUp() throws InterruptedException {
-        projectCache = mock(EntityReadCache.class);
-        topicCache = mock(EntityReadCache.class);
+        projectCache = mock(ResourceReadCache.class);
+        topicCache = mock(ResourceReadCache.class);
 
         vertx = Vertx.vertx();
         router = Router.router(vertx);

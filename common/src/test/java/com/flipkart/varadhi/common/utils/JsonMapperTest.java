@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.flipkart.varadhi.entities.JsonMapper;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.junit.jupiter.api.Assertions;
@@ -40,7 +40,7 @@ public class JsonMapperTest {
     public void testJsonDeserialize_InvalidPolymorphicData() {
         String invalidJson = "{\"manufacturer\":\"Honda\",\"@vehicleType\":\"InvalidType\"}";
         Exception exception = assertThrows(
-            VaradhiException.class,
+            JsonMapper.JsonParseException.class,
             () -> JsonMapper.jsonDeserialize(invalidJson, Vehicle.class)
         );
         assertTrue(exception.getMessage().contains("Could not resolve type id 'InvalidType'"));
@@ -49,7 +49,7 @@ public class JsonMapperTest {
     @Test
     public void testJsonSerializeFailure() {
         CantSerialize obj = new CantSerialize();
-        Exception exception = assertThrows(VaradhiException.class, () -> JsonMapper.jsonSerialize(obj));
+        Exception exception = assertThrows(JsonMapper.JsonParseException.class, () -> JsonMapper.jsonSerialize(obj));
         Assertions.assertEquals(InvalidDefinitionException.class, exception.getCause().getClass());
     }
 

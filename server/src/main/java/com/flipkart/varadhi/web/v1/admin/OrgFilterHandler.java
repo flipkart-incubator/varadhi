@@ -2,7 +2,7 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.services.OrgService;

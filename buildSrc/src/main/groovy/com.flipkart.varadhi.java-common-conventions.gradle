@@ -39,7 +39,6 @@ ext {
     jersey_version = "3.1.9"
     guava_version = "33.3.1-jre"
     curator_version = "5.7.1"
-    jackson_version = "2.18.1"
     jakarta_validation_version = "3.1.0"
     jakarta_annotation_version = "3.0.0"
     jakarta_ws_version = "4.0.0"
@@ -97,9 +96,6 @@ dependencies {
 
         compileOnly("org.projectlombok:lombok:$lombok_version")
         annotationProcessor("org.projectlombok:lombok:$lombok_version")
-
-        implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
-        implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version")
 
         implementation("io.vertx:vertx-core:$vertx_version")
         implementation("io.vertx:vertx-config:${vertx_version}")

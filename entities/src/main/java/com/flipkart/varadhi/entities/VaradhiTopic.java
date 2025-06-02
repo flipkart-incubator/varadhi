@@ -39,7 +39,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus status,
         String nfrFilterName
     ) {
-        super(name, version);
+        super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;

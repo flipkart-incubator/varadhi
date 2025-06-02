@@ -2,9 +2,9 @@ package com.flipkart.varadhi.web.v1.authz;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.web.Extensions;

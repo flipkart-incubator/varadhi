@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import io.vertx.ext.web.RoutingContext;
 
 import java.util.Map;

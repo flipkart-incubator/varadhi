@@ -8,11 +8,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.flipkart.varadhi.common.EntityReadCache;
+import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
@@ -82,9 +84,18 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
-     * Cache for VaradhiTopic entities.
+     * Cache for Varad
      */
-    private final EntityReadCache<VaradhiTopic> topicCache;
+    private final ResourceReadCache<OrgDetails> orgCache;
+    /**
+     * Cache for Varad
+     */
+    private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    /**
+     * Cache for VaradhiTopic resource.
+     */
+
+    private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     /**
      * Creates a new ProducerService with default options.
@@ -94,14 +105,16 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
     ) {
-        this(produceRegion, producerProvider, topicCache, ProducerOptions.defaultOptions());
+        this(produceRegion, producerProvider, orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
     }
 
     /**
@@ -112,18 +125,21 @@ public final class ProducerService {
      *
      * @param produceRegion    the region where messages are produced
      * @param producerProvider function to create producers for storage topics
-     * @param topicCache       cache for VaradhiTopic entities
+     * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
         String produceRegion,
         Function<StorageTopic, Producer> producerProvider,
-        EntityReadCache<VaradhiTopic> topicCache,
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
         ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
         this.topicCache = topicCache;
-
+        this.projectCache = projectCache;
+        this.orgCache = orgCache;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -154,15 +170,15 @@ public final class ProducerService {
         String varadhiTopicName,
         ProducerMetricsEmitter metricsEmitter
     ) {
-        Optional<VaradhiTopic> topic = topicCache.get(varadhiTopicName);
+        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(varadhiTopicName);
 
-        if (topic.isEmpty() || !topic.get().isActive()) {
+        if (topic.isEmpty() || !topic.get().getEntity().isActive()) {
             throw new ResourceNotFoundException(
                 "Topic(%s) ".formatted(varadhiTopicName) + (topic.isEmpty() ? "does not exist" : "is not active")
             );
         }
 
-        return produceToValidTopic(message, topic.get(), metricsEmitter);
+        return produceToValidTopic(message, topic.get().getEntity(), metricsEmitter);
     }
 
     /**
@@ -192,7 +208,7 @@ public final class ProducerService {
             );
         }
 
-        if (applyOrgFilter()) {
+        if (applyOrgFilter(varadhiTopic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
         }
 
@@ -271,19 +287,25 @@ public final class ProducerService {
         });
     }
 
-    private boolean applyOrgFilter() {
-        // TODO[IMP]: apply org filters
-        //        Project project = projectService.getCachedProject(projectName);
-        //        TODO[IMP]:avoid zk interactions for org and topic + filters
-        //        OrgFilters orgFilters = orgService.getAllFilters(project.getOrg());
-        //        VaradhiTopic topic = varadhiTopicService.get(buildTopicName(projectName, topicName));
-        //        String nfrStrategy = topic.getNfrFilterName();
-        //        Condition condition = (orgFilters != null && !orgFilters.getFilters().isEmpty()) ?
-        //                orgFilters.getFilters().get(nfrStrategy) :
-        //                null;
-        //        if (nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders())) {
-        //            return true;
-        //        }
-        return false;
+    private boolean applyOrgFilter(VaradhiTopic varadhiTopic, Message message) {
+        var projectOptional = projectCache.get(varadhiTopic.getProjectName());
+        if (projectOptional.isEmpty()) {
+            return false;
+        }
+        Project project = projectOptional.get().getEntity();
+
+        var orgDetailsOptional = orgCache.get(project.getOrg());
+        if (orgDetailsOptional.isEmpty()) {
+            return false;
+        }
+        OrgDetails orgDetails = orgDetailsOptional.get();
+
+        String nfrStrategy = varadhiTopic.getNfrFilterName();
+        Condition condition = Optional.ofNullable(orgDetails.getOrgFilters())
+                                      .map(OrgFilters::getFilters)
+                                      .map(filters -> filters.get(nfrStrategy))
+                                      .orElse(null);
+
+        return nfrStrategy != null && condition != null && condition.evaluate(message.getHeaders());
     }
 }

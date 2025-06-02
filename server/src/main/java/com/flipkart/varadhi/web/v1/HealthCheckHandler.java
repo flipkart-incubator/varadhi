@@ -3,7 +3,7 @@ package com.flipkart.varadhi.web.v1;
 
 import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.auth.ResourceType;
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.common.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

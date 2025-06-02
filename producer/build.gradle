@@ -3,12 +3,11 @@ plugins {
 }
 
 dependencies {
+    api(project(':entities'))
     implementation(project(':common'))
-    implementation(project(':entities'))
     implementation(project(':core'))
     implementation("com.google.guava:guava")
     implementation("io.micrometer:micrometer-core")
-    implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation(libs.caffeine)
     testImplementation("io.micrometer:micrometer-registry-otlp")
 

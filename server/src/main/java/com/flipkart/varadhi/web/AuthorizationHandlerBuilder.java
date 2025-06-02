@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.FutureExtensions;
-import com.flipkart.varadhi.entities.auth.ResourceType;
 import com.flipkart.varadhi.server.spi.authz.AuthorizationProvider;
 import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.VertxUserContext;
