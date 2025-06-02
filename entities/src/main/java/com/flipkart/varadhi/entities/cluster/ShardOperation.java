@@ -13,7 +13,7 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.*;
 
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class ShardOperation extends Versioned implements Operation {
+public class ShardOperation extends MetaStoreEntity implements Operation {
     private final OpData opData;
     private long startTime;
     private long endTime;
@@ -30,7 +30,7 @@ public class ShardOperation extends Versioned implements Operation {
         String errorMsg,
         ShardOperation.OpData opData
     ) {
-        super(operationId, version);
+        super(operationId, version, MetaStoreEntityType.SHARD_OPERATION);
         this.state = state;
         this.errorMsg = errorMsg;
         this.startTime = startTime;
@@ -39,7 +39,7 @@ public class ShardOperation extends Versioned implements Operation {
     }
 
     ShardOperation(ShardOperation.OpData opData) {
-        super(opData.getOperationId(), 0);
+        super(opData.getOperationId(), 0, MetaStoreEntityType.SHARD_OPERATION);
         this.state = IN_PROGRESS;
         this.startTime = System.currentTimeMillis();
         this.endTime = 0;

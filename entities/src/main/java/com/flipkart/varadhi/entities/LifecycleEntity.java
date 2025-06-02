@@ -21,8 +21,8 @@ public abstract class LifecycleEntity extends MetaStoreEntity {
      * @param name    the name of the entity
      * @param version the version of the entity
      */
-    protected LifecycleEntity(String name, int version, MetaStoreEntityType metaStoreEntityType) {
-        super(name, version, metaStoreEntityType);
+    protected LifecycleEntity(String name, int version, MetaStoreEntityType entityType) {
+        super(name, version, entityType);
     }
 
     /**

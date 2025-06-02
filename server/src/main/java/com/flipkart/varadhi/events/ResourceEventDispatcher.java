@@ -13,7 +13,7 @@ import com.flipkart.varadhi.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.common.events.ResourceEvent;
 import com.flipkart.varadhi.common.events.ResourceEventListener;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -127,7 +127,7 @@ public final class ResourceEventDispatcher {
     @SuppressWarnings ("unchecked")
     private <T extends Resource> Class<T> getResourceClass(ResourceType resourceType) {
         return switch (resourceType) {
-            default ->  (Class<T>)Resource.EntityResource.class;
+            default -> (Class<T>)Resource.EntityResource.class;
         };
     }
 

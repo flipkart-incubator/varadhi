@@ -3,7 +3,7 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.db.entities.ZKMetadataEvent;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
@@ -558,13 +558,21 @@ public class ZKMetaStore implements AutoCloseable {
     private CuratorOp createChangeEventZNode(String resourceName, MetaStoreEntityType metaStoreEntityType) {
         try {
             var nodeName = String.join(EVENT_DELIMITER, EVENT_PREFIX, metaStoreEntityType.name(), resourceName, "");
-            log.debug("Adding event znode creation operation for resource {} of type {}", resourceName, metaStoreEntityType);
+            log.debug(
+                "Adding event znode creation operation for resource {} of type {}",
+                resourceName,
+                metaStoreEntityType
+            );
 
             var eventsPath = ZNode.ofEntityChange(nodeName).getPath();
             return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT_SEQUENTIAL).forPath(eventsPath);
         } catch (Exception e) {
             throw new MetaStoreException(
-                String.format("Failed to create event znode for resource %s of type %s", resourceName, metaStoreEntityType),
+                String.format(
+                    "Failed to create event znode for resource %s of type %s",
+                    resourceName,
+                    metaStoreEntityType
+                ),
                 e
             );
         }
@@ -640,7 +648,12 @@ public class ZKMetaStore implements AutoCloseable {
             var name = Path.of(path).getFileName().toString();
             var parts = name.split(EVENT_DELIMITER, 4);
             if (parts.length >= 4 && EVENT_PREFIX.equals(parts[0])) {
-                var event = new ZKMetadataEvent(path, parts[2], MetaStoreEntityType.valueOf(parts[1].toUpperCase()), this);
+                var event = new ZKMetadataEvent(
+                    path,
+                    parts[2],
+                    MetaStoreEntityType.valueOf(parts[1].toUpperCase()),
+                    this
+                );
                 listener.onEvent(event);
             }
         } catch (Exception e) {

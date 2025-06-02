@@ -16,7 +16,7 @@ import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.BeforeAll;
 
 import com.fasterxml.jackson.databind.JavaType;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 
 import io.vertx.core.AsyncResult;

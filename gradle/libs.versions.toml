@@ -3,12 +3,17 @@ vertx = "4.5.10"
 guava = "33.3.1-jre"
 netty = "4.1.119.Final"
 caffeine = "3.2.0"
+jackson = "2.18.1"
 
 [libraries]
 vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
 vertx-web = { group = "io.vertx", name = "vertx-web", version.ref = "vertx" }
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
-jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
+jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jackson" }
+jackson-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
+jackson-module-parameter-names = { group = "com.fasterxml.jackson.module", name = "jackson-module-parameter-names", version.ref = "jackson" }
+jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jdk8", version.ref = "jackson" }
 netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
 vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }
 failsafe = { group = "dev.failsafe", name = "failsafe", version = "3.3.2" }

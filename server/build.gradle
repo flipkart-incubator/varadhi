@@ -7,10 +7,10 @@ plugins {
 
 dependencies {
 
+    implementation(project(":entities"))
     implementation(project(":common"))
     implementation(project(":core"))
     implementation(project(":producer"))
-    implementation(project(":entities"))
     implementation(project(":controller"))
     implementation(project(":consumer"))
     implementation(project(":server-spi"))
@@ -19,8 +19,6 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.commons:commons-lang3")
     implementation(libs.failsafe)
-
-    implementation("com.fasterxml.jackson.core:jackson-databind")
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-config")

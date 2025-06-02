@@ -5,9 +5,8 @@ import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
 import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterImpl;
@@ -187,9 +186,7 @@ class ProducerServiceTests {
         ProducerMetricsEmitter emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
-        when(topicReadCache.get(vt.getName())).thenReturn(
-            Optional.of(Resource.of(vt, MetaStoreEntityType.TOPIC, ResourceType.TOPIC))
-        );
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(Resource.of(vt, ResourceType.TOPIC)));
         doReturn(producer).when(producerFactory).newProducer(any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
@@ -307,11 +304,7 @@ class ProducerServiceTests {
     }
 
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
-        return Resource.of(
-            getTopic(TopicState.Producing, name, project, region),
-            MetaStoreEntityType.TOPIC,
-            ResourceType.TOPIC
-        );
+        return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {

@@ -24,10 +24,10 @@ public class OrgReadCache extends ResourceReadCache<OrgDetails> {
         EventType operation = event.operation();
 
         if (operation == EventType.UPSERT) {
-            resource.merge(orgName, event.resource(), OrgReadCache::merge);
+            resources.merge(orgName, event.resource(), OrgReadCache::merge);
         } else if (operation == EventType.INVALIDATE) {
             log.info("Invalidating OrgDetails: {}", orgName);
-            resource.remove(orgName);
+            resources.remove(orgName);
         }
     }
 
@@ -42,7 +42,7 @@ public class OrgReadCache extends ResourceReadCache<OrgDetails> {
 
         if (value.getOrg().getVersion() > previous.getOrg().getVersion()) {
             org = value.getOrg();
-            log.info("Updating Org: {}, version: {}", value.getOrg().getName(), value.getOrg().getName());
+            log.info("Updating Org: {}, version: {}", value.getOrg().getName(), value.getOrg().getVersion());
         }
         if (value.getOrgFilters().getVersion() > previous.getOrgFilters().getVersion()) {
             filters = value.getOrgFilters();

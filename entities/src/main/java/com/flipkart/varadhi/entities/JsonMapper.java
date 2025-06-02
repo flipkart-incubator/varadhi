@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.common.utils;
+package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -7,14 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
-@Slf4j
 public class JsonMapper {
+
     @Getter
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -35,8 +33,7 @@ public class JsonMapper {
         try {
             return mapper.writeValueAsString(entity);
         } catch (JsonProcessingException e) {
-            log.error("Failed to jsonSerialize({}): {}", entity, e);
-            throw new VaradhiException(e);
+            throw new JsonParseException(e);
         }
     }
 
@@ -44,8 +41,7 @@ public class JsonMapper {
         try {
             return mapper.readValue(data, clazz);
         } catch (JsonProcessingException e) {
-            log.error("Failed to jsonDeserialize({}): {}", data, e.getStackTrace());
-            throw new VaradhiException(e);
+            throw new JsonParseException(e);
         }
     }
 
@@ -53,8 +49,7 @@ public class JsonMapper {
         try {
             return mapper.writeValueAsBytes(entity);
         } catch (JsonProcessingException e) {
-            log.error("Failed to jsonSerialize({}): {}", entity, e);
-            throw new VaradhiException(e);
+            throw new JsonParseException(e);
         }
     }
 
@@ -62,8 +57,13 @@ public class JsonMapper {
         try {
             return mapper.readValue(data, clazz);
         } catch (IOException e) {
-            log.error("Failed to jsonDeserialize({}): {}", data, e);
-            throw new VaradhiException(e);
+            throw new JsonParseException(e);
+        }
+    }
+
+    public static class JsonParseException extends RuntimeException {
+        public JsonParseException(Throwable cause) {
+            super(cause);
         }
     }
 }

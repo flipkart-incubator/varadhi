@@ -19,7 +19,6 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.Map;
 
 import static com.flipkart.varadhi.db.ZNode.EVENT;
 import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
@@ -106,13 +105,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         public List<OrgDetails> getAllOrgDetails() {
             return zkMetaStore.listChildren(ZNode.ofEntityType(ORG)).stream().map(this::get).map(org -> {
                 ZNode orgFilterNode = ZNode.ofOrgNamedFilter(org.getName());
-                OrgFilters orgFilters;
+                OrgFilters orgFilters = null;
                 try {
                     orgFilters = zkMetaStore.getZNodeDataAsPojo(orgFilterNode, OrgFilters.class);
                 } catch (ResourceNotFoundException e) {
-                    // Fallback to default filters if not found
-                    log.warn("Filters not found for org '{}'. Using default filters.", org.getName());
-                    orgFilters = new OrgFilters(0, Map.of()); // Initialize with an empty map
+                    // Fallback to null.
                 }
                 return new OrgDetails(org, orgFilters);
             }).toList();

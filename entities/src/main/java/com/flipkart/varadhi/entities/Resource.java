@@ -1,11 +1,8 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.*;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import lombok.Getter;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents a versioned resource in the system.
@@ -19,14 +16,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * with its corresponding {@link ResourceType}.
  */
 
-@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "resourceType")
+@JsonTypeInfo (use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "resourceType")
 @JsonSubTypes ({
     @JsonSubTypes.Type (value = OrgDetails.class, name = "ORG"),
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "PROJECT"),
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "TEAM"),
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "IAM_POLICY"),
-    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "VARADHI_TOPIC"),
-    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "VARADHI_SUBSCRIPTION")})
+    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "TOPIC"),
+    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "SUBSCRIPTION")})
 @Getter
 public class Resource extends Versioned {
     @JsonProperty ("resourceType")
@@ -37,35 +34,29 @@ public class Resource extends Versioned {
         this.resourceType = resourceType;
     }
 
-    public static <T extends MetaStoreEntity> EntityResource<T> of(
-        T entity,
-        MetaStoreEntityType metaStoreEntityType,
-        ResourceType resourceType
-    ) {
-        return new EntityResource<>(entity, metaStoreEntityType, resourceType);
+    public static <T extends MetaStoreEntity> EntityResource<T> of(T entity, ResourceType resourceType) {
+        return new EntityResource<>(entity, resourceType);
     }
 
-    @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "metaStoreEntityType")
-    @JsonSubTypes ({
-        @JsonSubTypes.Type (value = Project.class, name = "PROJECT"),
-        @JsonSubTypes.Type (value = Team.class, name = "TEAM"),
-        @JsonSubTypes.Type (value = IamPolicyRecord.class, name = "IAM_POLICY"),
-        @JsonSubTypes.Type (value = VaradhiTopic.class, name = "VARADHI_TOPIC"),
-        @JsonSubTypes.Type (value = VaradhiSubscription.class, name = "VARADHI_SUBSCRIPTION"),})
     @Getter
     public static class EntityResource<T extends MetaStoreEntity> extends Resource {
+
+        @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "entityType")
+        @JsonSubTypes ({
+            @JsonSubTypes.Type (value = Project.class, name = "PROJECT"),
+            @JsonSubTypes.Type (value = Team.class, name = "TEAM"),
+            @JsonSubTypes.Type (value = IamPolicyRecord.class, name = "IAM_POLICY"),
+            @JsonSubTypes.Type (value = VaradhiTopic.class, name = "TOPIC"),
+            @JsonSubTypes.Type (value = VaradhiSubscription.class, name = "SUBSCRIPTION"),})
         private final T entity;
-        private final MetaStoreEntityType metaStoreEntityType;
 
         @JsonCreator
         public EntityResource(
             @JsonProperty ("entity") T entity,
-            @JsonProperty ("metaStoreEntityType") MetaStoreEntityType metaStoreEntityType,
-            ResourceType resourceType
+            @JsonProperty ("resourceType") ResourceType resourceType
         ) {
             super(entity.getName(), entity.getVersion(), resourceType);
             this.entity = entity;
-            this.metaStoreEntityType = metaStoreEntityType;
         }
     }
 }

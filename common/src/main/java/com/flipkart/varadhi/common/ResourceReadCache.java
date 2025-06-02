@@ -42,7 +42,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     /**
      * Thread-safe storage for resource, indexed by their names.
      */
-    protected final ConcurrentHashMap<String, T> resource;
+    protected final ConcurrentHashMap<String, T> resources;
 
     /**
      * The resource type managed by this provider.
@@ -64,7 +64,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     ResourceReadCache(ResourceType resourceType, Supplier<List<T>> resourceLoader) {
         this.resourceType = resourceType;
         this.resourceLoader = resourceLoader;
-        this.resource = new ConcurrentHashMap<>();
+        this.resources = new ConcurrentHashMap<>();
     }
 
     /**
@@ -120,7 +120,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
 
         return vertx.executeBlocking(resourceLoader::get, false).<Void>map(entityList -> {
             Map<String, T> entityMap = entityList.stream().collect(Collectors.toMap(T::getName, Function.identity()));
-            resource.putAll(entityMap);
+            resources.putAll(entityMap);
             log.info("Preloaded {} {}", entityList.size(), resourceType);
             return null;
         }).onFailure(e -> log.error("Failed to preload {}: {}", resourceType, e.getMessage()));
@@ -133,7 +133,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      * @return an Optional containing the entity with the given name, or empty if not found
      */
     public Optional<T> get(String name) {
-        return Optional.ofNullable(resource.get(name));
+        return Optional.ofNullable(resources.get(name));
     }
 
     /**
@@ -144,7 +144,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      * @throws ResourceNotFoundException if the resource is not found
      */
     public T getOrThrow(String name) {
-        T resourceData = resource.get(name);
+        T resourceData = resources.get(name);
         if (resourceData == null) {
             throw new ResourceNotFoundException("%s(%s) not found".formatted(resourceType.name(), name));
         }
@@ -172,7 +172,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
         if (operation == EventType.UPSERT) {
             T eventData = event.resource();
             if (eventData != null) {
-                resource.compute(entityName, (key, existingResource) -> {
+                resources.compute(entityName, (key, existingResource) -> {
                     if (existingResource == null || event.version() > existingResource.getVersion()) {
                         return eventData;
                     }
@@ -180,7 +180,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
                 });
             }
         } else if (operation == EventType.INVALIDATE) {
-            resource.remove(entityName);
+            resources.remove(entityName);
         }
     }
 }

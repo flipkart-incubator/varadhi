@@ -28,7 +28,12 @@ public class ZKMetadataEvent implements MetaStoreChangeEvent {
      * @param metaStoreEntityType the type of the resource that was modified
      * @param zkMetaStore  the ZooKeeper metadata store instance
      */
-    public ZKMetadataEvent(String path, String resourceName, MetaStoreEntityType metaStoreEntityType, ZKMetaStore zkMetaStore) {
+    public ZKMetadataEvent(
+        String path,
+        String resourceName,
+        MetaStoreEntityType metaStoreEntityType,
+        ZKMetaStore zkMetaStore
+    ) {
         this.path = Objects.requireNonNull(path, "path cannot be null.");
         this.resourceName = Objects.requireNonNull(resourceName, "resourceName cannot be null.");
         this.metaStoreEntityType = Objects.requireNonNull(metaStoreEntityType, "resourceType cannot be null.");

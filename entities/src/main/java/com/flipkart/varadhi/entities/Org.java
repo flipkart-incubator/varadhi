@@ -9,8 +9,9 @@ import lombok.Value;
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Org name. Check naming constraints.")
 public class Org extends MetaStoreEntity implements Validatable {
+
     @JsonCreator
-    Org(@JsonProperty ("name") String name, @JsonProperty ("version") int version) {
+    public Org(@JsonProperty ("name") String name, @JsonProperty ("version") int version) {
         super(name, version, MetaStoreEntityType.ORG);
     }
 

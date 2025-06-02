@@ -114,7 +114,7 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                 resourceType,
                 name,
                 EventType.UPSERT,
-                Resource.of(entity, metaStoreEntityType, resourceType),
+                Resource.of(entity, resourceType),
                 entity.getVersion(),
                 committer
             )

@@ -8,14 +8,13 @@ import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.common.utils.HostUtils;
-import com.flipkart.varadhi.common.utils.JsonMapper;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.config.MemberConfig;
 import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
 import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
 import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.events.ResourceEventDispatcher;
 import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
@@ -185,13 +184,13 @@ public class VaradhiApplication {
             () -> metaStore.projects()
                            .getAll()
                            .stream()
-                           .map(project -> Resource.of(project, MetaStoreEntityType.PROJECT, ResourceType.PROJECT))
+                           .map(project -> Resource.of(project, ResourceType.PROJECT))
                            .toList(),
             vertx
         );
         Future<ResourceReadCache<Resource.EntityResource<VaradhiTopic>>> topicCacheFuture = ResourceReadCache.create(
             ResourceType.TOPIC,
-            () -> metaStore.topics().getAll().stream().map(topic -> Resource.of(topic, MetaStoreEntityType.TOPIC, ResourceType.TOPIC)).toList(),
+            () -> metaStore.topics().getAll().stream().map(topic -> Resource.of(topic, ResourceType.TOPIC)).toList(),
             vertx
         );
 
