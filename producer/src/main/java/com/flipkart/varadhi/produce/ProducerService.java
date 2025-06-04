@@ -288,7 +288,7 @@ public final class ProducerService {
         });
     }
 
-    private boolean applyOrgFilter(VaradhiTopic varadhiTopic, Message message) {
+    protected boolean applyOrgFilter(VaradhiTopic varadhiTopic, Message message) {
         var projectOptional = projectCache.get(varadhiTopic.getProjectName());
         if (projectOptional.isEmpty()) {
             return false;

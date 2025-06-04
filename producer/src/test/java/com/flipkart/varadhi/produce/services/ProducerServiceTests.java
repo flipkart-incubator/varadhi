@@ -1,11 +1,15 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.produce.services;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
+import com.flipkart.varadhi.entities.filters.StringConditions;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
@@ -23,12 +27,22 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
 
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_PROJECT;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_REMOTE_HOST;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_TEAM;
+import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -290,8 +304,58 @@ class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
+    @Test
+    void testApplyOrgFilter() {
+        // Create a mock project and populate the project cache
+        Project project = Project.of("project1", "desc", "team1", "org1");
+        SimpleResourceReadCache<Resource.EntityResource<Project>> projectCache = new SimpleResourceReadCache<>(
+            ResourceType.PROJECT
+        );
+        projectCache.put("project1", Resource.EntityResource.of(project, ResourceType.PROJECT));
+
+        Map<String, Condition> filterConditions = new HashMap<>();
+        filterConditions.put("nfrStrategy1", new StringConditions.InCondition("key1", List.of("value1", "value2")));
+        OrgFilters orgFilters = new OrgFilters(1, filterConditions);
+        OrgDetails orgDetails = new OrgDetails(new Org("org1", 1), orgFilters);
+        SimpleResourceReadCache<OrgDetails> orgCache = new SimpleResourceReadCache<>(ResourceType.ORG);
+        orgCache.put("org1", orgDetails);
+
+        VaradhiTopic vTopic = getTopic(TopicState.Producing, "test", project, region, "nfrStrategy1");
+        Resource.EntityResource<VaradhiTopic> vt = Resource.EntityResource.of(vTopic, ResourceType.TOPIC);
+
+        Message message = getMessage(0, 1, null, 12, true);
+
+        ProducerService producerService = new ProducerService(
+            "region1",
+            storageTopic -> null,
+            orgCache,
+            projectCache,
+            null
+        );
+
+        boolean result = producerService.applyOrgFilter(vt.getEntity(), message);
+        assertTrue(result, "The filter should evaluate to true for the given message headers.");
+    }
+
+    // Simple implementation of ResourceReadCache for testing
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
         return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
+    }
+
+    static class SimpleResourceReadCache<T extends Resource> extends ResourceReadCache<T> {
+        SimpleResourceReadCache(ResourceType resourceType) {
+            super(resourceType, null);
+        }
+
+        private final Map<String, T> cache = new HashMap<>();
+
+        public Optional<T> get(String key) {
+            return Optional.ofNullable(cache.get(key));
+        }
+
+        public void put(String key, T value) {
+            cache.put(key, value);
+        }
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
@@ -311,12 +375,48 @@ class ProducerServiceTests {
         return topic;
     }
 
+    public VaradhiTopic getTopic(TopicState state, String name, Project project, String region, String nfrStrat) {
+        VaradhiTopic topic = VaradhiTopic.of(
+            project.getName(),
+            name,
+            false,
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            nfrStrat
+        );
+        topic.markCreated();
+
+        StorageTopic st = new DummyStorageTopic(topic.getName());
+        InternalCompositeTopic ict = InternalCompositeTopic.of(st);
+        ict.setTopicState(state);
+        topic.addInternalTopic(region, ict);
+        return topic;
+    }
+
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), getMessageId());
         headers.put(StdHeaders.get().producerIdentity(), "ANONYMOUS");
         headers.put(StdHeaders.get().produceRegion(), region);
         headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
+        byte[] payload = null;
+        if (payloadSize > 0) {
+            payload = new byte[payloadSize];
+            random.nextBytes(payload);
+        }
+        DummyProducer.DummyMessage message = new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
+        return new SimpleMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
+    }
+
+    public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize, boolean nfr) {
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put(StdHeaders.get().msgId(), getMessageId());
+        headers.put(StdHeaders.get().produceIdentity(), "ANONYMOUS");
+        headers.put(StdHeaders.get().produceRegion(), region);
+        headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
+        if (nfr) {
+            headers.put("key1", "value1");
+        }
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];
