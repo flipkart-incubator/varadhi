@@ -12,6 +12,7 @@ import org.apache.pulsar.client.impl.MessageIdImpl;
 
 @Getter
 public class PulsarOffset implements Offset {
+
     @JsonSerialize (using = MessageIdSerializer.class)
     @JsonDeserialize (using = MessageIdDeserializer.class)
     private final MessageId messageId;

@@ -10,7 +10,7 @@ public record SubRoutes(String basePath, List<RouteDefinition> subRoutes) implem
                         .map(
                             r -> new RouteDefinition(
                                 r.getMethodName(),
-                                r.getApiName(),
+                                r.getApiSubject(),
                                 r.getMethod(),
                                 basePath + r.getPath(),
                                 r.getBehaviours(),

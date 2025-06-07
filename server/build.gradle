@@ -15,60 +15,55 @@ dependencies {
     implementation(project(":consumer"))
     implementation(project(":server-spi"))
 
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
-    implementation("org.apache.logging.log4j:log4j-core")
-    implementation("org.apache.commons:commons-lang3")
+    implementation(libs.log4j.slf4j2.impl)
+    implementation(libs.log4j.core)
+    implementation(libs.commons.lang3)
     implementation(libs.failsafe)
 
-    implementation("io.vertx:vertx-core")
-    implementation("io.vertx:vertx-config")
-    implementation("io.vertx:vertx-config-yaml")
-    implementation("io.vertx:vertx-web")
-    implementation("io.vertx:vertx-auth-common")
-    implementation("io.vertx:vertx-auth-jwt")
-    implementation("io.vertx:vertx-zookeeper")
-    implementation("io.vertx:vertx-opentelemetry")
-    implementation("io.vertx:vertx-opentracing")
-    implementation("io.vertx:vertx-micrometer-metrics")
-    implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation(libs.vertx.core)
+    implementation(libs.vertx.config)
+    implementation(libs.vertx.config.yaml)
+    implementation(libs.vertx.web)
+    implementation(libs.vertx.auth.jwt)
+    implementation(libs.vertx.zookeeper)
+    implementation(libs.vertx.opentelemetry)
+    implementation(libs.vertx.opentracing)
+    implementation(libs.vertx.micrometer.metrics)
+    implementation(libs.micrometer.registry.prometheus)
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
-        runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.114.Final:osx-x86_64")
+        runtimeOnly(libs.netty.resolver.dns.native.macos)
     }
 
-    implementation("io.opentelemetry:opentelemetry-sdk")
-    implementation("io.opentelemetry:opentelemetry-exporter-logging")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
-    implementation("io.opentelemetry:opentelemetry-exporter-prometheus")
-    implementation("io.opentelemetry.semconv:opentelemetry-semconv")
+    implementation(libs.opentelemetry.sdk)
+    implementation(libs.opentelemetry.exporter.logging)
+    implementation(libs.opentelemetry.exporter.otlp)
+    implementation(libs.opentelemetry.exporter.prometheus)
+    implementation(libs.opentelemetry.semconv)
 
-    implementation("io.micrometer:micrometer-registry-otlp")
-    implementation("io.micrometer:micrometer-registry-jmx")
+    implementation(libs.micrometer.registry.otlp)
+    implementation(libs.micrometer.registry.jmx)
 
     //For ZK persistence, curator-framework.
-    implementation("org.apache.curator:curator-framework")
+    implementation(libs.curator.framework)
     runtimeOnly(project(":pulsar"))
-
-    testImplementation("io.vertx:vertx-zookeeper:4.5.1")
 
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
     testImplementation(testFixtures(project(":common")))
-    testImplementation("org.apache.curator:curator-test")
-    testImplementation("io.vertx:vertx-junit5")
-    testImplementation("io.vertx:vertx-web-client")
+    testImplementation(libs.curator.test)
+    testImplementation(libs.vertx.junit5)
+    testImplementation(libs.vertx.web.client)
 
-    testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
-    testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version")
+    testE2EImplementation(libs.jersey.client)
+    testE2EImplementation(libs.jersey.media.json.jackson)
 
     testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_version:runtime")
 
-
     // jacoco aggregation dependency -- explicit inclusion.
     jacocoAggregation project(":pulsar")
-
 }
 
 reporting {

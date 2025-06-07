@@ -76,7 +76,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         String nfrStrategy
     ) {
         return new VaradhiTopic(
-            buildTopicName(project, name),
+            fqn(project, name),
             INITIAL_VERSION,
             grouped,
             capacity,
@@ -93,7 +93,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param topicName   the name of the topic
      * @return the constructed topic name
      */
-    public static String buildTopicName(String projectName, String topicName) {
+    public static String fqn(String projectName, String topicName) {
         return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 

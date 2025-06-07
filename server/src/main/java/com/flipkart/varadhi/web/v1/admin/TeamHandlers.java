@@ -29,8 +29,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 public class TeamHandlers implements RouteProvider {
     private static final String API_NAME = "TEAM";
 
-    private static final String METHODNAMES_LIST_PROJECTS = "LIST_PROJECTS";
-
     private final TeamService teamService;
 
     public TeamHandlers(TeamService teamService) {

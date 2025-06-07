@@ -39,7 +39,7 @@ public class StdHeaders {
     private final String httpUri;
     private final String httpMethod;
     private final String httpContentType;
-    private final String produceIdentity;
+    private final String producerIdentity;
     private final String produceRegion;
     private final String produceTimestamp;
     private final List<String> allHeaders;
@@ -58,7 +58,7 @@ public class StdHeaders {
         @JsonProperty ("httpUri") String httpUri,
         @JsonProperty ("httpMethod") String httpMethod,
         @JsonProperty ("httpContentType") String httpContentType,
-        @JsonProperty ("produceIdentity") String produceIdentity,
+        @JsonProperty ("producerIdentity") String producerIdentity,
         @JsonProperty ("produceRegion") String produceRegion,
         @JsonProperty ("produceTimestamp") String produceTimestamp
     ) {
@@ -73,7 +73,7 @@ public class StdHeaders {
         this.httpUri = httpUri;
         this.httpMethod = httpMethod;
         this.httpContentType = httpContentType;
-        this.produceIdentity = produceIdentity;
+        this.producerIdentity = producerIdentity;
         this.produceRegion = produceRegion;
         this.produceTimestamp = produceTimestamp;
         this.allHeaders = List.of(
@@ -87,7 +87,7 @@ public class StdHeaders {
             this.httpUri,
             this.httpMethod,
             this.httpContentType,
-            this.produceIdentity,
+            this.producerIdentity,
             this.produceRegion,
             this.produceTimestamp
         );
@@ -144,8 +144,8 @@ public class StdHeaders {
         return this.httpContentType;
     }
 
-    public String produceIdentity() {
-        return this.produceIdentity;
+    public String producerIdentity() {
+        return this.producerIdentity;
     }
 
     public String produceRegion() {

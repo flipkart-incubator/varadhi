@@ -28,30 +28,6 @@ def loadProperties(path) {
 }
 
 ext {
-    lombok_version = "1.18.34"
-    slf4j_version = "2.0.16"
-    log4j2_version = "2.24.1"
-    vertx_version = "4.5.10"
-
-    otl_version = "1.43.0"
-    otl_semconv_version = "1.28.0-alpha"
-    micrometer_version = "1.13.6"
-    jersey_version = "3.1.9"
-    guava_version = "33.3.1-jre"
-    curator_version = "5.7.1"
-    jakarta_validation_version = "3.1.0"
-    jakarta_annotation_version = "3.0.0"
-    jakarta_ws_version = "4.0.0"
-    commons_lang_version = "3.17.0"
-    commons_collections_version = "4.4"
-    jctools_version = "4.0.5"
-
-    hibernate_validator_version = "8.0.1.Final"
-
-    junit_version = "5.11.3"
-    mockito_version = "5.14.2"
-    jmh_version = "1.37"
-    awaitility_version = "4.2.2"
     jacoco_version = "0.8.10"
 
     copyConfigToDir = { overridesFile, destination ->
@@ -87,77 +63,23 @@ configurations {
 }
 
 dependencies {
-    // TODO: Get rid of these unnecessary constraints. We are probably using it wrong. Need to check.
-    constraints {
-        implementation("org.slf4j:slf4j-api:$slf4j_version")
-        implementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
-        implementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
-        implementation("org.apache.commons:commons-lang3:$commons_lang_version")
-
-        compileOnly("org.projectlombok:lombok:$lombok_version")
-        annotationProcessor("org.projectlombok:lombok:$lombok_version")
-
-        implementation("io.vertx:vertx-core:$vertx_version")
-        implementation("io.vertx:vertx-config:${vertx_version}")
-        implementation("io.vertx:vertx-config-yaml:${vertx_version}")
-        implementation("io.vertx:vertx-web:$vertx_version")
-        implementation("io.vertx:vertx-auth-common:$vertx_version")
-        implementation("io.vertx:vertx-auth-jwt:$vertx_version")
-        implementation("io.vertx:vertx-zookeeper:$vertx_version")
-        implementation("io.vertx:vertx-opentelemetry:$vertx_version")
-        implementation("io.vertx:vertx-opentracing:$vertx_version")
-        implementation("io.vertx:vertx-micrometer-metrics:$vertx_version")
-        implementation("io.micrometer:micrometer-registry-prometheus:1.12.0")
-        runtimeOnly('io.netty:netty-resolver-dns-native-macos:4.1.91.Final')
-
-
-        implementation("io.opentelemetry:opentelemetry-api:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-sdk:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-exporter-logging:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-exporter-otlp:$otl_version")
-        implementation("io.opentelemetry:opentelemetry-exporter-prometheus:$otl_version-alpha")
-        implementation("io.opentelemetry.semconv:opentelemetry-semconv:$otl_semconv_version")
-
-        implementation("io.micrometer:micrometer-core:$micrometer_version")
-        implementation("io.micrometer:micrometer-registry-otlp:$micrometer_version")
-        implementation("org.apache.curator:curator-framework:$curator_version")
-
-        // TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
-        //  by default, and have the docker compose setup ready for local setup.
-        implementation("io.micrometer:micrometer-registry-jmx:$micrometer_version")
-        implementation("com.google.guava:guava:$guava_version")
-
-        implementation("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
-        implementation("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
-
-        testCompileOnly("org.projectlombok:lombok:$lombok_version")
-        testAnnotationProcessor("org.projectlombok:lombok:$lombok_version")
-        testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
-        testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
-        testImplementation("io.vertx:vertx-junit5:$vertx_version")
-        testImplementation("io.vertx:vertx-web-client:$vertx_version")
-        testImplementation("org.apache.curator:curator-test:$curator_version")
-
-        testE2EImplementation("org.glassfish.jersey.core:jersey-client:$jersey_version")
-        testE2EImplementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version")
-    }
 
     // code generation
-    compileOnly("org.projectlombok:lombok")
-    annotationProcessor("org.projectlombok:lombok")
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 
     // common apis
-    implementation("com.google.guava:guava")
-    implementation("org.slf4j:slf4j-api")
-    implementation("io.opentelemetry:opentelemetry-api")
-    implementation("jakarta.validation:jakarta.validation-api")
-    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation(libs.slf4j.api)
+    implementation(libs.guava)
+    implementation(libs.opentelemetry.api)
+    implementation(libs.jakarta.validation.api)
+    implementation(libs.jakarta.annotation.api)
 
     // common test framework
-    testCompileOnly("org.projectlombok:lombok")
-    testAnnotationProcessor("org.projectlombok:lombok")
-    testImplementation('org.junit.jupiter:junit-jupiter')
-    testImplementation('org.mockito:mockito-junit-jupiter')
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockito.junit.jupiter)
 }
 
 java {
