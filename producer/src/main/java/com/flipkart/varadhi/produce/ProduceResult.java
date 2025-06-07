@@ -18,6 +18,10 @@ public class ProduceResult {
     private final Throwable throwable;
     private final Offset produceOffset;
 
+    // not final, as these info can be set later on.
+    private long latencyMs;
+    private int msgSizeBytes;
+
     private ProduceResult(String messageId, ProduceStatus produceStatus, Offset produceOffset, Throwable throwable) {
         this.messageId = messageId;
         this.produceOffset = produceOffset;

@@ -20,17 +20,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
 public class PreProduceHandlerTest extends ProduceTestBase {
-    PreProduceHandler validationHandler;
     HttpRequest<Buffer> request;
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
-        validationHandler = new PreProduceHandler();
         route.handler(bodyHandler).handler(ctx -> {
             ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
-        }).handler(validationHandler).handler(produceHandlers::produce);
+        }).handler(produceHandlers::produce);
         setupFailureHandler(route);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());

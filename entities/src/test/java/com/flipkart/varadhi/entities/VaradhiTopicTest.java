@@ -61,9 +61,9 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void buildTopicName_ReturnsExpectedFormat() {
+    void fqn_ReturnsExpectedFormat() {
         String expected = "project1.topic1";
-        String actual = VaradhiTopic.buildTopicName(PROJECT_NAME, TOPIC_NAME);
+        String actual = VaradhiTopic.fqn(PROJECT_NAME, TOPIC_NAME);
 
         assertEquals(expected, actual, "Topic name format mismatch");
     }

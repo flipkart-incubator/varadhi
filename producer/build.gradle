@@ -6,13 +6,11 @@ dependencies {
     api(project(':entities'))
     implementation(project(':common'))
     implementation(project(':core'))
-    implementation project(':pulsar')
-    implementation("org.apache.pulsar:pulsar-client-admin:2.10.0")
-    implementation("com.google.guava:guava")
-    implementation("io.micrometer:micrometer-core")
+    implementation(libs.guava)
+    implementation(libs.micrometer.core)
     implementation(libs.caffeine)
-    testImplementation("io.micrometer:micrometer-registry-otlp")
 
+    testImplementation(libs.micrometer.registry.otlp)
     testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
 }

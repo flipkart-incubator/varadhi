@@ -2,8 +2,7 @@ package com.flipkart.varadhi.produce;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.produce.config.ProducerErrorType;
-import org.apache.pulsar.client.api.PulsarClientException;
+// import org.apache.pulsar.client.api.PulsarClientException;
 
 /**
  * Maps various exceptions and topic states to standardized {@link ProducerErrorType} values.
@@ -43,16 +42,16 @@ public final class ProducerErrorMapper {
 
         return switch (rootCause) {
             case ResourceNotFoundException ignored -> ProducerErrorType.TOPIC_NOT_FOUND;
-            case PulsarClientException.TimeoutException ignored -> ProducerErrorType.TIMEOUT;
-            case PulsarClientException.ProducerBusyException ignored -> ProducerErrorType.STORAGE;
-            case PulsarClientException.ProducerQueueIsFullError ignored -> ProducerErrorType.QUOTA;
-            case PulsarClientException.InvalidConfigurationException ignored -> ProducerErrorType.INVALID;
-            case PulsarClientException.CryptoException ignored -> ProducerErrorType.SERIALIZE;
-            case PulsarClientException.AlreadyClosedException ignored -> ProducerErrorType.PRODUCER_INIT;
-            case PulsarClientException.TopicTerminatedException ignored -> ProducerErrorType.TOPIC_INACTIVE;
-            case PulsarClientException.ConnectException ignored -> ProducerErrorType.CONN;
-            case PulsarClientException.LookupException ignored -> ProducerErrorType.CONN;
-            case PulsarClientException.NotConnectedException ignored -> ProducerErrorType.CONN;
+            //            case PulsarClientException.TimeoutException ignored -> ProducerErrorType.TIMEOUT;
+            //            case PulsarClientException.ProducerBusyException ignored -> ProducerErrorType.STORAGE;
+            //            case PulsarClientException.ProducerQueueIsFullError ignored -> ProducerErrorType.QUOTA;
+            //            case PulsarClientException.InvalidConfigurationException ignored -> ProducerErrorType.INVALID;
+            //            case PulsarClientException.CryptoException ignored -> ProducerErrorType.SERIALIZE;
+            //            case PulsarClientException.AlreadyClosedException ignored -> ProducerErrorType.INIT;
+            //            case PulsarClientException.TopicTerminatedException ignored -> ProducerErrorType.TOPIC_INACTIVE;
+            //            case PulsarClientException.ConnectException ignored -> ProducerErrorType.CONNECTION;
+            //            case PulsarClientException.LookupException ignored -> ProducerErrorType.CONNECTION;
+            //            case PulsarClientException.NotConnectedException ignored -> ProducerErrorType.CONNECTION;
             default -> ProducerErrorType.INTERNAL;
         };
     }

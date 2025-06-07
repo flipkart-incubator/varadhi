@@ -79,11 +79,7 @@ public class PulsarProducer implements Producer {
         // In general Pulsar client and producer, auto-reconnects so this should be fine.Might need to
         // refresh/re-create producer (and possibly client) if there are fatal errors, currently these
         // failures are unknown.
-        long storageStart = System.currentTimeMillis();
-        return messageBuilder.sendAsync().thenApply(msgId -> {
-            long storageLatency = System.currentTimeMillis() - storageStart;
-            return new PulsarOffset(msgId, storageLatency);
-        });
+        return messageBuilder.sendAsync().thenApply(PulsarOffset::new);
     }
 
     private String getPartitioningKey(Message message) {

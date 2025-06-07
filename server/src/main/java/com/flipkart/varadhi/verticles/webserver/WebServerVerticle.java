@@ -10,8 +10,8 @@ import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.services.DlqService;
 import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.services.OrgService;
@@ -34,10 +34,7 @@ import com.flipkart.varadhi.web.*;
 import com.flipkart.varadhi.web.configurators.*;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.RequestBodyHandler;
-import com.flipkart.varadhi.web.RequestBodyParser;
-import com.flipkart.varadhi.web.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
-import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -50,7 +47,6 @@ import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
-import com.flipkart.varadhi.web.v1.produce.PreProduceHandler;
 import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
@@ -73,7 +69,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -106,7 +101,6 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     // Immutable configuration and core services
-    private final Map<RouteBehaviour, RouteConfigurator> routeBehaviourConfigurators = new ConcurrentHashMap<>();
     private final AppConfiguration configuration;
     private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
@@ -173,7 +167,7 @@ public class WebServerVerticle extends AbstractVerticle {
                         ctx.endRequestWithResponse(ctx.getApiResponse());
                     }
                 } else {
-                    ctx.endRequestWithException(resultHandler.cause());
+                    ctx.fail(resultHandler.cause());
                 }
             });
         };
@@ -312,18 +306,30 @@ public class WebServerVerticle extends AbstractVerticle {
      */
     private Router createApiRouter() {
         Router router = Router.router(vertx);
-        setupRouteConfigurators();
+        Map<RouteBehaviour, RouteConfigurator> routeConfigurators = new HashMap<>();
+        setupRouteConfigurators(routeConfigurators);
 
         // Collect all route definitions
         List<RouteDefinition> routeDefinitions = new ArrayList<>();
         routeDefinitions.addAll(getIamPolicyRoutes());
         routeDefinitions.addAll(getAdminApiRoutes());
-        routeDefinitions.addAll(getProduceApiRoutes());
 
         routeDefinitions = routeDefinitions.stream().filter(this::isRouteEnabled).toList();
 
-        // Configure all routes
-        configureApiRoutes(router, routeDefinitions);
+        // Configure all CP routes
+        configureApiRoutes(router, routeDefinitions, routeConfigurators);
+
+        // Configure the msg produce routes
+        List<RouteDefinition> msgProduceRouteDefs = getProduceApiRoutes();
+        routeConfigurators.put(
+            RouteBehaviour.telemetry,
+            new MsgProduceRequestTelemetryConfigurator(
+                new SpanProvider(tracer),
+                meterRegistry,
+                configuration.getProducerOptions().getMetricsOptions()
+            )
+        );
+        configureApiRoutes(router, msgProduceRouteDefs, routeConfigurators);
         return router;
     }
 
@@ -448,33 +454,15 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
-    private HttpApiMetricsHandler createHttpApiMetricsHandler() {
-        return new HttpApiMetricsHandler(
-            true, // Enable metrics by default, or read from configuration
-            meterRegistry
-        );
-    }
-
     /**
      * Gets produce API routes.
      *
      * @return a list of produce API route definitions
      */
     private List<RouteDefinition> getProduceApiRoutes() {
-        PreProduceHandler preProduceHandler = new PreProduceHandler();
-        ProducerMetricHandler producerMetricsHandler = new ProducerMetricHandler(
-            configuration.getProducerOptions().isMetricEnabled(),
-            meterRegistry,
-            configuration.getProducerOptions().getMetricsConfig()
-        );
-        HttpApiMetricsHandler httpApiMetricsHandler = createHttpApiMetricsHandler();
-
         return new ArrayList<>(
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
-                preProduceHandler,
-                producerMetricsHandler,
-                httpApiMetricsHandler,
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
                 cacheRegistry.getCache(ResourceType.PROJECT)
@@ -485,12 +473,13 @@ public class WebServerVerticle extends AbstractVerticle {
     /**
      * Sets up route configurators for different route behaviors.
      */
-    private void setupRouteConfigurators() {
+    private void setupRouteConfigurators(Map<RouteBehaviour, RouteConfigurator> routeConfigurators) {
         AuthnConfigurator authnConfigurator = new AuthnConfigurator(vertx, configuration, meterRegistry);
         AuthzConfigurator authzConfigurator = new AuthzConfigurator(configuration, configResolver, meterRegistry);
         RequestTelemetryConfigurator requestTelemetryConfigurator = new RequestTelemetryConfigurator(
             new SpanProvider(tracer),
-            meterRegistry
+            meterRegistry,
+            MetricsOptions.getDefault()
         );
 
         // payload size restriction is required for Produce APIs. But should be fine to set as default for all.
@@ -501,12 +490,12 @@ public class WebServerVerticle extends AbstractVerticle {
         RequestBodyParsingConfigurator bodyParser = new RequestBodyParsingConfigurator();
         HierarchyConfigurator hierarchyConfigurator = new HierarchyConfigurator();
 
-        routeBehaviourConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
-        routeBehaviourConfigurators.put(RouteBehaviour.authenticated, authnConfigurator);
-        routeBehaviourConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
-        routeBehaviourConfigurators.put(RouteBehaviour.parseBody, bodyParser);
-        routeBehaviourConfigurators.put(RouteBehaviour.addHierarchy, hierarchyConfigurator);
-        routeBehaviourConfigurators.put(RouteBehaviour.authorized, authzConfigurator);
+        routeConfigurators.put(RouteBehaviour.telemetry, requestTelemetryConfigurator);
+        routeConfigurators.put(RouteBehaviour.authenticated, authnConfigurator);
+        routeConfigurators.put(RouteBehaviour.hasBody, (route, routeDef) -> route.handler(requestBodyHandler));
+        routeConfigurators.put(RouteBehaviour.parseBody, bodyParser);
+        routeConfigurators.put(RouteBehaviour.addHierarchy, hierarchyConfigurator);
+        routeConfigurators.put(RouteBehaviour.authorized, authzConfigurator);
     }
 
     /**
@@ -515,7 +504,11 @@ public class WebServerVerticle extends AbstractVerticle {
      * @param router    the router to configure
      * @param apiRoutes the list of route definitions to configure
      */
-    private void configureApiRoutes(Router router, List<RouteDefinition> apiRoutes) {
+    private void configureApiRoutes(
+        Router router,
+        List<RouteDefinition> apiRoutes,
+        Map<RouteBehaviour, RouteConfigurator> routeConfigurators
+    ) {
         log.info("Configuring {} API routes", apiRoutes.size());
         FailureHandler defaultFailureHandler = new FailureHandler();
 
@@ -527,7 +520,7 @@ public class WebServerVerticle extends AbstractVerticle {
             Arrays.sort(behaviours, Comparator.comparingInt(RouteBehaviour::getOrder));
 
             for (RouteBehaviour behaviour : behaviours) {
-                RouteConfigurator configurator = routeBehaviourConfigurators.get(behaviour);
+                RouteConfigurator configurator = routeConfigurators.get(behaviour);
                 if (configurator != null) {
                     configurator.configure(route, def);
                 } else {

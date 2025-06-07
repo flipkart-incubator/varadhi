@@ -15,10 +15,10 @@ public class ProducerOptions {
     private long producerCacheTtlSeconds = 3600;
 
     @Builder.Default
-    private boolean metricEnabled = true;
+    private boolean metricsEnabled = true;
 
     @Builder.Default
-    private ProducerMetricsConfig metricsConfig = ProducerMetricsConfig.getDefault();
+    private MetricsOptions metricsOptions = MetricsOptions.getDefault();
 
     public static ProducerOptions defaultOptions() {
         return ProducerOptions.builder().build();

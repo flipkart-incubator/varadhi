@@ -3,9 +3,10 @@ package com.flipkart.varadhi.web.v1.produce;
 import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitterNoOpImpl;
-import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.produce.config.MetricsOptions;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricHandler;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricsRecorder.NoOpImpl;
+import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
@@ -54,10 +55,9 @@ public class ProduceTestBase extends WebTestBase {
         varadhiTopicService = mock(VaradhiTopicService.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
-        PreProduceHandler preProduceHandler = new PreProduceHandler();
+        requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
         ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
-        doReturn(new ProducerMetricsEmitterNoOpImpl()).when(metricHandler).getEmitter(any());
+        doReturn(new NoOpImpl()).when(metricHandler).getEmitter(any());
         HttpApiMetricsHandler httpApiMetricsHandler = mock(HttpApiMetricsHandler.class);
         doReturn(new HttpApiMetricsEmitterNoOpImpl()).when(httpApiMetricsHandler).getEmitter(anyString(), anyMap());
         VaradhiTopic topic = mock(VaradhiTopic.class);
@@ -65,9 +65,6 @@ public class ProduceTestBase extends WebTestBase {
         when(topic.getNfrFilterName()).thenReturn(null);
         produceHandlers = new ProduceHandlers(
             producerService,
-            preProduceHandler,
-            metricHandler,
-            httpApiMetricsHandler,
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
             projectCache

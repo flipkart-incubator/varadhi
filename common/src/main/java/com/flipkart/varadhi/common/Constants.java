@@ -72,6 +72,8 @@ public class Constants {
 
         public static final String LIST_PROJECTS = "LIST_PROJECTS";
 
+        public static final String PRODUCE = "PRODUCE";
+
         private MethodNames() {
             // Private constructor to prevent instantiation
         }

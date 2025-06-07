@@ -6,15 +6,15 @@ plugins {
 dependencies {
     api(project(":entities"))
 
-    implementation("org.apache.commons:commons-collections4:$commons_collections_version")
+    implementation(libs.commons.collections4)
     implementation(libs.jackson.yaml)
-    implementation("io.micrometer:micrometer-core")
-    implementation('org.hibernate:hibernate-validator:8.0.1.Final')
-    implementation("io.vertx:vertx-core")
+    implementation(libs.micrometer.core)
+    implementation(libs.hibernate.validator)
+    implementation(libs.vertx.core)
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
 
-    testFixturesApi("com.google.guava:guava:$guava_version")
-    testFixturesApi("org.junit.jupiter:junit-jupiter:$junit_version")
-    testFixturesApi("org.awaitility:awaitility:4.2.1")
-    testImplementation("io.micrometer:micrometer-registry-jmx")
+    testFixturesApi(libs.guava)
+    testFixturesApi(libs.junit.jupiter)
+    testFixturesApi(libs.awaitility)
+    testImplementation(libs.micrometer.registry.jmx)
 }

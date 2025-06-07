@@ -10,9 +10,9 @@ dependencies {
     implementation(libs.jackson.module.parameter.names)
     implementation(libs.jackson.datatype.jdk8)
 
-    api("jakarta.validation:jakarta.validation-api:$jakarta_validation_version")
-    api("jakarta.ws.rs:jakarta.ws.rs-api:$jakarta_ws_version")
+    api(libs.jakarta.validation.api)
+    api(libs.jakarta.ws.rs.api)
 
     testRuntimeOnly("org.glassfish.expressly:expressly:5.0.0")
-    testRuntimeOnly("org.hibernate:hibernate-validator:$hibernate_validator_version")
+    testRuntimeOnly(libs.hibernate.validator)
 }
