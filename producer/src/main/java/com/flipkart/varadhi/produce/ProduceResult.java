@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.ProduceStatus;
 import com.flipkart.varadhi.entities.TopicState;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Represents the result of a message production operation in the Varadhi messaging system.
@@ -18,9 +19,8 @@ public class ProduceResult {
     private final Throwable throwable;
     private final Offset produceOffset;
 
-    // not final, as these info can be set later on.
-    private long latencyMs;
-    private int msgSizeBytes;
+    @Setter
+    private long latencyMs = -1;
 
     private ProduceResult(String messageId, ProduceStatus produceStatus, Offset produceOffset, Throwable throwable) {
         this.messageId = messageId;

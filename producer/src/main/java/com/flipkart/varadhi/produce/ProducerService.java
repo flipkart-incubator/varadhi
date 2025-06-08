@@ -188,20 +188,7 @@ public final class ProducerService {
         ProducerMetrics metrics = getMetrics(topicFQN);
         metrics.received(message.getPayload().length, message.getTotalSizeBytes());
 
-        return produceToValidTopic(topic.get().getEntity(), message).whenComplete((r, t) -> {
-            if (t != null) {
-                metrics.failure(ProducerErrorType.INTERNAL, -1);
-            } else {
-                if (r.isSuccess()) {
-                    metrics.success(r.getLatencyMs());
-                } else if (r.isFiltered()) {
-                    metrics.filtered();
-                } else {
-                    // TODO: which error type to pass here. This is expected errors
-                    metrics.failure(null, r.getLatencyMs());
-                }
-            }
-        });
+        return produceToValidTopic(topic.get().getEntity(), message).whenComplete(metrics::accepted);
     }
 
     /**
@@ -282,7 +269,9 @@ public final class ProducerService {
      * @return a future that completes with the result of the produce operation
      */
     private CompletableFuture<ProduceResult> doProduce(Producer producer, String topicName, Message message) {
-        return producer.produceAsync(message).handle((result, throwable) -> {
+        long start = System.currentTimeMillis();
+        return producer.produceAsync(message).handle((offset, throwable) -> {
+            long latency = System.currentTimeMillis() - start;
             if (throwable != null) {
                 log.debug(
                     "Produce Message({}) to StorageTopic({}) failed.",
@@ -291,7 +280,9 @@ public final class ProducerService {
                     throwable
                 );
             }
-            return ProduceResult.of(message.getMessageId(), Result.of(result, throwable));
+            var result = ProduceResult.of(message.getMessageId(), Result.of(offset, throwable));
+            result.setLatencyMs(latency);
+            return result;
         });
     }
 

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce.telemetry;
 
-import com.flipkart.varadhi.produce.ProducerErrorType;
+import com.flipkart.varadhi.produce.ProduceResult;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -36,8 +36,9 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
     private final Counter receivedTotalBytes;
     private final Counter receivedPayloadBytes;
     private final Counter filteredCount;
+    private final Counter rejectedCount;
     private final Timer successTimer;
-    private final Timer failureCounter;
+    private final Timer failureTimer;
 
     public ProducerMetricsImpl(MeterRegistry registry, String topicFQN) {
         this.registry = registry;
@@ -48,6 +49,7 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
                                            .tag("topic", topicFQN)
                                            .register(registry);
         this.filteredCount = Counter.builder("producer.filtered.count").tag("topic", topicFQN).register(registry);
+        this.rejectedCount = Counter.builder("producer.rejected.count").tag("topic", topicFQN).register(registry);
 
         // relying on the registry to dedup it for other ProducerMetricsImpl instances. Since instance creation is rare
         // operation, this is ok.
@@ -56,11 +58,10 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
                                  .publishPercentileHistogram()
                                  .register(registry);
 
-        this.failureCounter = Timer.builder("producer.latency")
-                                   .tag("result", "failure")
-                                   .tag("errorType", "unknown") // Default tag for unknown errors
-                                   .publishPercentileHistogram()
-                                   .register(registry);
+        this.failureTimer = Timer.builder("producer.latency")
+                                 .tag("result", "failure")
+                                 .publishPercentileHistogram()
+                                 .register(registry);
     }
 
     @Override
@@ -70,18 +71,18 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
     }
 
     @Override
-    public void filtered() {
-        filteredCount.increment();
-    }
+    public void accepted(ProduceResult result, Throwable t) {
+        if (t != null) {
+            // can ignore this, at least from the metrics pov. The api layer will handle it.
+            return;
+        }
 
-    @Override
-    public void success(long latencyMs) {
-        successTimer.record(latencyMs, TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public void failure(ProducerErrorType errorType, long latencyMs) {
-        failureCounter.record(latencyMs, TimeUnit.MILLISECONDS);
+        switch (result.getProduceStatus()) {
+            case Success -> successTimer.record(result.getLatencyMs(), TimeUnit.MILLISECONDS);
+            case Filtered -> filteredCount.increment();
+            case Throttled, Blocked, NotAllowed -> rejectedCount.increment();
+            case Failed -> failureTimer.record(result.getLatencyMs(), TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
