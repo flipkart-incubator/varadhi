@@ -73,7 +73,7 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
+        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertEquals(
             storageTopic.getName(),
@@ -94,7 +94,7 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
+        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertAll(
             () -> assertNotNull(varadhiTopic.getProduceTopicForRegion("region1"), "Region topic not found"),

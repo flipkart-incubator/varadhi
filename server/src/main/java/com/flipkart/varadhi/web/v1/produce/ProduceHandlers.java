@@ -169,11 +169,12 @@ public class ProduceHandlers implements RouteProvider {
      */
     Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
-        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, compliantHeaders, payload.length);
+        Message message = new SimpleMessage(payload, compliantHeaders);
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
         compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
         compliantHeaders.put(StdHeaders.get().producerIdentity(), producerIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
-        return new SimpleMessage(payload, compliantHeaders);
+        return message;
     }
 
     /**

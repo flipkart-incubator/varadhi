@@ -105,7 +105,7 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
             topicMetrics = metrics.computeIfAbsent(
                 topicFQN,
                 key -> new ApiMetrics(
-                    () -> Timer.builder(apiName + ".latency")
+                    () -> Timer.builder(apiName + ".request.latency")
                                .tag("topic", topicFQN)
                                .publishPercentiles(options.getLatencyPercentiles())
                                .publishPercentileHistogram(false)
@@ -121,7 +121,7 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
         // TODO: careful with the -1 response code.
         topicMetrics.getResponseCounter(
             responseCode,
-            (r) -> Counter.builder(apiName + ".response")
+            (r) -> Counter.builder(apiName + ".response.status_code")
                           .tag("topic", topicFQN)
                           .tag("status_code", r / 100 + "xx")
                           .register(meterRegistry)

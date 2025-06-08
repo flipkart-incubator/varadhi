@@ -8,7 +8,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.telemetry.ProducerMetricsRecorder;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.DummyProducer;
@@ -87,7 +87,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceMessage() throws InterruptedException {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 10);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
 
@@ -116,7 +116,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceWhenProduceAsyncThrows() {
-        ProducerMetricsRecorder emitter = mock(ProducerMetricsRecorder.class);
+        ProducerMetrics emitter = mock(ProducerMetrics.class);
         Message msg1 = getMessage(0, 1, null, 10);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
@@ -137,7 +137,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceToNonExistingTopic() {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         String topicName = VaradhiTopic.fqn(project.getName(), topic);
         doReturn(producer).when(producerFactory).newProducer(any());
@@ -180,7 +180,7 @@ class ProducerServiceTests {
 
     public void produceNotAllowedTopicState(TopicState topicState, ProduceStatus produceStatus, String message)
         throws InterruptedException {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(Resource.of(vt, ResourceType.TOPIC)));
@@ -200,7 +200,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceWithUnknownExceptionInGetProducer() {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
@@ -227,7 +227,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceWithKnownExceptionInGetProducer() {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
@@ -255,7 +255,7 @@ class ProducerServiceTests {
 
     @Test
     void testProduceWithProducerFailure() throws InterruptedException {
-        ProducerMetricsRecorder emitter = getMetricEmitter(topic, project, region);
+        ProducerMetrics emitter = getMetricEmitter(topic, project, region);
         Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
@@ -280,7 +280,7 @@ class ProducerServiceTests {
 
     @Test
     void testMetricEmitFailureNotIgnored() throws InterruptedException {
-        ProducerMetricsRecorder emitter = mock(ProducerMetricsRecorder.class);
+        ProducerMetrics emitter = mock(ProducerMetrics.class);
         //        doThrow(new RuntimeException("Failed to send metric.")).when(emitter)
         //                                                               .emit(
         //                                                                   anyBoolean(),
@@ -327,7 +327,7 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        InternalCompositeTopic ict = InternalCompositeTopic.of(st);
+        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
         ict.setTopicState(state);
         topic.addInternalTopic(region, ict);
         return topic;
@@ -348,7 +348,7 @@ class ProducerServiceTests {
         return new SimpleMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
     }
 
-    public ProducerMetricsRecorder getMetricEmitter(String topic, Project project, String region) {
+    public ProducerMetrics getMetricEmitter(String topic, Project project, String region) {
         Map<String, String> produceAttributes = new HashMap<>();
         produceAttributes.put(TAG_REGION, region);
         produceAttributes.put(TAG_ORG, project.getOrg());

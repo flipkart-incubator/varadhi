@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api(project(":entities"))
 
+    implementation(libs.guava)
     implementation(libs.commons.collections4)
     implementation(libs.jackson.yaml)
     implementation(libs.micrometer.core)

@@ -10,7 +10,7 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.telemetry.ProducerMetricsRecorder.NoOpImpl;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics.NoOpImpl;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;

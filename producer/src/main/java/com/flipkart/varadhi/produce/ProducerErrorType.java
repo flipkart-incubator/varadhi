@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce;
 
-import com.flipkart.varadhi.produce.telemetry.ProducerMetricsRecorderImpl;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
 import lombok.Getter;
 
 /**
@@ -8,7 +8,7 @@ import lombok.Getter;
  * These error types are used for metrics collection and error handling.
  * The error types are categorized by the layer where they occur.
  *
- * @see ProducerMetricsRecorderImpl
+ * @see ProducerMetricsImpl
  * @see ProducerErrorMapper
  */
 @Getter

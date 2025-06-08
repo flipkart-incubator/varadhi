@@ -1,10 +1,8 @@
 package com.flipkart.varadhi.utils;
 
-import java.util.Map;
-
 import com.flipkart.varadhi.config.MessageConfiguration;
+import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
-import com.google.common.base.Utf8;
 import com.google.common.collect.Multimap;
 
 public class MessageRequestValidator {
@@ -14,30 +12,17 @@ public class MessageRequestValidator {
      * object here must be capitalized as well.
      * 
      * @param msgConfig
-     * @param requestHeaders
-     * @param bodyLength
      */
-    public static void ensureHeaderSemanticsAndSize(
-        MessageConfiguration msgConfig,
-        Multimap<String, String> requestHeaders,
-        long bodyLength
-    ) {
-        msgConfig.ensureRequiredHeaders(requestHeaders);
+    public static void ensureHeaderSemanticsAndSize(MessageConfiguration msgConfig, Message message) {
+        msgConfig.ensureRequiredHeaders(message.getHeaders());
 
-        validateIdHeader(msgConfig, StdHeaders.get().msgId(), requestHeaders);
-        validateIdHeader(msgConfig, StdHeaders.get().groupId(), requestHeaders);
+        validateIdHeader(msgConfig, StdHeaders.get().msgId(), message.getHeaders());
+        validateIdHeader(msgConfig, StdHeaders.get().groupId(), message.getHeaders());
 
-        long headersAndBodySize = 0;
-        for (Map.Entry<String, String> entry : requestHeaders.entries()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            int byteLength = Utf8.encodedLength(key) + Utf8.encodedLength(value);
-            headersAndBodySize += byteLength;
-        }
-        headersAndBodySize += bodyLength;
+        int totalSizeBytes = message.getTotalSizeBytes();
 
         // If the total size of the headerNames and body exceeds the allowed limit, throw an exception
-        if (headersAndBodySize > msgConfig.getMaxRequestSize()) {
+        if (totalSizeBytes > msgConfig.getMaxRequestSize()) {
             throw new IllegalArgumentException(
                 String.format("Request size exceeds allowed limit of %d bytes.", msgConfig.getMaxRequestSize())
             );

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce.config;
 
-import com.flipkart.varadhi.produce.telemetry.ProducerMetricsRecorderImpl;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
@@ -11,10 +11,10 @@ import lombok.Data;
  * This class defines settings for latency percentiles, histogram generation,
  * and throughput calculation intervals.
  *
- * <p>Used by {@link ProducerMetricsRecorderImpl}
+ * <p>Used by {@link ProducerMetricsImpl}
  * to configure metrics collection behavior.</p>
  *
- * @see ProducerMetricsRecorderImpl
+ * @see ProducerMetricsImpl
  */
 @Data
 @Builder

@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.produce;
 
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -14,6 +15,7 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -40,33 +42,10 @@ public final class ProducerService {
     /**
      * A record that serves as a cache key for producers.
      *
-     * @param varadhiTopicName the full name of the Varadhi topic
-     * @param storageTopic     the storage topic instance
+     * @param varadhiTopicFQN the full name of the Varadhi topic
+     * @param storageTopicId     the storage topic id
      */
-    private record ProducerCacheKey(String varadhiTopicName, StorageTopic storageTopic) {
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-            ProducerCacheKey that = (ProducerCacheKey)o;
-            return Objects.equals(varadhiTopicName, that.varadhiTopicName) && Objects.equals(
-                storageTopic.getName(),
-                that.storageTopic.getName()
-            );
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(varadhiTopicName, storageTopic.getName());
-        }
-
-        @Override
-        public String toString() {
-            return "ProducerCacheKey[varadhiTopic=" + varadhiTopicName + ", storageTopic=" + storageTopic.getName()
-                   + "]";
-        }
+    private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId) {
     }
 
     /**
@@ -93,6 +72,9 @@ public final class ProducerService {
 
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
+    private final Map<String, ProducerMetrics> metrics = new ConcurrentHashMap<>();
+    private final Function<String, ProducerMetrics> metricsProvider;
+
     /**
      * Creates a new ProducerService with default options.
      * <p>
@@ -109,8 +91,17 @@ public final class ProducerService {
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
+
     ) {
-        this(produceRegion, producerProvider, orgCache, projectCache, topicCache, ProducerOptions.defaultOptions());
+        this(
+            produceRegion,
+            producerProvider,
+            orgCache,
+            projectCache,
+            topicCache,
+            t -> ProducerMetrics.NOOP,
+            ProducerOptions.defaultOptions()
+        );
     }
 
     /**
@@ -130,6 +121,7 @@ public final class ProducerService {
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
+        Function<String, ProducerMetrics> metricsRecorderProvider,
         ProducerOptions producerOptions
     ) {
         this.produceRegion = produceRegion;
@@ -139,7 +131,31 @@ public final class ProducerService {
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(key -> producerProvider.apply(key.storageTopic()));
+                                     .build(key -> loadProducerObject(produceRegion, producerProvider, key));
+        this.metricsProvider = metricsRecorderProvider;
+    }
+
+    private Producer loadProducerObject(
+        String produceRegion,
+        Function<StorageTopic, Producer> producerProvider,
+        ProducerCacheKey key
+    ) {
+        var topicMaybe = topicCache.get(key.varadhiTopicFQN);
+        if (topicMaybe.isEmpty()) {
+            throw new ResourceNotFoundException(
+                "Topic(%s) does not exist in region(%s).".formatted(key.varadhiTopicFQN, produceRegion)
+            );
+        }
+
+        var topic = topicMaybe.get();
+
+        return producerProvider.apply(
+            topic.getEntity().getProduceTopicForRegion(produceRegion).getTopic(key.storageTopicId)
+        );
+    }
+
+    private ProducerMetrics getMetrics(String topicFQN) {
+        return metrics.computeIfAbsent(topicFQN, metricsProvider);
     }
 
     /**
@@ -169,7 +185,23 @@ public final class ProducerService {
             );
         }
 
-        return produceToValidTopic(message, topic.get().getEntity());
+        ProducerMetrics metrics = getMetrics(topicFQN);
+        metrics.received(message.getPayload().length, message.getTotalSizeBytes());
+
+        return produceToValidTopic(topic.get().getEntity(), message).whenComplete((r, t) -> {
+            if (t != null) {
+                metrics.failure(ProducerErrorType.INTERNAL, -1);
+            } else {
+                if (r.isSuccess()) {
+                    metrics.success(r.getLatencyMs());
+                } else if (r.isFiltered()) {
+                    metrics.filtered();
+                } else {
+                    // TODO: which error type to pass here. This is expected errors
+                    metrics.failure(null, r.getLatencyMs());
+                }
+            }
+        });
     }
 
     /**
@@ -177,12 +209,13 @@ public final class ProducerService {
      *
      * @param message   the message to produce
      * @param topic     the Varadhi topic to produce to
+     *
      * @return a future that completes with the result of the produce operation
      * @throws ResourceNotFoundException if the topic is not available in the region
      * @throws ProduceException          if production fails due to an internal error
      */
-    private CompletableFuture<ProduceResult> produceToValidTopic(Message message, VaradhiTopic topic) {
-        InternalCompositeTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
+    private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
+        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
 
         if (internalTopic == null) {
             throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
@@ -200,9 +233,7 @@ public final class ProducerService {
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
         return getProducer(topic.getName(), storageTopic).thenCompose(
-            producer -> produceToStorageProducer(producer, storageTopic.getName(), message).thenApply(
-                result -> ProduceResult.of(message.getMessageId(), result)
-            )
+            producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
 
@@ -217,7 +248,7 @@ public final class ProducerService {
      * @return a future that completes with the producer
      */
     public CompletableFuture<Producer> getProducer(String topicFQN, StorageTopic storageTopic) {
-        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic);
+        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId());
         Producer producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
@@ -250,11 +281,7 @@ public final class ProducerService {
      * @param message        the message to produce
      * @return a future that completes with the result of the produce operation
      */
-    private CompletableFuture<Result<Offset>> produceToStorageProducer(
-        Producer producer,
-        String topicName,
-        Message message
-    ) {
+    private CompletableFuture<ProduceResult> doProduce(Producer producer, String topicName, Message message) {
         return producer.produceAsync(message).handle((result, throwable) -> {
             if (throwable != null) {
                 log.debug(
@@ -264,7 +291,7 @@ public final class ProducerService {
                     throwable
                 );
             }
-            return Result.of(result, throwable);
+            return ProduceResult.of(message.getMessageId(), Result.of(result, throwable));
         });
     }
 

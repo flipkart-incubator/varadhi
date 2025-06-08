@@ -74,6 +74,10 @@ public class ProduceResult {
         return produceStatus == ProduceStatus.Success;
     }
 
+    public boolean isFiltered() {
+        return produceStatus == ProduceStatus.Filtered;
+    }
+
     /**
      * Gets a detailed failure reason if the produce operation failed.
      * Combines the produce status message with any available exception message.

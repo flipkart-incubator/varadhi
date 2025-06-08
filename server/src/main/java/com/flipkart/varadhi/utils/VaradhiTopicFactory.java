@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.entities.InternalCompositeTopic;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -74,6 +74,6 @@ public class VaradhiTopicFactory {
             InternalQueueCategory.MAIN
         );
 
-        varadhiTopic.addInternalTopic(deploymentRegion, InternalCompositeTopic.of(storageTopic));
+        varadhiTopic.addInternalTopic(deploymentRegion, SegmentedStorageTopic.of(storageTopic));
     }
 }

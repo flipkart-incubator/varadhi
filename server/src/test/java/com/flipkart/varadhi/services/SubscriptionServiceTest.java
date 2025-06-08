@@ -213,7 +213,7 @@ class SubscriptionServiceTest {
             capacity,
             InternalQueueCategory.MAIN
         );
-        topic.addInternalTopic(region, InternalCompositeTopic.of(storageTopic));
+        topic.addInternalTopic(region, SegmentedStorageTopic.of(storageTopic));
 
         SubscriptionResource subscriptionResource = SubscriptionResource.of(
             "SubscriptionResource",

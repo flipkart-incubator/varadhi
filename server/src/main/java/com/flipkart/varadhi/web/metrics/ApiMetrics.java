@@ -16,8 +16,8 @@ public class ApiMetrics {
      */
     private final Counter[] responseCounters = new Counter[4];
 
-    public ApiMetrics(Supplier<Timer> supplier) {
-        this.apiLatency = supplier.get();
+    public ApiMetrics(Supplier<Timer> latencyTimer) {
+        this.apiLatency = latencyTimer.get();
     }
 
     public Timer getApiLatencyTimer() {
