@@ -71,7 +71,7 @@ public class TopicTests extends E2EBase {
 
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 409, errorDuplicateTopic, true);
         makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
-        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), ResourceDeletionType.HARD_DELETE.toString(), 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
@@ -122,12 +122,12 @@ public class TopicTests extends E2EBase {
         makeDeleteRequest(
             getTopicsUri(o1t1Project1, topic1.getName()),
             ResourceDeletionType.HARD_DELETE.toString(),
-            200
+            204
         );
         makeDeleteRequest(
             getTopicsUri(o2t1Project1, topic2.getName()),
             ResourceDeletionType.HARD_DELETE.toString(),
-            200
+            204
         );
     }
 
@@ -143,7 +143,7 @@ public class TopicTests extends E2EBase {
         );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
 
-        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), ResourceDeletionType.SOFT_DELETE.toString(), 200);
+        makeDeleteRequest(getTopicsUri(o1t1Project1, topicName), ResourceDeletionType.SOFT_DELETE.toString(), 204);
 
         List<String> topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1), 200));
         Assertions.assertFalse(topics.contains(topicName));
@@ -151,7 +151,7 @@ public class TopicTests extends E2EBase {
         topics = getTopics(makeListRequest(getTopicsUri(o1t1Project1) + "?includeInactive=true", 200));
         Assertions.assertTrue(topics.contains(topicName));
 
-        makePatchRequest(getTopicsUri(o1t1Project1, topicName) + "/restore", 200);
+        makePatchRequest(getTopicsUri(o1t1Project1, topicName) + "/restore", 204);
 
         TopicResource restoredTopic = makeGetRequest(getTopicsUri(o1t1Project1, topicName), TopicResource.class, 200);
         Assertions.assertEquals(topicName, restoredTopic.getName());
@@ -162,7 +162,7 @@ public class TopicTests extends E2EBase {
         makeDeleteRequest(
             getTopicsUri(o1t1Project1, topic.getName()),
             ResourceDeletionType.HARD_DELETE.toString(),
-            200
+            204
         );
     }
 }

@@ -35,7 +35,7 @@ public class OrgTests extends E2EBase {
         List<Org> orgList1 = getOrgs(makeListRequest(getOrgsUri(), 200));
         Assertions.assertTrue(orgList1.contains(org1));
         Assertions.assertTrue(orgList1.contains(org2));
-        makeDeleteRequest(getOrgUri(org1), 200);
+        makeDeleteRequest(getOrgUri(org1), 204);
         makeGetRequest(getOrgUri(org1), 404, String.format("Org(%s) not found.", org1.getName()), true);
         List<Org> orgList2 = getOrgs(makeListRequest(getOrgsUri(), 200));
         Assertions.assertFalse(orgList2.contains(org1));
