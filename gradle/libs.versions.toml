@@ -58,14 +58,14 @@ jackson-module-parameter-names = { group = "com.fasterxml.jackson.module", name 
 jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jdk8", version.ref = "jackson" }
 
 #storage
-curator-framework = { group = "org.apache.curator", name = "curator-framework", version = "curator_framework" }
+curator-framework = { group = "org.apache.curator", name = "curator-framework", version.ref = "curator_framework" }
 
 #telemetry
 opentelemetry-api = { group = "io.opentelemetry", name = "opentelemetry-api", version.ref = "otel" }
 opentelemetry-sdk = { group = "io.opentelemetry", name = "opentelemetry-sdk", version.ref = "otel" }
 opentelemetry-exporter-logging = { group = "io.opentelemetry", name = "opentelemetry-exporter-logging", version.ref = "otel" }
 opentelemetry-exporter-otlp = { group = "io.opentelemetry", name = "opentelemetry-exporter-otlp", version.ref = "otel" }
-opentelemetry-exporter-prometheus = { group = "io.opentelemetry", name = "opentelemetry-exporter-prometheus", version = "1.50.0-alpha" }
+opentelemetry-exporter-prometheus = { group = "io.opentelemetry", name = "opentelemetry-exporter-prometheus", version = "1.51.0-alpha" }
 opentelemetry-semconv = { group = "io.opentelemetry.semconv", name = "opentelemetry-semconv", version.ref = "otel_semconv" }
 micrometer-core = { group = "io.micrometer", name = "micrometer-core", version.ref = "micrometer" }
 micrometer-registry-prometheus = { group = "io.micrometer", name = "micrometer-registry-prometheus", version.ref = "micrometer" }

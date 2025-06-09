@@ -82,6 +82,10 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.engine)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockito.junit.jupiter)
+
+    testE2EImplementation(libs.junit.jupiter)
+    testE2ERuntimeOnly(libs.junit.platform.engine)
+    testE2ERuntimeOnly(libs.junit.platform.launcher)
 }
 
 java {
