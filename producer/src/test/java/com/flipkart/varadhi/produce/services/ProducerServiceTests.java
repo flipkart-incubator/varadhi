@@ -3,6 +3,8 @@ package com.flipkart.varadhi.produce.services;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.common.events.EventType;
+import com.flipkart.varadhi.common.events.ResourceEvent;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
@@ -26,6 +28,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +40,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
@@ -43,6 +50,7 @@ import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_REMOTE_HOST;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_TEAM;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -304,58 +312,65 @@ class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
-    @Test
-    void testApplyOrgFilter() {
-        // Create a mock project and populate the project cache
+    @ParameterizedTest
+    @MethodSource("orgFilterScenarios")
+    void testApplyOrgFilter(String testName, String nfrStrategy, String filterKey, List<String> filterValues,
+                            String messageHeaderKey, String messageHeaderValue, boolean expectedResult) {
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache =
+                new ResourceReadCache<>(ResourceType.PROJECT, null);
+        ResourceReadCache<OrgDetails> orgCache =
+                new ResourceReadCache<>(ResourceType.ORG, null);
+
         Project project = Project.of("project1", "desc", "team1", "org1");
-        SimpleResourceReadCache<Resource.EntityResource<Project>> projectCache = new SimpleResourceReadCache<>(
-            ResourceType.PROJECT
-        );
-        projectCache.put("project1", Resource.EntityResource.of(project, ResourceType.PROJECT));
+        ResourceEvent<Resource.EntityResource<Project>> projectEvent =
+                new ResourceEvent<>(ResourceType.PROJECT, "project1", EventType.UPSERT,
+                        Resource.of(project, ResourceType.PROJECT), 1, () -> {});
+        projectCache.onChange(projectEvent);
 
         Map<String, Condition> filterConditions = new HashMap<>();
-        filterConditions.put("nfrStrategy1", new StringConditions.InCondition("key1", List.of("value1", "value2")));
+        if (filterKey != null && filterValues != null) {
+            filterConditions.put(nfrStrategy, new StringConditions.InCondition(filterKey, filterValues));
+        }
         OrgFilters orgFilters = new OrgFilters(1, filterConditions);
         OrgDetails orgDetails = new OrgDetails(new Org("org1", 1), orgFilters);
-        SimpleResourceReadCache<OrgDetails> orgCache = new SimpleResourceReadCache<>(ResourceType.ORG);
-        orgCache.put("org1", orgDetails);
-
-        VaradhiTopic vTopic = getTopic(TopicState.Producing, "test", project, region, "nfrStrategy1");
-        Resource.EntityResource<VaradhiTopic> vt = Resource.EntityResource.of(vTopic, ResourceType.TOPIC);
-
-        Message message = getMessage(0, 1, null, 12, true);
-
+        ResourceEvent<OrgDetails> orgEvent =
+                new ResourceEvent<>(ResourceType.ORG, "org1", EventType.UPSERT, orgDetails, 1, () -> {});
+        orgCache.onChange(orgEvent);
+        VaradhiTopic vTopic = getTopic(TopicState.Producing, "test", project, "region1", nfrStrategy);
+        Message message = getMessage(0, 1, null, 12, false);
+        if (messageHeaderKey != null && messageHeaderValue != null) {
+            ((SimpleMessage) message).getHeaders().put(messageHeaderKey, messageHeaderValue);
+        }
         ProducerService producerService = new ProducerService(
-            "region1",
-            storageTopic -> null,
-            orgCache,
-            projectCache,
-            null
-        );
+                "region1", storageTopic -> null, orgCache, projectCache, null);
+        boolean result = producerService.applyOrgFilter(vTopic, message);
 
-        boolean result = producerService.applyOrgFilter(vt.getEntity(), message);
-        assertTrue(result, "The filter should evaluate to true for the given message headers.");
+        assertEquals(expectedResult, result,
+                "Filter evaluation failed for scenario: " + testName);
     }
 
-    // Simple implementation of ResourceReadCache for testing
+    static Stream<Arguments> orgFilterScenarios() {
+        return Stream.of(
+                Arguments.of("Matching filter", "nfrStrategy1", "key1",
+                        List.of("value1", "value2"), "key1", "value1", true),
+                Arguments.of("Wrong NFR strategy", "nfrStrategy1", "key1",
+                        List.of("value3", "value4"), "key1", "value1", false),
+                Arguments.of("Wrong header key", "nfrStrategy1", "key1",
+                        List.of("value1", "value2"), "key2", "value1", false),
+                Arguments.of("Non-matching value", "nfrStrategy1", "key1",
+                        List.of("value1", "value2"), "key1", "value3", false),
+                Arguments.of("Missing filter", "", "key1",
+                        List.of(), "key1", "value1", false),
+                Arguments.of("Null header", "nfrStrategy1", "key1",
+                        List.of("value1", "value2"), null, null, false)
+        );
+    }
+
+
+
+
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
         return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
-    }
-
-    static class SimpleResourceReadCache<T extends Resource> extends ResourceReadCache<T> {
-        SimpleResourceReadCache(ResourceType resourceType) {
-            super(resourceType, null);
-        }
-
-        private final Map<String, T> cache = new HashMap<>();
-
-        public Optional<T> get(String key) {
-            return Optional.ofNullable(cache.get(key));
-        }
-
-        public void put(String key, T value) {
-            cache.put(key, value);
-        }
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
