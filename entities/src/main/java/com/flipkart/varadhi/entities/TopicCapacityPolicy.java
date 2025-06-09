@@ -31,4 +31,8 @@ public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
     public String toString() {
         return String.format("%dKBps, %d Qps, %d readFanOut", throughputKBps, qps, readFanOut);
     }
+
+    public static TopicCapacityPolicy getDefault() {
+        return new TopicCapacityPolicy(100, 1000, 1);
+    }
 }

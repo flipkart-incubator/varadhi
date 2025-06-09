@@ -50,8 +50,8 @@ public class TopicPlanner {
         return boundedPartitionCount;
     }
 
-    public int getShardCount(PulsarStorageTopic topic, InternalQueueCategory category) {
-        return getShardCount(topic.getCapacity(), topic.getPartitionCount(), category);
+    public int getShardCount(PulsarStorageTopic topic, TopicCapacityPolicy capacity, InternalQueueCategory category) {
+        return getShardCount(capacity, topic.getPartitionCount(), category);
     }
 
     private int getShardCount(TopicCapacityPolicy ask, int topicPartitionCount, InternalQueueCategory category) {

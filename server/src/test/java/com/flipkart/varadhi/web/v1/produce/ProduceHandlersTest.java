@@ -9,19 +9,17 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.telemetry.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.telemetry.ProducerMetrics.NoOpImpl;
 import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.web.ErrorResponse;
-import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
+import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.SpanProvider;
-import com.flipkart.varadhi.web.metrics.HttpApiMetricsEmitterNoOpImpl;
-import com.flipkart.varadhi.web.metrics.HttpApiMetricsHandler;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.google.common.collect.Multimap;
-import io.opentelemetry.api.trace.Span;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -42,10 +40,8 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static com.flipkart.varadhi.entities.TopicState.*;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -54,7 +50,6 @@ import static org.mockito.Mockito.verify;
 
 public class ProduceHandlersTest extends ProduceTestBase {
 
-    Span span;
     private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
     private static final int OVERSIZED_HEADER_KEY_LENGTH = 101;
 
@@ -70,15 +65,13 @@ public class ProduceHandlersTest extends ProduceTestBase {
             ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
         }).handler(ctx -> {
-            requestTelemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
+            telemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
             ctx.next();
         }).handler(produceHandlers::produce);
         setupFailureHandler(route);
-        span = mock(Span.class);
+
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any());
-        doReturn(span).when(spanProvider).newSpan(any());
-        doReturn(span).when(span).setAttribute(anyString(), anyString());
     }
 
     @AfterEach
@@ -87,7 +80,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     }
 
     @Test
-    public void testProduceAndDuplicateMessage() throws InterruptedException {
+    public void testProduceAndDuplicateMessage() {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
@@ -97,19 +90,22 @@ public class ProduceHandlersTest extends ProduceTestBase {
         request.putHeader("RandomHeader", "value1");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
-        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
         Message capturedMessage = msgCapture.getValue();
         Assertions.assertTrue(capturedMessage.hasHeader(StdHeaders.get().msgId()));
         Assertions.assertArrayEquals(payload, msgCapture.getValue().getPayload());
-        verify(spanProvider, times(1)).newSpan(eq("TOPIC_PRODUCE"));
+        var spans = spanExporter.getFinishedSpanItems();
+        Assertions.assertEquals(1, spans.size());
+        Assertions.assertEquals("Produce", spans.get(0).getName());
+        Assertions.assertEquals(topicFullName, spans.get(0).getAttributes().get(AttributeKey.stringKey("topicFQN")));
 
         Assertions.assertFalse(capturedMessage.hasHeader("RandomHeader".toUpperCase()));
         Assertions.assertTrue(capturedMessage.getHeaders("x_header1".toUpperCase()).contains("h1v1"));
         Assertions.assertTrue(capturedMessage.getHeaders("x_header1".toUpperCase()).contains("h1v2"));
         Assertions.assertTrue(capturedMessage.getHeaders("x_header2".toUpperCase()).contains("h2v1"));
         Assertions.assertTrue(capturedMessage.hasHeader("X_HEADER2"));
-        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
         verify(producerService, times(2)).produceToTopic(any(), eq(topicFullName));
     }
@@ -121,7 +117,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 404, exceptionMessage, c(ErrorResponse.class));
     }
 
     @Test
@@ -142,11 +138,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             ProduceResult result = ProduceResult.ofNonProducingTopic(messageId, d.state);
             doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                                .produceToTopic(msgCapture.capture(), eq(topicFullName));
-            try {
-                sendRequestWithPayload(request, payload, d.status, d.message, ErrorResponse.class);
-            } catch (InterruptedException e) {
-                Assertions.fail("Unexpected Interruped Exception.");
-            }
+            sendRequestAndParseResponse(request, payload, d.status, d.message, c(ErrorResponse.class));
         });
     }
 
@@ -159,12 +151,12 @@ public class ProduceHandlersTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new ProduceException(topicProduceFailureMsg)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
-        sendRequestWithPayload(
+        sendRequestAndParseResponse(
             request,
             payload,
             500,
             String.format("Produce failure from messaging stack for Topic/Queue. %s", topicProduceFailureMsg),
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
     }
 
@@ -178,14 +170,14 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                                                                  );
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        sendRequestWithPayload(request, payload, 404, exceptionMessage, ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 404, exceptionMessage, c(ErrorResponse.class));
 
         doReturn(CompletableFuture.failedFuture(new RuntimeException(exceptionMessage))).when(producerService)
                                                                                         .produceToTopic(
                                                                                             msgCapture.capture(),
                                                                                             eq(topicFullName)
                                                                                         );
-        sendRequestWithPayload(request, payload, 500, exceptionMessage, ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 500, exceptionMessage, c(ErrorResponse.class));
     }
 
     @Test
@@ -195,7 +187,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        sendRequestWithPayload(request, payload, 500, exceptionMessage, ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 500, exceptionMessage, c(ErrorResponse.class));
     }
 
     @Test
@@ -213,7 +205,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         multimap.add("X_HEADER1", "h1v3");
         request.putHeaders(multimap);
         request.putHeader("X_HEADER2", "h2v1");
-        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
         String[] h1Values = msgCapture.getValue().getHeaders("X_HEADER1").toArray(new String[] {});
         Assertions.assertEquals("h1v1", h1Values[0]);
@@ -230,7 +222,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
-        sendRequestWithPayload(request, payload, 404, "PROJECT(project1) not found", ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 404, "PROJECT(project1) not found", c(ErrorResponse.class));
     }
 
     @Test
@@ -314,11 +306,11 @@ public class ProduceHandlersTest extends ProduceTestBase {
         spanProvider = mock(SpanProvider.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
-        ProducerMetricHandler metricHandler = mock(ProducerMetricHandler.class);
-        doReturn(new NoOpImpl()).when(metricHandler).getEmitter(any());
-        HttpApiMetricsHandler httpApiMetricsHandler = mock(HttpApiMetricsHandler.class);
-        doReturn(new HttpApiMetricsEmitterNoOpImpl()).when(httpApiMetricsHandler).getEmitter(anyString(), anyMap());
+        telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
+            spanProvider,
+            new SimpleMeterRegistry(),
+            MetricsOptions.getDefault()
+        );
         produceHandlers = new ProduceHandlers(
             producerService,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
@@ -364,12 +356,12 @@ public class ProduceHandlersTest extends ProduceTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
         request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
-        sendRequestWithPayload(
+        sendRequestAndParseResponse(
             request,
             payload,
             400,
             "X_MESSAGE_ID " + randomString + " exceeds allowed size of 100.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
     }
 
@@ -384,12 +376,12 @@ public class ProduceHandlersTest extends ProduceTestBase {
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
         Arrays.fill(largeBody, (byte)'A'); // Fill it with some data (e.g., 'A')
 
-        sendRequestWithPayload(
+        sendRequestAndParseResponse(
             request,
             largeBody,
             400,
             "Request size exceeds allowed limit of 5242880 bytes.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
     }
 

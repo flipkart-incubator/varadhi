@@ -32,7 +32,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
             "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
         Path configFile = tempDir.resolve("pulsarConfig.yaml");
         Files.write(configFile, yamlContent.getBytes());
-        topic = PulsarStorageTopic.of("testTopic", 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        topic = PulsarStorageTopic.of(0, "testTopic", 1);
         pClient = mock(PulsarClient.class);
         builder = mock(ProducerBuilder.class);
         org.apache.pulsar.client.api.Producer producer = mock(org.apache.pulsar.client.api.Producer.class);
@@ -44,7 +44,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     @Test
     public void testGetProducer() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
-        Producer p = factory.newProducer(topic);
+        Producer p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY);
         Assertions.assertNotNull(p);
         verify(builder, times(1)).create();
     }
@@ -53,7 +53,10 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     public void testGetProducerThrowsPulsarException() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
         doThrow(new PulsarClientException.NotFoundException("Topic not found")).when(builder).create();
-        ProduceException pe = Assertions.assertThrows(ProduceException.class, () -> factory.newProducer(topic));
+        ProduceException pe = Assertions.assertThrows(
+            ProduceException.class,
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY)
+        );
         verify(builder, times(1)).create();
         Assertions.assertEquals(
             String.format("Failed to create Pulsar producer for %s. %s", topic.getName(), "Topic not found"),
@@ -65,7 +68,10 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     public void testGetProducerThrowsUnhandledException() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
         doThrow(new RuntimeException("Random error check")).when(builder).create();
-        RuntimeException re = Assertions.assertThrows(RuntimeException.class, () -> factory.newProducer(topic));
+        RuntimeException re = Assertions.assertThrows(
+            RuntimeException.class,
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY)
+        );
         verify(builder, times(1)).create();
         Assertions.assertEquals("Random error check", re.getMessage());
     }

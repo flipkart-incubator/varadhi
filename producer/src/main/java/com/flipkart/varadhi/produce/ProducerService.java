@@ -17,6 +17,7 @@ import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
@@ -82,12 +83,12 @@ public final class ProducerService {
      * for cached producers.
      *
      * @param produceRegion    the region where messages are produced
-     * @param producerProvider function to create producers for storage topics
+     * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      */
     public ProducerService(
         String produceRegion,
-        Function<StorageTopic, Producer> producerProvider,
+        ProducerFactory<StorageTopic> producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
@@ -95,7 +96,7 @@ public final class ProducerService {
     ) {
         this(
             produceRegion,
-            producerProvider,
+            producerFactory,
             orgCache,
             projectCache,
             topicCache,
@@ -111,13 +112,13 @@ public final class ProducerService {
      * cached producers.
      *
      * @param produceRegion    the region where messages are produced
-     * @param producerProvider function to create producers for storage topics
+     * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
         String produceRegion,
-        Function<StorageTopic, Producer> producerProvider,
+        ProducerFactory<StorageTopic> producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
@@ -131,13 +132,13 @@ public final class ProducerService {
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(key -> loadProducerObject(produceRegion, producerProvider, key));
+                                     .build(key -> loadProducerObject(produceRegion, producerFactory, key));
         this.metricsProvider = metricsRecorderProvider;
     }
 
     private Producer loadProducerObject(
         String produceRegion,
-        Function<StorageTopic, Producer> producerProvider,
+        ProducerFactory<StorageTopic> producerFactory,
         ProducerCacheKey key
     ) {
         var topicMaybe = topicCache.get(key.varadhiTopicFQN);
@@ -149,8 +150,9 @@ public final class ProducerService {
 
         var topic = topicMaybe.get();
 
-        return producerProvider.apply(
-            topic.getEntity().getProduceTopicForRegion(produceRegion).getTopic(key.storageTopicId)
+        return producerFactory.newProducer(
+            topic.getEntity().getProduceTopicForRegion(produceRegion).getTopic(key.storageTopicId),
+            topic.getEntity().getCapacity()
         );
     }
 

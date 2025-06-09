@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Utf8;
 import com.google.common.collect.Multimap;
 
@@ -33,6 +34,7 @@ public interface Message {
     }
 
     // TODO: add support for caching the calculated size.
+    @JsonIgnore
     default int getTotalSizeBytes() {
         int headersAndBodySize = 0;
         for (Map.Entry<String, String> entry : getHeaders().entries()) {

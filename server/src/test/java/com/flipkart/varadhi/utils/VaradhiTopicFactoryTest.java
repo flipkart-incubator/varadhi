@@ -40,7 +40,7 @@ class VaradhiTopicFactoryTest {
         project = Project.of("default", "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), TOPIC_NAME);
         String pTopicName = String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, CAPACITY_POLICY);
+        PulsarStorageTopic pTopic = PulsarStorageTopic.of(0, pTopicName, 1);
 
         doReturn(pTopic).when(storageTopicFactory)
                         .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
@@ -85,8 +85,6 @@ class VaradhiTopicFactoryTest {
 
         assertNotNull(storageTopic);
         assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
-        assertEquals(CAPACITY_POLICY.getThroughputKBps(), storageTopic.getCapacity().getThroughputKBps());
-        assertEquals(CAPACITY_POLICY.getQps(), storageTopic.getCapacity().getQps());
     }
 
     @Test

@@ -1,10 +1,10 @@
 [versions]
 vertx = "4.5.15"
 guava = "33.3.1-jre"
-netty = "4.2.1.Final"
+netty = "4.2.2.Final"
 caffeine = "3.2.0"
 jackson = "2.18.1"
-otel = "1.50.0"
+otel = "1.51.0"
 otel_semconv = "1.32.0"
 micrometer = "1.15.0"
 failsafe = "3.3.2"
@@ -16,6 +16,7 @@ commons_collections4 = "4.5.0"
 jersey = "3.1.10"
 curator_framework = "5.8.0"
 junit = "5.13.0"
+junit_platform = "1.13.0"
 mockito = "5.18.0"
 
 [libraries]
@@ -75,7 +76,11 @@ micrometer-registry-jmx = { group = "io.micrometer", name = "micrometer-registry
 
 #testing
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+junit-platform-engine = { group = "org.junit.platform", name = "junit-platform-engine", version.ref = "junit_platform" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher", version.ref = "junit_platform" }
 mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter", version.ref = "mockito" }
+opentelemetry-sdk-testing = { group = "io.opentelemetry", name = "opentelemetry-sdk-testing", version.ref = "otel" }
+
 jmh-core = { group = "org.openjdk.jmh", name = "jmh-core", version = "1.37" }
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
 jersey-client = { group = "org.glassfish.jersey.core", name = "jersey-client", version.ref = "jersey" }

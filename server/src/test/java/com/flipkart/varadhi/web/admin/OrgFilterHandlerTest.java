@@ -79,7 +79,7 @@ public class OrgFilterHandlerTest extends WebTestBase {
         when(orgService.getAllFilters(eq(orgName))).thenReturn(orgFilter);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getFilterBaseUrl(orgName));
-        OrgFilters obtainedFilters = sendRequestWithoutPayload(request, OrgFilters.class);
+        OrgFilters obtainedFilters = sendRequestWithoutPayload(request, c(OrgFilters.class));
         Assertions.assertEquals(orgFilter, obtainedFilters);
         verify(orgService, times(1)).getAllFilters(eq(orgName));
 
@@ -98,7 +98,7 @@ public class OrgFilterHandlerTest extends WebTestBase {
         when(orgService.getFilter(eq(orgName), eq(filterName))).thenReturn(condition);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getFilterByNameUrl(orgName, filterName));
-        Condition obtained = sendRequestWithoutPayload(request, Condition.class);
+        Condition obtained = sendRequestWithoutPayload(request, c(Condition.class));
         Assertions.assertEquals(condition, obtained);
         verify(orgService, times(1)).getFilter(eq(orgName), eq(filterName));
 
@@ -121,14 +121,14 @@ public class OrgFilterHandlerTest extends WebTestBase {
         when(orgService.createFilter(eq(orgName), eq(inputFilters))).thenReturn(createdFilters);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getFilterBaseUrl(orgName));
-        OrgFilters obtained = sendRequestWithEntity(request, inputFilters, OrgFilters.class);
+        OrgFilters obtained = sendRequestWithEntity(request, inputFilters, c(OrgFilters.class));
         Assertions.assertEquals(createdFilters, obtained);
         verify(orgService, times(1)).createFilter(eq(orgName), eq(inputFilters));
 
         // Error case: creation fails
         String errorMsg = "Failed to create filter.";
         when(orgService.createFilter(eq(orgName), eq(inputFilters))).thenThrow(new ResourceNotFoundException(errorMsg));
-        ErrorResponse response = sendRequestWithEntity(request, inputFilters, 404, errorMsg, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, inputFilters, 404, errorMsg, c(ErrorResponse.class));
         Assertions.assertEquals(errorMsg, response.reason());
     }
 

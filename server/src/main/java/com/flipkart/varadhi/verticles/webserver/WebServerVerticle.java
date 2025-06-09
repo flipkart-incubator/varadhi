@@ -8,7 +8,6 @@ import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.ControllerRestApi;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.config.MetricsOptions;
@@ -23,7 +22,6 @@ import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.utils.ShardProvisioner;
 import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.utils.VaradhiTopicFactory;
@@ -69,7 +67,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -252,13 +249,11 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         // Initialize producer service
-        Function<StorageTopic, Producer> producerProvider = messagingStackProvider.getProducerFactory()::newProducer;
-
         serviceRegistry.register(
             ProducerService.class,
             new ProducerService(
                 verticleConfig.deployedRegion(),
-                producerProvider,
+                messagingStackProvider.getProducerFactory(),
                 cacheRegistry.getCache(ResourceType.ORG),
                 cacheRegistry.getCache(ResourceType.PROJECT),
                 cacheRegistry.getCache(ResourceType.TOPIC)

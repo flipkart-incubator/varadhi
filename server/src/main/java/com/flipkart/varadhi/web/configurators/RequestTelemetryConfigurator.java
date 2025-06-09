@@ -98,7 +98,9 @@ public class RequestTelemetryConfigurator implements RouteConfigurator {
     ) {
         span.setAttribute(HttpAttributes.HTTP_REQUEST_METHOD, ctx.request().method().name());
         span.setAttribute(AttributeKey.stringKey("url.path"), ctx.request().path());
-        span.setAttribute(AttributeKey.stringKey("url.query"), ctx.request().query());
+        if (ctx.request().query() != null) {
+            span.setAttribute(AttributeKey.stringKey("url.query"), ctx.request().query());
+        }
         span.setAttribute(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, responseCode);
         span.setAttribute(AttributeKey.longKey("http.response.latency"), latencyMs);
         span.setAllAttributes(requestTags);

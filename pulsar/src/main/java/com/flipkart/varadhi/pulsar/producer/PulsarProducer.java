@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -31,13 +32,14 @@ public class PulsarProducer implements Producer {
     public PulsarProducer(
         PulsarClient pulsarClient,
         PulsarStorageTopic storageTopic,
+        TopicCapacityPolicy capacity,
         ProducerOptions producerOptions,
         String hostName
     ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
                                                                   .filteredBy(DIGITS, LETTERS)
                                                                   .build();
-        this.pulsarProducer = getProducer(pulsarClient, storageTopic, producerOptions, hostName);
+        this.pulsarProducer = getProducer(pulsarClient, storageTopic, capacity, producerOptions, hostName);
     }
 
     public static String getProducerName(String topicName, String hostName) {
@@ -59,8 +61,8 @@ public class PulsarProducer implements Producer {
         return Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, ((topicMaxQps * maxPublishDelayMs) / 1000)));
     }
 
-    public static int getBatchingMaxBytes(int batchingMaxMessages, PulsarStorageTopic topic) {
-        return batchingMaxMessages * (topic.getCapacity().getThroughputKBps() * 1000 / topic.getCapacity().getQps());
+    public static int getBatchingMaxBytes(int batchingMaxMessages, TopicCapacityPolicy capacity) {
+        return batchingMaxMessages * (capacity.getThroughputKBps() * 1000 / capacity.getQps());
     }
 
     @Override
@@ -92,15 +94,21 @@ public class PulsarProducer implements Producer {
     private org.apache.pulsar.client.api.Producer<byte[]> getProducer(
         PulsarClient pulsarClient,
         PulsarStorageTopic topic,
+        TopicCapacityPolicy capacity,
         ProducerOptions options,
         String hostname
     ) throws PulsarClientException {
-        Map<String, Object> producerConfig = getProducerConfig(topic, options, hostname);
+        Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname);
 
         return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 
-    private Map<String, Object> getProducerConfig(PulsarStorageTopic topic, ProducerOptions options, String hostName) {
+    private Map<String, Object> getProducerConfig(
+        PulsarStorageTopic topic,
+        TopicCapacityPolicy capacity,
+        ProducerOptions options,
+        String hostName
+    ) {
 
         // System Configured::
         // sendTimeoutMs
@@ -127,14 +135,14 @@ public class PulsarProducer implements Producer {
         producerConfig.put("producerName", getProducerName(topic.getName(), hostName));
         producerConfig.put("accessMode", ProducerAccessMode.Shared);
 
-        int topicMaxQps = topic.getCapacity().getQps();
+        int topicMaxQps = capacity.getQps();
         int maxPendingMessages = getMaxPendingMessages(topicMaxQps);
         int batchingMaxMessages = getBatchMaxMessages(topicMaxQps, options.getBatchingMaxPublishDelayMs());
         producerConfig.put("maxPendingMessages", maxPendingMessages);
         // maxPendingMessages and maxPendingMessagesAcrossPartitions are kept same assuming worst case.
         producerConfig.put("maxPendingMessagesAcrossPartitions", maxPendingMessages);
         producerConfig.put("batchingMaxMessages", batchingMaxMessages);
-        producerConfig.put("batchingMaxBytes", getBatchingMaxBytes(batchingMaxMessages, topic));
+        producerConfig.put("batchingMaxBytes", getBatchingMaxBytes(batchingMaxMessages, capacity));
         return producerConfig;
     }
 

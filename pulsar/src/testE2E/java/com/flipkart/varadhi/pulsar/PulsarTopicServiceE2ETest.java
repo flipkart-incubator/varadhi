@@ -2,7 +2,6 @@ package com.flipkart.varadhi.pulsar;
 
 import java.util.List;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.EntityHelper;
@@ -34,7 +33,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     @Test
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
         topicService.create(pt, project);
         validateTopicExists(topicFQDN);
     }
@@ -42,7 +41,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     @Test
     public void testDuplicateTopicWithSameConfigAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
         topicService.create(pt, project);
         topicService.create(pt, project);
     }
@@ -50,8 +49,8 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     @Test
     public void testDuplicateTopicWithDifferentConfigNotAllowed() {
         String topicFQDN = getRandomTopicFQDN();
-        PulsarStorageTopic pt1 = PulsarStorageTopic.of(topicFQDN, 2, Constants.DEFAULT_TOPIC_CAPACITY);
-        PulsarStorageTopic pt2 = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt1 = PulsarStorageTopic.of(0, topicFQDN, 2);
+        PulsarStorageTopic pt2 = PulsarStorageTopic.of(1, topicFQDN, 1);
         topicService.create(pt1, project);
         MessagingException m = Assertions.assertThrows(
             MessagingException.class,
@@ -70,7 +69,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
         String topicFQDN = getRandomTopicFQDN();
 
-        PulsarStorageTopic pt = PulsarStorageTopic.of(topicFQDN, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
         topicService.create(pt, projectNew);
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);

@@ -19,7 +19,7 @@ class VaradhiTopicTest {
     @EqualsAndHashCode (callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name) {
-            super(name, TOPIC_CAPACITY);
+            super(0, name);
         }
     }
 

@@ -1,24 +1,14 @@
 package com.flipkart.varadhi.web;
 
-import static io.vertx.core.http.HttpMethod.*;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-
-import java.util.Collection;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
-import org.junit.jupiter.api.BeforeAll;
-
-import com.fasterxml.jackson.databind.JavaType;
-import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
-
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -34,6 +24,20 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeAll;
+
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import static io.vertx.core.http.HttpMethod.*;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 public class WebTestBase {
 
@@ -45,21 +49,15 @@ public class WebTestBase {
     protected FailureHandler failureHandler;
     protected ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     protected ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
+    protected InMemorySpanExporter spanExporter;
+    protected SdkTracerProvider tracerProvider;
+    protected OpenTelemetrySdk openTelemetry;
+    protected Tracer tracer;
+    protected SpanProvider spanProvider;
 
     protected static final int DEFAULT_PORT = 9090;
     protected static final String DEFAULT_HOST = "localhost";
     private static final long LATCH_TIMEOUT = 60L;
-
-    public static <R, T> R jsonDeserialize(String data, Class<? extends Collection> collectionClass, Class<T> clazz) {
-        try {
-            JavaType valueType = JsonMapper.getMapper()
-                                           .getTypeFactory()
-                                           .constructCollectionType(collectionClass, clazz);
-            return JsonMapper.getMapper().readValue(data, valueType);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to deserialize JSON", e);
-        }
-    }
 
     public void setUp() throws InterruptedException {
         projectCache = mock(ResourceReadCache.class);
@@ -75,6 +73,7 @@ public class WebTestBase {
         CountDownLatch latch = new CountDownLatch(1);
         server.requestHandler(router).listen().onComplete(onSuccess(res -> latch.countDown()));
         awaitLatch(latch);
+        setupTracer();
     }
 
     @BeforeAll
@@ -126,40 +125,24 @@ public class WebTestBase {
         }
     }
 
-    public <R> R sendRequestWithPayload(HttpRequest<Buffer> request, byte[] payload, Class<R> responseClass)
-        throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, payload);
-        assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
-        String responseBody = response.bodyAsString();
-        if (responseBody == null || responseBody.isEmpty()) {
-            return null;
-        }
-        return JsonMapper.jsonDeserialize(responseBody, responseClass);
+    public void setupTracer() {
+        spanExporter = InMemorySpanExporter.create();
+        tracerProvider = SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(spanExporter)).build();
+
+        openTelemetry = OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build();
+        tracer = openTelemetry.getTracer("testTracer");
+        spanProvider = new SpanProvider(tracer);
     }
 
-    public <R> R sendRequestWithPayload(
-        HttpRequest<Buffer> request,
-        byte[] payload,
-        int expectedStatusCode,
-        String expectedStatusMessage,
-        Class<R> responseClass
-    ) throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, payload);
-        assertEquals(expectedStatusCode, response.statusCode(), "Unexpected status code");
+    // ~~~ Refactored Request Sending Methods ~~~
 
-        Optional.ofNullable(expectedStatusMessage)
-                .ifPresent(
-                    statusMessage -> assertEquals(statusMessage, response.statusMessage(), "Unexpected status message")
-                );
-
-        return Optional.ofNullable(responseClass)
-                       .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
-                       .orElse(null);
+    public <R> R sendRequestWithPayload(HttpRequest<Buffer> request, byte[] payload, ClassRef<R> responseClassRef) {
+        int expectedStatusCode = (responseClassRef == null) ? HTTP_NO_CONTENT : HTTP_OK;
+        return sendRequestAndParseResponse(request, payload, expectedStatusCode, null, responseClassRef);
     }
 
-    public <T, R> R sendRequestWithEntity(HttpRequest<Buffer> request, T entity, Class<R> responseClass)
-        throws InterruptedException {
-        return sendRequestWithPayload(request, JsonMapper.jsonSerialize(entity).getBytes(), responseClass);
+    public <T, R> R sendRequestWithEntity(HttpRequest<Buffer> request, T entity, ClassRef<R> responseClassRef) {
+        return sendRequestWithPayload(request, JsonMapper.jsonSerialize(entity).getBytes(), responseClassRef);
     }
 
     public <T, R> R sendRequestWithEntity(
@@ -167,30 +150,36 @@ public class WebTestBase {
         T entity,
         int expectedStatusCode,
         String expectedStatusMessage,
-        Class<R> responseClass
-    ) throws InterruptedException {
-        return sendRequestWithPayload(
+        ClassRef<R> responseClassRef
+    ) {
+        return sendRequestAndParseResponse(
             request,
             JsonMapper.jsonSerialize(entity).getBytes(),
             expectedStatusCode,
             expectedStatusMessage,
-            responseClass
+            responseClassRef
         );
     }
 
-    public <R> R sendRequestWithoutPayload(HttpRequest<Buffer> request, Class<R> responseClass)
-        throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
-
-        return Optional.ofNullable(responseClass)
-                       .map(clazz -> JsonMapper.jsonDeserialize(response.bodyAsString(), clazz))
-                       .orElse(null);
+    public <R> R sendRequestWithoutPayload(HttpRequest<Buffer> request, ClassRef<R> responseClassRef) {
+        return sendRequestWithPayload(request, null, responseClassRef);
     }
 
-    public byte[] sendRequestWithoutPayload(HttpRequest<Buffer> request) throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        assertEquals(HTTP_OK, response.statusCode(), "Unexpected status code");
+    public byte[] sendRequestWithoutPayload(HttpRequest<Buffer> request) {
+        return sendRequestWithoutPayload(request, HTTP_OK);
+    }
+
+    @SneakyThrows
+    public byte[] sendRequestWithoutPayload(HttpRequest<Buffer> request, int expectedStatusCode) {
+        HttpResponse<Buffer> response = executeRequest(request, null);
+        assertEquals(
+            expectedStatusCode,
+            response.statusCode(),
+            () -> "Unexpected status code. response is : " + response.bodyAsString()
+        );
+        if (response.body() == null) {
+            return null;
+        }
         return response.body().getBytes();
     }
 
@@ -199,8 +188,12 @@ public class WebTestBase {
         int expectedStatusCode,
         String expectedStatusMessage
     ) throws InterruptedException {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        assertEquals(expectedStatusCode, response.statusCode(), "Unexpected status code");
+        HttpResponse<Buffer> response = executeRequest(request, null);
+        assertEquals(
+            expectedStatusCode,
+            response.statusCode(),
+            () -> "Unexpected status code. response is : " + response.bodyAsString()
+        );
 
         Optional.ofNullable(expectedStatusMessage)
                 .ifPresent(
@@ -212,7 +205,60 @@ public class WebTestBase {
     }
 
 
-    public HttpResponse<Buffer> sendRequest(HttpRequest<Buffer> request, byte[] payload) throws InterruptedException {
+    // ~~~ Private Helper Methods ~~~
+
+    /**
+     * The new base method that executes a request, validates the response, and parses the body.
+     */
+
+    @SneakyThrows
+    public <R> R sendRequestAndParseResponse(
+        HttpRequest<Buffer> request,
+        byte[] payload,
+        int expectedStatusCode,
+        String expectedStatusMessage,
+        ClassRef<R> responseClassRef
+    ) {
+        HttpResponse<Buffer> response = executeRequest(request, payload);
+
+        assertEquals(
+            expectedStatusCode,
+            response.statusCode(),
+            () -> String.format(
+                "Unexpected status code. Expected %d, but got %d. Response is: %s",
+                expectedStatusCode,
+                response.statusCode(),
+                response.bodyAsString()
+            )
+        );
+
+        Optional.ofNullable(expectedStatusMessage)
+                .ifPresent(
+                    statusMessage -> assertEquals(statusMessage, response.statusMessage(), "Unexpected status message")
+                );
+
+        if (responseClassRef == null) {
+            return null;
+        }
+
+        String responseBody = response.bodyAsString();
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+
+        if (responseClassRef instanceof T<R> typeRef) {
+            return JsonMapper.getMapper().readValue(responseBody, typeRef.ref);
+        } else if (responseClassRef instanceof C<R> classRef) {
+            return JsonMapper.getMapper().readValue(responseBody, classRef.clazz);
+        }
+        throw new IllegalArgumentException("Unsupported ClassRef type: " + responseClassRef.getClass().getName());
+    }
+
+    /**
+     * Executes the web request and waits for the response.
+     */
+    public HttpResponse<Buffer> executeRequest(HttpRequest<Buffer> request, byte[] payload)
+        throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         Future<HttpResponse<Buffer>> responseFuture = payload != null ?
             request.sendBuffer(Buffer.buffer(payload)) :
@@ -251,5 +297,31 @@ public class WebTestBase {
     private static class PostResponseCapture<T> {
         private volatile T response;
         private volatile Throwable throwable;
+    }
+
+    // method that takes object, serialized to string and then reads it back using jackson's type reference object
+
+
+    public static sealed class ClassRef<Type> permits T, C {
+    }
+
+
+    @AllArgsConstructor
+    public static final class T<T> extends ClassRef<T> {
+        private final TypeReference<T> ref;
+    }
+
+
+    @AllArgsConstructor
+    public static final class C<T> extends ClassRef<T> {
+        private final Class<T> clazz;
+    }
+
+    public static <T> ClassRef<T> t(TypeReference<T> ref) {
+        return new WebTestBase.T<>(ref);
+    }
+
+    public static <T> ClassRef<T> c(Class<T> clazz) {
+        return new WebTestBase.C<>(clazz);
     }
 }

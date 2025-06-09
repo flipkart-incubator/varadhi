@@ -4,12 +4,13 @@ import com.flipkart.varadhi.config.MessageHeaderUtils;
 import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.services.OrgService;
 import com.flipkart.varadhi.services.ProjectService;
 import com.flipkart.varadhi.services.VaradhiTopicService;
-import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
-import com.flipkart.varadhi.web.SpanProvider;
+import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.WebTestBase;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
@@ -32,9 +33,7 @@ public class ProduceTestBase extends WebTestBase {
     String messageId;
     byte[] payload;
 
-    RequestTelemetryConfigurator requestTelemetryConfigurator;
-    SpanProvider spanProvider;
-
+    MsgProduceRequestTelemetryConfigurator telemetryConfigurator;
     Route route;
 
     @Override
@@ -43,11 +42,14 @@ public class ProduceTestBase extends WebTestBase {
         projectService = mock(ProjectService.class);
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
-        spanProvider = mock(SpanProvider.class);
         varadhiTopicService = mock(VaradhiTopicService.class);
         RestOptions options = new RestOptions();
         options.setDeployedRegion(deployedRegion);
-        requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
+        telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
+            spanProvider,
+            new SimpleMeterRegistry(),
+            MetricsOptions.getDefault()
+        );
         VaradhiTopic topic = mock(VaradhiTopic.class);
         when(varadhiTopicService.get(any())).thenReturn(topic);
         when(topic.getNfrFilterName()).thenReturn(null);

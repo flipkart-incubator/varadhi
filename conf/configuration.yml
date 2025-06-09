@@ -40,7 +40,7 @@ restOptions:
 
 producerOptions:
   producerCacheTtlSeconds: 3600
-  metricEnabled: true
+  metricsEnabled: true
 
 
 authenticationOptions:
@@ -99,7 +99,7 @@ messageConfiguration:
     httpUri: "X_HTTP_URI"
     httpMethod: "X_HTTP_METHOD"
     httpContentType: "X_CONTENT_TYPE"
-    produceIdentity: "X_PRODUCE_IDENTITY"
+    producerIdentity: "X_PRODUCE_IDENTITY"
     produceRegion: "X_PRODUCE_REGION"
     produceTimestamp: "X_PRODUCE_TIMESTAMP"
   maxIdHeaderSize: 100

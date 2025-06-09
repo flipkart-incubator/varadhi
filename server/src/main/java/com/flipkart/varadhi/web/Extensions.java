@@ -104,7 +104,7 @@ public class Extensions {
         }
 
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
-            endRequestWithResponse(ctx, response);
+            endRequestWithResponse(ctx, HttpResponseStatus.OK.code(), response);
 
         }
 

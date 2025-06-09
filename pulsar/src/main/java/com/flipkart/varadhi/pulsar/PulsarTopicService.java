@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicPartitions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
@@ -74,10 +75,11 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
     @Override
     public List<TopicPartitions<PulsarStorageTopic>> shardTopic(
         PulsarStorageTopic topic,
+        TopicCapacityPolicy capacity,
         InternalQueueCategory category
     ) {
         List<TopicPartitions<PulsarStorageTopic>> topicPartitions = new ArrayList<>();
-        int shardCount = topicPlanner.getShardCount(topic, category);
+        int shardCount = topicPlanner.getShardCount(topic, capacity, category);
         int partitionsPerShard = topic.getPartitionCount() / shardCount;
         for (int shardId = 0; shardId < shardCount; shardId++) {
             topicPartitions.add(

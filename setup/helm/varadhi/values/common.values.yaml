@@ -59,7 +59,7 @@ varadhi:
       defaultProject: "public"
     producerOptions:
       producerCacheTtlSeconds: 3600
-      metricEnabled: true
+      metricsEnabled: true
     vertxOptions:
       eventLoopPoolSize: 1
       workerPoolSize: 1

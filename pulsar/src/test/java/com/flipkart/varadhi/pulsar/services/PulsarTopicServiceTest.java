@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.pulsar.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
@@ -50,7 +49,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(0, TEST_TOPIC, 1);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
             topics
         ).getPartitionedTopicMetadata(topic.getName());
@@ -61,7 +60,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_PulsarAdminException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(0, TEST_TOPIC, 1);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
             topics
         ).getPartitionedTopicMetadata(topic.getName());
@@ -72,7 +71,7 @@ public class PulsarTopicServiceTest {
 
     @Test
     public void testCreate_ConflictException() throws PulsarAdminException {
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(0, TEST_TOPIC, 1);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
             topics
         ).getPartitionedTopicMetadata(topic.getName());
@@ -102,7 +101,7 @@ public class PulsarTopicServiceTest {
         String newTenant = "testTenantNew";
         Project projectNew = Project.of("projectNew", "", "public", newTenant);
         String newNamespace = EntityHelper.getNamespace(newTenant, projectNew.getName());
-        PulsarStorageTopic topic = PulsarStorageTopic.of(TEST_TOPIC, 1, Constants.DEFAULT_TOPIC_CAPACITY);
+        PulsarStorageTopic topic = PulsarStorageTopic.of(0, TEST_TOPIC, 1);
         doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "topic not found", 409)).when(
             topics
         ).getPartitionedTopicMetadata(topic.getName());

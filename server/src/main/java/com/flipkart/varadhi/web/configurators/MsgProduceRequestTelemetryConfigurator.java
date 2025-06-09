@@ -89,7 +89,10 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
     }
 
     private Span addRequestSpan(String apiName, String topicFQN) {
-        return spanProvider.newSpan(apiName).setSpanKind(SpanKind.SERVER).setAttribute("topic", topicFQN).startSpan();
+        return spanProvider.newSpan(apiName)
+                           .setSpanKind(SpanKind.SERVER)
+                           .setAttribute("topicFQN", topicFQN)
+                           .startSpan();
     }
 
     private void closeRequestSpan(Span span, int responseCode, long latencyMs, Attributes requestTags) {

@@ -1,7 +1,9 @@
 package com.flipkart.varadhi.utils;
 
+import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.config.MessageHeaderUtils;
+import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -47,14 +49,16 @@ public class MessageRequestValidatorTest extends WebTestBase {
         }
         byte[] payload = new byte[payloadSize]; // Payload size from parameters
 
+        Message message = new SimpleMessage(payload, requestHeaders);
+
         if (shouldPass) {
             Assertions.assertDoesNotThrow(
-                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, requestHeaders, payload.length)
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message)
             );
         } else {
             IllegalArgumentException exception = Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, requestHeaders, payload.length)
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message)
             );
             Assertions.assertTrue(exception.getMessage().contains("Request size exceeds allowed limit"));
         }
