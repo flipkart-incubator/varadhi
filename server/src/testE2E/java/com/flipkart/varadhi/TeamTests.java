@@ -76,16 +76,16 @@ public class TeamTests extends E2EBase {
             true
         );
 
-        makeDeleteRequest(getTeamUri(org1Team1), 200);
+        makeDeleteRequest(getTeamUri(org1Team1), 204);
         org1Teams = getTeams(makeListRequest(getTeamsUri(org1.getName()), 200));
         Assertions.assertEquals(1, org1Teams.size());
         Assertions.assertTrue(org1Teams.contains(org1Team2));
 
-        makeDeleteRequest(getTeamUri(org1Team2), 200);
+        makeDeleteRequest(getTeamUri(org1Team2), 204);
         org1Teams = getTeams(makeListRequest(getTeamsUri(org1.getName()), 200));
         Assertions.assertEquals(0, org1Teams.size());
 
-        makeDeleteRequest(getOrgUri(org1), 200);
+        makeDeleteRequest(getOrgUri(org1), 204);
         org2Teams = getTeams(makeListRequest(getTeamsUri(org2.getName()), 200));
         Assertions.assertEquals(2, org2Teams.size());
     }

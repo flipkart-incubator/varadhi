@@ -29,6 +29,6 @@ public class PulsarTopicFactory implements StorageTopicFactory<PulsarStorageTopi
     ) {
         String pulsarTopicName = getPulsarTopicName(topicName, project);
         int partitionCount = partitioner.getPartitionCount(capacity, queueCategory);
-        return PulsarStorageTopic.of(pulsarTopicName, partitionCount, capacity);
+        return PulsarStorageTopic.of(0, pulsarTopicName, partitionCount);
     }
 }

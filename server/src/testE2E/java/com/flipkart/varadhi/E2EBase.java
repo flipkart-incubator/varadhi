@@ -35,6 +35,7 @@ public class E2EBase {
     private static final int READ_TIMEOUT_MS = 60_000;
     public static final String SUPER_USER = "thanos";
     public static final int EXPECTED_STATUS_OK = 200;
+    public static final int EXPECTED_STATUS_204 = 204;
 
     private static final Client CLIENT = createClient();
 
@@ -127,14 +128,14 @@ public class E2EBase {
 
     public static void cleanupOrg(Org org) {
         getTeams(makeListRequest(getTeamsUri(org.getName()), EXPECTED_STATUS_OK)).forEach(E2EBase::cleanupTeam);
-        makeDeleteRequest(getOrgUri(org), EXPECTED_STATUS_OK);
+        makeDeleteRequest(getOrgUri(org), EXPECTED_STATUS_204);
     }
 
     public static void cleanupTeam(Team team) {
         getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK)).forEach(
             E2EBase::cleanupProject
         );
-        makeDeleteRequest(getTeamUri(team), EXPECTED_STATUS_OK);
+        makeDeleteRequest(getTeamUri(team), EXPECTED_STATUS_204);
     }
 
     public static void cleanupProject(Project project) {
@@ -144,14 +145,14 @@ public class E2EBase {
             cleanupSubscriptionsOnTopics(existingTopics, project.getName());
             existingTopics.forEach(topic -> cleanupTopic(topic, project));
         }
-        makeDeleteRequest(getProjectUri(project), EXPECTED_STATUS_OK);
+        makeDeleteRequest(getProjectUri(project), EXPECTED_STATUS_204);
     }
 
     public static void cleanupTopic(String topicName, Project project) {
         makeDeleteRequest(
             getTopicsUri(project, topicName),
             ResourceDeletionType.HARD_DELETE.toString(),
-            EXPECTED_STATUS_OK
+            EXPECTED_STATUS_204
         );
     }
 
@@ -184,7 +185,7 @@ public class E2EBase {
                                                                                                                                       sub
                                                                                                                                   ),
                                                                                                                                   ResourceDeletionType.HARD_DELETE.toString(),
-                                                                                                                                  EXPECTED_STATUS_OK
+                                                                                                                                  EXPECTED_STATUS_204
                                                                                                                               );
                                                                                                                           }
                                                                                                                       }
@@ -199,7 +200,7 @@ public class E2EBase {
             sub -> makeDeleteRequest(
                 getSubscriptionsUri(project, sub.split(NAME_SEPARATOR_REGEX)[1]),
                 ResourceDeletionType.HARD_DELETE.toString(),
-                EXPECTED_STATUS_OK
+                EXPECTED_STATUS_204
             )
         );
     }

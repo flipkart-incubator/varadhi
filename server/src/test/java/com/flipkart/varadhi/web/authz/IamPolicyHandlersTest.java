@@ -113,7 +113,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         doReturn(policyRecord).when(iamPolicyService)
                               .setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
 
-        IamPolicyResponse response = sendRequestWithEntity(request, assignmentUpdate, IamPolicyResponse.class);
+        IamPolicyResponse response = sendRequestWithEntity(request, assignmentUpdate, c(IamPolicyResponse.class));
         assertEquals(expected, response);
         verify(iamPolicyService, times(1)).setIamPolicy(eq(ResourceType.ORG), eq(orgName), eq(assignmentUpdate));
 
@@ -129,7 +129,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
             assignmentUpdate,
             500,
             someInternalError,
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         assertEquals(someInternalError, errResponse.reason());
     }

@@ -5,11 +5,8 @@ import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.otel.ProducerMetricHandler;
-import com.flipkart.varadhi.produce.otel.ProducerMetricsEmitter;
-import com.flipkart.varadhi.produce.services.ProducerService;
+import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.utils.MessageRequestValidator;
-import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -17,9 +14,9 @@ import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,57 +26,63 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_RATE_LIMITED;
 import static com.flipkart.varadhi.common.Constants.HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+import static com.flipkart.varadhi.common.Constants.MethodNames.PRODUCE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_PRODUCE;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
+/**
+ * Handles HTTP requests for message production to topics in the Varadhi messaging system.
+ * This class implements the RouteProvider interface to define routes for message production endpoints.
+ *
+ * <p>The handler supports:
+ * <ul>
+ *   <li>Message production to topics with metrics tracking</li>
+ *   <li>Header validation and compliance checking</li>
+ *   <li>Authorization and access control</li>
+ *   <li>Error handling and status code mapping</li>
+ * </ul>
+ */
 @Slf4j
-@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class, Extensions.class})
+@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
+@RequiredArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private static final String API_NAME = "TOPIC";
     private final ProducerService producerService;
-    private final Handler<RoutingContext> preProduceHandler;
-    private final ProducerMetricHandler metricHandler;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
-    public ProduceHandlers(
-        ProducerService producerService,
-        Handler<RoutingContext> preProduceHandler,
-        ProducerMetricHandler metricHandler,
-        MessageConfiguration msgConfig,
-        String produceRegion,
-        ResourceReadCache<Resource.EntityResource<Project>> projectCache
-    ) {
-        this.producerService = producerService;
-        this.preProduceHandler = preProduceHandler;
-        this.metricHandler = metricHandler;
-        this.msgConfig = msgConfig;
-        this.produceRegion = produceRegion;
-        this.projectCache = projectCache;
-    }
-
+    /**
+     * Returns the list of route definitions for message production endpoints.
+     * Defines a POST route for producing messages to topics.
+     *
+     * @return List of RouteDefinition objects defining the produce endpoints
+     */
     @Override
     public List<RouteDefinition> get() {
-
         return new SubRoutes(
             "/v1/projects/:project",
             List.of(
-                RouteDefinition.post("produce", API_NAME, "/topics/:topic/produce")
+                RouteDefinition.post(PRODUCE, API_NAME, "/topics/:topic/produce")
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()
-                               .preHandler(preProduceHandler)
                                .authorize(TOPIC_PRODUCE)
                                .build(this::getHierarchies, this::produce)
             )
         ).get();
     }
 
+    /**
+     * Gets the resource hierarchies for authorization purposes.
+     * Creates a topic hierarchy based on the project and topic from the request path.
+     *
+     * @param ctx     The routing context containing request information
+     * @param hasBody Whether the request has a body
+     * @return Map of resource type to resource hierarchy
+     */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
         Project project = projectCache.getOrThrow(ctx.request().getParam(PATH_PARAM_PROJECT)).getEntity();
         return Map.of(
@@ -88,31 +91,35 @@ public class ProduceHandlers implements RouteProvider {
         );
     }
 
+    /**
+     * Handles message production requests to a topic.
+     * Processes the request, produces the message, and handles the response asynchronously.
+     *
+     * <p>The handler:
+     * <ul>
+     *   <li>Extracts message payload and headers from the request</li>
+     *   <li>Builds a message with standard headers</li>
+     *   <li>Produces the message to the specified topic</li>
+     *   <li>Tracks metrics for the production request</li>
+     *   <li>Handles success/failure responses</li>
+     * </ul>
+     *
+     * @param ctx The routing context containing the request and response information
+     */
     public void produce(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(PATH_PARAM_TOPIC);
+        String topicFQN = VaradhiTopic.fqn(projectName, topicName);
 
-        Map<String, String> produceAttributes = ctx.getRequestAttributes();
-        //TODO FIx attribute name semantics here.
-        String produceIdentity = ctx.getIdentityOrDefault();
-        produceAttributes.put(TAG_REGION, produceRegion);
-        produceAttributes.put(TAG_IDENTITY, produceIdentity);
-        ProducerMetricsEmitter metricsEmitter = metricHandler.getEmitter(ctx.body().length(), produceAttributes);
-
-        String varadhiTopicName = VaradhiTopic.buildTopicName(projectName, topicName);
-
-        // TODO:: Below is making extra copy, this needs to be avoided.
-        // ctx.body().buffer().getByteBuf().array() -- method gives complete backing array w/o copy,
-        // however only required bytes are needed. Need to figure out the correct mechanism here.
+        // FIXME: Optimize memory usage by avoiding buffer copy
+        // Current implementation: Uses getBytes() which creates a copy of the entire buffer
+        // Potential solution: Use getByteBuf().array() to access the backing array directly,
+        // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx);
-        CompletableFuture<ProduceResult> produceFuture = producerService.produceToTopic(
-            messageToProduce,
-            varadhiTopicName,
-            metricsEmitter
-        );
-        produceFuture.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
-            if (null != produceResult) {
+        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx.getIdentityOrDefault());
+        CompletableFuture<ProduceResult> result = producerService.produceToTopic(messageToProduce, topicFQN);
+        result.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
+            if (produceResult != null) {
                 if (produceResult.isSuccess()) {
                     ctx.endRequestWithResponse(produceResult.getMessageId());
                 } else {
@@ -123,18 +130,22 @@ public class ProduceHandlers implements RouteProvider {
                 }
             } else {
                 log.error(
-                    String.format(
-                        "produceToTopic(%s, %s) failed unexpectedly.",
-                        messageToProduce.getMessageId(),
-                        varadhiTopicName
-                    ),
+                    "produceToTopic({}, {}) failed unexpectedly.",
+                    messageToProduce.getMessageId(),
+                    topicFQN,
                     failure
                 );
-                ctx.endRequestWithException(failure);
+                ctx.fail(failure);
             }
         }));
     }
 
+    /**
+     * Maps produce status to appropriate HTTP status codes.
+     *
+     * @param produceStatus The status of the produce operation
+     * @return The corresponding HTTP status code
+     */
     private int getHttpStatusForProduceStatus(ProduceStatus produceStatus) {
         return switch (produceStatus) {
             case Blocked, NotAllowed -> HTTP_UNPROCESSABLE_ENTITY;
@@ -147,16 +158,23 @@ public class ProduceHandlers implements RouteProvider {
         };
     }
 
-    private Message buildMessageToProduce(byte[] payload, MultiMap headers, RoutingContext ctx) {
+    /**
+     * Builds a message object from the request payload and headers.
+     * Validates headers and enriches them with standard system headers.
+     *
+     * @param payload The message payload as byte array
+     * @param headers The request headers
+     * @param producerIdentity The identity of the producer
+     * @return A Message object ready for production
+     */
+    Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
-        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, compliantHeaders, payload.length);
-        //enriching headerNames with custom headerNames
-        String produceIdentity = ctx.getIdentityOrDefault();
-
+        Message message = new SimpleMessage(payload, compliantHeaders);
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
         compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
-        compliantHeaders.put(StdHeaders.get().produceIdentity(), produceIdentity);
+        compliantHeaders.put(StdHeaders.get().producerIdentity(), producerIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
-        return new SimpleMessage(payload, compliantHeaders);
+        return message;
     }
 
     /**
@@ -164,6 +182,7 @@ public class ProduceHandlers implements RouteProvider {
      * This step is necessary as Vert.x's MultiMap is already case-insensitive,
      * allowing access to headers in a case-insensitive manner before converting
      * to Google Multimap. The conversion to uppercase ensures consistent case insensitivity in Google Multimap.
+     *
      * @param headers
      * @return Multimap with headers converted to uppercase and non-compliant headers filtered
      */

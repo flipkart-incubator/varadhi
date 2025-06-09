@@ -1,20 +1,91 @@
 [versions]
-vertx = "4.5.10"
+vertx = "4.5.15"
 guava = "33.3.1-jre"
-netty = "4.1.119.Final"
+netty = "4.2.2.Final"
 caffeine = "3.2.0"
 jackson = "2.18.1"
+otel = "1.51.0"
+otel_semconv = "1.32.0"
+micrometer = "1.15.0"
+failsafe = "3.3.2"
+lombok = "1.18.38"
+slf4j = "2.0.17"
+log4j = "2.24.3"
+commons_lang = "3.17.0"
+commons_collections4 = "4.5.0"
+jersey = "3.1.10"
+curator_framework = "5.8.0"
+junit = "5.13.0"
+junit_platform = "1.13.0"
+mockito = "5.18.0"
 
 [libraries]
+#core
+netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
+netty-resolver-dns-native-macos = { group = "io.netty", name = "netty-resolver-dns-native-macos", version.ref = "netty" }
 vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
 vertx-web = { group = "io.vertx", name = "vertx-web", version.ref = "vertx" }
+vertx-config = { group = "io.vertx", name = "vertx-config", version.ref = "vertx" }
+vertx-config-yaml = { group = "io.vertx", name = "vertx-config-yaml", version.ref = "vertx" }
+vertx-auth-common = { group = "io.vertx", name = "vertx-auth-common", version.ref = "vertx" }
+vertx-auth-jwt = { group = "io.vertx", name = "vertx-auth-jwt", version.ref = "vertx" }
+vertx-zookeeper = { group = "io.vertx", name = "vertx-zookeeper", version.ref = "vertx" }
+vertx-opentelemetry = { group = "io.vertx", name = "vertx-opentelemetry", version.ref = "vertx" }
+vertx-opentracing = { group = "io.vertx", name = "vertx-opentracing", version.ref = "vertx" }
+vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }
+
+#utilities
+lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+log4j-core = { group = "org.apache.logging.log4j", name = "log4j-core", version.ref = "log4j" }
+log4j-slf4j2-impl = { group = "org.apache.logging.log4j", name = "log4j-slf4j2-impl", version.ref = "log4j" }
+jakarta-validation-api = { group = "jakarta.validation", name = "jakarta.validation-api", version = "3.1.1" }
+jakarta-annotation-api = { group = "jakarta.annotation", name = "jakarta.annotation-api", version = "3.0.0" }
+jakarta-ws-rs-api = { group = "jakarta.ws.rs", name = "jakarta.ws.rs-api", version = "4.0.0" }
+hibernate-validator = { group = "org.hibernate.validator", name = "hibernate-validator", version = "9.0.0.Final" }
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+commons-lang3 = { group = "org.apache.commons", name = "commons-lang3", version.ref = "commons_lang" }
+commons_collections4 = { group = "org.apache.commons", name = "commons-collections4", version.ref = "commons_collections4" }
+failsafe = { group = "dev.failsafe", name = "failsafe", version.ref = "failsafe" }
+caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
+jctools-core = { group = "org.jctools", name = "jctools-core", version = "4.0.5" }
+
+#serde
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
 jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jackson" }
 jackson-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
 jackson-module-parameter-names = { group = "com.fasterxml.jackson.module", name = "jackson-module-parameter-names", version.ref = "jackson" }
 jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jdk8", version.ref = "jackson" }
-netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
-vertx-micrometer-metrics = { group = "io.vertx", name = "vertx-micrometer-metrics", version.ref = "vertx" }
-failsafe = { group = "dev.failsafe", name = "failsafe", version = "3.3.2" }
-caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
+
+#storage
+curator-framework = { group = "org.apache.curator", name = "curator-framework", version.ref = "curator_framework" }
+
+#telemetry
+opentelemetry-api = { group = "io.opentelemetry", name = "opentelemetry-api", version.ref = "otel" }
+opentelemetry-sdk = { group = "io.opentelemetry", name = "opentelemetry-sdk", version.ref = "otel" }
+opentelemetry-exporter-logging = { group = "io.opentelemetry", name = "opentelemetry-exporter-logging", version.ref = "otel" }
+opentelemetry-exporter-otlp = { group = "io.opentelemetry", name = "opentelemetry-exporter-otlp", version.ref = "otel" }
+opentelemetry-exporter-prometheus = { group = "io.opentelemetry", name = "opentelemetry-exporter-prometheus", version = "1.51.0-alpha" }
+opentelemetry-semconv = { group = "io.opentelemetry.semconv", name = "opentelemetry-semconv", version.ref = "otel_semconv" }
+micrometer-core = { group = "io.micrometer", name = "micrometer-core", version.ref = "micrometer" }
+micrometer-registry-prometheus = { group = "io.micrometer", name = "micrometer-registry-prometheus", version.ref = "micrometer" }
+micrometer-registry-otlp = { group = "io.micrometer", name = "micrometer-registry-otlp", version.ref = "micrometer" }
+# TODO: remove the jmx option altogether. For that need to unify the tracing and metering to use otlp exporters
+# by default, and have the docker compose setup ready for local setup.
+micrometer-registry-jmx = { group = "io.micrometer", name = "micrometer-registry-jmx", version.ref = "micrometer" }
+
+#testing
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+junit-platform-engine = { group = "org.junit.platform", name = "junit-platform-engine", version.ref = "junit_platform" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher", version.ref = "junit_platform" }
+mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter", version.ref = "mockito" }
+opentelemetry-sdk-testing = { group = "io.opentelemetry", name = "opentelemetry-sdk-testing", version.ref = "otel" }
+
+jmh-core = { group = "org.openjdk.jmh", name = "jmh-core", version = "1.37" }
+awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
+jersey-client = { group = "org.glassfish.jersey.core", name = "jersey-client", version.ref = "jersey" }
+jersey-media-json-jackson = { group = "org.glassfish.jersey.media", name = "jersey-media-json-jackson", version.ref = "jersey" }
+vertx-junit5 = { group = "io.vertx", name = "vertx-junit5", version.ref = "vertx" }
+vertx-web-client = { group = "io.vertx", name = "vertx-web-client", version.ref = "vertx" }
+curator-test = { group = "org.apache.curator", name = "curator-test", version.ref = "curator_framework" }
+

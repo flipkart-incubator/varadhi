@@ -117,6 +117,7 @@ public final class VaradhiSubscriptionFactory {
         StorageTopic subscribedStorageTopic = topic.getProduceTopicForRegion(deployedRegion).getTopicToProduce();
         List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(
             subscribedStorageTopic,
+            topic.getCapacity(),
             InternalQueueCategory.MAIN
         );
         int numShards = topicPartitions.size();
@@ -355,7 +356,11 @@ public final class VaradhiSubscriptionFactory {
             READ_FAN_OUT_FOR_INTERNAL_QUEUE
         );
         StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
-        List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(st, queueType.getCategory());
+        List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(
+            st,
+            errCapacity,
+            queueType.getCategory()
+        );
         if (topicPartitions.size() != 1) {
             throw new IllegalArgumentException("Multi shard internal topics are unsupported for now.");
         }

@@ -7,7 +7,15 @@ import lombok.Getter;
 @Getter
 @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@storageType")
 public abstract class StorageSubscription<T extends StorageTopic> {
+
+    /**
+     * Name of the subscription.
+     */
     private final String name;
+
+    /**
+     * Partitions to subscribe
+     */
     private final TopicPartitions<T> topicPartitions;
 
     public StorageSubscription(String name, TopicPartitions<T> topicPartitions) {

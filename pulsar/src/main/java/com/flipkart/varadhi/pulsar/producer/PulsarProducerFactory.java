@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.pulsar.producer;
 
 import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -24,9 +25,9 @@ public class PulsarProducerFactory implements ProducerFactory<PulsarStorageTopic
     }
 
     @Override
-    public Producer newProducer(PulsarStorageTopic storageTopic) {
+    public Producer newProducer(PulsarStorageTopic storageTopic, TopicCapacityPolicy capacity) {
         try {
-            return new PulsarProducer(pulsarClient, storageTopic, producerOptions, hostName);
+            return new PulsarProducer(pulsarClient, storageTopic, capacity, producerOptions, hostName);
         } catch (PulsarClientException e) {
             throw new ProduceException(
                 String.format("Failed to create Pulsar producer for %s. %s", storageTopic.getName(), e.getMessage()),

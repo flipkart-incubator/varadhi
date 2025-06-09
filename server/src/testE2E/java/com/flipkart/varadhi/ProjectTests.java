@@ -104,7 +104,7 @@ public class ProjectTests extends E2EBase {
             String.format("Can not delete Team(%s) as it has associated Project(s).", org1Team1.getName()),
             true
         );
-        makeDeleteRequest(getProjectUri(o1t1Project2), 200);
+        makeDeleteRequest(getProjectUri(o1t1Project2), 204);
 
         validateTeamProjects(org1Team1, List.of(o1t1Project1));
 
@@ -174,7 +174,7 @@ public class ProjectTests extends E2EBase {
         validateTeamProjects(org1Team1, List.of());
         validateTeamProjects(org1Team2, List.of(o1t1Project1, o1t2Project3));
 
-        makeDeleteRequest(getTeamUri(org1Team1), 200);
+        makeDeleteRequest(getTeamUri(org1Team1), 204);
     }
 
     private void validateTeamProjects(Team team, List<Project> projects) {

@@ -11,12 +11,13 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults (makeFinal = true, level = AccessLevel.PRIVATE)
 @JsonTypeInfo (use = JsonTypeInfo.Id.NAME, property = "@storageType")
 public abstract class StorageTopic implements AbstractTopic {
-    String name;
-    TopicCapacityPolicy capacity;
 
-    protected StorageTopic(String name, TopicCapacityPolicy capacity) {
+    int id;
+    String name;
+
+    protected StorageTopic(int id, String name) {
+        this.id = id;
         this.name = name;
-        this.capacity = capacity;
     }
 
     @Override

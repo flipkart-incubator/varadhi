@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.admin;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
@@ -13,7 +14,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -64,18 +65,18 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         Org org1 = Org.of("name1");
         doReturn(org1).when(orgService).createOrg(eq(org1));
-        Org org1Created = sendRequestWithEntity(request, org1, Org.class);
+        Org org1Created = sendRequestWithEntity(request, org1, c(Org.class));
         Assertions.assertEquals(org1, org1Created);
         verify(orgService, times(1)).createOrg(eq(org1));
 
         String duplicateOrgError = String.format("Org(%s) already exists. Org is globally unique.", org1.getName());
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(orgService).createOrg(org1);
-        ErrorResponse response = sendRequestWithEntity(request, org1, 409, duplicateOrgError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, org1, 409, duplicateOrgError, c(ErrorResponse.class));
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
         doThrow(new MetaStoreException(someInternalError)).when(orgService).createOrg(org1);
-        response = sendRequestWithEntity(request, org1, 500, someInternalError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, org1, 500, someInternalError, c(ErrorResponse.class));
         Assertions.assertEquals(someInternalError, response.reason());
     }
 
@@ -95,7 +96,7 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, orgsPath);
         String orgNameErr = "Invalid Org name. Check naming constraints.";
         Org org = Org.of(name);
-        ErrorResponse response = sendRequestWithEntity(request, org, 400, orgNameErr, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, org, 400, orgNameErr, c(ErrorResponse.class));
         Assertions.assertEquals(orgNameErr, response.reason());
     }
 
@@ -106,7 +107,7 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getOrgUrl(org1.getName()));
         doReturn(org1).when(orgService).getOrg(org1.getName());
 
-        Org org1Get = sendRequestWithoutPayload(request, Org.class);
+        Org org1Get = sendRequestWithoutPayload(request, c(Org.class));
         Assertions.assertEquals(org1, org1Get);
         verify(orgService, times(1)).getOrg(org1.getName());
 
@@ -121,15 +122,11 @@ public class OrgHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, orgsPath);
         doReturn(orgList).when(orgService).getOrgs();
 
-        List<Org> orgListObtained = listOrganisations(request);
+        List<Org> orgListObtained = sendRequestWithoutPayload(request, t(new TypeReference<>() {
+        }));
         Assertions.assertEquals(orgList.size(), orgListObtained.size());
         Assertions.assertArrayEquals(orgList.toArray(), orgListObtained.toArray());
         verify(orgService, times(1)).getOrgs();
-    }
-
-    List<Org> listOrganisations(HttpRequest<Buffer> request) throws Exception {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        return jsonDeserialize(response.bodyAsString(), List.class, Org.class);
     }
 
     @Test
@@ -138,7 +135,7 @@ public class OrgHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, getOrgUrl(org1.getName()));
         doNothing().when(orgService).deleteOrg(org1.getName());
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
         verify(orgService, times(1)).deleteOrg(org1.getName());
 
         String notFoundError = String.format("Org(%s) not found.", org1.getName());

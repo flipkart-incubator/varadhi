@@ -96,7 +96,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         SubscriptionOperation operation = sendRequestWithEntity(
             request,
             unsidelineRequest,
-            SubscriptionOperation.class
+            c(SubscriptionOperation.class)
         );
         UnsidelineRequest actual = captor.getValue();
         assertEquals(unsidelineRequest.getLatestFailedAt(), actual.getLatestFailedAt());
@@ -117,7 +117,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
             unsidelineRequest,
             400,
             "Selective unsideline is not yet supported.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         verify(dlqService, never()).unsideline(any(), any(), any());
     }
@@ -134,7 +134,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
             unsidelineRequest,
             400,
             "Number of groupIds in one API call cannot be more than 1.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         verify(dlqService, never()).unsideline(any(), any(), any());
     }
@@ -151,7 +151,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
             unsidelineRequest,
             400,
             "Selective unsideline is not yet supported.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         verify(dlqService, never()).unsideline(any(), any(), any());
     }
@@ -168,7 +168,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
             unsidelineRequest,
             400,
             "Number of messageIds in one API call cannot be more than 1.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         verify(dlqService, never()).unsideline(any(), any(), any());
     }
@@ -185,7 +185,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
             unsidelineRequest,
             400,
             "At least one unsideline criteria needs to be specified.",
-            ErrorResponse.class
+            c(ErrorResponse.class)
         );
         verify(dlqService, never()).unsideline(any(), any(), any());
     }

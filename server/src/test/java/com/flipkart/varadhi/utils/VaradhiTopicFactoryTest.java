@@ -40,7 +40,7 @@ class VaradhiTopicFactoryTest {
         project = Project.of("default", "", "public", "public");
         vTopicName = String.format("%s.%s", project.getName(), TOPIC_NAME);
         String pTopicName = String.format("persistent://%s/%s", project.getOrg(), vTopicName);
-        PulsarStorageTopic pTopic = PulsarStorageTopic.of(pTopicName, 1, CAPACITY_POLICY);
+        PulsarStorageTopic pTopic = PulsarStorageTopic.of(0, pTopicName, 1);
 
         doReturn(pTopic).when(storageTopicFactory)
                         .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
@@ -58,7 +58,7 @@ class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
 
         assertNotNull(varadhiTopic);
-        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
         assertEquals(TopicState.Producing, internalTopic.getTopicState());
         assertNotNull(internalTopic.getTopicToProduce());
 
@@ -80,13 +80,11 @@ class VaradhiTopicFactoryTest {
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        InternalCompositeTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
         PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
 
         assertNotNull(storageTopic);
         assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
-        assertEquals(CAPACITY_POLICY.getThroughputKBps(), storageTopic.getCapacity().getThroughputKBps());
-        assertEquals(CAPACITY_POLICY.getQps(), storageTopic.getCapacity().getQps());
     }
 
     @Test
@@ -109,7 +107,7 @@ class VaradhiTopicFactoryTest {
 
         planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
 
-        InternalCompositeTopic internalCompositeTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        SegmentedStorageTopic internalCompositeTopic = varadhiTopic.getProduceTopicForRegion(REGION);
         assertNotNull(internalCompositeTopic);
         assertEquals(TopicState.Producing, internalCompositeTopic.getTopicState());
         assertNotNull(internalCompositeTopic.getTopicToProduce());

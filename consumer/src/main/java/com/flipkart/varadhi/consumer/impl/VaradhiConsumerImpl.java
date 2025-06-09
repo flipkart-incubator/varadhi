@@ -139,13 +139,18 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             internalProducers.put(
                 InternalQueueType.retryType(r),
                 createFailedMsgProducer(
-                    failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce()
+                    failurePolicy.getRetrySubscription().getSubscriptionForRetry(r).getTopicForProduce(),
+                    TopicCapacityPolicy.getDefault()
+
                 )
             );
         }
         internalProducers.put(
             InternalQueueType.deadLetterType(),
-            createFailedMsgProducer(failurePolicy.getDeadLetterSubscription().getTopicForProduce())
+            createFailedMsgProducer(
+                failurePolicy.getDeadLetterSubscription().getTopicForProduce(),
+                TopicCapacityPolicy.getDefault()
+            )
         );
 
         concurrencyControl = new ConcurrencyControlImpl<>(context, consumptionPolicy.getMaxParallelism(), iqPriority);
@@ -294,8 +299,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         return new ConsumerHolder(consumer, messageSrc);
     }
 
-    FailedMsgProducer createFailedMsgProducer(StorageTopic topic) {
-        return new FailedMsgProducer(env.getProducerFactory().newProducer(topic));
+    FailedMsgProducer createFailedMsgProducer(StorageTopic topic, TopicCapacityPolicy capacity) {
+        return new FailedMsgProducer(env.getProducerFactory().newProducer(topic, capacity));
     }
 
     void startLoop() {

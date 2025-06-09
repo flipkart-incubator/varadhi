@@ -20,20 +20,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
 public class PreProduceHandlerTest extends ProduceTestBase {
-    PreProduceHandler validationHandler;
     HttpRequest<Buffer> request;
 
     @BeforeEach
     public void PreTest() throws InterruptedException {
         super.setUp();
-        validationHandler = new PreProduceHandler();
         route.handler(bodyHandler).handler(ctx -> {
             ctx.put(RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
-        }).handler(validationHandler).handler(produceHandlers::produce);
+        }).handler(produceHandlers::produce);
         setupFailureHandler(route);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
-        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
     }
 
@@ -43,26 +41,26 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     }
 
     @Test
-    public void testProduceWithValidHeaders() throws InterruptedException {
+    public void testProduceWithValidHeaders() {
 
         request.putHeader(StdHeaders.get().msgId(), messageId);
         request.putHeader(StdHeaders.get().groupId(), "host1, host2");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
-        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
 
         request.putHeader("x_header2", "h2v1");
-        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
     }
 
     @Test
-    public void testProduceWithMultiValueHeaderIsSingleHeader() throws InterruptedException {
+    public void testProduceWithMultiValueHeaderIsSingleHeader() {
         request.putHeader(StdHeaders.get().msgId(), messageId);
         request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
-        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
     }
 }

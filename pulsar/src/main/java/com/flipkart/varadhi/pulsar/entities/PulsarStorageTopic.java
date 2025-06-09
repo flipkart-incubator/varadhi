@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,12 +11,12 @@ import lombok.Setter;
 public class PulsarStorageTopic extends StorageTopic {
     private int partitionCount;
 
-    private PulsarStorageTopic(String name, int partitionCount, TopicCapacityPolicy capacity) {
-        super(name, capacity);
+    private PulsarStorageTopic(int id, String name, int partitionCount) {
+        super(id, name);
         this.partitionCount = partitionCount;
     }
 
-    public static PulsarStorageTopic of(String name, int partitionCount, TopicCapacityPolicy capacity) {
-        return new PulsarStorageTopic(name, partitionCount, capacity);
+    public static PulsarStorageTopic of(int id, String name, int partitionCount) {
+        return new PulsarStorageTopic(id, name, partitionCount);
     }
 }

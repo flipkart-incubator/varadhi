@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.admin;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
@@ -15,7 +16,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,13 +81,13 @@ public class TeamHandlersTest extends WebTestBase {
         Team team1 = Team.of("team1", o1.getName());
 
         doReturn(team1).when(teamService).createTeam(eq(team1));
-        Team team1Created = sendRequestWithEntity(request, team1, Team.class);
+        Team team1Created = sendRequestWithEntity(request, team1, c(Team.class));
         Assertions.assertEquals(team1, team1Created);
         verify(teamService, times(1)).createTeam(eq(team1));
 
         String orgNotFoundError = String.format("Org(%s) not found.", team1.getOrg());
         doThrow(new ResourceNotFoundException(orgNotFoundError)).when(teamService).createTeam(team1);
-        ErrorResponse response = sendRequestWithEntity(request, team1, 404, orgNotFoundError, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, team1, 404, orgNotFoundError, c(ErrorResponse.class));
         Assertions.assertEquals(orgNotFoundError, response.reason());
 
         String duplicateOrgError = String.format(
@@ -95,12 +95,12 @@ public class TeamHandlersTest extends WebTestBase {
             team1.getName()
         );
         doThrow(new DuplicateResourceException(duplicateOrgError)).when(teamService).createTeam(team1);
-        response = sendRequestWithEntity(request, team1, 409, duplicateOrgError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, team1, 409, duplicateOrgError, c(ErrorResponse.class));
         Assertions.assertEquals(duplicateOrgError, response.reason());
 
         String someInternalError = "Some random error";
         doThrow(new MetaStoreException(someInternalError)).when(teamService).createTeam(team1);
-        response = sendRequestWithEntity(request, team1, 500, someInternalError, ErrorResponse.class);
+        response = sendRequestWithEntity(request, team1, 500, someInternalError, c(ErrorResponse.class));
         Assertions.assertEquals(someInternalError, response.reason());
     }
 
@@ -112,7 +112,7 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamUrl(team1));
         doReturn(team1).when(teamService).getTeam(team1.getName(), team1.getOrg());
 
-        Team team1Get = sendRequestWithoutPayload(request, Team.class);
+        Team team1Get = sendRequestWithoutPayload(request, c(Team.class));
         Assertions.assertEquals(team1, team1Get);
         verify(teamService, times(1)).getTeam(team1.getName(), team1.getOrg());
 
@@ -129,15 +129,11 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getTeamsUrl(o1.getName()));
         doReturn(teamList).when(teamService).getTeams(o1.getName());
 
-        List<Team> teamListObtained = list(request);
+        List<Team> teamListObtained = sendRequestWithoutPayload(request, t(new TypeReference<List<Team>>() {
+        }));
         Assertions.assertEquals(teamList.size(), teamListObtained.size());
         Assertions.assertArrayEquals(teamList.toArray(), teamListObtained.toArray());
         verify(teamService, times(1)).getTeams(o1.getName());
-    }
-
-    List<Team> list(HttpRequest<Buffer> request) throws Exception {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        return jsonDeserialize(response.bodyAsString(), List.class, Team.class);
     }
 
     @Test
@@ -148,23 +144,19 @@ public class TeamHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, getProjectsUrl(team1));
         doReturn(projectList1).when(teamService).getProjects(team1.getName(), team1.getOrg());
 
-        List<Project> projectList1Obtained = listProjects(request);
+        List<Project> projectList1Obtained = sendRequestWithoutPayload(request, t(new TypeReference<List<Project>>() {
+        }));
         Assertions.assertEquals(projectList1.size(), projectList1Obtained.size());
 
         doReturn(projectList2).when(teamService).getProjects(team1.getName(), team1.getOrg());
-        List<Project> projectList2Obtained = listProjects(request);
+        List<Project> projectList2Obtained = sendRequestWithoutPayload(request, t(new TypeReference<List<Project>>() {
+        }));
         Assertions.assertArrayEquals(projectList2.toArray(), projectList2Obtained.toArray());
-    }
-
-    List<Project> listProjects(HttpRequest<Buffer> request) throws Exception {
-        HttpResponse<Buffer> response = sendRequest(request, null);
-        return jsonDeserialize(response.bodyAsString(), List.class, Project.class);
     }
 
     private Project getProject(String name, Team team) {
         return Project.of(name, "Some random value", team.getName(), team.getOrg());
     }
-
 
     @Test
     public void testTeamDelete() throws InterruptedException {

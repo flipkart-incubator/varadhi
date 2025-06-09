@@ -19,7 +19,7 @@ class VaradhiTopicTest {
     @EqualsAndHashCode (callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name) {
-            super(name, TOPIC_CAPACITY);
+            super(0, name);
         }
     }
 
@@ -61,9 +61,9 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void buildTopicName_ReturnsExpectedFormat() {
+    void fqn_ReturnsExpectedFormat() {
         String expected = "project1.topic1";
-        String actual = VaradhiTopic.buildTopicName(PROJECT_NAME, TOPIC_NAME);
+        String actual = VaradhiTopic.fqn(PROJECT_NAME, TOPIC_NAME);
 
         assertEquals(expected, actual, "Topic name format mismatch");
     }
@@ -73,7 +73,7 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
+        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertEquals(
             storageTopic.getName(),
@@ -94,7 +94,7 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", InternalCompositeTopic.of(storageTopic));
+        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertAll(
             () -> assertNotNull(varadhiTopic.getProduceTopicForRegion("region1"), "Region topic not found"),

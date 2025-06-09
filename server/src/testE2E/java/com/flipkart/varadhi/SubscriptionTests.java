@@ -117,7 +117,7 @@ public class SubscriptionTests extends E2EBase {
         assertSubscriptionEquals(sub, got);
 
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 409, "Subscription 'default.sub1' already exists.", true);
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
@@ -163,7 +163,7 @@ public class SubscriptionTests extends E2EBase {
         assertEquals(update.getName(), updated.getName());
         assertEquals(update.getDescription(), updated.getDescription());
         assertEquals(2, updated.getVersion());
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
@@ -273,7 +273,7 @@ public class SubscriptionTests extends E2EBase {
         SubscriptionResource createdSub = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, createdSub);
 
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.SOFT_DELETE.toString(), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.SOFT_DELETE.toString(), 204);
 
         List<String> subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));
         assertFalse(subs.contains(subName));
@@ -293,6 +293,6 @@ public class SubscriptionTests extends E2EBase {
         subs = getSubscriptions(makeListRequest(getSubscriptionsUri(o1t1p1), 200));
         assertTrue(subs.contains("default." + subName));
 
-        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 200);
+        makeDeleteRequest(getSubscriptionsUri(o1t1p1, subName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 }

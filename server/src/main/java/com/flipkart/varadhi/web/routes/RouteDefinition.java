@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 public class RouteDefinition {
     public static final String DELIMITER = "_";
     private final String methodName;
-    private final String apiName;
+    private final String apiSubject;
 
     private final HttpMethod method;
     private final String path;
@@ -38,13 +38,13 @@ public class RouteDefinition {
     private final TelemetryType telemetryType;
 
     public String getName() {
-        return String.format("%s%s%s", apiName, DELIMITER, methodName);
+        return String.format("%s%s%s", apiSubject, DELIMITER, methodName);
     }
 
 
     RouteDefinition(
         String methodName,
-        String apiName,
+        String apiSubject,
         HttpMethod method,
         String path,
         Set<RouteBehaviour> behaviours,
@@ -57,7 +57,7 @@ public class RouteDefinition {
         TelemetryType telemetryType
     ) {
         this.methodName = methodName;
-        this.apiName = apiName;
+        this.apiSubject = apiSubject;
         this.method = method;
         this.path = path;
         this.behaviours = behaviours;
@@ -93,7 +93,7 @@ public class RouteDefinition {
     @RequiredArgsConstructor
     public static class Builder {
         private final String methodName;
-        private final String apiName;
+        private final String apiSubject;
         private final HttpMethod method;
         private final String path;
         private boolean unAuthenticated;
@@ -177,7 +177,7 @@ public class RouteDefinition {
 
             return new RouteDefinition(
                 methodName,
-                apiName,
+                apiSubject,
                 method,
                 path,
                 behaviours,

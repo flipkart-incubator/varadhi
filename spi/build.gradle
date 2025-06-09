@@ -6,5 +6,5 @@ plugins {
 dependencies {
     api(project(':entities'))
 
-    testFixturesImplementation("com.google.guava:guava:$guava_version")
+    testFixturesImplementation(libs.guava)
 }

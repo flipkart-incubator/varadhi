@@ -25,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,7 +107,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         doReturn(vTopic).when(topicService).get(TOPIC_RESOURCE.getProject() + "." + TOPIC_RESOURCE.getName());
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
 
-        SubscriptionResource createdResource = sendRequestWithEntity(request, resource, SubscriptionResource.class);
+        SubscriptionResource createdResource = sendRequestWithEntity(request, resource, c(SubscriptionResource.class));
 
         assertEquals(subscription.getName(), createdResource.getSubscriptionInternalName());
     }
@@ -124,7 +125,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(subscriptionService)
                                                                    .createSubscription(any(), any(), any());
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 401, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 401, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -137,7 +138,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         doThrow(new ResourceNotFoundException(errorMessage)).when(projectCache).getOrThrow(PROJECT.getName());
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -154,7 +155,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                                                                                   .getName()
                                                             );
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 404, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -169,7 +170,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         );
         String errorMessage = "Project name mismatch between URL and request body.";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -181,7 +182,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE, retryPolicy);
         String errorMessage = "Only 3 retries are supported.";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -193,7 +194,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         resource.getProperties().put("unsupportedProperty", "value");
         String errorMessage = "Unsupported properties: unsupportedProperty";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -205,7 +206,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         resource.getProperties().put("unsideline.api.message_count", "-10");
         String errorMessage = "Invalid value for property: unsideline.api.message_count";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -222,7 +223,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         when(subscriptionService.getSubscription(anyString())).thenReturn(subscription);
 
-        SubscriptionResource actualResource = sendRequestWithoutPayload(request, SubscriptionResource.class);
+        SubscriptionResource actualResource = sendRequestWithoutPayload(request, c(SubscriptionResource.class));
 
         assertEquals(actualResource.getName(), expectedResource.getName());
         verify(subscriptionService).getSubscription("project1.sub12");
@@ -235,8 +236,8 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         when(subscriptionService.getSubscriptionList(PROJECT.getName(), false)).thenReturn(List.of("sub1", "sub2"))
                                                                                .thenReturn(List.of());
 
-        List<String> subscriptions = sendRequestWithoutPayload(request, List.class);
-        List<String> subscriptions2 = sendRequestWithoutPayload(request, List.class);
+        List<String> subscriptions = sendRequestWithoutPayload(request, c(List.class));
+        List<String> subscriptions2 = sendRequestWithoutPayload(request, c(List.class));
 
         assertEquals(List.of("sub1", "sub2"), subscriptions);
         assertEquals(List.of(), subscriptions2);
@@ -254,7 +255,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             List.of("sub1", "sub2", "sub3")
         );
 
-        List<String> subscriptions = sendRequestWithoutPayload(request, List.class);
+        List<String> subscriptions = sendRequestWithoutPayload(request, c(List.class));
 
         assertEquals(List.of("sub1", "sub2", "sub3"), subscriptions);
         verify(subscriptionService, times(1)).getSubscriptionList(PROJECT.getName(), true);
@@ -276,7 +277,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                              any()
                                                          );
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
@@ -303,7 +304,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                              any()
                                                          );
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
@@ -327,7 +328,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                              any()
                                                          );
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
@@ -354,7 +355,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                              any()
                                                          );
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
@@ -390,7 +391,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             )
         ).thenReturn(CompletableFuture.completedFuture(subscription));
 
-        SubscriptionResource updated = sendRequestWithEntity(request, resource, SubscriptionResource.class);
+        SubscriptionResource updated = sendRequestWithEntity(request, resource, c(SubscriptionResource.class));
 
         assertEquals(resource.getName(), updated.getName());
         assertEquals(resource.getSubscriptionInternalName(), stringCaptor.getValue());
@@ -405,7 +406,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         String errorMessage = "Only 3 retries are supported.";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -421,7 +422,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         String errorMessage = "Project name mismatch between URL and request body.";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -448,7 +449,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                                        any()
                                                                    );
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 401, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 401, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -461,7 +462,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         String errorMessage = "Unsupported properties: unsupportedProperty";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -474,7 +475,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         String errorMessage = "Invalid value for property: unsideline.api.message_count";
 
-        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, ErrorResponse.class);
+        ErrorResponse response = sendRequestWithEntity(request, resource, 400, errorMessage, c(ErrorResponse.class));
 
         assertEquals(errorMessage, response.reason());
     }
@@ -489,7 +490,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
                                                          .restoreSubscription(any(), any(), any());
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).restoreSubscription(any(), any(), any());
     }
@@ -500,7 +501,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).start(any(), any());
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).start(any(), any());
     }
@@ -511,7 +512,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).stop(any(), any());
 
-        sendRequestWithoutPayload(request, null);
+        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(subscriptionService, times(1)).stop(any(), any());
     }

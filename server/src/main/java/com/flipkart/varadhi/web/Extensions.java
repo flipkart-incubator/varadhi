@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.entities.JsonMapper;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.utils.JsonSeqStream;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.User;
@@ -13,7 +13,6 @@ import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -66,7 +65,7 @@ public class Extensions {
         public static <T> void handleResponse(RoutingContext ctx, CompletableFuture<T> result) {
             result.whenComplete((t, error) -> ctx.vertx().runOnContext((Void) -> {
                 if (error != null) {
-                    endRequestWithException(ctx, unwrapExecutionException(error));
+                    ctx.fail(unwrapExecutionException(error));
                 } else {
                     if (null == t) {
                         endRequest(ctx);
@@ -105,13 +104,17 @@ public class Extensions {
         }
 
         public static <T> void endRequestWithResponse(RoutingContext ctx, T response) {
+            endRequestWithResponse(ctx, HttpResponseStatus.OK.code(), response);
+
+        }
+
+        public static <T> void endRequestWithResponse(RoutingContext ctx, int code, T response) {
             addResponseHeaders(ctx, ContentKind.APPLICATION_JSON);
+            ctx.response().setStatusCode(code);
             String responseBody = JsonMapper.jsonSerialize(response);
             ctx.response().end(responseBody, (r) -> {
                 HttpServerRequest request = ctx.request();
-                if (r.succeeded()) {
-                    log.debug("Request {}:{} completed successfully.", request.method(), request.path());
-                } else {
+                if (!r.succeeded()) {
                     log.error("Request {}:{} Failed to send response: {}", request.method(), request.path(), r.cause());
                 }
             });
@@ -119,25 +122,19 @@ public class Extensions {
 
         public static void endRequestWithStatusAndErrorMsg(RoutingContext ctx, int httpStatus, String errorMessage) {
             addResponseHeaders(ctx, ContentKind.APPLICATION_JSON);
-            ctx.response().setStatusCode(httpStatus);
             ctx.response().setStatusMessage(errorMessage);
-            endRequestWithResponse(ctx, new ErrorResponse(errorMessage));
+            endRequestWithResponse(ctx, httpStatus, new ErrorResponse(errorMessage));
         }
 
         public static void endRequest(RoutingContext ctx) {
             addResponseHeaders(ctx, ContentKind.NONE);
+            ctx.response().setStatusCode(HttpResponseStatus.NO_CONTENT.code());
             ctx.response().end((r) -> {
                 HttpServerRequest request = ctx.request();
-                if (r.succeeded()) {
-                    log.debug("Request {}:{} completed successfully.", request.method(), request.path());
-                } else {
+                if (!r.succeeded()) {
                     log.error("Request {}:{} Failed to complete:{}.", request.method(), request.path(), r.cause());
                 }
             });
-        }
-
-        public static <T extends Throwable> void endRequestWithException(RoutingContext ctx, T throwable) {
-            ctx.fail(throwable);
         }
 
         private static void addResponseHeaders(RoutingContext ctx, ContentKind kind) {
@@ -151,15 +148,13 @@ public class Extensions {
             ctx.put(ContextKeys.API_RESPONSE, response);
         }
 
-
         // Finish blocking handler by calling this for without setting API response.
         public static void endApi(RoutingContext ctx) {
             ctx.remove(ContextKeys.API_RESPONSE);
         }
 
-
         public static <T> T getApiResponse(RoutingContext ctx) {
-            return ctx.get("api-response");
+            return ctx.get(ContextKeys.API_RESPONSE);
         }
 
         public static void todo(RoutingContext context) {
@@ -178,10 +173,22 @@ public class Extensions {
             return ctx.get(ContextKeys.IS_SUPER_USER, false);
         }
 
-        public static Map<String, String> getRequestAttributes(RoutingContext ctx) {
-            Map<String, String> requestAttributes = new HashMap<>();
-            Map<ResourceType, ResourceHierarchy> empty = Map.of();
-            ctx.get(RESOURCE_HIERARCHY, empty).values().forEach(h -> requestAttributes.putAll(h.getAttributes()));
+        public static AttributesBuilder getRequestAttributes(RoutingContext ctx) {
+            var requestAttributes = Attributes.builder();
+            Map<ResourceType, ResourceHierarchy> resourceHierarchy = ctx.get(RESOURCE_HIERARCHY);
+            if (resourceHierarchy != null) {
+                resourceHierarchy.values().forEach(h -> h.getAttributes().forEach(requestAttributes::put));
+            }
+
+            String msgId = ctx.request().getHeader(StdHeaders.get().msgId());
+            String groupId = ctx.request().getHeader(StdHeaders.get().groupId());
+
+            if (null != msgId) {
+                requestAttributes.put("message.id", msgId);
+            }
+            if (null != groupId) {
+                requestAttributes.put("group.id", groupId);
+            }
             return requestAttributes;
         }
     }

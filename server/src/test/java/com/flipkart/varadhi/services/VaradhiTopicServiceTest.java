@@ -95,7 +95,7 @@ class VaradhiTopicServiceTest {
         vTopicName = String.format("%s.%s", project.getName(), TOPIC_NAME);
         String pTopicName = String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), vTopicName);
 
-        pulsarStorageTopic = PulsarStorageTopic.of(pTopicName, 1, DEFAULT_CAPACITY_POLICY);
+        pulsarStorageTopic = PulsarStorageTopic.of(0, pTopicName, 1);
         doReturn(pulsarStorageTopic).when(storageTopicFactory)
                                     .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
 

@@ -34,7 +34,7 @@ public class BodyHandlerTest extends ProduceTestBase {
         setupFailureHandler(route);
 
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
-        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any(), any());
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService).produceToTopic(any(), any());
         request = createRequest(HttpMethod.POST, topicPath);
     }
 
@@ -44,25 +44,25 @@ public class BodyHandlerTest extends ProduceTestBase {
     }
 
     @Test
-    public void testProduceWithForBodySize() throws InterruptedException {
+    public void testProduceWithForBodySize() {
         request.putHeader(StdHeaders.get().msgId(), messageId);
         request.putHeader(StdHeaders.get().msgId(), "host1, host2");
         payload = "0123456789".getBytes();
-        String messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        String messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "0123456789012345678".getBytes();
-        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "01234567890123456789".getBytes();
-        messageIdObtained = sendRequestWithPayload(request, payload, String.class);
+        messageIdObtained = sendRequestWithPayload(request, payload, c(String.class));
         Assertions.assertEquals(messageId, messageIdObtained);
 
         payload = "012345678901234567890".getBytes();
-        sendRequestWithPayload(request, payload, 413, "Entity too large.", ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 413, "Entity too large.", c(ErrorResponse.class));
 
         payload = "012345678901234567890123456789".getBytes();
-        sendRequestWithPayload(request, payload, 413, "Entity too large.", ErrorResponse.class);
+        sendRequestAndParseResponse(request, payload, 413, "Entity too large.", c(ErrorResponse.class));
     }
 }

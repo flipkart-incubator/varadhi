@@ -14,7 +14,7 @@ import java.util.Map;
 @EqualsAndHashCode (callSuper = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
-    private final Map<String, InternalCompositeTopic> internalTopics;
+    private final Map<String, SegmentedStorageTopic> internalTopics;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
     private final String nfrFilterName;
@@ -35,7 +35,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         int version,
         boolean grouped,
         TopicCapacityPolicy capacity,
-        Map<String, InternalCompositeTopic> internalTopics,
+        Map<String, SegmentedStorageTopic> internalTopics,
         LifecycleStatus status,
         String nfrFilterName
     ) {
@@ -76,7 +76,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         String nfrStrategy
     ) {
         return new VaradhiTopic(
-            buildTopicName(project, name),
+            fqn(project, name),
             INITIAL_VERSION,
             grouped,
             capacity,
@@ -93,7 +93,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param topicName   the name of the topic
      * @return the constructed topic name
      */
-    public static String buildTopicName(String projectName, String topicName) {
+    public static String fqn(String projectName, String topicName) {
         return String.join(NAME_SEPARATOR, projectName, topicName);
     }
 
@@ -103,7 +103,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param region        the region for the internal topic
      * @param internalTopic the internal topic to add
      */
-    public void addInternalTopic(String region, InternalCompositeTopic internalTopic) {
+    public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
     }
 
@@ -123,7 +123,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param region the region for which to retrieve the produce topic
      * @return the produce topic for the specified region
      */
-    public InternalCompositeTopic getProduceTopicForRegion(String region) {
+    public SegmentedStorageTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
     }
 }

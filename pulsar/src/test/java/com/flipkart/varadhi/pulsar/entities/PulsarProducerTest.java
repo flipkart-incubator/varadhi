@@ -37,7 +37,7 @@ public class PulsarProducerTest extends PulsarTestBase {
     ProducerOptions options;
     PulsarStorageTopic topic;
 
-    TopicCapacityPolicy policy;
+    TopicCapacityPolicy capacity;
     String hostname;
 
     @BeforeEach
@@ -53,8 +53,8 @@ public class PulsarProducerTest extends PulsarTestBase {
         messageBuilder = spy(new TypedMessageBuilderImpl(producer, Schema.BYTES));
         doReturn(messageBuilder).when(producer).newMessage();
 
-        policy = Constants.DEFAULT_TOPIC_CAPACITY;
-        topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
+        capacity = Constants.DEFAULT_TOPIC_CAPACITY;
+        topic = PulsarStorageTopic.of(0, "one.two.three.four", 1);
         doReturn(topic.getName()).when(producer).getTopic();
 
         options = new ProducerOptions();
@@ -67,7 +67,7 @@ public class PulsarProducerTest extends PulsarTestBase {
         ArgumentCaptor<Map<String, Object>> pConfigCaptor = ArgumentCaptor.forClass(Map.class);
         doReturn(producerBuilder).when(producerBuilder).loadConf(pConfigCaptor.capture());
 
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         Map<String, Object> pConfig = pConfigCaptor.getValue();
         validateProducerConfig(pConfig, topic, options, hostname);
     }
@@ -81,11 +81,11 @@ public class PulsarProducerTest extends PulsarTestBase {
         options.setCompressionType(CompressionType.LZ4);
         options.setSendTimeoutMs(2000);
         options.setBatchingMaxPublishDelayMs(25);
-        policy = new TopicCapacityPolicy(1000, 2000, 1);
-        topic = PulsarStorageTopic.of("one.two.three.four", 1, policy);
+        capacity = new TopicCapacityPolicy(1000, 2000, 1);
+        topic = PulsarStorageTopic.of(0, "one.two.three.four", 1);
         doReturn(topic.getName()).when(producer).getTopic();
 
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         Map<String, Object> pConfig = pConfigCaptor.getValue();
         validateProducerConfig(pConfig, topic, options, hostname);
     }
@@ -110,20 +110,20 @@ public class PulsarProducerTest extends PulsarTestBase {
         );
 
         Assertions.assertEquals(
-            PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
+            PulsarProducer.getMaxPendingMessages(capacity.getQps()),
             pConfig.get("maxPendingMessages")
         );
         Assertions.assertEquals(
-            PulsarProducer.getMaxPendingMessages(topic.getCapacity().getQps()),
+            PulsarProducer.getMaxPendingMessages(capacity.getQps()),
             pConfig.get("maxPendingMessagesAcrossPartitions")
         );
         int batchMaxMessages = PulsarProducer.getBatchMaxMessages(
-            topic.getCapacity().getQps(),
+            capacity.getQps(),
             options.getBatchingMaxPublishDelayMs()
         );
         Assertions.assertEquals(batchMaxMessages, pConfig.get("batchingMaxMessages"));
         Assertions.assertEquals(
-            PulsarProducer.getBatchingMaxBytes(batchMaxMessages, topic),
+            PulsarProducer.getBatchingMaxBytes(batchMaxMessages, capacity),
             pConfig.get("batchingMaxBytes")
         );
     }
@@ -136,7 +136,7 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testMessageBuildOnSend() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         pulsarProducer.produceAsync(message);
@@ -152,7 +152,7 @@ public class PulsarProducerTest extends PulsarTestBase {
         String payload = "somedata";
         String groupId1 = "groupId1";
         String groupId2 = "groupId2";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
@@ -181,7 +181,7 @@ public class PulsarProducerTest extends PulsarTestBase {
         // multi value properties
         String payload = "somedata";
         String groupId1 = "groupId1";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
@@ -202,7 +202,7 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testSendAsyncThrows() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         doThrow(new RuntimeException("Some Internal Error.")).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         RuntimeException ee = Assertions.assertThrows(
@@ -215,7 +215,7 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testSendAsyncFailsExceptionally() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, options, hostname);
+        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname);
         doReturn(CompletableFuture.failedFuture(new PulsarClientException.ProducerQueueIsFullError("Queue full.")))
                                                                                                                    .when(
                                                                                                                        messageBuilder

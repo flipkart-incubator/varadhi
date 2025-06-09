@@ -10,23 +10,23 @@ dependencies {
 
     implementation(libs.netty.common)
 
-    api("jakarta.annotation:jakarta.annotation-api:$jakarta_annotation_version")
-    implementation("org.slf4j:slf4j-api:$slf4j_version")
-    implementation("org.jctools:jctools-core:$jctools_version")
-    implementation("org.apache.commons:commons-lang3")
-    implementation("io.micrometer:micrometer-core:$micrometer_version")
+    api(libs.jakarta.annotation.api)
+    implementation(libs.slf4j.api)
+    implementation(libs.jctools.core)
+    implementation(libs.commons.lang3)
+    implementation(libs.micrometer.core)
 
     testImplementation(testFixtures(project(':common')))
     testImplementation(testFixtures(project(":spi")))
-    testImplementation("org.junit.jupiter:junit-jupiter:$junit_version")
-    testImplementation("org.mockito:mockito-junit-jupiter:$mockito_version")
-    testImplementation("org.awaitility:awaitility:$awaitility_version")
-    testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j2_version")
-    testImplementation("org.apache.logging.log4j:log4j-core:$log4j2_version")
-    testImplementation("org.openjdk.jmh:jmh-core:$jmh_version")
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.log4j.slf4j2.impl)
+    testImplementation(libs.log4j.core)
+    testImplementation(libs.jmh.core)
 //    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:$jmh_version")
 
     // demo
-    testImplementation("io.vertx:vertx-web:$vertx_version")
+    testImplementation(libs.vertx.web)
     testImplementation 'io.dropwizard.metrics:metrics-core:4.2.25'
 }

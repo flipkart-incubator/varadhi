@@ -13,8 +13,7 @@ import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.entities.TopicResource;
 import com.flipkart.varadhi.web.routes.TelemetryType;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.common.AttributeKey;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
@@ -26,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator.REQUEST_SPAN_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -49,20 +47,13 @@ class TopicHandlersTest extends WebTestBase {
     @Mock
     private VaradhiTopicFactory varadhiTopicFactory;
 
-    @Mock
-    private SpanProvider spanProvider;
-
-    @Mock
-    private Span span;
-
     private RequestTelemetryConfigurator requestTelemetryConfigurator;
 
     @BeforeEach
     void PreTest() throws InterruptedException {
         MockitoAnnotations.openMocks(this);
         super.setUp();
-        doReturn(span).when(spanProvider).addSpan(REQUEST_SPAN_NAME);
-        requestTelemetryConfigurator = new RequestTelemetryConfigurator(spanProvider, new SimpleMeterRegistry());
+        requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
         Resource.EntityResource<Project> projectResource = Resource.of(project, ResourceType.PROJECT);
         doReturn(projectResource).when(projectCache).getOrThrow(any());
 
@@ -110,11 +101,14 @@ class TopicHandlersTest extends WebTestBase {
         TopicResource createdTopic = sendRequestWithEntity(
             createRequest(HttpMethod.POST, getTopicsUrl(project)),
             topicResource,
-            TopicResource.class
+            c(TopicResource.class)
         );
 
         assertEquals(topicResource.getProject(), createdTopic.getProject());
-        verify(spanProvider).addSpan(REQUEST_SPAN_NAME);
+        var spans = spanExporter.getFinishedSpanItems();
+        assertEquals(1, spans.size());
+        assertEquals("server.request", spans.get(0).getName());
+        assertEquals("CreateTopic", spans.get(0).getAttributes().get(AttributeKey.stringKey("api")));
         verify(varadhiTopicService).create(any(), eq(project));
     }
 
@@ -122,7 +116,7 @@ class TopicHandlersTest extends WebTestBase {
     void createTopic_WithMismatchedProjectName_ShouldReturnBadRequest() throws InterruptedException {
         TopicResource topicResource = getTopicResource(Project.of("differentProject", "", TEAM_NAME, ORG_NAME));
 
-        HttpResponse<Buffer> response = sendRequest(
+        HttpResponse<Buffer> response = executeRequest(
             createRequest(HttpMethod.POST, getTopicsUrl(project)),
             JsonMapper.jsonSerialize(topicResource).getBytes()
         );
@@ -141,7 +135,7 @@ class TopicHandlersTest extends WebTestBase {
 
         TopicResource retrievedTopic = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicUrl(project)),
-            TopicResource.class
+            c(TopicResource.class)
         );
 
         assertEquals(topicResource.getProject(), retrievedTopic.getProject());
@@ -155,7 +149,7 @@ class TopicHandlersTest extends WebTestBase {
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project)),
-            List.class
+            c(List.class)
         );
 
         assertEquals(topics.size(), retrievedTopics.size());
@@ -169,7 +163,7 @@ class TopicHandlersTest extends WebTestBase {
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project) + "?includeInactive=true"),
-            List.class
+            c(List.class)
         );
 
         assertEquals(topics.size(), retrievedTopics.size());
@@ -181,7 +175,7 @@ class TopicHandlersTest extends WebTestBase {
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project)),
-            List.class
+            c(List.class)
         );
 
         assertTrue(retrievedTopics.isEmpty());
