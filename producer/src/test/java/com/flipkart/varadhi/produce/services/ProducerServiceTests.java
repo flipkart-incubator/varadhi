@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.produce.services;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.events.EventType;
@@ -32,23 +31,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_PROJECT;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_REGION;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_REMOTE_HOST;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_TEAM;
-import static com.flipkart.varadhi.common.Constants.Tags.TAG_TOPIC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -361,7 +349,7 @@ class ProducerServiceTests {
         }
         ProducerService producerService = new ProducerService(
             "region1",
-            storageTopic -> null,
+            producerFactory::newProducer,
             orgCache,
             projectCache,
             null
@@ -449,7 +437,7 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        InternalCompositeTopic ict = InternalCompositeTopic.of(st);
+        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
         ict.setTopicState(state);
         topic.addInternalTopic(region, ict);
         return topic;
@@ -473,7 +461,7 @@ class ProducerServiceTests {
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize, boolean nfr) {
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), getMessageId());
-        headers.put(StdHeaders.get().produceIdentity(), "ANONYMOUS");
+        headers.put(StdHeaders.get().producerIdentity(), "ANONYMOUS");
         headers.put(StdHeaders.get().produceRegion(), region);
         headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
         if (nfr) {
