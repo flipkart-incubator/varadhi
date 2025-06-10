@@ -40,7 +40,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_IDENTITY;
@@ -313,18 +312,31 @@ class ProducerServiceTests {
     }
 
     @ParameterizedTest
-    @MethodSource("orgFilterScenarios")
-    void testApplyOrgFilter(String testName, String nfrStrategy, String filterKey, List<String> filterValues,
-                            String messageHeaderKey, String messageHeaderValue, boolean expectedResult) {
-        ResourceReadCache<Resource.EntityResource<Project>> projectCache =
-                new ResourceReadCache<>(ResourceType.PROJECT, null);
-        ResourceReadCache<OrgDetails> orgCache =
-                new ResourceReadCache<>(ResourceType.ORG, null);
+    @MethodSource ("orgFilterScenarios")
+    void testApplyOrgFilter(
+        String testName,
+        String nfrStrategy,
+        String filterKey,
+        List<String> filterValues,
+        String messageHeaderKey,
+        String messageHeaderValue,
+        boolean expectedResult
+    ) {
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache = new ResourceReadCache<>(
+            ResourceType.PROJECT,
+            null
+        );
+        ResourceReadCache<OrgDetails> orgCache = new ResourceReadCache<>(ResourceType.ORG, null);
 
         Project project = Project.of("project1", "desc", "team1", "org1");
-        ResourceEvent<Resource.EntityResource<Project>> projectEvent =
-                new ResourceEvent<>(ResourceType.PROJECT, "project1", EventType.UPSERT,
-                        Resource.of(project, ResourceType.PROJECT), 1, () -> {});
+        ResourceEvent<Resource.EntityResource<Project>> projectEvent = new ResourceEvent<>(
+            ResourceType.PROJECT,
+            "project1",
+            EventType.UPSERT,
+            Resource.of(project, ResourceType.PROJECT),
+            1,
+            () -> {}
+        );
         projectCache.onChange(projectEvent);
 
         Map<String, Condition> filterConditions = new HashMap<>();
@@ -333,39 +345,74 @@ class ProducerServiceTests {
         }
         OrgFilters orgFilters = new OrgFilters(1, filterConditions);
         OrgDetails orgDetails = new OrgDetails(new Org("org1", 1), orgFilters);
-        ResourceEvent<OrgDetails> orgEvent =
-                new ResourceEvent<>(ResourceType.ORG, "org1", EventType.UPSERT, orgDetails, 1, () -> {});
+        ResourceEvent<OrgDetails> orgEvent = new ResourceEvent<>(
+            ResourceType.ORG,
+            "org1",
+            EventType.UPSERT,
+            orgDetails,
+            1,
+            () -> {}
+        );
         orgCache.onChange(orgEvent);
         VaradhiTopic vTopic = getTopic(TopicState.Producing, "test", project, "region1", nfrStrategy);
         Message message = getMessage(0, 1, null, 12, false);
         if (messageHeaderKey != null && messageHeaderValue != null) {
-            ((SimpleMessage) message).getHeaders().put(messageHeaderKey, messageHeaderValue);
+            ((SimpleMessage)message).getHeaders().put(messageHeaderKey, messageHeaderValue);
         }
         ProducerService producerService = new ProducerService(
-                "region1", storageTopic -> null, orgCache, projectCache, null);
+            "region1",
+            storageTopic -> null,
+            orgCache,
+            projectCache,
+            null
+        );
         boolean result = producerService.applyOrgFilter(vTopic, message);
 
-        assertEquals(expectedResult, result,
-                "Filter evaluation failed for scenario: " + testName);
+        assertEquals(expectedResult, result, "Filter evaluation failed for scenario: " + testName);
     }
 
     static Stream<Arguments> orgFilterScenarios() {
         return Stream.of(
-                Arguments.of("Matching filter", "nfrStrategy1", "key1",
-                        List.of("value1", "value2"), "key1", "value1", true),
-                Arguments.of("Wrong NFR strategy", "nfrStrategy1", "key1",
-                        List.of("value3", "value4"), "key1", "value1", false),
-                Arguments.of("Wrong header key", "nfrStrategy1", "key1",
-                        List.of("value1", "value2"), "key2", "value1", false),
-                Arguments.of("Non-matching value", "nfrStrategy1", "key1",
-                        List.of("value1", "value2"), "key1", "value3", false),
-                Arguments.of("Missing filter", "", "key1",
-                        List.of(), "key1", "value1", false),
-                Arguments.of("Null header", "nfrStrategy1", "key1",
-                        List.of("value1", "value2"), null, null, false)
+            Arguments.of(
+                "Matching filter",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key1",
+                "value1",
+                true
+            ),
+            Arguments.of(
+                "Wrong NFR strategy",
+                "nfrStrategy1",
+                "key1",
+                List.of("value3", "value4"),
+                "key1",
+                "value1",
+                false
+            ),
+            Arguments.of(
+                "Wrong header key",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key2",
+                "value1",
+                false
+            ),
+            Arguments.of(
+                "Non-matching value",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key1",
+                "value3",
+                false
+            ),
+            Arguments.of("Missing filter", "", "key1", List.of(), "key1", "value1", false),
+            Arguments.of("Null header", "nfrStrategy1", "key1", List.of("value1", "value2"), null, null, false)
         );
     }
-
 
 
 

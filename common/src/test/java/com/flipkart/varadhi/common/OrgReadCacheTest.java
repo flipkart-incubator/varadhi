@@ -33,10 +33,15 @@ class OrgReadCacheTest {
         OrgDetails details = new OrgDetails(org, filters);
         Supplier<List<OrgDetails>> supplier = () -> List.of(details);
         OrgReadCache cache = new OrgReadCache(ResourceType.ORG, supplier);
-        ResourceEvent<OrgDetails> orgEvent =
-                new ResourceEvent<>(ResourceType.ORG, "test-org", EventType.UPSERT,
-                        details, 1, () -> {
-                });
+        ResourceEvent<OrgDetails> orgEvent = new ResourceEvent<>(
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            details,
+            1,
+            () -> {
+            }
+        );
         cache.onChange(orgEvent);
         Optional<OrgDetails> result = cache.get("test-org");
         assertTrue(result.isPresent());
@@ -50,8 +55,14 @@ class OrgReadCacheTest {
         OrgDetails details = new OrgDetails(org, filters);
 
         ResourceEvent<OrgDetails> event = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, details, 1, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            details,
+            1,
+            () -> {
+            }
+        );
 
         orgReadCache.onChange(event);
 
@@ -67,16 +78,28 @@ class OrgReadCacheTest {
         OrgDetails initialDetails = new OrgDetails(initialOrg, initialFilters);
 
         ResourceEvent<OrgDetails> initialEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, initialDetails, 1, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            initialDetails,
+            1,
+            () -> {
+            }
+        );
         orgReadCache.onChange(initialEvent);
         Org updatedOrg = new Org("test-org", 2);
         OrgFilters sameFilters = new OrgFilters(3, new HashMap<>());
         OrgDetails updatedDetails = new OrgDetails(updatedOrg, sameFilters);
 
         ResourceEvent<OrgDetails> updateEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, updatedDetails, 2, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            updatedDetails,
+            2,
+            () -> {
+            }
+        );
 
         orgReadCache.onChange(updateEvent);
 
@@ -93,8 +116,14 @@ class OrgReadCacheTest {
         OrgDetails initialDetails = new OrgDetails(initialOrg, initialFilters);
 
         ResourceEvent<OrgDetails> initialEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, initialDetails, 1, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            initialDetails,
+            1,
+            () -> {
+            }
+        );
         orgReadCache.onChange(initialEvent);
 
         Org sameOrg = new Org("test-org", 2);
@@ -104,8 +133,14 @@ class OrgReadCacheTest {
         OrgDetails updatedDetails = new OrgDetails(sameOrg, updatedFilters);
 
         ResourceEvent<OrgDetails> updateEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, updatedDetails, 2, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            updatedDetails,
+            2,
+            () -> {
+            }
+        );
 
         orgReadCache.onChange(updateEvent);
 
@@ -123,15 +158,27 @@ class OrgReadCacheTest {
         OrgDetails details = new OrgDetails(org, filters);
 
         ResourceEvent<OrgDetails> upsertEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.UPSERT, details, 1, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.UPSERT,
+            details,
+            1,
+            () -> {
+            }
+        );
         orgReadCache.onChange(upsertEvent);
 
         assertTrue(orgReadCache.get("test-org").isPresent());
 
         ResourceEvent<OrgDetails> invalidateEvent = new ResourceEvent<>(
-                ResourceType.ORG, "test-org", EventType.INVALIDATE, null, 2, () -> {
-        });
+            ResourceType.ORG,
+            "test-org",
+            EventType.INVALIDATE,
+            null,
+            2,
+            () -> {
+            }
+        );
 
         orgReadCache.onChange(invalidateEvent);
 
