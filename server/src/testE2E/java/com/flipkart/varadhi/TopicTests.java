@@ -5,7 +5,7 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.web.entities.TopicResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,7 +55,7 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         TopicResource r = makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);
@@ -81,7 +81,7 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         String errorValidationTopic = "Invalid Topic name. Check naming constraints.";
@@ -99,14 +99,14 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         TopicResource topic2 = TopicResource.unGrouped(
             topicName,
             o2t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
 
@@ -138,7 +138,7 @@ public class TopicTests extends E2EBase {
             topicName,
             o1t1Project1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         makeCreateRequest(getTopicsUri(o1t1Project1), topic, 200);

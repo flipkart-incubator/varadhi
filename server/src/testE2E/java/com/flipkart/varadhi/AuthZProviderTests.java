@@ -2,11 +2,11 @@ package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.web.entities.TopicResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
@@ -61,7 +61,7 @@ public class AuthZProviderTests extends E2EBase {
             "topic001",
             fkDefault.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         makeCreateRequest(getOrgsUri(), oPublic, 200);

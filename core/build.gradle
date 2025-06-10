@@ -7,4 +7,13 @@ dependencies {
     api(project(':common'))
     api(project(':spi'))
     api(project(':entities'))
+
+    api(libs.vertx.core)
+    implementation(libs.curator.framework)
+    implementation(libs.vertx.zookeeper)
+    implementation(libs.failsafe)
+
+    testImplementation(project(':metastore-zk'))
+    testImplementation(libs.vertx.junit5)
+    testImplementation(libs.curator.test)
 }

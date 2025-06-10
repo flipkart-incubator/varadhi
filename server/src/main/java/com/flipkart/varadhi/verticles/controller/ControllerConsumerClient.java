@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.verticles.controller;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.core.cluster.ControllerConsumerApi;
-import com.flipkart.varadhi.core.cluster.entities.ShardOpResponse;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.api.ControllerConsumerApi;
+import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 
 import java.util.concurrent.CompletableFuture;

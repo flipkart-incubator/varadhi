@@ -13,4 +13,5 @@ module com.flipkart.varadhi.entities {
     exports com.flipkart.varadhi.entities.auth;
     exports com.flipkart.varadhi.entities.utils;
     exports com.flipkart.varadhi.entities.filters;
+    exports com.flipkart.varadhi.entities.web;
 }

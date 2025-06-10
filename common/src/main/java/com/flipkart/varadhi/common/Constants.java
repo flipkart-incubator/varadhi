@@ -18,6 +18,7 @@ public class Constants {
     public static final TopicCapacityPolicy DEFAULT_TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2);
     // System identity constant
     public static final String SYSTEM_IDENTITY = "System";
+    public static final String ANONYMOUS_IDENTITY = "Anonymous";
 
     // Handler name for entity events.
     public static final String ENTITY_EVENTS_HANDLER = "entity-events";

@@ -1,10 +1,10 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.server.spi.RequestContext;
-import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
-import com.flipkart.varadhi.server.spi.authn.AuthenticationProvider;
-import com.flipkart.varadhi.server.spi.utils.OrgResolver;
+import com.flipkart.varadhi.web.spi.RequestContext;
+import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.web.spi.authn.AuthenticationProvider;
+import com.flipkart.varadhi.web.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 

@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerInfo;
-import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
-import com.flipkart.varadhi.core.cluster.entities.ShardDlqMessageResponse;
+import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.core.subscription.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.*;

@@ -3,10 +3,11 @@ package com.flipkart.varadhi.utils;
 import java.lang.reflect.Method;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
-import com.flipkart.varadhi.web.entities.TopicResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -52,7 +53,7 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             CAPACITY_POLICY,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
@@ -76,7 +77,7 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
@@ -93,7 +94,7 @@ class VaradhiTopicFactoryTest {
             TOPIC_NAME,
             project.getName(),
             Constants.DEFAULT_TOPIC_CAPACITY,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();

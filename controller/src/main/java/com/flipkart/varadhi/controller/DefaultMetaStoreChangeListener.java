@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.common.events.ResourceEvent;
-import com.flipkart.varadhi.common.events.ResourceEventListener;
-import com.flipkart.varadhi.common.events.EventType;
+import com.flipkart.varadhi.core.cluster.events.ResourceEvent;
+import com.flipkart.varadhi.core.cluster.events.ResourceEventListener;
+import com.flipkart.varadhi.core.cluster.events.EventType;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;

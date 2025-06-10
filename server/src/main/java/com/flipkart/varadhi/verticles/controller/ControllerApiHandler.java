@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.verticles.controller;
 
-import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
-import com.flipkart.varadhi.core.cluster.entities.ShardOpResponse;
-import com.flipkart.varadhi.core.cluster.entities.SubscriptionOpRequest;
-import com.flipkart.varadhi.core.cluster.entities.UnsidelineOpRequest;
+import com.flipkart.varadhi.core.subscription.ShardOpResponse;
+import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
+import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;

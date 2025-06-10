@@ -18,11 +18,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.flipkart.varadhi.common.exceptions.CapacityException;
+import com.flipkart.varadhi.core.exceptions.CapacityException;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.core.cluster.entities.NodeProvider;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.NodeCapacity;
+import com.flipkart.varadhi.core.cluster.NodeProvider;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.VaradhiSubscription;

@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.core.exceptions.ProduceException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;

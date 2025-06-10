@@ -1,23 +1,23 @@
 package com.flipkart.varadhi.verticles.controller;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.cluster.MembershipListener;
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.MessageRouter;
-import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.MembershipListener;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.MessageRouter;
+import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.AssignmentManager;
 import com.flipkart.varadhi.controller.ControllerApiMgr;
 import com.flipkart.varadhi.controller.OperationMgr;
 import com.flipkart.varadhi.controller.RetryPolicy;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.ComponentKind;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.events.ResourceEventProcessor;
+import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -32,7 +32,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static com.flipkart.varadhi.core.cluster.ControllerRestApi.ROUTE_CONTROLLER;
+import static com.flipkart.varadhi.core.cluster.api.ControllerApi.ROUTE_CONTROLLER;
 
 @Slf4j
 public class ControllerVerticle extends AbstractVerticle {

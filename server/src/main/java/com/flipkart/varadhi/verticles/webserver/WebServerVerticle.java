@@ -2,37 +2,35 @@ package com.flipkart.varadhi.verticles.webserver;
 
 import com.flipkart.varadhi.CoreServices;
 import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.common.ResourceReadCacheRegistry;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
+import com.flipkart.varadhi.core.cluster.api.ControllerApi;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.config.MetricsOptions;
-import com.flipkart.varadhi.services.DlqService;
+import com.flipkart.varadhi.web.subscription.dlq.DlqService;
 import com.flipkart.varadhi.services.IamPolicyService;
-import com.flipkart.varadhi.services.OrgService;
-import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.services.SubscriptionService;
-import com.flipkart.varadhi.services.TeamService;
-import com.flipkart.varadhi.services.VaradhiTopicService;
+import com.flipkart.varadhi.core.OrgService;
+import com.flipkart.varadhi.core.ProjectService;
+import com.flipkart.varadhi.core.SubscriptionService;
+import com.flipkart.varadhi.core.TeamService;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.core.subscription.ShardProvisioner;
+import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
+import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.verticles.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.verticles.controller.ControllerRestClient;
 
-import com.flipkart.varadhi.web.*;
-import com.flipkart.varadhi.web.configurators.*;
 import com.flipkart.varadhi.web.FailureHandler;
 import com.flipkart.varadhi.web.RequestBodyHandler;
-import com.flipkart.varadhi.web.SpanProvider;
+import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -232,7 +230,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         // Initialize controller client and related services
-        ControllerRestApi controllerClient = new ControllerRestClient(messageExchange);
+        ControllerApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()

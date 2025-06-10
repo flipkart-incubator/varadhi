@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.config;
 
-import com.flipkart.varadhi.core.cluster.entities.ComponentKind;
+import com.flipkart.varadhi.core.cluster.ComponentKind;
 import lombok.Data;
 
 @Data

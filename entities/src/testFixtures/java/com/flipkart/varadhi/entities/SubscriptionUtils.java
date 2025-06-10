@@ -294,7 +294,7 @@ public class SubscriptionUtils {
                 Optional.ofNullable(consumptionPolicy).orElse(getConsumptionPolicy()),
                 shards,
                 properties,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         }
     }

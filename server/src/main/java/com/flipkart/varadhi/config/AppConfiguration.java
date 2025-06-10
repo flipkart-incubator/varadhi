@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.config;
 
+import com.flipkart.varadhi.common.ZookeeperConnectConfig;
 import com.flipkart.varadhi.entities.Validatable;
 
-import com.flipkart.varadhi.server.spi.authn.AuthenticationOptions;
-import com.flipkart.varadhi.server.spi.authz.AuthorizationOptions;
+import com.flipkart.varadhi.web.config.RestOptions;
+import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 
 import com.flipkart.varadhi.controller.config.ControllerConfig;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
@@ -48,6 +50,7 @@ public class AppConfiguration implements Validatable {
 
     @NotNull
     private ProducerOptions producerOptions;
+
     @NotNull
     private MessagingStackOptions messagingStackOptions;
 
@@ -70,6 +73,7 @@ public class AppConfiguration implements Validatable {
     @NotNull
     private MemberConfig member;
 
+    // TODO: move it out
     @NotNull
     private ControllerConfig controller;
 

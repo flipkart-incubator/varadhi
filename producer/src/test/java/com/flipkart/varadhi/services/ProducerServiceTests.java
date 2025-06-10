@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.core.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
@@ -300,7 +300,7 @@ class ProducerServiceTests {
             name,
             false,
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         topic.markCreated();
 

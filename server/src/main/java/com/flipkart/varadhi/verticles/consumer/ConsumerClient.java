@@ -1,10 +1,13 @@
 package com.flipkart.varadhi.verticles.consumer;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.core.cluster.entities.*;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.subscription.ShardDlqMessageRequest;
+import com.flipkart.varadhi.core.subscription.ShardDlqMessageResponse;
+import com.flipkart.varadhi.core.subscription.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.*;
-import com.flipkart.varadhi.core.cluster.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;

@@ -26,17 +26,17 @@ public class LifecycleStatus {
     /**
      * The actor code indicating the reason for the current state.
      */
-    private ActorCode actorCode;
+    private ActionCode actionCode;
 
     /**
      * Constructs a new LifecycleStatus instance with the specified state and actor code.
      * The message is set to the default message of the state.
      *
      * @param state     the state of the entity
-     * @param actorCode the actor code indicating the reason for the state
+     * @param actionCode the actor code indicating the reason for the state
      */
-    public LifecycleStatus(State state, ActorCode actorCode) {
-        this(state, state.getDefaultMessage(), actorCode);
+    public LifecycleStatus(State state, ActionCode actionCode) {
+        this(state, state.getDefaultMessage(), actionCode);
     }
 
     /**
@@ -44,15 +44,15 @@ public class LifecycleStatus {
      *
      * @param state     the new state of the entity
      * @param message   the new message associated with the state
-     * @param actorCode the new actor code indicating the reason for the state
+     * @param actionCode the new actor code indicating the reason for the state
      */
-    public void update(State state, String message, ActorCode actorCode) {
+    public void update(State state, String message, ActionCode actionCode) {
         if (this.state == state) {
             throw new IllegalArgumentException("Resource is already in " + state + " state");
         }
         this.state = state;
         this.message = (message != null && !message.isEmpty()) ? message : state.getDefaultMessage();
-        this.actorCode = actorCode;
+        this.actionCode = actionCode;
     }
 
     /**
@@ -63,7 +63,7 @@ public class LifecycleStatus {
      * @param state the new state of the entity
      */
     public void update(State state) {
-        update(state, state.getDefaultMessage(), this.actorCode);
+        update(state, state.getDefaultMessage(), this.actionCode);
     }
 
     /**
@@ -74,7 +74,7 @@ public class LifecycleStatus {
      * @param message the new message associated with the state
      */
     public void update(State state, String message) {
-        update(state, message, this.actorCode);
+        update(state, message, this.actionCode);
     }
 
     /**
@@ -117,7 +117,7 @@ public class LifecycleStatus {
     /**
      * Enum representing the actor codes for entity actions.
      */
-    public enum ActorCode {
+    public enum ActionCode {
         //        USER_INITIATED_ACTION,  // Action initiated directly by the user.
         //        USER_REQUESTED_ADMIN_ACTION,  // Action requested by the user to be performed by an admin.
         //        ADMIN_FORCED_ACTION, // Action intentionally performed by an admin.

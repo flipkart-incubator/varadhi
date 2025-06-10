@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.controller;
 
 import static com.flipkart.varadhi.common.TestHelper.*;
-import static com.flipkart.varadhi.core.cluster.entities.NodeProvider.getAssignment;
-import static com.flipkart.varadhi.core.cluster.entities.NodeProvider.getConsumerNodes;
+import static com.flipkart.varadhi.core.cluster.NodeProvider.getAssignment;
+import static com.flipkart.varadhi.core.cluster.NodeProvider.getConsumerNodes;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,6 +16,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.flipkart.varadhi.core.cluster.ComponentKind;
+import com.flipkart.varadhi.core.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.NodeCapacity;
+import com.flipkart.varadhi.core.cluster.NodeProvider;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,9 +29,8 @@ import org.mockito.ArgumentCaptor;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.controller.config.ControllerConfig;
-import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.entities.*;
+import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -134,9 +139,9 @@ public class ControllerApiMgrTest {
         List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
-        assignments.add(getAssignment(sub1, consumerNodes.get(0), shards.get(0)));
-        assignments.add(getAssignment(sub1, consumerNodes.get(1), shards.get(1)));
-        assignments.add(getAssignment(sub1, consumerNodes.get(2), shards.get(2)));
+        assignments.add(getAssignment(consumerNodes.get(0), sub1, shards.get(0)));
+        assignments.add(getAssignment(consumerNodes.get(1), sub1, shards.get(1)));
+        assignments.add(getAssignment(consumerNodes.get(2), sub1, shards.get(2)));
         doReturn(sub1).when(subscriptionStore).get(sub1.getName());
         doReturn(assignments).when(assignmentManager).getSubAssignments(sub1.getName());
         setupConsumerState(sub1.getName(), 0, ConsumerState.CONSUMING);
@@ -667,15 +672,15 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(3);
 
         List<Assignment> consumer0Assignments = new ArrayList<>();
-        consumer0Assignments.add(getAssignment(sub1, nodes.get(0), shards1.get(0)));
-        consumer0Assignments.add(getAssignment(sub2, nodes.get(0), shards2.get(0)));
+        consumer0Assignments.add(getAssignment(nodes.get(0), sub1, shards1.get(0)));
+        consumer0Assignments.add(getAssignment(nodes.get(0), sub2, shards2.get(0)));
         doAnswer(__ -> new HashMap<>()).when(operationMgr).getShardOps(any());
         doNothing().when(operationMgr).updateSubOp(any());
 
-        doReturn(CompletableFuture.completedFuture(getAssignment(sub1, nodes.get(1), shards1.get(0)))).when(
+        doReturn(CompletableFuture.completedFuture(getAssignment(nodes.get(1), sub1, shards1.get(0)))).when(
             assignmentManager
         ).reAssignShard(consumer0Assignments.get(0), sub1, false);
-        doReturn(CompletableFuture.completedFuture(getAssignment(sub2, nodes.get(1), shards2.get(0)))).when(
+        doReturn(CompletableFuture.completedFuture(getAssignment(nodes.get(1), sub2, shards2.get(0)))).when(
             assignmentManager
         ).reAssignShard(consumer0Assignments.get(1), sub2, false);
 
@@ -746,7 +751,7 @@ public class ControllerApiMgrTest {
         SubscriptionState state
     ) {
         for (int i = 0; i < shards.size(); i++) {
-            assignments.add(getAssignment(sub1, consumerNodes.get(i), shards.get(i)));
+            assignments.add(getAssignment(consumerNodes.get(i), sub1, shards.get(i)));
             setupConsumerState(sub1.getName(), shards.get(i).getShardId(), state.getConsumerState());
         }
         doReturn(sub1).when(subscriptionStore).get(sub1.getName());

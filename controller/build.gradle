@@ -9,6 +9,7 @@ dependencies {
 
     implementation(libs.vertx.micrometer.metrics)
     implementation(libs.commons.lang3)
+    implementation(libs.failsafe)
 
     testImplementation(testFixtures(project(":entities")))
     testImplementation(testFixtures(project(":core")))

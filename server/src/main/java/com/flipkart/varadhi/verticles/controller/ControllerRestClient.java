@@ -1,18 +1,18 @@
 package com.flipkart.varadhi.verticles.controller;
 
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.core.cluster.entities.ShardAssignments;
-import com.flipkart.varadhi.core.cluster.entities.SubscriptionOpRequest;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.api.ControllerApi;
+import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
+import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.core.cluster.entities.UnsidelineOpRequest;
+import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.*;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerRestClient implements ControllerRestApi {
+public class ControllerRestClient implements ControllerApi {
     private final MessageExchange exchange;
 
     public ControllerRestClient(MessageExchange exchange) {

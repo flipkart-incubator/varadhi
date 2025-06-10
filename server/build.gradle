@@ -13,7 +13,7 @@ dependencies {
     implementation(project(":producer"))
     implementation(project(":controller"))
     implementation(project(":consumer"))
-    implementation(project(":server-spi"))
+    implementation(project(":web"))
 
     implementation(libs.log4j.slf4j2.impl)
     implementation(libs.log4j.core)
@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.vertx.config.yaml)
     implementation(libs.vertx.web)
     implementation(libs.vertx.auth.jwt)
-    implementation(libs.vertx.zookeeper)
+
     implementation(libs.vertx.opentelemetry)
     implementation(libs.vertx.opentracing)
     implementation(libs.vertx.micrometer.metrics)

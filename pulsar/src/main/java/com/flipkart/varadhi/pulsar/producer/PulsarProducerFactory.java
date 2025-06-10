@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.pulsar.producer;
 
-import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.core.exceptions.ProduceException;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;

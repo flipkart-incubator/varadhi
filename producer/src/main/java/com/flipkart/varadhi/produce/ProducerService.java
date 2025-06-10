@@ -7,9 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
-import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.core.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.filters.Condition;

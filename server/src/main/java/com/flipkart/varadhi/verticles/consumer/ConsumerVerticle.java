@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.verticles.consumer;
 
 import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.cluster.MessageExchange;
-import com.flipkart.varadhi.cluster.MessageRouter;
-import com.flipkart.varadhi.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.MessageRouter;
+import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.consumer.ConsumerApiMgr;
 import com.flipkart.varadhi.consumer.ConsumersManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
-import com.flipkart.varadhi.core.cluster.entities.MemberInfo;
+import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.verticles.controller.ControllerConsumerClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;

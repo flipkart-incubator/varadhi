@@ -1,0 +1,13 @@
+plugins {
+    id 'com.flipkart.varadhi.java-library-conventions'
+    id 'java-test-fixtures'
+}
+
+dependencies {
+
+    api(project(':entities'))
+    api(project(':common'))
+    api(project(':web-spi'))
+
+    testImplementation(libs.junit.jupiter)
+}

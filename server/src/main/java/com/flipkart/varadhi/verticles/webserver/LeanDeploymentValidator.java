@@ -5,9 +5,9 @@ import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.services.OrgService;
-import com.flipkart.varadhi.services.ProjectService;
-import com.flipkart.varadhi.services.TeamService;
+import com.flipkart.varadhi.core.OrgService;
+import com.flipkart.varadhi.core.ProjectService;
+import com.flipkart.varadhi.core.TeamService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
