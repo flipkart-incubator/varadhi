@@ -1,15 +1,18 @@
-package com.flipkart.varadhi.services;
+package com.flipkart.varadhi.produce;
 
 import com.flipkart.varadhi.common.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.common.events.EventType;
+import com.flipkart.varadhi.common.events.ResourceEvent;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.produce.ProduceResult;
+import com.flipkart.varadhi.entities.filters.Condition;
+import com.flipkart.varadhi.entities.filters.OrgFilters;
+import com.flipkart.varadhi.entities.filters.StringConditions;
 import com.flipkart.varadhi.produce.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
-import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -22,13 +25,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -290,6 +297,111 @@ class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
+    @ParameterizedTest
+    @MethodSource ("orgFilterScenarios")
+    void testApplyOrgFilter(
+        String testName,
+        String nfrStrategy,
+        String filterKey,
+        List<String> filterValues,
+        String messageHeaderKey,
+        String messageHeaderValue,
+        boolean expectedResult
+    ) {
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache = new ResourceReadCache<>(
+            ResourceType.PROJECT,
+            null
+        );
+        ResourceReadCache<OrgDetails> orgCache = new ResourceReadCache<>(ResourceType.ORG, null);
+
+        Project project = Project.of("project1", "desc", "team1", "org1");
+        ResourceEvent<Resource.EntityResource<Project>> projectEvent = new ResourceEvent<>(
+            ResourceType.PROJECT,
+            "project1",
+            EventType.UPSERT,
+            Resource.of(project, ResourceType.PROJECT),
+            1,
+            () -> {}
+        );
+        projectCache.onChange(projectEvent);
+
+        Map<String, Condition> filterConditions = new HashMap<>();
+        if (filterKey != null && filterValues != null) {
+            filterConditions.put(nfrStrategy, new StringConditions.InCondition(filterKey, filterValues));
+        }
+        OrgFilters orgFilters = new OrgFilters(1, filterConditions);
+        OrgDetails orgDetails = new OrgDetails(new Org("org1", 1), orgFilters);
+        ResourceEvent<OrgDetails> orgEvent = new ResourceEvent<>(
+            ResourceType.ORG,
+            "org1",
+            EventType.UPSERT,
+            orgDetails,
+            1,
+            () -> {}
+        );
+        orgCache.onChange(orgEvent);
+        VaradhiTopic vTopic = getTopic(TopicState.Producing, "test", project, "region1", nfrStrategy);
+        Message message = getMessage(0, 1, null, 12, false);
+        if (messageHeaderKey != null && messageHeaderValue != null) {
+            ((SimpleMessage)message).getHeaders().put(messageHeaderKey, messageHeaderValue);
+        }
+        ProducerService producerService = new ProducerService(
+            "region1",
+            producerFactory::newProducer,
+            orgCache,
+            projectCache,
+            null
+        );
+        boolean result = producerService.applyOrgFilter(vTopic, message);
+
+        assertEquals(expectedResult, result, "Filter evaluation failed for scenario: " + testName);
+    }
+
+    static Stream<Arguments> orgFilterScenarios() {
+        return Stream.of(
+            Arguments.of(
+                "Matching filter",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key1",
+                "value1",
+                true
+            ),
+            Arguments.of(
+                "Wrong NFR strategy",
+                "nfrStrategy1",
+                "key1",
+                List.of("value3", "value4"),
+                "key1",
+                "value1",
+                false
+            ),
+            Arguments.of(
+                "Wrong header key",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key2",
+                "value1",
+                false
+            ),
+            Arguments.of(
+                "Non-matching value",
+                "nfrStrategy1",
+                "key1",
+                List.of("value1", "value2"),
+                "key1",
+                "value3",
+                false
+            ),
+            Arguments.of("Missing filter", "", "key1", List.of(), "key1", "value1", false),
+            Arguments.of("Null header", "nfrStrategy1", "key1", List.of("value1", "value2"), null, null, false)
+        );
+    }
+
+
+
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
         return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
     }
@@ -311,12 +423,48 @@ class ProducerServiceTests {
         return topic;
     }
 
+    public VaradhiTopic getTopic(TopicState state, String name, Project project, String region, String nfrStrat) {
+        VaradhiTopic topic = VaradhiTopic.of(
+            project.getName(),
+            name,
+            false,
+            null,
+            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            nfrStrat
+        );
+        topic.markCreated();
+
+        StorageTopic st = new DummyStorageTopic(topic.getName());
+        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
+        ict.setTopicState(state);
+        topic.addInternalTopic(region, ict);
+        return topic;
+    }
+
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), getMessageId());
         headers.put(StdHeaders.get().producerIdentity(), "ANONYMOUS");
         headers.put(StdHeaders.get().produceRegion(), region);
         headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
+        byte[] payload = null;
+        if (payloadSize > 0) {
+            payload = new byte[payloadSize];
+            random.nextBytes(payload);
+        }
+        DummyProducer.DummyMessage message = new DummyProducer.DummyMessage(sleepMs, offset, exceptionClass, payload);
+        return new SimpleMessage(JsonMapper.jsonSerialize(message).getBytes(), headers);
+    }
+
+    public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize, boolean nfr) {
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put(StdHeaders.get().msgId(), getMessageId());
+        headers.put(StdHeaders.get().producerIdentity(), "ANONYMOUS");
+        headers.put(StdHeaders.get().produceRegion(), region);
+        headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
+        if (nfr) {
+            headers.put("key1", "value1");
+        }
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];

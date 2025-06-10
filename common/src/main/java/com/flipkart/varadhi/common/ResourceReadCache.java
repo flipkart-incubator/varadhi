@@ -61,7 +61,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      * @param resourceType the type of resource managed by this provider
      * @param resourceLoader the strategy for loading all resource
      */
-    ResourceReadCache(ResourceType resourceType, Supplier<List<T>> resourceLoader) {
+    public ResourceReadCache(ResourceType resourceType, Supplier<List<T>> resourceLoader) {
         this.resourceType = resourceType;
         this.resourceLoader = resourceLoader;
         this.resources = new ConcurrentHashMap<>();
