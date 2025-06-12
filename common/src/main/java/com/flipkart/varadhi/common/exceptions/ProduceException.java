@@ -1,6 +1,5 @@
-package com.flipkart.varadhi.core.exceptions;
+package com.flipkart.varadhi.common.exceptions;
 
-import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import lombok.experimental.StandardException;
 
 @StandardException

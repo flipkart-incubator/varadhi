@@ -9,7 +9,7 @@ import java.util.function.Function;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
-import com.flipkart.varadhi.core.exceptions.ProduceException;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.filters.Condition;

@@ -9,6 +9,7 @@ module com.flipkart.varadhi.common {
     requires org.apache.commons.collections4;
     requires io.vertx.core;
     requires com.google.common;
+    requires org.hibernate.validator;
 
     exports com.flipkart.varadhi.common;
     exports com.flipkart.varadhi.common.exceptions;

@@ -2,7 +2,7 @@ package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.core.exceptions.ProduceException;
+import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
