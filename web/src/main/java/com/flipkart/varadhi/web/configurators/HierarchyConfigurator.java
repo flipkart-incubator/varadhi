@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.web.configurators;
 
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

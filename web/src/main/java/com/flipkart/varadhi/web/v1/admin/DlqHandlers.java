@@ -2,6 +2,10 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
 import com.flipkart.varadhi.core.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
@@ -28,8 +32,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCR
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
-import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
-import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;

@@ -1,14 +1,15 @@
 package com.flipkart.varadhi.web.v1.authz;
 
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.authz.IamPolicyService;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.*;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -23,10 +24,8 @@ import java.util.stream.Stream;
 
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.*;
-import static com.flipkart.varadhi.entities.Hierarchies.*;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
-import static com.flipkart.varadhi.utils.IamPolicyHelper.AUTH_RESOURCE_NAME_SEPARATOR;
-import static com.flipkart.varadhi.utils.IamPolicyHelper.toResponse;
+import static com.flipkart.varadhi.web.authz.IamPolicyService.AUTH_RESOURCE_NAME_SEPARATOR;
 
 @Slf4j
 @ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})

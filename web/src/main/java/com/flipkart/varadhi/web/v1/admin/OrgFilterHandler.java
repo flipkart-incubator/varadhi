@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.entities.Hierarchies;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;

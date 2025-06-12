@@ -1,14 +1,20 @@
 package com.flipkart.varadhi.web.v1.producer;
 
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.Constants.HttpCodes;
+import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
-import com.flipkart.varadhi.config.MessageConfiguration;
+import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.utils.MessageRequestValidator;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
+import com.flipkart.varadhi.web.MessageRequestValidator;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -59,7 +65,7 @@ public class ProduceHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project",
             List.of(
-                RouteDefinition.post(MethodNames.PRODUCE, API_NAME, "/topics/:topic/produce")
+                RouteDefinition.post(Constants.MethodNames.PRODUCE, API_NAME, "/topics/:topic/produce")
                                .hasBody()
                                .nonBlocking()
                                .metricsEnabled()

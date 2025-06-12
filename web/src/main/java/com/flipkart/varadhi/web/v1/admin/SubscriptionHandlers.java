@@ -1,18 +1,22 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.core.SubscriptionService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
+import com.flipkart.varadhi.web.config.RestOptions;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import com.flipkart.varadhi.web.subscription.SubscriptionPropertyValidator;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.experimental.ExtensionMethod;
@@ -31,8 +35,6 @@ import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELE
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Hierarchies.SubscriptionHierarchy;
-import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;

@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web.configurators;
 
 import com.flipkart.varadhi.common.exceptions.UnAuthenticatedException;
-import com.flipkart.varadhi.config.AppConfiguration;
 
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.web.config.WebConfiguration;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationHandlerProvider;
 
 import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
@@ -26,7 +26,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 public class AuthnConfigurator implements RouteConfigurator {
     private final AuthenticationHandlerWrapper authenticationHandler;
 
-    public AuthnConfigurator(Vertx vertx, AppConfiguration configuration, MeterRegistry meterRegistry)
+    public AuthnConfigurator(Vertx vertx, WebConfiguration configuration, MeterRegistry meterRegistry)
         throws InvalidConfigException {
 
         AuthenticationOptions authenticationConfig = configuration.getAuthenticationOptions();

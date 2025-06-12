@@ -60,7 +60,7 @@ public class AppConfiguration implements Validatable {
     private MessageConfiguration messageConfiguration;
 
     @NotNull
-    private MetricsOptions metricsOptions;
+    private MetricsExporterOptions metricsExporterOptions;
 
     private boolean tracesEnabled = true;
 

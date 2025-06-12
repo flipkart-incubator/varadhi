@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.entities.web;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Strings;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +10,6 @@ import java.util.stream.Collectors;
 
 
 @Data
-@Slf4j
 public class DlqPageMarker {
     private static final Pattern validPageMarkerPattern = Pattern.compile("\\d+=([^~]+)(?:[~]\\d+=([^~]+))*[~]?");
     /*
@@ -45,7 +42,7 @@ public class DlqPageMarker {
                                                .stream()
                                                .map(e -> String.format("%d=%s", e.getKey(), e.getValue()))
                                                .toList();
-        return Strings.join(markers, '~');
+        return String.join("~", markers);
     }
 
     public void addShardMarker(int shardId, String marker) {

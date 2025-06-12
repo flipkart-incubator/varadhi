@@ -1,16 +1,17 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.CoreServices;
-import com.flipkart.varadhi.auth.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
-import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.config.MetricsOptions;
+import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
+import com.flipkart.varadhi.web.authz.IamPolicyService;
+import com.flipkart.varadhi.web.config.WebConfiguration;
 import com.flipkart.varadhi.web.configurators.AuthnConfigurator;
 import com.flipkart.varadhi.web.configurators.AuthzConfigurator;
 import com.flipkart.varadhi.web.configurators.HierarchyConfigurator;
@@ -18,7 +19,6 @@ import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigur
 import com.flipkart.varadhi.web.configurators.RequestBodyParsingConfigurator;
 import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.SubscriptionService;
@@ -47,7 +47,7 @@ import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
-import com.flipkart.varadhi.web.v1.produce.ProduceHandlers;
+import com.flipkart.varadhi.web.v1.producer.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Tracer;
 import io.vertx.core.AbstractVerticle;
@@ -90,9 +90,9 @@ public class WebServerVerticle extends AbstractVerticle {
          * @param configuration the application configuration
          * @return a new VerticleConfig instance
          */
-        static VerticleConfig fromConfig(AppConfiguration configuration) {
+        static VerticleConfig fromConfig(WebConfiguration configuration) {
             return new VerticleConfig(
-                configuration.getRestOptions().getDeployedRegion(),
+                configuration.getDeployedRegion(),
                 configuration.getRestOptions().getDefaultTopicCapacity(),
                 configuration.getFeatureFlags().isLeanDeployment()
             );
@@ -100,7 +100,7 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
     // Immutable configuration and core services
-    private final AppConfiguration configuration;
+    private final WebConfiguration configuration;
     private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
     @SuppressWarnings ("rawtypes")
@@ -124,7 +124,7 @@ public class WebServerVerticle extends AbstractVerticle {
      * @param clusterManager the cluster manager
      */
     public WebServerVerticle(
-        AppConfiguration configuration,
+        WebConfiguration configuration,
         CoreServices services,
         VaradhiClusterManager clusterManager,
         ResourceReadCacheRegistry cacheRegistry
@@ -277,7 +277,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 serviceRegistry.get(TeamService.class),
                 serviceRegistry.get(ProjectService.class)
             );
-            validator.validate(configuration.getRestOptions());
+            validator.validate(configuration.getFeatureFlags());
         }
     }
 

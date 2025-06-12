@@ -10,7 +10,6 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.web.admin.SubscriptionTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -20,7 +19,7 @@ import org.mockito.MockitoAnnotations;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class VaradhiSubscriptionFactoryTest extends SubscriptionTestBase {
+class VaradhiSubscriptionFactoryTest {
 
     private static final String REGION = "local";
     private static final String SUBSCRIPTION_NAME = "testSubscription";
@@ -38,7 +37,6 @@ class VaradhiSubscriptionFactoryTest extends SubscriptionTestBase {
     @InjectMocks
     private VaradhiSubscriptionFactory varadhiSubscriptionFactory;
 
-    @Override
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);

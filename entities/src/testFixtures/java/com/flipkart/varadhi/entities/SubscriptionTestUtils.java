@@ -1,39 +1,55 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.entities.web.SubscriptionResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Utility class for creating and managing Varadhi subscriptions.
  */
-public class SubscriptionUtils {
+public class SubscriptionTestUtils {
 
-    private static final int DEFAULT_NUM_SHARDS = 2;
-    private static final int DEFAULT_QPS = 1000;
-    private static final int DEFAULT_THROUGHPUT_KBPS = 20000;
-    private static final int DEFAULT_READ_FANOUT = 2;
+    public static final int DEFAULT_NUM_SHARDS = 2;
+    public static final int DEFAULT_QPS = 1000;
+    public static final int DEFAULT_THROUGHPUT_KBPS = 20000;
+    public static final int DEFAULT_READ_FANOUT = 2;
 
-    /**
-     * Creates a default HTTP endpoint.
-     *
-     * @return the default HTTP endpoint
-     */
-    public static Endpoint getHttpEndpoint() {
-        return new Endpoint.HttpEndpoint(URI.create("http://localhost:8080"), "GET", "", 500, 500, false);
-    }
+    private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+        URI.create("http://localhost:8080"),
+        "GET",
+        "",
+        500,
+        500,
+        false
+    );
 
-    /**
-     * Creates a default retry policy.
-     *
-     * @return the default retry policy
-     */
-    public static RetryPolicy getRetryPolicy() {
-        return new RetryPolicy(new CodeRange[] {new CodeRange(500, 502)}, RetryPolicy.BackoffType.LINEAR, 1, 100, 4, 3);
-    }
+    private static final RetryPolicy DEFAULT_RETRY_POLICY = new RetryPolicy(
+        new CodeRange[] {new CodeRange(500, 502)},
+        RetryPolicy.BackoffType.LINEAR,
+        1,
+        1,
+        1,
+        3
+    );
+
+    private static final ConsumptionPolicy DEFAULT_CONSUMPTION_POLICY = new ConsumptionPolicy(10, 1, 1, false, 1, null);
+
+    private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = new TopicCapacityPolicy(1, 10, 1);
+
+    private static final SubscriptionShards DEFAULT_SHARDS = new SubscriptionUnitShard(
+        0,
+        DEFAULT_CAPACITY_POLICY,
+        null,
+        null,
+        null
+    );
 
     /**
      * Creates a map of default subscription properties.
@@ -43,23 +59,14 @@ public class SubscriptionUtils {
     public static Map<String, String> getSubscriptionDefaultProperties() {
         return new HashMap<>(
             Map.of(
-                "unsideline.api.message_count",
+                Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
                 "100",
-                "unsideline.api.group_count",
+                Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT,
                 "20",
-                "getmessages.api.messages_limit",
+                Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT,
                 "100"
             )
         );
-    }
-
-    /**
-     * Creates a default consumption policy.
-     *
-     * @return the default consumption policy
-     */
-    public static ConsumptionPolicy getConsumptionPolicy() {
-        return new ConsumptionPolicy(10, 1, 1, false, 1, null);
     }
 
     /**
@@ -289,13 +296,108 @@ public class SubscriptionUtils {
                 Optional.ofNullable(description)
                         .orElse("Test Subscription " + name + " Subscribed to " + subscribedTopic),
                 isGrouped,
-                Optional.ofNullable(endpoint).orElse(getHttpEndpoint()),
-                Optional.ofNullable(retryPolicy).orElse(getRetryPolicy()),
-                Optional.ofNullable(consumptionPolicy).orElse(getConsumptionPolicy()),
+                Optional.ofNullable(endpoint).orElse(DEFAULT_ENDPOINT),
+                Optional.ofNullable(retryPolicy).orElse(DEFAULT_RETRY_POLICY),
+                Optional.ofNullable(consumptionPolicy).orElse(DEFAULT_CONSUMPTION_POLICY),
                 shards,
                 properties,
                 LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         }
+    }
+
+    public static VaradhiSubscription createUngroupedSubscription(
+        String subscriptionName,
+        Project project,
+        VaradhiTopic topic
+    ) {
+        return createSubscription(subscriptionName, false, project, topic);
+    }
+
+    public static VaradhiSubscription createGroupedSubscription(
+        String subscriptionName,
+        Project project,
+        VaradhiTopic topic
+    ) {
+        return createSubscription(subscriptionName, true, project, topic);
+    }
+
+    private static VaradhiSubscription createSubscription(
+        String subscriptionName,
+        boolean grouped,
+        Project project,
+        VaradhiTopic topic
+    ) {
+        return VaradhiSubscription.of(
+            SubscriptionResource.buildInternalName(project.getName(), subscriptionName),
+            project.getName(),
+            topic.getName(),
+            UUID.randomUUID().toString(),
+            grouped,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            getSubscriptionDefaultProperties(),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+    }
+
+    protected SubscriptionResource createSubscriptionResource(
+        String subscriptionName,
+        Project project,
+        TopicResource topic
+    ) {
+        return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
+    }
+
+    protected SubscriptionResource createSubscriptionResource(
+        String subscriptionName,
+        Project project,
+        TopicResource topic,
+        RetryPolicy retryPolicy
+    ) {
+        return SubscriptionResource.of(
+            subscriptionName,
+            project.getName(),
+            topic.getName(),
+            topic.getProject(),
+            "Description",
+            false,
+            DEFAULT_ENDPOINT,
+            retryPolicy,
+            DEFAULT_CONSUMPTION_POLICY,
+            new HashMap<>(),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+    }
+
+    /**
+     * Creates a SubscriptionResource instance with default values.
+     *
+     * @param name          the name of the subscription
+     * @param project       the project associated with the subscription
+     * @param topicResource the topic resource for the subscription
+     * @return a new SubscriptionResource instance
+     */
+    public static SubscriptionResource defaultSubscriptionResource(
+        Project project,
+        TopicResource topicResource,
+        String name
+    ) {
+
+        return SubscriptionResource.of(
+            name,
+            project.getName(),
+            topicResource.getName(),
+            topicResource.getProject(),
+            "Description",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            getSubscriptionDefaultProperties(),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
     }
 }

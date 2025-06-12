@@ -4,6 +4,9 @@ import java.util.Map;
 import java.util.Set;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.core.OrgService;
+import com.flipkart.varadhi.core.ProjectService;
+import com.flipkart.varadhi.core.TeamService;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
@@ -20,7 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.web.authz.IamPolicyService.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.*;
 
 class IamPolicyServiceTest {

@@ -4,6 +4,8 @@ import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;

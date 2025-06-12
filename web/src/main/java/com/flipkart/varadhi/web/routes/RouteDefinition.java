@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.web.routes;
 
 
-import com.flipkart.varadhi.entities.HierarchyFunction;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
+import com.flipkart.varadhi.web.hierarchy.HierarchyFunction;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;

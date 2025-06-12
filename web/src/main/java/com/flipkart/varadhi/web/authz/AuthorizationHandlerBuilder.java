@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web.authz;
 
+import com.flipkart.varadhi.common.Extensions;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.FutureExtensions;
+import com.flipkart.varadhi.web.authn.VertxUserContext;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
-import com.flipkart.varadhi.entities.VertxUserContext;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,7 +24,7 @@ import java.util.Objects;
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
-@ExtensionMethod ({FutureExtensions.class})
+@ExtensionMethod ({Extensions.FutureExtensions.class})
 public class AuthorizationHandlerBuilder {
 
     private final AuthorizationProvider provider;

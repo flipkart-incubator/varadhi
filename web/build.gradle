@@ -8,6 +8,13 @@ dependencies {
     api(project(':entities'))
     api(project(':common'))
     api(project(':web-spi'))
+    api(project(':core'))
+    implementation(project(':producer'))
 
+    implementation(libs.commons.lang3)
+    implementation(libs.opentelemetry.semconv)
+
+    testImplementation(project(':metastore-zk'))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.curator.test)
 }

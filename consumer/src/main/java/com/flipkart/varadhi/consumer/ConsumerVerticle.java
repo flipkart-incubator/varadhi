@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.CoreServices;
+import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;

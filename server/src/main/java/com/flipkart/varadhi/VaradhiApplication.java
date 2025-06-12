@@ -23,7 +23,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
 import com.flipkart.varadhi.consumer.ConsumerVerticle;
 import com.flipkart.varadhi.controller.ControllerVerticle;
-import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
+import com.flipkart.varadhi.web.WebServerVerticle;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.vertx.config.ConfigRetriever;
@@ -384,16 +384,20 @@ public class VaradhiApplication {
     ) {
         log.info("Creating verticles for components: {}", Arrays.toString(memberInfo.roles()));
 
-        return Arrays.stream(memberInfo.roles())
-                     .distinct()
-                     .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-                         case Server -> new WebServerVerticle(config, coreServices, clusterManager, cacheRegistry);
-                         case Controller -> new ControllerVerticle(
-                             config.getController(),
-                             coreServices,
-                             clusterManager
-                         );
-                         case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
-                     }));
+        // TOO: fix it
+        return null;
+
+        //        return Arrays.stream(memberInfo.roles())
+        //                     .distinct()
+        //                     .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
+        //                         case Server -> new WebServerVerticle(config, coreServices, clusterManager,
+        //                             cacheRegistry);
+        //                         case Controller -> new ControllerVerticle(
+        //                             config.getController(),
+        //                             coreServices,
+        //                             clusterManager
+        //                         );
+        //                         case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
+        //                     }));
     }
 }

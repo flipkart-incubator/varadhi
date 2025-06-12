@@ -1,26 +1,32 @@
 package com.flipkart.varadhi.core.config;
 
-import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Builder;
+import lombok.Data;
 
-import java.util.List;
-import java.util.Map;
+/**
+ * Configuration for producer metrics collection and reporting.
+ * This class defines settings for latency percentiles, histogram generation,
+ * and throughput calculation intervals.
+ *
+ * to configure metrics collection behavior.</p>
+ */
+@Data
+@Builder
+public class MetricsOptions {
 
-public interface MetricsOptions extends Map<String, String> {
+    /**
+     * Array of percentile values for latency tracking.
+     * Values should be between 0.0 and 1.0.
+     * Common percentiles are: 0.5 (median), 0.75, 0.90, 0.95, 0.99, 0.999
+     */
+    @NotNull
+    @Size (min = 1, message = "At least one percentile value is required")
+    @Builder.Default
+    private double[] latencyPercentiles = {0.99, 0.999};
 
-    List<String> ALLOWED_EXPORTERS = List.of("prometheus", "jmx", "otlp");
-
-    default String getExporter() {
-        String value = get("exporter");
-        if (value == null || value.isEmpty()) {
-            throw new InvalidConfigException("Exporter must be specified in metrics options");
-        }
-
-        value = value.toLowerCase();
-        if (!ALLOWED_EXPORTERS.contains(value)) {
-            throw new InvalidConfigException(
-                String.format("Exporter must be one of %s, but found %s", String.join(",", ALLOWED_EXPORTERS), value)
-            );
-        }
-        return value;
+    public static MetricsOptions getDefault() {
+        return MetricsOptions.builder().build();
     }
 }

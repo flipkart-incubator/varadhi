@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.subscription;
 
-import com.flipkart.varadhi.config.RestOptions;
+
+import com.flipkart.varadhi.web.config.RestOptions;
 
 import java.util.HashMap;
 import java.util.Map;

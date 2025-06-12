@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.config.MessageConfiguration;
+import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.Multimap;

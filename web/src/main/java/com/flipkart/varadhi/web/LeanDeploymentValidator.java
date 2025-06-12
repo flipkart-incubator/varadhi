@@ -1,4 +1,4 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.core.config.FeatureFlags;
 import com.flipkart.varadhi.entities.Org;

@@ -1,12 +1,13 @@
 package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.spi.db.*;
 import com.flipkart.varadhi.spi.db.TopicStore;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -18,8 +19,6 @@ import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
-import com.flipkart.varadhi.web.entities.TopicResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -176,10 +175,7 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_SuccessfulHardDelete() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
@@ -190,10 +186,7 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_StorageTopicDoesNotExist_SuccessfulHardDelete() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         when(storageTopicService.exists(pulsarStorageTopic.getName())).thenReturn(false);
         when(metaStore.topics().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
@@ -208,10 +201,7 @@ class VaradhiTopicServiceTest {
     @Test
     void deleteVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         doThrow(new VaradhiException("metaStore.topicStore() deletion failed")).when(topicStore)
                                                                                .delete(varadhiTopic.getName());
@@ -265,10 +255,7 @@ class VaradhiTopicServiceTest {
     @Test
     void softDeleteVaradhiTopic_MetaStoreSuccess_UpdatesTopicStatus() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.SOFT_DELETE, actionRequest);
 
@@ -279,10 +266,7 @@ class VaradhiTopicServiceTest {
     @Test
     void softDeleteVaradhiTopic_MetaStoreFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = mockDeleteSetup();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
         doThrow(new VaradhiException("metaStore.topicStore() update failed")).when(topicStore).update(varadhiTopic);
 
         Exception exception = assertThrows(
@@ -385,10 +369,7 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
         when(metaStore.topics().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         varadhiTopicService.restore(varadhiTopic.getName(), actionRequest);
 
@@ -401,10 +382,7 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = spy(createVaradhiTopicMock());
         when(metaStore.topics().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
         doReturn(true).when(varadhiTopic).isActive();
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         Exception exception = assertThrows(
             InvalidOperationForResourceException.class,
@@ -421,10 +399,7 @@ class VaradhiTopicServiceTest {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         varadhiTopic.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
         when(metaStore.topics().get(varadhiTopic.getName())).thenReturn(varadhiTopic);
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.USER_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.USER_ACTION, "message");
 
         Exception exception = assertThrows(
             InvalidOperationForResourceException.class,
@@ -439,10 +414,7 @@ class VaradhiTopicServiceTest {
     @Test
     void restoreVaradhiTopic_NonExistentTopic_ThrowsException() {
         String nonExistentTopicName = "nonExistentTopic";
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "message"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "message");
 
         when(metaStore.topics().get(nonExistentTopicName)).thenThrow(new ResourceNotFoundException("Topic not found"));
 

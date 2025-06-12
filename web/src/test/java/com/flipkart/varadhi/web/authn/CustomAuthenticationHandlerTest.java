@@ -2,11 +2,11 @@ package com.flipkart.varadhi.web.authn;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.exceptions.ServerErrorException;
-import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.ResourceHierarchy;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.spi.RequestContext;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.web.spi.utils.OrgResolver;

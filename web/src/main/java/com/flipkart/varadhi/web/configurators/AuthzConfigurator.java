@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.web.configurators;
 
 import com.flipkart.varadhi.spi.ConfigFileResolver;
+import com.flipkart.varadhi.web.authz.AuthorizationHandlerBuilder;
+import com.flipkart.varadhi.web.config.WebConfiguration;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.config.AppConfiguration;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
-import com.flipkart.varadhi.web.AuthorizationHandlerBuilder;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -15,7 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 public class AuthzConfigurator implements RouteConfigurator {
     private final AuthorizationHandlerBuilder authorizationHandlerBuilder;
 
-    public AuthzConfigurator(AppConfiguration configuration, ConfigFileResolver resolver, MeterRegistry meterRegistry)
+    public AuthzConfigurator(WebConfiguration configuration, ConfigFileResolver resolver, MeterRegistry meterRegistry)
         throws InvalidConfigException {
         if (configuration.getAuthorization().isEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver, meterRegistry);
@@ -32,7 +32,7 @@ public class AuthzConfigurator implements RouteConfigurator {
     }
 
     AuthorizationHandlerBuilder createAuthorizationHandler(
-        AppConfiguration configuration,
+        WebConfiguration configuration,
         ConfigFileResolver resolver,
         MeterRegistry meterRegistry
     ) {
@@ -50,7 +50,7 @@ public class AuthzConfigurator implements RouteConfigurator {
 
     @SuppressWarnings ("unchecked")
     private AuthorizationProvider getAuthorizationProvider(
-        AppConfiguration configuration,
+        WebConfiguration configuration,
         ConfigFileResolver resolver,
         MeterRegistry meterRegistry
     ) {

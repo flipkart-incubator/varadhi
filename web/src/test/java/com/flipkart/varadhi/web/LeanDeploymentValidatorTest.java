@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.deployment;
+package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
@@ -15,7 +15,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.flipkart.varadhi.LeanDeploymentValidator;
+import com.flipkart.varadhi.web.config.WebConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;
@@ -41,7 +41,7 @@ public class LeanDeploymentValidatorTest {
     LeanDeploymentValidator deploymentValidator;
     MessagingStackProvider messagingStackProvider;
     MetaStoreProvider metaStoreProvider;
-    AppConfiguration appConfiguration;
+    WebConfiguration appConfiguration;
     MeterRegistry meterRegistry;
     Vertx vertx;
     private OrgService orgService;
@@ -68,7 +68,7 @@ public class LeanDeploymentValidatorTest {
         when(metaStoreProvider.getMetaStore()).thenReturn(varadhiMetaStore);
         when(messagingStackProvider.getProducerFactory()).thenReturn(mock(ProducerFactory.class));
 
-        appConfiguration = YamlLoader.loadConfig("test/configuration.yml", AppConfiguration.class);
+        appConfiguration = YamlLoader.loadConfig("test/configuration.yml", WebConfiguration.class);
 
 
         orgService = new OrgService(varadhiMetaStore.orgs(), varadhiMetaStore.teams());
@@ -86,25 +86,25 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testNoEntitiesPresent_Success() {
-        deploymentValidator.validate(appConfiguration.getRestOptions());
-        Org org = orgService.getOrg(appConfiguration.getRestOptions().getDefaultOrg());
-        assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), org.getName());
+        deploymentValidator.validate(appConfiguration.getFeatureFlags());
+        Org org = orgService.getOrg(appConfiguration.getFeatureFlags().getDefaultOrg());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultOrg(), org.getName());
 
-        Team team = teamService.getTeam(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
-        assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), team.getName());
+        Team team = teamService.getTeam(appConfiguration.getFeatureFlags().getDefaultTeam(), org.getName());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultTeam(), team.getName());
 
-        Project project = projectService.getProject(appConfiguration.getRestOptions().getDefaultProject());
-        assertEquals(appConfiguration.getRestOptions().getDefaultProject(), project.getName());
+        Project project = projectService.getProject(appConfiguration.getFeatureFlags().getDefaultProject());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultProject(), project.getName());
     }
 
     @Test
     public void testEntitiesPresentWithDefaultName_Success() {
-        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
+        Org org = Org.of(appConfiguration.getFeatureFlags().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
+        Team team = Team.of(appConfiguration.getFeatureFlags().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
         Project project = Project.of(
-            appConfiguration.getRestOptions().getDefaultProject(),
+            appConfiguration.getFeatureFlags().getDefaultProject(),
 
             "",
             team.getName(),
@@ -112,15 +112,15 @@ public class LeanDeploymentValidatorTest {
         );
         projectService.createProject(project);
 
-        deploymentValidator.validate(appConfiguration.getRestOptions());
-        Org orgObtained = orgService.getOrg(appConfiguration.getRestOptions().getDefaultOrg());
-        assertEquals(appConfiguration.getRestOptions().getDefaultOrg(), orgObtained.getName());
+        deploymentValidator.validate(appConfiguration.getFeatureFlags());
+        Org orgObtained = orgService.getOrg(appConfiguration.getFeatureFlags().getDefaultOrg());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultOrg(), orgObtained.getName());
 
-        Team teamObtained = teamService.getTeam(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
-        assertEquals(appConfiguration.getRestOptions().getDefaultTeam(), teamObtained.getName());
+        Team teamObtained = teamService.getTeam(appConfiguration.getFeatureFlags().getDefaultTeam(), org.getName());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultTeam(), teamObtained.getName());
 
-        Project pObtained = projectService.getProject(appConfiguration.getRestOptions().getDefaultProject());
-        assertEquals(appConfiguration.getRestOptions().getDefaultProject(), pObtained.getName());
+        Project pObtained = projectService.getProject(appConfiguration.getFeatureFlags().getDefaultProject());
+        assertEquals(appConfiguration.getFeatureFlags().getDefaultProject(), pObtained.getName());
     }
 
     @Test
@@ -143,7 +143,7 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testDifferentTeamPresent_Failure() {
-        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
+        Org org = Org.of(appConfiguration.getFeatureFlags().getDefaultOrg());
         orgService.createOrg(org);
         Team team = Team.of(TEST_TEAM, org.getName());
         teamService.createTeam(team);
@@ -154,7 +154,7 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testMultipleTeamsPresent_Failure() {
-        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
+        Org org = Org.of(appConfiguration.getFeatureFlags().getDefaultOrg());
         orgService.createOrg(org);
         Team team1 = Team.of(TEST_TEAM, org.getName());
         Team team2 = Team.of(TEST_TEAM + "2", org.getName());
@@ -165,9 +165,9 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testDifferentProjectPresent_Failure() {
-        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
+        Org org = Org.of(appConfiguration.getFeatureFlags().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
+        Team team = Team.of(appConfiguration.getFeatureFlags().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
         Project project = Project.of(TEST_PROJECT, "", team.getName(), org.getName());
         projectService.createProject(project);
@@ -178,9 +178,9 @@ public class LeanDeploymentValidatorTest {
 
     @Test
     public void testMultipleProjectsPresent_Failure() {
-        Org org = Org.of(appConfiguration.getRestOptions().getDefaultOrg());
+        Org org = Org.of(appConfiguration.getFeatureFlags().getDefaultOrg());
         orgService.createOrg(org);
-        Team team = Team.of(appConfiguration.getRestOptions().getDefaultTeam(), org.getName());
+        Team team = Team.of(appConfiguration.getFeatureFlags().getDefaultTeam(), org.getName());
         teamService.createTeam(team);
         Project project1 = Project.of(TEST_PROJECT, "", team.getName(), org.getName());
         Project project2 = Project.of(TEST_PROJECT + "2", "", team.getName(), org.getName());
@@ -192,7 +192,7 @@ public class LeanDeploymentValidatorTest {
     private void validateDeployment(String failureMsg) {
         InvalidConfigException ie = assertThrows(
             InvalidConfigException.class,
-            () -> deploymentValidator.validate(appConfiguration.getRestOptions())
+            () -> deploymentValidator.validate(appConfiguration.getFeatureFlags())
         );
         assertEquals(failureMsg, ie.getMessage());
     }

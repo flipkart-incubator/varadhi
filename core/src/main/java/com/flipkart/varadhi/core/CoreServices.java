@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.entities.JsonMapper;
-import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.config.AppConfiguration;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
@@ -110,11 +110,11 @@ public class CoreServices {
                                                       .buildAndRegisterGlobal();
 
         // TODO: make meter registry config configurable. each registry comes with its own config.
-        String meterExporter = "otlp";
+        String meterExporter = configuration.getMetricsExporterOptions().getExporter();
         MeterRegistry meterRegistry = switch (meterExporter) {
             case "jmx" -> new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
             case "prometheus" -> new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            case "otlp" -> new OtlpMeterRegistry(configuration.getOtelOptions()::get, Clock.SYSTEM);
+            case "otlp" -> new OtlpMeterRegistry(configuration.getMetricsExporterOptions()::get, Clock.SYSTEM);
             default -> null;
         };
         return new ObservabilityStack(openTelemetry, meterRegistry);

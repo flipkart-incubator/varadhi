@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.CoreServices;
+import com.flipkart.varadhi.controller.config.EventProcessorConfig;
+import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MembershipListener;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
@@ -36,23 +37,22 @@ public class ControllerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MetaStoreProvider metaStoreProvider;
     private final MeterRegistry meterRegistry;
-    private final OperationsConfig controllerConfig;
+    private final OperationsConfig operationsConfig;
+    private final EventProcessorConfig eventProcessorConfig;
 
     private ResourceEventProcessor entityEventProcessor;
 
     /**
      * Creates a new ControllerVerticle with the specified configuration and services.
-     *
-     * @param config         the controller configuration
-     * @param coreServices   the core services
-     * @param clusterManager the cluster manager
      */
     public ControllerVerticle(
-        OperationsConfig config,
         CoreServices coreServices,
-        VaradhiClusterManager clusterManager
+        VaradhiClusterManager clusterManager,
+        OperationsConfig opsConfig,
+        EventProcessorConfig eventProcessorConfig
     ) {
-        this.controllerConfig = config;
+        this.operationsConfig = opsConfig;
+        this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
@@ -114,7 +114,7 @@ public class ControllerVerticle extends AbstractVerticle {
             clusterManager.getExchange(vertx),
             clusterManager,
             metaStoreProvider.getMetaStore(),
-            controllerConfig.getEventProcessorConfig()
+            eventProcessorConfig
         ).onSuccess(processor -> this.entityEventProcessor = processor);
     }
 
@@ -130,7 +130,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
         // Create operation manager with retry policy
         OperationMgr operationMgr = new OperationMgr(
-            controllerConfig.getMaxConcurrentOps(),
+            operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
             createRetryPolicy()
         );
@@ -157,10 +157,10 @@ public class ControllerVerticle extends AbstractVerticle {
      */
     private RetryPolicy createRetryPolicy() {
         return new RetryPolicy(
-            controllerConfig.getMaxRetryAllowed(),
-            controllerConfig.getRetryIntervalInSeconds(),
-            controllerConfig.getRetryMinBackoffInSeconds(),
-            controllerConfig.getRetryMaxBackOffInSeconds()
+            operationsConfig.getMaxRetryAllowed(),
+            operationsConfig.getRetryIntervalInSeconds(),
+            operationsConfig.getRetryMinBackoffInSeconds(),
+            operationsConfig.getRetryMaxBackOffInSeconds()
         );
     }
 

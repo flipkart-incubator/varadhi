@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.log4j.core)
     implementation(libs.commons.lang3)
     implementation(libs.failsafe)
+    implementation(libs.opentelemetry.sdk)
 
     implementation(libs.vertx.core)
     implementation(libs.vertx.config)
@@ -26,24 +27,14 @@ dependencies {
     implementation(libs.vertx.web)
     implementation(libs.vertx.auth.jwt)
 
-    implementation(libs.vertx.opentelemetry)
-    implementation(libs.vertx.opentracing)
     implementation(libs.vertx.micrometer.metrics)
-    implementation(libs.micrometer.registry.prometheus)
+    implementation(libs.vertx.opentelemetry)
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
         runtimeOnly(libs.netty.resolver.dns.native.macos)
     }
 
-    implementation(libs.opentelemetry.sdk)
-    implementation(libs.opentelemetry.exporter.logging)
-    implementation(libs.opentelemetry.exporter.otlp)
-    implementation(libs.opentelemetry.exporter.prometheus)
-    implementation(libs.opentelemetry.semconv)
-
-    implementation(libs.micrometer.registry.otlp)
-    implementation(libs.micrometer.registry.jmx)
 
     //For ZK persistence, curator-framework.
     implementation(libs.curator.framework)

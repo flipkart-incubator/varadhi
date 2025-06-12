@@ -5,10 +5,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import com.flipkart.varadhi.core.SpanProvider;
+import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.web.Extensions;
-import com.flipkart.varadhi.web.SpanProvider;
 import com.flipkart.varadhi.web.metrics.ApiMetrics;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.subscription.ShardProvisioner;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
@@ -8,7 +9,6 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -16,7 +16,6 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.utils.ShardProvisioner;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -207,7 +206,7 @@ public class SubscriptionService {
         Project subProject,
         String requestedBy,
         ResourceDeletionType deletionType,
-        ResourceActionRequest actionRequest
+        RequestActionType actionRequest
     ) {
         VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
 
@@ -239,7 +238,7 @@ public class SubscriptionService {
     public CompletableFuture<VaradhiSubscription> restoreSubscription(
         String subscriptionName,
         String requestedBy,
-        ResourceActionRequest actionRequest
+        RequestActionType actionRequest
     ) {
         VaradhiSubscription subscription = subscriptionStore.get(subscriptionName);
 
@@ -254,9 +253,9 @@ public class SubscriptionService {
         }
 
         LifecycleStatus.ActionCode lastAction = subscription.getStatus().getActionCode();
-        boolean isVaradhiAdmin = actionRequest.actorCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION || actionRequest
-                                                                                                                       .actorCode()
-                                                                                                          == LifecycleStatus.ActionCode.ADMIN_ACTION;
+        boolean isVaradhiAdmin = actionRequest.actionCode() == LifecycleStatus.ActionCode.SYSTEM_ACTION || actionRequest
+                                                                                                                        .actionCode()
+                                                                                                           == LifecycleStatus.ActionCode.ADMIN_ACTION;
 
         if (!lastAction.isUserAllowed() && !isVaradhiAdmin) {
             throw new InvalidOperationForResourceException(
@@ -265,7 +264,7 @@ public class SubscriptionService {
         }
 
         return controllerClient.getSubscriptionState(subscriptionName, requestedBy).thenApply(state -> {
-            subscription.restore(actionRequest.actorCode(), actionRequest.message());
+            subscription.restore(actionRequest.actionCode(), actionRequest.message());
             subscriptionStore.update(subscription);
             log.info("Subscription '{}' restored successfully.", subscriptionName);
             return subscription;
@@ -359,10 +358,10 @@ public class SubscriptionService {
     private void handleHardDelete(
         VaradhiSubscription subscription,
         Project subProject,
-        ResourceActionRequest actionRequest
+        RequestActionType actionRequest
     ) {
         try {
-            subscription.markDeleting(actionRequest.actorCode(), actionRequest.message());
+            subscription.markDeleting(actionRequest.actionCode(), actionRequest.message());
             subscriptionStore.update(subscription);
 
             shardProvisioner.deProvision(subscription, subProject);
@@ -382,8 +381,8 @@ public class SubscriptionService {
      * @param subscription  the subscription to be soft-deleted
      * @param actionRequest the request containing the actor code and message for the deletion
      */
-    private void handleSoftDelete(VaradhiSubscription subscription, ResourceActionRequest actionRequest) {
-        subscription.markInactive(actionRequest.actorCode(), actionRequest.message());
+    private void handleSoftDelete(VaradhiSubscription subscription, RequestActionType actionRequest) {
+        subscription.markInactive(actionRequest.actionCode(), actionRequest.message());
         subscriptionStore.update(subscription);
         log.info("Subscription '{}' marked inactive successfully.", subscription.getName());
     }

@@ -10,8 +10,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.core.subscription.ShardProvisioner;
+import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.JsonMapper;
-import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
@@ -31,10 +32,6 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
-import com.flipkart.varadhi.utils.ShardProvisioner;
-import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.web.entities.ResourceActionRequest;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.jmx.JmxConfig;
@@ -53,10 +50,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createGroupedSubscription;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupedSubscription;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.getSubscriptionDefaultProperties;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
-import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
-import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createGroupedSubscription;
-import static com.flipkart.varadhi.web.admin.SubscriptionTestBase.createUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -80,7 +77,7 @@ class SubscriptionServiceTest {
     private VaradhiTopic unGroupedTopic, groupedTopic;
     private VaradhiSubscription subscription1, subscription2;
 
-    private static final String REQUESTED_BY = ANONYMOUS_IDENTITY;
+    private static final String REQUESTED_BY = Constants.ANONYMOUS_IDENTITY;
     private TopicStore topicStore;
     private SubscriptionStore subscriptionStore;
     private OrgStore orgStore;
@@ -144,8 +141,8 @@ class SubscriptionServiceTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
-        subscription1 = SubscriptionTestBase.createUngroupedSubscription("Sub1", project1, unGroupedTopic);
-        subscription2 = SubscriptionTestBase.createUngroupedSubscription("Sub2", project1, unGroupedTopic);
+        subscription1 = createUngroupedSubscription("Sub1", project1, unGroupedTopic);
+        subscription2 = createUngroupedSubscription("Sub2", project1, unGroupedTopic);
 
         orgService.createOrg(org);
         teamService.createTeam(team);
@@ -220,7 +217,7 @@ class SubscriptionServiceTest {
             endpoint,
             retryPolicy,
             consumptionPolicy,
-            SubscriptionPropertyValidator.createPropertyDefaultValueProviders(new RestOptions()),
+            getSubscriptionDefaultProperties(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
@@ -283,7 +280,7 @@ class SubscriptionServiceTest {
         subscriptionService.createSubscription(unGroupedTopic, subscription2, project1);
         subscriptionService.createSubscription(
             unGroupedTopic,
-            SubscriptionTestBase.createUngroupedSubscription("Sub3", project2, unGroupedTopic),
+            createUngroupedSubscription("Sub3", project2, unGroupedTopic),
             project2
         );
 
@@ -414,11 +411,7 @@ class SubscriptionServiceTest {
     @Test
     void createSubscription_NonGroupedTopicWithGroupedSubscription_ThrowsException() {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
-        VaradhiSubscription subscription = SubscriptionTestBase.createGroupedSubscription(
-            "Sub1",
-            project1,
-            unGroupedTopic
-        );
+        VaradhiSubscription subscription = createGroupedSubscription("Sub1", project1, unGroupedTopic);
 
         Exception exception = assertThrows(
             IllegalArgumentException.class,
@@ -437,12 +430,8 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         doReturn(groupedTopic).when(topicStore).get(groupedTopic.getName());
 
-        VaradhiSubscription unGroupedSub = SubscriptionTestBase.createUngroupedSubscription(
-            "Sub1",
-            project1,
-            groupedTopic
-        );
-        VaradhiSubscription groupedSub = SubscriptionTestBase.createGroupedSubscription("Sub2", project1, groupedTopic);
+        VaradhiSubscription unGroupedSub = createUngroupedSubscription("Sub1", project1, groupedTopic);
+        VaradhiSubscription groupedSub = createGroupedSubscription("Sub2", project1, groupedTopic);
 
         assertDoesNotThrow(() -> {
             subscriptionService.createSubscription(groupedTopic, unGroupedSub, project1);
@@ -507,7 +496,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        VaradhiSubscription update = SubscriptionTestBase.createUngroupedSubscription(
+        VaradhiSubscription update = createUngroupedSubscription(
             subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
             project1,
             unGroupedTopic
@@ -531,7 +520,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        VaradhiSubscription update = SubscriptionTestBase.createUngroupedSubscription(
+        VaradhiSubscription update = createUngroupedSubscription(
             subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
             project1,
             unGroupedTopic
@@ -559,7 +548,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        VaradhiSubscription update = SubscriptionTestBase.createGroupedSubscription(
+        VaradhiSubscription update = createGroupedSubscription(
             subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
             project1,
             unGroupedTopic
@@ -587,7 +576,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        VaradhiSubscription update = SubscriptionTestBase.createUngroupedSubscription(
+        VaradhiSubscription update = createUngroupedSubscription(
             subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
             project1,
             unGroupedTopic
@@ -635,10 +624,7 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerApi).getSubscriptionState(subscriptionName, REQUESTED_BY);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Delete"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Delete");
 
         Future.fromCompletionStage(
             subscriptionService.deleteSubscription(
@@ -668,10 +654,7 @@ class SubscriptionServiceTest {
         );
         doReturn(stoppedState).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Delete"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Delete");
 
         assertDoesNotThrow(
             () -> subscriptionService.deleteSubscription(
@@ -698,10 +681,7 @@ class SubscriptionServiceTest {
         );
         doReturn(activeState).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Delete"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Delete");
 
         ExecutionException exception = assertThrows(
             ExecutionException.class,
@@ -732,10 +712,7 @@ class SubscriptionServiceTest {
         doThrow(new RuntimeException("MetaStore deletion failed")).when(subscriptionStore)
                                                                   .delete(subscription1.getName());
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Delete"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Delete");
 
         ExecutionException exception = assertThrows(
             ExecutionException.class,
@@ -765,10 +742,7 @@ class SubscriptionServiceTest {
         doReturn(stoppedState).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
         doThrow(new RuntimeException("DeProvision failed")).when(shardProvisioner).deProvision(any(), any());
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Delete"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Delete");
 
         Exception exception = assertThrows(
             ExecutionException.class,
@@ -800,7 +774,7 @@ class SubscriptionServiceTest {
         );
         doReturn(stoppedState).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
+        RequestActionType softDeleteRequest = new RequestActionType(
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "Soft delete"
         );
@@ -837,7 +811,7 @@ class SubscriptionServiceTest {
         );
         doReturn(stoppedState).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest softDeleteRequest = new ResourceActionRequest(
+        RequestActionType softDeleteRequest = new RequestActionType(
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "Soft delete"
         );
@@ -849,7 +823,7 @@ class SubscriptionServiceTest {
             softDeleteRequest
         ).join();
 
-        ResourceActionRequest hardDeleteRequest = new ResourceActionRequest(
+        RequestActionType hardDeleteRequest = new RequestActionType(
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "Hard delete"
         );
@@ -944,10 +918,7 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Restore"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Restore");
 
         CompletableFuture<VaradhiSubscription> result = subscriptionService.restoreSubscription(
             subscription1.getName(),
@@ -973,10 +944,7 @@ class SubscriptionServiceTest {
         CompletableFuture<SubscriptionState> status = CompletableFuture.completedFuture(SubscriptionState.forStopped());
         doReturn(status).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.USER_ACTION,
-            "Restore"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.USER_ACTION, "Restore");
 
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,
@@ -1000,10 +968,7 @@ class SubscriptionServiceTest {
         doReturn(status).when(controllerApi).getSubscriptionState(subscription1.getName(), REQUESTED_BY);
         doThrow(new RuntimeException("MetaStore update failed")).when(subscriptionStore).update(any());
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Restore"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Restore");
 
         CompletableFuture<VaradhiSubscription> result = subscriptionService.restoreSubscription(
             subscription1.getName(),
@@ -1023,10 +988,7 @@ class SubscriptionServiceTest {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
         subscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
-        ResourceActionRequest actionRequest = new ResourceActionRequest(
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            "Restore"
-        );
+        RequestActionType actionRequest = new RequestActionType(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Restore");
 
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,

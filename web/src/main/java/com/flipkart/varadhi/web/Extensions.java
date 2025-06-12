@@ -1,8 +1,9 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.vertx.JsonSeqStream;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
-import com.flipkart.varadhi.utils.JsonSeqStream;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -164,7 +165,7 @@ public class Extensions {
 
         public static String getIdentityOrDefault(RoutingContext ctx) {
             User user = ctx.user();
-            return null != user ? user.subject() : ANONYMOUS_IDENTITY;
+            return null != user ? user.subject() : Constants.ANONYMOUS_IDENTITY;
         }
 
         // returns true if the request is from one of the configured super user(s).

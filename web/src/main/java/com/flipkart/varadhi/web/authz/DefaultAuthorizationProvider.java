@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.web.authz;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.utils.ClassUtils;
 import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
@@ -10,7 +11,6 @@ import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.Role;
 import com.flipkart.varadhi.entities.auth.UserContext;
 
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.flipkart.varadhi.utils.LoaderUtils.loadClass;
 
 @Slf4j
 public class DefaultAuthorizationProvider implements AuthorizationProvider, AutoCloseable {
@@ -67,7 +66,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
     }
 
     private IamPolicyService initAuthZService(MetaStoreOptions options) {
-        metaStoreProvider = loadClass(options.getProviderClassName());
+        metaStoreProvider = ClassUtils.loadClass(options.getProviderClassName());
         try {
             metaStoreProvider.init(options);
             MetaStore store = metaStoreProvider.getMetaStore();

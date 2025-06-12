@@ -1,13 +1,15 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.entities.web.TopicResource;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.*;
+import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -27,8 +29,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Hierarchies.ProjectHierarchy;
-import static com.flipkart.varadhi.entities.Hierarchies.TopicHierarchy;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;

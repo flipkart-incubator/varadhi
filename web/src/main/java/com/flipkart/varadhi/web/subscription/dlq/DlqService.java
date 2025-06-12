@@ -1,16 +1,15 @@
 package com.flipkart.varadhi.web.subscription.dlq;
 
-import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.api.ControllerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.core.subscription.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
-import com.flipkart.varadhi.web.entities.DlqPageMarker;
-import com.flipkart.varadhi.web.entities.ShardDlqMsgResponseCollector;
+import com.flipkart.varadhi.entities.web.DlqMessagesResponse;
+import com.flipkart.varadhi.entities.web.DlqPageMarker;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -61,7 +60,8 @@ public class DlqService {
         // call getMessage() for each shard on respective consumers.
         // Write response back as and when received from each shard.
         // Return CompletedFuture<Void> will complete/end the request.
-        ShardDlqMsgResponseCollector finalResponse = new ShardDlqMsgResponseCollector();
+        com.flipkart.varadhi.web.subscription.dlq.ShardDlqMsgResponseCollector finalResponse =
+            new ShardDlqMsgResponseCollector();
         boolean isRequestByTimeStamp = earliestFailedAt != UNSPECIFIED_TS;
         return controllerClient.getShardAssignments(subscription.getName()).thenCompose(assignments -> {
             List<CompletableFuture<ShardDlqMessageResponse>> shardFutures = new ArrayList<>();
