@@ -1,5 +1,6 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.VaradhiZkClusterManager;
 import com.flipkart.varadhi.core.OrgReadCache;
@@ -9,8 +10,8 @@ import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.reflect.RecursiveFieldUpdater;
 import com.flipkart.varadhi.common.utils.HostUtils;
 import com.flipkart.varadhi.entities.JsonMapper;
-import com.flipkart.varadhi.config.AppConfiguration;
-import com.flipkart.varadhi.config.MemberConfig;
+import com.flipkart.varadhi.core.config.AppConfiguration;
+import com.flipkart.varadhi.core.config.MemberConfig;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.NodeCapacity;
@@ -20,8 +21,8 @@ import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
-import com.flipkart.varadhi.verticles.consumer.ConsumerVerticle;
-import com.flipkart.varadhi.verticles.controller.ControllerVerticle;
+import com.flipkart.varadhi.consumer.ConsumerVerticle;
+import com.flipkart.varadhi.controller.ControllerVerticle;
 import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;

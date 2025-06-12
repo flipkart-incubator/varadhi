@@ -2,8 +2,8 @@ package com.flipkart.varadhi.controller.impl.opexecutors;
 
 import com.flipkart.varadhi.controller.AssignmentManager;
 import com.flipkart.varadhi.controller.OperationMgr;
-import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;

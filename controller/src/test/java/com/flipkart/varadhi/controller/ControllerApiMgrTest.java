@@ -28,9 +28,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.controller.config.ControllerConfig;
-import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
+import com.flipkart.varadhi.controller.config.OperationsConfig;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -56,7 +56,7 @@ public class ControllerApiMgrTest {
 
     @BeforeEach
     public void preTest() {
-        ControllerConfig config = mock(ControllerConfig.class);
+        OperationsConfig config = mock(OperationsConfig.class);
         doReturn(1).when(config).getMaxConcurrentOps();
         consumerClientFactory = mock(ConsumerClientFactory.class);
         metaStore = mock(MetaStore.class);

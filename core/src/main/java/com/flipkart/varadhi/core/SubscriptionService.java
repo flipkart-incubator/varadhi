@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.core.cluster.api.ControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;

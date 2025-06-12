@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.config.ControllerConfig;
+import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.entities.SubscriptionUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -28,7 +28,7 @@ public class OperationMgrTest {
     @Mock
     private OpStore opStore;
     @Mock
-    private ControllerConfig config;
+    private OperationsConfig config;
     private OperationMgr operationMgr;
     private ExecutorService executor;
 

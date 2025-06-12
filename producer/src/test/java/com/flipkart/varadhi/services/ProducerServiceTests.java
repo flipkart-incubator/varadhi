@@ -7,7 +7,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.config.ProducerOptions;
+import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;

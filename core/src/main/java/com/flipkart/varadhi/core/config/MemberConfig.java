@@ -1,0 +1,13 @@
+package com.flipkart.varadhi.core.config;
+
+import com.flipkart.varadhi.core.cluster.ComponentKind;
+import lombok.Data;
+
+@Data
+public class MemberConfig {
+    private ComponentKind[] roles;
+    private int clusterPort;
+    private int maxQps;
+    private int networkMBps;
+    private int cpuCount;
+}

@@ -18,4 +18,6 @@ module com.flipkart.varadhi.core {
     exports com.flipkart.varadhi.core.subscription;
     exports com.flipkart.varadhi.core.cluster.api;
     exports com.flipkart.varadhi.core.topic;
+    exports com.flipkart.varadhi.core.cluster.controller;
+    exports com.flipkart.varadhi.core.cluster.consumer;
 }

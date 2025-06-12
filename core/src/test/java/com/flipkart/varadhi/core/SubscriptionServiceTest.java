@@ -12,7 +12,7 @@ import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceExcepti
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.config.RestOptions;
-import com.flipkart.varadhi.core.cluster.api.ControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.*;

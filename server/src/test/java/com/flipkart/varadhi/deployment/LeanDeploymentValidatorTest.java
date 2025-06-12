@@ -2,7 +2,7 @@ package com.flipkart.varadhi.deployment;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
-import com.flipkart.varadhi.config.AppConfiguration;
+import com.flipkart.varadhi.core.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;
@@ -15,7 +15,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.flipkart.varadhi.verticles.webserver.LeanDeploymentValidator;
+import com.flipkart.varadhi.LeanDeploymentValidator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import org.apache.curator.framework.CuratorFramework;

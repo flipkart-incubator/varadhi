@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.subscription.ShardDlqMessageResponse;
