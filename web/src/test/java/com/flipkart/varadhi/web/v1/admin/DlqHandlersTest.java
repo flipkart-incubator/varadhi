@@ -7,6 +7,7 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.web.DlqMessage;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
+import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
@@ -30,6 +31,10 @@ import java.util.function.Consumer;
 
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
+import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
+import static com.flipkart.varadhi.entities.Samples.U_TOPIC_RESOURCE_1;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createSubscriptionResource;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -71,11 +76,11 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         UnsidelineRequest unsidelineRequest,
         ArgumentCaptor<UnsidelineRequest> captor
     ) {
-        SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
-        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        Resource.EntityResource<Project> project = Resource.of(PROJECT, ResourceType.PROJECT);
-        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
+        SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
+        Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
@@ -89,7 +94,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineOfTimeStamp() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(System.currentTimeMillis());
         prepUnsidelineRequest(unsidelineRequest, captor);
@@ -107,7 +112,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineOfGroupIds() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofGroupIds(List.of("grp1", "grp2"));
         VaradhiSubscription subscription = prepUnsidelineRequest(unsidelineRequest, captor);
@@ -124,7 +129,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineOfHigherGroupCount() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofGroupIds(List.of("grp1", "grp2"));
         VaradhiSubscription subscription = prepUnsidelineRequest(unsidelineRequest, captor);
@@ -141,7 +146,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineOfMessageIds() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofMessageIds(List.of("mid1", "mid2"));
         VaradhiSubscription subscription = prepUnsidelineRequest(unsidelineRequest, captor);
@@ -158,7 +163,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineOfHigherMessageCount() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofMessageIds(List.of("mid1", "mid2"));
         VaradhiSubscription subscription = prepUnsidelineRequest(unsidelineRequest, captor);
@@ -175,7 +180,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void dlqUnsidelineNoCriteria() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, getUnsidelineUrl("sub12", PROJECT_1));
         ArgumentCaptor<UnsidelineRequest> captor = ArgumentCaptor.forClass(UnsidelineRequest.class);
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(UnsidelineRequest.UNSPECIFIED_TS);
         VaradhiSubscription subscription = prepUnsidelineRequest(unsidelineRequest, captor);
@@ -194,7 +199,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     void testDlqListMessages() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", -1)
+            listMessagesUrl("sub12", PROJECT_1, System.currentTimeMillis(), "", -1)
         );
         ArgumentCaptor<DlqPageMarker> captor = ArgumentCaptor.forClass(DlqPageMarker.class);
         VaradhiSubscription subscription = setupSubscriptionForListMessages();
@@ -242,7 +247,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            listMessagesUrl("sub12", PROJECT, 0, pageMarker.toString(), -1)
+            listMessagesUrl("sub12", PROJECT_1, 0, pageMarker.toString(), -1)
         );
         ArgumentCaptor<DlqPageMarker> captor = ArgumentCaptor.forClass(DlqPageMarker.class);
         VaradhiSubscription subscription = setupSubscriptionForListMessages();
@@ -267,7 +272,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     void testDlqListMessagesInvalidLimit() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "", 5000)
+            listMessagesUrl("sub12", PROJECT_1, System.currentTimeMillis(), "", 5000)
         );
         setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Limit cannot be more than 100.");
@@ -275,7 +280,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     @Test
     void testDlqListMessagesNoCriteria() throws Exception {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, listMessagesUrl("sub12", PROJECT, 0, "", -1));
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, listMessagesUrl("sub12", PROJECT_1, 0, "", -1));
         setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "At least one get messages criteria needs to be specified.");
     }
@@ -284,7 +289,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     void testDlqListMessagesMultipleCriteria() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "1=mId:1:2:3", -1)
+            listMessagesUrl("sub12", PROJECT_1, System.currentTimeMillis(), "1=mId:1:2:3", -1)
         );
         setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Only one of the get messages criteria should be specified.");
@@ -294,18 +299,18 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     void testDlqListMessagesInvalidNextPageMarker() throws Exception {
         HttpRequest<Buffer> request = createRequest(
             HttpMethod.GET,
-            listMessagesUrl("sub12", PROJECT, System.currentTimeMillis(), "mId:1:2:3", -1)
+            listMessagesUrl("sub12", PROJECT_1, System.currentTimeMillis(), "mId:1:2:3", -1)
         );
         setupSubscriptionForListMessages();
         sendRequestWithoutPayload(request, 400, "Invalid page marker: mId:1:2:3");
     }
 
     private VaradhiSubscription setupSubscriptionForListMessages() {
-        SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT, TOPIC_RESOURCE);
-        VaradhiTopic vTopic = TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT, vTopic);
-        Resource.EntityResource<Project> project = Resource.of(PROJECT, ResourceType.PROJECT);
-        doReturn(project).when(projectCache).getOrThrow(PROJECT.getName());
+        SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
+        Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
+        doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
         doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }

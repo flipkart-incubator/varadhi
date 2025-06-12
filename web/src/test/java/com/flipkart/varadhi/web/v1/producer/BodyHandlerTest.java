@@ -2,11 +2,13 @@ package com.flipkart.varadhi.web.v1.producer;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
+import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.web.WebTestBase;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
@@ -27,7 +29,7 @@ public class BodyHandlerTest extends ProduceTestBase {
         super.setUp();
         bodyHandler.setBodyLimit(20);
         route.handler(bodyHandler).handler(ctx -> {
-            ctx.put(ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
+            ctx.put(Constants.ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchies(ctx, true));
             ctx.next();
         }).handler(produceHandlers::produce);
         setupFailureHandler(route);

@@ -5,27 +5,29 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import com.flipkart.varadhi.common.TestHelper;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.core.cluster.api.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.api.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.api.ControllerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.core.subscription.ShardDlqMessageResponse;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.web.DlqMessage;
-import com.flipkart.varadhi.web.admin.SubscriptionTestBase;
-import com.flipkart.varadhi.web.entities.DlqMessagesResponse;
-import com.flipkart.varadhi.web.entities.DlqPageMarker;
+import com.flipkart.varadhi.entities.web.DlqMessagesResponse;
+import com.flipkart.varadhi.entities.web.DlqPageMarker;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
+import com.flipkart.varadhi.web.v1.admin.SubscriptionTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static com.flipkart.varadhi.common.TestHelper.assertException;
-import static com.flipkart.varadhi.common.TestHelper.assertValue;
+import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
+import static com.flipkart.varadhi.entities.Samples.U_TOPIC_RESOURCE_1;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupedSubscription;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -47,10 +49,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsideline() {
-        VaradhiTopic vTopic = SubscriptionTestBase.TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = Mockito.spy(
-            SubscriptionTestBase.createUngroupedSubscription("sub12", SubscriptionTestBase.PROJECT, vTopic)
-        );
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(System.currentTimeMillis());
         String requestedBy = "testUser";
         SubscriptionOperation operation = SubscriptionOperation.unsidelineOp(
@@ -76,10 +76,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsidelineInvalidState() {
-        VaradhiTopic vTopic = SubscriptionTestBase.TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = Mockito.spy(
-            SubscriptionTestBase.createUngroupedSubscription("sub12", SubscriptionTestBase.PROJECT, vTopic)
-        );
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,
@@ -168,10 +166,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testGetMessagesInvalidState() {
-        VaradhiTopic vTopic = SubscriptionTestBase.TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = Mockito.spy(
-            SubscriptionTestBase.createUngroupedSubscription("sub12", SubscriptionTestBase.PROJECT, vTopic)
-        );
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,
@@ -233,10 +229,8 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     private VaradhiSubscription setupSubscriptionForGetMessages() {
         String consumerId = "consumerId";
-        VaradhiTopic vTopic = SubscriptionTestBase.TOPIC_RESOURCE.toVaradhiTopic();
-        VaradhiSubscription subscription = Mockito.spy(
-            SubscriptionTestBase.createUngroupedSubscription("sub12", SubscriptionTestBase.PROJECT, vTopic)
-        );
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = new ArrayList<>();
         for (int i = 0; i < shards.getShardCount(); i++) {

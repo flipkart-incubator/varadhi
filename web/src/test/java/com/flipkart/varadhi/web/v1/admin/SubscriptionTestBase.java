@@ -1,23 +1,15 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 
-import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.web.DlqMessage;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.SubscriptionService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.utils.SubscriptionPropertyValidator;
-import com.flipkart.varadhi.utils.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.web.WebTestBase;
-import com.flipkart.varadhi.entities.web.SubscriptionResource;
-import com.flipkart.varadhi.entities.web.TopicResource;
 import com.google.common.collect.ArrayListMultimap;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;

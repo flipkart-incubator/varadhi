@@ -4,11 +4,13 @@ import java.util.Collections;
 import java.util.List;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
-import com.flipkart.varadhi.utils.VaradhiTopicFactory;
+import com.flipkart.varadhi.web.Extensions;
+import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.web.routes.TelemetryType;

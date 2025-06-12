@@ -8,9 +8,9 @@ import java.util.Set;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.TestUser;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -27,7 +27,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 
 import static com.flipkart.varadhi.entities.TestUser.testUser;
-import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
+import static com.flipkart.varadhi.web.authz.IamPolicyService.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -74,7 +74,7 @@ class DefaultAuthorizationProviderTest {
         Path configFile = tempDir.resolve("config.yaml");
         String yamlContent = """
                     metaStoreOptions:
-                      providerClassName: "com.flipkart.varadhi.utils.InvalidMetaStoreProvider"
+                      providerClassName: "com.flipkart.varadhi.web.utils.InvalidMetaStoreProvider"
                       configFile: ""
                     roleDefinitions:
                       org.admin:

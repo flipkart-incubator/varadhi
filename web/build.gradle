@@ -13,8 +13,18 @@ dependencies {
 
     implementation(libs.commons.lang3)
     implementation(libs.opentelemetry.semconv)
+    implementation(libs.vertx.core)
+    implementation(libs.vertx.web)
 
     testImplementation(project(':metastore-zk'))
+    testImplementation(testFixtures(project(':entities')))
+    testImplementation(testFixtures(project(':spi')))
+    testImplementation(testFixtures(project(':pulsar')))
+    testImplementation(testFixtures(project(':common')))
+    testImplementation(testFixtures(project(':core')))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.vertx.junit5)
+    testImplementation(libs.vertx.web.client)
+    testImplementation(libs.opentelemetry.sdk.testing)
     testImplementation(libs.curator.test)
 }

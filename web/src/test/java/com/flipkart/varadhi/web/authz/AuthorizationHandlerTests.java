@@ -1,10 +1,12 @@
 package com.flipkart.varadhi.web.authz;
 
+import com.flipkart.varadhi.entities.TestUser;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.*;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 
 import com.flipkart.varadhi.web.spi.authz.AuthorizationProvider;
-import com.flipkart.varadhi.entities.Hierarchies;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.auth.ResourceAction;
 import com.flipkart.varadhi.entities.auth.UserContext;
@@ -22,8 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Objects;
 
-import static com.flipkart.varadhi.entities.Hierarchies.*;
-import static com.flipkart.varadhi.entities.TestUser.testUser;
 
 @ExtendWith (VertxExtension.class)
 public class AuthorizationHandlerTests {

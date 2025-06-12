@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.utils;
+package com.flipkart.varadhi.web.utils;
 
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.spi.db.AssignmentStore;

@@ -13,9 +13,9 @@ public class Samples {
         LifecycleStatus.ActionCode.SYSTEM_ACTION,
         "test"
     );
-    public static final SubscriptionResource U_SUB_RESOURCE_1 = SubscriptionTestUtils.defaultSubscriptionResource(
+    public static final SubscriptionResource U_SUB_RESOURCE_1 = SubscriptionTestUtils.createSubscriptionResource(
+        "SUB_1",
         PROJECT_1,
-        U_TOPIC_RESOURCE_1,
-        "SUB_1"
+        U_TOPIC_RESOURCE_1
     );
 }

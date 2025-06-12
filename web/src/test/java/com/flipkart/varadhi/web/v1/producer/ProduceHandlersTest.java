@@ -1,19 +1,21 @@
 package com.flipkart.varadhi.web.v1.producer;
 
+import com.flipkart.varadhi.common.Constants.ContextKeys;
 import com.flipkart.varadhi.common.Result;
+import com.flipkart.varadhi.core.config.MessageHeaderUtils;
+import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.core.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.config.MessageHeaderUtils;
-import com.flipkart.varadhi.config.RestOptions;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.spi.services.DummyProducer;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
+import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.config.RestOptions;
 import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigurator;
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.TelemetryType;
@@ -310,8 +312,6 @@ public class ProduceHandlersTest extends ProduceTestBase {
         projectService = mock(ProjectService.class);
         producerService = mock(ProducerService.class);
         spanProvider = mock(SpanProvider.class);
-        RestOptions options = new RestOptions();
-        options.setDeployedRegion(deployedRegion);
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),

@@ -5,7 +5,6 @@ import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
-import com.flipkart.varadhi.verticles.webserver.WebServerVerticle;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
@@ -28,7 +27,9 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.mockito.Mockito;
 
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -38,7 +39,6 @@ import java.util.function.Consumer;
 import static io.vertx.core.http.HttpMethod.*;
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.mockito.Mockito.mock;
 
 public class WebTestBase {
 

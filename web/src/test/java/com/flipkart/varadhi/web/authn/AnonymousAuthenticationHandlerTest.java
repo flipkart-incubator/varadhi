@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.authn;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.web.spi.utils.OrgResolver;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
@@ -21,7 +22,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.InetSocketAddress;
 
-import static com.flipkart.varadhi.web.Extensions.ANONYMOUS_IDENTITY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -73,7 +73,7 @@ class AnonymousAuthenticationHandlerTest {
 
         User user = userCaptor.getValue();
         assertNotNull(user);
-        Assertions.assertEquals(Extensions.ANONYMOUS_IDENTITY, user.subject());
+        Assertions.assertEquals(Constants.ANONYMOUS_IDENTITY, user.subject());
         assertFalse(user.expired());
     }
 }

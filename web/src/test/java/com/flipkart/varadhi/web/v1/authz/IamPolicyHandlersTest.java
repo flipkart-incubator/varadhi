@@ -5,11 +5,11 @@ import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
 import com.flipkart.varadhi.entities.auth.IamPolicyRequest;
 import com.flipkart.varadhi.entities.auth.IamPolicyResponse;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.services.IamPolicyService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
+import com.flipkart.varadhi.web.authz.IamPolicyService;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Set;
 
-import static com.flipkart.varadhi.utils.IamPolicyHelper.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -101,7 +100,7 @@ public class IamPolicyHandlersTest extends WebTestBase {
         Set<String> roles = Set.of("role1", "role2");
 
         IamPolicyRecord policyRecord = new IamPolicyRecord(
-            getAuthResourceFQN(ResourceType.ORG, orgName),
+            IamPolicyService.getAuthResourceFQN(ResourceType.ORG, orgName),
             0,
             Map.of(user, roles)
         );

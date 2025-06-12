@@ -1,7 +1,6 @@
-package com.flipkart.varadhi;
+package com.flipkart.varadhi.web.spi;
 
 import com.flipkart.varadhi.entities.auth.UserContext;
-import com.flipkart.varadhi.web.spi.RequestContext;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.web.spi.utils.OrgResolver;

@@ -322,7 +322,7 @@ public class SubscriptionTestUtils {
         return createSubscription(subscriptionName, true, project, topic);
     }
 
-    private static VaradhiSubscription createSubscription(
+    public static VaradhiSubscription createSubscription(
         String subscriptionName,
         boolean grouped,
         Project project,
@@ -343,7 +343,7 @@ public class SubscriptionTestUtils {
         );
     }
 
-    protected SubscriptionResource createSubscriptionResource(
+    public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,
         Project project,
         TopicResource topic
@@ -351,7 +351,7 @@ public class SubscriptionTestUtils {
         return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
     }
 
-    protected SubscriptionResource createSubscriptionResource(
+    public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,
         Project project,
         TopicResource topic,
@@ -368,35 +368,6 @@ public class SubscriptionTestUtils {
             retryPolicy,
             DEFAULT_CONSUMPTION_POLICY,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
-        );
-    }
-
-    /**
-     * Creates a SubscriptionResource instance with default values.
-     *
-     * @param name          the name of the subscription
-     * @param project       the project associated with the subscription
-     * @param topicResource the topic resource for the subscription
-     * @return a new SubscriptionResource instance
-     */
-    public static SubscriptionResource defaultSubscriptionResource(
-        Project project,
-        TopicResource topicResource,
-        String name
-    ) {
-
-        return SubscriptionResource.of(
-            name,
-            project.getName(),
-            topicResource.getName(),
-            topicResource.getProject(),
-            "Description",
-            false,
-            DEFAULT_ENDPOINT,
-            DEFAULT_RETRY_POLICY,
-            DEFAULT_CONSUMPTION_POLICY,
-            getSubscriptionDefaultProperties(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
     }

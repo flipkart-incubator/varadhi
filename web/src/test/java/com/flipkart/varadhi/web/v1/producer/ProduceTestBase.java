@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.web.v1.producer;
 
-import com.flipkart.varadhi.config.MessageHeaderUtils;
-import com.flipkart.varadhi.config.RestOptions;
+import com.flipkart.varadhi.core.config.MessageHeaderUtils;
+import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.config.MetricsOptions;
 import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
@@ -43,8 +42,6 @@ public class ProduceTestBase extends WebTestBase {
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
         varadhiTopicService = mock(VaradhiTopicService.class);
-        RestOptions options = new RestOptions();
-        options.setDeployedRegion(deployedRegion);
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),

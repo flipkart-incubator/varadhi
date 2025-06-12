@@ -47,7 +47,7 @@ dependencies {
     testImplementation(libs.curator.test)
     testImplementation(libs.vertx.junit5)
     testImplementation(libs.vertx.web.client)
-    testImplementation(libs.opentelemetry.sdk.testing)
+    
 
     testE2EImplementation(libs.jersey.client)
     testE2EImplementation(libs.jersey.media.json.jackson)

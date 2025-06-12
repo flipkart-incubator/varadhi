@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
 import static com.flipkart.varadhi.entities.Samples.U_TOPIC_RESOURCE_1;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createSubscriptionResource;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubscriptionResourceTest {
@@ -17,11 +18,7 @@ class SubscriptionResourceTest {
     @Test
     void of_CreatesSubscriptionResource() {
 
-        var subscriptionResource = SubscriptionTestUtils.defaultSubscriptionResource(
-            PROJECT_1,
-            U_TOPIC_RESOURCE_1,
-            "subscription1"
-        );
+        var subscriptionResource = createSubscriptionResource("subscription1", PROJECT_1, U_TOPIC_RESOURCE_1);
 
         // Basic creation check with default values
         assertAll(

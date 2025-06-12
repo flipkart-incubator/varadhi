@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.vertx.opentelemetry)
     api(libs.vertx.zookeeper)
 
+    testFixturesImplementation(testFixtures(project(':entities')))
+
     testImplementation(project(':metastore-zk'))
     testImplementation(project(':pulsar'))
     testImplementation(testFixtures(project(':entities')))
