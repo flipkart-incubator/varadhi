@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.vertx.micrometer.metrics)
     implementation(libs.vertx.opentelemetry)
     api(libs.vertx.zookeeper)
-    api(libs.curator.framework)
+    implementation(libs.curator.framework)
 
     testFixturesImplementation(testFixtures(project(':entities')))
 

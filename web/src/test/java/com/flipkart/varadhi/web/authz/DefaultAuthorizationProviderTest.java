@@ -26,7 +26,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 
-import static com.flipkart.varadhi.entities.TestUser.testUser;
 import static com.flipkart.varadhi.web.authz.IamPolicyService.getAuthResourceFQN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;

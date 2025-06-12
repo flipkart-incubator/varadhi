@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.common.utils.YamlLoader;
-import com.flipkart.varadhi.core.config.AppConfiguration;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Org;

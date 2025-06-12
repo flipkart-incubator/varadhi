@@ -8,10 +8,7 @@ include('producer')
 include('pulsar')
 include('consumer')
 include('controller')
-include('web-core')
-include('producer-web')
 include('web-spi')
 include('web')
 include('server')
-
-include 'metastore-zk'
+include('metastore-zk')

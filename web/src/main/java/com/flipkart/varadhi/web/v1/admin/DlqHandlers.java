@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;

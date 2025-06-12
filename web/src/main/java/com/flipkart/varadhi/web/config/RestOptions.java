@@ -2,7 +2,6 @@ package com.flipkart.varadhi.web.config;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data

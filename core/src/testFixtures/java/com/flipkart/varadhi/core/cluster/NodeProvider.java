@@ -1,10 +1,5 @@
 package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.core.cluster.ComponentKind;
-import com.flipkart.varadhi.core.cluster.ConsumerInfo;
-import com.flipkart.varadhi.core.cluster.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.core.cluster.NodeCapacity;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;

@@ -21,9 +21,6 @@ import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
-import com.flipkart.varadhi.consumer.ConsumerVerticle;
-import com.flipkart.varadhi.controller.ControllerVerticle;
-import com.flipkart.varadhi.web.WebServerVerticle;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.vertx.config.ConfigRetriever;
@@ -50,8 +47,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Main application class for Varadhi, responsible for bootstrapping the system.
