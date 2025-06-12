@@ -7,9 +7,8 @@ module com.flipkart.varadhi.core {
     requires com.flipkart.varadhi.entities;
     requires jakarta.validation;
     requires com.google.common;
-    requires transitive io.vertx.core;
+    requires io.vertx.core;
     requires io.vertx.clustermanager.zookeeper;
-    requires curator.framework;
     requires dev.failsafe.core;
     requires io.opentelemetry.api;
     requires micrometer.core;
@@ -22,6 +21,7 @@ module com.flipkart.varadhi.core {
     requires micrometer.registry.prometheus;
     requires micrometer.registry.otlp;
     requires io.vertx.tracing.opentelemetry;
+    requires curator.framework;
 
     exports com.flipkart.varadhi.core;
     exports com.flipkart.varadhi.core.cluster;

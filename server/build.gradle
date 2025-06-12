@@ -38,7 +38,7 @@ dependencies {
 
     //For ZK persistence, curator-framework.
     implementation(libs.curator.framework)
-    runtimeOnly(project(":pulsar"))
+    
 
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
@@ -47,7 +47,7 @@ dependencies {
     testImplementation(libs.curator.test)
     testImplementation(libs.vertx.junit5)
     testImplementation(libs.vertx.web.client)
-    
+
 
     testE2EImplementation(libs.jersey.client)
     testE2EImplementation(libs.jersey.media.json.jackson)

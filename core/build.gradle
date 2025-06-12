@@ -8,7 +8,6 @@ dependencies {
     api(project(':spi'))
     api(project(':entities'))
 
-    api(libs.vertx.core)
     implementation(libs.slf4j.api)
     implementation(libs.failsafe)
     implementation(libs.micrometer.core)
@@ -22,9 +21,11 @@ dependencies {
     implementation(libs.opentelemetry.exporter.prometheus)
     implementation(libs.opentelemetry.semconv)
 
+    api(libs.vertx.core)
     implementation(libs.vertx.micrometer.metrics)
     implementation(libs.vertx.opentelemetry)
     api(libs.vertx.zookeeper)
+    api(libs.curator.framework)
 
     testFixturesImplementation(testFixtures(project(':entities')))
 
