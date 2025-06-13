@@ -347,9 +347,9 @@ public class WebServerVerticle extends AbstractVerticle {
      */
     private List<RouteDefinition> getIamPolicyRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
-        String authProviderName = configuration.getAuthorization() == null ?
+        String authProviderName = configuration.getAuthorizationOptions() == null ?
             null :
-            configuration.getAuthorization().getProviderClassName();
+            configuration.getAuthorizationOptions().getProviderClassName();
         boolean isDefaultProvider = DefaultAuthorizationProvider.class.getName().equals(authProviderName);
 
         if (isDefaultProvider) {

@@ -46,6 +46,12 @@ ext {
             }
         }
     }
+
+    copyConfigForModule = { scope ->
+        destination = layout.buildDirectory.dir("resources/$scope")
+        overridesFile = layout.projectDirectory.file("src/$scope/resources/config.overrides")
+        return copyConfigToDir(overridesFile, destination)
+    }
 }
 
 sourceSets {

@@ -22,9 +22,16 @@ dependencies {
     testImplementation(testFixtures(project(':pulsar')))
     testImplementation(testFixtures(project(':common')))
     testImplementation(testFixtures(project(':core')))
+    testImplementation(testFixtures(project(':web-spi')))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.vertx.junit5)
     testImplementation(libs.vertx.web.client)
     testImplementation(libs.opentelemetry.sdk.testing)
     testImplementation(libs.curator.test)
+}
+
+tasks.register('copyTestConfig', Copy.class, copyConfigForModule('test'))
+
+compileTestE2EJava {
+    dependsOn tasks.named('copyTestConfig')
 }

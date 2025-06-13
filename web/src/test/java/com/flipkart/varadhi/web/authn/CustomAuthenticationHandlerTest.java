@@ -60,7 +60,7 @@ class CustomAuthenticationHandlerTest {
 
     @Test
     void providesHandlerInitializesAuthenticator() {
-        jsonObject.put("authenticationProviderClassName", "com.flipkart.varadhi.MockAuthenticator");
+        jsonObject.put("authenticationProviderClassName", "com.flipkart.varadhi.web.spi.MockAuthenticator");
         jsonObject.put("orgContextExemptionURLs", new ArrayList<>());
         AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
         assertNotNull(handler);

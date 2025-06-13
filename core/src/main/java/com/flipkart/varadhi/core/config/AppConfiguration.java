@@ -18,6 +18,13 @@ public class AppConfiguration implements Validatable {
     @NotBlank (message = "Deployed region must be specified")
     private String deployedRegion;
 
+    /**
+     * Overridable configuration to configure the amount of cpu & nic bandwidth available for this node.
+     * In the future, when this becomes auto-detected, this parameter will become optional.
+     */
+    @NotNull
+    private MemberConfig member;
+
     @NotNull
     private VertxOptions vertxOptions;
 
@@ -39,21 +46,14 @@ public class AppConfiguration implements Validatable {
     @NotNull
     private MetaStoreOptions metaStoreOptions;
 
-    @NotNull
-    private FeatureFlags featureFlags;
-
     /**
      * zookeeper options. This is used to connect to zookeeper for managing node cluster.
      */
     @NotNull
     private ZookeeperConnectConfig zookeeperOptions;
 
-    /**
-     * Overridable configuration to configure the amount of cpu & nic bandwidth available for this node.
-     * In the future, when this becomes auto-detected, this parameter will become optional.
-     */
     @NotNull
-    private MemberConfig member;
+    private FeatureFlags featureFlags;
 
     @NotNull
     @Valid

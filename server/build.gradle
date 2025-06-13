@@ -67,11 +67,6 @@ reporting {
 }
 
 tasks.register('copyMainConfig', Copy.class, copyConfigForModule('main'))
-tasks.register('copyTestConfig', Copy.class, copyConfigForModule('test'))
-
-compileTestE2EJava {
-    dependsOn tasks.named('copyTestConfig')
-}
 
 application {
     mainClass = "com.flipkart.varadhi.VaradhiApplication"

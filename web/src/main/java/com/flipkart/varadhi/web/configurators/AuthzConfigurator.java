@@ -17,7 +17,7 @@ public class AuthzConfigurator implements RouteConfigurator {
 
     public AuthzConfigurator(WebConfiguration configuration, ConfigFileResolver resolver, MeterRegistry meterRegistry)
         throws InvalidConfigException {
-        if (configuration.getAuthorization().isEnabled()) {
+        if (configuration.getAuthorizationOptions().isEnabled()) {
             authorizationHandlerBuilder = createAuthorizationHandler(configuration, resolver, meterRegistry);
         } else {
             authorizationHandlerBuilder = null;
@@ -36,7 +36,7 @@ public class AuthzConfigurator implements RouteConfigurator {
         ConfigFileResolver resolver,
         MeterRegistry meterRegistry
     ) {
-        if (configuration.getAuthorization().isEnabled()) {
+        if (configuration.getAuthorizationOptions().isEnabled()) {
             AuthorizationProvider authorizationProvider = getAuthorizationProvider(
                 configuration,
                 resolver,
@@ -54,13 +54,18 @@ public class AuthzConfigurator implements RouteConfigurator {
         ConfigFileResolver resolver,
         MeterRegistry meterRegistry
     ) {
-        String providerClassName = configuration.getAuthorization().getProviderClassName();
+        String providerClassName = configuration.getAuthorizationOptions().getProviderClassName();
         if (StringUtils.isNotBlank(providerClassName)) {
             try {
                 Class<? extends AuthorizationProvider> clazz = (Class<? extends AuthorizationProvider>)Class.forName(
                     providerClassName
                 );
-                return createAuthorizationProvider(clazz, configuration.getAuthorization(), resolver, meterRegistry);
+                return createAuthorizationProvider(
+                    clazz,
+                    configuration.getAuthorizationOptions(),
+                    resolver,
+                    meterRegistry
+                );
             } catch (ClassNotFoundException | ClassCastException e) {
                 throw new InvalidConfigException(e);
             }

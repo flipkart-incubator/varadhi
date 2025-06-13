@@ -19,7 +19,7 @@ public class WebConfiguration extends AppConfiguration {
 
     private AuthenticationOptions authenticationOptions;
 
-    private AuthorizationOptions authorization;
+    private AuthorizationOptions authorizationOptions;
 
     @NotNull
     private RestOptions restOptions;
