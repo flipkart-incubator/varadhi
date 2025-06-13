@@ -23,6 +23,7 @@ public class AppConfiguration implements Validatable {
      * In the future, when this becomes auto-detected, this parameter will become optional.
      */
     @NotNull
+    @Valid
     private MemberConfig member;
 
     @NotNull

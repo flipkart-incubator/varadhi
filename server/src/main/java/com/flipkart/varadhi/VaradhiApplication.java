@@ -1,5 +1,8 @@
 package com.flipkart.varadhi;
 
+import com.flipkart.varadhi.consumer.ConsumerVerticle;
+import com.flipkart.varadhi.controller.ControllerVerticle;
+import com.flipkart.varadhi.controller.config.ControllerConfiguration;
 import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.VaradhiZkClusterManager;
@@ -21,6 +24,8 @@ import com.flipkart.varadhi.spi.ConfigFile;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.utils.CuratorFrameworkCreator;
+import com.flipkart.varadhi.web.WebServerVerticle;
+import com.flipkart.varadhi.web.config.WebConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.vertx.config.ConfigRetriever;
@@ -47,6 +52,8 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Main application class for Varadhi, responsible for bootstrapping the system.
@@ -73,21 +80,21 @@ public class VaradhiApplication {
      */
     public static void main(String[] args) throws UnknownHostException {
         // Read configuration
-        Pair<AppConfiguration, ConfigFileResolver> configReadResult = readConfiguration(args);
-        AppConfiguration configuration = configReadResult.getLeft();
+        Pair<ComponentConfigurations, ConfigFileResolver> configReadResult = readConfiguration(args);
+        ComponentConfigurations config = configReadResult.getLeft();
         ConfigFileResolver configResolver = configReadResult.getRight();
 
         // Initialize host utilities and standard headers
         HostUtils.init();
-        StdHeaders.init(configuration.getMessageConfiguration().getStdHeaders());
+        StdHeaders.init(config.base.getMessageConfiguration().getStdHeaders());
 
         // Set up member info and core services
-        MemberInfo memberInfo = getMemberInfo(configuration.getMember());
-        CoreServices services = new CoreServices(configuration, configResolver);
-        VaradhiZkClusterManager clusterManager = getClusterManager(configuration, memberInfo.hostname());
+        MemberInfo memberInfo = getMemberInfo(config.base.getMember());
+        CoreServices services = new CoreServices(config.base, configResolver);
+        VaradhiZkClusterManager clusterManager = getClusterManager(config.base, memberInfo.hostname());
 
         Future<Pair<Vertx, Map<ComponentKind, Verticle>>> initFuture = createClusteredVertx(
-            configuration,
+            config.base,
             clusterManager,
             services,
             memberInfo
@@ -96,7 +103,7 @@ public class VaradhiApplication {
 
             // Get component verticles
             Map<ComponentKind, Verticle> verticles = getComponentVerticles(
-                configuration,
+                config,
                 services,
                 clusterManager,
                 memberInfo,
@@ -283,7 +290,7 @@ public class VaradhiApplication {
      * @param args command-line arguments, where the first argument must be the path to the configuration file
      * @return a pair containing the application configuration and config file resolver
      */
-    public static Pair<AppConfiguration, ConfigFileResolver> readConfiguration(String[] args) {
+    public static Pair<ComponentConfigurations, ConfigFileResolver> readConfiguration(String[] args) {
         if (args.length < 1) {
             log.error("Usage: java com.flipkart.varadhi.VaradhiApplication configuration.yml");
             System.exit(-1);
@@ -292,7 +299,26 @@ public class VaradhiApplication {
         String mainConfigPath = args[0];
         ConfigFileResolver configResolver = nameOrPath -> Paths.get(args[0]).resolveSibling(nameOrPath).toString();
 
-        return Pair.of(resolveLinkedConfigFiles(configResolver, readConfigFromFile(mainConfigPath)), configResolver);
+        AppConfiguration baseConfig = resolveLinkedConfigFiles(
+            configResolver,
+            readConfigFromFile(mainConfigPath, AppConfiguration.class)
+        );
+
+        boolean isWebServerEnabled = Arrays.asList(baseConfig.getMember().getRoles()).contains(ComponentKind.Server);
+        WebConfiguration webConfig = isWebServerEnabled ?
+            resolveLinkedConfigFiles(configResolver, readConfigFromFile(mainConfigPath, WebConfiguration.class)) :
+            null;
+        boolean isControllerEnabled = Arrays.asList(baseConfig.getMember().getRoles())
+                                            .contains(ComponentKind.Controller);
+        ControllerConfiguration controllerConfig = isControllerEnabled ?
+            resolveLinkedConfigFiles(
+                configResolver,
+                readConfigFromFile(mainConfigPath, ControllerConfiguration.class)
+            ) :
+            null;
+
+
+        return Pair.of(new ComponentConfigurations(baseConfig, webConfig, controllerConfig), configResolver);
     }
 
     /**
@@ -302,7 +328,8 @@ public class VaradhiApplication {
      * @return the application configuration
      * @throws InvalidConfigException if the configuration is invalid or cannot be read
      */
-    public static AppConfiguration readConfigFromFile(String filePath) throws InvalidConfigException {
+    public static <T extends AppConfiguration> T readConfigFromFile(String filePath, Class<T> configClazz)
+        throws InvalidConfigException {
         log.info("Loading configuration from {}", filePath);
         Vertx vertx = Vertx.vertx();
         ConfigRetriever retriever = null;
@@ -318,7 +345,7 @@ public class VaradhiApplication {
 
             JsonObject content = retriever.getConfig().toCompletionStage().toCompletableFuture().join();
 
-            AppConfiguration configuration = content.mapTo(AppConfiguration.class);
+            T configuration = content.mapTo(configClazz);
             configuration.validate();
             return configuration;
         } catch (Exception e) {
@@ -338,10 +365,7 @@ public class VaradhiApplication {
      * @param config         the application configuration
      * @return the updated application configuration with resolved linked files
      */
-    public static AppConfiguration resolveLinkedConfigFiles(
-        ConfigFileResolver configResolver,
-        AppConfiguration config
-    ) {
+    public static <T extends AppConfiguration> T resolveLinkedConfigFiles(ConfigFileResolver configResolver, T config) {
         RecursiveFieldUpdater.visit(config, ConfigFile.class, (field, value) -> {
             if (value instanceof String path) {
                 if (path.endsWith(".yml")) {
@@ -371,7 +395,7 @@ public class VaradhiApplication {
      * @return a map of component kinds to verticle instances
      */
     private static Map<ComponentKind, Verticle> getComponentVerticles(
-        AppConfiguration config,
+        ComponentConfigurations config,
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         MemberInfo memberInfo,
@@ -379,20 +403,24 @@ public class VaradhiApplication {
     ) {
         log.info("Creating verticles for components: {}", Arrays.toString(memberInfo.roles()));
 
-        // TOO: fix it
-        return null;
+        return Arrays.stream(memberInfo.roles())
+                     .distinct()
+                     .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
+                         case Server -> new WebServerVerticle(config.web, coreServices, clusterManager, cacheRegistry);
+                         case Controller -> new ControllerVerticle(
+                             coreServices,
+                             clusterManager,
+                             config.controller.getOperationsConfig(),
+                             config.controller.getEventProcessorConfig()
+                         );
+                         case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
+                     }));
+    }
 
-        //        return Arrays.stream(memberInfo.roles())
-        //                     .distinct()
-        //                     .collect(Collectors.toMap(Function.identity(), kind -> switch (kind) {
-        //                         case Server -> new WebServerVerticle(config, coreServices, clusterManager,
-        //                             cacheRegistry);
-        //                         case Controller -> new ControllerVerticle(
-        //                             config.getController(),
-        //                             coreServices,
-        //                             clusterManager
-        //                         );
-        //                         case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
-        //                     }));
+    public record ComponentConfigurations(
+        AppConfiguration base,
+        WebConfiguration web,
+        ControllerConfiguration controller
+    ) {
     }
 }
