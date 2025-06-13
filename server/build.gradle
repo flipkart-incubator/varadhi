@@ -71,6 +71,16 @@ reporting {
 }
 
 tasks.register('copyMainConfig', Copy.class, copyConfigForModule('main'))
+tasks.register('copyTestConfig', Copy.class, copyConfigForModule('test'))
+
+compileTestE2EJava {
+    dependsOn tasks.named('copyTestConfig')
+}
+
+testE2E {
+    useJUnitPlatform()
+    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
 
 application {
     mainClass = "com.flipkart.varadhi.VaradhiApplication"
@@ -83,9 +93,4 @@ run {
             "-Dvertx.disableDnsResolver=true",
             "-Dlog4j.configurationFile=$buildDir/resources/main/log4j2.xml"
     ]
-}
-
-testE2E {
-    useJUnitPlatform()
-    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
 }
