@@ -1,11 +1,11 @@
 package com.flipkart.varadhi.controller.impl;
 
-import com.flipkart.varadhi.core.cluster.entities.NodeProvider;
+import com.flipkart.varadhi.core.cluster.NodeProvider;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.entities.NodeCapacity;
-import com.flipkart.varadhi.common.exceptions.CapacityException;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.NodeCapacity;
+import com.flipkart.varadhi.core.exceptions.CapacityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,19 +23,19 @@ public class LeastAssignedStrategyTests {
 
     @Test
     public void testAssign_NoConsumerNodes_ThrowsException() {
-        VaradhiSubscription subscription = SubscriptionUtils.builder()
-                                                            .build("sub1", "subProject1", "subProject1.topic");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(subscription);
+        VaradhiSubscription subscription = SubscriptionTestUtils.builder()
+                                                                .build("sub1", "subProject1", "subProject1.topic");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> consumerNodes = Collections.emptyList();
         assertThrows(CapacityException.class, () -> strategy.assign(shards, subscription, consumerNodes));
     }
 
     @Test
     public void testAssign_EnoughResources_ReturnsAssignments() {
-        VaradhiSubscription subscription = SubscriptionUtils.builder()
-                                                            .setNumShards(2)
-                                                            .build("sub1", "subProject1", "subProject1.topic");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(subscription);
+        VaradhiSubscription subscription = SubscriptionTestUtils.builder()
+                                                                .setNumShards(2)
+                                                                .build("sub1", "subProject1", "subProject1.topic");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(2);
         NodeCapacity initialCapacity = nodes.get(0).getAvailable().clone();
         List<Assignment> assignments = strategy.assign(shards, subscription, nodes);
@@ -52,10 +52,10 @@ public class LeastAssignedStrategyTests {
 
     @Test
     public void testAssign_NotEnoughResources_ThrowsException() {
-        VaradhiSubscription subscription = SubscriptionUtils.builder()
-                                                            .setNumShards(2)
-                                                            .build("sub1", "subProject1", "subProject1.topic");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(subscription);
+        VaradhiSubscription subscription = SubscriptionTestUtils.builder()
+                                                                .setNumShards(2)
+                                                                .build("sub1", "subProject1", "subProject1.topic");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = NodeProvider.getConsumerNodes(2, NodeProvider.getNodeCapacity(400, 10000));
         assertThrows(CapacityException.class, () -> strategy.assign(shards, subscription, nodes));
     }
@@ -64,11 +64,11 @@ public class LeastAssignedStrategyTests {
     @Test
     public void testAssign_NotEnoughDistinctNodes_ReusesNodes() {
         // Create two shards and one consumer node with enough resources
-        VaradhiSubscription subscription = SubscriptionUtils.builder()
-                                                            .setNumShards(3)
-                                                            .setCapacity(new TopicCapacityPolicy(12000, 15000, 2))
-                                                            .build("sub1", "subProject1", "subProject1.topic");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(subscription);
+        VaradhiSubscription subscription = SubscriptionTestUtils.builder()
+                                                                .setNumShards(3)
+                                                                .setCapacity(new TopicCapacityPolicy(12000, 15000, 2))
+                                                                .build("sub1", "subProject1", "subProject1.topic");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = new ArrayList<>();
         nodes.add(NodeProvider.getConsumerNode("node1", NodeProvider.getNodeCapacity(10000, 12000)));
         nodes.add(NodeProvider.getConsumerNode("node2", NodeProvider.getNodeCapacity(10000, 3000)));
@@ -87,11 +87,11 @@ public class LeastAssignedStrategyTests {
     @Test
     public void testAssignReusesAllNodesWhenNoAvailableNodes() {
         // Create two shards and one consumer node with enough resources
-        VaradhiSubscription subscription = SubscriptionUtils.builder()
-                                                            .setNumShards(4)
-                                                            .setCapacity(new TopicCapacityPolicy(12000, 16000, 2))
-                                                            .build("sub1", "subProject1", "subProject1.topic");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(subscription);
+        VaradhiSubscription subscription = SubscriptionTestUtils.builder()
+                                                                .setNumShards(4)
+                                                                .setCapacity(new TopicCapacityPolicy(12000, 16000, 2))
+                                                                .build("sub1", "subProject1", "subProject1.topic");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = new ArrayList<>();
         nodes.add(NodeProvider.getConsumerNode("node1", NodeProvider.getNodeCapacity(10000, 100000)));
         nodes.add(NodeProvider.getConsumerNode("node2", NodeProvider.getNodeCapacity(10000, 100000)));

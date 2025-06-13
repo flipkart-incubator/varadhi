@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.utils;
 
-import com.flipkart.varadhi.config.ZookeeperConnectConfig;
+import com.flipkart.varadhi.common.ZookeeperConnectConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;

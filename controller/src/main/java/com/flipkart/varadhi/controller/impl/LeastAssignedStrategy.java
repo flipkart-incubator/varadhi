@@ -3,10 +3,10 @@ package com.flipkart.varadhi.controller.impl;
 import com.flipkart.varadhi.controller.AssignmentStrategy;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.cluster.Assignment;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.common.exceptions.CapacityException;
+import com.flipkart.varadhi.core.exceptions.CapacityException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;

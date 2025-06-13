@@ -56,7 +56,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         assertAll(
@@ -88,7 +88,7 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of("key", "value"),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         });
 
@@ -109,7 +109,7 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of("key", "value"),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         });
 
@@ -130,7 +130,7 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 null,
                 Map.of("key", "value"),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         });
 
@@ -151,7 +151,7 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 null,
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         });
 
@@ -172,7 +172,7 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of(),
-                LifecycleStatus.ActorCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
             );
         });
 
@@ -192,7 +192,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         subscription.markCreateFailed("Creation failed");
@@ -215,7 +215,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         subscription.markCreated();
@@ -238,7 +238,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         subscription.markDeleteFailed("Deletion failed");
@@ -261,10 +261,10 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
-        subscription.markDeleting(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Deleting");
+        subscription.markDeleting(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deleting");
         assertAll(
             () -> assertEquals(LifecycleStatus.State.DELETING, subscription.getStatus().getState()),
             () -> assertEquals("Deleting", subscription.getStatus().getMessage())
@@ -284,10 +284,10 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
-        subscription.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive");
+        subscription.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive");
         assertAll(
             () -> assertEquals(LifecycleStatus.State.INACTIVE, subscription.getStatus().getState()),
             () -> assertEquals("Inactive", subscription.getStatus().getMessage())
@@ -307,11 +307,11 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
-        subscription.markInactive(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Inactive");
-        subscription.restore(LifecycleStatus.ActorCode.SYSTEM_ACTION, "Restored");
+        subscription.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive");
+        subscription.restore(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Restored");
         assertAll(
             () -> assertEquals(LifecycleStatus.State.CREATED, subscription.getStatus().getState()),
             () -> assertEquals("Restored", subscription.getStatus().getMessage())
@@ -331,7 +331,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "10"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         assertEquals(10, subscription.getIntProperty("key"));
@@ -350,7 +350,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -373,7 +373,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "invalid"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         NumberFormatException exception = assertThrows(NumberFormatException.class, () -> {
@@ -396,7 +396,7 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", Integer.MAX_VALUE + "1"),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         assertThrows(NumberFormatException.class, () -> subscription.getIntProperty("key"));

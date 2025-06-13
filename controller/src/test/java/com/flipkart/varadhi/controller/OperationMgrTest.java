@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.config.ControllerConfig;
-import com.flipkart.varadhi.entities.SubscriptionUtils;
+import com.flipkart.varadhi.controller.config.OperationsConfig;
+import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
@@ -28,7 +28,7 @@ public class OperationMgrTest {
     @Mock
     private OpStore opStore;
     @Mock
-    private ControllerConfig config;
+    private OperationsConfig config;
     private OperationMgr operationMgr;
     private ExecutorService executor;
 
@@ -43,7 +43,8 @@ public class OperationMgrTest {
     @Test
     public void scheduleAndExecuteOperation() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -65,7 +66,8 @@ public class OperationMgrTest {
 
     @Test
     public void orderedExecutionForSingleSubscription() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp1 = getStartOp(sub1);
         SubscriptionOperation stopOp1 = getStopOp(sub1);
         SubscriptionOperation startOp2 = getStartOp(sub1);
@@ -109,7 +111,8 @@ public class OperationMgrTest {
     @Test
     public void duplicateOperationsAreIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -143,9 +146,12 @@ public class OperationMgrTest {
 
     @Test
     public void parallelExecutionForDifferentSubs() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
-        VaradhiSubscription sub2 = SubscriptionUtils.builder().build("project1.sub2", "project1", "project1.topic1");
-        VaradhiSubscription sub3 = SubscriptionUtils.builder().build("project1.sub3", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub2 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub2", "project1", "project1.topic1");
+        VaradhiSubscription sub3 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub3", "project1", "project1.topic1");
         SubscriptionOperation startOp1 = getStartOp(sub1);
         SubscriptionOperation startOp2 = getStopOp(sub2);
         SubscriptionOperation startOp3 = getStartOp(sub3);
@@ -203,8 +209,10 @@ public class OperationMgrTest {
     @Test
     public void updateOnNonTrackedTaskIsIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
-        VaradhiSubscription sub2 = SubscriptionUtils.builder().build("project1.sub2", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub2 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub2", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation startOp2 = getStartOp(sub1);
         SubscriptionOperation startOp3 = getStartOp(sub2);
@@ -234,7 +242,8 @@ public class OperationMgrTest {
     @Test
     public void partialUpdatesDoesNotCompleteTask() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         operationMgr.enqueue(startOp, operation -> {
@@ -261,7 +270,8 @@ public class OperationMgrTest {
     @Test
     public void updateWaitingTaskIsIgnored() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
@@ -295,7 +305,8 @@ public class OperationMgrTest {
     @Test
     public void enqueueWhenOpExecutorThrows() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
         CountDownLatch updateLatch = new CountDownLatch(1);
@@ -320,7 +331,8 @@ public class OperationMgrTest {
     @Test
     public void enqueueWhenOpFailsWithException() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -347,7 +359,8 @@ public class OperationMgrTest {
 
     @Test
     public void updateOpThrows() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -377,7 +390,8 @@ public class OperationMgrTest {
     @Test
     public void saveFailureInExecutionRemovesPendingTask() {
         CountDownLatch executionLatch = new CountDownLatch(1);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -402,7 +416,8 @@ public class OperationMgrTest {
 
     @Test
     public void saveFailureInUpdateRemovesPendingTask() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         CompletableFuture<Void> executionCalled = new CompletableFuture<>();
         ArgumentCaptor<SubscriptionOperation> opCaptor = ArgumentCaptor.forClass(SubscriptionOperation.class);
@@ -426,10 +441,10 @@ public class OperationMgrTest {
 
     @Test
     public void updateOfShardOpUpdatesSubscriptionOp() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder()
-                                                    .setNumShards(2)
-                                                    .build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .setNumShards(2)
+                                                        .build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(sub1);
         SubscriptionOperation startSubOp = getStartOp(sub1);
         ShardOperation shard1Op = getShardStartOp(startSubOp.getId(), shards.get(0), sub1);
         ShardOperation shard2Op = getShardStartOp(startSubOp.getId(), shards.get(1), sub1);
@@ -458,9 +473,9 @@ public class OperationMgrTest {
 
     @Test
     public void testCreateAndEnqueue() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder()
-                                                    .setNumShards(2)
-                                                    .build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .setNumShards(2)
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startSubOp = getStartOp(sub1);
         operationMgr.createAndEnqueue(startSubOp, operation -> CompletableFuture.completedFuture(null));
         verify(opStore, times(1)).createSubOp(startSubOp);
@@ -468,10 +483,10 @@ public class OperationMgrTest {
 
     @Test
     public void testCreateIfNeededAndExecute() {
-        VaradhiSubscription sub1 = SubscriptionUtils.builder()
-                                                    .setNumShards(2)
-                                                    .build("project1.sub1", "project1", "project1.topic1");
-        List<SubscriptionUnitShard> shards = SubscriptionUtils.shardsOf(sub1);
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .setNumShards(2)
+                                                        .build("project1.sub1", "project1", "project1.topic1");
+        List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(sub1);
         SubscriptionOperation startSubOp = getStartOp(sub1);
         ShardOperation shard1Op = getShardStartOp(startSubOp.getId(), shards.get(0), sub1);
         ShardOperation shard2Op = getShardStartOp(startSubOp.getId(), shards.get(1), sub1);
@@ -488,7 +503,8 @@ public class OperationMgrTest {
     public void failedOperationShouldBeRetried() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
 
         operationMgr.enqueue(startOp, operation -> CompletableFuture.completedFuture(null));
@@ -515,7 +531,8 @@ public class OperationMgrTest {
     public void failedOperationIsNotRetriedIfSubAlreadyHasPendingOp() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
 
@@ -534,7 +551,8 @@ public class OperationMgrTest {
     public void subsequentOperationShouldClearPendingRetriesIfAny() {
         RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
-        VaradhiSubscription sub1 = SubscriptionUtils.builder().build("project1.sub1", "project1", "project1.topic1");
+        VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
+                                                        .build("project1.sub1", "project1", "project1.topic1");
         SubscriptionOperation startOp = getStartOp(sub1);
         SubscriptionOperation stopOp = getStopOp(sub1);
 

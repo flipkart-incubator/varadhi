@@ -84,7 +84,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * @param consumptionPolicy the consumption policy of the subscription
      * @param shards            the shards of the subscription
      * @param properties        the properties of the subscription
-     * @param actorCode         the actor code indicating the reason for the state
+     * @param actionCode         the actor code indicating the reason for the state
      *
      * @return a new VaradhiSubscription instance
      */
@@ -99,7 +99,7 @@ public class VaradhiSubscription extends LifecycleEntity {
         ConsumptionPolicy consumptionPolicy,
         SubscriptionShards shards,
         Map<String, String> properties,
-        LifecycleStatus.ActorCode actorCode
+        LifecycleStatus.ActionCode actionCode
     ) {
         return new VaradhiSubscription(
             name,
@@ -112,7 +112,7 @@ public class VaradhiSubscription extends LifecycleEntity {
             retryPolicy,
             consumptionPolicy,
             shards,
-            new LifecycleStatus(LifecycleStatus.State.CREATING, actorCode),
+            new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             properties
         );
     }

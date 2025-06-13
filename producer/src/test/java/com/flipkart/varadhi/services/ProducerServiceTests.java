@@ -1,13 +1,13 @@
 package com.flipkart.varadhi.services;
 
-import com.flipkart.varadhi.common.ResourceReadCache;
+import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.produce.config.ProducerOptions;
+import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -300,7 +300,7 @@ class ProducerServiceTests {
             name,
             false,
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         topic.markCreated();
 

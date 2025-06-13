@@ -1,4 +1,4 @@
-disabledAPIs: []
+deployedRegion: "default"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
@@ -21,40 +21,8 @@ deliveryOptions:
   timeoutMs: 10000
   tracingPolicy: "PROPAGATE"
 
-httpServerOptions:
-  port: 18488
-  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
-  decompressionSupported: false
-  useAlpn: true
-  tracingPolicy: "ALWAYS"
-
-restOptions:
-  defaultTopicCapacity:
-    throughputKBps: 400
-    qps: 100
-    readFanOut: 2
-  deployedRegion: "default"
-  defaultOrg: "default"
-  defaultTeam: "public"
-  defaultProject: "public"
-
 producerOptions:
   producerCacheTtlSeconds: 3600
-  metricsEnabled: true
-
-
-authenticationOptions:
-  configFile: "authn.yml"
-  handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
-  orgContextExemptionURLs:
-    - path: ^\\/v1\\/orgs\$
-      methodList:
-        - POST
-
-authorization:
-  enabled: true
-  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
-  configFile: "authorizationConfig.yml"
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
@@ -64,27 +32,16 @@ metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: "metastore.yml"
 
-featureFlags:
-  leanDeployment: false
-
 zookeeperOptions:
   connectUrl: "${ZOOKEEPER_URL}"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
 
-controller:
-  maxConcurrentOps: 2
-  maxRetryAllowed: 3
-  retryIntervalInSeconds: 10
-  retryMinBackoffInSeconds: 10
-  retryMaxBackOffInSeconds: 60
-
-otelOptions:
-  otlp.url: "${OTEL_URL}"
-  otlp.step: "20s"
-  otlp.aggregationTemporality: "CUMULATIVE"
-  otlp.resourceAttributes:
-  otlp.headers:
+featureFlags:
+  leanDeployment: false
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
 
 messageConfiguration:
   headers:
@@ -105,3 +62,48 @@ messageConfiguration:
   maxIdHeaderSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true
+
+metricsExporterOptions:
+  exporter: "otlp"
+  otlp.url: "${OTEL_URL}"
+  otlp.step: "20s"
+  otlp.aggregationTemporality: "CUMULATIVE"
+  otlp.resourceAttributes:
+  otlp.headers:
+
+tracesEnabled: true
+
+operationsConfig:
+  maxConcurrentOps: 2
+  maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60
+
+disabledAPIs: [ ]
+
+httpServerOptions:
+  port: 18488
+  alpnVersions: [ "HTTP_1_1", "HTTP_2" ]
+  decompressionSupported: false
+  useAlpn: true
+  tracingPolicy: "ALWAYS"
+
+restOptions:
+  defaultTopicCapacity:
+    throughputKBps: 400
+    qps: 100
+    readFanOut: 2
+
+authenticationOptions:
+  configFile: "authn.yml"
+  handlerProviderClassName: "com.flipkart.varadhi.web.authn.UserHeaderAuthenticationHandler"
+  orgContextExemptionURLs:
+    - path: ^\\/v1\\/orgs\$
+      methodList:
+        - POST
+
+authorizationOptions:
+  enabled: true
+  providerClassName: "com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider"
+  configFile: "authorizationConfig.yml"

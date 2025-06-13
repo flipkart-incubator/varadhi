@@ -9,8 +9,8 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.Team;
-import com.flipkart.varadhi.web.entities.SubscriptionResource;
-import com.flipkart.varadhi.web.entities.TopicResource;
+import com.flipkart.varadhi.entities.web.SubscriptionResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -58,10 +58,16 @@ public class SubscriptionTests extends E2EBase {
             "topic1",
             o1t1p1.getName(),
             null,
-            LifecycleStatus.ActorCode.SYSTEM_ACTION,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        p1t2 = TopicResource.grouped("topic2", o1t1p1.getName(), null, LifecycleStatus.ActorCode.SYSTEM_ACTION, "test");
+        p1t2 = TopicResource.grouped(
+            "topic2",
+            o1t1p1.getName(),
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            "test"
+        );
         makeCreateRequest(getOrgsUri(), o1, 200);
         makeCreateRequest(getTeamsUri(o1t1.getOrg()), o1t1, 200);
         makeCreateRequest(getProjectCreateUri(), o1t1p1, 200);
@@ -104,7 +110,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, r);
@@ -134,7 +140,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created = makeGetRequest(
@@ -153,7 +159,7 @@ public class SubscriptionTests extends E2EBase {
             created.getRetryPolicy(),
             created.getConsumptionPolicy(),
             created.getProperties(),
-            created.getActorCode()
+            created.getActionCode()
         );
         //create subscription executes update internally.
         update.setVersion(1);
@@ -179,7 +185,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -200,7 +206,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         makeCreateRequest(
             getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")),
@@ -221,7 +227,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -242,7 +248,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -267,7 +273,7 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActorCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         SubscriptionResource createdSub = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);

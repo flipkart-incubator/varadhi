@@ -1,10 +1,12 @@
 plugins {
     id "com.flipkart.varadhi.java-library-conventions"
+    id 'java-test-fixtures'
 }
+
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":core"))
     implementation(project(":entities"))
+    implementation(project(":common"))
+    implementation(project(":spi"))
     implementation("org.apache.pulsar:pulsar-client-admin:3.3.7")
     implementation("org.apache.commons:commons-text:1.10.0")
 

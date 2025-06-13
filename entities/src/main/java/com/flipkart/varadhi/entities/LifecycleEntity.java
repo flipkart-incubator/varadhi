@@ -44,11 +44,11 @@ public abstract class LifecycleEntity extends MetaStoreEntity {
     /**
      * Marks the entity as deleting with an actor code and message.
      *
-     * @param actorCode the actor code indicating the reason for the state
+     * @param actionCode the actor code indicating the reason for the state
      * @param message   the message associated with the state
      */
-    public void markDeleting(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.DELETING, message, actorCode);
+    public void markDeleting(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.DELETING, message, actionCode);
     }
 
     /**
@@ -63,21 +63,21 @@ public abstract class LifecycleEntity extends MetaStoreEntity {
     /**
      * Marks the entity as inactive with an actor code and message.
      *
-     * @param actorCode the actor code indicating the reason for the state
+     * @param actionCode the actor code indicating the reason for the state
      * @param message   the message associated with the state
      */
-    public void markInactive(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.INACTIVE, message, actorCode);
+    public void markInactive(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.INACTIVE, message, actionCode);
     }
 
     /**
      * Restores the entity to the created state with an actor code and message.
      *
-     * @param actorCode the actor code indicating the reason for the state
+     * @param actionCode the actor code indicating the reason for the state
      * @param message   the message associated with the state
      */
-    public void restore(LifecycleStatus.ActorCode actorCode, String message) {
-        this.status.update(LifecycleStatus.State.CREATED, message, actorCode);
+    public void restore(LifecycleStatus.ActionCode actionCode, String message) {
+        this.status.update(LifecycleStatus.State.CREATED, message, actionCode);
     }
 
     /**

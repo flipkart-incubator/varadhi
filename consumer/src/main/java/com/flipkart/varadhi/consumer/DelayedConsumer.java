@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.consumer;
 
+import com.flipkart.varadhi.common.Extensions;
 import com.flipkart.varadhi.consumer.concurrent.Context;
-import com.flipkart.varadhi.common.FutureExtensions;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * @param <O>
  */
 @Slf4j
-@ExtensionMethod ({FutureExtensions.class})
+@ExtensionMethod ({Extensions.FutureExtensions.class})
 public class DelayedConsumer<O extends Offset> implements Consumer<O> {
 
     private final Consumer<O> delegate;

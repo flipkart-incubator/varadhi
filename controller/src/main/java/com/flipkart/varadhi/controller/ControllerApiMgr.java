@@ -6,13 +6,13 @@ import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
-import com.flipkart.varadhi.core.cluster.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.ControllerConsumerApi;
-import com.flipkart.varadhi.core.cluster.ControllerRestApi;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerInfo;
-import com.flipkart.varadhi.core.cluster.entities.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.entities.ShardAssignments;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
+import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
 @Slf4j
-public class ControllerApiMgr implements ControllerRestApi, ControllerConsumerApi {
+public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;

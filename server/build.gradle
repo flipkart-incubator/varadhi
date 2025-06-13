@@ -13,41 +13,34 @@ dependencies {
     implementation(project(":producer"))
     implementation(project(":controller"))
     implementation(project(":consumer"))
-    implementation(project(":server-spi"))
+    implementation(project(":web"))
 
     implementation(libs.log4j.slf4j2.impl)
     implementation(libs.log4j.core)
     implementation(libs.commons.lang3)
     implementation(libs.failsafe)
+    implementation(libs.opentelemetry.sdk)
 
     implementation(libs.vertx.core)
     implementation(libs.vertx.config)
     implementation(libs.vertx.config.yaml)
     implementation(libs.vertx.web)
     implementation(libs.vertx.auth.jwt)
-    implementation(libs.vertx.zookeeper)
-    implementation(libs.vertx.opentelemetry)
-    implementation(libs.vertx.opentracing)
+
     implementation(libs.vertx.micrometer.metrics)
-    implementation(libs.micrometer.registry.prometheus)
+    implementation(libs.vertx.opentelemetry)
 
     // TODO: check why still getting warning on class not found.
     if (DefaultNativePlatform.getCurrentOperatingSystem().isMacOsX()) {
         runtimeOnly(libs.netty.resolver.dns.native.macos)
     }
 
-    implementation(libs.opentelemetry.sdk)
-    implementation(libs.opentelemetry.exporter.logging)
-    implementation(libs.opentelemetry.exporter.otlp)
-    implementation(libs.opentelemetry.exporter.prometheus)
-    implementation(libs.opentelemetry.semconv)
-
-    implementation(libs.micrometer.registry.otlp)
-    implementation(libs.micrometer.registry.jmx)
-
     //For ZK persistence, curator-framework.
     implementation(libs.curator.framework)
-    runtimeOnly(project(":pulsar"))
+
+    // For running the varadhi server with pulsar and zk persistence.
+    runtimeOnly(project(':pulsar'))
+    runtimeOnly(project(':metastore-zk'))
 
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
@@ -56,7 +49,9 @@ dependencies {
     testImplementation(libs.curator.test)
     testImplementation(libs.vertx.junit5)
     testImplementation(libs.vertx.web.client)
-    testImplementation(libs.opentelemetry.sdk.testing)
+
+    // for e2e tests
+    testRuntimeOnly(project(':metastore-zk'))
 
     testE2EImplementation(libs.jersey.client)
     testE2EImplementation(libs.jersey.media.json.jackson)
@@ -82,6 +77,11 @@ compileTestE2EJava {
     dependsOn tasks.named('copyTestConfig')
 }
 
+testE2E {
+    useJUnitPlatform()
+    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
+
 application {
     mainClass = "com.flipkart.varadhi.VaradhiApplication"
 }
@@ -93,9 +93,4 @@ run {
             "-Dvertx.disableDnsResolver=true",
             "-Dlog4j.configurationFile=$buildDir/resources/main/log4j2.xml"
     ]
-}
-
-testE2E {
-    useJUnitPlatform()
-    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
 }

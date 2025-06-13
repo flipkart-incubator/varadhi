@@ -46,6 +46,12 @@ ext {
             }
         }
     }
+
+    copyConfigForModule = { scope ->
+        destination = layout.buildDirectory.dir("resources/$scope")
+        overridesFile = layout.projectDirectory.file("src/$scope/resources/config.overrides")
+        return copyConfigToDir(overridesFile, destination)
+    }
 }
 
 sourceSets {
@@ -59,6 +65,7 @@ sourceSets {
 
 configurations {
     testE2EImplementation.extendsFrom testImplementation
+    testE2ERuntimeOnly.extendsFrom testRuntimeOnly
     testE2ERuntime.extendsFrom testRuntime
 }
 

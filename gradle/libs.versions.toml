@@ -21,7 +21,7 @@ mockito = "5.18.0"
 
 [libraries]
 #core
-netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty"}
+netty-common = { group = "io.netty", name = "netty-common", version.ref = "netty" }
 netty-resolver-dns-native-macos = { group = "io.netty", name = "netty-resolver-dns-native-macos", version.ref = "netty" }
 vertx-core = { group = "io.vertx", name = "vertx-core", version.ref = "vertx" }
 vertx-web = { group = "io.vertx", name = "vertx-web", version.ref = "vertx" }
@@ -59,6 +59,7 @@ jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jack
 
 #storage
 curator-framework = { group = "org.apache.curator", name = "curator-framework", version.ref = "curator_framework" }
+curator-recipes = { group = "org.apache.curator", name = "curator-recipes", version.ref = "curator_framework" }
 
 #telemetry
 opentelemetry-api = { group = "io.opentelemetry", name = "opentelemetry-api", version.ref = "otel" }
