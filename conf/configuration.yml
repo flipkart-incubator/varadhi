@@ -39,6 +39,9 @@ zookeeperOptions:
 
 featureFlags:
   leanDeployment: false
+  defaultOrg: "default"
+  defaultTeam: "public"
+  defaultProject: "public"
 
 messageConfiguration:
   headers:
@@ -70,7 +73,7 @@ metricsExporterOptions:
 
 tracesEnabled: true
 
-controller:
+operationsConfig:
   maxConcurrentOps: 2
   maxRetryAllowed: 3
   retryIntervalInSeconds: 10
@@ -91,13 +94,10 @@ restOptions:
     throughputKBps: 400
     qps: 100
     readFanOut: 2
-  defaultOrg: "default"
-  defaultTeam: "public"
-  defaultProject: "public"
 
 authenticationOptions:
   configFile: "authn.yml"
-  handlerProviderClassName: "com.flipkart.varadhi.authn.UserHeaderAuthenticationHandler"
+  handlerProviderClassName: "com.flipkart.varadhi.web.authn.UserHeaderAuthenticationHandler"
   orgContextExemptionURLs:
     - path: ^\\/v1\\/orgs\$
       methodList:
@@ -105,5 +105,5 @@ authenticationOptions:
 
 authorizationOptions:
   enabled: true
-  providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+  providerClassName: "com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider"
   configFile: "authorizationConfig.yml"

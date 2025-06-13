@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.flipkart.varadhi.common.ZookeeperConnectConfig;
 import com.flipkart.varadhi.entities.Validatable;
 
@@ -13,6 +14,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
+@JsonIgnoreProperties (ignoreUnknown = true)
 public class AppConfiguration implements Validatable {
 
     @NotBlank (message = "Deployed region must be specified")

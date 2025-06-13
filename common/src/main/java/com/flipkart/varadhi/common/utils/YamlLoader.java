@@ -12,15 +12,12 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.*;
-
 public class YamlLoader {
 
     private static final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
     static {
         mapper.findAndRegisterModules();
-        mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public static <T> T loadConfig(String configFile, Class<T> clazz) {

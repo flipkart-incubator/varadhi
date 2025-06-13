@@ -35,10 +35,12 @@ dependencies {
         runtimeOnly(libs.netty.resolver.dns.native.macos)
     }
 
-
     //For ZK persistence, curator-framework.
     implementation(libs.curator.framework)
 
+    // For running the varadhi server with pulsar and zk persistence.
+    runtimeOnly(project(':pulsar'))
+    runtimeOnly(project(':metastore-zk'))
 
     testImplementation(project(":pulsar"))
     testImplementation(testFixtures(project(":spi")))
@@ -52,6 +54,7 @@ dependencies {
     testE2EImplementation(libs.jersey.client)
     testE2EImplementation(libs.jersey.media.json.jackson)
 
+    testE2ERuntime(project(':metastore-zk'))
     testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_version:runtime")
 
     // jacoco aggregation dependency -- explicit inclusion.

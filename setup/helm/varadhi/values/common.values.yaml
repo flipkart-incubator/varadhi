@@ -86,7 +86,7 @@ varadhi:
     authorizationEnabled: true
     authorization:
       superUsers: [ "thanos" ]
-      providerClassName: "com.flipkart.varadhi.auth.DefaultAuthorizationProvider"
+      providerClassName: "com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider"
     messagingStackOptions:
       providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
     metaStoreOptions:

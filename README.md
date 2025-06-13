@@ -21,6 +21,7 @@ See the [Wiki](https://github.com/flipkart-incubator/varadhi/wiki/) for concepts
 spec and other detailed information.
 
 ## Try locally
+
 Give it a go locally on your machine. You will require java 21, docker & python.
 Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/Try-Locally)
 
@@ -33,7 +34,7 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ## Integration Tests
 
 ```bash
-./gradlew copyDependencies copyConfigForE2E -x test
+./gradlew copyDependencies copyE2EConfig -x test
 
 docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg
 
@@ -65,10 +66,12 @@ can be used in a standalone mode. Details can be found [here](https://hub.docker
 
 ### Varadhi Server
 
-Finally, to run the Varadhi server, provide the custom zk & pulsar endpoints at `server/src/main/resources/config.overrides` and then do
+Finally, to run the Varadhi server, provide the custom zk & pulsar endpoints at
+`server/src/main/resources/config.overrides` and then do
 ```./gradlew run```
 
-If you are using the dev profile in our docker compose to start the zk and pulsar, then simply do `./gradlew run`. No config overrides are required.
+If you are using the dev profile in our docker compose to start the zk and pulsar, then simply do `./gradlew run`. No
+config overrides are required.
 
 ## k8s Deployment
 
@@ -103,6 +106,7 @@ See the Wiki page [Roadmap](https://github.com/flipkart-incubator/varadhi/wiki/R
 [ TBD ]
 
 ## Want to Contribute ?
+
 Refer to [Contributing](./CONTRIBUTING.md).
 
 You can also reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com.
@@ -112,6 +116,7 @@ You can also reachout to sahil.chachan@flipkart.com or k.dhruv@flipkart.com.
 [ TBD ]
 
 ## Blogs
+
 - [Effective Failure Handling in Flipkart’s Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc)
 - [Flipkart to Community: Open Source Varadhi](https://www.youtube.com/watch?v=A9ET2lw6nxM&t=144s)
 
