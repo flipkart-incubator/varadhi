@@ -50,11 +50,12 @@ dependencies {
     testImplementation(libs.vertx.junit5)
     testImplementation(libs.vertx.web.client)
 
+    // for e2e tests
+    testRuntimeOnly(project(':metastore-zk'))
 
     testE2EImplementation(libs.jersey.client)
     testE2EImplementation(libs.jersey.media.json.jackson)
 
-    testE2ERuntime(project(':metastore-zk'))
     testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_version:runtime")
 
     // jacoco aggregation dependency -- explicit inclusion.

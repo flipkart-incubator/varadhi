@@ -65,6 +65,7 @@ sourceSets {
 
 configurations {
     testE2EImplementation.extendsFrom testImplementation
+    testE2ERuntimeOnly.extendsFrom testRuntimeOnly
     testE2ERuntime.extendsFrom testRuntime
 }
 
