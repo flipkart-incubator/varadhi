@@ -200,6 +200,7 @@ class SubscriptionServiceTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         StorageTopic storageTopic = topicFactory.getTopic(
+            0,
             topic.getName(),
             project2,
             capacity,

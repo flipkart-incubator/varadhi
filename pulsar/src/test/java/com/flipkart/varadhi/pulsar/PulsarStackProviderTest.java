@@ -81,7 +81,7 @@ public class PulsarStackProviderTest extends PulsarTestBase {
         StorageTopicFactory<PulsarStorageTopic> storageTopicFactorySecond = pulsarStackProvider
                                                                                                .getStorageTopicFactory();
         Assertions.assertEquals(storageTopicFactory, storageTopicFactorySecond);
-        PulsarStorageTopic topic = storageTopicFactory.getTopic(topicName, project, capacity, topicCategory);
+        PulsarStorageTopic topic = storageTopicFactory.getTopic(0, topicName, project, capacity, topicCategory);
         Assertions.assertEquals(
             String.format("persistent://%s/%s/%s", project.getOrg(), project.getName(), topicName),
             topic.getName()

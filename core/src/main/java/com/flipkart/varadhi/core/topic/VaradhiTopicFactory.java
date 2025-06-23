@@ -68,6 +68,7 @@ public class VaradhiTopicFactory {
      */
     private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
         StorageTopic storageTopic = topicFactory.getTopic(
+            0,
             varadhiTopic.getName(),
             project,
             varadhiTopic.getCapacity(),

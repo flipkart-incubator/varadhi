@@ -8,5 +8,11 @@ public interface StorageTopicFactory<T extends StorageTopic> {
 
     // topicName is globally unique. Messaging stack can take a dependency on this to create either
     // global or regional topic names as required.
-    T getTopic(String topicName, Project project, TopicCapacityPolicy capacity, InternalQueueCategory queueCategory);
+    T getTopic(
+        int id,
+        String topicName,
+        Project project,
+        TopicCapacityPolicy capacity,
+        InternalQueueCategory queueCategory
+    );
 }
