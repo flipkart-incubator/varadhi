@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.common;
+package com.flipkart.varadhi.entities;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -9,8 +9,6 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
-import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -57,7 +55,11 @@ public class SimpleMessage implements Message, Serializable {
 
     @Override
     public String getHeader(String key) {
-        return requestHeaders.get(key).getFirst();
+        var values = requestHeaders.get(key);
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        return values.getFirst();
     }
 
     @Override

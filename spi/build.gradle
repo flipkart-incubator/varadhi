@@ -6,8 +6,11 @@ plugins {
 dependencies {
     api(project(':entities'))
 
+    testFixturesAnnotationProcessor(libs.lombok)
     testFixturesImplementation(project(':common'))
     testFixturesImplementation(libs.lombok)
     testFixturesImplementation(libs.guava)
     testFixturesImplementation(libs.netty.common)
+
+    testImplementation(testFixtures(project(':entities')))
 }

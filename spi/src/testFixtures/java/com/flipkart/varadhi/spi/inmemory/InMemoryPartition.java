@@ -2,12 +2,14 @@ package com.flipkart.varadhi.spi.inmemory;
 
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import lombok.RequiredArgsConstructor;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -28,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 @ThreadSafe
+@RequiredArgsConstructor
 public class InMemoryPartition {
 
     record PersistedMessage(byte[] message, long timestamp) {
@@ -43,9 +46,15 @@ public class InMemoryPartition {
     private final ReentrantLock lock = new ReentrantLock();
     private final List<Segment> messages = new ArrayList<>();
     private final Map<String, Integer> consumerOffsets = new ConcurrentHashMap<>();
-    private int baseOffset = 0;
+    private final boolean mock;
+    private final AtomicInteger baseOffset = new AtomicInteger();
 
     public int add(byte[] message) {
+
+        if (mock) {
+            return baseOffset.incrementAndGet();
+        }
+
         lock.lock();
         try {
             Segment lastSegment;
@@ -73,7 +82,7 @@ public class InMemoryPartition {
     }
 
     public int getLatestOffset() {
-        return baseOffset + getTotalMessageCount() - 1;
+        return baseOffset.get() + getTotalMessageCount() - 1;
     }
 
     public void clear() {
@@ -95,17 +104,17 @@ public class InMemoryPartition {
 
             // Consumer-based clearing
             int minOffset = consumerOffsets.values().stream().min(Integer::compareTo).orElse(getLatestOffset());
-            if (minOffset <= baseOffset) {
+            if (minOffset <= baseOffset.get()) {
                 return;
             }
 
-            int messagesToClear = minOffset - baseOffset;
+            int messagesToClear = minOffset - baseOffset.get();
             int segmentsToClear = messagesToClear / 1024;
 
             if (segmentsToClear > 0) {
                 // Efficient batch removal
                 messages.subList(0, segmentsToClear).clear();
-                baseOffset += segmentsToClear * 1024;
+                baseOffset.addAndGet(segmentsToClear * 1024);
             }
         } finally {
             lock.unlock();
@@ -121,9 +130,9 @@ public class InMemoryPartition {
             int latestOffset = getLatestOffset();
             int clampedOffset = initialOffset;
             if (getTotalMessageCount() == 0) {
-                clampedOffset = baseOffset;
+                clampedOffset = baseOffset.get();
             } else {
-                clampedOffset = Math.max(clampedOffset, baseOffset);
+                clampedOffset = Math.max(clampedOffset, baseOffset.get());
                 clampedOffset = Math.min(clampedOffset, latestOffset);
             }
             consumerOffsets.put(consumerName, clampedOffset);

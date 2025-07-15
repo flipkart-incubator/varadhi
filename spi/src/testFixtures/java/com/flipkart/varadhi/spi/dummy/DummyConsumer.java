@@ -1,6 +1,9 @@
-package com.flipkart.varadhi.spi.services;
+package com.flipkart.varadhi.spi.dummy;
 
-import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.dummy.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.services.Consumer;
+import com.flipkart.varadhi.spi.services.PolledMessage;
+import com.flipkart.varadhi.spi.services.PolledMessages;
 import com.google.common.collect.Multimap;
 
 import java.nio.charset.StandardCharsets;

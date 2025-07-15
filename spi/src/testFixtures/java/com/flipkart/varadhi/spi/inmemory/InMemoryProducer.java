@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.spi.inmemory;
 
-import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.services.MessagingException;
@@ -26,13 +26,18 @@ public class InMemoryProducer implements Producer {
     @Setter
     private volatile long produceLatencyMs = 0;
 
-    public InMemoryProducer(InMemoryStorageTopic topic, boolean roundRobinRouting, HashedWheelTimer scheduler) {
+    public InMemoryProducer(
+        InMemoryStorageTopic topic,
+        boolean roundRobinRouting,
+        HashedWheelTimer scheduler,
+        boolean mockProduce
+    ) {
         this.topic = topic;
         this.roundRobinRouting = roundRobinRouting;
         this.scheduler = scheduler;
         this.partitions = new ConcurrentHashMap<>();
         for (int i = 0; i < topic.getPartitions(); i++) {
-            partitions.put(i, new InMemoryPartition());
+            partitions.put(i, new InMemoryPartition(mockProduce));
         }
     }
 
