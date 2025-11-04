@@ -36,6 +36,7 @@ public class RecursiveFieldUpdater {
                 // If the field is annotated with the specified annotation, process it
                 if (field.isAnnotationPresent(annotationClass)) {
                     // Apply the update function to get the new value
+                    @SuppressWarnings ("unchecked")
                     V newValue = updateFunction.apply(fieldPath, (V)fieldValue);
                     setFieldValue(obj, field, newValue);
                 } else if (!field.getType().isPrimitive() && field.getType()

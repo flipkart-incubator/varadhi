@@ -7,6 +7,7 @@ public final class ClassUtils {
     private ClassUtils() {
     }
 
+    @SuppressWarnings ("unchecked")
     public static <T> T loadClass(String className) {
         try {
             if (null != className && !className.isBlank()) {

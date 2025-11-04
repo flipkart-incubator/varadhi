@@ -83,10 +83,7 @@ public class JsonMapperTest {
 
 
     private static class CantSerialize {
+        @SuppressWarnings ("unused")
         private int foobar;
-
-        private void CantSerialize() {
-
-        }
     }
 }
