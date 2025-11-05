@@ -24,7 +24,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
@@ -111,12 +110,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
 
-        return new CustomAuthenticationHandler(
-            authenticationProvider,
-            authenticationOptions.getOrgContextExemptionURLs() != null ?
-                authenticationOptions.getOrgContextExemptionURLs() :
-                Collections.EMPTY_LIST
-        );
+        this.orgExemptionURLs = authenticationOptions.getOrgContextExemptionURLs() != null ?
+            authenticationOptions.getOrgContextExemptionURLs() :
+            Collections.emptyList();
+
+        return this;
     }
 
     @Override
@@ -124,7 +122,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         RequestContext requestContext;
         try {
-            requestContext = createRequestContext(routingContext);
+            requestContext = new RequestContext(routingContext);
         } catch (URISyntaxException e) {
             throw new BadRequestException(e);
         }
@@ -135,6 +133,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
+                // TODO: check we are not setting the user via setUser() method.
                 routingContext.put(USER_CONTEXT, result.result());
                 routingContext.next();
             } else {
@@ -165,15 +164,5 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         }
 
         return "";
-    }
-
-    private RequestContext createRequestContext(RoutingContext routingContext) throws URISyntaxException {
-        RequestContext httpContext = new RequestContext();
-        httpContext.setUri(new URI(routingContext.request().uri()));
-
-        httpContext.setHeaders(routingContext.request().headers());
-        httpContext.setParams(routingContext.request().params());
-
-        return httpContext;
     }
 }

@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.dummy;
+package com.flipkart.varadhi.spi.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Message;

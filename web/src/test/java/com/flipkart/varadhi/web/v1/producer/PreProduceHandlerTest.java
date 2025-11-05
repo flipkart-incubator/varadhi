@@ -7,7 +7,7 @@ import com.flipkart.varadhi.common.Constants.ContextKeys;
 import com.flipkart.varadhi.common.Result;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.produce.ProduceResult;
-import com.flipkart.varadhi.spi.dummy.DummyProducer;
+import com.flipkart.varadhi.spi.mock.DummyProducer;
 import com.flipkart.varadhi.web.WebTestBase;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;

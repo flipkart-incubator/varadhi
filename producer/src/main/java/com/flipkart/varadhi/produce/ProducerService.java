@@ -86,6 +86,7 @@ public final class ProducerService {
      * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      */
+    // TODO: fix the generic type parameters. See ProduceBenchmarkTest for the issue.
     public ProducerService(
         String produceRegion,
         ProducerFactory<StorageTopic> producerFactory,

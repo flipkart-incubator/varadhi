@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.inmemory;
+package com.flipkart.varadhi.spi.mock;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.flipkart.varadhi.entities.StorageSubscription;

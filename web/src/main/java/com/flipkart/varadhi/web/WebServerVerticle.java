@@ -69,6 +69,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -103,7 +104,6 @@ public class WebServerVerticle extends AbstractVerticle {
     private final WebConfiguration configuration;
     private final ConfigFileResolver configResolver;
     private final VaradhiClusterManager clusterManager;
-    @SuppressWarnings ("rawtypes")
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
     private final MeterRegistry meterRegistry;
@@ -111,6 +111,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final VerticleConfig verticleConfig;
     private final ResourceReadCacheRegistry cacheRegistry;
     private final List<Pattern> disableAPIPatterns;
+    private final APIUsecases apiUsecases;
 
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
@@ -122,12 +123,15 @@ public class WebServerVerticle extends AbstractVerticle {
      * @param configuration  the application configuration
      * @param services       the core services
      * @param clusterManager the cluster manager
+     * @param cacheRegistry  the resource read cache registry
+     * @param apiUsecases    the usecases to be supported by this server
      */
     public WebServerVerticle(
         WebConfiguration configuration,
         CoreServices services,
         VaradhiClusterManager clusterManager,
-        ResourceReadCacheRegistry cacheRegistry
+        ResourceReadCacheRegistry cacheRegistry,
+        APIUsecases apiUsecases
     ) {
         this.configuration = configuration;
         this.configResolver = services.getConfigResolver();
@@ -137,6 +141,7 @@ public class WebServerVerticle extends AbstractVerticle {
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
+        this.apiUsecases = apiUsecases;
         this.cacheRegistry = cacheRegistry;
         this.disableAPIPatterns = configuration.getDisabledAPIs()
                                                .stream()
@@ -144,13 +149,22 @@ public class WebServerVerticle extends AbstractVerticle {
                                                .collect(Collectors.toList());
     }
 
+    public WebServerVerticle(
+        WebConfiguration configuration,
+        CoreServices services,
+        VaradhiClusterManager clusterManager,
+        ResourceReadCacheRegistry cacheRegistry
+    ) {
+        this(configuration, services, clusterManager, cacheRegistry, APIUsecases.ALL);
+    }
+
     /**
-     * Wraps a handler in a blocking execution context using virtual threads.
+     * Wraps a handler in a blocking execution context using worker pool.
      * This allows handlers to perform blocking operations without affecting the event loop.
      *
      * @param vertx         the Vert.x instance
      * @param apiEndHandler the handler to wrap
-     * @return a handler that executes the original handler in a virtual thread
+     * @return a handler that executes the original handler using worker pool.
      */
     public static Handler<RoutingContext> wrapBlockingExecution(Vertx vertx, Handler<RoutingContext> apiEndHandler) {
         return ctx -> {
@@ -177,12 +191,17 @@ public class WebServerVerticle extends AbstractVerticle {
      */
     @Override
     public void start(Promise<Void> startPromise) {
-        log.info("Starting WebServer verticle");
-
-        setupEntityServices().compose(v -> {
-            performValidations();
-            return startHttpServer();
-        }).onSuccess(v -> {
+        vertx.executeBlocking(() -> {
+            log.info("Starting WebServer verticle");
+            if (apiUsecases.hasAdmin()) {
+                setupEntityServicesForAdminApis();
+                performLeanDeployValidations();
+            }
+            if (apiUsecases.hasProduce()) {
+                setupEntityServicesForProduceApis();
+            }
+            return null;
+        }).compose(v -> startHttpServer()).onSuccess(v -> {
             log.info("WebServer verticle started successfully");
             startPromise.complete();
         }).onFailure(e -> {
@@ -206,26 +225,24 @@ public class WebServerVerticle extends AbstractVerticle {
 
     /**
      * Initializes all entity services required by the web server.
-     * Uses a builder pattern for cleaner initialization.
      *
      * @return a Future that completes when all services are initialized
      */
-    @SuppressWarnings ("unchecked")
-    private Future<Void> setupEntityServices() {
-        log.info("Setting up entity services");
+    private void setupEntityServicesForAdminApis() {
+        log.info("Setting up entity services for API Usecases: {}", apiUsecases);
 
         // Create message exchange for communication
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
         // Initialize basic services
-        serviceRegistry.register(OrgService.class, new OrgService(metaStore.orgs(), metaStore.teams()));
-        serviceRegistry.register(TeamService.class, new TeamService(metaStore));
-        serviceRegistry.register(ProjectService.class, new ProjectService(metaStore));
+        serviceRegistry.registerIfAbsent(OrgService.class, () -> new OrgService(metaStore.orgs(), metaStore.teams()));
+        serviceRegistry.registerIfAbsent(TeamService.class, () -> new TeamService(metaStore));
+        serviceRegistry.registerIfAbsent(ProjectService.class, () -> new ProjectService(metaStore));
 
         // Initialize topic service
-        serviceRegistry.register(
+        serviceRegistry.registerIfAbsent(
             VaradhiTopicService.class,
-            new VaradhiTopicService(
+            () -> new VaradhiTopicService(
                 messagingStackProvider.getStorageTopicService(),
                 metaStore.topics(),
                 metaStore.subscriptions(),
@@ -241,15 +258,23 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         // Initialize subscription and DLQ services
-        serviceRegistry.register(
+        serviceRegistry.registerIfAbsent(
             SubscriptionService.class,
-            new SubscriptionService(shardProvisioner, controllerClient, metaStore.subscriptions(), metaStore.topics())
+            () -> new SubscriptionService(
+                shardProvisioner,
+                controllerClient,
+                metaStore.subscriptions(),
+                metaStore.topics()
+            )
         );
-        serviceRegistry.register(
+        serviceRegistry.registerIfAbsent(
             DlqService.class,
-            new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
+            () -> new DlqService(controllerClient, new ConsumerClientFactoryImpl(messageExchange))
         );
+    }
 
+
+    private void setupEntityServicesForProduceApis() {
         // Initialize producer service
         serviceRegistry.register(
             ProducerService.class,
@@ -261,14 +286,12 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
-
-        return Future.succeededFuture();
     }
 
     /**
      * Performs validation checks based on the deployment configuration.
      */
-    private void performValidations() {
+    private void performLeanDeployValidations() {
         if (verticleConfig.isLeanDeployment()) {
             log.info("Performing lean deployment validations");
             // Its sync execution for time being, can be changed to Async.
@@ -287,6 +310,7 @@ public class WebServerVerticle extends AbstractVerticle {
      * @return a Future that completes when the server is started
      */
     private Future<Void> startHttpServer() {
+        log.info("Starting HttpServer");
         Router router = createApiRouter();
         httpServer = vertx.createHttpServer(configuration.getHttpServerOptions()).requestHandler(router);
 
@@ -306,27 +330,33 @@ public class WebServerVerticle extends AbstractVerticle {
         Map<RouteBehaviour, RouteConfigurator> routeConfigurators = new HashMap<>();
         setupRouteConfigurators(routeConfigurators);
 
-        // Collect all route definitions
         List<RouteDefinition> routeDefinitions = new ArrayList<>();
-        routeDefinitions.addAll(getIamPolicyRoutes());
-        routeDefinitions.addAll(getAdminApiRoutes());
 
+        // Health check routes - always available
+        routeDefinitions.addAll(new HealthCheckHandler().get());
+
+        // Admin routes (for ADMIN or ALL)
+        if (apiUsecases.hasAdmin()) {
+            routeDefinitions.addAll(getIamPolicyRoutes());
+            routeDefinitions.addAll(getAdminApiRoutes());
+        }
         routeDefinitions = routeDefinitions.stream().filter(this::isRouteEnabled).toList();
-
-        // Configure all CP routes
         configureApiRoutes(router, routeDefinitions, routeConfigurators);
 
-        // Configure the msg produce routes
-        List<RouteDefinition> msgProduceRouteDefs = getProduceApiRoutes();
-        routeConfigurators.put(
-            RouteBehaviour.telemetry,
-            new MsgProduceRequestTelemetryConfigurator(
-                new SpanProvider(tracer),
-                meterRegistry,
-                configuration.getProducerOptions().getMetricsOptions()
-            )
-        );
-        configureApiRoutes(router, msgProduceRouteDefs, routeConfigurators);
+        // Producer routes (for PRODUCE or ALL)
+        if (apiUsecases.hasProduce()) {
+            List<RouteDefinition> msgProduceRouteDefs = getProduceApiRoutes();
+            routeConfigurators.put(
+                RouteBehaviour.telemetry,
+                new MsgProduceRequestTelemetryConfigurator(
+                    new SpanProvider(tracer),
+                    meterRegistry,
+                    configuration.getProducerOptions().getMetricsOptions()
+                )
+            );
+            configureApiRoutes(router, msgProduceRouteDefs, routeConfigurators);
+        }
+
         return router;
     }
 
@@ -424,8 +454,6 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
-
-        routes.addAll(new HealthCheckHandler().get());
 
         return routes;
     }
@@ -557,7 +585,17 @@ public class WebServerVerticle extends AbstractVerticle {
          * @param service the service instance
          */
         <T> void register(Class<T> clazz, T service) {
+            if (services.containsKey(clazz)) {
+                throw new IllegalStateException("Service already registered: " + clazz.getName());
+            }
             services.put(clazz, Objects.requireNonNull(service, "Service cannot be null"));
+        }
+
+        <T> void registerIfAbsent(Class<T> clazz, Supplier<T> serviceSupplier) {
+            if (services.containsKey(clazz)) {
+                return;
+            }
+            services.put(clazz, Objects.requireNonNull(serviceSupplier.get(), "Service cannot be null"));
         }
 
         /**
@@ -575,6 +613,19 @@ public class WebServerVerticle extends AbstractVerticle {
                 throw new IllegalStateException("Service not registered: " + clazz.getName());
             }
             return (T)service;
+        }
+    }
+
+
+    public static enum APIUsecases {
+        ADMIN, PRODUCE, ALL;
+
+        boolean hasAdmin() {
+            return this == ADMIN || this == ALL;
+        }
+
+        boolean hasProduce() {
+            return this == PRODUCE || this == ALL;
         }
     }
 }

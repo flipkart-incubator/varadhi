@@ -1,6 +1,6 @@
-package com.flipkart.varadhi.spi.dummy;
+package com.flipkart.varadhi.spi.mock;
 
-import com.flipkart.varadhi.spi.dummy.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.mock.DummyProducer.DummyOffset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;

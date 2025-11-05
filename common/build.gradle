@@ -14,7 +14,10 @@ dependencies {
     implementation(libs.vertx.core)
     runtimeOnly('org.glassfish.expressly:expressly:5.0.0')
 
+    testFixturesAnnotationProcessor(libs.lombok)
     testFixturesApi(libs.guava)
+    testFixturesApi(libs.vertx.core)
+    testFixturesImplementation(libs.lombok)
     testFixturesImplementation(libs.junit.jupiter)
     testFixturesImplementation(libs.awaitility)
 

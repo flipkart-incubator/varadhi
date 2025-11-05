@@ -7,7 +7,7 @@ import com.flipkart.varadhi.web.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 
-public class MockAuthenticator implements AuthenticationProvider {
+public class MockAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Future<Boolean> init(

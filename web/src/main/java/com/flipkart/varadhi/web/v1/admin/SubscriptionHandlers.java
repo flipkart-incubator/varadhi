@@ -19,7 +19,6 @@ import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.flipkart.varadhi.web.subscription.SubscriptionPropertyValidator;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -50,7 +49,6 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
  * starting, and stopping subscriptions.
  */
 @Slf4j
-@ExtensionMethod ({Extensions.RequestBodyExtension.class, Extensions.RoutingContextExtension.class})
 public class SubscriptionHandlers implements RouteProvider {
     private static final String API_NAME = "SUBSCRIPTION";
 
@@ -144,8 +142,11 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void setSubscription(RoutingContext ctx) {
-        SubscriptionResource subscriptionResource = ctx.body().asValidatedPojo(SubscriptionResource.class);
-        String requestedBy = ctx.getIdentityOrDefault();
+        SubscriptionResource subscriptionResource = Extensions.RequestBodyExtension.asValidatedPojo(
+            ctx.body(),
+            SubscriptionResource.class
+        );
+        String requestedBy = Extensions.RoutingContextExtension.getIdentityOrDefault(ctx);
         LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ?
             LifecycleStatus.ActionCode.ADMIN_ACTION :
             LifecycleStatus.ActionCode.USER_ACTION;
@@ -206,7 +207,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                      .orElse(false);
 
         List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName, includeInactive);
-        ctx.endApiWithResponse(subscriptionNames);
+        Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscriptionNames);
     }
 
     /**
@@ -219,7 +220,7 @@ public class SubscriptionHandlers implements RouteProvider {
         SubscriptionResource subscription = SubscriptionResource.from(
             subscriptionService.getSubscription(internalSubscriptionName)
         );
-        ctx.endApiWithResponse(subscription);
+        Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscription);
     }
 
     /**
@@ -243,7 +244,7 @@ public class SubscriptionHandlers implements RouteProvider {
             subProject
         );
 
-        ctx.endApiWithResponse(SubscriptionResource.from(createdSubscription));
+        Extensions.RoutingContextExtension.endApiWithResponse(ctx, SubscriptionResource.from(createdSubscription));
     }
 
     /**
@@ -255,7 +256,8 @@ public class SubscriptionHandlers implements RouteProvider {
         SubscriptionResource subscription = getValidSubscriptionResource(ctx);
         // TODO: Consider splitting these into separate update APIs.
         // Note: Updates are currently allowed even if there are no changes to the subscription, which should be avoided.
-        ctx.handleResponse(
+        Extensions.RoutingContextExtension.handleResponse(
+            ctx,
             subscriptionService.updateSubscription(
                 subscription.getSubscriptionInternalName(),
                 subscription.getVersion(),
@@ -264,7 +266,7 @@ public class SubscriptionHandlers implements RouteProvider {
                 subscription.getEndpoint(),
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy(),
-                ctx.getIdentityOrDefault()
+                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
             ).thenApply(SubscriptionResource::from)
         );
     }
@@ -282,11 +284,12 @@ public class SubscriptionHandlers implements RouteProvider {
                                                .orElse(ResourceDeletionType.SOFT_DELETE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
 
-        ctx.handleResponse(
+        Extensions.RoutingContextExtension.handleResponse(
+            ctx,
             subscriptionService.deleteSubscription(
                 getSubscriptionFqn(ctx),
                 projectCache.getOrThrow(ctx.pathParam(PATH_PARAM_PROJECT)).getEntity(),
-                ctx.getIdentityOrDefault(),
+                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
                 deletionType,
                 actionRequest
             )
@@ -301,8 +304,13 @@ public class SubscriptionHandlers implements RouteProvider {
     public void restore(RoutingContext ctx) {
         RequestActionType actionRequest = createResourceActionRequest(ctx);
 
-        ctx.handleResponse(
-            subscriptionService.restoreSubscription(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault(), actionRequest)
+        Extensions.RoutingContextExtension.handleResponse(
+            ctx,
+            subscriptionService.restoreSubscription(
+                getSubscriptionFqn(ctx),
+                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
+                actionRequest
+            )
         );
     }
 
@@ -312,7 +320,13 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void start(RoutingContext ctx) {
-        ctx.handleResponse(subscriptionService.start(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
+        Extensions.RoutingContextExtension.handleResponse(
+            ctx,
+            subscriptionService.start(
+                getSubscriptionFqn(ctx),
+                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
+            )
+        );
     }
 
     /**
@@ -321,7 +335,13 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void stop(RoutingContext ctx) {
-        ctx.handleResponse(subscriptionService.stop(getSubscriptionFqn(ctx), ctx.getIdentityOrDefault()));
+        Extensions.RoutingContextExtension.handleResponse(
+            ctx,
+            subscriptionService.stop(
+                getSubscriptionFqn(ctx),
+                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
+            )
+        );
     }
 
     /**
@@ -364,7 +384,7 @@ public class SubscriptionHandlers implements RouteProvider {
      * @param ignoreConstraints whether to ignore constraints
      */
     private void validateSuperUserConstraints(RoutingContext ctx, boolean ignoreConstraints) {
-        if (ignoreConstraints && !ctx.isSuperUser()) {
+        if (ignoreConstraints && !Extensions.RoutingContextExtension.isSuperUser(ctx)) {
             throw new HttpException(HTTP_UNAUTHORIZED, "ignoreConstraints is restricted to super admins only.");
         }
     }
@@ -463,7 +483,7 @@ public class SubscriptionHandlers implements RouteProvider {
      * @return the resource action request
      */
     private RequestActionType createResourceActionRequest(RoutingContext ctx) {
-        String requestedBy = ctx.getIdentityOrDefault();
+        String requestedBy = Extensions.RoutingContextExtension.getIdentityOrDefault(ctx);
         LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy) ?
             LifecycleStatus.ActionCode.ADMIN_ACTION :
             LifecycleStatus.ActionCode.USER_ACTION;

@@ -1,6 +1,7 @@
 plugins {
     id 'com.flipkart.varadhi.java-library-conventions'
     id 'java-test-fixtures'
+    id 'me.champeau.jmh' version '0.7.3'
 }
 
 dependencies {
@@ -28,6 +29,29 @@ dependencies {
     testImplementation(libs.vertx.web.client)
     testImplementation(libs.opentelemetry.sdk.testing)
     testImplementation(libs.curator.test)
+
+    // JMH dependencies
+    jmh(libs.jmh.core)
+    jmhAnnotationProcessor(libs.lombok)
+    jmhAnnotationProcessor(libs.jmh.generator.annprocess)
+
+    // JMH runtime dependencies - same as test dependencies
+    jmhImplementation(project(':metastore-zk'))
+    jmhImplementation(testFixtures(project(':entities')))
+    jmhImplementation(testFixtures(project(':spi')))
+    jmhImplementation(testFixtures(project(':pulsar')))
+    jmhImplementation(testFixtures(project(':common')))
+    jmhImplementation(testFixtures(project(':core')))
+    jmhImplementation(testFixtures(project(':web-spi')))
+}
+
+jmh {
+    includes = ['.*ProduceBenchmarkTest.*']
+    duplicateClassesStrategy = DuplicatesStrategy.WARN
+    fork = 1
+    warmupIterations = 3
+    iterations = 5
+    jmhTimeout = '10m'
 }
 
 tasks.register('copyTestConfig', Copy.class, copyConfigForModule('test'))

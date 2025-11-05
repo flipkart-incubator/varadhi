@@ -121,7 +121,7 @@ spotless {
     json {
         target '**/*.json'
         simple().indentWithSpaces(4)
-        targetExclude 'setup/docker/configs/varadhi-auto-generated/**'
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', '.vscode/**'
     }
 }
 

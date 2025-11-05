@@ -11,7 +11,7 @@ import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.dummy.DummyProducer;
+import com.flipkart.varadhi.spi.mock.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.collect.ArrayListMultimap;

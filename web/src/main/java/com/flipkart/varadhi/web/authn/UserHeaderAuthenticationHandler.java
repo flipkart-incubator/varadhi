@@ -1,6 +1,10 @@
 package com.flipkart.varadhi.web.authn;
 
+import com.flipkart.varadhi.entities.auth.UserContext;
+import com.flipkart.varadhi.web.spi.RequestContext;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationHandlerProvider;
+import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
+import com.flipkart.varadhi.web.spi.authn.AuthenticationProvider;
 import com.flipkart.varadhi.web.spi.utils.OrgResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
@@ -15,6 +19,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+
+import java.net.URISyntaxException;
 
 @Slf4j
 public class UserHeaderAuthenticationHandler implements AuthenticationHandlerProvider {
@@ -39,12 +45,48 @@ public class UserHeaderAuthenticationHandler implements AuthenticationHandlerPro
     ) {
         log.warn("Staring to configure User header based authentication.");
 
+        AuthnProvider authnProvider = new AuthnProvider();
         return SimpleAuthenticationHandler.create().authenticate(ctx -> {
-            String userName = ctx.request().getHeader(USER_ID_HEADER);
+            RequestContext requestContext;
+            try {
+                requestContext = new RequestContext(ctx);
+            } catch (URISyntaxException e) {
+                return Future.failedFuture(e);
+            }
+            return authnProvider.authenticate(null, requestContext).map(userContext -> {
+                return User.fromName(userContext.getSubject());
+            });
+        });
+    }
+
+    public static class AuthnProvider implements AuthenticationProvider {
+
+        @Override
+        public Future<Boolean> init(
+            AuthenticationOptions authenticationOptions,
+            OrgResolver orgResolver,
+            MeterRegistry meterRegistry
+        ) {
+            return Future.succeededFuture(true);
+        }
+
+        @Override
+        public Future<UserContext> authenticate(String orgName, RequestContext ctx) {
+            String userName = ctx.getHeaders().get(USER_ID_HEADER);
             if (StringUtils.isBlank(userName)) {
                 return Future.failedFuture(new HttpException(HTTP_UNAUTHORIZED, "no user details present"));
             }
-            return Future.succeededFuture(User.fromName(userName));
-        });
+            return Future.succeededFuture(new UserContext() {
+                @Override
+                public String getSubject() {
+                    return userName;
+                }
+
+                @Override
+                public boolean isExpired() {
+                    return false;
+                }
+            });
+        }
     }
 }

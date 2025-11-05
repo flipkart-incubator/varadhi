@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.inmemory;
+package com.flipkart.varadhi.spi.mock;
 
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.spi.services.MessagingException;

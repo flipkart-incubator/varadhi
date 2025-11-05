@@ -1,4 +1,4 @@
-package com.flipkart.varadhi.spi.inmemory;
+package com.flipkart.varadhi.spi.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;

@@ -4,6 +4,7 @@ package com.flipkart.varadhi.common.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.flipkart.varadhi.entities.Validator;
+import com.google.common.annotations.VisibleForTesting;
 import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 
 import java.io.File;
@@ -50,5 +51,25 @@ public class YamlLoader {
         throw new InvalidConfigException(
             String.format("Failed to load config file: %s. %s", configFile, String.join(",", failures))
         );
+    }
+
+    @VisibleForTesting
+    public static <T> T loadConfigFromString(String configString, Class<T> clazz, boolean validate) {
+        T config;
+        try {
+            config = mapper.readValue(configString, clazz);
+        } catch (Exception e) {
+            throw new InvalidConfigException(String.format("Failed to load config string as %s.", clazz), e);
+        }
+
+        if (!validate) {
+            return config;
+        }
+
+        List<String> failures = Validator.validate(config);
+        if (failures.isEmpty()) {
+            return config;
+        }
+        throw new InvalidConfigException(String.format("Failed to load config string. %s", String.join(",", failures)));
     }
 }
