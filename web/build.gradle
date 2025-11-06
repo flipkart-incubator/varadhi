@@ -46,11 +46,14 @@ dependencies {
 }
 
 jmh {
+    // jvmArgsAppend = [
+    //     '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+    // ]
     includes = ['.*ProduceBenchmarkTest.*']
     duplicateClassesStrategy = DuplicatesStrategy.WARN
     fork = 1
-    warmupIterations = 3
-    iterations = 5
+    warmupIterations = 2
+    iterations = 3
     jmhTimeout = '10m'
 }
 

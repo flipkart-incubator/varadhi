@@ -16,6 +16,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
@@ -129,12 +130,13 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         String orgName = readOrgNameFromContext(routingContext);
 
+        // TODO: authenticationProvider only gives UserContext as the result, but that is not playing nice with the routingContext.user().
+        // There is no way to convert UserContext to vertx User directly.
         Future<UserContext> userContext = authenticationProvider.authenticate(orgName, requestContext);
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
-                // TODO: check we are not setting the user via setUser() method.
-                routingContext.put(USER_CONTEXT, result.result());
+                routingContext.setUser(User.fromName(orgName));
                 routingContext.next();
             } else {
                 routingContext.fail(UNAUTHORIZED.code(), result.cause());
@@ -144,15 +146,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     private String readOrgNameFromContext(RoutingContext routingContext) {
 
-        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = routingContext.get(RESOURCE_HIERARCHY);
-        if (typeHierarchyMap != null) {
-            if (typeHierarchyMap.containsKey(ResourceType.ORG)) {
-                ResourceHierarchy hierarchy = typeHierarchyMap.get(ResourceType.ORG);
-                if (hierarchy != null && hierarchy.getAttributes() != null && hierarchy.getAttributes()
-                                                                                       .containsKey(TAG_ORG)) {
-                    return hierarchy.getAttributes().get(TAG_ORG);
-                }
-            }
+        String orgName = getOrgNameFromContext(routingContext.get(RESOURCE_HIERARCHY));
+
+        if (!StringUtils.isBlank(orgName)) {
+            return orgName;
         }
 
         if (!anyMatch(
@@ -163,6 +160,18 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new ServerErrorException("Org context missing in the request");
         }
 
+        return orgName;
+    }
+
+    private String getOrgNameFromContext(Map<ResourceType, ResourceHierarchy> typeHierarchyMap) {
+        if (typeHierarchyMap != null) {
+            // since org is at the top of hierarchy, we can expect this info present in any entry present in the map
+            for (ResourceHierarchy hierarchy : typeHierarchyMap.values()) {
+                if (hierarchy.getAttributes() != null && hierarchy.getAttributes().containsKey(TAG_ORG)) {
+                    return hierarchy.getAttributes().get(TAG_ORG);
+                }
+            }
+        }
         return "";
     }
 }

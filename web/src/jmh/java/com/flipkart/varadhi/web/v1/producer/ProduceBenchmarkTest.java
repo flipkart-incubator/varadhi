@@ -9,29 +9,24 @@ import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.spi.db.MetaStoreProvider;
-import com.flipkart.varadhi.spi.mock.InMemoryMessagingStackProvider;
-import com.flipkart.varadhi.spi.mock.InMemoryMetaStore;
-import com.flipkart.varadhi.spi.mock.InMemoryStorageTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.WebServerVerticle;
 import com.flipkart.varadhi.web.config.WebConfiguration;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.opentelemetry.api.OpenTelemetry;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -43,11 +38,11 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.concurrent.TimeUnit;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
+import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static java.util.Arrays.asList;
 
 /**
@@ -58,7 +53,7 @@ import static java.util.Arrays.asList;
  * are set up exactly like in production but with in-memory implementations.
  */
 @State (Scope.Benchmark)
-@Fork (1)
+// @Fork (1)
 @ExtensionMethod ({TestExtensions.FutureExtensions.class})
 public class ProduceBenchmarkTest {
 
@@ -88,19 +83,26 @@ public class ProduceBenchmarkTest {
     /// Setup
     ///////////////////////////////
 
+    static final List<String> TOPIC_NAMES = List.of(
+        "topic1",
+        "topic2",
+        "topic3",
+        "topic4",
+        "topic5",
+        "topic6",
+        "topic7",
+        "topic8",
+        "topic9",
+        "topic10"
+    );
     static final String DEFAULT_PROJECT_NAME = "testProject";
     static final String DEFAULT_ORG_NAME = "testOrg";
     static final String DEFAULT_TEAM_NAME = "testTeam";
     static final int NUM_TOPICS = 10;
 
-    // Fixed set of topics for cycling
-    // Note: JMH doesn't allow static fields in benchmark classes, so we'll initialize this in setup
-    private List<String> topicNames;
-
-    final byte[] SAMPLE_PAYLOAD = RandomStringUtils.insecure().nextAlphanumeric(1000).getBytes(StandardCharsets.UTF_8);
+    static final String SAMPLE_PAYLOAD = RandomStringUtils.insecure().nextAlphanumeric(1000);
 
     private Vertx vertx;
-    private HttpServer httpServer;
     private WebServerVerticle webServerVerticle;
 
     // Load generation 
@@ -109,17 +111,20 @@ public class ProduceBenchmarkTest {
 
     @Setup
     public void setup() throws Exception {
+
+        var appConfig = createMinimalWebConfig();
+
         // Initialize StdHeaders
         if (!StdHeaders.isGlobalInstanceInitialized()) {
             StdHeaders.init(TestStdHeaders.get());
         }
 
         // Setup Vertx
-        vertx = Vertx.vertx(serverVertxOptions);
+        vertx = Vertx.vertx(appConfig.getVertxOptions());
 
         VertxOptions loadGenVertxOptions = new VertxOptions().setEventLoopPoolSize(2)
-                                                             .setWorkerPoolSize(20)
-                                                             .setInternalBlockingPoolSize(20);
+                                                             .setWorkerPoolSize(1)
+                                                             .setInternalBlockingPoolSize(1);
         loadGenVertx = Vertx.vertx(loadGenVertxOptions);
         WebClientOptions webClientOptions = new WebClientOptions().setKeepAlive(true)
                                                                   .setTcpNoDelay(true)
@@ -127,30 +132,24 @@ public class ProduceBenchmarkTest {
         loadGenClient = WebClient.create(loadGenVertx, webClientOptions);
 
         // Create WebServerVerticle with PRODUCE-only APIs
-        webServerVerticle = createProducerWebServer();
+        webServerVerticle = createProducerWebServer(appConfig, vertx);
 
         // Deploy and start the verticle
         vertx.deployVerticle(webServerVerticle).blockingGet();
 
-        // Wait for HTTP server to be ready
-        Thread.sleep(1000); // Give time for server startup
-
+        System.out.println("WebServerVerticle deployed for ProduceBenchmarkTest");
     }
 
     /**
      * Creates a WebServerVerticle configured for producer-only APIs with in-memory implementations
      */
-    private WebServerVerticle createProducerWebServer() throws Exception {
-        // Create minimal web configuration
-        WebConfiguration webConfig = createMinimalWebConfig();
+    private WebServerVerticle createProducerWebServer(WebConfiguration appConfig, Vertx vertx) throws Exception {
 
-        // Create in-memory messaging stack
-        InMemoryMessagingStackProvider messagingStackProvider = new InMemoryMessagingStackProvider();
-        messagingStackProvider.init(null, null);
+        CoreServices coreServices = new CoreServices(appConfig, c -> c);
 
         // Create test data and caches
         Project testProject = Project.of(DEFAULT_PROJECT_NAME, "", DEFAULT_TEAM_NAME, DEFAULT_ORG_NAME);
-        OrgDetails testOrg = new OrgDetails(com.flipkart.varadhi.entities.Org.of(DEFAULT_ORG_NAME), null);
+        OrgDetails testOrg = new OrgDetails(Org.of(DEFAULT_ORG_NAME), null);
 
         // Create caches with test data
         ResourceReadCache<Resource.EntityResource<Project>> projectCache = ResourceReadCache.create(
@@ -162,7 +161,10 @@ public class ProduceBenchmarkTest {
         OrgReadCache orgCache = new OrgReadCache(ResourceType.ORG, () -> asList(testOrg));
         ResourceReadCache.preload(orgCache, vertx).blockingGet();
 
-        List<Resource.EntityResource<VaradhiTopic>> testTopics = createTestTopics(testProject, messagingStackProvider);
+        List<Resource.EntityResource<VaradhiTopic>> testTopics = createTestTopics(
+            testProject,
+            coreServices.getMessagingStackProvider()
+        );
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = ResourceReadCache.create(
             ResourceType.TOPIC,
             () -> testTopics,
@@ -171,36 +173,13 @@ public class ProduceBenchmarkTest {
 
         // Create cache registry
         ResourceReadCacheRegistry cacheRegistry = new ResourceReadCacheRegistry();
-        cacheRegistry.addCache(ResourceType.ORG, orgCache);
-        cacheRegistry.addCache(ResourceType.PROJECT, projectCache);
-        cacheRegistry.addCache(ResourceType.TOPIC, topicCache);
-
-        // Create core services with minimal implementations
-        CoreServices coreServices = new CoreServices() {
-            @Override
-            public MessagingStackProvider getMessagingStackProvider() {
-                return messagingStackProvider;
-            }
-
-            @Override
-            public MetaStoreProvider getMetaStoreProvider() {
-                return () -> new InMemoryMetaStore();
-            }
-
-            @Override
-            public SimpleMeterRegistry getMeterRegistry() {
-                return new SimpleMeterRegistry();
-            }
-
-            @Override
-            public io.opentelemetry.api.trace.Tracer getTracer(String instrumentationName) {
-                return OpenTelemetry.noop().getTracer(instrumentationName);
-            }
-        };
+        cacheRegistry.register(ResourceType.ORG, orgCache);
+        cacheRegistry.register(ResourceType.PROJECT, projectCache);
+        cacheRegistry.register(ResourceType.TOPIC, topicCache);
 
         // Create WebServerVerticle with PRODUCE-only APIs
         return new WebServerVerticle(
-            webConfig,
+            appConfig,
             coreServices,
             null, // No cluster manager needed for produce-only
             cacheRegistry,
@@ -223,10 +202,10 @@ public class ProduceBenchmarkTest {
                     producerCacheTtlSeconds: 3600
 
                 messagingStackOptions:
-                    providerClassName: "com.flipkart.varadhi.spi.inmemory.InMemoryMessagingStackProvider"
+                    providerClassName: "com.flipkart.varadhi.spi.mock.InMemoryMessagingStackProvider"
 
                 metaStoreOptions:
-                providerClassName: "com.flipkart.varadhi.spi.mock.InMemoryMetastoreProvider"
+                    providerClassName: "com.flipkart.varadhi.spi.mock.InMemoryMetastoreProvider"
 
                 featureFlags:
                     leanDeployment: false
@@ -238,6 +217,21 @@ public class ProduceBenchmarkTest {
                     maxIdHeaderSize: 100
                     maxRequestSize: 5242880
                     filterNonCompliantHeaders: true
+                    headers:
+                        allowedPrefix: [ "X_", "X-" ]
+                        msgId: "X_MESSAGE_ID"
+                        groupId: "X_GROUP_ID"
+                        callbackCodes: "X_CALLBACK_CODES"
+                        requestTimeout: "X_REQUEST_TIMEOUT"
+                        replyToHttpUri: "X_REPLY_TO_HTTP_URI"
+                        replyToHttpMethod: "X_REPLY_TO_HTTP_METHOD"
+                        replyTo: "X_REPLY_TO"
+                        httpUri: "X_HTTP_URI"
+                        httpMethod: "X_HTTP_METHOD"
+                        httpContentType: "X_CONTENT_TYPE"
+                        producerIdentity: "X_PRODUCE_IDENTITY"
+                        produceRegion: "X_PRODUCE_REGION"
+                        produceTimestamp: "X_PRODUCE_TIMESTAMP"
 
                 tracesEnabled: true
 
@@ -256,13 +250,27 @@ public class ProduceBenchmarkTest {
                     useAlpn: true
                     tracingPolicy: "ALWAYS"
 
+                metricsExporterOptions:
+                    exporter: "otlp"
+                    otlp.url: "http://localhost:4318/v1/metrics"
+                    otlp.step: "20s"
+                    otlp.aggregationTemporality: "CUMULATIVE"
+                    otlp.resourceAttributes:
+                    otlp.headers:
+
                 authenticationOptions:
                     handlerProviderClassName: "com.flipkart.varadhi.web.authn.CustomAuthenticationHandler"
-                    authenticationProviderClassName: "com.flipkart.varadhi.web.authn.UserHeaderAuthenticationHandler.AuthnProvider"
+                    authenticationProviderClassName: "com.flipkart.varadhi.web.authn.UserHeaderAuthenticationHandler$AuthnProvider"
 
                 authorizationOptions:
                     enabled: true
-                    providerClassName: "com.flipkart.varadhi.web.spi.authz.AuthorizationProvider.NoAuthorizationProvider"
+                    providerClassName: "com.flipkart.varadhi.web.spi.authz.AuthorizationProvider$NoAuthorizationProvider"
+
+                restOptions:
+                    defaultTopicCapacity:
+                        throughputKBps: 400
+                        qps: 100
+                        readFanOut: 2
                 """;
 
         WebConfiguration webConfig = YamlLoader.loadConfigFromString(configStr, WebConfiguration.class, false);
@@ -272,7 +280,7 @@ public class ProduceBenchmarkTest {
 
     private List<Resource.EntityResource<VaradhiTopic>> createTestTopics(
         Project project,
-        InMemoryMessagingStackProvider messagingStackProvider
+        MessagingStackProvider messagingStackProvider
     ) {
         List<Resource.EntityResource<VaradhiTopic>> topics = new ArrayList<>();
         TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1);
@@ -289,14 +297,14 @@ public class ProduceBenchmarkTest {
             topic.markCreated(); // Set state to active
 
             // Create storage topic using messaging stack provider
-            InMemoryStorageTopic storageTopic = messagingStackProvider.getStorageTopicFactory()
-                                                                      .getTopic(
-                                                                          i,
-                                                                          topic.getName(),
-                                                                          project,
-                                                                          policy,
-                                                                          InternalQueueCategory.MAIN
-                                                                      );
+            StorageTopic storageTopic = messagingStackProvider.getStorageTopicFactory()
+                                                              .getTopic(
+                                                                  i,
+                                                                  topic.getName(),
+                                                                  project,
+                                                                  policy,
+                                                                  InternalQueueCategory.MAIN
+                                                              );
 
             // Create the topic in the messaging stack
             messagingStackProvider.getStorageTopicService().create(storageTopic, project);
@@ -304,7 +312,7 @@ public class ProduceBenchmarkTest {
             // Add as internal topic with proper state
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
             segmentedTopic.setTopicState(TopicState.Producing);
-            topic.addInternalTopic("testRegion", segmentedTopic);
+            topic.addInternalTopic("default", segmentedTopic);
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }
@@ -325,34 +333,13 @@ public class ProduceBenchmarkTest {
     /// Benchmark Test
     ///////////////////////////////
 
-    // @Benchmark
-    // @BenchmarkMode (Mode.Throughput)
-    // @Threads (4)
-    //     @Warmup (iterations = 3, time = 10, timeUnit = TimeUnit.SECONDS)
-    // @Measurement (iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    // @OutputTimeUnit (TimeUnit.SECONDS)
-    // public void benchmarkProduceMessages(ThreadState threadState) throws Exception {
-    //     // Get next topic from thread-specific randomized list
-    //     String topicName = threadState.getNextTopic();
-
-    //     // Use pre-created reusable message to avoid object creation overhead
-    //     String topicFQN = VaradhiTopic.fqn(DEFAULT_PROJECT_NAME, topicName);
-
-    //     // Call producer service directly for better performance measurement
-
-    //     var result = producerService.produceToTopic(reusableMessage, topicFQN).join();
-    //     Assertions.assertTrue(result.isSuccess());
-    // }
-
     @Benchmark
     @BenchmarkMode (Mode.AverageTime)
-    @Threads (1)
-    @Warmup (iterations = 3, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement (iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+    @Threads (2)
+    @Warmup (iterations = 2, time = 10, timeUnit = TimeUnit.SECONDS)
+    @Measurement (iterations = 3, time = 120, timeUnit = TimeUnit.SECONDS)
     @OutputTimeUnit (TimeUnit.MICROSECONDS)
     public void benchmarkProduceHttpMessages(ThreadState threadState, Blackhole blackhole) throws Exception {
-
-
         // Get next topic from thread-specific randomized list
         String topicName = threadState.getNextTopic();
         String endpoint = String.format("/v1/projects/%s/topics/%s/produce", DEFAULT_PROJECT_NAME, topicName);
@@ -362,12 +349,8 @@ public class ProduceBenchmarkTest {
                                     .putHeader("Content-Type", "application/json")
                                     .putHeader("X_PRODUCE_REGION", "testRegion")
                                     .putHeader("X_MESSAGE_ID", "benchmark-msg-" + System.nanoTime())
-                                    .sendJsonObject(
-                                        new JsonObject().put(
-                                            "payload",
-                                            new String(SAMPLE_PAYLOAD, StandardCharsets.UTF_8)
-                                        )
-                                    )
+                                    .putHeader(USER_ID_HEADER, "produce-bench")
+                                    .sendJsonObject(new JsonObject().put("payload", SAMPLE_PAYLOAD))
                                     .blockingGet();  // Block to wait for response in JMH
 
         // Consume the result to prevent JVM optimization
