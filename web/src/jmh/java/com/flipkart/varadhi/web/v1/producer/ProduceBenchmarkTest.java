@@ -337,7 +337,7 @@ public class ProduceBenchmarkTest {
     @BenchmarkMode (Mode.AverageTime)
     @Threads (2)
     @Warmup (iterations = 2, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement (iterations = 3, time = 120, timeUnit = TimeUnit.SECONDS)
+    @Measurement (iterations = 3, time = 30, timeUnit = TimeUnit.SECONDS)
     @OutputTimeUnit (TimeUnit.MICROSECONDS)
     public void benchmarkProduceHttpMessages(ThreadState threadState, Blackhole blackhole) throws Exception {
         // Get next topic from thread-specific randomized list
