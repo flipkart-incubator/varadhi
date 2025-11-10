@@ -94,7 +94,6 @@ class ConcurrencyControlImplTest {
         assertTrue(executed.stream().allMatch(t -> t.type == priority[0]));
 
         // execute the rest. The fact that below succeeds, means that we are able to follow ordering, priority & concurrency.
-        long start = System.currentTimeMillis();
         int pendingCompletion = 10;
         for (InternalQueueType t : priority) {
             for (CompletableFuture<Integer> f : enqueued.get(t)) {

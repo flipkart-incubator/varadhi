@@ -1,9 +1,12 @@
 package com.flipkart.varadhi.web.authn;
 
 import com.flipkart.varadhi.web.spi.utils.OrgResolver;
+
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
@@ -17,6 +20,8 @@ import org.mockito.ArgumentCaptor;
 
 import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class UserHeaderAuthenticationHandlerTest {
@@ -28,6 +33,7 @@ class UserHeaderAuthenticationHandlerTest {
     private MeterRegistry meterRegistry;
     private RoutingContext routingContext;
     private HttpServerRequest request;
+    private MultiMap headers = new HeadersMultiMap();
     private HttpServerResponse response;
 
     @BeforeEach
@@ -39,6 +45,9 @@ class UserHeaderAuthenticationHandlerTest {
         meterRegistry = mock(MeterRegistry.class);
         routingContext = mock(RoutingContext.class);
         request = mock(HttpServerRequest.class);
+        doReturn("/hello/world").when(request).uri();
+        doReturn(new HeadersMultiMap()).when(request).params();
+        doReturn(headers).when(request).headers();
         response = mock(HttpServerResponse.class);
     }
 
@@ -53,7 +62,7 @@ class UserHeaderAuthenticationHandlerTest {
     void userHeaderAccessSucceeds() {
         AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
         when(routingContext.request()).thenReturn(request);
-        when(request.getHeader(USER_ID_HEADER)).thenReturn("testUser");
+        headers.add(USER_ID_HEADER, "testUser");
 
         handler.handle(routingContext);
 
@@ -67,14 +76,23 @@ class UserHeaderAuthenticationHandlerTest {
     }
 
     @Test
-    void userHeaderAccessFailsWhenHeaderIsMissing() {
+    void userHeaderAccessFailsWhenHeaderIsEmpty() {
         AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
         when(routingContext.request()).thenReturn(request);
-        when(request.getHeader(USER_ID_HEADER)).thenReturn(null);
+        headers.add(USER_ID_HEADER, "");
         handler.handle(routingContext);
 
         verify(routingContext, never()).setUser(any());
         verify(routingContext).fail(eq(401), any(HttpException.class));
+    }
 
+    @Test
+    void userHeaderAccessFailsWhenHeaderIsMissing() {
+        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
+        when(routingContext.request()).thenReturn(request);
+        handler.handle(routingContext);
+
+        verify(routingContext, never()).setUser(any());
+        verify(routingContext).fail(eq(401), any(HttpException.class));
     }
 }

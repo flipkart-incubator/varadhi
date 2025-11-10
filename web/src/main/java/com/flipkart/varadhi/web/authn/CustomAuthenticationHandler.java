@@ -16,6 +16,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthenticationHandler;
 import jakarta.ws.rs.BadRequestException;
@@ -24,14 +25,12 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
 import static com.flipkart.varadhi.web.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
@@ -93,7 +92,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                     "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
                 );
             }
-            authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
+
+            AuthenticationProvider authenticationProvider = (AuthenticationProvider)providerClass
+                                                                                                 .getDeclaredConstructor()
+                                                                                                 .newInstance();
 
             try {
                 authenticationProvider.init(authenticationOptions, orgResolver, meterRegistry);
@@ -101,6 +103,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
 
+            List<URLDefinition> exemptions = authenticationOptions.getOrgContextExemptionURLs() != null ?
+                authenticationOptions.getOrgContextExemptionURLs() :
+                Collections.emptyList();
+
+            return new CustomAuthenticationHandler(authenticationProvider, exemptions);
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
                 "Authentication provider class not found: " + authenticationOptions
@@ -110,13 +117,6 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         } catch (ReflectiveOperationException e) {
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
-
-        return new CustomAuthenticationHandler(
-            authenticationProvider,
-            authenticationOptions.getOrgContextExemptionURLs() != null ?
-                authenticationOptions.getOrgContextExemptionURLs() :
-                Collections.EMPTY_LIST
-        );
     }
 
     @Override
@@ -124,18 +124,20 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         RequestContext requestContext;
         try {
-            requestContext = createRequestContext(routingContext);
+            requestContext = new RequestContext(routingContext);
         } catch (URISyntaxException e) {
             throw new BadRequestException(e);
         }
 
         String orgName = readOrgNameFromContext(routingContext);
 
+        // TODO: authenticationProvider only gives UserContext as the result, but that is not playing nice with the routingContext.user().
+        // There is no way to convert UserContext to vertx User directly.
         Future<UserContext> userContext = authenticationProvider.authenticate(orgName, requestContext);
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
-                routingContext.put(USER_CONTEXT, result.result());
+                routingContext.setUser(User.fromName(result.result().getSubject()));
                 routingContext.next();
             } else {
                 routingContext.fail(UNAUTHORIZED.code(), result.cause());
@@ -145,15 +147,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
     private String readOrgNameFromContext(RoutingContext routingContext) {
 
-        Map<ResourceType, ResourceHierarchy> typeHierarchyMap = routingContext.get(RESOURCE_HIERARCHY);
-        if (typeHierarchyMap != null) {
-            if (typeHierarchyMap.containsKey(ResourceType.ORG)) {
-                ResourceHierarchy hierarchy = typeHierarchyMap.get(ResourceType.ORG);
-                if (hierarchy != null && hierarchy.getAttributes() != null && hierarchy.getAttributes()
-                                                                                       .containsKey(TAG_ORG)) {
-                    return hierarchy.getAttributes().get(TAG_ORG);
-                }
-            }
+        String orgName = getOrgNameFromContext(routingContext.get(RESOURCE_HIERARCHY));
+
+        if (!StringUtils.isBlank(orgName)) {
+            return orgName;
         }
 
         if (!anyMatch(
@@ -164,16 +161,18 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
             throw new ServerErrorException("Org context missing in the request");
         }
 
-        return "";
+        return orgName;
     }
 
-    private RequestContext createRequestContext(RoutingContext routingContext) throws URISyntaxException {
-        RequestContext httpContext = new RequestContext();
-        httpContext.setUri(new URI(routingContext.request().uri()));
-
-        httpContext.setHeaders(routingContext.request().headers());
-        httpContext.setParams(routingContext.request().params());
-
-        return httpContext;
+    private String getOrgNameFromContext(Map<ResourceType, ResourceHierarchy> typeHierarchyMap) {
+        if (typeHierarchyMap != null) {
+            // since org is at the top of hierarchy, we can expect this info present in any entry present in the map
+            for (ResourceHierarchy hierarchy : typeHierarchyMap.values()) {
+                if (hierarchy.getAttributes() != null && hierarchy.getAttributes().containsKey(TAG_ORG)) {
+                    return hierarchy.getAttributes().get(TAG_ORG);
+                }
+            }
+        }
+        return "";
     }
 }

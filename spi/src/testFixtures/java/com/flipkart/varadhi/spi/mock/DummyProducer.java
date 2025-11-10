@@ -1,8 +1,9 @@
-package com.flipkart.varadhi.spi.services;
+package com.flipkart.varadhi.spi.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.spi.services.Producer;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;

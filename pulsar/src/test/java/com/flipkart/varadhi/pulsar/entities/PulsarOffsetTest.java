@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.pulsar.entities;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.spi.mock.DummyProducer;
 import com.flipkart.varadhi.entities.JsonMapper;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.impl.MessageIdImpl;

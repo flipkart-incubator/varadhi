@@ -20,7 +20,7 @@ public class Result<T> {
         return Result.of(result, null);
     }
 
-    public static Result of(Throwable cause) {
+    public static <T> Result<T> of(Throwable cause) {
         return Result.of(null, cause);
     }
 

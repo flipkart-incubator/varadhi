@@ -12,7 +12,7 @@ import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.core.ProjectService;
-import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.spi.mock.DummyProducer;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigurator;

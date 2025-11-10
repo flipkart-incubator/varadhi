@@ -1,6 +1,9 @@
-package com.flipkart.varadhi.spi.services;
+package com.flipkart.varadhi.spi.mock;
 
-import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.mock.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.services.Consumer;
+import com.flipkart.varadhi.spi.services.PolledMessage;
+import com.flipkart.varadhi.spi.services.PolledMessages;
 import com.google.common.collect.Multimap;
 
 import java.nio.charset.StandardCharsets;
@@ -51,7 +54,7 @@ public class DummyConsumer implements Consumer<DummyOffset> {
 
         // mark the consumer as called to avoid multiple calls
         isCalled = true;
-        return CompletableFuture.supplyAsync(() -> new PolledMessages<>() {
+        return CompletableFuture.supplyAsync(() -> new PolledMessages<DummyOffset>() {
             @Override
             public int getCount() {
                 return messages.size();
@@ -60,7 +63,7 @@ public class DummyConsumer implements Consumer<DummyOffset> {
             @Override
             public Iterator<PolledMessage<DummyOffset>> iterator() {
                 Iterator<String> iter = messages.keySet().iterator();
-                return new Iterator<>() {
+                return new Iterator<PolledMessage<DummyOffset>>() {
                     @Override
                     public boolean hasNext() {
                         return iter.hasNext();
@@ -69,7 +72,7 @@ public class DummyConsumer implements Consumer<DummyOffset> {
                     @Override
                     public PolledMessage<DummyOffset> next() {
                         String message = iter.next();
-                        return new PolledMessage<>() {
+                        return new PolledMessage<DummyOffset>() {
                             @Override
                             public long getProducedTimestampMs() {
                                 return 0;

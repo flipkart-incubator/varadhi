@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.consumer;
 
 import com.flipkart.varadhi.entities.InternalQueueType;
-import com.flipkart.varadhi.spi.services.DummyConsumer;
-import com.flipkart.varadhi.spi.services.DummyProducer.DummyOffset;
+import com.flipkart.varadhi.spi.mock.DummyConsumer;
+import com.flipkart.varadhi.spi.mock.DummyProducer.DummyOffset;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;

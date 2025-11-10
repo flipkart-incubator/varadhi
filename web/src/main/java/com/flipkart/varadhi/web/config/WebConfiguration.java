@@ -16,6 +16,10 @@ public class WebConfiguration extends AppConfiguration {
 
     private List<String> disabledAPIs;
 
+    public List<String> getDisabledAPIs() {
+        return disabledAPIs == null ? List.of() : disabledAPIs;
+    }
+
     @NotNull
     private HttpServerOptions httpServerOptions;
 

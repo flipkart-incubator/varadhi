@@ -6,6 +6,7 @@ import com.flipkart.varadhi.entities.filters.OrgFilters;
 import lombok.Getter;
 
 @Getter
+// TODO rename this class. "details" is too generic
 public class OrgDetails extends Resource {
     private final Org org;
     private final OrgFilters orgFilters;

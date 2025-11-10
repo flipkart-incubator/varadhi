@@ -355,7 +355,7 @@ public final class VaradhiSubscriptionFactory {
             consumptionPolicy.getMaxErrorThreshold(),
             READ_FAN_OUT_FOR_INTERNAL_QUEUE
         );
-        StorageTopic st = topicFactory.getTopic(itTopicName, project, errCapacity, queueType.getCategory());
+        StorageTopic st = topicFactory.getTopic(0, itTopicName, project, errCapacity, queueType.getCategory());
         List<TopicPartitions<StorageTopic>> topicPartitions = topicService.shardTopic(
             st,
             errCapacity,

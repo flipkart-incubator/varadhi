@@ -99,7 +99,13 @@ class VaradhiTopicServiceTest {
 
         pulsarStorageTopic = PulsarStorageTopic.of(0, pTopicName, 1);
         doReturn(pulsarStorageTopic).when(storageTopicFactory)
-                                    .getTopic(vTopicName, project, DEFAULT_CAPACITY_POLICY, InternalQueueCategory.MAIN);
+                                    .getTopic(
+                                        0,
+                                        vTopicName,
+                                        project,
+                                        DEFAULT_CAPACITY_POLICY,
+                                        InternalQueueCategory.MAIN
+                                    );
 
         when(metaStore.topics()).thenReturn(topicStore);
         when(metaStore.subscriptions()).thenReturn(subscriptionStore);
@@ -116,6 +122,7 @@ class VaradhiTopicServiceTest {
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
         verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
         verify(storageTopicFactory, times(1)).getTopic(
+            0,
             vTopicName,
             project,
             DEFAULT_CAPACITY_POLICY,

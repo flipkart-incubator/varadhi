@@ -34,6 +34,7 @@ public class Resource extends Versioned {
         this.resourceType = resourceType;
     }
 
+    // TODO: reverse the order of parameters to have resourceType first
     public static <T extends MetaStoreEntity> EntityResource<T> of(T entity, ResourceType resourceType) {
         return new EntityResource<>(entity, resourceType);
     }

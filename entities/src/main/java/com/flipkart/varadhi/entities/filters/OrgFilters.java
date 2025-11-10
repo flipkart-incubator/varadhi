@@ -10,8 +10,12 @@ import lombok.Getter;
 import java.util.Map;
 
 @Getter
+// TODO: rename it to NamedFilters
 public class OrgFilters extends MetaStoreEntity {
 
+    /**
+     * Map of filter name to filter conditions.
+     */
     private final Map<String, Condition> filters;
 
     @JsonCreator

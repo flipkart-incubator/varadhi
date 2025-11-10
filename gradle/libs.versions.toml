@@ -83,6 +83,7 @@ mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter",
 opentelemetry-sdk-testing = { group = "io.opentelemetry", name = "opentelemetry-sdk-testing", version.ref = "otel" }
 
 jmh-core = { group = "org.openjdk.jmh", name = "jmh-core", version = "1.37" }
+jmh-generator-annprocess = { group = "org.openjdk.jmh", name = "jmh-generator-annprocess", version = "1.37" }
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.3.0" }
 jersey-client = { group = "org.glassfish.jersey.core", name = "jersey-client", version.ref = "jersey" }
 jersey-media-json-jackson = { group = "org.glassfish.jersey.media", name = "jersey-media-json-jackson", version.ref = "jersey" }

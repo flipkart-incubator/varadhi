@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.services;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
@@ -11,7 +11,7 @@ import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.services.DummyProducer;
+import com.flipkart.varadhi.spi.mock.DummyProducer;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.google.common.collect.ArrayListMultimap;

@@ -4,7 +4,7 @@ import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.Constants.HttpCodes;
 import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.auth.ResourceAction;

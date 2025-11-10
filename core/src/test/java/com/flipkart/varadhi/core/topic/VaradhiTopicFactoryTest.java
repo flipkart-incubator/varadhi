@@ -43,7 +43,7 @@ class VaradhiTopicFactoryTest {
         PulsarStorageTopic pTopic = PulsarStorageTopic.of(0, pTopicName, 1);
 
         doReturn(pTopic).when(storageTopicFactory)
-                        .getTopic(vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
+                        .getTopic(0, vTopicName, project, CAPACITY_POLICY, InternalQueueCategory.MAIN);
     }
 
     @Test
@@ -63,6 +63,7 @@ class VaradhiTopicFactoryTest {
         assertNotNull(internalTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
+            0,
             vTopicName,
             project,
             CAPACITY_POLICY,
@@ -113,6 +114,7 @@ class VaradhiTopicFactoryTest {
         assertNotNull(internalCompositeTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
+            0,
             vTopicName,
             project,
             Constants.DEFAULT_TOPIC_CAPACITY,

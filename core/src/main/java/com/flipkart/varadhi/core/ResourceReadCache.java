@@ -97,7 +97,9 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     }
 
     public static <T extends Resource, C extends ResourceReadCache<T>> Future<C> preload(C cache, Vertx vertx) {
-        return cache.preload(vertx).map(v -> cache);
+        return cache.preload(vertx).map(v -> {
+            return cache;
+        });
     }
 
     /**

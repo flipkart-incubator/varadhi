@@ -3,7 +3,7 @@ package com.flipkart.varadhi.pulsar.entities;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.pulsar.PulsarTestBase;

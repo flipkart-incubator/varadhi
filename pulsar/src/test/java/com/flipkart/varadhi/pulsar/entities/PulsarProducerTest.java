@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.flipkart.varadhi.common.Constants;
-import com.flipkart.varadhi.common.SimpleMessage;
+import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StdHeaders;

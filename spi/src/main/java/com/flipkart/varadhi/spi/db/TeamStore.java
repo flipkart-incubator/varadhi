@@ -7,6 +7,7 @@ import java.util.List;
 public interface TeamStore {
     void create(Team team);
 
+    // TODO: reorganize method signatures to have orgName as the first parameter
     Team get(String teamName, String orgName);
 
     List<Team> getAll(String orgName);

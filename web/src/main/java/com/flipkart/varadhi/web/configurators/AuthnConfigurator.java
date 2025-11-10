@@ -71,9 +71,7 @@ public class AuthnConfigurator implements RouteConfigurator {
     }
 
     public void configure(Route route, RouteDefinition routeDef) {
-        if (authenticationHandler != null) {
-            route.handler(authenticationHandler);
-        }
+        route.handler(authenticationHandler);
     }
 
     static class AuthenticationHandlerWrapper implements Handler<RoutingContext> {
