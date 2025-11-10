@@ -92,7 +92,10 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                     "Provider class " + providerClass.getName() + " does not implement AuthenticationProvider interface"
                 );
             }
-            authenticationProvider = (AuthenticationProvider)providerClass.getDeclaredConstructor().newInstance();
+
+            AuthenticationProvider authenticationProvider = (AuthenticationProvider)providerClass
+                                                                                                 .getDeclaredConstructor()
+                                                                                                 .newInstance();
 
             try {
                 authenticationProvider.init(authenticationOptions, orgResolver, meterRegistry);
@@ -100,6 +103,11 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
                 throw new InvalidConfigException("Failed to initialize authenticator: " + e.getMessage(), e);
             }
 
+            List<URLDefinition> exemptions = authenticationOptions.getOrgContextExemptionURLs() != null ?
+                authenticationOptions.getOrgContextExemptionURLs() :
+                Collections.emptyList();
+
+            return new CustomAuthenticationHandler(authenticationProvider, exemptions);
         } catch (ClassNotFoundException e) {
             throw new InvalidConfigException(
                 "Authentication provider class not found: " + authenticationOptions
@@ -109,12 +117,6 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
         } catch (ReflectiveOperationException e) {
             throw new InvalidConfigException("Failed to create authentication provider", e);
         }
-
-        this.orgExemptionURLs = authenticationOptions.getOrgContextExemptionURLs() != null ?
-            authenticationOptions.getOrgContextExemptionURLs() :
-            Collections.emptyList();
-
-        return this;
     }
 
     @Override
