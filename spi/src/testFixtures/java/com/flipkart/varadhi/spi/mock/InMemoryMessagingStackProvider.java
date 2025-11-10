@@ -30,7 +30,7 @@ public class InMemoryMessagingStackProvider implements
 
     @Override
     public StorageSubscriptionFactory<InMemoryStorageSubscription, InMemoryStorageTopic> getSubscriptionFactory() {
-        return null;
+        throw new UnsupportedOperationException("InMemoryStorageSubscriptionFactory is not implemented yet.");
     }
 
     @Override

@@ -76,7 +76,7 @@ class UserHeaderAuthenticationHandlerTest {
     }
 
     @Test
-    void userHeaderAccessFailsWhenHeaderIsMissing() {
+    void userHeaderAccessFailsWhenHeaderIsEmpty() {
         AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
         when(routingContext.request()).thenReturn(request);
         headers.add(USER_ID_HEADER, "");
@@ -84,6 +84,15 @@ class UserHeaderAuthenticationHandlerTest {
 
         verify(routingContext, never()).setUser(any());
         verify(routingContext).fail(eq(401), any(HttpException.class));
+    }
 
+    @Test
+    void userHeaderAccessFailsWhenHeaderIsMissing() {
+        AuthenticationHandler handler = handlerProvider.provideHandler(vertx, jsonObject, orgResolver, meterRegistry);
+        when(routingContext.request()).thenReturn(request);
+        handler.handle(routingContext);
+
+        verify(routingContext, never()).setUser(any());
+        verify(routingContext).fail(eq(401), any(HttpException.class));
     }
 }

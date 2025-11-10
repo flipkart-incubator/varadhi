@@ -10,6 +10,10 @@ public class InMemoryProducerFactory implements ProducerFactory<InMemoryStorageT
 
     private final HashedWheelTimer timer = new HashedWheelTimer();
 
+    public InMemoryProducerFactory() {
+        Runtime.getRuntime().addShutdownHook(new Thread(timer::stop));
+    }
+
     @Override
     public Producer newProducer(InMemoryStorageTopic storageTopic, TopicCapacityPolicy capacity)
         throws MessagingException {

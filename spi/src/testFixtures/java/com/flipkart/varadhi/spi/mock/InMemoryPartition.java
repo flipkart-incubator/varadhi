@@ -30,130 +30,161 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 @ThreadSafe
-@RequiredArgsConstructor
-public class InMemoryPartition {
+public interface InMemoryPartition {
 
-    record PersistedMessage(byte[] message, long timestamp) {
-    }
+    int add(byte[] message);
 
+    int getLatestOffset();
 
-    record Segment(List<PersistedMessage> messages) {
-        Segment() {
-            this(new ArrayList<>(1024));
-        }
-    }
+    void clear();
 
-    private final ReentrantLock lock = new ReentrantLock();
-    private final List<Segment> messages = new ArrayList<>();
-    private final Map<String, Integer> consumerOffsets = new ConcurrentHashMap<>();
-    private final boolean mock;
-    private final AtomicInteger baseOffset = new AtomicInteger();
+    void registerConsumer(String consumerName, int initialOffset);
 
-    public int add(byte[] message) {
+    void unregisterConsumer(String consumerName);
 
-        if (mock) {
+    class NullPartition implements InMemoryPartition {
+        private final AtomicInteger baseOffset = new AtomicInteger();
+
+        public int add(byte[] message) {
             return baseOffset.incrementAndGet();
         }
 
-        lock.lock();
-        try {
-            Segment lastSegment;
-            if (messages.isEmpty()) {
-                lastSegment = new Segment();
-                messages.add(lastSegment);
-            } else {
-                lastSegment = messages.getLast();
-            }
+        public int getLatestOffset() {
+            return baseOffset.get();
+        }
 
-            if (lastSegment.messages().size() == 1024) {
-                lastSegment = new Segment();
-                messages.add(lastSegment);
-            } else if (lastSegment.messages().size() > 1024) {
-                throw new IllegalStateException(
-                    "Last segment is corrupted, it should not have more than 1024 messages."
-                );
-            }
+        @Override
+        public void clear() {
+        }
 
-            lastSegment.messages().add(new PersistedMessage(message, System.currentTimeMillis()));
-            return getLatestOffset();
-        } finally {
-            lock.unlock();
+        @Override
+        public void registerConsumer(String consumerName, int initialOffset) {
+        }
+
+        @Override
+        public void unregisterConsumer(String consumerName) {
         }
     }
 
-    public int getLatestOffset() {
-        return baseOffset.get() + getTotalMessageCount() - 1;
-    }
 
-    public void clear() {
-        lock.lock();
-        try {
-            if (messages.isEmpty()) {
-                return;
+    @RequiredArgsConstructor
+    class InMemoryPartitionImpl implements InMemoryPartition {
+
+        record PersistedMessage(byte[] message, long timestamp) {
+        }
+
+
+        record Segment(List<PersistedMessage> messages) {
+            Segment() {
+                this(new ArrayList<>(1024));
             }
+        }
 
-            // if consumer are empty, then clear will clear every full segment. if last segment is not full, then keep
-            // the last segment.
-            if (consumerOffsets.isEmpty()) {
-                // Fast path: If we have multiple segments, try to clear full segments
-                int segmentsCount = messages.size();
-                if (segmentsCount == 1) {
-                    return; // Keep at least one segment
+        private final ReentrantLock lock = new ReentrantLock();
+        private final List<Segment> messages = new ArrayList<>();
+        private final Map<String, Integer> consumerOffsets = new ConcurrentHashMap<>();
+        private final AtomicInteger baseOffset = new AtomicInteger();
+
+        public int add(byte[] message) {
+            lock.lock();
+            try {
+                Segment lastSegment;
+                if (messages.isEmpty()) {
+                    lastSegment = new Segment();
+                    messages.add(lastSegment);
+                } else {
+                    lastSegment = messages.getLast();
                 }
-            }
 
-            // Consumer-based clearing
-            int minOffset = consumerOffsets.values().stream().min(Integer::compareTo).orElse(getLatestOffset());
-            if (minOffset <= baseOffset.get()) {
-                return;
-            }
+                if (lastSegment.messages().size() == 1024) {
+                    lastSegment = new Segment();
+                    messages.add(lastSegment);
+                } else if (lastSegment.messages().size() > 1024) {
+                    throw new IllegalStateException(
+                        "Last segment is corrupted, it should not have more than 1024 messages."
+                    );
+                }
 
-            int messagesToClear = minOffset - baseOffset.get();
-            int segmentsToClear = messagesToClear / 1024;
-
-            if (segmentsToClear > 0) {
-                // Efficient batch removal
-                messages.subList(0, segmentsToClear).clear();
-                baseOffset.addAndGet(segmentsToClear * 1024);
+                lastSegment.messages().add(new PersistedMessage(message, System.currentTimeMillis()));
+                return getLatestOffset();
+            } finally {
+                lock.unlock();
             }
-        } finally {
-            lock.unlock();
         }
-    }
 
-    public void registerConsumer(String consumerName, int initialOffset) {
-        lock.lock();
-        try {
-            if (consumerOffsets.containsKey(consumerName)) {
-                throw new DuplicateResourceException("Consumer " + consumerName + " already registered.");
-            }
-            int latestOffset = getLatestOffset();
-            int clampedOffset = initialOffset;
-            if (getTotalMessageCount() == 0) {
-                clampedOffset = baseOffset.get();
-            } else {
-                clampedOffset = Math.max(clampedOffset, baseOffset.get());
-                clampedOffset = Math.min(clampedOffset, latestOffset);
-            }
-            consumerOffsets.put(consumerName, clampedOffset);
-        } finally {
-            lock.unlock();
+        public int getLatestOffset() {
+            return baseOffset.get() + getTotalMessageCount() - 1;
         }
-    }
 
-    public void unregisterConsumer(String consumerName) {
-        lock.lock();
-        try {
-            if (consumerOffsets.remove(consumerName) == null) {
-                throw new ResourceNotFoundException("Consumer " + consumerName + " not found.");
+        public void clear() {
+            lock.lock();
+            try {
+                if (messages.isEmpty()) {
+                    return;
+                }
+
+                // if consumer are empty, then clear will clear every full segment. if last segment is not full, then keep
+                // the last segment.
+                if (consumerOffsets.isEmpty()) {
+                    int segmentsCount = messages.size();
+                    if (segmentsCount == 1 && messages.get(0).messages().size() < 1024) {
+                        return; // Keep at least one segment
+                    }
+                }
+
+                // Consumer-based clearing, which also works when consumers are empty
+                int minOffset = consumerOffsets.values().stream().min(Integer::compareTo).orElse(getLatestOffset() + 1);
+                if (minOffset <= baseOffset.get()) {
+                    return;
+                }
+
+                int messagesToClear = minOffset - baseOffset.get();
+                int segmentsToClear = messagesToClear / 1024;
+
+                if (segmentsToClear > 0) {
+                    // Efficient batch removal
+                    messages.subList(0, segmentsToClear).clear();
+                    baseOffset.addAndGet(segmentsToClear * 1024);
+                }
+            } finally {
+                lock.unlock();
             }
-        } finally {
-            lock.unlock();
         }
-    }
 
-    private int getTotalMessageCount() {
-        int segments = messages.size();
-        return segments == 0 ? 0 : (segments - 1) * 1024 + messages.get(segments - 1).messages().size();
+        public void registerConsumer(String consumerName, int initialOffset) {
+            lock.lock();
+            try {
+                if (consumerOffsets.containsKey(consumerName)) {
+                    throw new DuplicateResourceException("Consumer " + consumerName + " already registered.");
+                }
+                int latestOffset = getLatestOffset();
+                int clampedOffset = initialOffset;
+                if (getTotalMessageCount() == 0) {
+                    clampedOffset = baseOffset.get();
+                } else {
+                    clampedOffset = Math.max(clampedOffset, baseOffset.get());
+                    clampedOffset = Math.min(clampedOffset, latestOffset);
+                }
+                consumerOffsets.put(consumerName, clampedOffset);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        public void unregisterConsumer(String consumerName) {
+            lock.lock();
+            try {
+                if (consumerOffsets.remove(consumerName) == null) {
+                    throw new ResourceNotFoundException("Consumer " + consumerName + " not found.");
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        private int getTotalMessageCount() {
+            int segments = messages.size();
+            return segments == 0 ? 0 : (segments - 1) * 1024 + messages.get(segments - 1).messages().size();
+        }
     }
 }

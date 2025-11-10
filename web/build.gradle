@@ -32,6 +32,7 @@ dependencies {
 
     // JMH dependencies
     jmh(libs.jmh.core)
+    jmhCompileOnly(libs.lombok)
     jmhAnnotationProcessor(libs.lombok)
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
 

@@ -345,7 +345,9 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Producer routes (for PRODUCE or ALL)
         if (apiUsecases.hasProduce()) {
-            List<RouteDefinition> msgProduceRouteDefs = getProduceApiRoutes();
+            List<RouteDefinition> msgProduceRouteDefs = getProduceApiRoutes().stream()
+                                                                             .filter(this::isRouteEnabled)
+                                                                             .toList();
             routeConfigurators.put(
                 RouteBehaviour.telemetry,
                 new MsgProduceRequestTelemetryConfigurator(

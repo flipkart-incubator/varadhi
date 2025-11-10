@@ -7,17 +7,15 @@ import com.flipkart.varadhi.spi.db.OpStore;
 
 public class InMemoryMetastoreProvider implements MetaStoreProvider {
 
-    @Override
-    public InMemoryMetaStore getMetaStore() {
-        return new InMemoryMetaStore();
-    }
-
-    @Override
-    public void close() throws Exception {
-    }
+    private final InMemoryMetaStore metastore = new InMemoryMetaStore();
 
     @Override
     public void init(MetaStoreOptions metaStoreOptions) {
+    }
+
+    @Override
+    public InMemoryMetaStore getMetaStore() {
+        return metastore;
     }
 
     @Override
@@ -30,5 +28,9 @@ public class InMemoryMetastoreProvider implements MetaStoreProvider {
     public AssignmentStore getAssignmentStore() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAssignmentStore'");
+    }
+
+    @Override
+    public void close() throws Exception {
     }
 }

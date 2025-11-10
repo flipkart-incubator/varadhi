@@ -34,6 +34,7 @@ import java.util.Map;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.assertArg;
 import static org.mockito.Mockito.*;
 
 class CustomAuthenticationHandlerTest {
@@ -134,7 +135,8 @@ class CustomAuthenticationHandlerTest {
 
         handler.handle(routingContext);
 
-        verify(routingContext).put(eq("userContext"), any(UserContext.class));
+        //        verify(routingContext).put(eq("userContext"), any(UserContext.class));
+        verify(routingContext).setUser(assertArg(user -> assertEquals(userContext.getSubject(), user.subject())));
         verify(routingContext).next();
     }
 
@@ -176,7 +178,8 @@ class CustomAuthenticationHandlerTest {
 
         handler.handle(routingContext);
 
-        verify(routingContext).put(eq("userContext"), any(UserContext.class));
+        //        verify(routingContext).put(eq("userContext"), any(UserContext.class));
+        verify(routingContext).setUser(assertArg(user -> assertEquals(userContext.getSubject(), user.subject())));
         verify(routingContext).next();
     }
 

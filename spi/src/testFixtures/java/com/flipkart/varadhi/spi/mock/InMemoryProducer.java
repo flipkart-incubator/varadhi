@@ -3,6 +3,8 @@ package com.flipkart.varadhi.spi.mock;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.spi.mock.InMemoryPartition.InMemoryPartitionImpl;
+import com.flipkart.varadhi.spi.mock.InMemoryPartition.NullPartition;
 import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.spi.services.Producer;
 import io.netty.util.HashedWheelTimer;
@@ -30,14 +32,14 @@ public class InMemoryProducer implements Producer {
         InMemoryStorageTopic topic,
         boolean roundRobinRouting,
         HashedWheelTimer scheduler,
-        boolean mockProduce
+        boolean zeroRetention
     ) {
         this.topic = topic;
         this.roundRobinRouting = roundRobinRouting;
         this.scheduler = scheduler;
         this.partitions = new ConcurrentHashMap<>();
         for (int i = 0; i < topic.getPartitions(); i++) {
-            partitions.put(i, new InMemoryPartition(mockProduce));
+            partitions.put(i, zeroRetention ? new NullPartition() : new InMemoryPartitionImpl());
         }
     }
 

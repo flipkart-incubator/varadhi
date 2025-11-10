@@ -312,8 +312,8 @@ public class InMemoryMetaStore implements MetaStore {
         }
 
         @Override
-        public VaradhiSubscription get(String subscriptionName) {
-            byte[] bytes = subscriptions.get(subscriptionName);
+        public VaradhiSubscription get(String subscriptionFQN) {
+            byte[] bytes = subscriptions.get(subscriptionFQN);
             return bytes == null ? null : fromBytes(bytes, VaradhiSubscription.class);
         }
 
@@ -331,16 +331,16 @@ public class InMemoryMetaStore implements MetaStore {
         }
 
         @Override
-        public boolean exists(String subscriptionName) {
-            return subscriptions.containsKey(subscriptionName);
+        public boolean exists(String subscriptionFQN) {
+            return subscriptions.containsKey(subscriptionFQN);
         }
 
         @Override
-        public void delete(String subscriptionName) {
-            if (!subscriptions.containsKey(subscriptionName)) {
-                throw new MetaStoreException("Subscription does not exist: " + subscriptionName);
+        public void delete(String subscriptionFQN) {
+            if (!subscriptions.containsKey(subscriptionFQN)) {
+                throw new MetaStoreException("Subscription does not exist: " + subscriptionFQN);
             }
-            subscriptions.remove(subscriptionName);
+            subscriptions.remove(subscriptionFQN);
         }
 
         private List<VaradhiSubscription> getAll() {

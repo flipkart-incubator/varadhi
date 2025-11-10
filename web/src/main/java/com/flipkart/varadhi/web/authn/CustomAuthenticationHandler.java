@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.RESOURCE_HIERARCHY;
-import static com.flipkart.varadhi.common.Constants.ContextKeys.USER_CONTEXT;
 import static com.flipkart.varadhi.common.Constants.Tags.TAG_ORG;
 import static com.flipkart.varadhi.web.spi.vo.URLDefinition.anyMatch;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
@@ -136,7 +135,7 @@ public class CustomAuthenticationHandler implements AuthenticationHandler, Authe
 
         userContext.onComplete(result -> {
             if (result.succeeded()) {
-                routingContext.setUser(User.fromName(orgName));
+                routingContext.setUser(User.fromName(result.result().getSubject()));
                 routingContext.next();
             } else {
                 routingContext.fail(UNAUTHORIZED.code(), result.cause());
