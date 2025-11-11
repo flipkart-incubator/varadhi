@@ -1,10 +1,11 @@
 package com.flipkart.varadhi.pulsar.consumer;
 
-import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.MessagingException;
+import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicPartitions;
 import org.apache.pulsar.client.api.BatchReceivePolicy;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -15,7 +16,7 @@ import org.apache.pulsar.common.naming.TopicName;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic, PulsarOffset> {
+public class PulsarConsumerFactory implements ConsumerFactory {
 
     private final PulsarClient pulsarClient;
     private final Map<String, Object> defaultConsumerProperties;
@@ -30,8 +31,8 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
     }
 
     @Override
-    public Consumer<PulsarOffset> newConsumer(
-        Collection<TopicPartitions<PulsarStorageTopic>> topics,
+    public Consumer<? extends Offset> newConsumer(
+        Collection<TopicPartitions<? extends StorageTopic>> _topics,
         String subscriptionName,
         String consumerName,
         Map<String, Object> properties
@@ -41,7 +42,8 @@ public class PulsarConsumerFactory implements ConsumerFactory<PulsarStorageTopic
 
             Set<String> topicNames = new HashSet<>();
 
-            for (TopicPartitions<PulsarStorageTopic> topic : topics) {
+            for (var _topic : _topics) {
+                TopicPartitions<PulsarStorageTopic> topic = _topic.lift(PulsarStorageTopic.class);
                 if (!topic.hasSpecificPartitions()) {
                     topicNames.add(topic.getTopic().getName());
                 } else {

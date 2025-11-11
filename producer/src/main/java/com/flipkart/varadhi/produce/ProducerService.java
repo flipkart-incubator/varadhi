@@ -52,7 +52,7 @@ public final class ProducerService {
     /**
      * Cache of producers for storage topics.
      */
-    private final LoadingCache<ProducerCacheKey, Producer> producerCache;
+    private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
 
     /**
      * The region where messages are produced.
@@ -89,7 +89,7 @@ public final class ProducerService {
     // TODO: fix the generic type parameters. See ProduceBenchmarkTest for the issue.
     public ProducerService(
         String produceRegion,
-        ProducerFactory<StorageTopic> producerFactory,
+        ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache
@@ -119,7 +119,7 @@ public final class ProducerService {
      */
     public ProducerService(
         String produceRegion,
-        ProducerFactory<StorageTopic> producerFactory,
+        ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
@@ -137,9 +137,9 @@ public final class ProducerService {
         this.metricsProvider = metricsRecorderProvider;
     }
 
-    private Producer loadProducerObject(
+    private Producer<? extends Offset> loadProducerObject(
         String produceRegion,
-        ProducerFactory<StorageTopic> producerFactory,
+        ProducerFactory producerFactory,
         ProducerCacheKey key
     ) {
         var topicMaybe = topicCache.get(key.varadhiTopicFQN);
@@ -237,9 +237,9 @@ public final class ProducerService {
      * @param storageTopic   the storage topic to get a producer for
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer> getProducer(String topicFQN, StorageTopic storageTopic) {
+    public CompletableFuture<Producer<? extends Offset>> getProducer(String topicFQN, StorageTopic storageTopic) {
         ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId());
-        Producer producer = producerCache.getIfPresent(key);
+        Producer<? extends Offset> producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
@@ -271,7 +271,11 @@ public final class ProducerService {
      * @param message        the message to produce
      * @return a future that completes with the result of the produce operation
      */
-    private CompletableFuture<ProduceResult> doProduce(Producer producer, String topicName, Message message) {
+    private CompletableFuture<ProduceResult> doProduce(
+        Producer<? extends Offset> producer,
+        String topicName,
+        Message message
+    ) {
         long start = System.currentTimeMillis();
         return producer.produceAsync(message).handle((offset, throwable) -> {
             long latency = System.currentTimeMillis() - start;
@@ -283,7 +287,7 @@ public final class ProducerService {
                     throwable
                 );
             }
-            var result = ProduceResult.of(message.getMessageId(), Result.of(offset, throwable));
+            var result = ProduceResult.of(message.getMessageId(), Result.<Offset>of(offset, throwable));
             result.setLatencyMs(latency);
             return result;
         });

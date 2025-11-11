@@ -9,12 +9,12 @@ import java.util.List;
 
 @Slf4j
 public class ShardProvisioner {
-    StorageTopicService<StorageTopic> storageTopicService;
-    StorageSubscriptionService<StorageSubscription<StorageTopic>> storageSubscriptionService;
+    StorageTopicService storageTopicService;
+    StorageSubscriptionService storageSubscriptionService;
 
     public ShardProvisioner(
-        StorageSubscriptionService<StorageSubscription<StorageTopic>> storageSubscriptionService,
-        StorageTopicService<StorageTopic> storageTopicService
+        StorageSubscriptionService storageSubscriptionService,
+        StorageTopicService storageTopicService
     ) {
         this.storageSubscriptionService = storageSubscriptionService;
         this.storageTopicService = storageTopicService;
@@ -52,7 +52,7 @@ public class ShardProvisioner {
         Project project,
         boolean provisionTopics
     ) {
-        List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
+        var storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
             if (provisionTopics) {
                 provisionStorageTopic(storageSub.getStorageTopic(), project);
@@ -61,14 +61,14 @@ public class ShardProvisioner {
         });
     }
 
-    private void provisionStorageSubscription(StorageSubscription<StorageTopic> storageSub, Project project) {
+    private void provisionStorageSubscription(StorageSubscription<? extends StorageTopic> storageSub, Project project) {
         if (storageSubscriptionService.exists(
             storageSub.getName(),
             storageSub.getTopicPartitions().getTopic().getName()
         )) {
             log.info("StorageSubscription:{} already exists, re-using it.", storageSub.getName());
         } else {
-            storageSubscriptionService.create(storageSub, project);
+            storageSubscriptionService.create(project, storageSub);
             log.info("StorageSubscription:{} provisioned.", storageSub.getName());
         }
     }
@@ -77,7 +77,7 @@ public class ShardProvisioner {
         if (storageTopicService.exists(storageTopic.getName())) {
             log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
         } else {
-            storageTopicService.create(storageTopic, project);
+            storageTopicService.create(project, storageTopic);
             log.info("storageTopic:{} provisioned.", storageTopic.getName());
         }
     }
@@ -98,7 +98,7 @@ public class ShardProvisioner {
         Project project,
         boolean deProvisionTopics
     ) {
-        List<StorageSubscription<StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
+        List<StorageSubscription<? extends StorageTopic>> storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
             deProvisionStorageSubscription(storageSub, project);
             if (deProvisionTopics) {
@@ -111,19 +111,22 @@ public class ShardProvisioner {
         if (!storageTopicService.exists(storageTopic.getName())) {
             log.info("StorageTopic:{} not found, skipping delete.", storageTopic.getName());
         } else {
-            storageTopicService.delete(storageTopic.getName(), project);
+            storageTopicService.delete(project, storageTopic.getName());
             log.info("storageTopic:{} deleted.", storageTopic.getName());
         }
     }
 
-    private void deProvisionStorageSubscription(StorageSubscription<StorageTopic> storageSub, Project project) {
+    private void deProvisionStorageSubscription(
+        StorageSubscription<? extends StorageTopic> storageSub,
+        Project project
+    ) {
         if (!storageSubscriptionService.exists(
             storageSub.getName(),
             storageSub.getTopicPartitions().getTopic().getName()
         )) {
             log.info("StorageSubscription:{} not found, skipping delete.", storageSub.getName());
         } else {
-            storageSubscriptionService.delete(storageSub, project);
+            storageSubscriptionService.delete(project, storageSub);
             log.info("StorageSubscription:{} deleted.", storageSub.getName());
         }
     }

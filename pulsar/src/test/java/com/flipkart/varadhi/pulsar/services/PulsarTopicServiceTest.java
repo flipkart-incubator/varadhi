@@ -54,7 +54,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(topic, project);
+        pulsarTopicService.create(project, topic);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
     }
 
@@ -65,7 +65,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
-        assertThrows(MessagingException.class, () -> pulsarTopicService.create(topic, project));
+        assertThrows(MessagingException.class, () -> pulsarTopicService.create(project, topic));
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
     }
 
@@ -88,7 +88,7 @@ public class PulsarTopicServiceTest {
                                                                                                                    );
         MessagingException me = Assertions.assertThrows(
             MessagingException.class,
-            () -> pulsarTopicService.create(topic, project)
+            () -> pulsarTopicService.create(project, topic)
         );
         Assertions.assertInstanceOf(PulsarAdminException.ConflictException.class, me.getCause());
         Assertions.assertEquals("duplicate topic error", me.getMessage());
@@ -106,7 +106,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(topic, projectNew);
+        pulsarTopicService.create(projectNew, topic);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
         verify(tenants, times(1)).createTenant(eq(projectNew.getOrg()), any());
         verify(namespaces, times(1)).createNamespace(eq(newNamespace));

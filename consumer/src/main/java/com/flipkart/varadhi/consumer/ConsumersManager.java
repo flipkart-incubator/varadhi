@@ -22,7 +22,7 @@ public interface ConsumersManager {
         String project,
         String subscription,
         int shardId,
-        StorageSubscription<StorageTopic> mainSubscription,
+        StorageSubscription<? extends StorageTopic> mainSubscription,
         boolean grouped,
         Endpoint endpoint,
         ConsumptionPolicy consumptionPolicy,

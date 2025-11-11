@@ -29,7 +29,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     private final String project;
     private final String subscriptionName;
     private final int shardId;
-    private final StorageSubscription<StorageTopic> storageSubscription;
+    private final StorageSubscription<? extends StorageTopic> storageSubscription;
     private final boolean grouped;
     private final Endpoint endpoint;
     private final ConsumptionPolicy consumptionPolicy;
@@ -59,7 +59,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     /**
      * producer objects for required storage topics
      */
-    private final Map<InternalQueueType, FailedMsgProducer> internalProducers = new HashMap<>();
+    private final Map<InternalQueueType, FailedMsgProducer<? extends Offset>> internalProducers = new HashMap<>();
 
     /*
         secured by synchronized block
@@ -122,9 +122,9 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
             )
         );
         for (int r = 1; r <= failurePolicy.getRetryPolicy().getRetryAttempts(); ++r) {
-            StorageSubscription<StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
-                                                                               .getSubscriptionForRetry(r)
-                                                                               .getSubscriptionForConsume();
+            StorageSubscription<? extends StorageTopic> retrySubscription = failurePolicy.getRetrySubscription()
+                                                                                         .getSubscriptionForRetry(r)
+                                                                                         .getSubscriptionForConsume();
             // TODO: the retry delay should be configurable.
             internalConsumers.put(
                 InternalQueueType.retryType(r),
@@ -257,7 +257,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         connected = false;
     }
 
-    record ConsumerHolder(Consumer<Offset> consumer, MessageSrc messageSrc) implements Closeable {
+    record ConsumerHolder(Consumer<? extends Offset> consumer, MessageSrc messageSrc) implements Closeable {
         @Override
         public void close() throws IOException {
             consumer.close();
@@ -272,26 +272,26 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         return new MessageSrcSelector(context, messageSrcs, batchSize);
     }
 
-    Consumer<Offset> createConsumer(
-        StorageSubscription<StorageTopic> storageSubscription,
+    Consumer<? extends Offset> createConsumer(
+        StorageSubscription<? extends StorageTopic> storageSubscription,
         InternalQueueType queueType
     ) {
         String consumerName = String.format("%s/%s/%s/%s", project, subscriptionName, shardId, queueType.toString());
-        Consumer<Offset> consumer = env.getConsumerFactory()
-                                       .newConsumer(
-                                           List.of(storageSubscription.getTopicPartitions()),
-                                           storageSubscription.getName(),
-                                           consumerName,
-                                           Map.of()
-                                       );
+        Consumer<? extends Offset> consumer = env.getConsumerFactory()
+                                                 .newConsumer(
+                                                     List.of(storageSubscription.getTopicPartitions()),
+                                                     storageSubscription.getName(),
+                                                     consumerName,
+                                                     Map.of()
+                                                 );
         return consumer;
     }
 
-    Consumer<Offset> createDelayedConsumer(Consumer<Offset> normalConsumer, long delayMs) {
+    Consumer<? extends Offset> createDelayedConsumer(Consumer<? extends Offset> normalConsumer, long delayMs) {
         return new DelayedConsumer<>(normalConsumer, context, delayMs);
     }
 
-    ConsumerHolder createConsumerHolder(Consumer<Offset> consumer, InternalQueueType queueType) {
+    ConsumerHolder createConsumerHolder(Consumer<? extends Offset> consumer, InternalQueueType queueType) {
         // TODO: configurable unacked messages.
         MessageSrc messageSrc = grouped ?
             new GroupedMessageSrc<>(consumer, 1000, metrics) :
@@ -299,8 +299,8 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
         return new ConsumerHolder(consumer, messageSrc);
     }
 
-    FailedMsgProducer createFailedMsgProducer(StorageTopic topic, TopicCapacityPolicy capacity) {
-        return new FailedMsgProducer(env.getProducerFactory().newProducer(topic, capacity));
+    FailedMsgProducer<? extends Offset> createFailedMsgProducer(StorageTopic topic, TopicCapacityPolicy capacity) {
+        return new FailedMsgProducer<>(env.getProducerFactory().newProducer(topic, capacity));
     }
 
     void startLoop() {

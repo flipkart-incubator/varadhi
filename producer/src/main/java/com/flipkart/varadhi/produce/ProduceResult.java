@@ -36,7 +36,7 @@ public class ProduceResult {
      * @param producerResult the result of the produce operation
      * @return a new ProduceResult instance
      */
-    public static ProduceResult of(String messageId, Result<Offset> producerResult) {
+    public static ProduceResult of(String messageId, Result<? extends Offset> producerResult) {
         return producerResult.hasResult() ?
             new ProduceResult(messageId, ProduceStatus.Success, producerResult.result(), null) :
             new ProduceResult(messageId, ProduceStatus.Failed, null, producerResult.cause());

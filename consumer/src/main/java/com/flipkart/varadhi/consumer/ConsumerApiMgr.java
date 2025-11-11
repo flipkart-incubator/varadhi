@@ -29,7 +29,7 @@ public class ConsumerApiMgr implements ConsumerApi {
         log.info("Consumer: Starting shard {}", operation);
         SubscriptionUnitShard shard = operation.getShard();
 
-        StorageSubscription<StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
+        StorageSubscription<? extends StorageTopic> mainSub = shard.getMainSubscription().getSubscriptionForConsume();
         ConsumptionFailurePolicy failurePolicy = new ConsumptionFailurePolicy(
             operation.getRetryPolicy(),
             shard.getRetrySubscription(),

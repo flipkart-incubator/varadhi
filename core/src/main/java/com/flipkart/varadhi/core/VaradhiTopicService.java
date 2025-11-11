@@ -4,7 +4,6 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
@@ -22,7 +21,7 @@ import java.util.List;
 @Slf4j
 public class VaradhiTopicService {
 
-    private final StorageTopicService<StorageTopic> storageTopicService;
+    private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
     private final SubscriptionStore subscriptionStore;
     private final ProjectStore projectStore;
@@ -34,7 +33,7 @@ public class VaradhiTopicService {
      * @param topicStore           the meta store
      */
     public VaradhiTopicService(
-        StorageTopicService<StorageTopic> storageTopicService,
+        StorageTopicService storageTopicService,
         TopicStore topicStore,
         SubscriptionStore subscriptionStore,
         ProjectStore projectStore
@@ -86,13 +85,7 @@ public class VaradhiTopicService {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         varadhiTopic.getInternalTopics()
                     .forEach(
-                        (region, internalTopic) -> internalTopic.getActiveTopics()
-                                                                .forEach(
-                                                                    storageTopic -> storageTopicService.create(
-                                                                        storageTopic,
-                                                                        project
-                                                                    )
-                                                                )
+                        (region, it) -> it.getActiveTopics().forEach(st -> storageTopicService.create(project, st))
                     );
     }
 
@@ -156,13 +149,8 @@ public class VaradhiTopicService {
 
             varadhiTopic.getInternalTopics()
                         .forEach(
-                            (region, internalTopic) -> internalTopic.getActiveTopics()
-                                                                    .forEach(
-                                                                        storageTopic -> storageTopicService.delete(
-                                                                            storageTopic.getName(),
-                                                                            project
-                                                                        )
-                                                                    )
+                            (region, it) -> it.getActiveTopics()
+                                              .forEach(st -> storageTopicService.delete(project, st.getName()))
                         );
             topicStore.delete(varadhiTopic.getName());
         } catch (Exception e) {

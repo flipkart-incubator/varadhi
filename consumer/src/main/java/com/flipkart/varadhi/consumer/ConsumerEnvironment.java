@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.consumer;
 
-import com.flipkart.varadhi.entities.Offset;
-import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -13,8 +11,8 @@ import java.net.http.HttpClient;
 @RequiredArgsConstructor
 @Getter
 public class ConsumerEnvironment {
-    private final ProducerFactory<StorageTopic> producerFactory;
-    private final ConsumerFactory<StorageTopic, Offset> consumerFactory;
+    private final ProducerFactory producerFactory;
+    private final ConsumerFactory consumerFactory;
     private final HttpClient httpClient;
     private final MeterRegistry meterRegistry;
 }

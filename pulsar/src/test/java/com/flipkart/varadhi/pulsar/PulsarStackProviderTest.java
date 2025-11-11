@@ -16,9 +16,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingStackOptions;
-import com.flipkart.varadhi.spi.services.ProducerFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
-import com.flipkart.varadhi.spi.services.StorageTopicService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,9 +95,8 @@ public class PulsarStackProviderTest extends PulsarTestBase {
     @Test
     public void testGetStorageTopicService_Initialized() {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
-        StorageTopicService<PulsarStorageTopic> storageTopicService = pulsarStackProvider.getStorageTopicService();
-        StorageTopicService<PulsarStorageTopic> storageTopicServiceSecond = pulsarStackProvider
-                                                                                               .getStorageTopicService();
+        var storageTopicService = pulsarStackProvider.getStorageTopicService();
+        var storageTopicServiceSecond = pulsarStackProvider.getStorageTopicService();
         Assertions.assertEquals(storageTopicService, storageTopicServiceSecond);
     }
 
@@ -111,8 +108,8 @@ public class PulsarStackProviderTest extends PulsarTestBase {
     @Test
     public void testGetProducerFactory_Initialized() {
         pulsarStackProvider.init(messagingStackOptions, objectMapper);
-        ProducerFactory<PulsarStorageTopic> producerFactory1 = pulsarStackProvider.getProducerFactory();
-        ProducerFactory<PulsarStorageTopic> producerFactory2 = pulsarStackProvider.getProducerFactory();
+        var producerFactory1 = pulsarStackProvider.getProducerFactory();
+        var producerFactory2 = pulsarStackProvider.getProducerFactory();
         Assertions.assertEquals(producerFactory1, producerFactory2);
     }
 }

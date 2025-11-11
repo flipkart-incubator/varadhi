@@ -12,22 +12,22 @@ import java.util.concurrent.CompletableFuture;
  * follow through messages that are simply following failures in previous message of the same group.
  */
 @RequiredArgsConstructor
-public class FailedMsgProducer implements Producer {
+public class FailedMsgProducer<O extends Offset> implements Producer<O> {
 
     public static final String FOLLOW_THROUGH_MSG_HEADER = "varadhi.msg.followed";
 
-    private final Producer delegate;
+    private final Producer<O> delegate;
 
     public static boolean isFollowThroughMsg(Message message) {
         return message.hasHeader(FOLLOW_THROUGH_MSG_HEADER);
     }
 
     @Override
-    public CompletableFuture<Offset> produceAsync(Message message) {
+    public CompletableFuture<O> produceAsync(Message message) {
         return delegate.produceAsync(message.withoutHeader(FOLLOW_THROUGH_MSG_HEADER));
     }
 
-    public CompletableFuture<Offset> produceFollowThroughMsgAsync(Message msg, String previousOffset) {
+    public CompletableFuture<O> produceFollowThroughMsgAsync(Message msg, String previousOffset) {
         return delegate.produceAsync(msg.withHeader(FOLLOW_THROUGH_MSG_HEADER, previousOffset));
     }
 }

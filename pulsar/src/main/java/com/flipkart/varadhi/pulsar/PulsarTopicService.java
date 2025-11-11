@@ -2,8 +2,10 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicPartitions;
+import com.flipkart.varadhi.entities.utils.TypeUtil;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.MessagingException;
@@ -23,7 +25,7 @@ import java.util.Set;
 import static com.flipkart.varadhi.pulsar.util.EntityHelper.getNamespace;
 
 @Slf4j
-public class PulsarTopicService implements StorageTopicService<PulsarStorageTopic> {
+public class PulsarTopicService implements StorageTopicService {
     private final ClientProvider clientProvider;
     private final TopicPlanner topicPlanner;
 
@@ -32,7 +34,9 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
         this.topicPlanner = topicPlanner;
     }
 
-    public void create(PulsarStorageTopic topic, Project project) {
+    @Override
+    public void create(Project project, StorageTopic _topic) {
+        var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
         createTenant(project.getOrg());
         createNamespace(project.getOrg(), project.getName());
         try {
@@ -73,12 +77,13 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
     }
 
     @Override
-    public List<TopicPartitions<PulsarStorageTopic>> shardTopic(
-        PulsarStorageTopic topic,
+    public List<TopicPartitions<? extends StorageTopic>> shardTopic(
+        StorageTopic _topic,
         TopicCapacityPolicy capacity,
         InternalQueueCategory category
     ) {
-        List<TopicPartitions<PulsarStorageTopic>> topicPartitions = new ArrayList<>();
+        var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
+        List<TopicPartitions<? extends StorageTopic>> topicPartitions = new ArrayList<>();
         int shardCount = topicPlanner.getShardCount(topic, capacity, category);
         int partitionsPerShard = topic.getPartitionCount() / shardCount;
         for (int shardId = 0; shardId < shardCount; shardId++) {
@@ -99,9 +104,9 @@ public class PulsarTopicService implements StorageTopicService<PulsarStorageTopi
     }
 
     @Override
-    public void delete(String topicName, Project project) {
+    public void delete(Project project, String topicName) {
         try {
-            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, false, false);
+            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, false);
             log.debug("Deleted the pulsar topic:{}", topicName);
         } catch (PulsarAdminException e) {
             if (e instanceof PulsarAdminException.NotFoundException) {

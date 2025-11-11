@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UngroupedProcessingLoop extends ProcessingLoop {
 
-    private final Map<InternalQueueType, FailedMsgProducer> internalProducers;
+    private final Map<InternalQueueType, FailedMsgProducer<? extends Offset>> internalProducers;
     private final ConsumptionFailurePolicy failurePolicy;
 
     public UngroupedProcessingLoop(
@@ -28,7 +28,7 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
         ThresholdProvider.Dynamic throttleThresholdProvider,
         Throttler<DeliveryResponse> throttler,
         MessageDelivery deliveryClient,
-        Map<InternalQueueType, FailedMsgProducer> internalProducers,
+        Map<InternalQueueType, FailedMsgProducer<? extends Offset>> internalProducers,
         ConsumptionFailurePolicy failurePolicy,
         int maxInFlightMessages
     ) {
@@ -74,8 +74,8 @@ public class UngroupedProcessingLoop extends ProcessingLoop {
         MessageConsumptionStatus status
     ) {
         // failed msgs are present in failedMsgInQueue, so produce this msg there
-        CompletableFuture<Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
-                                                                  .produceAsync(message.getMessage());
+        CompletableFuture<? extends Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
+                                                                            .produceAsync(message.getMessage());
         asyncProduce.whenComplete((offset, e) -> {
             log.debug(
                 "Produced failed message to internal queue: {} with offset: {}. msg id: {}",

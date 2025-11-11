@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Copilot Instructions for Varadhi
 
 ## Project Overview

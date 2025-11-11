@@ -1,25 +1,24 @@
 package com.flipkart.varadhi.spi.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
 
-public interface MessagingStackProvider<T extends StorageTopic, O extends Offset, S extends StorageSubscription<T>> {
-    //TODO::This is likely a candidate for flattening, instead of these many factories.
+public interface MessagingStackProvider {
+
     String getName();
 
     void init(MessagingStackOptions messagingStackOptions, ObjectMapper mapper);
 
-    StorageTopicFactory<T> getStorageTopicFactory();
+    StorageTopicFactory<? extends StorageTopic> getStorageTopicFactory();
 
-    StorageSubscriptionFactory<S, T> getSubscriptionFactory();
+    StorageSubscriptionFactory<? extends StorageSubscription<? extends StorageTopic>> getSubscriptionFactory();
 
-    StorageTopicService<T> getStorageTopicService();
+    StorageTopicService getStorageTopicService();
 
-    StorageSubscriptionService<S> getStorageSubscriptionService();
+    StorageSubscriptionService getStorageSubscriptionService();
 
-    ProducerFactory<T> getProducerFactory();
+    ProducerFactory getProducerFactory();
 
-    ConsumerFactory<T, O> getConsumerFactory();
+    ConsumerFactory getConsumerFactory();
 }

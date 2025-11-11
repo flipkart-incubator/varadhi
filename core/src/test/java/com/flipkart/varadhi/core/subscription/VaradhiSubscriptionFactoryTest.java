@@ -26,13 +26,13 @@ class VaradhiSubscriptionFactoryTest {
     private static final TopicCapacityPolicy CAPACITY_POLICY = Constants.DEFAULT_TOPIC_CAPACITY;
 
     @Mock
-    private StorageSubscriptionFactory<StorageSubscription<StorageTopic>, StorageTopic> subscriptionFactory;
+    private StorageSubscriptionFactory<StorageSubscription<StorageTopic>> subscriptionFactory;
 
     @Mock
     private StorageTopicFactory<StorageTopic> topicFactory;
 
     @Mock
-    private StorageTopicService<StorageTopic> topicService;
+    private StorageTopicService topicService;
 
     @InjectMocks
     private VaradhiSubscriptionFactory varadhiSubscriptionFactory;

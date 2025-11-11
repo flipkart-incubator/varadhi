@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -25,7 +24,7 @@ import static org.apache.commons.text.CharacterPredicates.DIGITS;
 import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
-public class PulsarProducer implements Producer {
+public class PulsarProducer implements Producer<PulsarOffset> {
     private final RandomStringGenerator stringGenerator;
     private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
@@ -66,7 +65,7 @@ public class PulsarProducer implements Producer {
     }
 
     @Override
-    public CompletableFuture<Offset> produceAsync(Message message) {
+    public CompletableFuture<PulsarOffset> produceAsync(Message message) {
 
         String partitioningKey = getPartitioningKey(message);
 

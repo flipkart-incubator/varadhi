@@ -7,7 +7,7 @@ import com.flipkart.varadhi.entities.TopicPartitions;
 import java.util.Collection;
 import java.util.Map;
 
-public interface ConsumerFactory<T extends StorageTopic, O extends Offset> {
+public interface ConsumerFactory {
 
     /**
      * Retrieves a consumer instance for consuming messages from given topics.
@@ -23,8 +23,8 @@ public interface ConsumerFactory<T extends StorageTopic, O extends Offset> {
      *
      * @throws MessagingException if an error occurs while creating the consumer.
      */
-    Consumer<O> newConsumer(
-        Collection<TopicPartitions<T>> topics,
+    Consumer<? extends Offset> newConsumer(
+        Collection<TopicPartitions<? extends StorageTopic>> topics,
         String subscriptionName,
         String consumerName,
         Map<String, Object> properties
