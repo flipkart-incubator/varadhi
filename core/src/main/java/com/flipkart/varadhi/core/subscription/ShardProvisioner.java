@@ -9,8 +9,8 @@ import java.util.List;
 
 @Slf4j
 public class ShardProvisioner {
-    StorageTopicService storageTopicService;
-    StorageSubscriptionService storageSubscriptionService;
+    private final StorageTopicService storageTopicService;
+    private final StorageSubscriptionService storageSubscriptionService;
 
     public ShardProvisioner(
         StorageSubscriptionService storageSubscriptionService,
