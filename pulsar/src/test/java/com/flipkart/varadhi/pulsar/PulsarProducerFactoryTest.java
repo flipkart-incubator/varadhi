@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -44,7 +45,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     @Test
     public void testGetProducer() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
-        Producer p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY);
+        Producer<? extends Offset> p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY);
         Assertions.assertNotNull(p);
         verify(builder, times(1)).create();
     }

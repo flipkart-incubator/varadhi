@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.PulsarTestBase;
@@ -222,7 +221,7 @@ public class PulsarProducerTest extends PulsarTestBase {
                                                                                                                    )
                                                                                                                    .sendAsync();
         Message message = getMessage(payload);
-        CompletableFuture<Offset> future = pulsarProducer.produceAsync(message);
+        CompletableFuture<PulsarOffset> future = pulsarProducer.produceAsync(message);
         Assertions.assertTrue(future.isCompletedExceptionally());
         ExecutionException ee = Assertions.assertThrows(
             ExecutionException.class,

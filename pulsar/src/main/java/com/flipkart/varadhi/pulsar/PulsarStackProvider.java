@@ -12,13 +12,13 @@ import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.*;
 import com.flipkart.varadhi.common.utils.HostUtils;
 import com.flipkart.varadhi.common.utils.YamlLoader;
+
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 
 @Slf4j
-public class PulsarStackProvider implements
-    MessagingStackProvider<PulsarStorageTopic, PulsarOffset, PulsarSubscription> {
+public class PulsarStackProvider implements MessagingStackProvider {
     private PulsarTopicService topicService;
     private PulsarTopicFactory topicFactory;
     private PulsarProducerFactory producerFactory;
@@ -54,33 +54,38 @@ public class PulsarStackProvider implements
         initialised = true;
     }
 
+    @Override
     public StorageTopicFactory<PulsarStorageTopic> getStorageTopicFactory() {
         ensureInitialized();
         return topicFactory;
     }
 
-    public StorageSubscriptionFactory<PulsarSubscription, PulsarStorageTopic> getSubscriptionFactory() {
+    @Override
+    public PulsarSubscriptionFactory getSubscriptionFactory() {
         ensureInitialized();
         return subscriptionFactory;
     }
 
-    public StorageTopicService<PulsarStorageTopic> getStorageTopicService() {
+    @Override
+    public StorageTopicService getStorageTopicService() {
         ensureInitialized();
         return topicService;
     }
 
-    public StorageSubscriptionService<PulsarSubscription> getStorageSubscriptionService() {
+    @Override
+    public StorageSubscriptionService getStorageSubscriptionService() {
         ensureInitialized();
         return subscriptionService;
     }
 
-    public ProducerFactory<PulsarStorageTopic> getProducerFactory() {
+    @Override
+    public ProducerFactory getProducerFactory() {
         ensureInitialized();
         return producerFactory;
     }
 
     @Override
-    public ConsumerFactory<PulsarStorageTopic, PulsarOffset> getConsumerFactory() {
+    public ConsumerFactory getConsumerFactory() {
         ensureInitialized();
         return consumerFactory;
     }

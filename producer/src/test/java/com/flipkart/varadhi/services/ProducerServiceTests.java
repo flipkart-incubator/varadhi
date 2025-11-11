@@ -44,10 +44,10 @@ import static org.mockito.Mockito.when;
 
 class ProducerServiceTests {
     ProducerService service;
-    ProducerFactory<StorageTopic> producerFactory;
+    ProducerFactory producerFactory;
     MeterRegistry meterRegistry;
     MetaStore metaStore;
-    Producer producer;
+    Producer<? extends Offset> producer;
     ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicReadCache;
     ResourceReadCache<OrgDetails> orgCache;
@@ -70,7 +70,7 @@ class ProducerServiceTests {
         projectCache = mock(ResourceReadCache.class);
         orgCache = mock(ResourceReadCache.class);
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        when(producerFactory.newProducer(any(), any())).thenReturn(producer);
+        doReturn(producer).when(producerFactory).newProducer(any(), any());
 
         service = new ProducerService(region, producerFactory::newProducer, orgCache, projectCache, topicReadCache);
         random = new Random();
@@ -188,7 +188,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        ProducerFactory<StorageTopic> failingProducerProvider = (st, c) -> {
+        ProducerFactory failingProducerProvider = (st, c) -> {
             throw new RuntimeException("Unknown Error.");
         };
         ProducerService failingService = new ProducerService(
@@ -213,7 +213,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        ProducerFactory<StorageTopic> failingProducerProvider = (st, c) -> {
+        ProducerFactory failingProducerProvider = (st, c) -> {
             throw new RuntimeException("Topic doesn't exist.");
         };
         ProducerService failingService = new ProducerService(

@@ -10,8 +10,7 @@ import com.flipkart.varadhi.spi.services.StorageSubscriptionService;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 
-public class InMemoryMessagingStackProvider implements
-    MessagingStackProvider<InMemoryStorageTopic, InMemoryOffset, InMemoryStorageSubscription> {
+public class InMemoryMessagingStackProvider implements MessagingStackProvider {
 
     @Override
     public String getName() {
@@ -29,27 +28,27 @@ public class InMemoryMessagingStackProvider implements
     }
 
     @Override
-    public StorageSubscriptionFactory<InMemoryStorageSubscription, InMemoryStorageTopic> getSubscriptionFactory() {
+    public StorageSubscriptionFactory<InMemoryStorageSubscription> getSubscriptionFactory() {
         throw new UnsupportedOperationException("InMemoryStorageSubscriptionFactory is not implemented yet.");
     }
 
     @Override
-    public StorageTopicService<InMemoryStorageTopic> getStorageTopicService() {
+    public StorageTopicService getStorageTopicService() {
         return new InMemoryStorageTopicService();
     }
 
     @Override
-    public StorageSubscriptionService<InMemoryStorageSubscription> getStorageSubscriptionService() {
+    public StorageSubscriptionService getStorageSubscriptionService() {
         throw new UnsupportedOperationException("InMemoryStorageSubscriptionService is not implemented yet.");
     }
 
     @Override
-    public ProducerFactory<InMemoryStorageTopic> getProducerFactory() {
+    public ProducerFactory getProducerFactory() {
         return new InMemoryProducerFactory();
     }
 
     @Override
-    public ConsumerFactory<InMemoryStorageTopic, InMemoryOffset> getConsumerFactory() {
+    public ConsumerFactory getConsumerFactory() {
         throw new UnsupportedOperationException("InMemoryConsumerFactory is not implemented yet.");
     }
 }

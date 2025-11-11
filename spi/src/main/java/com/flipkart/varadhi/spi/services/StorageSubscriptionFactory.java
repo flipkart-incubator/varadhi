@@ -5,8 +5,6 @@ import com.flipkart.varadhi.entities.StorageSubscription;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicPartitions;
 
-// TODO::Fix warning, raw usage of StorageSubscription
-public interface StorageSubscriptionFactory<S extends StorageSubscription, T extends StorageTopic> {
-    S get(String subName, TopicPartitions<T> topicPartitions, Project project);
-
+public interface StorageSubscriptionFactory<S extends StorageSubscription<? extends StorageTopic>> {
+    S get(String subName, TopicPartitions<? extends StorageTopic> topicPartitions, Project project);
 }

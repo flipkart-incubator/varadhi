@@ -1,4 +1,8 @@
-# Copilot Instructions for Varadhi
+---
+trigger: always_on
+---
+
+# Instructions for Varadhi
 
 ## Project Overview
 - **Varadhi** is a message bus with a REST interface, supporting both point-to-point and pub-sub models. It is designed for async REST communication between microservices, using HTTP as the transport.

@@ -16,7 +16,7 @@ import java.util.Optional;
  */
 public class VaradhiTopicFactory {
 
-    private final StorageTopicFactory<StorageTopic> topicFactory;
+    private final StorageTopicFactory<? extends StorageTopic> topicFactory;
     private final TopicCapacityPolicy defaultTopicCapacityPolicy;
 
     /**
@@ -35,7 +35,7 @@ public class VaradhiTopicFactory {
      * @param defaultTopicCapacityPolicy the default capacity policy for the topic
      */
     public VaradhiTopicFactory(
-        StorageTopicFactory<StorageTopic> topicFactory,
+        StorageTopicFactory<? extends StorageTopic> topicFactory,
         String deploymentRegion,
         TopicCapacityPolicy defaultTopicCapacityPolicy
     ) {

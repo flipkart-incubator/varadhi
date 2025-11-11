@@ -2,7 +2,6 @@ package com.flipkart.varadhi.spi.mock;
 
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
-import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.spi.mock.InMemoryPartition.InMemoryPartitionImpl;
 import com.flipkart.varadhi.spi.mock.InMemoryPartition.NullPartition;
 import com.flipkart.varadhi.spi.services.MessagingException;
@@ -17,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class InMemoryProducer implements Producer {
+public class InMemoryProducer implements Producer<InMemoryOffset> {
 
     private final InMemoryStorageTopic topic;
     private final boolean roundRobinRouting;
@@ -44,7 +43,7 @@ public class InMemoryProducer implements Producer {
     }
 
     @Override
-    public CompletableFuture<Offset> produceAsync(Message message) {
+    public CompletableFuture<InMemoryOffset> produceAsync(Message message) {
         int partition = selectPartition(message);
 
         InMemoryPartition partitionStore = partitions.get(partition);
@@ -55,7 +54,7 @@ public class InMemoryProducer implements Producer {
             throw new MessagingException("Failed to serialize message for topic: " + topic.getName(), e);
         }
 
-        CompletableFuture<Offset> future = new CompletableFuture<>();
+        CompletableFuture<InMemoryOffset> future = new CompletableFuture<>();
         InMemoryOffset result = new InMemoryOffset(partition, offset);
 
         if (produceLatencyMs > 0) {

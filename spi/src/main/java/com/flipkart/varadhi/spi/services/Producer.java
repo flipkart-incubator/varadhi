@@ -7,9 +7,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
-public interface Producer extends Closeable {
+public interface Producer<O extends Offset> extends Closeable {
 
-    CompletableFuture<Offset> produceAsync(Message message);
+    CompletableFuture<O> produceAsync(Message message);
 
     @Override
     default void close() throws IOException {

@@ -20,7 +20,7 @@ public class GroupedProcessingLoop extends ProcessingLoop {
 
     private final GroupPointer[] groupPointers;
     private final SubscriptionGroupsState subscriptionGroupsState;
-    private final Map<InternalQueueType, FailedMsgProducer> internalProducers;
+    private final Map<InternalQueueType, FailedMsgProducer<? extends Offset>> internalProducers;
     private final ConsumptionFailurePolicy failurePolicy;
 
     public GroupedProcessingLoop(
@@ -31,7 +31,7 @@ public class GroupedProcessingLoop extends ProcessingLoop {
         Throttler<DeliveryResponse> throttler,
         MessageDelivery deliveryClient,
         SubscriptionGroupsState subscriptionGroupsState,
-        Map<InternalQueueType, FailedMsgProducer> internalProducers,
+        Map<InternalQueueType, FailedMsgProducer<? extends Offset>> internalProducers,
         ConsumptionFailurePolicy failurePolicy,
         int maxInFlightMessages
     ) {
@@ -101,8 +101,8 @@ public class GroupedProcessingLoop extends ProcessingLoop {
         MessageConsumptionStatus status
     ) {
         // failed msgs are present in failedMsgInQueue, so produce this msg there
-        CompletableFuture<Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
-                                                                  .produceAsync(message.getMessage());
+        CompletableFuture<? extends Offset> asyncProduce = internalProducers.get(failedMsgInQueue)
+                                                                            .produceAsync(message.getMessage());
 
         asyncProduce.thenCompose(offset -> {
             // TODO: add all other info. fix the internal topic idx

@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.entities.utils.TypeUtil;
+
 import lombok.Getter;
 
 @Getter
@@ -25,5 +27,9 @@ public class TopicPartitions<T extends StorageTopic> {
 
     public boolean hasSpecificPartitions() {
         return partitions != null;
+    }
+
+    public <R extends StorageTopic> TopicPartitions<R> lift(Class<R> clazz) {
+        return new TopicPartitions<>(TypeUtil.safeCast(topic, clazz), partitions);
     }
 }

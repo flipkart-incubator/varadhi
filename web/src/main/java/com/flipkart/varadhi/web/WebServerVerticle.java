@@ -409,7 +409,6 @@ public class WebServerVerticle extends AbstractVerticle {
      *
      * @return a list of admin API route definitions
      */
-    @SuppressWarnings ("unchecked")
     private List<RouteDefinition> getAdminApiRoutes() {
         List<RouteDefinition> routes = new ArrayList<>();
 

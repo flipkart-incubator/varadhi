@@ -12,7 +12,6 @@ import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceExcepti
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.core.subscription.ShardProvisioner;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
@@ -28,7 +27,6 @@ import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.db.*;
-import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -55,6 +53,7 @@ import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupe
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.getSubscriptionDefaultProperties;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith (VertxExtension.class)
@@ -188,8 +187,8 @@ class SubscriptionServiceTest {
         String region = "default";
 
         TopicPlanner planner = new TopicPlanner(new PulsarConfig());
-        StorageSubscriptionFactory subscriptionFactory = new PulsarSubscriptionFactory();
-        StorageTopicFactory topicFactory = new PulsarTopicFactory(planner);
+        StorageSubscriptionFactory<PulsarSubscription> subscriptionFactory = new PulsarSubscriptionFactory();
+        StorageTopicFactory<PulsarStorageTopic> topicFactory = new PulsarTopicFactory(planner);
         StorageTopicService topicService = new PulsarTopicService(null, planner);
 
         VaradhiTopic topic = VaradhiTopic.of(

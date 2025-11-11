@@ -4,14 +4,17 @@ import com.flipkart.varadhi.entities.*;
 
 import java.util.List;
 
-public interface StorageTopicService<T extends StorageTopic> {
+public interface StorageTopicService {
 
-    // TODO: fix the param order. Project should come first.
-    void create(T topic, Project project);
+    void create(Project project, StorageTopic topic);
 
-    List<TopicPartitions<T>> shardTopic(T topic, TopicCapacityPolicy capacity, InternalQueueCategory category);
+    List<TopicPartitions<? extends StorageTopic>> shardTopic(
+        StorageTopic topic,
+        TopicCapacityPolicy capacity,
+        InternalQueueCategory category
+    );
 
-    void delete(String topicName, Project project);
+    void delete(Project project, String topicName);
 
     boolean exists(String topicName);
 }

@@ -11,12 +11,12 @@ import java.util.List;
 @AllArgsConstructor
 public class InternalCompositeSubscription {
     private final InternalQueueType queueType;
-    private StorageSubscription<StorageTopic>[] storageSubscriptions;
+    private StorageSubscription<? extends StorageTopic>[] storageSubscriptions;
     private int produceIndex;
     private int consumeIndex;
 
     public static InternalCompositeSubscription of(
-        StorageSubscription<StorageTopic> storageSubscription,
+        StorageSubscription<? extends StorageTopic> storageSubscription,
         InternalQueueType queueType
     ) {
         return new InternalCompositeSubscription(queueType, new StorageSubscription[] {storageSubscription}, 0, 0);
@@ -31,12 +31,12 @@ public class InternalCompositeSubscription {
     }
 
     @JsonIgnore
-    public StorageSubscription<StorageTopic> getSubscriptionForConsume() {
+    public StorageSubscription<? extends StorageTopic> getSubscriptionForConsume() {
         return storageSubscriptions[consumeIndex];
     }
 
     @JsonIgnore
-    public List<StorageSubscription<StorageTopic>> getActiveSubscriptions() {
+    public List<StorageSubscription<? extends StorageTopic>> getActiveSubscriptions() {
         return Lists.newArrayList(storageSubscriptions);
     }
 }

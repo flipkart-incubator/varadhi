@@ -26,8 +26,8 @@ public class ConsumersManagerImpl implements ConsumersManager {
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
     public ConsumersManagerImpl(
-        ProducerFactory<StorageTopic> producerFactory,
-        ConsumerFactory<StorageTopic, Offset> consumerFactory,
+        ProducerFactory producerFactory,
+        ConsumerFactory consumerFactory,
         MeterRegistry meterRegistry
     ) {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -41,7 +41,7 @@ public class ConsumersManagerImpl implements ConsumersManager {
         String project,
         String subscription,
         int shardId,
-        StorageSubscription<StorageTopic> storageSubscription,
+        StorageSubscription<? extends StorageTopic> storageSubscription,
         boolean grouped,
         Endpoint endpoint,
         ConsumptionPolicy consumptionPolicy,

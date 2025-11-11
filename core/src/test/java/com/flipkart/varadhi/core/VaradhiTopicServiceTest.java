@@ -54,7 +54,7 @@ class VaradhiTopicServiceTest {
     private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = Constants.DEFAULT_TOPIC_CAPACITY;
 
     @Mock
-    private StorageTopicService<StorageTopic> storageTopicService;
+    private StorageTopicService storageTopicService;
 
     @Mock
     private MetaStore metaStore;
@@ -120,7 +120,7 @@ class VaradhiTopicServiceTest {
         varadhiTopicService.create(varadhiTopic, project);
 
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
-        verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
         verify(storageTopicFactory, times(1)).getTopic(
             0,
             vTopicName,
@@ -149,7 +149,7 @@ class VaradhiTopicServiceTest {
     void createVaradhiTopic_StorageTopicServiceFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         doThrow(new VaradhiException("StorageTopicService error")).when(storageTopicService)
-                                                                  .create(pulsarStorageTopic, project);
+                                                                  .create(project, pulsarStorageTopic);
 
         Exception exception = assertThrows(
             VaradhiException.class,
@@ -158,7 +158,7 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
         verify(metaStore.topics(), times(1)).update(varadhiTopic);
-        verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("StorageTopicService error", exception.getMessage());
         assertEquals(LifecycleStatus.State.CREATE_FAILED, varadhiTopic.getStatus().getState());
@@ -176,7 +176,7 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore.topics(), never()).create(varadhiTopic);
         verify(metaStore.topics(), times(2)).update(varadhiTopic);
-        verify(storageTopicService, times(1)).create(pulsarStorageTopic, project);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
     }
 
     @Test
@@ -186,7 +186,7 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
-        verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
+        verify(storageTopicService, times(1)).delete(project, pulsarStorageTopic.getName());
         verify(metaStore.topics(), times(1)).delete(varadhiTopic.getName());
     }
 
@@ -201,7 +201,7 @@ class VaradhiTopicServiceTest {
 
         varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest);
 
-        verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
+        verify(storageTopicService, times(1)).delete(project, pulsarStorageTopic.getName());
         verify(metaStore.topics(), times(1)).delete(varadhiTopic.getName());
     }
 
@@ -218,7 +218,7 @@ class VaradhiTopicServiceTest {
             () -> varadhiTopicService.delete(varadhiTopic.getName(), ResourceDeletionType.HARD_DELETE, actionRequest)
         );
 
-        verify(storageTopicService, times(1)).delete(pulsarStorageTopic.getName(), project);
+        verify(storageTopicService, times(1)).delete(project, pulsarStorageTopic.getName());
         verify(metaStore.topics(), times(1)).delete(varadhiTopic.getName());
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("metaStore.topicStore() deletion failed", exception.getMessage());

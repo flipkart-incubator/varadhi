@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.StorageSubscription;
+import com.flipkart.varadhi.entities.StorageTopic;
+import com.flipkart.varadhi.entities.utils.TypeUtil;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionService;
@@ -10,7 +13,7 @@ import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.client.api.MessageId;
 
 @Slf4j
-public class PulsarSubscriptionService implements StorageSubscriptionService<PulsarSubscription> {
+public class PulsarSubscriptionService implements StorageSubscriptionService {
     private final ClientProvider clientProvider;
 
     public PulsarSubscriptionService(ClientProvider clientProvider) {
@@ -18,7 +21,8 @@ public class PulsarSubscriptionService implements StorageSubscriptionService<Pul
     }
 
     @Override
-    public void create(PulsarSubscription subscription, Project project) {
+    public void create(Project project, StorageSubscription<? extends StorageTopic> _subscription) {
+        PulsarSubscription subscription = TypeUtil.safeCast(_subscription, PulsarSubscription.class);
         try {
             PulsarAdmin admin = clientProvider.getAdminClient();
             //TODO::check configurability of messageId.latest.
@@ -32,7 +36,8 @@ public class PulsarSubscriptionService implements StorageSubscriptionService<Pul
     }
 
     @Override
-    public void delete(PulsarSubscription subscription, Project project) {
+    public void delete(Project project, StorageSubscription<? extends StorageTopic> _subscription) {
+        PulsarSubscription subscription = TypeUtil.safeCast(_subscription, PulsarSubscription.class);
         try {
             String topicName = subscription.getTopicPartitions().getTopic().getName();
             clientProvider.getAdminClient().topics().deleteSubscription(topicName, subscription.getName(), false);
