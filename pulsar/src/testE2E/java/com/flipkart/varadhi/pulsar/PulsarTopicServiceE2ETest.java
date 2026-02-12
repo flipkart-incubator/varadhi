@@ -34,7 +34,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     public void testCreateTopic() throws PulsarAdminException {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
-        topicService.create(project, pt);
+        topicService.create(project, pt, null);
         validateTopicExists(topicFQDN);
     }
 
@@ -42,8 +42,8 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
     public void testDuplicateTopicWithSameConfigAllowed() {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
-        topicService.create(project, pt);
-        topicService.create(project, pt);
+        topicService.create(project, pt, null);
+        topicService.create(project, pt, null);
     }
 
     @Test
@@ -51,10 +51,10 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
         String topicFQDN = getRandomTopicFQDN();
         PulsarStorageTopic pt1 = PulsarStorageTopic.of(0, topicFQDN, 2);
         PulsarStorageTopic pt2 = PulsarStorageTopic.of(1, topicFQDN, 1);
-        topicService.create(project, pt1);
+        topicService.create(project, pt1, null);
         MessagingException m = Assertions.assertThrows(
             MessagingException.class,
-            () -> topicService.create(project, pt2)
+                () -> topicService.create(project, pt2, null)
         );
         Assertions.assertEquals(
             "Found existing pulsar topic %s with different config, can't re-use it.".formatted(pt1.getName()),
@@ -70,7 +70,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
         String topicFQDN = getRandomTopicFQDN();
 
         PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
-        topicService.create(projectNew, pt);
+        topicService.create(projectNew, pt, null);
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);
