@@ -283,7 +283,7 @@ public class ProduceBenchmarkTest {
         MessagingStackProvider.Base messagingStackProvider
     ) {
         List<Resource.EntityResource<VaradhiTopic>> topics = new ArrayList<>();
-        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1);
+        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1, 2);
 
         for (int i = 0; i < NUM_TOPICS; i++) {
             String topicName = "topic" + (i + 1);

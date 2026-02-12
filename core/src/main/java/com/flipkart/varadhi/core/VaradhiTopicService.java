@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.core;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -85,9 +84,7 @@ public class VaradhiTopicService {
      */
     private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
-        TopicCapacityPolicy capacity = varadhiTopic.getCapacity() != null ?
-            varadhiTopic.getCapacity() :
-            Constants.DEFAULT_TOPIC_CAPACITY;
+        TopicCapacityPolicy capacity = varadhiTopic.getCapacity();
         varadhiTopic.getInternalTopics()
                     .forEach(
                         (region, it) -> it.getActiveTopics()

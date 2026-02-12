@@ -14,7 +14,7 @@ class VaradhiTopicTest {
 
     private static final String PROJECT_NAME = "project1";
     private static final String TOPIC_NAME = "topic1";
-    private static final TopicCapacityPolicy TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2);
+    private static final TopicCapacityPolicy TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2, 2);
 
     @EqualsAndHashCode (callSuper = true)
     public static class DummyStorageTopic extends StorageTopic {

@@ -20,6 +20,7 @@ public class SubscriptionTestUtils {
     public static final int DEFAULT_QPS = 1000;
     public static final int DEFAULT_THROUGHPUT_KBPS = 20000;
     public static final int DEFAULT_READ_FANOUT = 2;
+    public static final int DEFAULT_RETENTION_PERIOD = 2;
 
     private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
@@ -41,7 +42,7 @@ public class SubscriptionTestUtils {
 
     private static final ConsumptionPolicy DEFAULT_CONSUMPTION_POLICY = new ConsumptionPolicy(10, 1, 1, false, 1, null);
 
-    private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = new TopicCapacityPolicy(1, 10, 1);
+    private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = new TopicCapacityPolicy(1, 10, 1, 2);
 
     private static final SubscriptionShards DEFAULT_SHARDS = new SubscriptionUnitShard(
         0,
@@ -106,7 +107,7 @@ public class SubscriptionTestUtils {
      * @return the topic capacity policy
      */
     public static TopicCapacityPolicy getCapacity(int qps, int throughputKbps) {
-        return getCapacity(qps, throughputKbps, DEFAULT_READ_FANOUT);
+        return getCapacity(qps, throughputKbps, DEFAULT_READ_FANOUT, DEFAULT_THROUGHPUT_KBPS);
     }
 
     /**
@@ -118,8 +119,13 @@ public class SubscriptionTestUtils {
      *
      * @return the topic capacity policy
      */
-    public static TopicCapacityPolicy getCapacity(int qps, int throughputKbps, int readFanOut) {
-        return new TopicCapacityPolicy(qps, throughputKbps, readFanOut);
+    public static TopicCapacityPolicy getCapacity(
+        int qps,
+        int throughputKbps,
+        int readFanOut,
+        int retentionPeriodInDays
+    ) {
+        return new TopicCapacityPolicy(qps, throughputKbps, readFanOut, retentionPeriodInDays);
     }
 
     /**
@@ -280,12 +286,21 @@ public class SubscriptionTestUtils {
          */
         public VaradhiSubscription build(String name, String subProject, String subscribedTopic) {
             if (subCapacity == null) {
-                subCapacity = getCapacity(DEFAULT_QPS, DEFAULT_THROUGHPUT_KBPS, DEFAULT_READ_FANOUT);
+                subCapacity = getCapacity(
+                    DEFAULT_QPS,
+                    DEFAULT_THROUGHPUT_KBPS,
+                    DEFAULT_READ_FANOUT,
+                    DEFAULT_RETENTION_PERIOD
+                );
             }
 
             if (shards == null) {
                 double shardCapacityFactor = (double)1 / numShards;
-                TopicCapacityPolicy shardCapacity = subCapacity.from(shardCapacityFactor, DEFAULT_READ_FANOUT);
+                TopicCapacityPolicy shardCapacity = subCapacity.from(
+                    shardCapacityFactor,
+                    DEFAULT_READ_FANOUT,
+                    DEFAULT_RETENTION_PERIOD
+                );
                 shards = getShards(numShards, shardCapacity);
             }
 

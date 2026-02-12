@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.core.subscription;
 
-import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionService;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -21,10 +20,10 @@ public class ShardProvisioner {
         this.storageTopicService = storageTopicService;
     }
 
-    public void provision(VaradhiSubscription varadhiSub, Project project) {
+    public void provision(VaradhiSubscription varadhiSub, Project project, VaradhiTopic varadhiTopic) {
         for (int i = 0; i < varadhiSub.getShards().getShardCount(); i++) {
             SubscriptionUnitShard shard = varadhiSub.getShards().getShard(i);
-            provisionShard(varadhiSub.getName(), shard, project);
+            provisionShard(varadhiSub.getName(), shard, project, varadhiTopic);
         }
         log.info("Provisioned the Subscription: {}", varadhiSub.getName());
     }
@@ -37,26 +36,32 @@ public class ShardProvisioner {
         log.info("deProvisioned the Subscription: {}", varadhiSub.getName());
     }
 
-    private void provisionShard(String subscriptionName, SubscriptionUnitShard shard, Project project) {
+    private void provisionShard(
+        String subscriptionName,
+        SubscriptionUnitShard shard,
+        Project project,
+        VaradhiTopic varadhiTopic
+    ) {
         // provision main sub for shard.
-        provisionCompositeSubscription(shard.getMainSubscription(), project, false);
+        provisionCompositeSubscription(shard.getMainSubscription(), project, varadhiTopic, false);
         RetrySubscription retrySub = shard.getRetrySubscription();
         for (int rqIndex = 0; rqIndex < retrySub.getMaxRetryCount(); rqIndex++) {
-            provisionCompositeSubscription(retrySub.getSubscriptionForRetry(rqIndex + 1), project, true);
+            provisionCompositeSubscription(retrySub.getSubscriptionForRetry(rqIndex + 1), project, varadhiTopic, true);
         }
-        provisionCompositeSubscription(shard.getDeadLetterSubscription(), project, true);
+        provisionCompositeSubscription(shard.getDeadLetterSubscription(), project, varadhiTopic, true);
         log.info("Provisioned the Subscription: {}, Shard:{}", subscriptionName, shard.getShardId());
     }
 
     private void provisionCompositeSubscription(
         InternalCompositeSubscription compositeSubscription,
         Project project,
+        VaradhiTopic varadhiTopic,
         boolean provisionTopics
     ) {
         var storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
             if (provisionTopics) {
-                provisionStorageTopic(storageSub.getStorageTopic(), project);
+                provisionStorageTopic(storageSub.getStorageTopic(), project, varadhiTopic);
             }
             provisionStorageSubscription(storageSub, project);
         });
@@ -74,11 +79,11 @@ public class ShardProvisioner {
         }
     }
 
-    private void provisionStorageTopic(StorageTopic storageTopic, Project project) {
+    private void provisionStorageTopic(StorageTopic storageTopic, Project project, VaradhiTopic varadhiTopic) {
         if (storageTopicService.exists(storageTopic.getName())) {
             log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
         } else {
-            storageTopicService.create(project, storageTopic, Constants.DEFAULT_TOPIC_CAPACITY);
+            storageTopicService.create(project, storageTopic, varadhiTopic.getCapacity());
             log.info("storageTopic:{} provisioned.", storageTopic.getName());
         }
     }

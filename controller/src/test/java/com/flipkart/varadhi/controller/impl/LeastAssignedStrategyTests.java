@@ -66,7 +66,9 @@ public class LeastAssignedStrategyTests {
         // Create two shards and one consumer node with enough resources
         VaradhiSubscription subscription = SubscriptionTestUtils.builder()
                                                                 .setNumShards(3)
-                                                                .setCapacity(new TopicCapacityPolicy(12000, 15000, 2))
+                                                                .setCapacity(
+                                                                    new TopicCapacityPolicy(12000, 15000, 2, 2)
+                                                                )
                                                                 .build("sub1", "subProject1", "subProject1.topic");
         List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = new ArrayList<>();
@@ -89,7 +91,9 @@ public class LeastAssignedStrategyTests {
         // Create two shards and one consumer node with enough resources
         VaradhiSubscription subscription = SubscriptionTestUtils.builder()
                                                                 .setNumShards(4)
-                                                                .setCapacity(new TopicCapacityPolicy(12000, 16000, 2))
+                                                                .setCapacity(
+                                                                    new TopicCapacityPolicy(12000, 16000, 2, 2)
+                                                                )
                                                                 .build("sub1", "subProject1", "subProject1.topic");
         List<SubscriptionUnitShard> shards = SubscriptionTestUtils.shardsOf(subscription);
         List<ConsumerNode> nodes = new ArrayList<>();

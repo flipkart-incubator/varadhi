@@ -15,7 +15,7 @@ public class Constants {
     public static final String USER_ID_HEADER = "x_user_id";
 
     // Default topic capacity policy
-    public static final TopicCapacityPolicy DEFAULT_TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2);
+    public static final TopicCapacityPolicy DEFAULT_TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2, 2);
     // System identity constant
     public static final String SYSTEM_IDENTITY = "System";
     public static final String ANONYMOUS_IDENTITY = "Anonymous";

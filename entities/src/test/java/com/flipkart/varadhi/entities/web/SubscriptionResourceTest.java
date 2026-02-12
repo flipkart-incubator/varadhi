@@ -61,7 +61,7 @@ class SubscriptionResourceTest {
             PROJECT_NAME + "." + TOPIC_NAME,
             TOPIC_NAME,
             false,
-            new TopicCapacityPolicy(100, 400, 2),
+            new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 

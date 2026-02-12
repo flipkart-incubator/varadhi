@@ -30,7 +30,7 @@ public class InMemoryMessagingTest {
         provider.init(null, null);
 
         Project project = Project.of("testProject", "testDescription", "testTeam", "testOrg");
-        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1);
+        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1, 2);
         InMemoryStorageTopic topic = provider.getStorageTopicFactory()
                                              .getTopic(1, "testTopic", project, policy, InternalQueueCategory.MAIN);
 
