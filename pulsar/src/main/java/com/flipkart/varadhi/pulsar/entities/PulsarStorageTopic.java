@@ -11,7 +11,7 @@ import lombok.Setter;
 public class PulsarStorageTopic extends StorageTopic {
     private int partitionCount;
 
-    private PulsarStorageTopic(int id, String name, int partitionCount) {
+    public PulsarStorageTopic(int id, String name, int partitionCount) {
         super(id, name);
         this.partitionCount = partitionCount;
     }
