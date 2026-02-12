@@ -90,7 +90,7 @@ public class PulsarTopicServiceTest {
                                                                                                                    );
         MessagingException me = Assertions.assertThrows(
             MessagingException.class,
-            () -> pulsarTopicService.create(project, topic, null)
+            () -> pulsarTopicService.create(project, topic, DEFAULT_TOPIC_CAPACITY)
         );
         Assertions.assertInstanceOf(PulsarAdminException.ConflictException.class, me.getCause());
         Assertions.assertEquals("duplicate topic error", me.getMessage());

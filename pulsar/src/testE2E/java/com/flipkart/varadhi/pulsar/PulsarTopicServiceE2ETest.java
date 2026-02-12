@@ -72,7 +72,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
         String topicFQDN = getRandomTopicFQDN();
 
         PulsarStorageTopic pt = PulsarStorageTopic.of(0, topicFQDN, 1);
-        topicService.create(projectNew, pt, null);
+        topicService.create(projectNew, pt, DEFAULT_TOPIC_CAPACITY);
         validateTopicExists(topicFQDN);
         validateTenantExists(newTenant);
         validateNamespaceExists(newTenant, newNamespace);

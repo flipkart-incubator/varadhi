@@ -110,7 +110,7 @@ public class SubscriptionService {
                 subscriptionStore.update(subscription);
             }
 
-            shardProvisioner.provision(subscription, subProject, subscribedTopic);
+            shardProvisioner.provision(subscription, subProject, subscribedTopic.getCapacity());
             subscription.markCreated();
         } catch (Exception e) {
             log.error("Failed to create subscription: ", e);

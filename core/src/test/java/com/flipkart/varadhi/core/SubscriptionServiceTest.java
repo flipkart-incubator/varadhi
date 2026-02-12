@@ -404,7 +404,7 @@ class SubscriptionServiceTest {
 
         assertSubscriptionsEqual(subscription1, result);
         assertSubscriptionsEqual(subscription1, subscriptionService.getSubscription(subscription1.getName()));
-        verify(shardProvisioner, times(1)).provision(subscription1, project1, unGroupedTopic);
+        verify(shardProvisioner, times(1)).provision(subscription1, project1, unGroupedTopic.getCapacity());
         verify(subscriptionStore, times(1)).create(subscription1);
     }
 
@@ -472,7 +472,7 @@ class SubscriptionServiceTest {
 
         verify(shardProvisioner, times(1)).deProvision(subscription1, project1);
         verify(subscriptionStore, times(4)).update(subscription1);
-        verify(shardProvisioner, times(2)).provision(subscription1, project1, unGroupedTopic);
+        verify(shardProvisioner, times(2)).provision(subscription1, project1, unGroupedTopic.getCapacity());
     }
 
     @Test

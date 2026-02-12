@@ -107,7 +107,7 @@ public class SubscriptionTestUtils {
      * @return the topic capacity policy
      */
     public static TopicCapacityPolicy getCapacity(int qps, int throughputKbps) {
-        return getCapacity(qps, throughputKbps, DEFAULT_READ_FANOUT, DEFAULT_THROUGHPUT_KBPS);
+        return getCapacity(qps, throughputKbps, DEFAULT_READ_FANOUT, DEFAULT_RETENTION_PERIOD);
     }
 
     /**
