@@ -21,7 +21,7 @@ public class ShardProvisioner {
     }
 
     /*
-    @TODO signatures to be corrected in order of project, topic then sub
+    @TODO signatures to be corrected in order of project then sub then capacity
      */
     public void provision(VaradhiSubscription varadhiSub, Project project, TopicCapacityPolicy topicCapacityPolicy) {
         for (int i = 0; i < varadhiSub.getShards().getShardCount(); i++) {

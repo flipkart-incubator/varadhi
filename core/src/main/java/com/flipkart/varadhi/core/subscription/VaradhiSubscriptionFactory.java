@@ -37,7 +37,7 @@ public final class VaradhiSubscriptionFactory {
     private static final String TOPIC_QUALIFIER = "it";
     private static final String SHARD_QUALIFIER = "shard";
     private static final int READ_FAN_OUT_FOR_INTERNAL_QUEUE = 1;
-    private static final int DEFAULT_RETENTION_PERIOD_IN_DAYS = 1;
+    private static final int DEFAULT_RETENTION_PERIOD_IN_DAYS = 2;
 
     private final String deployedRegion;
     private final StorageSubscriptionFactory<? extends StorageSubscription<? extends StorageTopic>> subscriptionFactory;
