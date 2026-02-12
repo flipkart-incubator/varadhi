@@ -54,7 +54,7 @@ public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {
         topicService.create(project, pt1, null);
         MessagingException m = Assertions.assertThrows(
             MessagingException.class,
-                () -> topicService.create(project, pt2, null)
+            () -> topicService.create(project, pt2, null)
         );
         Assertions.assertEquals(
             "Found existing pulsar topic %s with different config, can't re-use it.".formatted(pt1.getName()),
