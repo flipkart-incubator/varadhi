@@ -36,7 +36,7 @@ public class InMemoryMessagingTest {
 
         Assertions.assertEquals(2, topic.getPartitions());
 
-        provider.getStorageTopicService().create(project, topic);
+        provider.getStorageTopicService().create(project, topic, policy);
 
         Producer<? extends Offset> producer = provider.getProducerFactory().newProducer(topic, policy);
 
