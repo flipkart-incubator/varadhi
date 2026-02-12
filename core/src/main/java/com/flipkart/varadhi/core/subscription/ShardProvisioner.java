@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core.subscription;
 
+import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionService;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -77,7 +78,7 @@ public class ShardProvisioner {
         if (storageTopicService.exists(storageTopic.getName())) {
             log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
         } else {
-            storageTopicService.create(project, storageTopic);
+            storageTopicService.create(project, storageTopic, Constants.DEFAULT_TOPIC_CAPACITY);
             log.info("storageTopic:{} provisioned.", storageTopic.getName());
         }
     }

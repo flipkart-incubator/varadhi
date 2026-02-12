@@ -120,7 +120,7 @@ class VaradhiTopicServiceTest {
         varadhiTopicService.create(varadhiTopic, project);
 
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
-        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic, null);
         verify(storageTopicFactory, times(1)).getTopic(
             0,
             vTopicName,

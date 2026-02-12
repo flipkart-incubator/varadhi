@@ -15,7 +15,7 @@ public class InMemoryStorageTopicService implements StorageTopicService {
     private final ConcurrentHashMap<String, InMemoryStorageTopic> topics = new ConcurrentHashMap<>();
 
     @Override
-    public void create(Project project, StorageTopic _topic) {
+    public void create(Project project, StorageTopic _topic, TopicCapacityPolicy capacityPolicy) {
         var topic = TypeUtil.safeCast(_topic, InMemoryStorageTopic.class);
         if (topics.putIfAbsent(topic.getName(), topic) != null) {
             throw new DuplicateResourceException(String.format("StorageTopic(%s) already exists.", topic.getName()));

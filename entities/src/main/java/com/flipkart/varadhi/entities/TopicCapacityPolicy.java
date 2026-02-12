@@ -9,16 +9,22 @@ public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
     private int qps;
     private int throughputKBps;
     private int readFanOut;
+    private int retentionPeriodInDays;
 
     public TopicCapacityPolicy(int qps, int throughputKBps, int readFanOut) {
+        this(qps, throughputKBps, readFanOut, 2);
+    }
+
+    public TopicCapacityPolicy(int qps, int throughputKBps, int readFanOut, int retentionPeriodInDays) {
         this.qps = qps;
         this.throughputKBps = throughputKBps;
         this.readFanOut = readFanOut;
+        this.retentionPeriodInDays = retentionPeriodInDays;
     }
 
     public TopicCapacityPolicy from(double factor, int readFanOut) {
-        int qps = (int)Math.ceil((double)this.qps * factor);
-        int kbps = (int)Math.ceil((double)throughputKBps * factor);
+        int qps = (int) Math.ceil((double) this.qps * factor);
+        int kbps = (int) Math.ceil((double) throughputKBps * factor);
         return new TopicCapacityPolicy(qps, kbps, readFanOut);
     }
 
