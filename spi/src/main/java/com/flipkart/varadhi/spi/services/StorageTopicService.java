@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface StorageTopicService {
 
-    void create(Project project, StorageTopic topic);
+    void create(Project project, StorageTopic topic, TopicCapacityPolicy capacityPolicy);
 
     List<TopicPartitions<? extends StorageTopic>> shardTopic(
         StorageTopic topic,

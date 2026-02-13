@@ -120,7 +120,7 @@ class VaradhiTopicServiceTest {
         varadhiTopicService.create(varadhiTopic, project);
 
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
-        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic, varadhiTopic.getCapacity());
         verify(storageTopicFactory, times(1)).getTopic(
             0,
             vTopicName,
@@ -149,7 +149,11 @@ class VaradhiTopicServiceTest {
     void createVaradhiTopic_StorageTopicServiceFailure_ThrowsException() {
         VaradhiTopic varadhiTopic = createVaradhiTopicMock();
         doThrow(new VaradhiException("StorageTopicService error")).when(storageTopicService)
-                                                                  .create(project, pulsarStorageTopic);
+                                                                  .create(
+                                                                      project,
+                                                                      pulsarStorageTopic,
+                                                                      varadhiTopic.getCapacity()
+                                                                  );
 
         Exception exception = assertThrows(
             VaradhiException.class,
@@ -158,7 +162,7 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore.topics(), times(1)).create(varadhiTopic);
         verify(metaStore.topics(), times(1)).update(varadhiTopic);
-        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic, varadhiTopic.getCapacity());
         assertEquals(VaradhiException.class, exception.getClass());
         assertEquals("StorageTopicService error", exception.getMessage());
         assertEquals(LifecycleStatus.State.CREATE_FAILED, varadhiTopic.getStatus().getState());
@@ -176,7 +180,7 @@ class VaradhiTopicServiceTest {
 
         verify(metaStore.topics(), never()).create(varadhiTopic);
         verify(metaStore.topics(), times(2)).update(varadhiTopic);
-        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic);
+        verify(storageTopicService, times(1)).create(project, pulsarStorageTopic, varadhiTopic.getCapacity());
     }
 
     @Test

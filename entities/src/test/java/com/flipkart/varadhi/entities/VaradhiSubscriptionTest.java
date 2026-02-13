@@ -33,7 +33,7 @@ class VaradhiSubscriptionTest {
 
     private static final ConsumptionPolicy DEFAULT_CONSUMPTION_POLICY = new ConsumptionPolicy(10, 1, 1, false, 1, null);
 
-    private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = new TopicCapacityPolicy(1, 10, 1);
+    private static final TopicCapacityPolicy DEFAULT_CAPACITY_POLICY = new TopicCapacityPolicy(1, 10, 1, 2);
 
     private static final SubscriptionShards DEFAULT_SHARDS = new SubscriptionUnitShard(
         0,

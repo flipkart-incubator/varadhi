@@ -37,6 +37,7 @@ public final class VaradhiSubscriptionFactory {
     private static final String TOPIC_QUALIFIER = "it";
     private static final String SHARD_QUALIFIER = "shard";
     private static final int READ_FAN_OUT_FOR_INTERNAL_QUEUE = 1;
+    private static final int DEFAULT_RETENTION_PERIOD_IN_DAYS = 2;
 
     private final String deployedRegion;
     private final StorageSubscriptionFactory<? extends StorageSubscription<? extends StorageTopic>> subscriptionFactory;
@@ -223,7 +224,11 @@ public final class VaradhiSubscriptionFactory {
      * @return A TopicCapacityPolicy instance.
      */
     private TopicCapacityPolicy getShardCapacity(TopicCapacityPolicy topicCapacity, int shardCount) {
-        return topicCapacity.from((double)1 / shardCount, topicCapacity.getReadFanOut());
+        return topicCapacity.from(
+            (double)1 / shardCount,
+            topicCapacity.getReadFanOut(),
+            topicCapacity.getRetentionPeriodInDays()
+        );
     }
 
     /**
@@ -357,7 +362,8 @@ public final class VaradhiSubscriptionFactory {
         String itTopicName = getInternalTopicName(subscriptionName, shardId, queueType.getCategory(), queueIndex);
         TopicCapacityPolicy errCapacity = capacity.from(
             consumptionPolicy.getMaxErrorThreshold(),
-            READ_FAN_OUT_FOR_INTERNAL_QUEUE
+            READ_FAN_OUT_FOR_INTERNAL_QUEUE,
+            DEFAULT_RETENTION_PERIOD_IN_DAYS
         );
         StorageTopic st = topicFactory.getTopic(0, itTopicName, project, errCapacity, queueType.getCategory());
         List<TopicPartitions<? extends StorageTopic>> topicPartitions = topicService.shardTopic(

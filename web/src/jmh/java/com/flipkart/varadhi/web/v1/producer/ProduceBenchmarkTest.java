@@ -283,7 +283,7 @@ public class ProduceBenchmarkTest {
         MessagingStackProvider.Base messagingStackProvider
     ) {
         List<Resource.EntityResource<VaradhiTopic>> topics = new ArrayList<>();
-        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1);
+        TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1, 2);
 
         for (int i = 0; i < NUM_TOPICS; i++) {
             String topicName = "topic" + (i + 1);
@@ -307,7 +307,7 @@ public class ProduceBenchmarkTest {
                                                               );
 
             // Create the topic in the messaging stack
-            messagingStackProvider.getStorageTopicService().create(storageTopic, project);
+            messagingStackProvider.getStorageTopicService().create(project, storageTopic, policy);
 
             // Add as internal topic with proper state
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);

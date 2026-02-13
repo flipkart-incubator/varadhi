@@ -151,7 +151,7 @@ class SubscriptionServiceTest {
 
     private void setupMocks() {
         shardProvisioner = mock(ShardProvisioner.class);
-        doNothing().when(shardProvisioner).provision(any(), any());
+        doNothing().when(shardProvisioner).provision(any(), any(), any());
 
         controllerApi = mock(ControllerApi.class);
         when(varadhiMetaStore.subscriptions()).thenReturn(subscriptionStore);
@@ -404,7 +404,7 @@ class SubscriptionServiceTest {
 
         assertSubscriptionsEqual(subscription1, result);
         assertSubscriptionsEqual(subscription1, subscriptionService.getSubscription(subscription1.getName()));
-        verify(shardProvisioner, times(1)).provision(subscription1, project1);
+        verify(shardProvisioner, times(1)).provision(subscription1, project1, unGroupedTopic.getCapacity());
         verify(subscriptionStore, times(1)).create(subscription1);
     }
 
@@ -445,7 +445,7 @@ class SubscriptionServiceTest {
     @Test
     void createSubscription_ProvisionFailure_SetsStateToCreateFailed() {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
-        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
+        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any(), any());
 
         Exception exception = assertThrows(
             RuntimeException.class,
@@ -472,7 +472,7 @@ class SubscriptionServiceTest {
 
         verify(shardProvisioner, times(1)).deProvision(subscription1, project1);
         verify(subscriptionStore, times(4)).update(subscription1);
-        verify(shardProvisioner, times(2)).provision(subscription1, project1);
+        verify(shardProvisioner, times(2)).provision(subscription1, project1, unGroupedTopic.getCapacity());
     }
 
     @Test
@@ -870,7 +870,7 @@ class SubscriptionServiceTest {
     @Test
     void startSubscription_NotProvisioned_ThrowsException() {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
-        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
+        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any(), any());
 
         assertThrows(
             RuntimeException.class,
@@ -890,7 +890,7 @@ class SubscriptionServiceTest {
     @Test
     void stopSubscription_NotProvisioned_ThrowsException() {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
-        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any());
+        doThrow(new RuntimeException("Provision failed")).when(shardProvisioner).provision(any(), any(), any());
 
         assertThrows(
             RuntimeException.class,

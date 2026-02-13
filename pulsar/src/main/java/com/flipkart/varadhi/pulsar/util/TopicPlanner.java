@@ -22,7 +22,11 @@ public class TopicPlanner {
         if (category != InternalQueueCategory.MAIN) {
             return 1;
         }
-        TopicCapacityPolicy planned = ask.from(config.getGrowthMultiplier(), ask.getReadFanOut());
+        TopicCapacityPolicy planned = ask.from(
+            config.getGrowthMultiplier(),
+            ask.getReadFanOut(),
+            ask.getRetentionPeriodInDays()
+        );
         int countFromQps = (int)Math.ceil((double)planned.getQps() / config.getMaxQPSPerPartition());
         int countFromKBps = (int)Math.ceil((double)planned.getThroughputKBps() / config.getMaxKBpsPerPartition());
         int partitionCount = Math.max(countFromQps, countFromKBps);
@@ -58,7 +62,11 @@ public class TopicPlanner {
         if (category != InternalQueueCategory.MAIN) {
             return 1;
         }
-        TopicCapacityPolicy planned = ask.from(config.getGrowthMultiplier(), ask.getReadFanOut());
+        TopicCapacityPolicy planned = ask.from(
+            config.getGrowthMultiplier(),
+            ask.getReadFanOut(),
+            ask.getRetentionPeriodInDays()
+        );
         int countFromQps = (int)Math.ceil((double)planned.getQps() / config.getMaxQpsPerShard());
         int countFromKBps = (int)Math.ceil((double)planned.getThroughputKBps() / config.getMaxKBpsPerShard());
         int shardCount = Math.max(countFromQps, countFromKBps);

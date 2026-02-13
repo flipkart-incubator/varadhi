@@ -35,7 +35,7 @@ public class PulsarTopicService implements StorageTopicService {
     }
 
     @Override
-    public void create(Project project, StorageTopic _topic) {
+    public void create(Project project, StorageTopic _topic, TopicCapacityPolicy capacityPolicy) {
         var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
         createTenant(project.getOrg());
         createNamespace(project.getOrg(), project.getName());

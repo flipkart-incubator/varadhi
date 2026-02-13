@@ -20,10 +20,13 @@ public class ShardProvisioner {
         this.storageTopicService = storageTopicService;
     }
 
-    public void provision(VaradhiSubscription varadhiSub, Project project) {
+    /*
+    @TODO signatures to be corrected in order of project then sub then capacity
+     */
+    public void provision(VaradhiSubscription varadhiSub, Project project, TopicCapacityPolicy topicCapacityPolicy) {
         for (int i = 0; i < varadhiSub.getShards().getShardCount(); i++) {
             SubscriptionUnitShard shard = varadhiSub.getShards().getShard(i);
-            provisionShard(varadhiSub.getName(), shard, project);
+            provisionShard(varadhiSub.getName(), shard, project, topicCapacityPolicy);
         }
         log.info("Provisioned the Subscription: {}", varadhiSub.getName());
     }
@@ -36,26 +39,37 @@ public class ShardProvisioner {
         log.info("deProvisioned the Subscription: {}", varadhiSub.getName());
     }
 
-    private void provisionShard(String subscriptionName, SubscriptionUnitShard shard, Project project) {
+    private void provisionShard(
+        String subscriptionName,
+        SubscriptionUnitShard shard,
+        Project project,
+        TopicCapacityPolicy topicCapacityPolicy
+    ) {
         // provision main sub for shard.
-        provisionCompositeSubscription(shard.getMainSubscription(), project, false);
+        provisionCompositeSubscription(shard.getMainSubscription(), project, topicCapacityPolicy, false);
         RetrySubscription retrySub = shard.getRetrySubscription();
         for (int rqIndex = 0; rqIndex < retrySub.getMaxRetryCount(); rqIndex++) {
-            provisionCompositeSubscription(retrySub.getSubscriptionForRetry(rqIndex + 1), project, true);
+            provisionCompositeSubscription(
+                retrySub.getSubscriptionForRetry(rqIndex + 1),
+                project,
+                topicCapacityPolicy,
+                true
+            );
         }
-        provisionCompositeSubscription(shard.getDeadLetterSubscription(), project, true);
+        provisionCompositeSubscription(shard.getDeadLetterSubscription(), project, topicCapacityPolicy, true);
         log.info("Provisioned the Subscription: {}, Shard:{}", subscriptionName, shard.getShardId());
     }
 
     private void provisionCompositeSubscription(
         InternalCompositeSubscription compositeSubscription,
         Project project,
+        TopicCapacityPolicy topicCapacityPolicy,
         boolean provisionTopics
     ) {
         var storageSubs = compositeSubscription.getActiveSubscriptions();
         storageSubs.forEach(storageSub -> {
             if (provisionTopics) {
-                provisionStorageTopic(storageSub.getStorageTopic(), project);
+                provisionStorageTopic(storageSub.getStorageTopic(), project, topicCapacityPolicy);
             }
             provisionStorageSubscription(storageSub, project);
         });
@@ -73,11 +87,15 @@ public class ShardProvisioner {
         }
     }
 
-    private void provisionStorageTopic(StorageTopic storageTopic, Project project) {
+    private void provisionStorageTopic(
+        StorageTopic storageTopic,
+        Project project,
+        TopicCapacityPolicy topicCapacityPolicy
+    ) {
         if (storageTopicService.exists(storageTopic.getName())) {
             log.info("StorageTopic:{} already exists, re-using it.", storageTopic.getName());
         } else {
-            storageTopicService.create(project, storageTopic);
+            storageTopicService.create(project, storageTopic, topicCapacityPolicy);
             log.info("storageTopic:{} provisioned.", storageTopic.getName());
         }
     }

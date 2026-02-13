@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -83,9 +84,11 @@ public class VaradhiTopicService {
      */
     private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
+        TopicCapacityPolicy capacity = varadhiTopic.getCapacity();
         varadhiTopic.getInternalTopics()
                     .forEach(
-                        (region, it) -> it.getActiveTopics().forEach(st -> storageTopicService.create(project, st))
+                        (region, it) -> it.getActiveTopics()
+                                          .forEach(st -> storageTopicService.create(project, st, capacity))
                     );
     }
 

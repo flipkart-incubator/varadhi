@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar.services;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.ClientProvider;
 import com.flipkart.varadhi.pulsar.PulsarTopicService;
 import com.flipkart.varadhi.pulsar.config.PulsarConfig;
@@ -28,6 +29,7 @@ public class PulsarTopicServiceTest {
     private PulsarTopicService pulsarTopicService;
     private ClientProvider clientProvider;
     private Project project;
+    private static final TopicCapacityPolicy DEFAULT_TOPIC_CAPACITY = new TopicCapacityPolicy(100, 400, 2, 2);
 
     @BeforeEach
     public void setUp() {
@@ -54,7 +56,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(project, topic);
+        pulsarTopicService.create(project, topic, DEFAULT_TOPIC_CAPACITY);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
     }
 
@@ -65,7 +67,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doThrow(PulsarAdminException.class).when(topics).createPartitionedTopic(anyString(), eq(1));
-        assertThrows(MessagingException.class, () -> pulsarTopicService.create(project, topic));
+        assertThrows(MessagingException.class, () -> pulsarTopicService.create(project, topic, DEFAULT_TOPIC_CAPACITY));
         verify(pulsarAdmin.topics(), times(1)).createPartitionedTopic(anyString(), eq(1));
     }
 
@@ -88,7 +90,7 @@ public class PulsarTopicServiceTest {
                                                                                                                    );
         MessagingException me = Assertions.assertThrows(
             MessagingException.class,
-            () -> pulsarTopicService.create(project, topic)
+            () -> pulsarTopicService.create(project, topic, DEFAULT_TOPIC_CAPACITY)
         );
         Assertions.assertInstanceOf(PulsarAdminException.ConflictException.class, me.getCause());
         Assertions.assertEquals("duplicate topic error", me.getMessage());
@@ -106,7 +108,7 @@ public class PulsarTopicServiceTest {
             topics
         ).getPartitionedTopicMetadata(topic.getName());
         doNothing().when(topics).createPartitionedTopic(anyString(), eq(1));
-        pulsarTopicService.create(projectNew, topic);
+        pulsarTopicService.create(projectNew, topic, DEFAULT_TOPIC_CAPACITY);
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
         verify(tenants, times(1)).createTenant(eq(projectNew.getOrg()), any());
         verify(namespaces, times(1)).createNamespace(eq(newNamespace));
