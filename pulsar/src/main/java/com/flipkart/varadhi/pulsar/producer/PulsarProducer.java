@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.pulsar.producer;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -100,6 +101,11 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname);
 
         return pulsarClient.newProducer().loadConf(producerConfig).create();
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.pulsarProducer.close();
     }
 
     private Map<String, Object> getProducerConfig(
