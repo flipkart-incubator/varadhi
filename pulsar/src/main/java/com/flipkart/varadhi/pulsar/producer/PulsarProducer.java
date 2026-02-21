@@ -12,6 +12,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.api.ProducerAccessMode;
@@ -27,7 +28,8 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 @Slf4j
 public class PulsarProducer implements Producer<PulsarOffset> {
     private final RandomStringGenerator stringGenerator;
-    private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
+    @Getter
+    public org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
         PulsarClient pulsarClient,

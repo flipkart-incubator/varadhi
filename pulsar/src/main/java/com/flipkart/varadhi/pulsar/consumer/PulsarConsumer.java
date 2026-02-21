@@ -5,6 +5,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,8 +15,8 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @RequiredArgsConstructor
 public class PulsarConsumer implements Consumer<PulsarOffset> {
-
-    private final org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer;
+    @Getter
+    public final org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer;
 
     @Override
     public CompletableFuture<PolledMessages<PulsarOffset>> receiveAsync() {
