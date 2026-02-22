@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class PulsarConsumer implements Consumer<PulsarOffset> {
     @Getter
-    public final org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer;
+    private final org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer;
 
     @Override
     public CompletableFuture<PolledMessages<PulsarOffset>> receiveAsync() {
