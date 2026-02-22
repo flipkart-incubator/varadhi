@@ -29,7 +29,7 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 public class PulsarProducer implements Producer<PulsarOffset> {
     private final RandomStringGenerator stringGenerator;
     @Getter
-    private org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
+    private final org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
         PulsarClient pulsarClient,
