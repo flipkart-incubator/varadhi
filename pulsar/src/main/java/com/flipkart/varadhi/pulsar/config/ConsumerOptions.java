@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.pulsar.config;
 
 import lombok.Data;
+import org.apache.pulsar.client.api.BatchReceivePolicy;
+import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.apache.pulsar.client.api.SubscriptionMode;
 import org.apache.pulsar.client.api.SubscriptionType;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Pulsar consumer configuration options.
@@ -69,6 +72,12 @@ public class ConsumerOptions {
 
     private SubscriptionMode subscriptionMode = SubscriptionMode.Durable;
 
+    /**
+     * Where to start consuming when a subscription is created.
+     * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#subscriptionInitialPosition}
+     */
+    private SubscriptionInitialPosition subscriptionInitialPosition = SubscriptionInitialPosition.Earliest;
+
     public synchronized Map<String, Object> asMap() {
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("maxPollRecords", this.maxPollRecords);
@@ -79,6 +88,21 @@ public class ConsumerOptions {
         configMap.put("maxTotalReceiverQueueSizeAcrossPartitions", this.maxTotalReceiverQueueSizeAcrossPartitions);
         configMap.put("messageSourcePollMaxWaitMs", this.messageSourcePollMaxWaitMs);
         configMap.put("maxInMemoryMessages", this.maxInMemoryMessages);
+        configMap.put("subscriptionType", this.subscriptionType);
+        configMap.put("subscriptionMode", this.subscriptionMode);
+        configMap.put("subscriptionInitialPosition", this.subscriptionInitialPosition.name());
+        configMap.put("batchReceivePolicy", buildBatchReceivePolicy());
         return configMap;
+    }
+
+    /** Build policy for {@link org.apache.pulsar.client.api.ConsumerBuilder#loadConf} batchReceivePolicy. */
+    private BatchReceivePolicy buildBatchReceivePolicy() {
+        int maxBytes = this.fetchMaxBytes != null ? this.fetchMaxBytes : 5 * 1024 * 1024;
+        int timeoutMs = this.fetchMaxWaitMs != null ? this.fetchMaxWaitMs : 200;
+        return BatchReceivePolicy.builder()
+                                 .maxNumMessages(this.maxPollRecords)
+                                 .maxNumBytes(maxBytes)
+                                 .timeout(timeoutMs, TimeUnit.MILLISECONDS)
+                                 .build();
     }
 }
