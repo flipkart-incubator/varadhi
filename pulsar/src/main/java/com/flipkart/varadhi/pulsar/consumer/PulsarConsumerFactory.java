@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.pulsar.consumer;
 
+import com.flipkart.varadhi.pulsar.config.ConsumerOptions;
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
@@ -7,27 +9,25 @@ import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicPartitions;
-import org.apache.pulsar.client.api.BatchReceivePolicy;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.client.api.*;
 import org.apache.pulsar.common.naming.TopicName;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class PulsarConsumerFactory implements ConsumerFactory {
 
     private final PulsarClient pulsarClient;
-    private final Map<String, Object> defaultConsumerProperties;
+    private final TelemetryOptions telemetryOptions;
+    private final ConsumerOptions consumerOptions;
 
-    public PulsarConsumerFactory(PulsarClient pulsarClient, Map<String, Object> defaultConsumerProperties) {
+    public PulsarConsumerFactory(
+        PulsarClient pulsarClient,
+        ConsumerOptions defaultConsumerProperties,
+        TelemetryOptions telemetryOptions
+    ) {
         this.pulsarClient = pulsarClient;
-        this.defaultConsumerProperties = new HashMap<>(defaultConsumerProperties);
-
-        // removing topicNames from defaultConsumerProperties as calling topics() method in newConsumer() method only
-        // adds topics and not overrides it.
-        this.defaultConsumerProperties.remove("topicNames");
+        this.telemetryOptions = telemetryOptions;
+        this.consumerOptions = defaultConsumerProperties;
     }
 
     @Override
@@ -55,27 +55,17 @@ public class PulsarConsumerFactory implements ConsumerFactory {
                 }
             }
 
-            Map<String, Object> consumerProperties = new HashMap<>(defaultConsumerProperties);
-            consumerProperties.putAll(properties);
             return new PulsarConsumer(
-                pulsarClient.newConsumer(Schema.BYTES)
-                            .loadConf(consumerProperties)
-                            .topics(new ArrayList<>(topicNames))
-                            .subscriptionName(subscriptionName)
-                            .consumerName(consumerName)
-                            .poolMessages(true)
-                            .batchReceivePolicy(
-                                BatchReceivePolicy.builder()
-                                                  .maxNumMessages(2000)
-                                                  .maxNumBytes(5 * 1024 * 1024)
-                                                  .timeout(200, TimeUnit.MILLISECONDS)
-                                                  .build()
-                            )
-                            .acknowledgmentGroupTime(1, TimeUnit.SECONDS)
-                            .subscribe()
+                pulsarClient,
+                consumerOptions,
+                topicNames,
+                subscriptionName,
+                consumerName,
+                telemetryOptions
             );
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);
         }
     }
+
 }

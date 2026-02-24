@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
@@ -16,23 +14,16 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import static org.mockito.Mockito.*;
 
 public class PulsarProducerFactoryTest extends PulsarTestBase {
-    @TempDir
-    Path tempDir;
     PulsarClient pClient;
     PulsarStorageTopic topic;
     ProducerBuilder<byte[]> builder;
 
     @BeforeEach
     public void preTest() throws IOException {
-        String yamlContent =
-            "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
-        Path configFile = tempDir.resolve("pulsarConfig.yaml");
-        Files.write(configFile, yamlContent.getBytes());
         topic = PulsarStorageTopic.of(0, "testTopic", 1);
         pClient = mock(PulsarClient.class);
         builder = mock(ProducerBuilder.class);
@@ -44,7 +35,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducer() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
+        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         Producer<? extends Offset> p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY);
         Assertions.assertNotNull(p);
         verify(builder, times(1)).create();
@@ -52,7 +43,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducerThrowsPulsarException() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
+        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         doThrow(new PulsarClientException.NotFoundException("Topic not found")).when(builder).create();
         ProduceException pe = Assertions.assertThrows(
             ProduceException.class,
@@ -67,7 +58,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducerThrowsUnhandledException() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost");
+        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         doThrow(new RuntimeException("Random error check")).when(builder).create();
         RuntimeException re = Assertions.assertThrows(
             RuntimeException.class,

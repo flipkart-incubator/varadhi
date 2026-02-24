@@ -1,0 +1,40 @@
+package com.flipkart.varadhi.pulsar.util;
+
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.Producer;
+
+/**
+ * Default telemetry implementation for Pulsar producers and consumers.
+ */
+public class PulsarTelemetryOptions implements TelemetryOptions {
+
+    /**
+     * Register a Pulsar producer for telemetry recording (e.g. metrics).
+     *
+     * @param producer the Pulsar producer to recordTelemetry; must not be null
+     */
+    @Override
+    public void recordTelemetry(Producer<byte[]> producer) {
+    }
+
+    /**
+     * Register a Pulsar consumer for telemetry recording. The consumer is {@link AutoCloseable};
+     * implementations may use this to tie telemetry lifecycle to the consumer.
+     *
+     * @param consumer the Pulsar consumer to recordTelemetry; must not be null
+     */
+    @Override
+    public void recordTelemetry(Consumer<byte[]> consumer) {
+    }
+
+    /**
+     * Closes this resource, relinquishing any underlying resources.
+     * This method is invoked automatically on objects managed by the
+     * {@code try}-with-resources statement.
+     */
+    @Override
+    public void close() throws Exception {
+
+    }
+}
