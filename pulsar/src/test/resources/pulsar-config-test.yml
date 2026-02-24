@@ -1,7 +1,7 @@
 pulsarAdminOptions:
-  serviceHttpUrl: "http://127.0.0.1:8080"
+  serviceHttpUrl: "http://127.0.0.1:8081"
 pulsarClientOptions:
-  serviceUrl: "http://127.0.0.1:8080"
+  serviceUrl: "http://127.0.0.1:8081"
 producerOptions:
   sendTimeoutMs: 10000
   blockIfQueueFull: true
@@ -20,4 +20,3 @@ consumerOptions:
   fetchMaxWaitMs: 500
   messageSourcePollMaxWaitMs: 1000
   maxInMemoryMessages: 10000
-

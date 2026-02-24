@@ -1,8 +1,6 @@
 package com.flipkart.varadhi.pulsar;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -20,14 +18,13 @@ import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class PulsarStackProviderTest extends PulsarTestBase {
-    @TempDir
-    Path tempDir;
+    private static final String PULSAR_CONFIG_TEST_FILE = "pulsar-config-test.yml";
+
     private PulsarStackProvider pulsarStackProvider;
     private MessagingStackOptions messagingStackOptions;
     private ObjectMapper objectMapper;
@@ -36,14 +33,10 @@ public class PulsarStackProviderTest extends PulsarTestBase {
 
     @BeforeEach
     public void preTest() throws InterruptedException, IOException {
-        String yamlContent =
-            "pulsarAdminOptions:\n  serviceHttpUrl: \"http://127.0.0.1:8081\"\npulsarClientOptions:\n  serviceUrl: \"http://127.0.0.1:8081\"\n";
-        Path configFile = tempDir.resolve("pulsarConfig.yaml");
-        Files.write(configFile, yamlContent.getBytes());
-        PulsarConfig pulsarConfig = YamlLoader.loadConfig(configFile.toString(), PulsarConfig.class);
+        PulsarConfig pulsarConfig = YamlLoader.loadConfig(PULSAR_CONFIG_TEST_FILE, PulsarConfig.class);
 
         messagingStackOptions = new MessagingStackOptions();
-        messagingStackOptions.setConfigFile(configFile.toString());
+        messagingStackOptions.setConfigFile(PULSAR_CONFIG_TEST_FILE);
         messagingStackOptions.setProviderClassName("com.flipkart.varadhi.pulsar.PulsarStackProvider");
         project = Project.of("default", "", "public", "public");
         objectMapper = mock(ObjectMapper.class);

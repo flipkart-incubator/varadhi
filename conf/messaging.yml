@@ -2,3 +2,20 @@ pulsarAdminOptions:
   serviceHttpUrl: "${PULSAR_URL}"
 pulsarClientOptions:
   serviceUrl: "${PULSAR_URL}"
+producerOptions:
+  sendTimeoutMs: 10000
+  blockIfQueueFull: true
+  maxPendingMessages: 200
+  maxPendingMessagesAcrossPartitions: 500
+  batchingMaxPublishDelayMicros: 20000
+  batchingMaxMessages: 100
+  batchingEnabled: true
+  compressionType: SNAPPY
+consumerOptions:
+  maxPollRecords: 2000
+  acknowledgementsGroupTimeMicros: 100000
+  receiverQueueSize: 2000
+  maxTotalReceiverQueueSizeAcrossPartitions: 10000
+  fetchMaxBytes: 52428800
+  fetchMaxWaitMs: 500
+  maxInMemoryMessages: 10000
