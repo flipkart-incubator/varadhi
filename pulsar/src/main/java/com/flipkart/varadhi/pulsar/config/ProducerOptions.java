@@ -18,7 +18,7 @@ public class ProducerOptions {
 
     /** Timeout in milliseconds for a send to be acknowledged by the broker; send fails after this. */
     @NotNull
-    private Long sendTimeoutMs = 10000L;
+    private int sendTimeoutMs = 10000;
 
     /** If true, {@code send()} / {@code sendAsync()} block when the pending queue is full; if false, they fail. */
     @NotNull

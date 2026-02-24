@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.pulsar.config;
 
 import lombok.Data;
+import org.apache.pulsar.client.api.SubscriptionMode;
+import org.apache.pulsar.client.api.SubscriptionType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,48 +22,52 @@ public class ConsumerOptions {
      * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#maxNumMessages}
      * Can be overridden by subscription property.
      */
-    private int maxPollRecords;
+    private int maxPollRecords = 1000;
 
     /**
      * Max bytes to fetch from Pulsar per batch.
      * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#maxNumBytes}
      */
-    private Integer fetchMaxBytes;
+    private Integer fetchMaxBytes = 52428800;
 
     /**
      * Max time to wait when fetching messages for a batch (milliseconds).
      * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#timeout}
      */
-    private Integer fetchMaxWaitMs;
+    private Integer fetchMaxWaitMs = 500;
 
     /**
      * Time to group consumer acknowledgments before sending to broker (microseconds).
      * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#acknowledgmentGroupTime}
      */
-    private Long acknowledgementsGroupTimeMicros;
+    private Long acknowledgementsGroupTimeMicros = 100000L;
 
     /**
      * Size of the consumer receive queue.
      * <p>Can be overridden by {@link #maxTotalReceiverQueueSizeAcrossPartitions}.
      * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#receiverQueueSize}
      */
-    private Integer receiverQueueSize;
+    private Integer receiverQueueSize = 2000;
 
     /**
      * Max total receiver queue size across all partitions.
      * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#maxTotalReceiverQueueSizeAcrossPartitions}
      */
-    private Integer maxTotalReceiverQueueSizeAcrossPartitions;
+    private Integer maxTotalReceiverQueueSizeAcrossPartitions = 10000;
 
     /**
      * Max timeout to wait when polling a message source (milliseconds).
      */
-    private Integer messageSourcePollMaxWaitMs;
+    private Integer messageSourcePollMaxWaitMs = 1000;
 
     /**
      * Max number of messages to hold in memory for a subscription.
      */
-    private Integer maxInMemoryMessages;
+    private Integer maxInMemoryMessages = 2000;
+
+    private SubscriptionType subscriptionType = SubscriptionType.Exclusive;
+
+    private SubscriptionMode subscriptionMode = SubscriptionMode.Durable;
 
     public synchronized Map<String, Object> asMap() {
         Map<String, Object> configMap = new HashMap<>();

@@ -13,7 +13,6 @@ import org.apache.pulsar.client.api.*;
 import org.apache.pulsar.common.naming.TopicName;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class PulsarConsumerFactory implements ConsumerFactory {
 
@@ -56,74 +55,17 @@ public class PulsarConsumerFactory implements ConsumerFactory {
                 }
             }
 
-            Map<String, Object> config = new HashMap<>(consumerOptions.asMap());
-            config.putAll(properties);
-            config.remove("topicNames");
-
-            int maxPollRecords = getInt(config, "maxPollRecords", 2000);
-            int fetchMaxBytes = getInt(config, "fetchMaxBytes", 5 * 1024 * 1024);
-            int fetchMaxWaitMs = getInt(config, "fetchMaxWaitMs", 200);
-            Integer receiverQueueSize = getInt(config, "receiverQueueSize");
-            Integer maxTotalReceiverQueueSizeAcrossPartitions = getInt(
-                config,
-                "maxTotalReceiverQueueSizeAcrossPartitions"
+            return new PulsarConsumer(
+                pulsarClient,
+                consumerOptions,
+                topicNames,
+                subscriptionName,
+                consumerName,
+                telemetryOptions
             );
-            Long acknowledgementGroupTimeMicros = getLong(config, "acknowledgementsGroupTimeMicros");
-
-            var builder = pulsarClient.newConsumer(Schema.BYTES)
-                                      .topics(new ArrayList<>(topicNames))
-                                      .subscriptionName(subscriptionName)
-                                      .subscriptionType(SubscriptionType.Exclusive)
-                                      .subscriptionMode(SubscriptionMode.Durable)
-                                      .consumerName(consumerName)
-                                      .poolMessages(true)
-                                      .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
-                                      .batchReceivePolicy(
-                                          BatchReceivePolicy.builder()
-                                                            .maxNumMessages(maxPollRecords)
-                                                            .maxNumBytes(fetchMaxBytes)
-                                                            .timeout(fetchMaxWaitMs, TimeUnit.MILLISECONDS)
-                                                            .build()
-                                      )
-                                      .acknowledgmentGroupTime(
-                                          acknowledgementGroupTimeMicros != null ?
-                                              acknowledgementGroupTimeMicros :
-                                              1_000_000L,
-                                          TimeUnit.MICROSECONDS
-                                      );
-            if (receiverQueueSize != null) {
-                builder = builder.receiverQueueSize(receiverQueueSize);
-            }
-            if (maxTotalReceiverQueueSizeAcrossPartitions != null) {
-                builder = builder.maxTotalReceiverQueueSizeAcrossPartitions(maxTotalReceiverQueueSizeAcrossPartitions);
-            }
-
-            return new PulsarConsumer(builder.subscribe(), telemetryOptions);
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);
         }
     }
 
-    private static Integer getInt(Map<String, Object> config, String key) {
-        Object v = config.get(key);
-        if (v == null)
-            return null;
-        if (v instanceof Number)
-            return ((Number)v).intValue();
-        return null;
-    }
-
-    private static int getInt(Map<String, Object> config, String key, int defaultValue) {
-        Integer v = getInt(config, key);
-        return v != null ? v : defaultValue;
-    }
-
-    private static Long getLong(Map<String, Object> config, String key) {
-        Object v = config.get(key);
-        if (v == null)
-            return null;
-        if (v instanceof Number)
-            return ((Number)v).longValue();
-        return null;
-    }
 }
