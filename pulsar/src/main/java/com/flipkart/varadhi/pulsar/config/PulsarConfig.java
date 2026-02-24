@@ -10,7 +10,9 @@ public class PulsarConfig {
     private PulsarAdminOptions pulsarAdminOptions;
     @NotNull
     private PulsarClientOptions pulsarClientOptions;
+    @NotNull
     private ProducerOptions producerOptions;
+    @NotNull
     private ConsumerOptions consumerOptions;
     private int maxQPSPerPartition = 1000;
     private int maxKBpsPerPartition = 4000;
