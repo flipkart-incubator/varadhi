@@ -83,7 +83,7 @@ public class PulsarProducerTest extends PulsarTestBase {
         options.setBatchingEnabled(false);
         options.setCompressionType(CompressionType.LZ4);
         options.setSendTimeoutMs(2000);
-        options.setBatchingMaxPublishDelayMicros(25l);
+        options.setBatchingMaxPublishDelayMicros(25L);
         capacity = new TopicCapacityPolicy(1000, 2000, 1, 2);
         topic = PulsarStorageTopic.of(0, "one.two.three.four", 1);
         doReturn(topic.getName()).when(producer).getTopic();

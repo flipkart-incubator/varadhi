@@ -6,10 +6,6 @@ import org.apache.pulsar.client.api.Producer;
 
 /**
  * Default telemetry implementation for Pulsar producers and consumers.
- * <p>
- * Publishes (besides {@link Producer#getStats()}): producer/consumer identity as tags,
- * {@link Producer#getLastSequenceId()}, {@link Producer#isConnected()} / {@link Consumer#isConnected()},
- * and from getStats(): send rates, latency percentiles, totals, pending queue size.
  */
 public class PulsarTelemetryOptions implements TelemetryOptions {
 
