@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.pulsar.consumer;
 
+import com.flipkart.varadhi.pulsar.config.ConsumerOptions;
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
@@ -7,10 +9,7 @@ import com.flipkart.varadhi.spi.services.MessagingException;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicPartitions;
-import org.apache.pulsar.client.api.BatchReceivePolicy;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.client.api.*;
 import org.apache.pulsar.common.naming.TopicName;
 
 import java.util.*;
@@ -19,15 +18,17 @@ import java.util.concurrent.TimeUnit;
 public class PulsarConsumerFactory implements ConsumerFactory {
 
     private final PulsarClient pulsarClient;
-    private final Map<String, Object> defaultConsumerProperties;
+    private final TelemetryOptions telemetryOptions;
+    private final ConsumerOptions consumerOptions;
 
-    public PulsarConsumerFactory(PulsarClient pulsarClient, Map<String, Object> defaultConsumerProperties) {
+    public PulsarConsumerFactory(
+        PulsarClient pulsarClient,
+        ConsumerOptions defaultConsumerProperties,
+        TelemetryOptions telemetryOptions
+    ) {
         this.pulsarClient = pulsarClient;
-        this.defaultConsumerProperties = new HashMap<>(defaultConsumerProperties);
-
-        // removing topicNames from defaultConsumerProperties as calling topics() method in newConsumer() method only
-        // adds topics and not overrides it.
-        this.defaultConsumerProperties.remove("topicNames");
+        this.telemetryOptions = telemetryOptions;
+        this.consumerOptions = defaultConsumerProperties;
     }
 
     @Override
@@ -55,27 +56,74 @@ public class PulsarConsumerFactory implements ConsumerFactory {
                 }
             }
 
-            Map<String, Object> consumerProperties = new HashMap<>(defaultConsumerProperties);
-            consumerProperties.putAll(properties);
-            return new PulsarConsumer(
-                pulsarClient.newConsumer(Schema.BYTES)
-                            .loadConf(consumerProperties)
-                            .topics(new ArrayList<>(topicNames))
-                            .subscriptionName(subscriptionName)
-                            .consumerName(consumerName)
-                            .poolMessages(true)
-                            .batchReceivePolicy(
-                                BatchReceivePolicy.builder()
-                                                  .maxNumMessages(2000)
-                                                  .maxNumBytes(5 * 1024 * 1024)
-                                                  .timeout(200, TimeUnit.MILLISECONDS)
-                                                  .build()
-                            )
-                            .acknowledgmentGroupTime(1, TimeUnit.SECONDS)
-                            .subscribe()
+            Map<String, Object> config = new HashMap<>(consumerOptions.asMap());
+            config.putAll(properties);
+            config.remove("topicNames");
+
+            int maxPollRecords = getInt(config, "maxPollRecords", 2000);
+            int fetchMaxBytes = getInt(config, "fetchMaxBytes", 5 * 1024 * 1024);
+            int fetchMaxWaitMs = getInt(config, "fetchMaxWaitMs", 200);
+            Integer receiverQueueSize = getInt(config, "receiverQueueSize");
+            Integer maxTotalReceiverQueueSizeAcrossPartitions = getInt(
+                config,
+                "maxTotalReceiverQueueSizeAcrossPartitions"
             );
+            Long acknowledgementGroupTimeMicros = getLong(config, "acknowledgementsGroupTimeMicros");
+
+            var builder = pulsarClient.newConsumer(Schema.BYTES)
+                                      .topics(new ArrayList<>(topicNames))
+                                      .subscriptionName(subscriptionName)
+                                      .subscriptionType(SubscriptionType.Exclusive)
+                                      .subscriptionMode(SubscriptionMode.Durable)
+                                      .consumerName(consumerName)
+                                      .poolMessages(true)
+                                      .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+                                      .batchReceivePolicy(
+                                          BatchReceivePolicy.builder()
+                                                            .maxNumMessages(maxPollRecords)
+                                                            .maxNumBytes(fetchMaxBytes)
+                                                            .timeout(fetchMaxWaitMs, TimeUnit.MILLISECONDS)
+                                                            .build()
+                                      )
+                                      .acknowledgmentGroupTime(
+                                          acknowledgementGroupTimeMicros != null ?
+                                              acknowledgementGroupTimeMicros :
+                                              1_000_000L,
+                                          TimeUnit.MICROSECONDS
+                                      );
+            if (receiverQueueSize != null) {
+                builder = builder.receiverQueueSize(receiverQueueSize);
+            }
+            if (maxTotalReceiverQueueSizeAcrossPartitions != null) {
+                builder = builder.maxTotalReceiverQueueSizeAcrossPartitions(maxTotalReceiverQueueSizeAcrossPartitions);
+            }
+
+            return new PulsarConsumer(builder.subscribe(), telemetryOptions);
         } catch (PulsarClientException e) {
             throw new MessagingException("Error creating consumer", e);
         }
+    }
+
+    private static Integer getInt(Map<String, Object> config, String key) {
+        Object v = config.get(key);
+        if (v == null)
+            return null;
+        if (v instanceof Number)
+            return ((Number)v).intValue();
+        return null;
+    }
+
+    private static int getInt(Map<String, Object> config, String key, int defaultValue) {
+        Integer v = getInt(config, key);
+        return v != null ? v : defaultValue;
+    }
+
+    private static Long getLong(Map<String, Object> config, String key) {
+        Object v = config.get(key);
+        if (v == null)
+            return null;
+        if (v instanceof Number)
+            return ((Number)v).longValue();
+        return null;
     }
 }

@@ -8,6 +8,7 @@ import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.entities.PulsarSubscription;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
+import com.flipkart.varadhi.pulsar.util.PulsarTelemetryOptions;
 import com.flipkart.varadhi.pulsar.util.TopicPlanner;
 import com.flipkart.varadhi.spi.services.*;
 import com.flipkart.varadhi.common.utils.HostUtils;
@@ -15,7 +16,6 @@ import com.flipkart.varadhi.common.utils.YamlLoader;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 
 @Slf4j
 public class PulsarStackProvider implements MessagingStackProvider {
@@ -42,12 +42,21 @@ public class PulsarStackProvider implements MessagingStackProvider {
         topicFactory = new PulsarTopicFactory(planner);
         ClientProvider clientProvider = new ClientProvider(pulsarConfig);
         topicService = new PulsarTopicService(clientProvider, planner);
+        PulsarTelemetryOptions pulsarTelemetryOptions = null;
+        if (pulsarConfig.isEnableTelemetry()) {
+            pulsarTelemetryOptions = new PulsarTelemetryOptions();
+        }
         producerFactory = new PulsarProducerFactory(
             clientProvider.getPulsarClient(),
             pulsarConfig.getProducerOptions(),
-            hostName
+            hostName,
+            pulsarTelemetryOptions
         );
-        consumerFactory = new PulsarConsumerFactory(clientProvider.getPulsarClient(), new HashMap<>());
+        consumerFactory = new PulsarConsumerFactory(
+            clientProvider.getPulsarClient(),
+            pulsarConfig.getConsumerOptions(),
+            pulsarTelemetryOptions
+        );
         subscriptionFactory = new PulsarSubscriptionFactory();
         subscriptionService = new PulsarSubscriptionService(clientProvider);
         registerSubtypes(mapper);

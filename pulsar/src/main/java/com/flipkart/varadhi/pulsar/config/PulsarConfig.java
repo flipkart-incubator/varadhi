@@ -11,6 +11,7 @@ public class PulsarConfig {
     @NotNull
     private PulsarClientOptions pulsarClientOptions;
     private ProducerOptions producerOptions;
+    private ConsumerOptions consumerOptions;
     private int maxQPSPerPartition = 1000;
     private int maxKBpsPerPartition = 4000;
     private int minPartitionPerTopic = 1;
@@ -23,4 +24,5 @@ public class PulsarConfig {
     private int shardMultiples = 2;
     private int maxShardPerSubscription = 4;
     private double growthMultiplier = 1.5;
+    private boolean enableTelemetry = true;
 }

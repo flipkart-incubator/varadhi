@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.utils.TypeUtil;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -19,19 +20,26 @@ public class PulsarProducerFactory implements ProducerFactory {
     private final PulsarClient pulsarClient;
     private final String hostName;
     private final ProducerOptions producerOptions;
+    private final TelemetryOptions telemetryOptions;
 
 
-    public PulsarProducerFactory(PulsarClient pulsarClient, ProducerOptions producerOptions, String hostName) {
+    public PulsarProducerFactory(
+        PulsarClient pulsarClient,
+        ProducerOptions producerOptions,
+        String hostName,
+        TelemetryOptions telemetryOptions
+    ) {
         this.pulsarClient = pulsarClient;
         this.hostName = hostName;
         this.producerOptions = null == producerOptions ? new ProducerOptions() : producerOptions;
+        this.telemetryOptions = telemetryOptions;
     }
 
     @Override
     public Producer<PulsarOffset> newProducer(StorageTopic _topic, TopicCapacityPolicy capacity) {
         var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
         try {
-            return new PulsarProducer(pulsarClient, topic, capacity, producerOptions, hostName);
+            return new PulsarProducer(pulsarClient, topic, capacity, producerOptions, hostName, telemetryOptions);
         } catch (PulsarClientException e) {
             throw new ProduceException(
                 String.format("Failed to create Pulsar producer for %s. %s", topic.getName(), e.getMessage()),

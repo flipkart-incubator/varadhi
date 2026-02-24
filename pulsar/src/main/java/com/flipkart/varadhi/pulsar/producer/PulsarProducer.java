@@ -8,11 +8,11 @@ import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.util.PropertyHelper;
 import com.flipkart.varadhi.spi.services.Producer;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.pulsar.client.api.ProducerAccessMode;
@@ -28,7 +28,6 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 @Slf4j
 public class PulsarProducer implements Producer<PulsarOffset> {
     private final RandomStringGenerator stringGenerator;
-    @Getter
     private final org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
     public PulsarProducer(
@@ -36,12 +35,16 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         PulsarStorageTopic storageTopic,
         TopicCapacityPolicy capacity,
         ProducerOptions producerOptions,
-        String hostName
+        String hostName,
+        TelemetryOptions telemetryOptions
     ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
                                                                   .filteredBy(DIGITS, LETTERS)
                                                                   .build();
         this.pulsarProducer = getProducer(pulsarClient, storageTopic, capacity, producerOptions, hostName);
+        if (telemetryOptions != null) {
+            telemetryOptions.records(this.pulsarProducer);
+        }
     }
 
     public static String getProducerName(String topicName, String hostName) {
@@ -101,7 +104,6 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         String hostname
     ) throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname);
-
         return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 
@@ -137,14 +139,17 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         // maxPendingMessages, maxPendingMessagesAcrossPartitions
         // batchingMaxMessages, batchingMaxBytes,
 
-        Map<String, Object> producerConfig = options.asConfigMap();
+        Map<String, Object> producerConfig = options.asMap();
         producerConfig.put("topicName", topic.getName());
         producerConfig.put("producerName", getProducerName(topic.getName(), hostName));
         producerConfig.put("accessMode", ProducerAccessMode.Shared);
 
         int topicMaxQps = capacity.getQps();
         int maxPendingMessages = getMaxPendingMessages(topicMaxQps);
-        int batchingMaxMessages = getBatchMaxMessages(topicMaxQps, options.getBatchingMaxPublishDelayMs());
+        int batchingMaxMessages = getBatchMaxMessages(
+            topicMaxQps,
+            (int)(options.getBatchingMaxPublishDelayMicros() / 1000)
+        );
         producerConfig.put("maxPendingMessages", maxPendingMessages);
         // maxPendingMessages and maxPendingMessagesAcrossPartitions are kept same assuming worst case.
         producerConfig.put("maxPendingMessagesAcrossPartitions", maxPendingMessages);

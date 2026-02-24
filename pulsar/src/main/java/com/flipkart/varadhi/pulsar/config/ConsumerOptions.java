@@ -2,22 +2,77 @@ package com.flipkart.varadhi.pulsar.config;
 
 import lombok.Data;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Pulsar consumer configuration options.
+ * <p>
+ * These options map to {@link org.apache.pulsar.client.api.ConsumerBuilder} and
+ * {@link org.apache.pulsar.client.api.BatchReceivePolicy} settings and control
+ * batch receive, receiver queue size, and acknowledgment grouping.
+ */
 @Data
 public class ConsumerOptions {
-    private int receiverQueueSize = 1000;
 
-    /**s
-     * Converts this configuration to a Map suitable for Pulsar consumer builder's loadConf method.
-     *
-     * @return an unmodifiable map of configuration properties
+    /**
+     * Max number of messages to fetch per batch.
+     * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#maxNumMessages}
+     * Can be overridden by subscription property.
      */
-    public Map<String, Object> asMap() {
+    private int maxPollRecords;
+
+    /**
+     * Max bytes to fetch from Pulsar per batch.
+     * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#maxNumBytes}
+     */
+    private Integer fetchMaxBytes;
+
+    /**
+     * Max time to wait when fetching messages for a batch (milliseconds).
+     * <p>{@link org.apache.pulsar.client.api.BatchReceivePolicy#timeout}
+     */
+    private Integer fetchMaxWaitMs;
+
+    /**
+     * Time to group consumer acknowledgments before sending to broker (microseconds).
+     * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#acknowledgmentGroupTime}
+     */
+    private Long acknowledgementsGroupTimeMicros;
+
+    /**
+     * Size of the consumer receive queue.
+     * <p>Can be overridden by {@link #maxTotalReceiverQueueSizeAcrossPartitions}.
+     * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#receiverQueueSize}
+     */
+    private Integer receiverQueueSize;
+
+    /**
+     * Max total receiver queue size across all partitions.
+     * <p>{@link org.apache.pulsar.client.api.ConsumerBuilder#maxTotalReceiverQueueSizeAcrossPartitions}
+     */
+    private Integer maxTotalReceiverQueueSizeAcrossPartitions;
+
+    /**
+     * Max timeout to wait when polling a message source (milliseconds).
+     */
+    private Integer messageSourcePollMaxWaitMs;
+
+    /**
+     * Max number of messages to hold in memory for a subscription.
+     */
+    private Integer maxInMemoryMessages;
+
+    public synchronized Map<String, Object> asMap() {
         Map<String, Object> configMap = new HashMap<>();
-        configMap.put("receiverQueueSize", receiverQueueSize);
-        return Collections.unmodifiableMap(configMap);
+        configMap.put("maxPollRecords", this.maxPollRecords);
+        configMap.put("fetchMaxBytes", this.fetchMaxBytes);
+        configMap.put("fetchMaxWaitMs", this.fetchMaxWaitMs);
+        configMap.put("acknowledgementsGroupTimeMicros", this.acknowledgementsGroupTimeMicros);
+        configMap.put("receiverQueueSize", this.receiverQueueSize);
+        configMap.put("maxTotalReceiverQueueSizeAcrossPartitions", this.maxTotalReceiverQueueSizeAcrossPartitions);
+        configMap.put("messageSourcePollMaxWaitMs", this.messageSourcePollMaxWaitMs);
+        configMap.put("maxInMemoryMessages", this.maxInMemoryMessages);
+        return configMap;
     }
 }

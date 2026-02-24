@@ -1,22 +1,29 @@
 package com.flipkart.varadhi.pulsar.consumer;
 
+import com.flipkart.varadhi.pulsar.config.TelemetryOptions;
 import com.flipkart.varadhi.pulsar.entities.PulsarMessages;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.spi.services.Consumer;
 import com.flipkart.varadhi.spi.services.PolledMessage;
 import com.flipkart.varadhi.spi.services.PolledMessages;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
-@RequiredArgsConstructor
 public class PulsarConsumer implements Consumer<PulsarOffset> {
-    @Getter
     private final org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer;
+
+    public PulsarConsumer(
+        org.apache.pulsar.client.api.Consumer<byte[]> pulsarConsumer,
+        TelemetryOptions telemetryOptions
+    ) {
+        this.pulsarConsumer = pulsarConsumer;
+        if (telemetryOptions != null) {
+            telemetryOptions.records(pulsarConsumer);
+        }
+    }
 
     @Override
     public CompletableFuture<PolledMessages<PulsarOffset>> receiveAsync() {
