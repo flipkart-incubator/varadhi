@@ -43,7 +43,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
                                                                   .build();
         this.pulsarProducer = getProducer(pulsarClient, storageTopic, capacity, producerOptions, hostName);
         if (telemetryOptions != null) {
-            telemetryOptions.records(this.pulsarProducer);
+            telemetryOptions.recordTelemetry(this.pulsarProducer);
         }
     }
 

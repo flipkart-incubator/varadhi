@@ -12,20 +12,20 @@ public class PulsarTelemetryOptions implements TelemetryOptions {
     /**
      * Register a Pulsar producer for telemetry recording (e.g. metrics).
      *
-     * @param producer the Pulsar producer to record; must not be null
+     * @param producer the Pulsar producer to recordTelemetry; must not be null
      */
     @Override
-    public void records(Producer<byte[]> producer) {
+    public void recordTelemetry(Producer<byte[]> producer) {
     }
 
     /**
      * Register a Pulsar consumer for telemetry recording. The consumer is {@link AutoCloseable};
      * implementations may use this to tie telemetry lifecycle to the consumer.
      *
-     * @param consumer the Pulsar consumer to record; must not be null
+     * @param consumer the Pulsar consumer to recordTelemetry; must not be null
      */
     @Override
-    public void records(Consumer<byte[]> consumer) {
+    public void recordTelemetry(Consumer<byte[]> consumer) {
     }
 
     /**

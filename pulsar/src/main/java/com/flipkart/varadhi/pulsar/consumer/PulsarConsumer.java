@@ -37,7 +37,7 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
             consumerOptions
         );
         if (telemetryOptions != null) {
-            telemetryOptions.records(pulsarConsumer);
+            telemetryOptions.recordTelemetry(pulsarConsumer);
         }
     }
 
