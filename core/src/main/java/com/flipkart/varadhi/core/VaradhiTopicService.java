@@ -18,9 +18,10 @@ import java.util.List;
 
 /**
  * Service class for managing Varadhi topics.
+ * Implements {@link ResourceOperations} so topic and queue can share a common contract.
  */
 @Slf4j
-public class VaradhiTopicService {
+public class VaradhiTopicService implements ResourceOperations<VaradhiTopic> {
 
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
@@ -163,6 +164,11 @@ public class VaradhiTopicService {
         }
     }
 
+    @Override
+    public void restore(String name, RequestActionType actionRequest) {
+        restoreTopic(name, actionRequest);
+    }
+
     /**
      * Restores a deleted Varadhi topic.
      *
@@ -171,7 +177,7 @@ public class VaradhiTopicService {
      *
      * @throws InvalidOperationForResourceException if the topic is not deleted or if the restoration is not allowed
      */
-    public void restore(String topicName, RequestActionType actionRequest) {
+    public void restoreTopic(String topicName, RequestActionType actionRequest) {
         log.info("Restoring Varadhi topic: {}", topicName);
 
         VaradhiTopic varadhiTopic = topicStore.get(topicName);
@@ -253,6 +259,11 @@ public class VaradhiTopicService {
      * @return a list of Varadhi topic names
      */
     public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
+        return list(projectName, includeInactive);
+    }
+
+    @Override
+    public List<String> list(String projectName, boolean includeInactive) {
         return topicStore.getAllNames(projectName)
                          .stream()
                          .filter(topicName -> includeInactive || topicStore.get(topicName).isActive())
