@@ -159,7 +159,12 @@ class VaradhiSubscriptionServiceTest {
         when(varadhiMetaStore.projects()).thenReturn(projectStore);
         when(varadhiMetaStore.orgs()).thenReturn(orgStore);
         when(varadhiMetaStore.teams()).thenReturn(teamStore);
-        varadhiSubscriptionService = new VaradhiSubscriptionService(shardProvisioner, controllerApi, subscriptionStore, topicStore);
+        varadhiSubscriptionService = new VaradhiSubscriptionService(
+            shardProvisioner,
+            controllerApi,
+            subscriptionStore,
+            topicStore
+        );
     }
 
     @AfterEach
@@ -284,10 +289,16 @@ class VaradhiSubscriptionServiceTest {
             project2
         );
 
-        List<String> actualProject1Subscriptions = varadhiSubscriptionService.getSubscriptionList(project1.getName(), false);
+        List<String> actualProject1Subscriptions = varadhiSubscriptionService.getSubscriptionList(
+            project1.getName(),
+            false
+        );
         assertEquals(List.of("Project1.Sub1", "Project1.Sub2"), actualProject1Subscriptions);
 
-        List<String> actualProject2Subscriptions = varadhiSubscriptionService.getSubscriptionList(project2.getName(), false);
+        List<String> actualProject2Subscriptions = varadhiSubscriptionService.getSubscriptionList(
+            project2.getName(),
+            false
+        );
         assertEquals(List.of("Project2.Sub3"), actualProject2Subscriptions);
     }
 
@@ -400,7 +411,11 @@ class VaradhiSubscriptionServiceTest {
     void createSubscription_ValidUngroupedTopic_CreatesSuccessfully() {
         doReturn(unGroupedTopic).when(topicStore).get(unGroupedTopic.getName());
 
-        VaradhiSubscription result = varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
+        VaradhiSubscription result = varadhiSubscriptionService.createSubscription(
+            unGroupedTopic,
+            subscription1,
+            project1
+        );
 
         assertSubscriptionsEqual(subscription1, result);
         assertSubscriptionsEqual(subscription1, varadhiSubscriptionService.getSubscription(subscription1.getName()));
@@ -468,7 +483,9 @@ class VaradhiSubscriptionServiceTest {
         doReturn(true).when(subscriptionStore).exists(subscription1.getName());
         doReturn(subscription1).when(subscriptionStore).get(subscription1.getName());
 
-        assertDoesNotThrow(() -> varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1));
+        assertDoesNotThrow(
+            () -> varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1)
+        );
 
         verify(shardProvisioner, times(1)).deProvision(subscription1, project1);
         verify(subscriptionStore, times(4)).update(subscription1);
@@ -948,7 +965,8 @@ class VaradhiSubscriptionServiceTest {
 
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,
-            () -> varadhiSubscriptionService.restoreSubscription(subscription1.getName(), REQUESTED_BY, actionRequest).get()
+            () -> varadhiSubscriptionService.restoreSubscription(subscription1.getName(), REQUESTED_BY, actionRequest)
+                                            .get()
         );
 
         String expectedMessage = "Restoration denied. Only Varadhi Admin can restore this subscription.";
@@ -993,7 +1011,8 @@ class VaradhiSubscriptionServiceTest {
         InvalidOperationForResourceException exception = assertThrows(
             InvalidOperationForResourceException.class,
             () -> {
-                varadhiSubscriptionService.restoreSubscription(subscription1.getName(), REQUESTED_BY, actionRequest).get();
+                varadhiSubscriptionService.restoreSubscription(subscription1.getName(), REQUESTED_BY, actionRequest)
+                                          .get();
             }
         );
 

@@ -51,7 +51,10 @@ public class SubscriptionActionHandler {
         String topicName = topicNameSegments[1];
 
         return Map.ofEntries(
-            Map.entry(ResourceType.SUBSCRIPTION, new Hierarchies.SubscriptionHierarchy(subscriptionProject, subscriptionName)),
+            Map.entry(
+                ResourceType.SUBSCRIPTION,
+                new Hierarchies.SubscriptionHierarchy(subscriptionProject, subscriptionName)
+            ),
             Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
         );
     }

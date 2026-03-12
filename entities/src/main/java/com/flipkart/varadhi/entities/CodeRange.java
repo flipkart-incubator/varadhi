@@ -15,7 +15,7 @@ public class CodeRange {
     private final int to;
 
     @JsonCreator
-    public CodeRange(@JsonProperty("from") int from, @JsonProperty("to") int to) {
+    public CodeRange(@JsonProperty ("from") int from, @JsonProperty ("to") int to) {
         this.from = from;
         this.to = to;
     }

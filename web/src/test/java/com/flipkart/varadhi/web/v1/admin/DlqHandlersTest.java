@@ -81,7 +81,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
-        doReturn(subscription).when(varadhiSubscriptionService).getSubscription(subResource.getSubscriptionInternalName());
+        doReturn(subscription).when(varadhiSubscriptionService)
+                              .getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
             unsidelineRequest,
@@ -311,7 +312,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
-        doReturn(subscription).when(varadhiSubscriptionService).getSubscription(subResource.getSubscriptionInternalName());
+        doReturn(subscription).when(varadhiSubscriptionService)
+                              .getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }
 
