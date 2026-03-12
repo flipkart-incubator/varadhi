@@ -23,7 +23,7 @@ import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.SubscriptionService;
 import com.flipkart.varadhi.core.TeamService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.VaradhiTopicHandler;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -241,8 +241,8 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize topic service
         serviceRegistry.registerIfAbsent(
-            VaradhiTopicService.class,
-            () -> new VaradhiTopicService(
+            VaradhiTopicHandler.class,
+            () -> new VaradhiTopicHandler(
                 messagingStackProvider.getStorageTopicService(),
                 metaStore.topics(),
                 metaStore.subscriptions(),
@@ -433,7 +433,7 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(
             new TopicHandlers(
                 varadhiTopicFactory,
-                serviceRegistry.get(VaradhiTopicService.class),
+                serviceRegistry.get(VaradhiTopicHandler.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
@@ -441,7 +441,7 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(
             new SubscriptionHandlers(
                 serviceRegistry.get(SubscriptionService.class),
-                serviceRegistry.get(VaradhiTopicService.class),
+                serviceRegistry.get(VaradhiTopicHandler.class),
                 subscriptionFactory,
                 configuration.getRestOptions(),
                 cacheRegistry.getCache(ResourceType.PROJECT)

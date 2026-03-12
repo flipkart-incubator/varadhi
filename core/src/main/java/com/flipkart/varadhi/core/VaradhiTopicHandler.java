@@ -18,10 +18,9 @@ import java.util.List;
 
 /**
  * Service class for managing Varadhi topics.
- * Implements {@link ResourceOperations} so topic and queue can share a common contract.
  */
 @Slf4j
-public class VaradhiTopicService implements ResourceOperations<VaradhiTopic> {
+public class VaradhiTopicHandler {
 
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
@@ -29,12 +28,12 @@ public class VaradhiTopicService implements ResourceOperations<VaradhiTopic> {
     private final ProjectStore projectStore;
 
     /**
-     * Constructs a VaradhiTopicService with the specified storage topic service and meta store.
+     * Constructs a VaradhiTopicHandler with the specified storage topic service and meta store.
      *
      * @param storageTopicService the storage topic service
      * @param topicStore           the meta store
      */
-    public VaradhiTopicService(
+    public VaradhiTopicHandler(
         StorageTopicService storageTopicService,
         TopicStore topicStore,
         SubscriptionStore subscriptionStore,
@@ -164,7 +163,6 @@ public class VaradhiTopicService implements ResourceOperations<VaradhiTopic> {
         }
     }
 
-    @Override
     public void restore(String name, RequestActionType actionRequest) {
         restoreTopic(name, actionRequest);
     }
@@ -262,7 +260,6 @@ public class VaradhiTopicService implements ResourceOperations<VaradhiTopic> {
         return list(projectName, includeInactive);
     }
 
-    @Override
     public List<String> list(String projectName, boolean includeInactive) {
         return topicStore.getAllNames(projectName)
                          .stream()
