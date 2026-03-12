@@ -62,7 +62,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         super.setUp();
         MockitoAnnotations.openMocks(this);
         subscriptionHandlers = new SubscriptionHandlers(
-                varadhiSubscriptionService,
+            varadhiSubscriptionService,
             topicService,
             subscriptionFactory,
             new RestOptions(),
@@ -80,7 +80,12 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         createRoute(HttpMethod.DELETE, SUBSCRIPTION_PATH, subscriptionHandlers::delete, false);
         createRoute(HttpMethod.PUT, SUBSCRIPTION_PATH, subscriptionHandlers::update, true);
         createRoute(HttpMethod.PATCH, SUBSCRIPTION_PATH + "/restore", subscriptionHandlers::restore, false);
-        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/start", subscriptionHandlers.getActionHandler()::start, false);
+        createRoute(
+            HttpMethod.POST,
+            SUBSCRIPTION_PATH + "/start",
+            subscriptionHandlers.getActionHandler()::start,
+            false
+        );
         createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/stop", subscriptionHandlers.getActionHandler()::stop, false);
     }
 
@@ -286,8 +291,9 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void listSubscriptions_ValidProject_ReturnsSubscriptionList() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, buildSubscriptionsUrl(PROJECT_1));
 
-        when(varadhiSubscriptionService.getSubscriptionList(PROJECT_1.getName(), false)).thenReturn(List.of("sub1", "sub2"))
-                                                                                 .thenReturn(List.of());
+        when(varadhiSubscriptionService.getSubscriptionList(PROJECT_1.getName(), false)).thenReturn(
+            List.of("sub1", "sub2")
+        ).thenReturn(List.of());
 
         List<String> subscriptions = sendRequestWithoutPayload(request, WebTestBase.c(List.class));
         List<String> subscriptions2 = sendRequestWithoutPayload(request, WebTestBase.c(List.class));

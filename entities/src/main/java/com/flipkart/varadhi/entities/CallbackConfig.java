@@ -36,9 +36,7 @@ public class CallbackConfig {
     private final Set<CodeRange> codeRanges = new HashSet<>();
 
     @JsonCreator
-    public CallbackConfig(
-        @JsonProperty("codeRanges") Set<CodeRange> codeRanges
-    ) {
+    public CallbackConfig(@JsonProperty ("codeRanges") Set<CodeRange> codeRanges) {
         if (codeRanges != null) {
             this.codeRanges.addAll(codeRanges);
         }
@@ -56,10 +54,9 @@ public class CallbackConfig {
             return null;
         }
         try {
-            Set<CodeRange> codeRanges = JsonMapper.getMapper().readValue(
-                requestJson,
-                new TypeReference<Set<CodeRange>>() {}
-            );
+            Set<CodeRange> codeRanges = JsonMapper.getMapper()
+                                                  .readValue(requestJson, new TypeReference<Set<CodeRange>>() {
+                                                  });
             return new CallbackConfig(codeRanges);
         } catch (Exception e) {
             LOG.error("Unable to deserialize callback code ranges from json: {} - {}", requestJson, e.getMessage());

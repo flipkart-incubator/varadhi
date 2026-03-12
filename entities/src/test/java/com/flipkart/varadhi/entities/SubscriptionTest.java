@@ -20,29 +20,49 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SubscriptionTest {
 
     private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
-        URI.create("http://localhost:8080"), "GET", "", 500, 500, false
+        URI.create("http://localhost:8080"),
+        "GET",
+        "",
+        500,
+        500,
+        false
     );
     private static final RetryPolicy DEFAULT_RETRY_POLICY = new RetryPolicy(
         new CodeRange[] {new CodeRange(500, 502)},
-        RetryPolicy.BackoffType.LINEAR, 1, 1, 1, 3
+        RetryPolicy.BackoffType.LINEAR,
+        1,
+        1,
+        1,
+        3
     );
-    private static final ConsumptionPolicy DEFAULT_CONSUMPTION_POLICY =
-        new ConsumptionPolicy(10, 1, 1, false, 1, null);
-    private static final SubscriptionShards DEFAULT_SHARDS =
-        new SubscriptionUnitShard(0, new TopicCapacityPolicy(1, 10, 1, 2), null, null, null);
+    private static final ConsumptionPolicy DEFAULT_CONSUMPTION_POLICY = new ConsumptionPolicy(10, 1, 1, false, 1, null);
+    private static final SubscriptionShards DEFAULT_SHARDS = new SubscriptionUnitShard(
+        0,
+        new TopicCapacityPolicy(1, 10, 1, 2),
+        null,
+        null,
+        null
+    );
 
     // ---------- VaradhiSubscription with delivery / callback ----------
 
     @Test
     void varadhiSubscription_withDeliveryFields_setsGetters() {
-        CallbackConfig callbackConfig = new CallbackConfig(
-            Set.of(new CodeRange(200, 299), new CodeRange(500, 599))
-        );
+        CallbackConfig callbackConfig = new CallbackConfig(Set.of(new CodeRange(200, 299), new CodeRange(500, 599)));
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            List.of("c1", "c2"), callbackConfig
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of("c1", "c2"),
+            callbackConfig
         );
 
         assertEquals(List.of("c1", "c2"), sub.getTargetClientIds());
@@ -53,9 +73,17 @@ class SubscriptionTest {
     @Test
     void varadhiSubscription_withoutDeliveryFields_hasDefaults() {
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         assertTrue(sub.getTargetClientIds().isEmpty());
@@ -64,14 +92,21 @@ class SubscriptionTest {
 
     @Test
     void serializeDeserialize_varadhiSubscriptionWithCallbackConfigRoundTrip() {
-        CallbackConfig callbackConfig = new CallbackConfig(
-            Set.of(new CodeRange(200, 299), new CodeRange(500, 599))
-        );
+        CallbackConfig callbackConfig = new CallbackConfig(Set.of(new CodeRange(200, 299), new CodeRange(500, 599)));
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            List.of("c1", "c2"), callbackConfig
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of("c1", "c2"),
+            callbackConfig
         );
 
         String json = JsonMapper.jsonSerialize(sub);
@@ -86,9 +121,17 @@ class SubscriptionTest {
     @Test
     void serializeDeserialize_varadhiSubscriptionMinimalRoundTrip() {
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
         String json = JsonMapper.jsonSerialize(sub);
@@ -114,9 +157,7 @@ class SubscriptionTest {
 
     @Test
     void serializeDeserialize_callbackConfigRoundTrip() {
-        CallbackConfig config = new CallbackConfig(
-            Set.of(new CodeRange(200, 299), new CodeRange(500, 599))
-        );
+        CallbackConfig config = new CallbackConfig(Set.of(new CodeRange(200, 299), new CodeRange(500, 599)));
         String json = JsonMapper.jsonSerialize(config);
         assertNotNull(json);
         CallbackConfig deserialized = JsonMapper.jsonDeserialize(json, CallbackConfig.class);
@@ -166,9 +207,17 @@ class SubscriptionTest {
     @Test
     void callbackConfigFactory_returnsNullWhenNoCallbackConfig() {
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         assertNull(CallbackConfig.getCallbackConfig(sub));
         assertNull(CallbackConfig.getCallbackConfig(null));
@@ -178,10 +227,19 @@ class SubscriptionTest {
     void callbackConfigFactory_returnsConfigWhenPresent() {
         CallbackConfig callbackConfig = new CallbackConfig(Set.of(new CodeRange(500, 502)));
         VaradhiSubscription sub = VaradhiSubscription.of(
-            "sub-1", "project1", "topic1", "desc", false,
-            DEFAULT_ENDPOINT, DEFAULT_RETRY_POLICY, DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS, Map.of("k", "v"), LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            null, callbackConfig
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            callbackConfig
         );
 
         CallbackConfig config = CallbackConfig.getCallbackConfig(sub);

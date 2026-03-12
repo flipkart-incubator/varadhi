@@ -5,10 +5,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Represents a subscription in the Varadhi.
@@ -17,7 +15,7 @@ import java.util.Set;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class VaradhiSubscription extends LifecycleEntity {
 
     private final String project;
@@ -46,20 +44,20 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Constructs a new VaradhiSubscription instance.
      */
     private VaradhiSubscription(
-            String name,
-            int version,
-            String project,
-            String topic,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards,
-            LifecycleStatus status,
-            Map<String, String> properties,
-            List<String> targetClientIds,
-            CallbackConfig callbackConfig
+        String name,
+        int version,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        LifecycleStatus status,
+        Map<String, String> properties,
+        List<String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         super(name, version, MetaStoreEntityType.SUBSCRIPTION);
         this.project = validateNotNullOrEmpty(project, "Project");
@@ -80,20 +78,33 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Creates a new VaradhiSubscription instance (no delivery/callback overrides).
      */
     public static VaradhiSubscription of(
-            String name,
-            String project,
-            String topic,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards,
-            Map<String, String> properties,
-            LifecycleStatus.ActionCode actionCode
+        String name,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode
     ) {
-        return of(name, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-                shards, properties, actionCode, null, null);
+        return of(
+            name,
+            project,
+            topic,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            shards,
+            properties,
+            actionCode,
+            null,
+            null
+        );
     }
 
     /**
@@ -103,35 +114,35 @@ public class VaradhiSubscription extends LifecycleEntity {
      * @param callbackConfig  optional callback config for queue-style subscriptions
      */
     public static VaradhiSubscription of(
-            String name,
-            String project,
-            String topic,
-            String description,
-            boolean grouped,
-            Endpoint endpoint,
-            RetryPolicy retryPolicy,
-            ConsumptionPolicy consumptionPolicy,
-            SubscriptionShards shards,
-            Map<String, String> properties,
-            LifecycleStatus.ActionCode actionCode,
-            List<String> targetClientIds,
-            CallbackConfig callbackConfig
+        String name,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode,
+        List<String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         return new VaradhiSubscription(
-                name,
-                INITIAL_VERSION,
-                project,
-                topic,
-                description,
-                grouped,
-                endpoint,
-                retryPolicy,
-                consumptionPolicy,
-                shards,
-                new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
-                properties,
-                targetClientIds,
-                callbackConfig
+            name,
+            INITIAL_VERSION,
+            project,
+            topic,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            shards,
+            new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
+            properties,
+            targetClientIds,
+            callbackConfig
         );
     }
 
