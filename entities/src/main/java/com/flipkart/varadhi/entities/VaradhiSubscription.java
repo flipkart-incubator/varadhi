@@ -17,7 +17,7 @@ import java.util.Set;
  */
 @Getter
 @Setter
-@EqualsAndHashCode (callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 public class VaradhiSubscription extends LifecycleEntity {
 
     private final String project;
@@ -30,16 +30,14 @@ public class VaradhiSubscription extends LifecycleEntity {
     private SubscriptionShards shards;
     private Map<String, String> properties;
 
-    /** Unified list of target client IDs for delivery (topic: typically one; queue: multiple). */
+    /**
+     * Unified list of target client IDs for delivery (topic: typically one; queue: multiple).
+     */
     private final List<String> targetClientIds;
-    /** Name of the retry subscription (internal queue role), if any. */
-    private final String retrySubscriptionName;
-    /** Name of the dead-letter subscription (internal queue role), if any. */
-    private final String dlqSubscriptionName;
-    /** Callback code ranges for callback-style (queue) subscriptions. */
-    private final Set<CodeRange> callbackCodeRanges;
-    /** Callback request timeout in milliseconds; 0 means not set. */
-    private final long callbackTimeoutMs;
+    /**
+     * Callback config required for queue endpoint
+     */
+    private final CallbackConfig callbackConfig;
 
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
     private static final String PROPERTIES_ERROR = "Properties cannot be null or empty";
@@ -48,23 +46,20 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Constructs a new VaradhiSubscription instance.
      */
     private VaradhiSubscription(
-        String name,
-        int version,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        LifecycleStatus status,
-        Map<String, String> properties,
-        List<String> targetClientIds,
-        String retrySubscriptionName,
-        String dlqSubscriptionName,
-        Set<CodeRange> callbackCodeRanges,
-        long callbackTimeoutMs
+            String name,
+            int version,
+            String project,
+            String topic,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            SubscriptionShards shards,
+            LifecycleStatus status,
+            Map<String, String> properties,
+            List<String> targetClientIds,
+            CallbackConfig callbackConfig
     ) {
         super(name, version, MetaStoreEntityType.SUBSCRIPTION);
         this.project = validateNotNullOrEmpty(project, "Project");
@@ -75,91 +70,68 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
         this.shards = validateShards(shards);
+        this.callbackConfig = callbackConfig;
         this.status = status;
         this.properties = validateProperties(properties);
         this.targetClientIds = targetClientIds != null ? List.copyOf(targetClientIds) : List.of();
-        this.retrySubscriptionName = retrySubscriptionName;
-        this.dlqSubscriptionName = dlqSubscriptionName;
-        this.callbackCodeRanges = callbackCodeRanges != null ? Set.copyOf(callbackCodeRanges) : Collections.emptySet();
-        this.callbackTimeoutMs = callbackTimeoutMs > 0 ? callbackTimeoutMs : 0;
-    }
-
-    /**
-     * Whether this subscription has callback-style config (e.g. queue with code ranges).
-     * Not serialized; derived from callbackCodeRanges on deserialize.
-     */
-    @JsonIgnore
-    public boolean isCallbackStyle() {
-        return callbackCodeRanges != null && !callbackCodeRanges.isEmpty();
     }
 
     /**
      * Creates a new VaradhiSubscription instance (no delivery/callback overrides).
      */
     public static VaradhiSubscription of(
-        String name,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+            String name,
+            String project,
+            String topic,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            SubscriptionShards shards,
+            Map<String, String> properties,
+            LifecycleStatus.ActionCode actionCode
     ) {
-        return of(
-            name, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
-            shards, properties, actionCode, null, null, null, null, 0
-        );
+        return of(name, project, topic, description, grouped, endpoint, retryPolicy, consumptionPolicy,
+                shards, properties, actionCode, null, null);
     }
 
     /**
      * Creates a new VaradhiSubscription instance with optional delivery contract fields.
      *
-     * @param targetClientIds       optional list of target client IDs (topic/queue)
-     * @param retrySubscriptionName optional retry subscription name
-     * @param dlqSubscriptionName   optional DLQ subscription name
-     * @param callbackCodeRanges   optional callback code ranges for queue-style
-     * @param callbackTimeoutMs     optional callback timeout in ms; 0 or negative = not set
+     * @param targetClientIds optional list of target client IDs (topic/queue)
+     * @param callbackConfig  optional callback config for queue-style subscriptions
      */
     public static VaradhiSubscription of(
-        String name,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode,
-        List<String> targetClientIds,
-        String retrySubscriptionName,
-        String dlqSubscriptionName,
-        Set<CodeRange> callbackCodeRanges,
-        long callbackTimeoutMs
+            String name,
+            String project,
+            String topic,
+            String description,
+            boolean grouped,
+            Endpoint endpoint,
+            RetryPolicy retryPolicy,
+            ConsumptionPolicy consumptionPolicy,
+            SubscriptionShards shards,
+            Map<String, String> properties,
+            LifecycleStatus.ActionCode actionCode,
+            List<String> targetClientIds,
+            CallbackConfig callbackConfig
     ) {
         return new VaradhiSubscription(
-            name,
-            INITIAL_VERSION,
-            project,
-            topic,
-            description,
-            grouped,
-            endpoint,
-            retryPolicy,
-            consumptionPolicy,
-            shards,
-            new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
-            properties,
-            targetClientIds,
-            retrySubscriptionName,
-            dlqSubscriptionName,
-            callbackCodeRanges,
-            callbackTimeoutMs
+                name,
+                INITIAL_VERSION,
+                project,
+                topic,
+                description,
+                grouped,
+                endpoint,
+                retryPolicy,
+                consumptionPolicy,
+                shards,
+                new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
+                properties,
+                targetClientIds,
+                callbackConfig
         );
     }
 
@@ -167,9 +139,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Retrieves the integer value of a property.
      *
      * @param property the property name
-     *
      * @return the integer value of the property
-     *
      * @throws IllegalArgumentException if the property is not found or cannot be parsed as an integer
      */
     @JsonIgnore
@@ -186,9 +156,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      *
      * @param value     the string value to validate
      * @param fieldName the name of the field being validated
-     *
      * @return the validated string value
-     *
      * @throws IllegalArgumentException if the value is null or empty
      */
     private static String validateNotNullOrEmpty(String value, String fieldName) {
@@ -202,9 +170,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the shards are not null or empty.
      *
      * @param shards the shards to validate
-     *
      * @return the validated shards
-     *
      * @throws IllegalArgumentException if the shards are null or empty
      */
     private static SubscriptionShards validateShards(SubscriptionShards shards) {
@@ -218,9 +184,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the properties are not null or empty.
      *
      * @param properties the properties to validate
-     *
      * @return the validated properties
-     *
      * @throws IllegalArgumentException if the properties are null or empty
      */
     private static Map<String, String> validateProperties(Map<String, String> properties) {

@@ -8,7 +8,7 @@ import com.flipkart.varadhi.entities.web.DlqMessage;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.VaradhiTopicHandler;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.google.common.collect.ArrayListMultimap;
 import org.mockito.Mock;
@@ -26,7 +26,7 @@ public class SubscriptionTestBase extends WebTestBase {
     protected ProjectService projectService;
 
     @Mock
-    protected VaradhiTopicService topicService;
+    protected VaradhiTopicHandler topicService;
 
     @Mock
     protected VaradhiSubscriptionFactory subscriptionFactory;

@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiTopicHandler;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
@@ -55,7 +55,7 @@ public class SubscriptionHandlers implements RouteProvider {
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
     private final SubscriptionService subscriptionService;
-    private final VaradhiTopicService topicService;
+    private final VaradhiTopicHandler topicService;
     private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
@@ -72,7 +72,7 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     public SubscriptionHandlers(
         SubscriptionService subscriptionService,
-        VaradhiTopicService topicService,
+        VaradhiTopicHandler topicService,
         VaradhiSubscriptionFactory subscriptionFactory,
         RestOptions restOptions,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache

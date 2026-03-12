@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiTopicHandler;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.core.RequestActionType;
@@ -46,23 +46,23 @@ public class TopicHandlers implements RouteProvider {
     private static final String API_NAME = "TOPIC";
 
     private final VaradhiTopicFactory varadhiTopicFactory;
-    private final VaradhiTopicService varadhiTopicService;
+    private final VaradhiTopicHandler varadhiTopicHandler;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
     /**
      * Constructs a new TopicHandlers instance.
      *
      * @param varadhiTopicFactory the factory for creating VaradhiTopic instances
-     * @param varadhiTopicService the service for managing VaradhiTopic instances
+     * @param varadhiTopicHandler the service for managing VaradhiTopic instances
      * @param projectCache        the entity read cache for projects
      */
     public TopicHandlers(
         VaradhiTopicFactory varadhiTopicFactory,
-        VaradhiTopicService varadhiTopicService,
+        VaradhiTopicHandler varadhiTopicHandler,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
         this.varadhiTopicFactory = varadhiTopicFactory;
-        this.varadhiTopicService = varadhiTopicService;
+        this.varadhiTopicHandler = varadhiTopicHandler;
         this.projectCache = projectCache;
     }
 
@@ -136,7 +136,7 @@ public class TopicHandlers implements RouteProvider {
      * @param ctx the routing context
      */
     public void get(RoutingContext ctx) {
-        VaradhiTopic varadhiTopic = varadhiTopicService.get(getVaradhiTopicName(ctx));
+        VaradhiTopic varadhiTopic = varadhiTopicHandler.get(getVaradhiTopicName(ctx));
         ctx.endApiWithResponse(TopicResource.from(varadhiTopic));
     }
 
@@ -159,7 +159,7 @@ public class TopicHandlers implements RouteProvider {
         Project project = projectCache.getOrThrow(topicResource.getProject()).getEntity();
 
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        varadhiTopicService.create(varadhiTopic, project);
+        varadhiTopicHandler.create(varadhiTopic, project);
         ctx.endApiWithResponse(TopicResource.from(varadhiTopic));
     }
 
@@ -176,7 +176,7 @@ public class TopicHandlers implements RouteProvider {
                                                .orElse(ResourceDeletionType.SOFT_DELETE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
 
-        varadhiTopicService.delete(getVaradhiTopicName(ctx), deletionType, actionRequest);
+        varadhiTopicHandler.delete(getVaradhiTopicName(ctx), deletionType, actionRequest);
         ctx.endApi();
     }
 
@@ -188,7 +188,7 @@ public class TopicHandlers implements RouteProvider {
     public void restore(RoutingContext ctx) {
         RequestActionType actionRequest = createResourceActionRequest(ctx);
 
-        varadhiTopicService.restore(getVaradhiTopicName(ctx), actionRequest);
+        varadhiTopicHandler.restore(getVaradhiTopicName(ctx), actionRequest);
         ctx.endApi();
     }
 
@@ -206,7 +206,7 @@ public class TopicHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+        List<String> topics = varadhiTopicHandler.getVaradhiTopics(projectName, includeInactive)
                                                  .stream()
                                                  .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
                                                  .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
