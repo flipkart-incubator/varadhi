@@ -26,20 +26,20 @@ import java.util.function.BiFunction;
  * Service class for managing subscriptions.
  */
 @Slf4j
-public class SubscriptionService {
+public class VaradhiSubscriptionService {
     private final SubscriptionStore subscriptionStore;
     private final TopicStore topicStore;
     private final ControllerApi controllerClient;
     private final ShardProvisioner shardProvisioner;
 
     /**
-     * Constructs a new SubscriptionService instance.
+     * Constructs a new VaradhiSubscriptionService instance.
      *
      * @param shardProvisioner the shard provisioner
      * @param controllerClient the controller REST API client
      * @param subscriptionStore        the meta store
      */
-    public SubscriptionService(
+    public VaradhiSubscriptionService(
         ShardProvisioner shardProvisioner,
         ControllerApi controllerClient,
         SubscriptionStore subscriptionStore,

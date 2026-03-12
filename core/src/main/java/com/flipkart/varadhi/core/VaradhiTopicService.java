@@ -20,7 +20,7 @@ import java.util.List;
  * Service class for managing Varadhi topics.
  */
 @Slf4j
-public class VaradhiTopicHandler {
+public class VaradhiTopicService {
 
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
@@ -28,12 +28,12 @@ public class VaradhiTopicHandler {
     private final ProjectStore projectStore;
 
     /**
-     * Constructs a VaradhiTopicHandler with the specified storage topic service and meta store.
+     * Constructs a VaradhiTopicService with the specified storage topic service and meta store.
      *
      * @param storageTopicService the storage topic service
      * @param topicStore           the meta store
      */
-    public VaradhiTopicHandler(
+    public VaradhiTopicService(
         StorageTopicService storageTopicService,
         TopicStore topicStore,
         SubscriptionStore subscriptionStore,

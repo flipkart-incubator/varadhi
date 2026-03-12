@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.web.v1.producer;
 
-import com.flipkart.varadhi.core.VaradhiTopicHandler;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.config.MessageHeaderUtils;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.*;
@@ -23,7 +23,7 @@ public class ProduceTestBase extends WebTestBase {
     ProducerService producerService;
     ProjectService projectService;
     OrgService orgService;
-    VaradhiTopicHandler varadhiTopicHandler;
+    VaradhiTopicService varadhiTopicService;
     String deployedRegion = "region1";
 
     ArgumentCaptor<Message> msgCapture;
@@ -41,14 +41,14 @@ public class ProduceTestBase extends WebTestBase {
         projectService = mock(ProjectService.class);
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
-        varadhiTopicHandler = mock(VaradhiTopicHandler.class);
+        varadhiTopicService = mock(VaradhiTopicService.class);
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),
             MetricsOptions.getDefault()
         );
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(varadhiTopicHandler.get(any())).thenReturn(topic);
+        when(varadhiTopicService.get(any())).thenReturn(topic);
         when(topic.getNfrFilterName()).thenReturn(null);
         produceHandlers = new ProduceHandlers(
             producerService,

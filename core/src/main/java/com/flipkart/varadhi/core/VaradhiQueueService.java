@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.core;
 
-public class VaradhiQueueHandler {
+public class VaradhiQueueService {
     /**
      * No op currently
      */

@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.VaradhiTopicHandler;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.core.SubscriptionService;
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
@@ -54,30 +54,31 @@ public class SubscriptionHandlers implements RouteProvider {
 
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
-    private final SubscriptionService subscriptionService;
-    private final VaradhiTopicHandler topicService;
+    private final VaradhiSubscriptionService varadhiSubscriptionService;
+    private final VaradhiTopicService topicService;
     private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    private final SubscriptionActionHandler actionHandler;
 
     /**
      * Constructs a new SubscriptionHandlers instance.
      *
-     * @param subscriptionService the service to manage subscriptions
+     * @param varadhiSubscriptionService the service to manage subscriptions
      * @param topicService        the service to manage topics
      * @param subscriptionFactory the factory to create subscriptions
      * @param restOptions         the REST options configuration
      * @param projectCache        the entity read cache for projects
      */
     public SubscriptionHandlers(
-        SubscriptionService subscriptionService,
-        VaradhiTopicHandler topicService,
+        VaradhiSubscriptionService varadhiSubscriptionService,
+        VaradhiTopicService topicService,
         VaradhiSubscriptionFactory subscriptionFactory,
         RestOptions restOptions,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
-        this.subscriptionService = subscriptionService;
+        this.varadhiSubscriptionService = varadhiSubscriptionService;
         this.topicService = topicService;
         this.varadhiSubscriptionFactory = subscriptionFactory;
         this.propertyValidators = SubscriptionPropertyValidator.createPropertyValidators(restOptions);
@@ -85,6 +86,14 @@ public class SubscriptionHandlers implements RouteProvider {
             restOptions
         );
         this.projectCache = projectCache;
+        this.actionHandler = new SubscriptionActionHandler(varadhiSubscriptionService, projectCache);
+    }
+
+    /**
+     * Returns the handler for subscription lifecycle actions (start, stop). Used by tests and route building.
+     */
+    public SubscriptionActionHandler getActionHandler() {
+        return actionHandler;
     }
 
     /**
@@ -127,11 +136,12 @@ public class SubscriptionHandlers implements RouteProvider {
                 RouteDefinition.post(START, API_NAME, "/:subscription/start")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::start),
+                               .build(actionHandler::getHierarchies, actionHandler::start),
+
                 RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::stop)
+                               .build(actionHandler::getHierarchies, actionHandler::stop)
             )
         ).get();
     }
@@ -181,7 +191,7 @@ public class SubscriptionHandlers implements RouteProvider {
             return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(subscriptionProject));
         }
 
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
         String topicName = topicNameSegments[1];
@@ -206,7 +216,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName, includeInactive);
+        List<String> subscriptionNames = varadhiSubscriptionService.getSubscriptionList(projectName, includeInactive);
         Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscriptionNames);
     }
 
@@ -218,7 +228,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public void get(RoutingContext ctx) {
         String internalSubscriptionName = getSubscriptionFqn(ctx);
         SubscriptionResource subscription = SubscriptionResource.from(
-            subscriptionService.getSubscription(internalSubscriptionName)
+            varadhiSubscriptionService.getSubscription(internalSubscriptionName)
         );
         Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscription);
     }
@@ -238,7 +248,7 @@ public class SubscriptionHandlers implements RouteProvider {
             subProject,
             subscribedTopic
         );
-        VaradhiSubscription createdSubscription = subscriptionService.createSubscription(
+        VaradhiSubscription createdSubscription = varadhiSubscriptionService.createSubscription(
             subscribedTopic,
             varadhiSubscription,
             subProject
@@ -258,7 +268,7 @@ public class SubscriptionHandlers implements RouteProvider {
         // Note: Updates are currently allowed even if there are no changes to the subscription, which should be avoided.
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.updateSubscription(
+            varadhiSubscriptionService.updateSubscription(
                 subscription.getSubscriptionInternalName(),
                 subscription.getVersion(),
                 subscription.getDescription(),
@@ -286,7 +296,7 @@ public class SubscriptionHandlers implements RouteProvider {
 
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.deleteSubscription(
+            varadhiSubscriptionService.deleteSubscription(
                 getSubscriptionFqn(ctx),
                 projectCache.getOrThrow(ctx.pathParam(PATH_PARAM_PROJECT)).getEntity(),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
@@ -306,40 +316,10 @@ public class SubscriptionHandlers implements RouteProvider {
 
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.restoreSubscription(
+            varadhiSubscriptionService.restoreSubscription(
                 getSubscriptionFqn(ctx),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
                 actionRequest
-            )
-        );
-    }
-
-    /**
-     * Starts a subscription.
-     *
-     * @param ctx the routing context
-     */
-    public void start(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            subscriptionService.start(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
-            )
-        );
-    }
-
-    /**
-     * Stops a subscription.
-     *
-     * @param ctx the routing context
-     */
-    public void stop(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            subscriptionService.stop(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
             )
         );
     }

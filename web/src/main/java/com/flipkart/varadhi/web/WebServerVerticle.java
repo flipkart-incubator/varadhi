@@ -1,9 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.core.CoreServices;
+import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -19,11 +18,7 @@ import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigur
 import com.flipkart.varadhi.web.configurators.RequestBodyParsingConfigurator;
 import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
-import com.flipkart.varadhi.core.OrgService;
-import com.flipkart.varadhi.core.ProjectService;
-import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.TeamService;
-import com.flipkart.varadhi.core.VaradhiTopicHandler;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -34,7 +29,6 @@ import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
 
-import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -241,8 +235,8 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize topic service
         serviceRegistry.registerIfAbsent(
-            VaradhiTopicHandler.class,
-            () -> new VaradhiTopicHandler(
+            VaradhiTopicService.class,
+            () -> new VaradhiTopicService(
                 messagingStackProvider.getStorageTopicService(),
                 metaStore.topics(),
                 metaStore.subscriptions(),
@@ -259,8 +253,8 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize subscription and DLQ services
         serviceRegistry.registerIfAbsent(
-            SubscriptionService.class,
-            () -> new SubscriptionService(
+            VaradhiSubscriptionService.class,
+            () -> new VaradhiSubscriptionService(
                 shardProvisioner,
                 controllerClient,
                 metaStore.subscriptions(),
@@ -433,15 +427,15 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(
             new TopicHandlers(
                 varadhiTopicFactory,
-                serviceRegistry.get(VaradhiTopicHandler.class),
+                serviceRegistry.get(VaradhiTopicService.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
 
         routes.addAll(
             new SubscriptionHandlers(
-                serviceRegistry.get(SubscriptionService.class),
-                serviceRegistry.get(VaradhiTopicHandler.class),
+                serviceRegistry.get(VaradhiSubscriptionService.class),
+                serviceRegistry.get(VaradhiTopicService.class),
                 subscriptionFactory,
                 configuration.getRestOptions(),
                 cacheRegistry.getCache(ResourceType.PROJECT)
@@ -451,7 +445,7 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(
             new DlqHandlers(
                 serviceRegistry.get(DlqService.class),
-                serviceRegistry.get(SubscriptionService.class),
+                serviceRegistry.get(VaradhiSubscriptionService.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
