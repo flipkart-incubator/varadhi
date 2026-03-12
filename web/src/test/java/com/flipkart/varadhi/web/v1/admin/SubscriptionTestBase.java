@@ -2,13 +2,13 @@ package com.flipkart.varadhi.web.v1.admin;
 
 import java.util.Random;
 
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.web.DlqMessage;
 import com.flipkart.varadhi.pulsar.entities.PulsarOffset;
 import com.flipkart.varadhi.core.ProjectService;
-import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.VaradhiTopicHandler;
 import com.flipkart.varadhi.web.WebTestBase;
 import com.google.common.collect.ArrayListMultimap;
 import org.mockito.Mock;
@@ -20,13 +20,13 @@ public class SubscriptionTestBase extends WebTestBase {
     private final Random random = new Random();
 
     @Mock
-    protected SubscriptionService subscriptionService;
+    protected VaradhiSubscriptionService varadhiSubscriptionService;
 
     @Mock
     protected ProjectService projectService;
 
     @Mock
-    protected VaradhiTopicHandler topicService;
+    protected VaradhiTopicService topicService;
 
     @Mock
     protected VaradhiSubscriptionFactory subscriptionFactory;

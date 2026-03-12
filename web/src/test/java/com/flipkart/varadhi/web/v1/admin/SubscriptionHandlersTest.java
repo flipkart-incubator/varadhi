@@ -62,7 +62,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         super.setUp();
         MockitoAnnotations.openMocks(this);
         subscriptionHandlers = new SubscriptionHandlers(
-            subscriptionService,
+                varadhiSubscriptionService,
             topicService,
             subscriptionFactory,
             new RestOptions(),
@@ -80,8 +80,8 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         createRoute(HttpMethod.DELETE, SUBSCRIPTION_PATH, subscriptionHandlers::delete, false);
         createRoute(HttpMethod.PUT, SUBSCRIPTION_PATH, subscriptionHandlers::update, true);
         createRoute(HttpMethod.PATCH, SUBSCRIPTION_PATH + "/restore", subscriptionHandlers::restore, false);
-        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/start", subscriptionHandlers::start, false);
-        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/stop", subscriptionHandlers::stop, false);
+        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/start", subscriptionHandlers.getActionHandler()::start, false);
+        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/stop", subscriptionHandlers.getActionHandler()::stop, false);
     }
 
     private void createRoute(HttpMethod method, String path, Handler<RoutingContext> handler, boolean requiresBody) {
@@ -109,7 +109,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
 
         doReturn(vTopic).when(topicService).get(U_TOPIC_RESOURCE_1.getProject() + "." + U_TOPIC_RESOURCE_1.getName());
-        when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
+        when(varadhiSubscriptionService.createSubscription(any(), any(), any())).thenReturn(subscription);
 
         SubscriptionResource createdResource = sendRequestWithEntity(
             request,
@@ -130,7 +130,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
         String errorMessage = "ignoreConstraints is restricted to super admins only.";
 
-        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(subscriptionService)
+        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(varadhiSubscriptionService)
                                                                    .createSubscription(any(), any(), any());
 
         ErrorResponse response = sendRequestWithEntity(
@@ -271,7 +271,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             U_TOPIC_RESOURCE_1.toVaradhiTopic()
         );
 
-        when(subscriptionService.getSubscription(anyString())).thenReturn(subscription);
+        when(varadhiSubscriptionService.getSubscription(anyString())).thenReturn(subscription);
 
         SubscriptionResource actualResource = sendRequestWithoutPayload(
             request,
@@ -279,14 +279,14 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         );
 
         assertEquals(actualResource.getName(), expectedResource.getName());
-        verify(subscriptionService).getSubscription("project1.sub12");
+        verify(varadhiSubscriptionService).getSubscription("project1.sub12");
     }
 
     @Test
     void listSubscriptions_ValidProject_ReturnsSubscriptionList() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.GET, buildSubscriptionsUrl(PROJECT_1));
 
-        when(subscriptionService.getSubscriptionList(PROJECT_1.getName(), false)).thenReturn(List.of("sub1", "sub2"))
+        when(varadhiSubscriptionService.getSubscriptionList(PROJECT_1.getName(), false)).thenReturn(List.of("sub1", "sub2"))
                                                                                  .thenReturn(List.of());
 
         List<String> subscriptions = sendRequestWithoutPayload(request, WebTestBase.c(List.class));
@@ -294,7 +294,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         assertEquals(List.of("sub1", "sub2"), subscriptions);
         assertEquals(List.of(), subscriptions2);
-        verify(subscriptionService, times(2)).getSubscriptionList(PROJECT_1.getName(), false);
+        verify(varadhiSubscriptionService, times(2)).getSubscriptionList(PROJECT_1.getName(), false);
     }
 
     @Test
@@ -304,14 +304,14 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionsUrl(PROJECT_1) + "?includeInactive=true"
         );
 
-        when(subscriptionService.getSubscriptionList(PROJECT_1.getName(), true)).thenReturn(
+        when(varadhiSubscriptionService.getSubscriptionList(PROJECT_1.getName(), true)).thenReturn(
             List.of("sub1", "sub2", "sub3")
         );
 
         List<String> subscriptions = sendRequestWithoutPayload(request, WebTestBase.c(List.class));
 
         assertEquals(List.of("sub1", "sub2", "sub3"), subscriptions);
-        verify(subscriptionService, times(1)).getSubscriptionList(PROJECT_1.getName(), true);
+        verify(varadhiSubscriptionService, times(1)).getSubscriptionList(PROJECT_1.getName(), true);
     }
 
     @Test
@@ -321,7 +321,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT_1) + "?deletionType=SOFT_DELETE"
         );
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
                                                              eq(PROJECT_1),
@@ -332,7 +332,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).deleteSubscription(
+        verify(varadhiSubscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
             eq(PROJECT_1),
             any(),
@@ -348,7 +348,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT_1) + "?deletionType=HARD_DELETE"
         );
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
                                                              eq(PROJECT_1),
@@ -359,7 +359,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).deleteSubscription(
+        verify(varadhiSubscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
             eq(PROJECT_1),
             any(),
@@ -372,7 +372,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void deleteSubscription_NoDeletionType_UsesSoftDelete() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, buildSubscriptionUrl("sub1", PROJECT_1));
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
                                                              eq(PROJECT_1),
@@ -383,7 +383,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).deleteSubscription(
+        verify(varadhiSubscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
             eq(PROJECT_1),
             any(),
@@ -399,7 +399,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT_1) + "?deletionType=INVALID_TYPE"
         );
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService)
                                                          .deleteSubscription(
                                                              anyString(),
                                                              eq(PROJECT_1),
@@ -410,7 +410,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).deleteSubscription(
+        verify(varadhiSubscriptionService, times(1)).deleteSubscription(
             eq("project1.sub1"),
             eq(PROJECT_1),
             any(),
@@ -432,7 +432,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         doReturn(subscription).when(subscriptionFactory).get(any(), any(), any());
 
         when(
-            subscriptionService.updateSubscription(
+            varadhiSubscriptionService.updateSubscription(
                 stringCaptor.capture(),
                 integerCaptor.capture(),
                 anyString(),
@@ -506,7 +506,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
 
         String errorMessage = "ignoreConstraints is restricted to super admins only.";
-        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(subscriptionService)
+        doThrow(new HttpException(HTTP_UNAUTHORIZED, errorMessage)).when(varadhiSubscriptionService)
                                                                    .updateSubscription(
                                                                        any(),
                                                                        anyInt(),
@@ -574,12 +574,12 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT_1) + "/restore"
         );
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService)
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService)
                                                          .restoreSubscription(any(), any(), any());
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).restoreSubscription(any(), any(), any());
+        verify(varadhiSubscriptionService, times(1)).restoreSubscription(any(), any(), any());
     }
 
     @Test
@@ -589,21 +589,21 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
             buildSubscriptionUrl("sub1", PROJECT_1) + "/start"
         );
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).start(any(), any());
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService).start(any(), any());
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).start(any(), any());
+        verify(varadhiSubscriptionService, times(1)).start(any(), any());
     }
 
     @Test
     void stopSubscription_ValidRequest_TriggersStop() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionUrl("sub1", PROJECT_1) + "/stop");
 
-        doReturn(CompletableFuture.completedFuture(null)).when(subscriptionService).stop(any(), any());
+        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService).stop(any(), any());
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        verify(subscriptionService, times(1)).stop(any(), any());
+        verify(varadhiSubscriptionService, times(1)).stop(any(), any());
     }
 }
