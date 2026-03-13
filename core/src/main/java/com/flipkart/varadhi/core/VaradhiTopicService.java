@@ -163,10 +163,6 @@ public class VaradhiTopicService {
         }
     }
 
-    public void restore(String name, RequestActionType actionRequest) {
-        restoreTopic(name, actionRequest);
-    }
-
     /**
      * Restores a deleted Varadhi topic.
      *
@@ -175,7 +171,7 @@ public class VaradhiTopicService {
      *
      * @throws InvalidOperationForResourceException if the topic is not deleted or if the restoration is not allowed
      */
-    public void restoreTopic(String topicName, RequestActionType actionRequest) {
+    public void restore(String topicName, RequestActionType actionRequest) {
         log.info("Restoring Varadhi topic: {}", topicName);
 
         VaradhiTopic varadhiTopic = topicStore.get(topicName);
