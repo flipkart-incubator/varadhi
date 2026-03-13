@@ -3,35 +3,30 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import lombok.Getter;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Configuration for callback-style subscriptions (e.g. Queue delivery).
  * List of callback code ranges: defines which HTTP response code ranges trigger callback behaviour.
- * <p>
- * Aligned with QueueCallbackConfig: mutable set of code ranges, fromJson (header/request), addRange, shouldCallback.
- * Optional timeoutMs for request timeout; 0 means not set.
- * </p>
  *
  * @see VaradhiSubscription#getCallbackConfig()
  */
-@Getter
-@Setter
 @NoArgsConstructor
+@EqualsAndHashCode
 public class CallbackConfig {
 
     private static final Logger LOG = LoggerFactory.getLogger(CallbackConfig.class);
 
     /**
      * Set of code ranges on which callback should be applied (closed range).
-     * Mutable so ranges can be added via {@link #addRange(CodeRange)} or parsed from JSON.
+     * Mutable internally via {@link #addRange(CodeRange)}; exposed as unmodifiable.
      */
     private final Set<CodeRange> codeRanges = new HashSet<>();
 
@@ -40,6 +35,11 @@ public class CallbackConfig {
         if (codeRanges != null) {
             this.codeRanges.addAll(codeRanges);
         }
+    }
+
+    /** Returns an unmodifiable view of the code ranges. */
+    public Set<CodeRange> getCodeRanges() {
+        return Collections.unmodifiableSet(codeRanges);
     }
 
     /**
@@ -75,12 +75,7 @@ public class CallbackConfig {
      * (e.g. for deciding whether to trigger callback or retry).
      */
     public boolean shouldCallback(int responseCode) {
-        for (CodeRange range : codeRanges) {
-            if (range.inRange(responseCode)) {
-                return true;
-            }
-        }
-        return false;
+        return codeRanges.stream().anyMatch(r -> r.inRange(responseCode));
     }
 
     /**
@@ -101,20 +96,18 @@ public class CallbackConfig {
     }
 
     /**
-     * Get callback config for the message. If not available, get the config from queue config
+     * Get callback config from the message header (e.g. callback code ranges from request).
      *
      * @param message   being processed
-     * @param topicName to get callback config for
-     *
-     * @return the callback config if queue and is configured. Else, return null
+     * @param topicName to get callback config for (unused, for future use)
+     * @return the callback config parsed from message header, or null
      */
-    CallbackConfig getCallbackConfig(final Message message, final String topicName) {
+    public static CallbackConfig getCallbackConfig(final Message message, final String topicName) {
         final String callbackCodes = message.getHeader(StdHeaders.get().callbackCodes());
         // here we're getting callback code from message
         // thus even if we remove all failure callback codes from queue callback config
         // we can never be sure that a failure code will never lead to a callback
         // maybe we can remove any failure codes from the callback config here
-        CallbackConfig callbackConfig = CallbackConfig.fromJson(callbackCodes);
-        return callbackConfig;
+        return CallbackConfig.fromJson(callbackCodes);
     }
 }
