@@ -165,7 +165,7 @@ class SubscriptionTest {
         assertEquals(2, deserialized.getCodeRanges().size());
         assertTrue(deserialized.shouldCallback(200));
         assertTrue(deserialized.shouldCallback(599));
-        assertTrue(deserialized.matches(200));
+        assertTrue(deserialized.shouldCallback(200));
     }
 
     @Test
@@ -219,8 +219,7 @@ class SubscriptionTest {
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        assertNull(CallbackConfig.getCallbackConfig(sub));
-        assertNull(CallbackConfig.getCallbackConfig(null));
+        assertNull(sub.getCallbackConfig());
     }
 
     @Test
@@ -242,7 +241,7 @@ class SubscriptionTest {
             callbackConfig
         );
 
-        CallbackConfig config = CallbackConfig.getCallbackConfig(sub);
+        CallbackConfig config = sub.getCallbackConfig();
         assertNotNull(config);
         assertEquals(1, config.getCodeRanges().size());
         assertTrue(config.getCodeRanges().stream().anyMatch(r -> r.getFrom() == 500 && r.getTo() == 502));

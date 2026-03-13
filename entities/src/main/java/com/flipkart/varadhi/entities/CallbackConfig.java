@@ -77,37 +77,4 @@ public class CallbackConfig {
     public boolean shouldCallback(int responseCode) {
         return codeRanges.stream().anyMatch(r -> r.inRange(responseCode));
     }
-
-    /**
-     * Same as {@link #shouldCallback(int)}; kept for backward compatibility.
-     */
-    public boolean matches(int code) {
-        return shouldCallback(code);
-    }
-
-    /**
-     * Factory: callback config from a Varadhi subscription that has callback config.
-     *
-     * @param sub Varadhi subscription (e.g. queue-backed with callback config)
-     * @return sub.getCallbackConfig() or null if sub or sub.getCallbackConfig() is null
-     */
-    public static CallbackConfig getCallbackConfig(VaradhiSubscription sub) {
-        return sub == null ? null : sub.getCallbackConfig();
-    }
-
-    /**
-     * Get callback config from the message header (e.g. callback code ranges from request).
-     *
-     * @param message   being processed
-     * @param topicName to get callback config for (unused, for future use)
-     * @return the callback config parsed from message header, or null
-     */
-    public static CallbackConfig getCallbackConfig(final Message message, final String topicName) {
-        final String callbackCodes = message.getHeader(StdHeaders.get().callbackCodes());
-        // here we're getting callback code from message
-        // thus even if we remove all failure callback codes from queue callback config
-        // we can never be sure that a failure code will never lead to a callback
-        // maybe we can remove any failure codes from the callback config here
-        return CallbackConfig.fromJson(callbackCodes);
-    }
 }
