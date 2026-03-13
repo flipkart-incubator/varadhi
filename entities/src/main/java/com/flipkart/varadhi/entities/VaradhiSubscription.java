@@ -42,6 +42,19 @@ public class VaradhiSubscription extends LifecycleEntity {
 
     /**
      * Constructs a new VaradhiSubscription instance.
+     *
+     * @param name              the name of the subscription
+     * @param version           the version of the subscription
+     * @param project           the project associated with the subscription
+     * @param topic             the topic associated with the subscription
+     * @param description       the description of the subscription
+     * @param grouped           whether the subscription is grouped
+     * @param endpoint          the endpoint of the subscription
+     * @param retryPolicy       the retry policy of the subscription
+     * @param consumptionPolicy the consumption policy of the subscription
+     * @param shards            the shards of the subscription
+     * @param status            the status of the subscription
+     * @param properties        the properties of the subscription
      */
     private VaradhiSubscription(
         String name,
@@ -76,6 +89,17 @@ public class VaradhiSubscription extends LifecycleEntity {
 
     /**
      * Creates a new VaradhiSubscription instance (no delivery/callback overrides).
+     * @param name              the name of the subscription
+     * @param project           the project associated with the subscription
+     * @param topic             the topic associated with the subscription
+     * @param description       the description of the subscription
+     * @param grouped           whether the subscription is grouped
+     * @param endpoint          the endpoint of the subscription
+     * @param retryPolicy       the retry policy of the subscription
+     * @param consumptionPolicy the consumption policy of the subscription
+     * @param shards            the shards of the subscription
+     * @param properties        the properties of the subscription
+     * @param actionCode         the actor code indicating the reason for the state
      */
     public static VaradhiSubscription of(
         String name,
