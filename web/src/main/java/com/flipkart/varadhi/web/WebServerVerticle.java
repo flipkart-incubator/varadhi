@@ -450,12 +450,7 @@ public class WebServerVerticle extends AbstractVerticle {
             ).get()
         );
 
-        routes.addAll(
-            new QueueHandlers(
-                varadhiQueueService,
-                cacheRegistry.getCache(ResourceType.PROJECT)
-            ).get()
-        );
+        routes.addAll(new QueueHandlers(varadhiQueueService, cacheRegistry.getCache(ResourceType.PROJECT)).get());
 
         routes.addAll(
             new DlqHandlers(

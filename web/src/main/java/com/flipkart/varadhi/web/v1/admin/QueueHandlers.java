@@ -50,7 +50,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
  * Handler for Queue CRUD and restore. Delegates to {@link VaradhiQueueService}.
  */
 @Slf4j
-@ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
+@ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class QueueHandlers implements RouteProvider {
     private static final String API_NAME = "QUEUE";
 
@@ -71,28 +71,28 @@ public class QueueHandlers implements RouteProvider {
             "/v1/projects/:project/queues",
             List.of(
                 RouteDefinition.get(LIST, API_NAME, "")
-                    .authorize(TOPIC_LIST)
-                    .authorize(SUBSCRIPTION_LIST)
-                    .build(this::getHierarchies, this::list),
+                               .authorize(TOPIC_LIST)
+                               .authorize(SUBSCRIPTION_LIST)
+                               .build(this::getHierarchies, this::list),
                 RouteDefinition.get(GET, API_NAME, "/:queue")
-                    .authorize(TOPIC_GET)
-                    .authorize(SUBSCRIPTION_GET)
-                    .build(this::getHierarchies, this::get),
+                               .authorize(TOPIC_GET)
+                               .authorize(SUBSCRIPTION_GET)
+                               .build(this::getHierarchies, this::get),
                 RouteDefinition.post(CREATE, API_NAME, "")
-                    .hasBody()
-                    .bodyParser(this::setRequestBody)
-                    .authorize(TOPIC_CREATE)
-                    .authorize(SUBSCRIPTION_CREATE)
-                    .authorize(TOPIC_SUBSCRIBE)
-                    .build(this::getHierarchies, this::create),
+                               .hasBody()
+                               .bodyParser(this::setRequestBody)
+                               .authorize(TOPIC_CREATE)
+                               .authorize(SUBSCRIPTION_CREATE)
+                               .authorize(TOPIC_SUBSCRIBE)
+                               .build(this::getHierarchies, this::create),
                 RouteDefinition.delete(DELETE, API_NAME, "/:queue")
-                    .authorize(SUBSCRIPTION_DELETE)
-                    .authorize(TOPIC_DELETE)
-                    .build(this::getHierarchies, this::delete),
+                               .authorize(SUBSCRIPTION_DELETE)
+                               .authorize(TOPIC_DELETE)
+                               .build(this::getHierarchies, this::delete),
                 RouteDefinition.patch(RESTORE, API_NAME, "/:queue/restore")
-                    .authorize(SUBSCRIPTION_UPDATE)
-                    .authorize(TOPIC_UPDATE)
-                    .build(this::getHierarchies, this::restore)
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .authorize(TOPIC_UPDATE)
+                               .build(this::getHierarchies, this::restore)
             )
         ).get();
     }
@@ -116,10 +116,10 @@ public class QueueHandlers implements RouteProvider {
     public void list(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         boolean includeInactive = ctx.queryParam(QUERY_PARAM_INCLUDE_INACTIVE)
-            .stream()
-            .findFirst()
-            .map(Boolean::parseBoolean)
-            .orElse(false);
+                                     .stream()
+                                     .findFirst()
+                                     .map(Boolean::parseBoolean)
+                                     .orElse(false);
 
         List<String> queues = varadhiQueueService.list(projectName, includeInactive);
         ctx.endApiWithResponse(queues);
@@ -159,10 +159,10 @@ public class QueueHandlers implements RouteProvider {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
         ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE)
-            .stream()
-            .map(ResourceDeletionType::fromValue)
-            .findFirst()
-            .orElse(ResourceDeletionType.SOFT_DELETE);
+                                               .stream()
+                                               .map(ResourceDeletionType::fromValue)
+                                               .findFirst()
+                                               .orElse(ResourceDeletionType.SOFT_DELETE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String requestedBy = ctx.getIdentityOrDefault();
@@ -183,7 +183,9 @@ public class QueueHandlers implements RouteProvider {
 
     private LifecycleStatus.ActionCode getActionCode(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        return isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION : LifecycleStatus.ActionCode.USER_ACTION;
+        return isVaradhiAdmin(requestedBy) ?
+            LifecycleStatus.ActionCode.ADMIN_ACTION :
+            LifecycleStatus.ActionCode.USER_ACTION;
     }
 
     private RequestActionType createResourceActionRequest(RoutingContext ctx) {
@@ -205,5 +207,6 @@ public class QueueHandlers implements RouteProvider {
         String project,
         TopicResource topic,
         SubscriptionResource subscription
-    ) {}
+    ) {
+    }
 }

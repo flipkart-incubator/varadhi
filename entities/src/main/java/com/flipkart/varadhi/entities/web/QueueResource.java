@@ -11,8 +11,6 @@ import com.flipkart.varadhi.entities.CodeRange;
 import com.flipkart.varadhi.entities.Constants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.net.URI;
 import java.util.List;
@@ -23,7 +21,7 @@ import java.util.Map;
  */
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 public class QueueResource extends BaseResource implements Validatable {
     private static final String QUEUE_SUBSCRIPTION_PREFIX = "sub_";
 
@@ -37,7 +35,7 @@ public class QueueResource extends BaseResource implements Validatable {
     );
 
     private static final RetryPolicy DEFAULT_QUEUE_RETRY_POLICY = new RetryPolicy(
-        new CodeRange[] { new CodeRange(500, 502) },
+        new CodeRange[] {new CodeRange(500, 502)},
         RetryPolicy.BackoffType.LINEAR,
         1,
         1,
@@ -45,8 +43,14 @@ public class QueueResource extends BaseResource implements Validatable {
         3
     );
 
-    private static final ConsumptionPolicy DEFAULT_QUEUE_CONSUMPTION_POLICY =
-        new ConsumptionPolicy(10, 1, 1, false, 1, null);
+    private static final ConsumptionPolicy DEFAULT_QUEUE_CONSUMPTION_POLICY = new ConsumptionPolicy(
+        10,
+        1,
+        1,
+        false,
+        1,
+        null
+    );
 
     private static final Map<String, String> DEFAULT_SUBSCRIPTION_PROPERTIES = Map.of(
         Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
@@ -83,7 +87,9 @@ public class QueueResource extends BaseResource implements Validatable {
         String projectName = this.project != null && !this.project.isBlank() ? this.project : projectFromPath;
         TopicCapacityPolicy cap = this.capacity != null ? this.capacity : TopicCapacityPolicy.getDefault();
         LifecycleStatus.ActionCode code = actionCode != null ? actionCode : LifecycleStatus.ActionCode.USER_ACTION;
-        String nfr = this.nfrFilterName != null ? this.nfrFilterName : (this.getNfrStrategy() != null ? this.getNfrStrategy() : "");
+        String nfr = this.nfrFilterName != null ?
+            this.nfrFilterName :
+            (this.getNfrStrategy() != null ? this.getNfrStrategy() : "");
 
         if (Boolean.TRUE.equals(this.getGrouped())) {
             return TopicResource.grouped(this.getName(), projectName, cap, code, nfr);

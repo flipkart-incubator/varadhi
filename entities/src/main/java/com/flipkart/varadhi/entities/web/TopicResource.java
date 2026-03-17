@@ -14,8 +14,8 @@ import lombok.Setter;
  * Represents a topic resource in the Varadhi system (API request/response and factory input).
  */
 @Getter
-@EqualsAndHashCode(callSuper = true)
-@ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
+@EqualsAndHashCode (callSuper = true)
+@ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
 public class TopicResource extends BaseResource implements Validatable {
 
     @Setter

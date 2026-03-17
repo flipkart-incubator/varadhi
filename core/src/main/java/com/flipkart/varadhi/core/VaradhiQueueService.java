@@ -46,7 +46,8 @@ public class VaradhiQueueService {
     /**
      * Result of queue create or get: the underlying topic and subscription.
      */
-    public record QueueResult(VaradhiTopic topic, VaradhiSubscription subscription) {}
+    public record QueueResult(VaradhiTopic topic, VaradhiSubscription subscription) {
+    }
 
     /**
      * Creates a queue (topic + default subscription) for the given project and action code.
@@ -67,8 +68,16 @@ public class VaradhiQueueService {
 
         VaradhiTopic createdTopic = varadhiTopicService.get(topicFqn(projectName, queueName));
         SubscriptionResource subscriptionResource = queue.toSubscriptionResource(projectName, actionCode);
-        VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(subscriptionResource, project, createdTopic);
-        VaradhiSubscription createdSubscription = varadhiSubscriptionService.createSubscription(createdTopic, varadhiSubscription, project);
+        VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
+            subscriptionResource,
+            project,
+            createdTopic
+        );
+        VaradhiSubscription createdSubscription = varadhiSubscriptionService.createSubscription(
+            createdTopic,
+            varadhiSubscription,
+            project
+        );
 
         return new QueueResult(createdTopic, createdSubscription);
     }
@@ -90,18 +99,21 @@ public class VaradhiQueueService {
      */
     public List<String> list(String projectName, boolean includeInactive) {
         List<String> topicNames = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
-            .stream()
-            .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
-            .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
-            .toList();
+                                                     .stream()
+                                                     .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
+                                                     .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
+                                                     .toList();
 
         Set<String> subscriptionNames = Set.copyOf(
             varadhiSubscriptionService.getSubscriptionList(projectName, includeInactive)
         );
         return topicNames.stream()
-            .filter(topicName -> subscriptionNames.contains(
-                subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(topicName))))
-            .toList();
+                         .filter(
+                             topicName -> subscriptionNames.contains(
+                                 subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(topicName))
+                             )
+                         )
+                         .toList();
     }
 
     /**
@@ -119,7 +131,11 @@ public class VaradhiQueueService {
         String topicFqn = topicFqn(projectName, queueName);
 
         CompletableFuture<Void> deleteSub = varadhiSubscriptionService.deleteSubscription(
-            subFqn, project, requestedBy, deletionType, actionRequest
+            subFqn,
+            project,
+            requestedBy,
+            deletionType,
+            actionRequest
         );
         deleteSub.join();
 
@@ -129,17 +145,14 @@ public class VaradhiQueueService {
     /**
      * Restores a queue (subscription first, then topic).
      */
-    public void restore(
-        String projectName,
-        String queueName,
-        String requestedBy,
-        RequestActionType actionRequest
-    ) {
+    public void restore(String projectName, String queueName, String requestedBy, RequestActionType actionRequest) {
         String subFqn = subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(queueName));
         String topicFqn = topicFqn(projectName, queueName);
 
         CompletableFuture<VaradhiSubscription> restoreSub = varadhiSubscriptionService.restoreSubscription(
-            subFqn, requestedBy, actionRequest
+            subFqn,
+            requestedBy,
+            actionRequest
         );
         restoreSub.join();
 

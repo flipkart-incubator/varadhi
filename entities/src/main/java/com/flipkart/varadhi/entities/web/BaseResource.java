@@ -2,7 +2,6 @@ package com.flipkart.varadhi.entities.web;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.flipkart.varadhi.entities.Versioned;
-import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,8 +12,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@EqualsAndHashCode (callSuper = true)
+@JsonInclude (JsonInclude.Include.NON_NULL)
 public abstract class BaseResource extends Versioned {
 
     protected String project;
