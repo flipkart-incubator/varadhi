@@ -1,0 +1,9 @@
+apiVersion: v2
+name: varadhi-oss-locust-chart
+description: A Helm chart for deploying Locust on Kubernetes
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - locust
+  - load testing
+

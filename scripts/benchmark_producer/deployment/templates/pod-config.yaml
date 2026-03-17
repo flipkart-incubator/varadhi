@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: locust-pod
+spec:
+  containers:
+    - name: locust-container
+      image: varadhi-locust-image
+      volumeMounts:
+      - name: config-volume
+        mountPath: /etc/config
+      envFrom:
+      - configMapRef:
+          name: produce-config
+  volumes:
+    - name: config-volume
+      configMap:
+        name: produce-config
