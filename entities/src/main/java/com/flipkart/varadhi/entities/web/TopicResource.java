@@ -13,11 +13,11 @@ import lombok.Setter;
 
 
 /**
- * Represents a topic resource in the Varadhi system.
+ * Represents a topic resource in the Varadhi system (API request/response and factory input).
  */
 @Getter
-@EqualsAndHashCode (callSuper = true)
-@ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
+@EqualsAndHashCode(callSuper = true)
+@ValidateResource(message = "Invalid Topic name. Check naming constraints.", max = 64)
 public class TopicResource extends Versioned implements Validatable {
 
     @NotBlank
@@ -35,12 +35,13 @@ public class TopicResource extends Versioned implements Validatable {
     /**
      * Constructs a new TopicResource instance.
      *
-     * @param name      the name of the topic
-     * @param version   the version of the topic
-     * @param project   the project associated with the topic
-     * @param grouped   whether the topic is grouped
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
+     * @param name        the name of the topic
+     * @param version     the version of the topic
+     * @param project     the project associated with the topic
+     * @param grouped     whether the topic is grouped
+     * @param capacity    the capacity policy of the topic
+     * @param actionCode  the actor code indicating reason behind the action performed on the topic
+     * @param nfrFilterName the NFR filter name
      */
     private TopicResource(
         String name,
@@ -61,13 +62,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Creates a new grouped TopicResource instance.
-     *
-     * @param name      the name of the topic
-     * @param project   the project associated with the topic
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
-     *
-     * @return a new grouped TopicResource instance
      */
     public static TopicResource grouped(
         String name,
@@ -81,13 +75,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Creates a new ungrouped TopicResource instance.
-     *
-     * @param name      the name of the topic
-     * @param project   the project associated with the topic
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
-     *
-     * @return a new ungrouped TopicResource instance
      */
     public static TopicResource unGrouped(
         String name,
@@ -101,10 +88,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Creates a TopicResource instance from a VaradhiTopic instance.
-     *
-     * @param varadhiTopic the VaradhiTopic instance
-     *
-     * @return a new TopicResource instance
      */
     public static TopicResource from(VaradhiTopic varadhiTopic) {
         String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
@@ -122,8 +105,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Converts this TopicResource instance to a VaradhiTopic instance.
-     *
-     * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
         return VaradhiTopic.of(project, getName(), grouped, capacity, actionCode, nfrFilterName);
