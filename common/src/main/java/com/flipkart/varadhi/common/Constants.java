@@ -37,6 +37,7 @@ public class Constants {
         public static final String PATH_PARAM_PROJECT = "project";
         public static final String PATH_PARAM_TOPIC = "topic";
         public static final String PATH_PARAM_SUBSCRIPTION = "subscription";
+        public static final String PATH_PARAM_QUEUE = "queue";
         public static final String PATH_PARAM_ORG_FILTER_NAME = "orgFilterName";
 
         private PathParams() {

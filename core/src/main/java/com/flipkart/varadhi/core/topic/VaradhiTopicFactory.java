@@ -48,7 +48,7 @@ public class VaradhiTopicFactory {
      * Creates a VaradhiTopic instance based on the provided project and topic resource.
      *
      * @param project       the project associated with the topic
-     * @param topicResource the topic resource containing topic details
+     * @param topicResource the topic model containing topic details
      *
      * @return the created VaradhiTopic instance
      */
