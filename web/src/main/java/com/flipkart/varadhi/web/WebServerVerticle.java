@@ -421,6 +421,13 @@ public class WebServerVerticle extends AbstractVerticle {
             verticleConfig.deployedRegion()
         );
 
+        VaradhiQueueService varadhiQueueService = new VaradhiQueueService(
+            varadhiTopicFactory,
+            serviceRegistry.get(VaradhiTopicService.class),
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            subscriptionFactory
+        );
+
         // Add management entity routes if not in lean deployment
         routes.addAll(getManagementEntitiesApiRoutes());
 
@@ -445,10 +452,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
         routes.addAll(
             new QueueHandlers(
-                varadhiTopicFactory,
-                serviceRegistry.get(VaradhiTopicService.class),
-                serviceRegistry.get(VaradhiSubscriptionService.class),
-                subscriptionFactory,
+                varadhiQueueService,
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );

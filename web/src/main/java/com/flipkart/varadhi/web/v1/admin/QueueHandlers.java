@@ -1,17 +1,13 @@
 package com.flipkart.varadhi.web.v1.admin;
 
-import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.RequestActionType;
-import com.flipkart.varadhi.core.VaradhiTopicService;
-import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
-import com.flipkart.varadhi.core.VaradhiSubscriptionService;
-import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
+import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiQueueService;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
@@ -21,7 +17,8 @@ import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
-import com.flipkart.varadhi.entities.web.*;
+import com.flipkart.varadhi.entities.web.SubscriptionResource;
+import com.flipkart.varadhi.entities.web.TopicResource;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -37,8 +34,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_QUEUE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
@@ -52,31 +47,21 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 
 /**
- * Handler for Queue CRUD and restore. A queue is implemented as a topic plus a default
- * queue-style subscription (subscription name = {@link QueueResource#getDefaultSubscriptionName(String)}).
+ * Handler for Queue CRUD and restore. Delegates to {@link VaradhiQueueService}.
  */
 @Slf4j
 @ExtensionMethod({RequestBodyExtension.class, RoutingContextExtension.class})
 public class QueueHandlers implements RouteProvider {
     private static final String API_NAME = "QUEUE";
 
-    private final VaradhiTopicFactory varadhiTopicFactory;
-    private final VaradhiTopicService varadhiTopicService;
-    private final VaradhiSubscriptionService varadhiSubscriptionService;
-    private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
+    private final VaradhiQueueService varadhiQueueService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
     public QueueHandlers(
-        VaradhiTopicFactory varadhiTopicFactory,
-        VaradhiTopicService varadhiTopicService,
-        VaradhiSubscriptionService varadhiSubscriptionService,
-        VaradhiSubscriptionFactory varadhiSubscriptionFactory,
+        VaradhiQueueService varadhiQueueService,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
-        this.varadhiTopicFactory = varadhiTopicFactory;
-        this.varadhiTopicService = varadhiTopicService;
-        this.varadhiSubscriptionService = varadhiSubscriptionService;
-        this.varadhiSubscriptionFactory = varadhiSubscriptionFactory;
+        this.varadhiQueueService = varadhiQueueService;
         this.projectCache = projectCache;
     }
 
@@ -136,37 +121,20 @@ public class QueueHandlers implements RouteProvider {
             .map(Boolean::parseBoolean)
             .orElse(false);
 
-        List<String> topicNames = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
-            .stream()
-            .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
-            .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
-            .toList();
-
-        java.util.Set<String> subscriptionNames = new java.util.HashSet<>(
-            varadhiSubscriptionService.getSubscriptionList(projectName, includeInactive)
-        );
-        List<String> queues = topicNames.stream()
-            .filter(topicName -> subscriptionNames.contains(
-                subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(topicName))))
-            .toList();
-
+        List<String> queues = varadhiQueueService.list(projectName, includeInactive);
         ctx.endApiWithResponse(queues);
     }
 
     public void get(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
-        String topicFqn = topicFqn(projectName, queueName);
-        String subFqn = subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(queueName));
 
-        VaradhiTopic topic = varadhiTopicService.get(topicFqn);
-        var subscription = varadhiSubscriptionService.getSubscription(subFqn);
-
+        VaradhiQueueService.QueueResult result = varadhiQueueService.get(projectName, queueName);
         QueueResponse response = new QueueResponse(
             queueName,
             projectName,
-            com.flipkart.varadhi.entities.web.TopicResource.from(topic),
-            com.flipkart.varadhi.entities.web.SubscriptionResource.from(subscription)
+            TopicResource.from(result.topic()),
+            SubscriptionResource.from(result.subscription())
         );
         ctx.endApiWithResponse(response);
     }
@@ -174,32 +142,15 @@ public class QueueHandlers implements RouteProvider {
     public void create(RoutingContext ctx) {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         QueueResource queueResource = ctx.get(REQUEST_BODY);
-        String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy)
-            ? LifecycleStatus.ActionCode.ADMIN_ACTION
-            : LifecycleStatus.ActionCode.USER_ACTION;
-
-        validateProjectAndName(projectName, queueResource);
-
-        queueResource.setName(queueResource.getName() != null ? queueResource.getName().trim() : "");
+        LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
         Project project = projectCache.getOrThrow(projectName).getEntity();
 
-        TopicResource topicResource =
-            QueueRequestMapper.toTopicResource(queueResource, projectName, actionCode);
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
-        varadhiTopicService.create(varadhiTopic, project);
-
-        SubscriptionResource subscriptionResource =
-            QueueRequestMapper.toSubscriptionResource(queueResource, projectName, actionCode);
-        VaradhiTopic createdTopic = varadhiTopicService.get(topicFqn(projectName, queueResource.getName()));
-        var varadhiSubscription = varadhiSubscriptionFactory.get(subscriptionResource, project, createdTopic);
-        var createdSubscription = varadhiSubscriptionService.createSubscription(createdTopic, varadhiSubscription, project);
-
+        VaradhiQueueService.QueueResult result = varadhiQueueService.create(queueResource, project, actionCode);
         QueueResponse response = new QueueResponse(
             queueResource.getName(),
             projectName,
-            com.flipkart.varadhi.entities.web.TopicResource.from(createdTopic),
-            com.flipkart.varadhi.entities.web.SubscriptionResource.from(createdSubscription)
+            TopicResource.from(result.topic()),
+            SubscriptionResource.from(result.subscription())
         );
         ctx.endApiWithResponse(response);
     }
@@ -213,18 +164,10 @@ public class QueueHandlers implements RouteProvider {
             .findFirst()
             .orElse(ResourceDeletionType.SOFT_DELETE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
+        Project project = projectCache.getOrThrow(projectName).getEntity();
+        String requestedBy = ctx.getIdentityOrDefault();
 
-        String subFqn = subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(queueName));
-        String topicFqn = topicFqn(projectName, queueName);
-
-        varadhiSubscriptionService.deleteSubscription(
-            subFqn,
-            projectCache.getOrThrow(projectName).getEntity(),
-            ctx.getIdentityOrDefault(),
-            deletionType,
-            actionRequest
-        );
-        varadhiTopicService.delete(topicFqn, deletionType, actionRequest);
+        varadhiQueueService.delete(projectName, queueName, project, requestedBy, deletionType, actionRequest);
         ctx.endApi();
     }
 
@@ -232,37 +175,20 @@ public class QueueHandlers implements RouteProvider {
         String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
+        String requestedBy = ctx.getIdentityOrDefault();
 
-        String subFqn = subscriptionFqn(projectName, QueueResource.getDefaultSubscriptionName(queueName));
-        String topicFqn = topicFqn(projectName, queueName);
-
-        varadhiSubscriptionService.restoreSubscription(subFqn, ctx.getIdentityOrDefault(), actionRequest);
-        varadhiTopicService.restore(topicFqn, actionRequest);
+        varadhiQueueService.restore(projectName, queueName, requestedBy, actionRequest);
         ctx.endApi();
     }
 
-    private void validateProjectAndName(String projectName, QueueResource queue) {
-        if (queue.getName() == null || queue.getName().isBlank()) {
-            throw new IllegalArgumentException("Queue name is required.");
-        }
-        if (queue.getTeam() != null && !queue.getTeam().isBlank()) {
-            // optional: validate team exists if needed
-        }
-    }
-
-    private static String topicFqn(String project, String queueOrTopicName) {
-        return String.join(NAME_SEPARATOR, project, queueOrTopicName);
-    }
-
-    private static String subscriptionFqn(String project, String subscriptionName) {
-        return com.flipkart.varadhi.entities.web.SubscriptionResource.buildInternalName(project, subscriptionName);
+    private LifecycleStatus.ActionCode getActionCode(RoutingContext ctx) {
+        String requestedBy = ctx.getIdentityOrDefault();
+        return isVaradhiAdmin(requestedBy) ? LifecycleStatus.ActionCode.ADMIN_ACTION : LifecycleStatus.ActionCode.USER_ACTION;
     }
 
     private RequestActionType createResourceActionRequest(RoutingContext ctx) {
         String requestedBy = ctx.getIdentityOrDefault();
-        LifecycleStatus.ActionCode actionCode = isVaradhiAdmin(requestedBy)
-            ? LifecycleStatus.ActionCode.ADMIN_ACTION
-            : LifecycleStatus.ActionCode.USER_ACTION;
+        LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
         return new RequestActionType(actionCode, message);
     }
@@ -278,6 +204,6 @@ public class QueueHandlers implements RouteProvider {
         String queueName,
         String project,
         TopicResource topic,
-        com.flipkart.varadhi.entities.web.SubscriptionResource subscription
+        SubscriptionResource subscription
     ) {}
 }

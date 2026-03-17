@@ -1,30 +1,64 @@
 package com.flipkart.varadhi.entities.web;
 
 import com.flipkart.varadhi.entities.CallbackConfig;
+import com.flipkart.varadhi.entities.ConsumptionPolicy;
+import com.flipkart.varadhi.entities.Endpoint;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
-import com.flipkart.varadhi.entities.web.request.SubscriptionRequestModel;
+import com.flipkart.varadhi.entities.CodeRange;
+import com.flipkart.varadhi.entities.Constants;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Queue resource - base + queue-specific fields (topic + subscription aspects for a queue).
  */
-@Getter
-@Setter
+
+@Data
+@EqualsAndHashCode(callSuper = true)
 public class QueueResource extends BaseResource implements Validatable {
-    private static final String QUEUE_SUBSCRIPTION_SUFFIX = "-queue";
+    private static final String QUEUE_SUBSCRIPTION_PREFIX = "sub_";
+
+    private static final Endpoint DEFAULT_QUEUE_ENDPOINT = new Endpoint.HttpEndpoint(
+        URI.create("http://localhost:8080"),
+        "POST",
+        "application/json",
+        500,
+        500,
+        false
+    );
+
+    private static final RetryPolicy DEFAULT_QUEUE_RETRY_POLICY = new RetryPolicy(
+        new CodeRange[] { new CodeRange(500, 502) },
+        RetryPolicy.BackoffType.LINEAR,
+        1,
+        1,
+        1,
+        3
+    );
+
+    private static final ConsumptionPolicy DEFAULT_QUEUE_CONSUMPTION_POLICY =
+        new ConsumptionPolicy(10, 1, 1, false, 1, null);
+
+    private static final Map<String, String> DEFAULT_SUBSCRIPTION_PROPERTIES = Map.of(
+        Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
+        "100",
+        Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT,
+        "20",
+        Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT,
+        "100"
+    );
 
     // Queue extra fields (for topic part)
-    private Object storageTopicDetails;
-    private Boolean mirror;
     private String activeProduceZone;
-    private List<?> storageTopics;
     private TopicCapacityPolicy capacity;
     private LifecycleStatus.ActionCode actionCode;
     private String nfrFilterName;
@@ -39,7 +73,7 @@ public class QueueResource extends BaseResource implements Validatable {
      * Default subscription name for a queue (topic name + suffix).
      */
     public static String getDefaultSubscriptionName(String queueOrTopicName) {
-        return queueOrTopicName + QUEUE_SUBSCRIPTION_SUFFIX;
+        return QUEUE_SUBSCRIPTION_PREFIX + queueOrTopicName;
     }
 
     /**
@@ -58,28 +92,28 @@ public class QueueResource extends BaseResource implements Validatable {
     }
 
     /**
-     * Builds SubscriptionRequestModel from this queue resource (subscription part).
+     * Builds SubscriptionResource from this queue resource (subscription part) for the given project and action code.
+     * Uses default endpoint, retry policy, consumption policy, and properties for the queue-style subscription.
      */
-    public SubscriptionRequestModel toSubscriptionRequest() {
-        SubscriptionRequestModel sub = new SubscriptionRequestModel();
-        copyBaseTo(sub);
-        sub.setName(getDefaultSubscriptionName(this.getName()));
-        sub.setTopicName(this.getName());
-        sub.setSubscriptionMode("QUEUE_LIKE");
-        sub.setNoOfConsumers(this.getNoOfConsumers());
-        sub.setRetryPolicy(this.getRetryPolicy());
-        sub.setCallbackConfig(this.getCallbackConfig());
-        sub.setTargetClientIds(this.getTargetClientIds());
-        return sub;
-    }
-
-    private void copyBaseTo(BaseResource target) {
-        target.setName(this.getName());
-        target.setProject(this.getProject());
-        target.setTeam(this.getTeam());
-        target.setSecured(this.getSecured());
-        target.setGrouped(this.getGrouped());
-        target.setAppId(this.getAppId());
-        target.setNfrStrategy(this.getNfrStrategy());
+    public SubscriptionResource toSubscriptionResource(String projectFromPath, LifecycleStatus.ActionCode actionCode) {
+        String projectName = this.project != null && !this.project.isBlank() ? this.project : projectFromPath;
+        String topicName = getName();
+        String subName = getDefaultSubscriptionName(topicName);
+        String description = "Queue subscription for " + topicName;
+        boolean grouped = Boolean.TRUE.equals(getGrouped());
+        LifecycleStatus.ActionCode code = actionCode != null ? actionCode : LifecycleStatus.ActionCode.USER_ACTION;
+        return SubscriptionResource.of(
+            subName,
+            projectName,
+            topicName,
+            projectName,
+            description,
+            grouped,
+            DEFAULT_QUEUE_ENDPOINT,
+            DEFAULT_QUEUE_RETRY_POLICY,
+            DEFAULT_QUEUE_CONSUMPTION_POLICY,
+            DEFAULT_SUBSCRIPTION_PROPERTIES,
+            code
+        );
     }
 }
