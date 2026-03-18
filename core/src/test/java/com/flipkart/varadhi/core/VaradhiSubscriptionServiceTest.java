@@ -77,8 +77,7 @@ class VaradhiSubscriptionServiceTest {
     private VaradhiSubscription subscription1, subscription2;
 
     private static final String REQUESTED_BY = Constants.ANONYMOUS_IDENTITY;
-    /** Pass as targetClientIds to use subscription name as the single target client id. */
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
     private TopicStore topicStore;
     private SubscriptionStore subscriptionStore;
     private OrgStore orgStore;

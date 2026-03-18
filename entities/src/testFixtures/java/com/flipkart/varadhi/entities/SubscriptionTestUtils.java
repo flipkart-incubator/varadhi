@@ -370,8 +370,7 @@ public class SubscriptionTestUtils {
         return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
     }
 
-    /** Pass as targetClientIds to use subscription name as the single target client id. */
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
 
     public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,

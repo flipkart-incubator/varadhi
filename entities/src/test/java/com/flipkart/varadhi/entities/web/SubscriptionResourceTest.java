@@ -12,8 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SubscriptionResourceTest {
 
-    /** Pass as targetClientIds to use subscription name as the single target client id. */
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
 
     String PROJECT_NAME = "project1";
     String TOPIC_NAME = "topic1";
@@ -38,7 +37,7 @@ class SubscriptionResourceTest {
             () -> assertNotNull(subscriptionResource.getConsumptionPolicy()),
             () -> assertNotNull(subscriptionResource.getProperties()),
             () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, subscriptionResource.getActionCode()),
-            () -> assertEquals(List.of("subscription1"), subscriptionResource.getTargetClientIds())
+            () -> assertEquals(List.of("test"), subscriptionResource.getTargetClientIds())
         );
 
         // copy

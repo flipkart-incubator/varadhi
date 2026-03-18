@@ -25,8 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
-    /** Pass as targetClientIds to use subscription name as the single target client id. */
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
 
     private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
