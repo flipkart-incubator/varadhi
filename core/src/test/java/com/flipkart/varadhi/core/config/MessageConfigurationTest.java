@@ -2,6 +2,8 @@ package com.flipkart.varadhi.core.config;
 
 import java.util.List;
 
+import com.flipkart.varadhi.entities.HeaderSpec;
+import com.flipkart.varadhi.entities.RequiredBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -47,7 +49,7 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                "VARADHI_MESSAGE_ID",
+                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.Both),
                 "VARADHI_GROUP_ID",
                 "VARADHI_CALLBACK_CODES",
                 "VARADHI_REQUEST_TIMEOUT",

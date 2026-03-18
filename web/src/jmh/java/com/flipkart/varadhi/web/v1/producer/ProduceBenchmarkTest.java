@@ -219,7 +219,9 @@ public class ProduceBenchmarkTest {
                     filterNonCompliantHeaders: true
                     headers:
                         allowedPrefix: [ "X_", "X-" ]
-                        msgId: "X_MESSAGE_ID"
+                        msgId:
+                          value: "X_MESSAGE_ID"
+                          requiredBy: Both
                         groupId: "X_GROUP_ID"
                         callbackCodes: "X_CALLBACK_CODES"
                         requestTimeout: "X_REQUEST_TIMEOUT"

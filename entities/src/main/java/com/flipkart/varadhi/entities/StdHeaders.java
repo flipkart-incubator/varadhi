@@ -29,15 +29,15 @@ public class StdHeaders {
     }
 
     private final List<String> allowedPrefix;
-    private final String msgId;
+    private final HeaderSpec msgId;
     private final String groupId;
     private final String callbackCodes;
     private final String requestTimeout;
     private final String replyToHttpUri;
     private final String replyToHttpMethod;
     private final String replyTo;
-    private final String httpUri;
-    private final String httpMethod;
+    private final HeaderSpec httpUri;
+    private final HeaderSpec httpMethod;
     private final String httpContentType;
     private final String producerIdentity;
     private final String produceRegion;
@@ -47,20 +47,20 @@ public class StdHeaders {
     @JsonCreator
     @VisibleForTesting
     public StdHeaders(
-        @JsonProperty ("allowedPrefix") List<String> allowedPrefix,
-        @JsonProperty ("msgId") String msgId,
-        @JsonProperty ("groupId") String groupId,
-        @JsonProperty ("callbackCodes") String callbackCodes,
-        @JsonProperty ("requestTimeout") String requestTimeout,
-        @JsonProperty ("replyToHttpUri") String replyToHttpUri,
-        @JsonProperty ("replyToHttpMethod") String replyToHttpMethod,
-        @JsonProperty ("replyTo") String replyTo,
-        @JsonProperty ("httpUri") String httpUri,
-        @JsonProperty ("httpMethod") String httpMethod,
-        @JsonProperty ("httpContentType") String httpContentType,
-        @JsonProperty ("producerIdentity") String producerIdentity,
-        @JsonProperty ("produceRegion") String produceRegion,
-        @JsonProperty ("produceTimestamp") String produceTimestamp
+            @JsonProperty("allowedPrefix") List<String> allowedPrefix,
+            @JsonProperty("msgId") HeaderSpec msgId,
+            @JsonProperty("groupId") String groupId,
+            @JsonProperty("callbackCodes") String callbackCodes,
+            @JsonProperty("requestTimeout") String requestTimeout,
+            @JsonProperty("replyToHttpUri") String replyToHttpUri,
+            @JsonProperty("replyToHttpMethod") String replyToHttpMethod,
+            @JsonProperty("replyTo") String replyTo,
+            @JsonProperty("httpUri") HeaderSpec httpUri,
+            @JsonProperty("httpMethod") HeaderSpec httpMethod,
+            @JsonProperty("httpContentType") String httpContentType,
+            @JsonProperty("producerIdentity") String producerIdentity,
+            @JsonProperty("produceRegion") String produceRegion,
+            @JsonProperty("produceTimestamp") String produceTimestamp
     ) {
         this.allowedPrefix = Collections.unmodifiableList(allowedPrefix);
         this.msgId = msgId;
@@ -77,19 +77,19 @@ public class StdHeaders {
         this.produceRegion = produceRegion;
         this.produceTimestamp = produceTimestamp;
         this.allHeaders = List.of(
-            this.msgId,
-            this.groupId,
-            this.callbackCodes,
-            this.requestTimeout,
-            this.replyToHttpUri,
-            this.replyToHttpMethod,
-            this.replyTo,
-            this.httpUri,
-            this.httpMethod,
-            this.httpContentType,
-            this.producerIdentity,
-            this.produceRegion,
-            this.produceTimestamp
+                this.msgId.value(),
+                this.groupId,
+                this.callbackCodes,
+                this.requestTimeout,
+                this.replyToHttpUri,
+                this.replyToHttpMethod,
+                this.replyTo,
+                this.httpUri.value(),
+                this.httpMethod.value(),
+                this.httpContentType,
+                this.producerIdentity,
+                this.produceRegion,
+                this.produceTimestamp
         );
     }
 
@@ -104,7 +104,17 @@ public class StdHeaders {
         return this.allowedPrefix;
     }
 
+    /**
+     * Header name for message ID (for use in required-headers and request handling).
+     */
     public String msgId() {
+        return this.msgId.value();
+    }
+
+    /**
+     * Full spec for message-ID header (value + requiredBy).
+     */
+    public HeaderSpec msgIdSpec() {
         return this.msgId;
     }
 
@@ -132,11 +142,11 @@ public class StdHeaders {
         return this.replyTo;
     }
 
-    public String httpUri() {
+    public HeaderSpec httpUri() {
         return this.httpUri;
     }
 
-    public String httpMethod() {
+    public HeaderSpec httpMethod() {
         return this.httpMethod;
     }
 

@@ -206,7 +206,7 @@ public class TopicHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+        List<String> topics = varadhiTopicService.list(projectName, includeInactive)
                                                  .stream()
                                                  .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
                                                  .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
