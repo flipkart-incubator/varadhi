@@ -80,23 +80,17 @@ public class ConsumerOptions {
 
     public synchronized Map<String, Object> asMap() {
         Map<String, Object> configMap = new HashMap<>();
-        configMap.put("maxPollRecords", this.maxPollRecords);
-        configMap.put("fetchMaxBytes", this.fetchMaxBytes);
-        configMap.put("fetchMaxWaitMs", this.fetchMaxWaitMs);
         configMap.put("acknowledgementsGroupTimeMicros", this.acknowledgementsGroupTimeMicros);
         configMap.put("receiverQueueSize", this.receiverQueueSize);
         configMap.put("maxTotalReceiverQueueSizeAcrossPartitions", this.maxTotalReceiverQueueSizeAcrossPartitions);
-        configMap.put("messageSourcePollMaxWaitMs", this.messageSourcePollMaxWaitMs);
-        configMap.put("maxInMemoryMessages", this.maxInMemoryMessages);
         configMap.put("subscriptionType", this.subscriptionType);
         configMap.put("subscriptionMode", this.subscriptionMode);
         configMap.put("subscriptionInitialPosition", this.subscriptionInitialPosition.name());
-        configMap.put("batchReceivePolicy", buildBatchReceivePolicy());
         return configMap;
     }
 
     /** Build policy for {@link org.apache.pulsar.client.api.ConsumerBuilder#loadConf} batchReceivePolicy. */
-    private BatchReceivePolicy buildBatchReceivePolicy() {
+    public BatchReceivePolicy buildBatchReceivePolicy() {
         int maxBytes = this.fetchMaxBytes != null ? this.fetchMaxBytes : 5 * 1024 * 1024;
         int timeoutMs = this.fetchMaxWaitMs != null ? this.fetchMaxWaitMs : 200;
         return BatchReceivePolicy.builder()
