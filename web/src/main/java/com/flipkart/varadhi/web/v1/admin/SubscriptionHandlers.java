@@ -13,6 +13,7 @@ import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
+import com.flipkart.varadhi.web.routes.ApiPaths;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -59,9 +60,6 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
  */
 @Slf4j
 public class SubscriptionHandlers implements RouteProvider {
-
-    /** Base path for subscription and subscription-action routes; used by this class and {@link SubscriptionActionHandler}. */
-    public static final String SUBSCRIPTIONS_BASE_PATH = "/v1/projects/:project/subscriptions";
 
     private static final String API_NAME = "SUBSCRIPTION";
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
@@ -144,7 +142,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                .build(this::getHierarchies, this::restore)
             )
         );
-        return new SubRoutes(SUBSCRIPTIONS_BASE_PATH, routes).get();
+        return new SubRoutes(ApiPaths.SUBSCRIPTIONS, routes).get();
     }
 
     /**

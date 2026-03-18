@@ -11,6 +11,7 @@ import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
+import com.flipkart.varadhi.web.routes.ApiPaths;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -90,7 +91,7 @@ public class SubscriptionActionHandler implements RouteProvider {
 
     @Override
     public List<RouteDefinition> get() {
-        return new SubRoutes(SubscriptionHandlers.SUBSCRIPTIONS_BASE_PATH, getActionRouteDefinitions()).get();
+        return new SubRoutes(ApiPaths.SUBSCRIPTIONS, getActionRouteDefinitions()).get();
     }
 
     /**
