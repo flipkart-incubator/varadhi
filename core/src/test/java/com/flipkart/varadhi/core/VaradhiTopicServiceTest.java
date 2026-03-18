@@ -487,7 +487,7 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void list() {
+    void getVaradhiTopicsForProject_ValidProject_ReturnsActiveTopics() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2");
         List<Boolean> topicStatuses = List.of(true, true);
@@ -502,7 +502,7 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void list() {
+    void getVaradhiTopicsForProject_MultipleStatuses_FiltersInactiveTopics() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2", "topic3");
         List<Boolean> topicStatuses = List.of(true, false, true);
@@ -517,7 +517,7 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void list() {
+    void getVaradhiTopicsForProject_IncludingInactive_ReturnsAllTopics() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2", "topic3");
         List<Boolean> topicStatuses = List.of(true, false, true);
