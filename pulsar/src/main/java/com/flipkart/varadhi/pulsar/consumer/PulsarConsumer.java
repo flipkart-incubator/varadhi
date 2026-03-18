@@ -88,7 +88,6 @@ public class PulsarConsumer implements Consumer<PulsarOffset> {
                            .topics(new ArrayList<>(topicNames))
                            .subscriptionName(subscriptionName)
                            .consumerName(consumerName)
-                           .batchReceivePolicy(consumerOptions.buildBatchReceivePolicy())
                            .subscribe();
     }
 }
