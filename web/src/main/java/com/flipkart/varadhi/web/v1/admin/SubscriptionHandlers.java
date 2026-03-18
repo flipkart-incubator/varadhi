@@ -20,7 +20,6 @@ import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.flipkart.varadhi.web.subscription.SubscriptionPropertyValidator;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -70,12 +69,6 @@ public class SubscriptionHandlers implements RouteProvider {
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
-    /**
-     * -- GETTER --
-     *  Returns the handler for subscription lifecycle actions (start, stop). Used by tests and route building.
-     */
-    @Getter
-    private final SubscriptionActionHandler actionHandler;
 
     /**
      * Constructs a new SubscriptionHandlers instance.
@@ -101,7 +94,6 @@ public class SubscriptionHandlers implements RouteProvider {
             restOptions
         );
         this.projectCache = projectCache;
-        this.actionHandler = new SubscriptionActionHandler(varadhiSubscriptionService, projectCache);
     }
 
     /**

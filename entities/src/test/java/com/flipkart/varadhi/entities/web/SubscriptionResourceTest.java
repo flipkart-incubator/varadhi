@@ -135,6 +135,49 @@ class SubscriptionResourceTest {
     }
 
     @Test
+    void of_blankOrNullInTargetClientIds_throws() {
+        SubscriptionResource base = createSubscriptionResource(SUB_NAME, PROJECT_1, U_TOPIC_RESOURCE_1);
+
+        IllegalArgumentException blankEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> SubscriptionResource.of(
+                base.getName(),
+                base.getProject(),
+                base.getTopic(),
+                base.getTopicProject(),
+                base.getDescription(),
+                base.isGrouped(),
+                base.getEndpoint(),
+                base.getRetryPolicy(),
+                base.getConsumptionPolicy(),
+                base.getProperties(),
+                base.getActionCode(),
+                List.of("q1", "")
+            )
+        );
+        assertTrue(blankEx.getMessage().contains("null or blank"));
+
+        IllegalArgumentException nullMemberEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> SubscriptionResource.of(
+                base.getName(),
+                base.getProject(),
+                base.getTopic(),
+                base.getTopicProject(),
+                base.getDescription(),
+                base.isGrouped(),
+                base.getEndpoint(),
+                base.getRetryPolicy(),
+                base.getConsumptionPolicy(),
+                base.getProperties(),
+                base.getActionCode(),
+                java.util.Arrays.asList("q1", null)
+            )
+        );
+        assertTrue(nullMemberEx.getMessage().contains("null or blank"));
+    }
+
+    @Test
     void buildInternalName_ReturnsCorrectInternalName() {
         String internalName = SubscriptionResource.buildInternalName("a", "b");
         assertEquals("a.b", internalName);

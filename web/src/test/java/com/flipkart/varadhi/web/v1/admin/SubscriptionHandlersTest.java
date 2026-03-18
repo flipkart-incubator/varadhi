@@ -80,13 +80,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         createRoute(HttpMethod.DELETE, SUBSCRIPTION_PATH, subscriptionHandlers::delete, false);
         createRoute(HttpMethod.PUT, SUBSCRIPTION_PATH, subscriptionHandlers::update, true);
         createRoute(HttpMethod.PATCH, SUBSCRIPTION_PATH + "/restore", subscriptionHandlers::restore, false);
-        createRoute(
-            HttpMethod.POST,
-            SUBSCRIPTION_PATH + "/start",
-            subscriptionHandlers.getActionHandler()::start,
-            false
-        );
-        createRoute(HttpMethod.POST, SUBSCRIPTION_PATH + "/stop", subscriptionHandlers.getActionHandler()::stop, false);
+
     }
 
     private void createRoute(HttpMethod method, String path, Handler<RoutingContext> handler, boolean requiresBody) {
@@ -586,30 +580,5 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(varadhiSubscriptionService, times(1)).restoreSubscription(any(), any(), any());
-    }
-
-    @Test
-    void startSubscription_ValidRequest_TriggersStart() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(
-            HttpMethod.POST,
-            buildSubscriptionUrl("sub1", PROJECT_1) + "/start"
-        );
-
-        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService).start(any(), any());
-
-        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
-
-        verify(varadhiSubscriptionService, times(1)).start(any(), any());
-    }
-
-    @Test
-    void stopSubscription_ValidRequest_TriggersStop() throws InterruptedException {
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionUrl("sub1", PROJECT_1) + "/stop");
-
-        doReturn(CompletableFuture.completedFuture(null)).when(varadhiSubscriptionService).stop(any(), any());
-
-        sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
-
-        verify(varadhiSubscriptionService, times(1)).stop(any(), any());
     }
 }

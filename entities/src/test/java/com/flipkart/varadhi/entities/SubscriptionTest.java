@@ -234,6 +234,49 @@ class SubscriptionTest {
     }
 
     @Test
+    void varadhiSubscription_blankOrNullInTargetClientIds_throws() {
+        IllegalArgumentException blankEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                List.of("q1", ""),
+                null
+            )
+        );
+        assertTrue(blankEx.getMessage().contains("null or blank"));
+
+        IllegalArgumentException nullMemberEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                java.util.Arrays.asList("q1", null),
+                null
+            )
+        );
+        assertTrue(nullMemberEx.getMessage().contains("null or blank"));
+    }
+
+    @Test
     void callbackConfigFactory_returnsNullWhenNoCallbackConfig() {
         VaradhiSubscription sub = VaradhiSubscription.of(
             "sub-1",

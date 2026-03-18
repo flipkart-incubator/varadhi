@@ -33,13 +33,7 @@ import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
-import com.flipkart.varadhi.web.v1.admin.OrgFilterHandler;
-import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
-import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
-import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
-import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
-import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import com.flipkart.varadhi.web.v1.admin.*;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.producer.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -440,7 +434,13 @@ public class WebServerVerticle extends AbstractVerticle {
             cacheRegistry.getCache(ResourceType.PROJECT)
         );
         routes.addAll(subscriptionHandlers.get());
-        routes.addAll(subscriptionHandlers.getActionHandler().get());
+
+        SubscriptionActionHandler subscriptionActionHandler = new SubscriptionActionHandler(
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            cacheRegistry.getCache(ResourceType.PROJECT)
+        );
+
+        routes.addAll(subscriptionActionHandler.get());
 
         routes.addAll(
             new DlqHandlers(

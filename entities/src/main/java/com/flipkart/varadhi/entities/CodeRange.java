@@ -4,7 +4,7 @@ import lombok.Data;
 
 /**
  * CodeRange for some kind of codes.
- * from and to are inclusive bounds.
+ * from and to are inclusive bounds
  */
 @Data
 public class CodeRange {

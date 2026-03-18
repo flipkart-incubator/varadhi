@@ -198,19 +198,21 @@ public class VaradhiSubscription extends LifecycleEntity {
     }
 
     /**
-     * Validates that targetClientIds is non-null, non-empty, and contains at least one non-blank id.
+     * Validates that targetClientIds is non-null, non-empty, and that every element is non-null and non-blank.
      *
      * @param targetClientIds the list of target client IDs
      * @return an immutable copy of the list
-     * @throws IllegalArgumentException if null, empty, or no valid (non-blank) id
+     * @throws IllegalArgumentException if null, empty, or any element is null or blank
      */
     private static List<String> validateTargetClientIds(List<String> targetClientIds) {
         if (targetClientIds == null || targetClientIds.isEmpty()) {
             throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
         }
-        boolean hasNonBlank = targetClientIds.stream().anyMatch(id -> id != null && !id.trim().isEmpty());
-        if (!hasNonBlank) {
-            throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
+        boolean hasNullOrBlank = targetClientIds.stream().anyMatch(id -> id == null || id.trim().isEmpty());
+        if (hasNullOrBlank) {
+            throw new IllegalArgumentException(
+                "targetClientIds must not contain null or blank elements; every id must be non-null and non-blank"
+            );
         }
         return List.copyOf(targetClientIds);
     }
