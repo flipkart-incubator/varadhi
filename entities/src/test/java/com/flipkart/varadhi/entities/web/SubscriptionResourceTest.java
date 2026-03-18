@@ -3,6 +3,8 @@ package com.flipkart.varadhi.entities.web;
 import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
 import static com.flipkart.varadhi.entities.Samples.U_TOPIC_RESOURCE_1;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createSubscriptionResource;
@@ -32,7 +34,8 @@ class SubscriptionResourceTest {
             () -> assertNotNull(subscriptionResource.getRetryPolicy()),
             () -> assertNotNull(subscriptionResource.getConsumptionPolicy()),
             () -> assertNotNull(subscriptionResource.getProperties()),
-            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, subscriptionResource.getActionCode())
+            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, subscriptionResource.getActionCode()),
+            () -> assertEquals(List.of("subscription1"), subscriptionResource.getTargetClientIds())
         );
 
         // copy
@@ -47,7 +50,8 @@ class SubscriptionResourceTest {
             subscriptionResource.getRetryPolicy(),
             subscriptionResource.getConsumptionPolicy(),
             null,
-            subscriptionResource.getActionCode()
+            subscriptionResource.getActionCode(),
+            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
         );
 
         assertTrue(copiedResource.getProperties().isEmpty());
@@ -87,8 +91,45 @@ class SubscriptionResourceTest {
             () -> assertEquals(varadhiSubscription.getRetryPolicy(), subscriptionResource.getRetryPolicy()),
             () -> assertEquals(varadhiSubscription.getConsumptionPolicy(), subscriptionResource.getConsumptionPolicy()),
             () -> assertEquals(varadhiSubscription.getProperties(), subscriptionResource.getProperties()),
-            () -> assertEquals(varadhiSubscription.getStatus().getActionCode(), subscriptionResource.getActionCode())
+            () -> assertEquals(varadhiSubscription.getStatus().getActionCode(), subscriptionResource.getActionCode()),
+            () -> assertEquals(varadhiSubscription.getTargetClientIds(), subscriptionResource.getTargetClientIds())
         );
+    }
+
+    @Test
+    void of_withTargetClientIds_singleForSubscription_multipleForQueues() {
+        SubscriptionResource base = createSubscriptionResource(SUB_NAME, PROJECT_1, U_TOPIC_RESOURCE_1);
+        SubscriptionResource single = SubscriptionResource.of(
+            base.getName(),
+            base.getProject(),
+            base.getTopic(),
+            base.getTopicProject(),
+            base.getDescription(),
+            base.isGrouped(),
+            base.getEndpoint(),
+            base.getRetryPolicy(),
+            base.getConsumptionPolicy(),
+            base.getProperties(),
+            base.getActionCode(),
+            List.of("client-1")
+        );
+        assertEquals(List.of("client-1"), single.getTargetClientIds());
+
+        SubscriptionResource multiple = SubscriptionResource.of(
+            base.getName(),
+            base.getProject(),
+            base.getTopic(),
+            base.getTopicProject(),
+            base.getDescription(),
+            base.isGrouped(),
+            base.getEndpoint(),
+            base.getRetryPolicy(),
+            base.getConsumptionPolicy(),
+            base.getProperties(),
+            base.getActionCode(),
+            List.of("q1", "q2", "q3")
+        );
+        assertEquals(List.of("q1", "q2", "q3"), multiple.getTargetClientIds());
     }
 
     @Test

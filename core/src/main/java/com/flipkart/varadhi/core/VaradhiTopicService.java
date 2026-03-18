@@ -252,10 +252,6 @@ public class VaradhiTopicService {
      *
      * @return a list of Varadhi topic names
      */
-    public List<String> getVaradhiTopics(String projectName, boolean includeInactive) {
-        return list(projectName, includeInactive);
-    }
-
     public List<String> list(String projectName, boolean includeInactive) {
         return topicStore.getAllNames(projectName)
                          .stream()

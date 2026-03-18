@@ -39,6 +39,8 @@ public class VaradhiSubscription extends LifecycleEntity {
 
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
     private static final String PROPERTIES_ERROR = "Properties cannot be null or empty";
+    private static final String TARGET_CLIENT_IDS_ERROR =
+        "targetClientIds cannot be null or empty; at least one target client id is required";
 
     /**
      * Constructs a new VaradhiSubscription instance.
@@ -84,11 +86,11 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.callbackConfig = callbackConfig;
         this.status = status;
         this.properties = validateProperties(properties);
-        this.targetClientIds = targetClientIds != null ? List.copyOf(targetClientIds) : List.of();
+        this.targetClientIds = validateTargetClientIds(targetClientIds);
     }
 
     /**
-     * Creates a new VaradhiSubscription instance (no delivery/callback overrides).
+     * Creates a new VaradhiSubscription instance with required target client id(s).
      * @param name              the name of the subscription
      * @param project           the project associated with the subscription
      * @param topic             the topic associated with the subscription
@@ -99,43 +101,9 @@ public class VaradhiSubscription extends LifecycleEntity {
      * @param consumptionPolicy the consumption policy of the subscription
      * @param shards            the shards of the subscription
      * @param properties        the properties of the subscription
-     * @param actionCode         the actor code indicating the reason for the state
-     */
-    public static VaradhiSubscription of(
-        String name,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        return of(
-            name,
-            project,
-            topic,
-            description,
-            grouped,
-            endpoint,
-            retryPolicy,
-            consumptionPolicy,
-            shards,
-            properties,
-            actionCode,
-            null,
-            null
-        );
-    }
-
-    /**
-     * Creates a new VaradhiSubscription instance with optional delivery contract fields.
-     *
-     * @param targetClientIds optional list of target client IDs (topic/queue)
-     * @param callbackConfig  optional callback config for queue-style subscriptions
+     * @param actionCode        the actor code indicating the reason for the state
+     * @param targetClientIds   list of target client IDs (topic/queue); must contain at least one id
+     * @param callbackConfig    optional callback config for queue-style subscriptions
      */
     public static VaradhiSubscription of(
         String name,
@@ -167,6 +135,39 @@ public class VaradhiSubscription extends LifecycleEntity {
             properties,
             targetClientIds,
             callbackConfig
+        );
+    }
+
+    /**
+     * Creates a new VaradhiSubscription instance (convenience overload with at least one target client id).
+     */
+    public static VaradhiSubscription of(
+        String name,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode
+    ) {
+        return of(
+            name,
+            project,
+            topic,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            shards,
+            properties,
+            actionCode,
+            List.of(name),
+            null
         );
     }
 
@@ -227,5 +228,23 @@ public class VaradhiSubscription extends LifecycleEntity {
             throw new IllegalArgumentException(PROPERTIES_ERROR);
         }
         return properties;
+    }
+
+    /**
+     * Validates that targetClientIds is non-null, non-empty, and contains at least one non-blank id.
+     *
+     * @param targetClientIds the list of target client IDs
+     * @return an immutable copy of the list
+     * @throws IllegalArgumentException if null, empty, or no valid (non-blank) id
+     */
+    private static List<String> validateTargetClientIds(List<String> targetClientIds) {
+        if (targetClientIds == null || targetClientIds.isEmpty()) {
+            throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
+        }
+        boolean hasNonBlank = targetClientIds.stream().anyMatch(id -> id != null && !id.trim().isEmpty());
+        if (!hasNonBlank) {
+            throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
+        }
+        return List.copyOf(targetClientIds);
     }
 }

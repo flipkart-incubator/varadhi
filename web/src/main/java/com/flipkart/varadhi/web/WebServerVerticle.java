@@ -432,15 +432,15 @@ public class WebServerVerticle extends AbstractVerticle {
             ).get()
         );
 
-        routes.addAll(
-            new SubscriptionHandlers(
-                serviceRegistry.get(VaradhiSubscriptionService.class),
-                serviceRegistry.get(VaradhiTopicService.class),
-                subscriptionFactory,
-                configuration.getRestOptions(),
-                cacheRegistry.getCache(ResourceType.PROJECT)
-            ).get()
+        SubscriptionHandlers subscriptionHandlers = new SubscriptionHandlers(
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            serviceRegistry.get(VaradhiTopicService.class),
+            subscriptionFactory,
+            configuration.getRestOptions(),
+            cacheRegistry.getCache(ResourceType.PROJECT)
         );
+        routes.addAll(subscriptionHandlers.get());
+        routes.addAll(subscriptionHandlers.getActionHandler().get());
 
         routes.addAll(
             new DlqHandlers(

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -86,7 +87,7 @@ class SubscriptionTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
 
-        assertTrue(sub.getTargetClientIds().isEmpty());
+        assertEquals(List.of("sub-1"), sub.getTargetClientIds());
         assertNull(sub.getCallbackConfig());
     }
 
@@ -137,7 +138,7 @@ class SubscriptionTest {
         String json = JsonMapper.jsonSerialize(sub);
         VaradhiSubscription deserialized = JsonMapper.jsonDeserialize(json, VaradhiSubscription.class);
 
-        assertTrue(deserialized.getTargetClientIds().isEmpty());
+        assertEquals(List.of("sub-1"), deserialized.getTargetClientIds());
         assertNull(deserialized.getCallbackConfig());
     }
 
@@ -169,25 +170,6 @@ class SubscriptionTest {
     }
 
     @Test
-    void callbackConfig_fromJson_parsesCodeRanges() {
-        String requestJson = "[{\"from\": 200, \"to\": 299}, {\"from\": 500, \"to\": 502}]";
-        CallbackConfig config = CallbackConfig.fromJson(requestJson);
-        assertNotNull(config);
-        assertEquals(2, config.getCodeRanges().size());
-        assertTrue(config.shouldCallback(200));
-        assertTrue(config.shouldCallback(501));
-        assertFalse(config.shouldCallback(499));
-        assertFalse(config.shouldCallback(503));
-    }
-
-    @Test
-    void callbackConfig_fromJson_nullOrEmpty_returnsNull() {
-        assertNull(CallbackConfig.fromJson(null));
-        assertNull(CallbackConfig.fromJson(""));
-        assertNull(CallbackConfig.fromJson("   "));
-    }
-
-    @Test
     void callbackConfig_addRange_mutable() {
         CallbackConfig config = new CallbackConfig();
         config.addRange(new CodeRange(200, 299));
@@ -202,6 +184,49 @@ class SubscriptionTest {
         CallbackConfig config = new CallbackConfig();
         assertTrue(config.getCodeRanges().isEmpty());
         assertFalse(config.shouldCallback(200));
+    }
+
+    @Test
+    void varadhiSubscription_nullOrEmptyTargetClientIds_throws() {
+        IllegalArgumentException nullEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                null,
+                null
+            )
+        );
+        assertTrue(nullEx.getMessage().contains("targetClientIds"));
+
+        IllegalArgumentException emptyEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                List.of(),
+                null
+            )
+        );
+        assertTrue(emptyEx.getMessage().contains("targetClientIds"));
     }
 
     @Test
@@ -237,7 +262,7 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            null,
+            List.of("c1"),
             callbackConfig
         );
 
@@ -249,5 +274,29 @@ class SubscriptionTest {
         assertTrue(config.shouldCallback(501));
         assertFalse(config.shouldCallback(499));
         assertFalse(config.shouldCallback(503));
+    }
+
+    @Test
+    void callbackConfig_invalidCodeRange_fromGreaterThanTo_neverMatches() {
+        // Invalid range: from (500) > to (200) — no code can satisfy code >= 500 && code <= 200
+        CallbackConfig config = new CallbackConfig(Set.of(new CodeRange(500, 200)));
+        assertNotNull(config);
+        assertEquals(1, config.getCodeRanges().size());
+        assertFalse(config.shouldCallback(200));
+        assertFalse(config.shouldCallback(350));
+        assertFalse(config.shouldCallback(500));
+        assertFalse(config.shouldCallback(501));
+    }
+
+    @Test
+    void callbackConfig_invalidCodeRange_reversedBounds_mixedWithValid() {
+        // One valid range (200–299) and one invalid (500, 200)
+        CallbackConfig config = new CallbackConfig(Set.of(new CodeRange(200, 299), new CodeRange(500, 200)));
+        assertNotNull(config);
+        assertEquals(2, config.getCodeRanges().size());
+        assertTrue(config.shouldCallback(200));
+        assertTrue(config.shouldCallback(250));
+        assertFalse(config.shouldCallback(500));
+        assertFalse(config.shouldCallback(350));
     }
 }

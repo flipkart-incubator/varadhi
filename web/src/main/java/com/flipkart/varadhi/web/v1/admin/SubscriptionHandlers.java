@@ -19,39 +19,51 @@ import com.flipkart.varadhi.web.routes.SubRoutes;
 import com.flipkart.varadhi.web.subscription.SubscriptionPropertyValidator;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
-import static com.flipkart.varadhi.common.Constants.MethodNames.*;
-
+import static com.flipkart.varadhi.common.Constants.MethodNames.CREATE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.DELETE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.GET;
+import static com.flipkart.varadhi.common.Constants.MethodNames.LIST;
+import static com.flipkart.varadhi.common.Constants.MethodNames.RESTORE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.UPDATE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
- * Handles various subscription-related operations such as listing, creating, updating, deleting, restoring,
- * starting, and stopping subscriptions.
+ * Handles subscription CRUD and restore only: list, get, create, update, delete, restore.
+ * Route definitions for these operations are in this class.
+ * <p>
+ * Actions common to both subscription (topic) and queue (start, stop, offset-reset, etc.) are in
+ * {@link SubscriptionActionHandler}, which defines and handles those routes in its own class.
  */
 @Slf4j
 public class SubscriptionHandlers implements RouteProvider {
-    private static final String API_NAME = "SUBSCRIPTION";
 
+    /** Base path for subscription and subscription-action routes; used by this class and {@link SubscriptionActionHandler}. */
+    public static final String SUBSCRIPTIONS_BASE_PATH = "/v1/projects/:project/subscriptions";
+
+    private static final String API_NAME = "SUBSCRIPTION";
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
     private final VaradhiSubscriptionService varadhiSubscriptionService;
@@ -60,6 +72,11 @@ public class SubscriptionHandlers implements RouteProvider {
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
     private final Map<String, String> propertyDefaultValueProviders;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    /**
+     * -- GETTER --
+     *  Returns the handler for subscription lifecycle actions (start, stop). Used by tests and route building.
+     */
+    @Getter
     private final SubscriptionActionHandler actionHandler;
 
     /**
@@ -90,60 +107,42 @@ public class SubscriptionHandlers implements RouteProvider {
     }
 
     /**
-     * Returns the handler for subscription lifecycle actions (start, stop). Used by tests and route building.
-     */
-    public SubscriptionActionHandler getActionHandler() {
-        return actionHandler;
-    }
-
-    /**
      * Returns the list of route definitions for subscription-related operations.
      *
      * @return the list of route definitions
      */
     @Override
     public List<RouteDefinition> get() {
-        return new SubRoutes(
-            "/v1/projects/:project/subscriptions",
-            List.of(
-                RouteDefinition.get(LIST, API_NAME, "")
-                               .authorize(SUBSCRIPTION_LIST)
-                               .build(this::getHierarchies, this::list),
-                RouteDefinition.get(GET, API_NAME, "/:subscription")
-                               .authorize(SUBSCRIPTION_GET)
-                               .build(this::getHierarchies, this::get),
-                RouteDefinition.post(CREATE, API_NAME, "")
-                               .hasBody()
-                               .bodyParser(this::setSubscription)
-                               .authorize(SUBSCRIPTION_CREATE)
-                               .authorize(TOPIC_SUBSCRIBE)
-                               .build(this::getHierarchies, this::create),
-                RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
-                               .nonBlocking()
-                               .hasBody()
-                               .bodyParser(this::setSubscription)
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .authorize(TOPIC_SUBSCRIBE)
-                               .build(this::getHierarchies, this::update),
-                RouteDefinition.delete(DELETE, API_NAME, "/:subscription")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_DELETE)
-                               .build(this::getHierarchies, this::delete),
-                RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::restore),
-                RouteDefinition.post(START, API_NAME, "/:subscription/start")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .build(actionHandler::getHierarchies, actionHandler::start),
-
-                RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .build(actionHandler::getHierarchies, actionHandler::stop)
-            )
-        ).get();
+        List<RouteDefinition> routes = new ArrayList<>(List.of(
+            RouteDefinition.get(LIST, API_NAME, "")
+                .authorize(SUBSCRIPTION_LIST)
+                .build(this::getHierarchies, this::list),
+            RouteDefinition.get(GET, API_NAME, "/:subscription")
+                .authorize(SUBSCRIPTION_GET)
+                .build(this::getHierarchies, this::get),
+            RouteDefinition.post(CREATE, API_NAME, "")
+                .hasBody()
+                .bodyParser(this::setSubscription)
+                .authorize(SUBSCRIPTION_CREATE)
+                .authorize(TOPIC_SUBSCRIBE)
+                .build(this::getHierarchies, this::create),
+            RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
+                .nonBlocking()
+                .hasBody()
+                .bodyParser(this::setSubscription)
+                .authorize(SUBSCRIPTION_UPDATE)
+                .authorize(TOPIC_SUBSCRIBE)
+                .build(this::getHierarchies, this::update),
+            RouteDefinition.delete(DELETE, API_NAME, "/:subscription")
+                .nonBlocking()
+                .authorize(SUBSCRIPTION_DELETE)
+                .build(this::getHierarchies, this::delete),
+            RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
+                .nonBlocking()
+                .authorize(SUBSCRIPTION_UPDATE)
+                .build(this::getHierarchies, this::restore)
+        ));
+        return new SubRoutes(SUBSCRIPTIONS_BASE_PATH, routes).get();
     }
 
     /**

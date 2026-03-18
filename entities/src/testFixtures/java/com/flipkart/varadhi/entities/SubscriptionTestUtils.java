@@ -383,7 +383,8 @@ public class SubscriptionTestUtils {
             retryPolicy,
             DEFAULT_CONSUMPTION_POLICY,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
         );
     }
 }

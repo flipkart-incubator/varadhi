@@ -223,7 +223,8 @@ class VaradhiSubscriptionServiceTest {
             retryPolicy,
             consumptionPolicy,
             getSubscriptionDefaultProperties(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
         );
 
         VaradhiSubscriptionFactory varadhiFactory = new VaradhiSubscriptionFactory(
