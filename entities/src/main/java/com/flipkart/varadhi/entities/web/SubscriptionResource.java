@@ -17,10 +17,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Subscription name. Check naming constraints.", max = 64)
-public class SubscriptionResource extends Versioned implements Validatable {
-
-    @NotBlank
-    private final String project;
+public class SubscriptionResource extends BaseResource implements Validatable {
 
     @NotBlank
     private final String topic;
@@ -30,8 +27,6 @@ public class SubscriptionResource extends Versioned implements Validatable {
 
     @NotBlank
     private final String description;
-
-    private final boolean grouped;
 
     @NotNull
     private final Endpoint endpoint;
@@ -79,11 +74,11 @@ public class SubscriptionResource extends Versioned implements Validatable {
         LifecycleStatus.ActionCode actionCode
     ) {
         super(name, version);
-        this.project = project;
+        setProject(project);
+        setGrouped(grouped);
         this.topic = topic;
         this.topicProject = topicProject;
         this.description = description;
-        this.grouped = grouped;
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
@@ -187,8 +182,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
      *
      * @return The internal name for the subscription.
      */
+    /** Whether the subscription is grouped; uses base resource grouped flag. */
+    public boolean isGrouped() {
+        return Boolean.TRUE.equals(getGrouped());
+    }
+
     @JsonIgnore
     public String getSubscriptionInternalName() {
-        return buildInternalName(project, getName());
+        return buildInternalName(getProject(), getName());
     }
 }

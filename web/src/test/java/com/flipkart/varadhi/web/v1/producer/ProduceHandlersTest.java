@@ -360,7 +360,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(OVERSIZED_HEADER_KEY_LENGTH);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
         sendRequestAndParseResponse(
             request,
             payload,
@@ -375,7 +375,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(99);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB

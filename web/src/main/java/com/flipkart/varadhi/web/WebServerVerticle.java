@@ -39,6 +39,7 @@ import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
 import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
 import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
 import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
+import com.flipkart.varadhi.web.v1.admin.QueueHandlers;
 import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.producer.ProduceHandlers;
@@ -420,6 +421,13 @@ public class WebServerVerticle extends AbstractVerticle {
             verticleConfig.deployedRegion()
         );
 
+        VaradhiQueueService varadhiQueueService = new VaradhiQueueService(
+            varadhiTopicFactory,
+            serviceRegistry.get(VaradhiTopicService.class),
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            subscriptionFactory
+        );
+
         // Add management entity routes if not in lean deployment
         routes.addAll(getManagementEntitiesApiRoutes());
 
@@ -441,6 +449,8 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );
+
+        routes.addAll(new QueueHandlers(varadhiQueueService, cacheRegistry.getCache(ResourceType.PROJECT)).get());
 
         routes.addAll(
             new DlqHandlers(

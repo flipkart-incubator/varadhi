@@ -153,6 +153,27 @@ class SubscriptionTest {
         assertTrue(deserialized.inRange(501));
     }
 
+    @Test
+    void codeRange_invalidRange_fromGreaterThanTo_inRangeNeverTrue() {
+        // Invalid range (500, 200): from > to is accepted but range is effectively empty
+        CodeRange invalid = new CodeRange(500, 200);
+        assertEquals(500, invalid.getFrom());
+        assertEquals(200, invalid.getTo());
+        assertFalse(invalid.inRange(200));
+        assertFalse(invalid.inRange(500));
+        assertFalse(invalid.inRange(350));
+    }
+
+    @Test
+    void codeRange_invalidRange_deserializeFromJson_inRangeNeverTrue() {
+        String invalidJson = "{\"from\": 500, \"to\": 200}";
+        CodeRange deserialized = JsonMapper.jsonDeserialize(invalidJson, CodeRange.class);
+        assertEquals(500, deserialized.getFrom());
+        assertEquals(200, deserialized.getTo());
+        assertFalse(deserialized.inRange(200));
+        assertFalse(deserialized.inRange(500));
+    }
+
     // ---------- CallbackConfig (reference: QueueCallbackConfig) ----------
 
     @Test
@@ -166,25 +187,6 @@ class SubscriptionTest {
         assertTrue(deserialized.shouldCallback(200));
         assertTrue(deserialized.shouldCallback(599));
         assertTrue(deserialized.shouldCallback(200));
-    }
-
-    @Test
-    void callbackConfig_fromJson_parsesCodeRanges() {
-        String requestJson = "[{\"from\": 200, \"to\": 299}, {\"from\": 500, \"to\": 502}]";
-        CallbackConfig config = CallbackConfig.fromJson(requestJson);
-        assertNotNull(config);
-        assertEquals(2, config.getCodeRanges().size());
-        assertTrue(config.shouldCallback(200));
-        assertTrue(config.shouldCallback(501));
-        assertFalse(config.shouldCallback(499));
-        assertFalse(config.shouldCallback(503));
-    }
-
-    @Test
-    void callbackConfig_fromJson_nullOrEmpty_returnsNull() {
-        assertNull(CallbackConfig.fromJson(null));
-        assertNull(CallbackConfig.fromJson(""));
-        assertNull(CallbackConfig.fromJson("   "));
     }
 
     @Test

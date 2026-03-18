@@ -5,25 +5,18 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.Versioned;
-import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 
 /**
- * Represents a topic resource in the Varadhi system.
+ * Represents a topic resource in the Varadhi system (API request/response and factory input).
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
-public class TopicResource extends Versioned implements Validatable {
-
-    @NotBlank
-    private final String project;
-
-    private final boolean grouped;
+public class TopicResource extends BaseResource implements Validatable {
 
     @Setter
     private TopicCapacityPolicy capacity;
@@ -34,13 +27,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Constructs a new TopicResource instance.
-     *
-     * @param name      the name of the topic
-     * @param version   the version of the topic
-     * @param project   the project associated with the topic
-     * @param grouped   whether the topic is grouped
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
      */
     private TopicResource(
         String name,
@@ -52,22 +38,20 @@ public class TopicResource extends Versioned implements Validatable {
         String nfrFilterName
     ) {
         super(name, version);
-        this.project = project;
-        this.grouped = grouped;
+        setProject(project);
+        setGrouped(grouped);
         this.capacity = capacity;
         this.actionCode = actionCode;
         this.nfrFilterName = nfrFilterName;
     }
 
+    /** Whether the topic is grouped; uses base resource grouped flag. */
+    public boolean isGrouped() {
+        return Boolean.TRUE.equals(getGrouped());
+    }
+
     /**
      * Creates a new grouped TopicResource instance.
-     *
-     * @param name      the name of the topic
-     * @param project   the project associated with the topic
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
-     *
-     * @return a new grouped TopicResource instance
      */
     public static TopicResource grouped(
         String name,
@@ -81,13 +65,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Creates a new ungrouped TopicResource instance.
-     *
-     * @param name      the name of the topic
-     * @param project   the project associated with the topic
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating reason behind the action performed on the topic
-     *
-     * @return a new ungrouped TopicResource instance
      */
     public static TopicResource unGrouped(
         String name,
@@ -101,10 +78,6 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Creates a TopicResource instance from a VaradhiTopic instance.
-     *
-     * @param varadhiTopic the VaradhiTopic instance
-     *
-     * @return a new TopicResource instance
      */
     public static TopicResource from(VaradhiTopic varadhiTopic) {
         String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
@@ -122,10 +95,8 @@ public class TopicResource extends Versioned implements Validatable {
 
     /**
      * Converts this TopicResource instance to a VaradhiTopic instance.
-     *
-     * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actionCode, nfrFilterName);
+        return VaradhiTopic.of(getProject(), getName(), isGrouped(), capacity, actionCode, nfrFilterName);
     }
 }

@@ -487,14 +487,14 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void getVaradhiTopicsForProject_ValidProject_ReturnsActiveTopics() {
+    void list() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2");
         List<Boolean> topicStatuses = List.of(true, true);
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> activeTopics = varadhiTopicService.getVaradhiTopics(projectName, false);
+        List<String> activeTopics = varadhiTopicService.list(projectName, false);
 
         assertNotNull(activeTopics);
         assertEquals(2, activeTopics.size());
@@ -502,14 +502,14 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void getVaradhiTopicsForProject_MultipleStatuses_FiltersInactiveTopics() {
+    void list() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2", "topic3");
         List<Boolean> topicStatuses = List.of(true, false, true);
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> activeTopics = varadhiTopicService.getVaradhiTopics(projectName, false);
+        List<String> activeTopics = varadhiTopicService.list(projectName, false);
 
         assertNotNull(activeTopics);
         assertEquals(2, activeTopics.size());
@@ -517,14 +517,14 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void getVaradhiTopicsForProject_IncludingInactive_ReturnsAllTopics() {
+    void list() {
         String projectName = project.getName();
         List<String> topicNames = List.of("topic1", "topic2", "topic3");
         List<Boolean> topicStatuses = List.of(true, false, true);
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> allTopics = varadhiTopicService.getVaradhiTopics(projectName, true);
+        List<String> allTopics = varadhiTopicService.list(projectName, true);
 
         assertNotNull(allTopics);
         assertEquals(3, allTopics.size());
