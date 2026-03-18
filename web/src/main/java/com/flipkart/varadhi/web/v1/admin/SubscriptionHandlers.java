@@ -113,35 +113,37 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     @Override
     public List<RouteDefinition> get() {
-        List<RouteDefinition> routes = new ArrayList<>(List.of(
-            RouteDefinition.get(LIST, API_NAME, "")
-                .authorize(SUBSCRIPTION_LIST)
-                .build(this::getHierarchies, this::list),
-            RouteDefinition.get(GET, API_NAME, "/:subscription")
-                .authorize(SUBSCRIPTION_GET)
-                .build(this::getHierarchies, this::get),
-            RouteDefinition.post(CREATE, API_NAME, "")
-                .hasBody()
-                .bodyParser(this::setSubscription)
-                .authorize(SUBSCRIPTION_CREATE)
-                .authorize(TOPIC_SUBSCRIBE)
-                .build(this::getHierarchies, this::create),
-            RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
-                .nonBlocking()
-                .hasBody()
-                .bodyParser(this::setSubscription)
-                .authorize(SUBSCRIPTION_UPDATE)
-                .authorize(TOPIC_SUBSCRIBE)
-                .build(this::getHierarchies, this::update),
-            RouteDefinition.delete(DELETE, API_NAME, "/:subscription")
-                .nonBlocking()
-                .authorize(SUBSCRIPTION_DELETE)
-                .build(this::getHierarchies, this::delete),
-            RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
-                .nonBlocking()
-                .authorize(SUBSCRIPTION_UPDATE)
-                .build(this::getHierarchies, this::restore)
-        ));
+        List<RouteDefinition> routes = new ArrayList<>(
+            List.of(
+                RouteDefinition.get(LIST, API_NAME, "")
+                               .authorize(SUBSCRIPTION_LIST)
+                               .build(this::getHierarchies, this::list),
+                RouteDefinition.get(GET, API_NAME, "/:subscription")
+                               .authorize(SUBSCRIPTION_GET)
+                               .build(this::getHierarchies, this::get),
+                RouteDefinition.post(CREATE, API_NAME, "")
+                               .hasBody()
+                               .bodyParser(this::setSubscription)
+                               .authorize(SUBSCRIPTION_CREATE)
+                               .authorize(TOPIC_SUBSCRIBE)
+                               .build(this::getHierarchies, this::create),
+                RouteDefinition.put(UPDATE, API_NAME, "/:subscription")
+                               .nonBlocking()
+                               .hasBody()
+                               .bodyParser(this::setSubscription)
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .authorize(TOPIC_SUBSCRIBE)
+                               .build(this::getHierarchies, this::update),
+                RouteDefinition.delete(DELETE, API_NAME, "/:subscription")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_DELETE)
+                               .build(this::getHierarchies, this::delete),
+                RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
+                               .nonBlocking()
+                               .authorize(SUBSCRIPTION_UPDATE)
+                               .build(this::getHierarchies, this::restore)
+            )
+        );
         return new SubRoutes(SUBSCRIPTIONS_BASE_PATH, routes).get();
     }
 

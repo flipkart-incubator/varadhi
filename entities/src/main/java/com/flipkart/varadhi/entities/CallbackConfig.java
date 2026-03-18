@@ -28,7 +28,9 @@ public class CallbackConfig {
 
     /** Convenience constructor for programmatic use (not used by Jackson). */
     public CallbackConfig(Set<CodeRange> codeRanges) {
-        this.codeRanges.addAll(codeRanges);
+        if (codeRanges != null) {
+            this.codeRanges.addAll(codeRanges);
+        }
     }
 
     /** Returns an unmodifiable view of the code ranges. */

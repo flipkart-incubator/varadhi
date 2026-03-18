@@ -84,7 +84,9 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of("sub-1"),
+            null
         );
 
         assertEquals(List.of("sub-1"), sub.getTargetClientIds());
@@ -132,7 +134,9 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of("sub-1"),
+            null
         );
 
         String json = JsonMapper.jsonSerialize(sub);
@@ -242,7 +246,9 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of("sub-1"),
+            null
         );
         assertNull(sub.getCallbackConfig());
     }

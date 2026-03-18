@@ -77,6 +77,8 @@ class VaradhiSubscriptionServiceTest {
     private VaradhiSubscription subscription1, subscription2;
 
     private static final String REQUESTED_BY = Constants.ANONYMOUS_IDENTITY;
+    /** Pass as targetClientIds to use subscription name as the single target client id. */
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
     private TopicStore topicStore;
     private SubscriptionStore subscriptionStore;
     private OrgStore orgStore;
@@ -224,7 +226,7 @@ class VaradhiSubscriptionServiceTest {
             consumptionPolicy,
             getSubscriptionDefaultProperties(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
 
         VaradhiSubscriptionFactory varadhiFactory = new VaradhiSubscriptionFactory(

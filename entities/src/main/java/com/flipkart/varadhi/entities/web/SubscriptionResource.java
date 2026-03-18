@@ -50,11 +50,6 @@ public class SubscriptionResource extends Versioned implements Validatable {
     private LifecycleStatus.ActionCode actionCode;
 
     /**
-     * Pass as {@code targetClientIds} to use the subscription name as the single target client id.
-     */
-    public static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
-
-    /**
      * Target client IDs for delivery (one for subscription, multiple for queues).
      */
     @NotNull

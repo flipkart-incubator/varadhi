@@ -139,39 +139,6 @@ public class VaradhiSubscription extends LifecycleEntity {
     }
 
     /**
-     * Creates a new VaradhiSubscription instance (convenience overload with at least one target client id).
-     */
-    public static VaradhiSubscription of(
-        String name,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        return of(
-            name,
-            project,
-            topic,
-            description,
-            grouped,
-            endpoint,
-            retryPolicy,
-            consumptionPolicy,
-            shards,
-            properties,
-            actionCode,
-            List.of(name),
-            null
-        );
-    }
-
-    /**
      * Retrieves the integer value of a property.
      *
      * @param property the property name

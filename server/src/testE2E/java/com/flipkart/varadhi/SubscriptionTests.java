@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
+    /** Pass as targetClientIds to use subscription name as the single target client id. */
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
+
     private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
@@ -111,7 +114,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, r);
@@ -142,7 +145,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created = makeGetRequest(
@@ -189,7 +192,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -211,7 +214,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")),
@@ -233,7 +236,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -255,7 +258,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -281,7 +284,7 @@ public class SubscriptionTests extends E2EBase {
             consumptionPolicy,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
 
         SubscriptionResource createdSub = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);

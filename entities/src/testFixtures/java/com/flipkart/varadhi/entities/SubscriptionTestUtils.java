@@ -316,7 +316,9 @@ public class SubscriptionTestUtils {
                 Optional.ofNullable(consumptionPolicy).orElse(DEFAULT_CONSUMPTION_POLICY),
                 shards,
                 properties,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                List.of(name),
+                null
             );
         }
     }
@@ -354,7 +356,9 @@ public class SubscriptionTestUtils {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             getSubscriptionDefaultProperties(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            List.of(SubscriptionResource.buildInternalName(project.getName(), subscriptionName)),
+            null
         );
     }
 
@@ -365,6 +369,9 @@ public class SubscriptionTestUtils {
     ) {
         return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
     }
+
+    /** Pass as targetClientIds to use subscription name as the single target client id. */
+    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = null;
 
     public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,
@@ -384,7 +391,7 @@ public class SubscriptionTestUtils {
             DEFAULT_CONSUMPTION_POLICY,
             new HashMap<>(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            SubscriptionResource.DEFAULT_TARGET_CLIENT_IDS
+            DEFAULT_TARGET_CLIENT_IDS
         );
     }
 }

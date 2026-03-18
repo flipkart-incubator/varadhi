@@ -78,13 +78,13 @@ public class SubscriptionActionHandler implements RouteProvider {
     public List<RouteDefinition> getActionRouteDefinitions() {
         return List.of(
             RouteDefinition.post(START, API_NAME, "/:subscription/start")
-                .nonBlocking()
-                .authorize(SUBSCRIPTION_UPDATE)
-                .build(this::getHierarchies, this::start),
+                           .nonBlocking()
+                           .authorize(SUBSCRIPTION_UPDATE)
+                           .build(this::getHierarchies, this::start),
             RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
-                .nonBlocking()
-                .authorize(SUBSCRIPTION_UPDATE)
-                .build(this::getHierarchies, this::stop)
+                           .nonBlocking()
+                           .authorize(SUBSCRIPTION_UPDATE)
+                           .build(this::getHierarchies, this::stop)
         );
     }
 
@@ -118,8 +118,7 @@ public class SubscriptionActionHandler implements RouteProvider {
     }
 
     private enum LifecycleAction {
-        START,
-        STOP
+        START, STOP
     }
 
     private static String getSubscriptionFqn(RoutingContext ctx) {
