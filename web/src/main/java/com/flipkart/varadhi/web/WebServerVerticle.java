@@ -1,9 +1,8 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.core.CoreServices;
+import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -19,10 +18,6 @@ import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigur
 import com.flipkart.varadhi.web.configurators.RequestBodyParsingConfigurator;
 import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
-import com.flipkart.varadhi.core.OrgService;
-import com.flipkart.varadhi.core.ProjectService;
-import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.TeamService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
@@ -34,18 +29,11 @@ import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
 
-import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
-import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
-import com.flipkart.varadhi.web.v1.admin.OrgFilterHandler;
-import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
-import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
-import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
-import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
-import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
+import com.flipkart.varadhi.web.v1.admin.*;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.producer.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -259,8 +247,8 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize subscription and DLQ services
         serviceRegistry.registerIfAbsent(
-            SubscriptionService.class,
-            () -> new SubscriptionService(
+            VaradhiSubscriptionService.class,
+            () -> new VaradhiSubscriptionService(
                 shardProvisioner,
                 controllerClient,
                 metaStore.subscriptions(),
@@ -438,20 +426,26 @@ public class WebServerVerticle extends AbstractVerticle {
             ).get()
         );
 
-        routes.addAll(
-            new SubscriptionHandlers(
-                serviceRegistry.get(SubscriptionService.class),
-                serviceRegistry.get(VaradhiTopicService.class),
-                subscriptionFactory,
-                configuration.getRestOptions(),
-                cacheRegistry.getCache(ResourceType.PROJECT)
-            ).get()
+        SubscriptionHandlers subscriptionHandlers = new SubscriptionHandlers(
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            serviceRegistry.get(VaradhiTopicService.class),
+            subscriptionFactory,
+            configuration.getRestOptions(),
+            cacheRegistry.getCache(ResourceType.PROJECT)
         );
+        routes.addAll(subscriptionHandlers.get());
+
+        SubscriptionActionHandler subscriptionActionHandler = new SubscriptionActionHandler(
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            cacheRegistry.getCache(ResourceType.PROJECT)
+        );
+
+        routes.addAll(subscriptionActionHandler.get());
 
         routes.addAll(
             new DlqHandlers(
                 serviceRegistry.get(DlqService.class),
-                serviceRegistry.get(SubscriptionService.class),
+                serviceRegistry.get(VaradhiSubscriptionService.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities.web;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -49,6 +50,12 @@ public class SubscriptionResource extends Versioned implements Validatable {
     private LifecycleStatus.ActionCode actionCode;
 
     /**
+     * Target client IDs for delivery (one for subscription, multiple for queues).
+     */
+    @NotNull
+    private final List<String> targetClientIds;
+
+    /**
      * Constructs a new SubscriptionResource.
      *
      * @param name              The name of the subscription.
@@ -62,7 +69,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
-     * @param actionCode         The actor code associated with the subscription.
+     * @param actionCode        The actor code associated with the subscription.
+     * @param targetClientIds   Target client IDs (single for subscription, multiple for queues); at least one required.
      */
     private SubscriptionResource(
         String name,
@@ -76,7 +84,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
         RetryPolicy retryPolicy,
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+        LifecycleStatus.ActionCode actionCode,
+        List<String> targetClientIds
     ) {
         super(name, version);
         this.project = project;
@@ -89,24 +98,26 @@ public class SubscriptionResource extends Versioned implements Validatable {
         this.consumptionPolicy = consumptionPolicy;
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
+        this.targetClientIds = validateTargetClientIds(targetClientIds, name);
+    }
+
+    private static List<String> validateTargetClientIds(List<String> targetClientIds, String subscriptionName) {
+        if (targetClientIds == null || targetClientIds.isEmpty()) {
+            return List.of(subscriptionName);
+        }
+        boolean hasNullOrBlank = targetClientIds.stream().anyMatch(id -> id == null || id.trim().isEmpty());
+        if (hasNullOrBlank) {
+            throw new IllegalArgumentException(
+                "targetClientIds must not contain null or blank elements; every id must be non-null and non-blank"
+            );
+        }
+        return List.copyOf(targetClientIds);
     }
 
     /**
      * Creates a new SubscriptionResource instance.
      *
-     * @param name              The name of the subscription.
-     * @param project           The project associated with the subscription.
-     * @param topic             The topic associated with the subscription.
-     * @param topicProject      The project of the topic associated with the subscription.
-     * @param description       The description of the subscription.
-     * @param grouped           Indicates if the subscription is grouped.
-     * @param endpoint          The endpoint associated with the subscription.
-     * @param retryPolicy       The retry policy for the subscription.
-     * @param consumptionPolicy The consumption policy for the subscription.
-     * @param properties        Additional properties for the subscription.
-     * @param actionCode         The actor code associated with the subscription.
-     *
-     * @return A new SubscriptionResource instance.
+     * @param targetClientIds   Target client IDs (single for subscription, multiple for queues); at least one required.
      */
     public static SubscriptionResource of(
         String name,
@@ -119,7 +130,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
         RetryPolicy retryPolicy,
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+        LifecycleStatus.ActionCode actionCode,
+        List<String> targetClientIds
     ) {
         return new SubscriptionResource(
             name,
@@ -133,7 +145,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
             retryPolicy,
             consumptionPolicy,
             properties,
-            actionCode
+            actionCode,
+            targetClientIds
         );
     }
 
@@ -176,7 +189,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
             subscription.getRetryPolicy(),
             subscription.getConsumptionPolicy(),
             subscription.getProperties(),
-            subscription.getStatus().getActionCode()
+            subscription.getStatus().getActionCode(),
+            subscription.getTargetClientIds()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;

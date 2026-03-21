@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.core.SubscriptionService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
@@ -13,6 +13,7 @@ import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
+import com.flipkart.varadhi.web.routes.ApiPaths;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -21,40 +22,48 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
-import static com.flipkart.varadhi.common.Constants.MethodNames.*;
-
+import static com.flipkart.varadhi.common.Constants.MethodNames.CREATE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.DELETE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.GET;
+import static com.flipkart.varadhi.common.Constants.MethodNames.LIST;
+import static com.flipkart.varadhi.common.Constants.MethodNames.RESTORE;
+import static com.flipkart.varadhi.common.Constants.MethodNames.UPDATE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
- * Handles various subscription-related operations such as listing, creating, updating, deleting, restoring,
- * starting, and stopping subscriptions.
+ * Handles subscription CRUD and restore only: list, get, create, update, delete, restore.
+ * Route definitions for these operations are in this class.
+ * <p>
+ * Actions common to both subscription (topic) and queue (start, stop, offset-reset, etc.) are in
+ * {@link SubscriptionActionHandler}, which defines and handles those routes in its own class.
  */
 @Slf4j
 public class SubscriptionHandlers implements RouteProvider {
-    private static final String API_NAME = "SUBSCRIPTION";
 
+    private static final String API_NAME = "SUBSCRIPTION";
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
-    private final SubscriptionService subscriptionService;
+    private final VaradhiSubscriptionService varadhiSubscriptionService;
     private final VaradhiTopicService topicService;
     private final VaradhiSubscriptionFactory varadhiSubscriptionFactory;
     private final Map<String, SubscriptionPropertyValidator> propertyValidators;
@@ -64,20 +73,20 @@ public class SubscriptionHandlers implements RouteProvider {
     /**
      * Constructs a new SubscriptionHandlers instance.
      *
-     * @param subscriptionService the service to manage subscriptions
+     * @param varadhiSubscriptionService the service to manage subscriptions
      * @param topicService        the service to manage topics
      * @param subscriptionFactory the factory to create subscriptions
      * @param restOptions         the REST options configuration
      * @param projectCache        the entity read cache for projects
      */
     public SubscriptionHandlers(
-        SubscriptionService subscriptionService,
+        VaradhiSubscriptionService varadhiSubscriptionService,
         VaradhiTopicService topicService,
         VaradhiSubscriptionFactory subscriptionFactory,
         RestOptions restOptions,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
-        this.subscriptionService = subscriptionService;
+        this.varadhiSubscriptionService = varadhiSubscriptionService;
         this.topicService = topicService;
         this.varadhiSubscriptionFactory = subscriptionFactory;
         this.propertyValidators = SubscriptionPropertyValidator.createPropertyValidators(restOptions);
@@ -94,8 +103,7 @@ public class SubscriptionHandlers implements RouteProvider {
      */
     @Override
     public List<RouteDefinition> get() {
-        return new SubRoutes(
-            "/v1/projects/:project/subscriptions",
+        List<RouteDefinition> routes = new ArrayList<>(
             List.of(
                 RouteDefinition.get(LIST, API_NAME, "")
                                .authorize(SUBSCRIPTION_LIST)
@@ -123,17 +131,10 @@ public class SubscriptionHandlers implements RouteProvider {
                 RouteDefinition.patch(RESTORE, API_NAME, "/:subscription/restore")
                                .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::restore),
-                RouteDefinition.post(START, API_NAME, "/:subscription/start")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::start),
-                RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
-                               .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
-                               .build(this::getHierarchies, this::stop)
+                               .build(this::getHierarchies, this::restore)
             )
-        ).get();
+        );
+        return new SubRoutes(ApiPaths.SUBSCRIPTIONS, routes).get();
     }
 
     /**
@@ -181,7 +182,7 @@ public class SubscriptionHandlers implements RouteProvider {
             return Map.of(ResourceType.PROJECT, new Hierarchies.ProjectHierarchy(subscriptionProject));
         }
 
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
         Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
         String topicName = topicNameSegments[1];
@@ -206,7 +207,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> subscriptionNames = subscriptionService.getSubscriptionList(projectName, includeInactive);
+        List<String> subscriptionNames = varadhiSubscriptionService.getSubscriptionList(projectName, includeInactive);
         Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscriptionNames);
     }
 
@@ -218,7 +219,7 @@ public class SubscriptionHandlers implements RouteProvider {
     public void get(RoutingContext ctx) {
         String internalSubscriptionName = getSubscriptionFqn(ctx);
         SubscriptionResource subscription = SubscriptionResource.from(
-            subscriptionService.getSubscription(internalSubscriptionName)
+            varadhiSubscriptionService.getSubscription(internalSubscriptionName)
         );
         Extensions.RoutingContextExtension.endApiWithResponse(ctx, subscription);
     }
@@ -238,7 +239,7 @@ public class SubscriptionHandlers implements RouteProvider {
             subProject,
             subscribedTopic
         );
-        VaradhiSubscription createdSubscription = subscriptionService.createSubscription(
+        VaradhiSubscription createdSubscription = varadhiSubscriptionService.createSubscription(
             subscribedTopic,
             varadhiSubscription,
             subProject
@@ -258,7 +259,7 @@ public class SubscriptionHandlers implements RouteProvider {
         // Note: Updates are currently allowed even if there are no changes to the subscription, which should be avoided.
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.updateSubscription(
+            varadhiSubscriptionService.updateSubscription(
                 subscription.getSubscriptionInternalName(),
                 subscription.getVersion(),
                 subscription.getDescription(),
@@ -286,7 +287,7 @@ public class SubscriptionHandlers implements RouteProvider {
 
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.deleteSubscription(
+            varadhiSubscriptionService.deleteSubscription(
                 getSubscriptionFqn(ctx),
                 projectCache.getOrThrow(ctx.pathParam(PATH_PARAM_PROJECT)).getEntity(),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
@@ -306,40 +307,10 @@ public class SubscriptionHandlers implements RouteProvider {
 
         Extensions.RoutingContextExtension.handleResponse(
             ctx,
-            subscriptionService.restoreSubscription(
+            varadhiSubscriptionService.restoreSubscription(
                 getSubscriptionFqn(ctx),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx),
                 actionRequest
-            )
-        );
-    }
-
-    /**
-     * Starts a subscription.
-     *
-     * @param ctx the routing context
-     */
-    public void start(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            subscriptionService.start(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
-            )
-        );
-    }
-
-    /**
-     * Stops a subscription.
-     *
-     * @param ctx the routing context
-     */
-    public void stop(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            subscriptionService.stop(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
             )
         );
     }

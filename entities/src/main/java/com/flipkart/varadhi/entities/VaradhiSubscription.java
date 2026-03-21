@@ -5,10 +5,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * Represents a subscription in the Varadhi.
+ * Includes delivery contract fields: targetClientIds, retry/DLQ subscription names, and callback config
+ * for both topic and queue use cases.
  */
 @Getter
 @Setter
@@ -25,8 +28,19 @@ public class VaradhiSubscription extends LifecycleEntity {
     private SubscriptionShards shards;
     private Map<String, String> properties;
 
+    /**
+     * Unified list of target client IDs for delivery (topic: typically one; queue: multiple).
+     */
+    private final List<String> targetClientIds;
+    /**
+     * Callback config required for queue endpoint
+     */
+    private final CallbackConfig callbackConfig;
+
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
     private static final String PROPERTIES_ERROR = "Properties cannot be null or empty";
+    private static final String TARGET_CLIENT_IDS_ERROR =
+        "targetClientIds cannot be null or empty; at least one target client id is required";
 
     /**
      * Constructs a new VaradhiSubscription instance.
@@ -56,7 +70,9 @@ public class VaradhiSubscription extends LifecycleEntity {
         ConsumptionPolicy consumptionPolicy,
         SubscriptionShards shards,
         LifecycleStatus status,
-        Map<String, String> properties
+        Map<String, String> properties,
+        List<String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         super(name, version, MetaStoreEntityType.SUBSCRIPTION);
         this.project = validateNotNullOrEmpty(project, "Project");
@@ -67,13 +83,14 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
         this.shards = validateShards(shards);
+        this.callbackConfig = callbackConfig;
         this.status = status;
         this.properties = validateProperties(properties);
+        this.targetClientIds = validateTargetClientIds(targetClientIds);
     }
 
     /**
-     * Creates a new VaradhiSubscription instance.
-     *
+     * Creates a new VaradhiSubscription instance with required target client id(s).
      * @param name              the name of the subscription
      * @param project           the project associated with the subscription
      * @param topic             the topic associated with the subscription
@@ -84,9 +101,9 @@ public class VaradhiSubscription extends LifecycleEntity {
      * @param consumptionPolicy the consumption policy of the subscription
      * @param shards            the shards of the subscription
      * @param properties        the properties of the subscription
-     * @param actionCode         the actor code indicating the reason for the state
-     *
-     * @return a new VaradhiSubscription instance
+     * @param actionCode        the actor code indicating the reason for the state
+     * @param targetClientIds   list of target client IDs (topic/queue); must contain at least one id
+     * @param callbackConfig    optional callback config for queue-style subscriptions
      */
     public static VaradhiSubscription of(
         String name,
@@ -99,7 +116,9 @@ public class VaradhiSubscription extends LifecycleEntity {
         ConsumptionPolicy consumptionPolicy,
         SubscriptionShards shards,
         Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+        LifecycleStatus.ActionCode actionCode,
+        List<String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         return new VaradhiSubscription(
             name,
@@ -113,7 +132,9 @@ public class VaradhiSubscription extends LifecycleEntity {
             consumptionPolicy,
             shards,
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
-            properties
+            properties,
+            targetClientIds,
+            callbackConfig
         );
     }
 
@@ -121,9 +142,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Retrieves the integer value of a property.
      *
      * @param property the property name
-     *
      * @return the integer value of the property
-     *
      * @throws IllegalArgumentException if the property is not found or cannot be parsed as an integer
      */
     @JsonIgnore
@@ -140,9 +159,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      *
      * @param value     the string value to validate
      * @param fieldName the name of the field being validated
-     *
      * @return the validated string value
-     *
      * @throws IllegalArgumentException if the value is null or empty
      */
     private static String validateNotNullOrEmpty(String value, String fieldName) {
@@ -156,9 +173,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the shards are not null or empty.
      *
      * @param shards the shards to validate
-     *
      * @return the validated shards
-     *
      * @throws IllegalArgumentException if the shards are null or empty
      */
     private static SubscriptionShards validateShards(SubscriptionShards shards) {
@@ -172,9 +187,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the properties are not null or empty.
      *
      * @param properties the properties to validate
-     *
      * @return the validated properties
-     *
      * @throws IllegalArgumentException if the properties are null or empty
      */
     private static Map<String, String> validateProperties(Map<String, String> properties) {
@@ -182,5 +195,25 @@ public class VaradhiSubscription extends LifecycleEntity {
             throw new IllegalArgumentException(PROPERTIES_ERROR);
         }
         return properties;
+    }
+
+    /**
+     * Validates that targetClientIds is non-null, non-empty, and that every element is non-null and non-blank.
+     *
+     * @param targetClientIds the list of target client IDs
+     * @return an immutable copy of the list
+     * @throws IllegalArgumentException if null, empty, or any element is null or blank
+     */
+    private static List<String> validateTargetClientIds(List<String> targetClientIds) {
+        if (targetClientIds == null || targetClientIds.isEmpty()) {
+            throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
+        }
+        boolean hasNullOrBlank = targetClientIds.stream().anyMatch(id -> id == null || id.trim().isEmpty());
+        if (hasNullOrBlank) {
+            throw new IllegalArgumentException(
+                "targetClientIds must not contain null or blank elements; every id must be non-null and non-blank"
+            );
+        }
+        return List.copyOf(targetClientIds);
     }
 }

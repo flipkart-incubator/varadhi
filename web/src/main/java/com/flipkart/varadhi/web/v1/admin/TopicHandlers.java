@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.core.RequestActionType;
@@ -206,7 +206,7 @@ public class TopicHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+        List<String> topics = varadhiTopicService.list(projectName, includeInactive)
                                                  .stream()
                                                  .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
                                                  .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
