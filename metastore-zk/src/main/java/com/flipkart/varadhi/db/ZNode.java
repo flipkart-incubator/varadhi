@@ -21,6 +21,7 @@ import lombok.Getter;
  *     <li>SHARD_OP - Shard Operation nodes</li>
  *     <li>ASSIGNMENT - Assignment nodes</li>
  *     <li>EVENT - Event nodes</li>
+ *     <li>REGION - Region nodes</li>
  * </ul>
  *
  * @see ZNodeKind
@@ -40,6 +41,7 @@ public final class ZNode {
      */
     public static final ZNodeKind TEAM = new ZNodeKind("Team", "%s" + RESOURCE_NAME_SEPARATOR + "%s");
     public static final ZNodeKind PROJECT = new ZNodeKind("Project", "%s");
+    public static final ZNodeKind REGION = new ZNodeKind("Region", "%s");
     public static final ZNodeKind TOPIC = new ZNodeKind("Topic", "%s");
     public static final ZNodeKind IAM_POLICY = new ZNodeKind("IamPolicy", "%s");
     public static final ZNodeKind SUBSCRIPTION = new ZNodeKind("Subscription", "%s");
@@ -76,6 +78,10 @@ public final class ZNode {
 
     public static ZNode ofProject(String projectName) {
         return new ZNode(projectName, PROJECT.kind(), PROJECT.resolvePath(ENTITIES_BASE_PATH, projectName));
+    }
+
+    public static ZNode ofRegion(String regionName) {
+        return new ZNode(regionName, REGION.kind(), REGION.resolvePath(ENTITIES_BASE_PATH, regionName));
     }
 
     public static ZNode ofTopic(String topicName) {

@@ -99,6 +99,7 @@ public class IamPolicyService {
                 yield (segments.length == 2) && metaStore.subscriptions().exists(subscriptionName);
             }
             case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
+            case REGION -> metaStore.regions().exists(resourceId);
         };
     }
 

@@ -21,6 +21,25 @@ public class Hierarchies {
     }
 
 
+    /**
+     * Hierarchy for a single region (metastore region id).
+     */
+    public record RegionHierarchy(String region) implements ResourceHierarchy {
+
+        @Override
+        public String getResourcePath() {
+            return "/" + region;
+        }
+
+        @Override
+        public Map<String, String> getAttributes() {
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(TAG_REGION, region);
+            return attributes;
+        }
+    }
+
+
     public record OrgHierarchy(String org) implements ResourceHierarchy {
 
         @Override

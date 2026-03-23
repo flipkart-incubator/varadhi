@@ -40,7 +40,7 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
      * If the resource exists, it creates an UPSERT event with the resource data.
      * If the resource doesn't exist (ResourceNotFoundException), it creates an INVALIDATE event.
      * <p>
-     * The method supports TOPIC, SUBSCRIPTION, and PROJECT resource types.
+     * The method supports TOPIC, SUBSCRIPTION, PROJECT, ORG, and REGION resource types.
      *
      * @param event the MetaStore change event to process
      * @throws IllegalArgumentException if the resource type is not supported
@@ -70,6 +70,11 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                     log.debug("Retrieved project {}, creating UPSERT event", name);
                     processUpsertEvent(ResourceType.PROJECT, name, project, type, event::markAsProcessed);
                 }
+                case REGION -> {
+                    Region region = metaStore.regions().get(name);
+                    log.debug("Retrieved region {}, creating UPSERT event", name);
+                    processUpsertEvent(ResourceType.REGION, name, region, type, event::markAsProcessed);
+                }
                 case ORG, ORG_FILTER -> {
                     Org org = metaStore.orgs().get(name);
                     OrgFilters orgFilters = metaStore.orgs().getFilter(name);
@@ -98,6 +103,8 @@ public class DefaultMetaStoreChangeListener implements MetaStoreEventListener {
                 processInvalidateEvent(ResourceType.PROJECT, name, event::markAsProcessed);
             } else if (type == MetaStoreEntityType.ORG) {
                 processInvalidateEvent(ResourceType.ORG, name, event::markAsProcessed);
+            } else if (type == MetaStoreEntityType.REGION) {
+                processInvalidateEvent(ResourceType.REGION, name, event::markAsProcessed);
             }
         }
     }
