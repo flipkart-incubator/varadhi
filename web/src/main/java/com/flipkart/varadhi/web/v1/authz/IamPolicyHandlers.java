@@ -69,6 +69,9 @@ public class IamPolicyHandlers implements RouteProvider {
                 ctx.pathParam(PATH_PARAM_SUBSCRIPTION)
             );
             case IAM_POLICY -> throw new IllegalArgumentException("IamPolicy is not a policy owning resource.");
+            case REGION -> throw new IllegalArgumentException(
+                "REGION is not exposed via IAM policy HTTP routes; use metastore APIs."
+            );
         };
     }
 

@@ -69,7 +69,15 @@ public enum ResourceAction {
     IAM_POLICY_GET(ResourceType.IAM_POLICY, Action.GET), IAM_POLICY_SET(
         ResourceType.IAM_POLICY,
         Action.SET
-    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE);
+    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE),
+
+    /**
+     * Actions related to region resources (logical zones / DCs).
+     */
+    REGION_CREATE(ResourceType.REGION, Action.CREATE), REGION_GET(ResourceType.REGION, Action.GET), REGION_LIST(
+        ResourceType.ROOT,
+        Action.LIST
+    ), REGION_DELETE(ResourceType.REGION, Action.DELETE);
 
     /**
      * The type of resource associated with the action.
