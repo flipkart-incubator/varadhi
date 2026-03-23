@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.flipkart.varadhi.entities.VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class SubscriptionTest {
 
-    private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -89,10 +87,10 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "sub-1")
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
 
-        assertEquals(Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "sub-1"), sub.getTargetClientIds());
+        assertEquals(Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1"), sub.getTargetClientIds());
         assertNull(sub.getCallbackConfig());
     }
 
@@ -138,13 +136,13 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "sub-1")
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
 
         String json = JsonMapper.jsonSerialize(sub);
         VaradhiSubscription deserialized = JsonMapper.jsonDeserialize(json, VaradhiSubscription.class);
 
-        assertEquals(Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "sub-1"), deserialized.getTargetClientIds());
+        assertEquals(Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1"), deserialized.getTargetClientIds());
         assertNull(deserialized.getCallbackConfig());
     }
 
@@ -304,7 +302,7 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "sub-1")
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
         assertNull(sub.getCallbackConfig());
     }
@@ -324,7 +322,7 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "c1"),
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "c1"),
             callbackConfig
         );
 

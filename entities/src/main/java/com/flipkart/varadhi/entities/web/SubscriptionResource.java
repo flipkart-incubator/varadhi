@@ -49,10 +49,11 @@ public class SubscriptionResource extends Versioned implements Validatable {
     private LifecycleStatus.ActionCode actionCode;
 
     /**
-     * Target client id per consumer endpoint: key = stable endpoint identifier (see
-     * {@link VaradhiSubscription#DEFAULT_CONSUMER_ENDPOINT_KEY}), value = client id. One entry is typical for topics;
-     * queues use one entry per logical endpoint. String keys are used instead of {@link Endpoint} as map keys for a
-     * JSON-friendly contract; {@link #endpoint} carries the primary endpoint configuration.
+     * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
+     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #endpoint}), value = client id.
+     * One entry is typical for topics; queues use one entry per logical endpoint. String keys are used instead of
+     * {@link Endpoint} as map keys for a JSON-friendly contract; {@link #endpoint} carries the primary endpoint
+     * configuration.
      */
     @NotNull
     private final Map<String, String> targetClientIds;

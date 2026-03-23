@@ -18,12 +18,6 @@ import java.util.Map;
 @EqualsAndHashCode (callSuper = true)
 public class VaradhiSubscription extends LifecycleEntity {
 
-    /**
-     * Identifier for the sole logical consumer endpoint on typical topic subscriptions (single entry in
-     * {@link #targetClientIds}). Queue-style subscriptions should use a distinct id per queue endpoint instead.
-     */
-    public static final String DEFAULT_CONSUMER_ENDPOINT_KEY = "default";
-
     private final String project;
     private final String topic;
     private String description;
@@ -36,7 +30,7 @@ public class VaradhiSubscription extends LifecycleEntity {
 
     /**
      * Target client IDs keyed by consumer endpoint identifier (topic: usually one entry, often under
-     * {@link #DEFAULT_CONSUMER_ENDPOINT_KEY}; queues: one entry per endpoint with that endpoint's client id).
+     * queues: one entry per endpoint with that endpoint's client id).
      */
     private final Map<String, String> targetClientIds;
     /**

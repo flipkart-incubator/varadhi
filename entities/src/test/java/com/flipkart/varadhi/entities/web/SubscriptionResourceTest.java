@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities.web;
 import com.flipkart.varadhi.entities.*;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,12 +11,23 @@ import java.util.Map;
 import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
 import static com.flipkart.varadhi.entities.Samples.U_TOPIC_RESOURCE_1;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createSubscriptionResource;
-import static com.flipkart.varadhi.entities.VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubscriptionResourceTest {
 
-    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "test");
+    private static final Endpoint.HttpEndpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+        URI.create("http://localhost:8080"),
+        "GET",
+        "",
+        500,
+        500,
+        false
+    );
+
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(
+        DEFAULT_ENDPOINT.getUri().toString(),
+        "test"
+    );
 
     /** Must match {@link VaradhiSubscription} validation for null/empty map. */
     private static final String TARGET_CLIENT_IDS_NULL_OR_EMPTY =
@@ -123,9 +135,9 @@ class SubscriptionResourceTest {
             base.getConsumptionPolicy(),
             base.getProperties(),
             base.getActionCode(),
-            Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "client-1")
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "client-1")
         );
-        assertEquals(Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "client-1"), single.getTargetClientIds());
+        assertEquals(Map.of(DEFAULT_ENDPOINT.getUri().toString(), "client-1"), single.getTargetClientIds());
 
         SubscriptionResource multiple = SubscriptionResource.of(
             base.getName(),

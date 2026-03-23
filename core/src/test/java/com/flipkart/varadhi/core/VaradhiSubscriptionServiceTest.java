@@ -51,6 +51,7 @@ import org.mockito.ArgumentCaptor;
 
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createGroupedSubscription;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupedSubscription;
+import static com.flipkart.varadhi.entities.SubscriptionTestUtils.defaultTestEndpointUriKey;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.getSubscriptionDefaultProperties;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -77,10 +78,7 @@ class VaradhiSubscriptionServiceTest {
     private VaradhiSubscription subscription1, subscription2;
 
     private static final String REQUESTED_BY = Constants.ANONYMOUS_IDENTITY;
-    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(
-        VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY,
-        "test"
-    );
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(defaultTestEndpointUriKey(), "test");
     private TopicStore topicStore;
     private SubscriptionStore subscriptionStore;
     private OrgStore orgStore;

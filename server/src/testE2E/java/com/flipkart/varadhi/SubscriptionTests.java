@@ -20,17 +20,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.flipkart.varadhi.entities.VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
-    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "test");
-
-    private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint endpoint = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -38,6 +34,8 @@ public class SubscriptionTests extends E2EBase {
         500,
         false
     );
+
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(endpoint.getUri().toString(), "test");
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
