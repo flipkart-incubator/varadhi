@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -51,7 +52,6 @@ import org.mockito.ArgumentCaptor;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createGroupedSubscription;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.createUngroupedSubscription;
 import static com.flipkart.varadhi.entities.SubscriptionTestUtils.getSubscriptionDefaultProperties;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -77,7 +77,10 @@ class VaradhiSubscriptionServiceTest {
     private VaradhiSubscription subscription1, subscription2;
 
     private static final String REQUESTED_BY = Constants.ANONYMOUS_IDENTITY;
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(
+        VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY,
+        "test"
+    );
     private TopicStore topicStore;
     private SubscriptionStore subscriptionStore;
     private OrgStore orgStore;
@@ -516,7 +519,7 @@ class VaradhiSubscriptionServiceTest {
         varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
-            subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
+            VaradhiTopicName.parse(subscription1.getName()).getTopicName(),
             project1,
             unGroupedTopic
         );
@@ -540,7 +543,7 @@ class VaradhiSubscriptionServiceTest {
         varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
-            subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
+            VaradhiTopicName.parse(subscription1.getName()).getTopicName(),
             project1,
             unGroupedTopic
         );
@@ -568,7 +571,7 @@ class VaradhiSubscriptionServiceTest {
         varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createGroupedSubscription(
-            subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
+            VaradhiTopicName.parse(subscription1.getName()).getTopicName(),
             project1,
             unGroupedTopic
         );
@@ -596,7 +599,7 @@ class VaradhiSubscriptionServiceTest {
         varadhiSubscriptionService.createSubscription(unGroupedTopic, subscription1, project1);
 
         VaradhiSubscription update = createUngroupedSubscription(
-            subscription1.getName().split(NAME_SEPARATOR_REGEX)[1],
+            VaradhiTopicName.parse(subscription1.getName()).getTopicName(),
             project1,
             unGroupedTopic
         );

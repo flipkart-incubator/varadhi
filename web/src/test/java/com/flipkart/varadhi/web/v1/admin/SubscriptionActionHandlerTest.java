@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -15,11 +17,15 @@ import org.mockito.MockitoAnnotations;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.entities.Samples.PROJECT_1;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class SubscriptionActionHandlerTest extends SubscriptionTestBase {
 
@@ -80,5 +86,63 @@ class SubscriptionActionHandlerTest extends SubscriptionTestBase {
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
         verify(varadhiSubscriptionService, times(1)).stop(any(), any());
+    }
+
+    @Test
+    void startSubscription_ServiceReturnsNotFound_Returns404() throws InterruptedException {
+        String errorMessage = "SUBSCRIPTION(default.sub1) not found";
+        HttpRequest<Buffer> request = createRequest(
+            HttpMethod.POST,
+            buildSubscriptionUrl("sub1", PROJECT_1) + "/start"
+        );
+
+        when(varadhiSubscriptionService.start(any(), any())).thenReturn(
+            CompletableFuture.failedFuture(new ResourceNotFoundException(errorMessage))
+        );
+
+        sendRequestWithoutPayload(request, HTTP_NOT_FOUND, errorMessage);
+
+        verify(varadhiSubscriptionService, times(1)).start(any(), any());
+    }
+
+    @Test
+    void stopSubscription_ServiceReturnsNotFound_Returns404() throws InterruptedException {
+        String errorMessage = "SUBSCRIPTION(default.sub1) not found";
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionUrl("sub1", PROJECT_1) + "/stop");
+
+        when(varadhiSubscriptionService.stop(any(), any())).thenReturn(
+            CompletableFuture.failedFuture(new ResourceNotFoundException(errorMessage))
+        );
+
+        sendRequestWithoutPayload(request, HTTP_NOT_FOUND, errorMessage);
+
+        verify(varadhiSubscriptionService, times(1)).stop(any(), any());
+    }
+
+    @Test
+    void startSubscription_ServiceReturnsIllegalArgument_Returns400() throws InterruptedException {
+        String errorMessage = "Subscription cannot be started in current state";
+        HttpRequest<Buffer> request = createRequest(
+            HttpMethod.POST,
+            buildSubscriptionUrl("sub1", PROJECT_1) + "/start"
+        );
+
+        when(varadhiSubscriptionService.start(any(), any())).thenReturn(
+            CompletableFuture.failedFuture(new IllegalArgumentException(errorMessage))
+        );
+
+        sendRequestWithoutPayload(request, HTTP_BAD_REQUEST, errorMessage);
+
+        verify(varadhiSubscriptionService, times(1)).start(any(), any());
+    }
+
+    @Test
+    void startSubscription_GetMethod_MethodNotAllowed_ServiceNotInvoked() {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, buildSubscriptionUrl("sub1", PROJECT_1) + "/start");
+
+        sendRequestWithoutPayload(request, HttpResponseStatus.METHOD_NOT_ALLOWED.code());
+
+        verify(varadhiSubscriptionService, never()).start(any(), any());
+        verify(varadhiSubscriptionService, never()).stop(any(), any());
     }
 }

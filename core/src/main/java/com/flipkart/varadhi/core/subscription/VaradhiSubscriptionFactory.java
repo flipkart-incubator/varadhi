@@ -94,8 +94,7 @@ public final class VaradhiSubscriptionFactory {
             shards,
             subscriptionResource.getProperties(),
             subscriptionResource.getActionCode(),
-            subscriptionResource.getTargetClientIds(),
-            null
+            subscriptionResource.getTargetClientIds()
         );
     }
 

@@ -13,7 +13,6 @@ import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
-import com.flipkart.varadhi.web.routes.ApiPaths;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -47,7 +46,6 @@ import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNO
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
@@ -61,6 +59,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 public class SubscriptionHandlers implements RouteProvider {
 
     private static final String API_NAME = "SUBSCRIPTION";
+    private static final String SUBSCRIPTIONS_PATH = "/v1/projects/:project/subscriptions";
     private static final int NUMBER_OF_RETRIES_ALLOWED = 3;
 
     private final VaradhiSubscriptionService varadhiSubscriptionService;
@@ -134,7 +133,7 @@ public class SubscriptionHandlers implements RouteProvider {
                                .build(this::getHierarchies, this::restore)
             )
         );
-        return new SubRoutes(ApiPaths.SUBSCRIPTIONS, routes).get();
+        return new SubRoutes(SUBSCRIPTIONS_PATH, routes).get();
     }
 
     /**
@@ -183,9 +182,9 @@ public class SubscriptionHandlers implements RouteProvider {
         }
 
         VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
-        String topicName = topicNameSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        Project topicProject = projectCache.getOrThrow(topicFqn.getProjectName()).getEntity();
+        String topicName = topicFqn.getTopicName();
 
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(subscriptionProject, subscriptionName)),

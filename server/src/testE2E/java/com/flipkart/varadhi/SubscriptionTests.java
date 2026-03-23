@@ -18,6 +18,9 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static com.flipkart.varadhi.entities.VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(DEFAULT_CONSUMER_ENDPOINT_KEY, "test");
 
     private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),

@@ -21,6 +21,7 @@ public class SubscriptionTestUtils {
     public static final int DEFAULT_THROUGHPUT_KBPS = 20000;
     public static final int DEFAULT_READ_FANOUT = 2;
     public static final int DEFAULT_RETENTION_PERIOD = 2;
+    public static final String DEFAULT_CLIENT_ID = "test-client";
 
     private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
@@ -317,8 +318,7 @@ public class SubscriptionTestUtils {
                 shards,
                 properties,
                 LifecycleStatus.ActionCode.SYSTEM_ACTION,
-                List.of(name),
-                null
+                Map.of(VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY, name)
             );
         }
     }
@@ -357,8 +357,7 @@ public class SubscriptionTestUtils {
             DEFAULT_SHARDS,
             getSubscriptionDefaultProperties(),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            List.of(SubscriptionResource.buildInternalName(project.getName(), subscriptionName)),
-            null
+            Map.of(VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY, DEFAULT_CLIENT_ID)
         );
     }
 
@@ -370,7 +369,10 @@ public class SubscriptionTestUtils {
         return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
     }
 
-    private static final List<String> DEFAULT_TARGET_CLIENT_IDS = List.of("test");
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(
+        VaradhiSubscription.DEFAULT_CONSUMER_ENDPOINT_KEY,
+        "test"
+    );
 
     public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,

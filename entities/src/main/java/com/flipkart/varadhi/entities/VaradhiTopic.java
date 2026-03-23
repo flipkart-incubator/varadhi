@@ -94,7 +94,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @return the constructed topic name
      */
     public static String fqn(String projectName, String topicName) {
-        return String.join(NAME_SEPARATOR, projectName, topicName);
+        return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
     /**
@@ -114,7 +114,15 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      */
     @JsonIgnore
     public String getProjectName() {
-        return getName().split(NAME_SEPARATOR_REGEX)[0];
+        return VaradhiTopicName.parse(getName()).getProjectName();
+    }
+
+    /**
+     * Local topic name (segment after the project prefix in the fully-qualified name).
+     */
+    @JsonIgnore
+    public String getTopicName() {
+        return VaradhiTopicName.parse(getName()).getTopicName();
     }
 
     /**

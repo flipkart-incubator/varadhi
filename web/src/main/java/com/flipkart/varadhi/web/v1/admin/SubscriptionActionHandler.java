@@ -6,12 +6,12 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
-import com.flipkart.varadhi.web.routes.ApiPaths;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
@@ -24,7 +24,6 @@ import static com.flipkart.varadhi.common.Constants.MethodNames.START;
 import static com.flipkart.varadhi.common.Constants.MethodNames.STOP;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 
 /**
@@ -37,6 +36,7 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPD
 public class SubscriptionActionHandler implements RouteProvider {
 
     private static final String API_NAME = "SUBSCRIPTION";
+    private static final String SUBSCRIPTIONS_PATH = "/v1/projects/:project/subscriptions";
 
     private final VaradhiSubscriptionService varadhiSubscriptionService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
@@ -60,9 +60,9 @@ public class SubscriptionActionHandler implements RouteProvider {
         }
 
         VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
-        String topicName = topicNameSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        Project topicProject = projectCache.getOrThrow(topicFqn.getProjectName()).getEntity();
+        String topicName = topicFqn.getTopicName();
 
         return Map.ofEntries(
             Map.entry(
@@ -91,7 +91,7 @@ public class SubscriptionActionHandler implements RouteProvider {
 
     @Override
     public List<RouteDefinition> get() {
-        return new SubRoutes(ApiPaths.SUBSCRIPTIONS, getActionRouteDefinitions()).get();
+        return new SubRoutes(SUBSCRIPTIONS_PATH, getActionRouteDefinitions()).get();
     }
 
     /**

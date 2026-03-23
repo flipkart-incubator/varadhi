@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.entities.web;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -50,10 +49,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
     private LifecycleStatus.ActionCode actionCode;
 
     /**
-     * Target client IDs for delivery (one for subscription, multiple for queues).
+     * Target client id per consumer endpoint: key = stable endpoint identifier (see
+     * {@link VaradhiSubscription#DEFAULT_CONSUMER_ENDPOINT_KEY}), value = client id. One entry is typical for topics;
+     * queues use one entry per logical endpoint. String keys are used instead of {@link Endpoint} as map keys for a
+     * JSON-friendly contract; {@link #endpoint} carries the primary endpoint configuration.
      */
     @NotNull
-    private final List<String> targetClientIds;
+    private final Map<String, String> targetClientIds;
 
     /**
      * Constructs a new SubscriptionResource.
@@ -70,7 +72,7 @@ public class SubscriptionResource extends Versioned implements Validatable {
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
      * @param actionCode        The actor code associated with the subscription.
-     * @param targetClientIds   Target client IDs (single for subscription, multiple for queues); at least one required.
+     * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
      */
     private SubscriptionResource(
         String name,
@@ -85,7 +87,7 @@ public class SubscriptionResource extends Versioned implements Validatable {
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
         LifecycleStatus.ActionCode actionCode,
-        List<String> targetClientIds
+        Map<String, String> targetClientIds
     ) {
         super(name, version);
         this.project = project;
@@ -98,26 +100,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
         this.consumptionPolicy = consumptionPolicy;
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
-        this.targetClientIds = validateTargetClientIds(targetClientIds, name);
-    }
-
-    private static List<String> validateTargetClientIds(List<String> targetClientIds, String subscriptionName) {
-        if (targetClientIds == null || targetClientIds.isEmpty()) {
-            return List.of(subscriptionName);
-        }
-        boolean hasNullOrBlank = targetClientIds.stream().anyMatch(id -> id == null || id.trim().isEmpty());
-        if (hasNullOrBlank) {
-            throw new IllegalArgumentException(
-                "targetClientIds must not contain null or blank elements; every id must be non-null and non-blank"
-            );
-        }
-        return List.copyOf(targetClientIds);
+        this.targetClientIds = VaradhiSubscription.validateTargetClientIds(targetClientIds);
     }
 
     /**
      * Creates a new SubscriptionResource instance.
      *
-     * @param targetClientIds   Target client IDs (single for subscription, multiple for queues); at least one required.
+     * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
      */
     public static SubscriptionResource of(
         String name,
@@ -131,7 +120,7 @@ public class SubscriptionResource extends Versioned implements Validatable {
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
         LifecycleStatus.ActionCode actionCode,
-        List<String> targetClientIds
+        Map<String, String> targetClientIds
     ) {
         return new SubscriptionResource(
             name,
@@ -159,7 +148,7 @@ public class SubscriptionResource extends Versioned implements Validatable {
      * @return The internal name for the subscription.
      */
     public static String buildInternalName(String project, String subsResourceName) {
-        return String.join(NAME_SEPARATOR, project, subsResourceName);
+        return VaradhiTopicName.of(project, subsResourceName).toFqn();
     }
 
     /**
@@ -170,13 +159,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
      * @return A new SubscriptionResource instance.
      */
     public static SubscriptionResource from(VaradhiSubscription subscription) {
-        String[] subscriptionSegments = subscription.getName().split(NAME_SEPARATOR_REGEX);
-        String subscriptionProject = subscriptionSegments[0];
-        String subscriptionName = subscriptionSegments[1];
+        VaradhiTopicName subscriptionFqn = VaradhiTopicName.parse(subscription.getName());
+        String subscriptionProject = subscriptionFqn.getProjectName();
+        String subscriptionName = subscriptionFqn.getTopicName();
 
-        String[] topicSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        String topicProject = topicSegments[0];
-        String topicName = topicSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        String topicProject = topicFqn.getProjectName();
+        String topicName = topicFqn.getTopicName();
 
         SubscriptionResource subResource = of(
             subscriptionName,

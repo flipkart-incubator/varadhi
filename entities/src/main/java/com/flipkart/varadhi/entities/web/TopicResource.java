@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.Versioned;
 import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
@@ -107,12 +108,12 @@ public class TopicResource extends Versioned implements Validatable {
      * @return a new TopicResource instance
      */
     public static TopicResource from(VaradhiTopic varadhiTopic) {
-        String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
+        VaradhiTopicName fqn = VaradhiTopicName.parse(varadhiTopic.getName());
 
         return new TopicResource(
-            topicResourceInfo[1],
+            fqn.getTopicName(),
             varadhiTopic.getVersion(),
-            topicResourceInfo[0],
+            fqn.getProjectName(),
             varadhiTopic.isGrouped(),
             varadhiTopic.getCapacity(),
             varadhiTopic.getStatus().getActionCode(),

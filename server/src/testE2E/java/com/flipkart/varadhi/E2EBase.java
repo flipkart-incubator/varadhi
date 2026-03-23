@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
@@ -24,7 +25,6 @@ import java.util.List;
 
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -198,7 +198,7 @@ public class E2EBase {
     public static void cleanupSubscriptionsOnProject(Project project) {
         getSubscriptions(makeListRequest(getSubscriptionsUri(project), EXPECTED_STATUS_OK)).forEach(
             sub -> makeDeleteRequest(
-                getSubscriptionsUri(project, sub.split(NAME_SEPARATOR_REGEX)[1]),
+                getSubscriptionsUri(project, VaradhiTopicName.parse(sub).getTopicName()),
                 ResourceDeletionType.HARD_DELETE.toString(),
                 EXPECTED_STATUS_204
             )

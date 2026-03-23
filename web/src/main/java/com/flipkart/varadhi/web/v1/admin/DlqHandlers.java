@@ -31,7 +31,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCR
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
@@ -87,9 +86,9 @@ public class DlqHandlers implements RouteProvider {
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
         VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
-        String topicName = topicNameSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        Project topicProject = projectCache.getOrThrow(topicFqn.getProjectName()).getEntity();
+        String topicName = topicFqn.getTopicName();
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
             Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
