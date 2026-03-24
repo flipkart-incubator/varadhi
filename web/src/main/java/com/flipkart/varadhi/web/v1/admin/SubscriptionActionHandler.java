@@ -6,23 +6,37 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
+import com.flipkart.varadhi.web.routes.RouteDefinition;
+import com.flipkart.varadhi.web.routes.RouteProvider;
+import com.flipkart.varadhi.web.routes.SubRoutes;
 import io.vertx.ext.web.RoutingContext;
 
+import java.util.List;
 import java.util.Map;
 
+import static com.flipkart.varadhi.common.Constants.MethodNames.START;
+import static com.flipkart.varadhi.common.Constants.MethodNames.STOP;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 
 /**
- * Handles subscription lifecycle actions: start and stop.
+ * Handles actions that are common to both subscription (topic) and queue: start, stop, offset-reset, etc.
+ * These actions require only the subscription name and are shared by topic and queue flows.
+ * <p>
+ * Route definitions for these actions are in this class. This class is a {@link RouteProvider} so
+ * action routes are registered separately from {@link SubscriptionHandlers} (CRUD and restore only).
  */
-public class SubscriptionActionHandler {
+public class SubscriptionActionHandler implements RouteProvider {
+
+    private static final String API_NAME = "SUBSCRIPTION";
+    private static final String SUBSCRIPTIONS_PATH = "/v1/projects/:project/subscriptions";
 
     private final VaradhiSubscriptionService varadhiSubscriptionService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
@@ -46,9 +60,9 @@ public class SubscriptionActionHandler {
         }
 
         VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
-        String topicName = topicNameSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        Project topicProject = projectCache.getOrThrow(topicFqn.getProjectName()).getEntity();
+        String topicName = topicFqn.getTopicName();
 
         return Map.ofEntries(
             Map.entry(
@@ -60,29 +74,52 @@ public class SubscriptionActionHandler {
     }
 
     /**
+     * Returns route definitions for actions common to subscription and queue (start, stop, etc.).
+     */
+    public List<RouteDefinition> getActionRouteDefinitions() {
+        return List.of(
+            RouteDefinition.post(START, API_NAME, "/:subscription/start")
+                           .nonBlocking()
+                           .authorize(SUBSCRIPTION_UPDATE)
+                           .build(this::getHierarchies, this::start),
+            RouteDefinition.post(STOP, API_NAME, "/:subscription/stop")
+                           .nonBlocking()
+                           .authorize(SUBSCRIPTION_UPDATE)
+                           .build(this::getHierarchies, this::stop)
+        );
+    }
+
+    @Override
+    public List<RouteDefinition> get() {
+        return new SubRoutes(SUBSCRIPTIONS_PATH, getActionRouteDefinitions()).get();
+    }
+
+    /**
      * Starts a subscription.
      */
     public void start(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            varadhiSubscriptionService.start(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
-            )
-        );
+        executeLifecycleAction(ctx, LifecycleAction.START);
     }
 
     /**
      * Stops a subscription.
      */
     public void stop(RoutingContext ctx) {
-        Extensions.RoutingContextExtension.handleResponse(
-            ctx,
-            varadhiSubscriptionService.stop(
-                getSubscriptionFqn(ctx),
-                Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
-            )
-        );
+        executeLifecycleAction(ctx, LifecycleAction.STOP);
+    }
+
+    private void executeLifecycleAction(RoutingContext ctx, LifecycleAction action) {
+        String fqn = getSubscriptionFqn(ctx);
+        String identity = Extensions.RoutingContextExtension.getIdentityOrDefault(ctx);
+        var future = switch (action) {
+            case START -> varadhiSubscriptionService.start(fqn, identity);
+            case STOP -> varadhiSubscriptionService.stop(fqn, identity);
+        };
+        Extensions.RoutingContextExtension.handleResponse(ctx, future);
+    }
+
+    private enum LifecycleAction {
+        START, STOP
     }
 
     private static String getSubscriptionFqn(RoutingContext ctx) {

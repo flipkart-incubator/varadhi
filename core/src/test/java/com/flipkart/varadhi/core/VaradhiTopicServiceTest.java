@@ -494,7 +494,7 @@ class VaradhiTopicServiceTest {
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> activeTopics = varadhiTopicService.getVaradhiTopics(projectName, false);
+        List<String> activeTopics = varadhiTopicService.list(projectName, false);
 
         assertNotNull(activeTopics);
         assertEquals(2, activeTopics.size());
@@ -509,7 +509,7 @@ class VaradhiTopicServiceTest {
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> activeTopics = varadhiTopicService.getVaradhiTopics(projectName, false);
+        List<String> activeTopics = varadhiTopicService.list(projectName, false);
 
         assertNotNull(activeTopics);
         assertEquals(2, activeTopics.size());
@@ -524,7 +524,7 @@ class VaradhiTopicServiceTest {
 
         setupMockTopics(projectName, topicNames, topicStatuses);
 
-        List<String> allTopics = varadhiTopicService.getVaradhiTopics(projectName, true);
+        List<String> allTopics = varadhiTopicService.list(projectName, true);
 
         assertNotNull(allTopics);
         assertEquals(3, allTopics.size());

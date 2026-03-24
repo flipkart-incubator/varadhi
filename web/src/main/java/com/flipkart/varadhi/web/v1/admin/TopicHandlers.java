@@ -30,7 +30,6 @@ import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELE
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
 import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
@@ -206,10 +205,10 @@ public class TopicHandlers implements RouteProvider {
                                      .map(Boolean::parseBoolean)
                                      .orElse(false);
 
-        List<String> topics = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+        List<String> topics = varadhiTopicService.list(projectName, includeInactive)
                                                  .stream()
                                                  .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
-                                                 .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
+                                                 .map(topic -> VaradhiTopicName.parse(topic).getTopicName())
                                                  .toList();
 
         ctx.endApiWithResponse(topics);
@@ -251,7 +250,7 @@ public class TopicHandlers implements RouteProvider {
      * @return the full topic name
      */
     private String buildTopicName(String projectName, String topicName) {
-        return String.join(NAME_SEPARATOR, projectName, topicName);
+        return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
     /**

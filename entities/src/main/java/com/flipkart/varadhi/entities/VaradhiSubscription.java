@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Strings;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,9 +30,10 @@ public class VaradhiSubscription extends LifecycleEntity {
     private Map<String, String> properties;
 
     /**
-     * Unified list of target client IDs for delivery (topic: typically one; queue: multiple).
+     * Target client IDs keyed by consumer endpoint identifier (topic: usually one entry, often under
+     * queues: one entry per endpoint with that endpoint's client id).
      */
-    private final List<String> targetClientIds;
+    private final Map<String, String> targetClientIds;
     /**
      * Callback config required for queue endpoint
      */
@@ -39,6 +41,10 @@ public class VaradhiSubscription extends LifecycleEntity {
 
     private static final String SHARDS_ERROR = "Shards cannot be null or empty";
     private static final String PROPERTIES_ERROR = "Properties cannot be null or empty";
+    private static final String TARGET_CLIENT_IDS_ERROR =
+        "targetClientIds map cannot be null or empty; at least one endpoint-to-client-id mapping is required";
+    private static final String TARGET_CLIENT_IDS_INVALID_ENTRY =
+        "targetClientIds map keys and values must be non-null and non-blank";
 
     /**
      * Constructs a new VaradhiSubscription instance.
@@ -69,7 +75,7 @@ public class VaradhiSubscription extends LifecycleEntity {
         SubscriptionShards shards,
         LifecycleStatus status,
         Map<String, String> properties,
-        List<String> targetClientIds,
+        Map<String, String> targetClientIds,
         CallbackConfig callbackConfig
     ) {
         super(name, version, MetaStoreEntityType.SUBSCRIPTION);
@@ -84,58 +90,13 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.callbackConfig = callbackConfig;
         this.status = status;
         this.properties = validateProperties(properties);
-        this.targetClientIds = targetClientIds != null ? List.copyOf(targetClientIds) : List.of();
+        this.targetClientIds = validateTargetClientIds(targetClientIds);
     }
 
     /**
-     * Creates a new VaradhiSubscription instance (no delivery/callback overrides).
-     * @param name              the name of the subscription
-     * @param project           the project associated with the subscription
-     * @param topic             the topic associated with the subscription
-     * @param description       the description of the subscription
-     * @param grouped           whether the subscription is grouped
-     * @param endpoint          the endpoint of the subscription
-     * @param retryPolicy       the retry policy of the subscription
-     * @param consumptionPolicy the consumption policy of the subscription
-     * @param shards            the shards of the subscription
-     * @param properties        the properties of the subscription
-     * @param actionCode         the actor code indicating the reason for the state
-     */
-    public static VaradhiSubscription of(
-        String name,
-        String project,
-        String topic,
-        String description,
-        boolean grouped,
-        Endpoint endpoint,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        SubscriptionShards shards,
-        Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        return of(
-            name,
-            project,
-            topic,
-            description,
-            grouped,
-            endpoint,
-            retryPolicy,
-            consumptionPolicy,
-            shards,
-            properties,
-            actionCode,
-            null,
-            null
-        );
-    }
-
-    /**
-     * Creates a new VaradhiSubscription instance with optional delivery contract fields.
-     *
-     * @param targetClientIds optional list of target client IDs (topic/queue)
-     * @param callbackConfig  optional callback config for queue-style subscriptions
+     * Creates a new VaradhiSubscription with no callback config ({@code callbackConfig == null}).
+     * Same as {@link #of(String, String, String, String, boolean, Endpoint, RetryPolicy, ConsumptionPolicy, SubscriptionShards, Map, LifecycleStatus.ActionCode, Map, CallbackConfig)}
+     * with a null callback.
      */
     public static VaradhiSubscription of(
         String name,
@@ -149,7 +110,55 @@ public class VaradhiSubscription extends LifecycleEntity {
         SubscriptionShards shards,
         Map<String, String> properties,
         LifecycleStatus.ActionCode actionCode,
-        List<String> targetClientIds,
+        Map<String, String> targetClientIds
+    ) {
+        return of(
+            name,
+            project,
+            topic,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            shards,
+            properties,
+            actionCode,
+            targetClientIds,
+            null
+        );
+    }
+
+    /**
+     * Creates a new VaradhiSubscription instance with required target client id(s) and optional callback config.
+     *
+     * @param name              the name of the subscription
+     * @param project           the project associated with the subscription
+     * @param topic             the topic associated with the subscription
+     * @param description       the description of the subscription
+     * @param grouped           whether the subscription is grouped
+     * @param endpoint          the endpoint of the subscription
+     * @param retryPolicy       the retry policy of the subscription
+     * @param consumptionPolicy the consumption policy of the subscription
+     * @param shards            the shards of the subscription
+     * @param properties        the properties of the subscription
+     * @param actionCode        the actor code indicating the reason for the state
+     * @param targetClientIds   endpoint id → client id (non-empty map; keys/values non-blank)
+     * @param callbackConfig    optional callback config for queue-style subscriptions ({@code null} if none)
+     */
+    public static VaradhiSubscription of(
+        String name,
+        String project,
+        String topic,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        SubscriptionShards shards,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode,
+        Map<String, String> targetClientIds,
         CallbackConfig callbackConfig
     ) {
         return new VaradhiSubscription(
@@ -205,7 +214,9 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the shards are not null or empty.
      *
      * @param shards the shards to validate
+     *
      * @return the validated shards
+     *
      * @throws IllegalArgumentException if the shards are null or empty
      */
     private static SubscriptionShards validateShards(SubscriptionShards shards) {
@@ -219,7 +230,9 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the properties are not null or empty.
      *
      * @param properties the properties to validate
+     *
      * @return the validated properties
+     *
      * @throws IllegalArgumentException if the properties are null or empty
      */
     private static Map<String, String> validateProperties(Map<String, String> properties) {
@@ -227,5 +240,24 @@ public class VaradhiSubscription extends LifecycleEntity {
             throw new IllegalArgumentException(PROPERTIES_ERROR);
         }
         return properties;
+    }
+
+    /**
+     * Validates that {@code targetClientIds} is non-null, non-empty, and that every key and value is non-null and non-blank.
+     *
+     * @param targetClientIds endpoint identifier → client id
+     * @return an immutable copy of the map
+     * @throws IllegalArgumentException if null, empty, or any key or value is null or blank
+     */
+    public static Map<String, String> validateTargetClientIds(Map<String, String> targetClientIds) {
+        if (targetClientIds == null || targetClientIds.isEmpty()) {
+            throw new IllegalArgumentException(TARGET_CLIENT_IDS_ERROR);
+        }
+        for (Map.Entry<String, String> e : targetClientIds.entrySet()) {
+            if (Strings.isNullOrEmpty(e.getKey()) || Strings.isNullOrEmpty(e.getValue())) {
+                throw new IllegalArgumentException(TARGET_CLIENT_IDS_INVALID_ENTRY);
+            }
+        }
+        return Map.copyOf(targetClientIds);
     }
 }

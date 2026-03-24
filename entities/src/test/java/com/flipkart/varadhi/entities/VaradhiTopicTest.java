@@ -90,6 +90,13 @@ class VaradhiTopicTest {
     }
 
     @Test
+    void getTopicName_ReturnsCorrectLocalTopicName() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertEquals(TOPIC_NAME, varadhiTopic.getTopicName(), "Topic name segment mismatch");
+    }
+
+    @Test
     void getProduceTopicForRegion_WithValidRegion_ReturnsCorrectTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());

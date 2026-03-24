@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SubscriptionTests extends E2EBase {
 
-    private static final Endpoint endpoint = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint endpoint = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -33,6 +34,8 @@ public class SubscriptionTests extends E2EBase {
         500,
         false
     );
+
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(endpoint.getUri().toString(), "test");
     private static Org o1;
     private static Team o1t1;
     private static Project o1t1p1;
@@ -110,7 +113,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         SubscriptionResource r = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         assertSubscriptionEquals(sub, r);
@@ -140,7 +144,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);
         SubscriptionResource created = makeGetRequest(
@@ -159,7 +164,8 @@ public class SubscriptionTests extends E2EBase {
             created.getRetryPolicy(),
             created.getConsumptionPolicy(),
             created.getProperties(),
-            created.getActionCode()
+            created.getActionCode(),
+            created.getTargetClientIds()
         );
         //create subscription executes update internally.
         update.setVersion(1);
@@ -185,7 +191,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -206,7 +213,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(Project.of("some_proj", "desc", "someteam", "org")),
@@ -227,7 +235,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -248,7 +257,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
         makeCreateRequest(
             getSubscriptionsUri(o1t1p1),
@@ -273,7 +283,8 @@ public class SubscriptionTests extends E2EBase {
             retryPolicy,
             consumptionPolicy,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
 
         SubscriptionResource createdSub = makeCreateRequest(getSubscriptionsUri(o1t1p1), sub, 200);

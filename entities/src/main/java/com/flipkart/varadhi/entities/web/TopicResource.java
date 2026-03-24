@@ -5,6 +5,9 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
+import com.flipkart.varadhi.entities.Versioned;
+import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +30,13 @@ public class TopicResource extends BaseResource implements Validatable {
 
     /**
      * Constructs a new TopicResource instance.
+     *
+     * @param name      the name of the topic
+     * @param version   the version of the topic
+     * @param project   the project associated with the topic
+     * @param grouped   whether the topic is grouped
+     * @param capacity  the capacity policy of the topic
+     * @param actionCode the actor code indicating reason behind the action performed on the topic
      */
     private TopicResource(
         String name,
@@ -52,6 +62,13 @@ public class TopicResource extends BaseResource implements Validatable {
 
     /**
      * Creates a new grouped TopicResource instance.
+     *
+     * @param name      the name of the topic
+     * @param project   the project associated with the topic
+     * @param capacity  the capacity policy of the topic
+     * @param actionCode the actor code indicating reason behind the action performed on the topic
+     *
+     * @return a new grouped TopicResource instance
      */
     public static TopicResource grouped(
         String name,
@@ -65,6 +82,13 @@ public class TopicResource extends BaseResource implements Validatable {
 
     /**
      * Creates a new ungrouped TopicResource instance.
+     *
+     * @param name      the name of the topic
+     * @param project   the project associated with the topic
+     * @param capacity  the capacity policy of the topic
+     * @param actionCode the actor code indicating reason behind the action performed on the topic
+     *
+     * @return a new ungrouped TopicResource instance
      */
     public static TopicResource unGrouped(
         String name,
@@ -78,14 +102,18 @@ public class TopicResource extends BaseResource implements Validatable {
 
     /**
      * Creates a TopicResource instance from a VaradhiTopic instance.
+     *
+     * @param varadhiTopic the VaradhiTopic instance
+     *
+     * @return a new TopicResource instance
      */
     public static TopicResource from(VaradhiTopic varadhiTopic) {
-        String[] topicResourceInfo = varadhiTopic.getName().split(NAME_SEPARATOR_REGEX);
+        VaradhiTopicName fqn = VaradhiTopicName.parse(varadhiTopic.getName());
 
         return new TopicResource(
-            topicResourceInfo[1],
+            fqn.getTopicName(),
             varadhiTopic.getVersion(),
-            topicResourceInfo[0],
+            fqn.getProjectName(),
             varadhiTopic.isGrouped(),
             varadhiTopic.getCapacity(),
             varadhiTopic.getStatus().getActionCode(),
@@ -95,6 +123,8 @@ public class TopicResource extends BaseResource implements Validatable {
 
     /**
      * Converts this TopicResource instance to a VaradhiTopic instance.
+     *
+     * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
         return VaradhiTopic.of(getProject(), getName(), isGrouped(), capacity, actionCode, nfrFilterName);

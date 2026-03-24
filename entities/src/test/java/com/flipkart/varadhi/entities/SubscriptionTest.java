@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,15 +12,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for delivery-contract fields on VaradhiSubscription (targetClientIds, callbackConfig)
- * and for CallbackConfig (fromJson, addRange, shouldCallback) / CodeRange serialize-deserialize.
+ * and for CallbackConfig (fromJson, immutability, shouldCallback) / CodeRange serialize-deserialize.
  */
 class SubscriptionTest {
 
-    private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -61,11 +64,11 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            List.of("c1", "c2"),
+            Map.of("ep-a", "c1", "ep-b", "c2"),
             callbackConfig
         );
 
-        assertEquals(List.of("c1", "c2"), sub.getTargetClientIds());
+        assertEquals(Map.of("ep-a", "c1", "ep-b", "c2"), sub.getTargetClientIds());
         assertNotNull(sub.getCallbackConfig());
         assertEquals(2, sub.getCallbackConfig().getCodeRanges().size());
     }
@@ -83,10 +86,11 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
 
-        assertTrue(sub.getTargetClientIds().isEmpty());
+        assertEquals(Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1"), sub.getTargetClientIds());
         assertNull(sub.getCallbackConfig());
     }
 
@@ -105,7 +109,7 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            List.of("c1", "c2"),
+            Map.of("ep-a", "c1", "ep-b", "c2"),
             callbackConfig
         );
 
@@ -131,13 +135,14 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
 
         String json = JsonMapper.jsonSerialize(sub);
         VaradhiSubscription deserialized = JsonMapper.jsonDeserialize(json, VaradhiSubscription.class);
 
-        assertTrue(deserialized.getTargetClientIds().isEmpty());
+        assertEquals(Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1"), deserialized.getTargetClientIds());
         assertNull(deserialized.getCallbackConfig());
     }
 
@@ -169,32 +174,9 @@ class SubscriptionTest {
     }
 
     @Test
-    void callbackConfig_fromJson_parsesCodeRanges() {
-        String requestJson = "[{\"from\": 200, \"to\": 299}, {\"from\": 500, \"to\": 502}]";
-        CallbackConfig config = CallbackConfig.fromJson(requestJson);
-        assertNotNull(config);
-        assertEquals(2, config.getCodeRanges().size());
-        assertTrue(config.shouldCallback(200));
-        assertTrue(config.shouldCallback(501));
-        assertFalse(config.shouldCallback(499));
-        assertFalse(config.shouldCallback(503));
-    }
-
-    @Test
-    void callbackConfig_fromJson_nullOrEmpty_returnsNull() {
-        assertNull(CallbackConfig.fromJson(null));
-        assertNull(CallbackConfig.fromJson(""));
-        assertNull(CallbackConfig.fromJson("   "));
-    }
-
-    @Test
-    void callbackConfig_addRange_mutable() {
-        CallbackConfig config = new CallbackConfig();
-        config.addRange(new CodeRange(200, 299));
-        config.addRange(new CodeRange(500, 502));
-        assertEquals(2, config.getCodeRanges().size());
-        assertTrue(config.shouldCallback(250));
-        assertTrue(config.shouldCallback(501));
+    void callbackConfig_getCodeRanges_isUnmodifiable() {
+        CallbackConfig config = new CallbackConfig(Set.of(new CodeRange(200, 299)));
+        assertThrows(UnsupportedOperationException.class, () -> config.getCodeRanges().add(new CodeRange(500, 502)));
     }
 
     @Test
@@ -202,6 +184,108 @@ class SubscriptionTest {
         CallbackConfig config = new CallbackConfig();
         assertTrue(config.getCodeRanges().isEmpty());
         assertFalse(config.shouldCallback(200));
+    }
+
+    @Test
+    void varadhiSubscription_nullOrEmptyTargetClientIds_throws() {
+        IllegalArgumentException nullEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                null,
+                null
+            )
+        );
+        assertTrue(nullEx.getMessage().contains("targetClientIds"));
+
+        IllegalArgumentException emptyEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> VaradhiSubscription.of(
+                "sub-1",
+                "project1",
+                "topic1",
+                "desc",
+                false,
+                DEFAULT_ENDPOINT,
+                DEFAULT_RETRY_POLICY,
+                DEFAULT_CONSUMPTION_POLICY,
+                DEFAULT_SHARDS,
+                Map.of("k", "v"),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of()
+            )
+        );
+        assertTrue(emptyEx.getMessage().contains("targetClientIds"));
+    }
+
+    @Test
+    void varadhiSubscription_blankOrNullInTargetClientIds_throws() {
+        IllegalArgumentException soleBlankValueEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> varadhiOfWithTargetClientIds(Map.of("ep", ""))
+        );
+        assertTrue(soleBlankValueEx.getMessage().contains("keys and values"));
+
+        IllegalArgumentException blankKeyEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> varadhiOfWithTargetClientIds(Map.of("", "q1"))
+        );
+        assertTrue(blankKeyEx.getMessage().contains("keys and values"));
+
+        IllegalArgumentException mixedBlankValueEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> varadhiOfWithTargetClientIds(Map.of("e1", "q1", "e2", ""))
+        );
+        assertTrue(mixedBlankValueEx.getMessage().contains("keys and values"));
+
+        IllegalArgumentException nullKeyEx = assertThrows(IllegalArgumentException.class, () -> {
+            Map<String, String> m = new HashMap<>();
+            m.put(null, "a");
+            varadhiOfWithTargetClientIds(m);
+        });
+        assertTrue(nullKeyEx.getMessage().contains("keys and values"));
+
+        IllegalArgumentException nullValueEx = assertThrows(IllegalArgumentException.class, () -> {
+            Map<String, String> m = new HashMap<>();
+            m.put("e1", null);
+            varadhiOfWithTargetClientIds(m);
+        });
+        assertTrue(nullValueEx.getMessage().contains("keys and values"));
+    }
+
+    /**
+     * {@link List#of(Object)} does not permit null elements (unrelated to targetClientIds map shape).
+     */
+    @Test
+    void listOf_singleNullElement_throwsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> List.of((String)null));
+    }
+
+    private static VaradhiSubscription varadhiOfWithTargetClientIds(Map<String, String> targetClientIds) {
+        return VaradhiSubscription.of(
+            "sub-1",
+            "project1",
+            "topic1",
+            "desc",
+            false,
+            DEFAULT_ENDPOINT,
+            DEFAULT_RETRY_POLICY,
+            DEFAULT_CONSUMPTION_POLICY,
+            DEFAULT_SHARDS,
+            Map.of("k", "v"),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            targetClientIds
+        );
     }
 
     @Test
@@ -217,7 +301,8 @@ class SubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("k", "v"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub-1")
         );
         assertNull(sub.getCallbackConfig());
     }
@@ -237,7 +322,7 @@ class SubscriptionTest {
             DEFAULT_SHARDS,
             Map.of("k", "v"),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            null,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "c1"),
             callbackConfig
         );
 
@@ -249,5 +334,36 @@ class SubscriptionTest {
         assertTrue(config.shouldCallback(501));
         assertFalse(config.shouldCallback(499));
         assertFalse(config.shouldCallback(503));
+    }
+
+    @Test
+    void codeRange_fromGreaterThanTo_throws() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new CodeRange(500, 200));
+        assertTrue(ex.getMessage().contains("from"));
+        assertTrue(ex.getMessage().contains("to"));
+    }
+
+    @Test
+    void callbackConfig_rejectsInvalidCodeRange_viaCodeRangeConstructor() {
+        assertThrows(IllegalArgumentException.class, () -> new CallbackConfig(Set.of(new CodeRange(500, 200))));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new CallbackConfig(Set.of(new CodeRange(200, 299), new CodeRange(500, 200)))
+        );
+    }
+
+    @Test
+    void deserialize_codeRange_fromGreaterThanTo_throws() {
+        String json = "{\"from\":500,\"to\":200}";
+        JsonMapper.JsonParseException ex = assertThrows(
+            JsonMapper.JsonParseException.class,
+            () -> JsonMapper.jsonDeserialize(json, CodeRange.class)
+        );
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof IllegalArgumentException iae && iae.getMessage().contains("from")) {
+                return;
+            }
+        }
+        fail("Expected IllegalArgumentException about inclusive bounds in exception chain");
     }
 }

@@ -44,6 +44,16 @@ public class SubscriptionResource extends BaseResource implements Validatable {
     private LifecycleStatus.ActionCode actionCode;
 
     /**
+     * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
+     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #endpoint}), value = client id.
+     * One entry is typical for topics; queues use one entry per logical endpoint. String keys are used instead of
+     * {@link Endpoint} as map keys for a JSON-friendly contract; {@link #endpoint} carries the primary endpoint
+     * configuration.
+     */
+    @NotNull
+    private final Map<String, String> targetClientIds;
+
+    /**
      * Constructs a new SubscriptionResource.
      *
      * @param name              The name of the subscription.
@@ -57,7 +67,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
-     * @param actionCode         The actor code associated with the subscription.
+     * @param actionCode        The actor code associated with the subscription.
+     * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
      */
     private SubscriptionResource(
         String name,
@@ -71,7 +82,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         RetryPolicy retryPolicy,
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+        LifecycleStatus.ActionCode actionCode,
+        Map<String, String> targetClientIds
     ) {
         super(name, version);
         setProject(project);
@@ -84,24 +96,13 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         this.consumptionPolicy = consumptionPolicy;
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
+        this.targetClientIds = VaradhiSubscription.validateTargetClientIds(targetClientIds);
     }
 
     /**
      * Creates a new SubscriptionResource instance.
      *
-     * @param name              The name of the subscription.
-     * @param project           The project associated with the subscription.
-     * @param topic             The topic associated with the subscription.
-     * @param topicProject      The project of the topic associated with the subscription.
-     * @param description       The description of the subscription.
-     * @param grouped           Indicates if the subscription is grouped.
-     * @param endpoint          The endpoint associated with the subscription.
-     * @param retryPolicy       The retry policy for the subscription.
-     * @param consumptionPolicy The consumption policy for the subscription.
-     * @param properties        Additional properties for the subscription.
-     * @param actionCode         The actor code associated with the subscription.
-     *
-     * @return A new SubscriptionResource instance.
+     * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
      */
     public static SubscriptionResource of(
         String name,
@@ -114,7 +115,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         RetryPolicy retryPolicy,
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
-        LifecycleStatus.ActionCode actionCode
+        LifecycleStatus.ActionCode actionCode,
+        Map<String, String> targetClientIds
     ) {
         return new SubscriptionResource(
             name,
@@ -128,7 +130,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
             retryPolicy,
             consumptionPolicy,
             properties,
-            actionCode
+            actionCode,
+            targetClientIds
         );
     }
 
@@ -141,7 +144,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * @return The internal name for the subscription.
      */
     public static String buildInternalName(String project, String subsResourceName) {
-        return String.join(NAME_SEPARATOR, project, subsResourceName);
+        return VaradhiTopicName.of(project, subsResourceName).toFqn();
     }
 
     /**
@@ -152,13 +155,13 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * @return A new SubscriptionResource instance.
      */
     public static SubscriptionResource from(VaradhiSubscription subscription) {
-        String[] subscriptionSegments = subscription.getName().split(NAME_SEPARATOR_REGEX);
-        String subscriptionProject = subscriptionSegments[0];
-        String subscriptionName = subscriptionSegments[1];
+        VaradhiTopicName subscriptionFqn = VaradhiTopicName.parse(subscription.getName());
+        String subscriptionProject = subscriptionFqn.getProjectName();
+        String subscriptionName = subscriptionFqn.getTopicName();
 
-        String[] topicSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        String topicProject = topicSegments[0];
-        String topicName = topicSegments[1];
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        String topicProject = topicFqn.getProjectName();
+        String topicName = topicFqn.getTopicName();
 
         SubscriptionResource subResource = of(
             subscriptionName,
@@ -171,7 +174,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
             subscription.getRetryPolicy(),
             subscription.getConsumptionPolicy(),
             subscription.getProperties(),
-            subscription.getStatus().getActionCode()
+            subscription.getStatus().getActionCode(),
+            subscription.getTargetClientIds()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;
