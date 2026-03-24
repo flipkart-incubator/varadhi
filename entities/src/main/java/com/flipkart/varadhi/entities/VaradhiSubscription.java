@@ -213,9 +213,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the shards are not null or empty.
      *
      * @param shards the shards to validate
-     *
      * @return the validated shards
-     *
      * @throws IllegalArgumentException if the shards are null or empty
      */
     private static SubscriptionShards validateShards(SubscriptionShards shards) {
@@ -229,9 +227,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Validates that the properties are not null or empty.
      *
      * @param properties the properties to validate
-     *
      * @return the validated properties
-     *
      * @throws IllegalArgumentException if the properties are null or empty
      */
     private static Map<String, String> validateProperties(Map<String, String> properties) {

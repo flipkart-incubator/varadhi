@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -29,6 +30,7 @@ import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
 
+import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
