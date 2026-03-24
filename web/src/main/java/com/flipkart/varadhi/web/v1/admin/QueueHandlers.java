@@ -12,6 +12,7 @@ import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.ProjectHierarchy;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -106,11 +107,29 @@ public class QueueHandlers implements RouteProvider {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getOrThrow(projectName).getEntity();
 
+        if (hasBody) {
+            QueueResource queueResource = ctx.get(REQUEST_BODY);
+            String queueName = queueResource.getName() != null ? queueResource.getName().trim() : "";
+            return Map.ofEntries(
+                Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, queueName)),
+                Map.entry(
+                    ResourceType.SUBSCRIPTION,
+                    new SubscriptionHierarchy(project, QueueResource.getDefaultSubscriptionName(queueName))
+                )
+            );
+        }
+
         String queueName = ctx.request().getParam(PATH_PARAM_QUEUE);
         if (queueName == null) {
             return Map.of(ResourceType.PROJECT, new ProjectHierarchy(project));
         }
-        return Map.of(ResourceType.TOPIC, new TopicHierarchy(project, queueName));
+        return Map.ofEntries(
+            Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, queueName)),
+            Map.entry(
+                ResourceType.SUBSCRIPTION,
+                new SubscriptionHierarchy(project, QueueResource.getDefaultSubscriptionName(queueName))
+            )
+        );
     }
 
     public void list(RoutingContext ctx) {
