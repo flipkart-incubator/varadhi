@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.db.VaradhiMetaStore;
 import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Region;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RegionServiceTest {
@@ -66,5 +68,60 @@ class RegionServiceTest {
 
         regionService.deleteRegion(name.value());
         assertFalse(regionService.regionExists(name.value()));
+    }
+
+    @Test
+    void getRegions_whenStoreHasMultipleRegions_returnsAllOrderedByName() {
+        regionService.createRegion(Region.of(new RegionName("dc-c"), RegionStatus.AVAILABLE));
+        regionService.createRegion(Region.of(new RegionName("dc-a"), RegionStatus.UNAVAILABLE));
+        regionService.createRegion(Region.of(new RegionName("dc-b"), RegionStatus.PRODUCE_UNAVAILABLE));
+
+        List<Region> all = regionService.getRegions();
+        assertEquals(3, all.size());
+        List<String> names = all.stream().map(Region::getName).sorted().toList();
+        assertEquals(List.of("dc-a", "dc-b", "dc-c"), names);
+    }
+
+    @Test
+    void getRegion_and_regionExists_whenStoreHasMultipleRegions() {
+        regionService.createRegion(Region.of(new RegionName("r-east"), RegionStatus.AVAILABLE));
+        regionService.createRegion(Region.of(new RegionName("r-west"), RegionStatus.CONSUME_UNAVAILABLE));
+
+        assertTrue(regionService.regionExists("r-east"));
+        assertTrue(regionService.regionExists("r-west"));
+        assertFalse(regionService.regionExists("r-unknown"));
+
+        assertEquals(RegionStatus.AVAILABLE, regionService.getRegion("r-east").getStatus());
+        assertEquals(RegionStatus.CONSUME_UNAVAILABLE, regionService.getRegion("r-west").getStatus());
+        assertEquals("r-east", regionService.getRegion("r-east").getName());
+    }
+
+    @Test
+    void getRegion_whenMissingButStoreNotEmpty_throwsResourceNotFoundException() {
+        regionService.createRegion(Region.of(new RegionName("present"), RegionStatus.AVAILABLE));
+
+        assertThrows(ResourceNotFoundException.class, () -> regionService.getRegion("absent"));
+    }
+
+    @Test
+    void deleteRegion_whenMultipleRegions_removesOnlyTarget() {
+        regionService.createRegion(Region.of(new RegionName("keep-1"), RegionStatus.AVAILABLE));
+        regionService.createRegion(Region.of(new RegionName("remove-me"), RegionStatus.AVAILABLE));
+        regionService.createRegion(Region.of(new RegionName("keep-2"), RegionStatus.UNAVAILABLE));
+
+        regionService.deleteRegion("remove-me");
+
+        assertFalse(regionService.regionExists("remove-me"));
+        assertTrue(regionService.regionExists("keep-1"));
+        assertTrue(regionService.regionExists("keep-2"));
+        List<String> remaining = regionService.getRegions().stream().map(Region::getName).sorted().toList();
+        assertEquals(List.of("keep-1", "keep-2"), remaining);
+    }
+
+    @Test
+    void deleteRegion_whenMissingButStoreNotEmpty_throwsResourceNotFoundException() {
+        regionService.createRegion(Region.of(new RegionName("only"), RegionStatus.AVAILABLE));
+
+        assertThrows(ResourceNotFoundException.class, () -> regionService.deleteRegion("ghost"));
     }
 }

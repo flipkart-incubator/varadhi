@@ -153,7 +153,11 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         addResourceContextForLeafNode(resourceContextTuples, action, segments);
         addResourceContextForProjectNode(resourceContextTuples, segments);
         addResourceContextForTeamNode(resourceContextTuples, segments);
-        addResourceContextForOrgNode(resourceContextTuples, segments, action);
+        if (action.getResourceType() == ResourceType.REGION) {
+            addResourceContextForRegionNode(resourceContextTuples, segments);
+        } else {
+            addResourceContextForOrgNode(resourceContextTuples, segments);
+        }
 
         return resourceContextTuples;
     }
@@ -201,26 +205,34 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
 
     private void addResourceContextForOrgNode(
         List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
-        String[] segments,
-        ResourceAction action
+        String[] segments
     ) {
         if (segments.length == 0) {
-            return;
-        }
-        // Single-segment paths are either an org id or a region id; disambiguate using the action.
-        if (action.getResourceType() == ResourceType.REGION) {
-            resourceIdTuples.add(
-                Pair.of(
-                    ResourceType.REGION,
-                    new ResourceContext(ResourceType.REGION, segments[0], "/regions/%s".formatted(segments[0]))
-                )
-            );
             return;
         }
         resourceIdTuples.add(
             Pair.of(
                 ResourceType.ORG,
                 new ResourceContext(ResourceType.ORG, segments[0], "/orgs/%s".formatted(segments[0]))
+            )
+        );
+    }
+
+    /**
+     * Adds region-level IAM context for {@link ResourceAction}s whose {@link ResourceAction#getResourceType()} is
+     * {@link ResourceType#REGION} (single-segment path: region id).
+     */
+    private void addResourceContextForRegionNode(
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        String[] segments
+    ) {
+        if (segments.length == 0) {
+            return;
+        }
+        resourceIdTuples.add(
+            Pair.of(
+                ResourceType.REGION,
+                new ResourceContext(ResourceType.REGION, segments[0], "/regions/%s".formatted(segments[0]))
             )
         );
     }
