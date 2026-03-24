@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.VaradhiTopicName;
+import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -52,6 +52,16 @@ public class TopicResource extends BaseResource implements Validatable {
         this.capacity = capacity;
         this.actionCode = actionCode;
         this.nfrFilterName = nfrFilterName;
+    }
+
+    /**
+     * Project is declared on {@link BaseResource} for sharing across web resources; bean validation does not
+     * cascade to the superclass field for {@code TopicResource} unless constrained here.
+     */
+    @Override
+    @NotBlank (message = "project must not be null or blank")
+    public String getProject() {
+        return super.getProject();
     }
 
     /** Whether the topic is grouped; uses base resource grouped flag. */

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicResourceTest {
@@ -66,6 +67,33 @@ class TopicResourceTest {
             () -> assertNotNull(topicResource.getCapacity()),
             () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, topicResource.getActionCode())
         );
+    }
+
+    @Test
+    void validate_RejectsBlankProject() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, topicResource::validate);
+        assertTrue(ex.getMessage().contains("project"));
+    }
+
+    @Test
+    void validate_RejectsNullProject() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        topicResource.setProject(null);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, topicResource::validate);
+        assertTrue(ex.getMessage().contains("project"));
     }
 
     @Test

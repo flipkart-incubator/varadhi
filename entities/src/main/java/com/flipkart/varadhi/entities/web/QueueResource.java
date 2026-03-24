@@ -150,7 +150,7 @@ public class QueueResource extends BaseResource implements Validatable {
             description,
             grouped,
             DEFAULT_QUEUE_ENDPOINT,
-            DEFAULT_QUEUE_RETRY_POLICY,
+            retryPolicy,
             DEFAULT_QUEUE_CONSUMPTION_POLICY,
             DEFAULT_SUBSCRIPTION_PROPERTIES,
             code,

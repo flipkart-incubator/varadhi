@@ -87,10 +87,12 @@ public class QueueHandlers implements RouteProvider {
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
                 RouteDefinition.delete(DELETE, API_NAME, "/:queue")
+                               .nonBlocking()
                                .authorize(SUBSCRIPTION_DELETE)
                                .authorize(TOPIC_DELETE)
                                .build(this::getHierarchies, this::delete),
                 RouteDefinition.patch(RESTORE, API_NAME, "/:queue/restore")
+                               .nonBlocking()
                                .authorize(SUBSCRIPTION_UPDATE)
                                .authorize(TOPIC_UPDATE)
                                .build(this::getHierarchies, this::restore)
@@ -174,30 +176,68 @@ public class QueueHandlers implements RouteProvider {
         ctx.endApiWithResponse(response);
     }
 
+    /**
+     * Handles the DELETE request to delete a queue: subscription delete (async, same as subscription API) then topic
+     * delete (sync, same as topic API).
+     *
+     * @param ctx the routing context
+     */
     public void delete(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
         ResourceDeletionType deletionType = ctx.queryParam(QUERY_PARAM_DELETION_TYPE)
                                                .stream()
                                                .map(ResourceDeletionType::fromValue)
                                                .findFirst()
                                                .orElse(ResourceDeletionType.SOFT_DELETE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
+
+        String projectName = getProjectName(ctx);
+        String queueName = getQueueName(ctx);
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String requestedBy = ctx.getIdentityOrDefault();
 
-        varadhiQueueService.delete(projectName, queueName, project, requestedBy, deletionType, actionRequest);
-        ctx.endApi();
+        ctx.handleResponse(
+            varadhiQueueService.deleteQueueSubscription(
+                projectName,
+                queueName,
+                project,
+                requestedBy,
+                deletionType,
+                actionRequest
+            ).thenRun(() -> varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest))
+        );
     }
 
+    /**
+     * Handles the PATCH request to restore a queue: subscription restore (async) then topic restore (sync).
+     *
+     * @param ctx the routing context
+     */
     public void restore(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
-        String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
         RequestActionType actionRequest = createResourceActionRequest(ctx);
+        String projectName = getProjectName(ctx);
+        String queueName = getQueueName(ctx);
         String requestedBy = ctx.getIdentityOrDefault();
 
-        varadhiQueueService.restore(projectName, queueName, requestedBy, actionRequest);
-        ctx.endApi();
+        ctx.handleResponse(
+            varadhiQueueService.restoreQueueSubscription(projectName, queueName, requestedBy, actionRequest)
+                               .thenRun(
+                                   () -> varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest)
+                               )
+        );
+    }
+
+    /**
+     * Project name from the route {@code :project} segment.
+     */
+    private String getProjectName(RoutingContext ctx) {
+        return ctx.pathParam(PATH_PARAM_PROJECT);
+    }
+
+    /**
+     * Queue name from the route {@code :queue} segment.
+     */
+    private String getQueueName(RoutingContext ctx) {
+        return ctx.pathParam(PATH_PARAM_QUEUE);
     }
 
     private LifecycleStatus.ActionCode getActionCode(RoutingContext ctx) {
