@@ -4,9 +4,9 @@ public enum MetaStoreEntityType {
 
     ROOT("root"), ORG("org"), ORG_FILTER("org_filter"), TEAM("team"), PROJECT("project"), TOPIC("topic"), SUBSCRIPTION(
         "subscription"
-    ), IAM_POLICY("iam_policy"), SUBSCRIPTION_OPERATION("subscription_operation"), SHARD_OPERATION("shard_operation"), REGION(
-        "region"
-    );
+    ), IAM_POLICY("iam_policy"), SUBSCRIPTION_OPERATION("subscription_operation"), SHARD_OPERATION(
+        "shard_operation"
+    ), REGION("region");
 
     private final String type;
 

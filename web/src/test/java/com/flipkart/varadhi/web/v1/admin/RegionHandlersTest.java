@@ -110,13 +110,7 @@ public class RegionHandlersTest extends WebTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, REGIONS_PATH);
         String err = "Invalid Region name. Check naming constraints.";
         Region region = new Region(name, Region.INITIAL_VERSION, RegionStatus.AVAILABLE);
-        ErrorResponse response = sendRequestWithEntity(
-            request,
-            region,
-            400,
-            err,
-            WebTestBase.c(ErrorResponse.class)
-        );
+        ErrorResponse response = sendRequestWithEntity(request, region, 400, err, WebTestBase.c(ErrorResponse.class));
         Assertions.assertEquals(err, response.reason());
     }
 
