@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,6 +43,7 @@ public class Region extends MetaStoreEntity implements Validatable {
     /**
      * Type-safe view of the region identifier (same as {@link #getName()} as a string).
      */
+    @JsonIgnore
     public RegionName getRegionName() {
         return new RegionName(getName());
     }
@@ -51,6 +53,7 @@ public class Region extends MetaStoreEntity implements Validatable {
      *
      * @return {@code true} if message stack is available, {@code false} otherwise
      */
+    @JsonIgnore
     public boolean isMessageStackAvailable() {
         return status.isMessageStackAvailable();
     }
@@ -60,6 +63,7 @@ public class Region extends MetaStoreEntity implements Validatable {
      *
      * @return {@code true} if produce is available, {@code false} otherwise
      */
+    @JsonIgnore
     public boolean isProduceAvailable() {
         return status.isProduceAvailable();
     }
@@ -69,6 +73,7 @@ public class Region extends MetaStoreEntity implements Validatable {
      *
      * @return {@code true} if consume is available, {@code false} otherwise
      */
+    @JsonIgnore
     public boolean isConsumeAvailable() {
         return status.isConsumeAvailable();
     }
@@ -78,6 +83,7 @@ public class Region extends MetaStoreEntity implements Validatable {
      *
      * @return {@code true} if region is fully available, {@code false} otherwise
      */
+    @JsonIgnore
     public boolean isAvailable() {
         return status.isAvailable();
     }
