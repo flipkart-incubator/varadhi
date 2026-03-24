@@ -95,6 +95,14 @@ public class E2EBase {
         return buildUri(getSubscriptionsUri(project), subscriptionName);
     }
 
+    public static String getQueuesUri(Project project) {
+        return buildUri(getProjectUri(project), "queues");
+    }
+
+    public static String getQueuesUri(Project project, String queueName) {
+        return buildUri(getQueuesUri(project), queueName);
+    }
+
     public static List<Org> getOrgs(Response response) {
         return response.readEntity(new GenericType<>() {
         });
