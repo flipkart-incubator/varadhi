@@ -6,8 +6,6 @@ import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.Versioned;
-import jakarta.validation.constraints.NotBlank;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
