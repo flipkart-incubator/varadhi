@@ -13,7 +13,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,7 +70,7 @@ public class QueueResource extends BaseResource implements Validatable {
     private Integer noOfConsumers;
     private RetryPolicy retryPolicy;
     private CallbackConfig callbackConfig;
-    private Map<String, List<String>> targetClientIds;
+    private Map<String, String> targetClientIds;
 
     /**
      * Default subscription name for a queue (topic name + suffix).
@@ -119,7 +118,8 @@ public class QueueResource extends BaseResource implements Validatable {
             DEFAULT_QUEUE_RETRY_POLICY,
             DEFAULT_QUEUE_CONSUMPTION_POLICY,
             DEFAULT_SUBSCRIPTION_PROPERTIES,
-            code
+            code,
+            targetClientIds
         );
     }
 }

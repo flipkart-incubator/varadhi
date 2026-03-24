@@ -98,7 +98,7 @@ public class VaradhiQueueService {
      * Lists queue names in the project (topics that have the default queue subscription).
      */
     public List<String> list(String projectName, boolean includeInactive) {
-        List<String> topicNames = varadhiTopicService.getVaradhiTopics(projectName, includeInactive)
+        List<String> topicNames = varadhiTopicService.list(projectName, includeInactive)
                                                      .stream()
                                                      .filter(topic -> topic.startsWith(projectName + NAME_SEPARATOR))
                                                      .map(topic -> topic.split(NAME_SEPARATOR_REGEX)[1])
