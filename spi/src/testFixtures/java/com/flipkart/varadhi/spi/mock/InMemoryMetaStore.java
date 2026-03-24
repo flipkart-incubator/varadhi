@@ -249,6 +249,7 @@ public class InMemoryMetaStore implements MetaStore {
         }
     }
 
+
     private class InMemoryRegionStore implements RegionStore {
         @Override
         public void create(Region region) {

@@ -16,7 +16,7 @@ import lombok.Setter;
  * Extends {@link MetaStoreEntity} so it can be persisted via the metastore (e.g. ZooKeeper).
  */
 @Getter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Region name. Check naming constraints.")
 public class Region extends MetaStoreEntity implements Validatable {
 
@@ -27,11 +27,7 @@ public class Region extends MetaStoreEntity implements Validatable {
     @Setter
     private RegionStatus status;
 
-    public Region(
-        String name,
-        int version,
-        RegionStatus status
-    ) {
+    public Region(String name, int version, RegionStatus status) {
         super(name, version, MetaStoreEntityType.REGION);
         this.status = status;
     }
