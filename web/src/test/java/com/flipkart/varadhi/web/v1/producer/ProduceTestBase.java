@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.web.v1.producer;
 
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.config.MessageHeaderUtils;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.core.ProjectService;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.WebTestBase;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

@@ -5,7 +5,6 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import org.junit.jupiter.api.Test;
 
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,8 +79,8 @@ class TopicResourceTest {
         );
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
         assertAll(
-            () -> assertEquals("topicName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[1]),
-            () -> assertEquals("projectName", varadhiTopic.getName().split(NAME_SEPARATOR_REGEX)[0]),
+            () -> assertEquals("topicName", varadhiTopic.getTopicName()),
+            () -> assertEquals("projectName", varadhiTopic.getProjectName()),
             () -> assertTrue(varadhiTopic.isGrouped()),
             () -> assertNotNull(varadhiTopic.getCapacity()),
             () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode())

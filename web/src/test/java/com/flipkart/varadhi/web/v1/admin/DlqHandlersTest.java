@@ -50,7 +50,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
     public void PreTest() throws InterruptedException {
         super.setUp();
         dlqService = mock(DlqService.class);
-        dlqHandlers = new DlqHandlers(dlqService, subscriptionService, projectCache);
+        dlqHandlers = new DlqHandlers(dlqService, varadhiSubscriptionService, projectCache);
         Route routeUnsideline = router.post("/projects/:project/subscriptions/:subscription/dlq/messages/unsideline")
                                       .handler(bodyHandler)
                                       .handler(ctx -> {
@@ -81,7 +81,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
-        doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
+        doReturn(subscription).when(varadhiSubscriptionService)
+                              .getSubscription(subResource.getSubscriptionInternalName());
         SubscriptionOperation op = SubscriptionOperation.unsidelineOp(
             subscription.getName(),
             unsidelineRequest,
@@ -311,7 +312,8 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
-        doReturn(subscription).when(subscriptionService).getSubscription(subResource.getSubscriptionInternalName());
+        doReturn(subscription).when(varadhiSubscriptionService)
+                              .getSubscription(subResource.getSubscriptionInternalName());
         return subscription;
     }
 

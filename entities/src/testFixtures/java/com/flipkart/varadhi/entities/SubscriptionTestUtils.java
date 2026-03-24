@@ -21,8 +21,9 @@ public class SubscriptionTestUtils {
     public static final int DEFAULT_THROUGHPUT_KBPS = 20000;
     public static final int DEFAULT_READ_FANOUT = 2;
     public static final int DEFAULT_RETENTION_PERIOD = 2;
+    public static final String DEFAULT_CLIENT_ID = "test-client";
 
-    private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -30,6 +31,13 @@ public class SubscriptionTestUtils {
         500,
         false
     );
+
+    /**
+     * Map key for {@code targetClientIds} in tests that use {@link #DEFAULT_ENDPOINT} (HTTP consumer URI string).
+     */
+    public static String defaultTestEndpointUriKey() {
+        return DEFAULT_ENDPOINT.getUri().toString();
+    }
 
     private static final RetryPolicy DEFAULT_RETRY_POLICY = new RetryPolicy(
         new CodeRange[] {new CodeRange(500, 502)},
@@ -316,7 +324,8 @@ public class SubscriptionTestUtils {
                 Optional.ofNullable(consumptionPolicy).orElse(DEFAULT_CONSUMPTION_POLICY),
                 shards,
                 properties,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(defaultTestEndpointUriKey(), name)
             );
         }
     }
@@ -354,7 +363,8 @@ public class SubscriptionTestUtils {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             getSubscriptionDefaultProperties(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(defaultTestEndpointUriKey(), DEFAULT_CLIENT_ID)
         );
     }
 
@@ -365,6 +375,8 @@ public class SubscriptionTestUtils {
     ) {
         return createSubscriptionResource(subscriptionName, project, topic, DEFAULT_RETRY_POLICY);
     }
+
+    private static final Map<String, String> DEFAULT_TARGET_CLIENT_IDS = Map.of(defaultTestEndpointUriKey(), "test");
 
     public static SubscriptionResource createSubscriptionResource(
         String subscriptionName,
@@ -383,7 +395,8 @@ public class SubscriptionTestUtils {
             retryPolicy,
             DEFAULT_CONSUMPTION_POLICY,
             new HashMap<>(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            DEFAULT_TARGET_CLIENT_IDS
         );
     }
 }

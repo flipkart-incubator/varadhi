@@ -1,12 +1,12 @@
 package com.flipkart.varadhi.web.v1.admin;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.SubscriptionHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
-import com.flipkart.varadhi.core.SubscriptionService;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.entities.web.DlqMessagesResponse;
 import com.flipkart.varadhi.entities.web.DlqPageMarker;
@@ -31,7 +31,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCR
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT;
 import static com.flipkart.varadhi.entities.Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR_REGEX;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers.getSubscriptionFqn;
@@ -42,17 +41,17 @@ public class DlqHandlers implements RouteProvider {
     private static final String API_NAME = "DLQ";
 
     private static final long UNSPECIFIED_TS = 0L;
-    private final SubscriptionService subscriptionService;
+    private final VaradhiSubscriptionService varadhiSubscriptionService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     private final DlqService dlqService;
 
     public DlqHandlers(
         DlqService dlqService,
-        SubscriptionService subscriptionService,
+        VaradhiSubscriptionService varadhiSubscriptionService,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache
     ) {
         this.dlqService = dlqService;
-        this.subscriptionService = subscriptionService;
+        this.varadhiSubscriptionService = varadhiSubscriptionService;
         this.projectCache = projectCache;
     }
 
@@ -86,10 +85,10 @@ public class DlqHandlers implements RouteProvider {
         String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String subscriptionName = ctx.request().getParam(PATH_PARAM_SUBSCRIPTION);
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
-        String[] topicNameSegments = subscription.getTopic().split(NAME_SEPARATOR_REGEX);
-        Project topicProject = projectCache.getOrThrow(topicNameSegments[0]).getEntity();
-        String topicName = topicNameSegments[1];
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiTopicName topicFqn = VaradhiTopicName.parse(subscription.getTopic());
+        Project topicProject = projectCache.getOrThrow(topicFqn.getProjectName()).getEntity();
+        String topicName = topicFqn.getTopicName();
         return Map.ofEntries(
             Map.entry(ResourceType.SUBSCRIPTION, new SubscriptionHierarchy(project, subscriptionName)),
             Map.entry(ResourceType.TOPIC, new TopicHierarchy(topicProject, topicName))
@@ -98,14 +97,14 @@ public class DlqHandlers implements RouteProvider {
 
     public void enqueueUnsideline(RoutingContext ctx) {
         UnsidelineRequest unsidelineRequest = ctx.get(REQUEST_BODY);
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
         log.info("Unsideline requested for Subscription:{}", subscription.getName());
         validateUnsidelineCriteria(subscription, unsidelineRequest);
         ctx.handleResponse(dlqService.unsideline(subscription, unsidelineRequest, ctx.getIdentityOrDefault()));
     }
 
     public void listMessages(RoutingContext ctx) {
-        VaradhiSubscription subscription = subscriptionService.getSubscription(getSubscriptionFqn(ctx));
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(getSubscriptionFqn(ctx));
         String limitStr = ctx.request().getParam("limit");
         int limit = limitStr == null ?
             subscription.getIntProperty(GETMESSAGES_API_MESSAGES_LIMIT) :

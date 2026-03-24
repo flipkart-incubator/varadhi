@@ -4,10 +4,10 @@ import java.util.Collections;
 import java.util.List;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.*;
-import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -147,7 +147,7 @@ class TopicHandlersTest extends WebTestBase {
     void listTopics_WithTopicsAvailable_ShouldReturnAll() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
-        doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
+        doReturn(topics).when(varadhiTopicService).list(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project)),
@@ -161,7 +161,7 @@ class TopicHandlersTest extends WebTestBase {
     void listTopics_WithIncludeInactive_ShouldReturnAllIncludingInactive() throws InterruptedException {
         List<String> topics = List.of(String.join(".", project.getName(), TOPIC_NAME));
 
-        doReturn(topics).when(varadhiTopicService).getVaradhiTopics(project.getName(), true);
+        doReturn(topics).when(varadhiTopicService).list(project.getName(), true);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project) + "?includeInactive=true"),
@@ -173,7 +173,7 @@ class TopicHandlersTest extends WebTestBase {
 
     @Test
     void listTopics_WithNoTopicsAvailable_ShouldReturnEmptyList() throws InterruptedException {
-        doReturn(Collections.emptyList()).when(varadhiTopicService).getVaradhiTopics(project.getName(), false);
+        doReturn(Collections.emptyList()).when(varadhiTopicService).list(project.getName(), false);
 
         List<String> retrievedTopics = sendRequestWithoutPayload(
             createRequest(HttpMethod.GET, getTopicsUrl(project)),

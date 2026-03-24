@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiSubscriptionTest {
 
-    private static final Endpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
+    private static final Endpoint.HttpEndpoint DEFAULT_ENDPOINT = new Endpoint.HttpEndpoint(
         URI.create("http://localhost:8080"),
         "GET",
         "",
@@ -56,7 +56,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         assertAll(
@@ -88,7 +89,8 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of("key", "value"),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
             );
         });
 
@@ -109,7 +111,8 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of("key", "value"),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
             );
         });
 
@@ -130,7 +133,8 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 null,
                 Map.of("key", "value"),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
             );
         });
 
@@ -151,7 +155,8 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 null,
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
             );
         });
 
@@ -172,7 +177,8 @@ class VaradhiSubscriptionTest {
                 DEFAULT_CONSUMPTION_POLICY,
                 DEFAULT_SHARDS,
                 Map.of(),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION
+                LifecycleStatus.ActionCode.SYSTEM_ACTION,
+                Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
             );
         });
 
@@ -192,7 +198,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markCreateFailed("Creation failed");
@@ -215,7 +222,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markCreated();
@@ -238,7 +246,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markDeleteFailed("Deletion failed");
@@ -261,7 +270,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markDeleting(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Deleting");
@@ -284,7 +294,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive");
@@ -307,7 +318,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         subscription.markInactive(LifecycleStatus.ActionCode.SYSTEM_ACTION, "Inactive");
@@ -331,7 +343,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "10"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         assertEquals(10, subscription.getIntProperty("key"));
@@ -350,7 +363,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -373,7 +387,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", "invalid"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         NumberFormatException exception = assertThrows(NumberFormatException.class, () -> {
@@ -396,7 +411,8 @@ class VaradhiSubscriptionTest {
             DEFAULT_CONSUMPTION_POLICY,
             DEFAULT_SHARDS,
             Map.of("key", Integer.MAX_VALUE + "1"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            Map.of(DEFAULT_ENDPOINT.getUri().toString(), "sub1")
         );
 
         assertThrows(NumberFormatException.class, () -> subscription.getIntProperty("key"));
