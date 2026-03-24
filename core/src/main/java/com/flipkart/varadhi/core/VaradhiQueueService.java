@@ -163,9 +163,6 @@ public class VaradhiQueueService {
         if (queue.getName() == null || queue.getName().isBlank()) {
             throw new IllegalArgumentException("Queue name is required.");
         }
-        if (queue.getTeam() != null && !queue.getTeam().isBlank()) {
-            // optional: validate team exists if needed
-        }
     }
 
     private static String topicFqn(String project, String queueOrTopicName) {

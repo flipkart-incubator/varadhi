@@ -21,12 +21,6 @@ public abstract class BaseResource extends Versioned {
     protected Boolean grouped;
     protected String appId;
     protected String nfrStrategy;
-    protected String team;
-
-    /** For subclasses that set fields after construction (e.g. JSON deserialization). */
-    protected BaseResource() {
-        super();
-    }
 
     /** For subclasses that supply name and version at construction (TopicResource, SubscriptionResource). */
     protected BaseResource(String name, int version) {
