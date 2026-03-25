@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
@@ -178,7 +179,7 @@ public class QueueHandlers implements RouteProvider {
 
     /**
      * Handles the DELETE request to delete a queue: subscription delete (async, same as subscription API) then topic
-     * delete (sync, same as topic API).
+     * delete (blocking meta/storage I/O, off the event loop).
      *
      * @param ctx the routing context
      */
@@ -195,20 +196,27 @@ public class QueueHandlers implements RouteProvider {
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String requestedBy = ctx.getIdentityOrDefault();
 
+        CompletableFuture<Void> subscriptionDone = varadhiQueueService.deleteQueueSubscription(
+            projectName,
+            queueName,
+            project,
+            requestedBy,
+            deletionType,
+            actionRequest
+        );
         ctx.handleResponse(
-            varadhiQueueService.deleteQueueSubscription(
-                projectName,
-                queueName,
-                project,
-                requestedBy,
-                deletionType,
-                actionRequest
-            ).thenRun(() -> varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest))
+            subscriptionDone.thenCompose(
+                v -> runOnWorker(
+                    ctx,
+                    () -> varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest)
+                )
+            )
         );
     }
 
     /**
-     * Handles the PATCH request to restore a queue: subscription restore (async) then topic restore (sync).
+     * Handles the PATCH request to restore a queue: subscription restore (async) then topic restore (blocking
+     * meta I/O, off the event loop).
      *
      * @param ctx the routing context
      */
@@ -218,12 +226,31 @@ public class QueueHandlers implements RouteProvider {
         String queueName = getQueueName(ctx);
         String requestedBy = ctx.getIdentityOrDefault();
 
-        ctx.handleResponse(
-            varadhiQueueService.restoreQueueSubscription(projectName, queueName, requestedBy, actionRequest)
-                               .thenRun(
-                                   () -> varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest)
-                               )
+        CompletableFuture<Void> subscriptionDone = varadhiQueueService.restoreQueueSubscription(
+            projectName,
+            queueName,
+            requestedBy,
+            actionRequest
         );
+        ctx.handleResponse(
+            subscriptionDone.thenCompose(
+                v -> runOnWorker(
+                    ctx,
+                    () -> varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest)
+                )
+            )
+        );
+    }
+
+    /**
+     * Runs blocking work on a Vert.x worker thread. Subscription futures may complete on the event loop; topic
+     * delete/restore must not use {@code thenRun} for store I/O on that thread.
+     */
+    private CompletableFuture<Void> runOnWorker(RoutingContext ctx, Runnable blocking) {
+        return ctx.vertx().<Void>executeBlocking(() -> {
+            blocking.run();
+            return null;
+        }, false).toCompletionStage().toCompletableFuture();
     }
 
     /**
