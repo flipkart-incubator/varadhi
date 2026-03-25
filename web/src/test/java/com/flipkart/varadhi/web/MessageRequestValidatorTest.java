@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.core.config.MessageHeaderUtils;
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.junit.jupiter.api.Assertions;
@@ -29,6 +30,22 @@ public class MessageRequestValidatorTest extends WebTestBase {
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         Assertions.assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders));
+    }
+
+    @Test
+    public void testQueueProduceMissingQueueOrBothHeaders() {
+        MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration();
+        Multimap<String, String> headers = ArrayListMultimap.create();
+        headers.put(StdHeaders.get().msgId(), "id-1");
+        headers.put(StdHeaders.get().httpUri().value(), "https://example.com");
+        Message message = new SimpleMessage(new byte[0], headers);
+
+        IllegalArgumentException ex = Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> MessageRequestValidator.ensureHeaderSemanticsAndSizeForQueueProduce(msgConfig, message)
+        );
+        Assertions.assertTrue(ex.getMessage().contains("Missing required header"));
+        Assertions.assertTrue(ex.getMessage().contains("queue produce"));
     }
 
     @ParameterizedTest

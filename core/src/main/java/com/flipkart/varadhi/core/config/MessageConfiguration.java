@@ -79,4 +79,16 @@ public class MessageConfiguration {
             }
         });
     }
+
+    /**
+     * Ensures all standard headers marked {@link com.flipkart.varadhi.entities.RequiredBy#Queue} or
+     * {@link com.flipkart.varadhi.entities.RequiredBy#Both} are present (queue produce API).
+     */
+    public void ensureQueueProduceRequiredHeaders(Multimap<String, String> headers) {
+        stdHeaders.getHeaderNamesRequiredForQueueProduce().forEach(key -> {
+            if (!headers.containsKey(key)) {
+                throw new IllegalArgumentException(String.format("Missing required header %s for queue produce", key));
+            }
+        });
+    }
 }

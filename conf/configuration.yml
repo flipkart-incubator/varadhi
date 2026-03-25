@@ -46,15 +46,27 @@ featureFlags:
 messageConfiguration:
   headers:
     allowedPrefix: [ "X_", "X-" ]
-    msgId: "X_MESSAGE_ID"
+    msgId:
+      value: "X_MESSAGE_ID"
+      requiredBy: Both
     groupId: "X_GROUP_ID"
     callbackCodes: "X_CALLBACK_CODES"
     requestTimeout: "X_REQUEST_TIMEOUT"
-    replyToHttpUri: "X_REPLY_TO_HTTP_URI"
-    replyToHttpMethod: "X_REPLY_TO_HTTP_METHOD"
-    replyTo: "X_REPLY_TO"
-    httpUri: "X_HTTP_URI"
-    httpMethod: "X_HTTP_METHOD"
+    replyToHttpUri:
+      value: "X_REPLY_TO_HTTP_URI"
+      requiredBy: Callback
+    replyToHttpMethod:
+      value: "X_REPLY_TO_HTTP_METHOD"
+      requiredBy: Callback
+    replyTo:
+      value: "X_REPLY_TO"
+      requiredBy: Callback
+    httpUri:
+      value: "X_HTTP_URI"
+      requiredBy: Queue
+    httpMethod:
+      value: "X_HTTP_METHOD"
+      requiredBy: Queue
     httpContentType: "X_CONTENT_TYPE"
     producerIdentity: "X_PRODUCE_IDENTITY"
     produceRegion: "X_PRODUCE_REGION"

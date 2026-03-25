@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -54,14 +55,17 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
 
     public void addRequestSpanAndLog(RoutingContext ctx, String apiName, TelemetryType telemetryType) {
         long start = System.currentTimeMillis();
-        String topic = ctx.request().getParam("topic");
-        String project = ctx.request().getParam("project");
+        String project = ctx.request().getParam(PathParams.PATH_PARAM_PROJECT);
+        String topicOrQueue = firstNonEmpty(
+            ctx.request().getParam(PathParams.PATH_PARAM_TOPIC),
+            ctx.request().getParam(PathParams.PATH_PARAM_QUEUE)
+        );
 
-        if (Strings.isNullOrEmpty(topic) || Strings.isNullOrEmpty(project)) {
-            throw new BadRequestException("Missing required parameters: topic or project");
+        if (Strings.isNullOrEmpty(topicOrQueue) || Strings.isNullOrEmpty(project)) {
+            throw new BadRequestException("Missing required parameters: project and topic or queue");
         }
 
-        String fqn = VaradhiTopic.fqn(project, topic);
+        String fqn = VaradhiTopic.fqn(project, topicOrQueue);
         Span span = telemetryType.traces() ? addRequestSpan(apiName, fqn) : null;
 
         ctx.addEndHandler(ar -> {
@@ -137,5 +141,12 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
         sb.append(" latency=%dms".formatted(latencyMs));
         requestTags.forEach((k, v) -> sb.append(" ").append(k.getKey()).append("=").append(v));
         log.info(sb.toString());
+    }
+
+    private static String firstNonEmpty(String a, String b) {
+        if (!Strings.isNullOrEmpty(a)) {
+            return a;
+        }
+        return b;
     }
 }

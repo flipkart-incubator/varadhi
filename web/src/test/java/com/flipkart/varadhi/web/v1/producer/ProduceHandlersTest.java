@@ -25,6 +25,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
@@ -360,7 +361,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(OVERSIZED_HEADER_KEY_LENGTH);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
         sendRequestAndParseResponse(
             request,
             payload,
@@ -375,7 +376,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(99);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
@@ -388,6 +389,55 @@ public class ProduceHandlersTest extends ProduceTestBase {
             "Request size exceeds allowed limit of 5242880 bytes.",
             WebTestBase.c(ErrorResponse.class)
         );
+    }
+
+    @Test
+    public void testQueueProduceRejectedWhenQueueHeadersMissing() {
+        Route queueRoute = router.post("/projects/:project/queues/:queue/produce");
+        queueRoute.handler(bodyHandler).handler(ctx -> {
+            ctx.put(ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchiesForQueueProduce(ctx, true));
+            ctx.next();
+        }).handler(ctx -> {
+            telemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
+            ctx.next();
+        }).handler(produceHandlers::produceToQueue);
+        setupFailureHandler(queueRoute);
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, "/projects/project1/queues/topic1/produce");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        sendRequestAndParseResponse(
+            request,
+            payload,
+            400,
+            "Missing required header " + StdHeaders.get().httpMethod().value() + " for queue produce",
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                                                           .produceToTopic(msgCapture.capture(), eq(topicFullName));
+
+        Route queueRoute = router.post("/projects/:project/queues/:queue/produce");
+        queueRoute.handler(bodyHandler).handler(ctx -> {
+            ctx.put(ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchiesForQueueProduce(ctx, true));
+            ctx.next();
+        }).handler(ctx -> {
+            telemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
+            ctx.next();
+        }).handler(produceHandlers::produceToQueue);
+        setupFailureHandler(queueRoute);
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, "/projects/project1/queues/topic1/produce");
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        request.putHeader(StdHeaders.get().httpMethod().value(), "POST");
+        String messageIdObtained = sendRequestWithPayload(request, payload, WebTestBase.c(String.class));
+        Assertions.assertEquals(messageId, messageIdObtained);
+        verify(producerService).produceToTopic(any(), eq(topicFullName));
     }
 
 }
