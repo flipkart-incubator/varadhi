@@ -178,8 +178,9 @@ public class QueueHandlers implements RouteProvider {
     }
 
     /**
-     * Handles the DELETE request to delete a queue: subscription delete (async, same as subscription API) then topic
-     * delete (blocking meta/storage I/O, off the event loop).
+     * Deletes a queue: subscription leg async via {@link com.flipkart.varadhi.core.VaradhiSubscriptionService} (same as
+     * {@link SubscriptionHandlers#delete}), then topic leg synchronous via {@link com.flipkart.varadhi.core.VaradhiTopicService}
+     * (same as {@link TopicHandlers#delete}), chained on the subscription completion thread without a worker pool.
      *
      * @param ctx the routing context
      */
@@ -204,19 +205,15 @@ public class QueueHandlers implements RouteProvider {
             deletionType,
             actionRequest
         );
-        ctx.handleResponse(
-            subscriptionDone.thenCompose(
-                v -> runOnWorker(
-                    ctx,
-                    () -> varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest)
-                )
-            )
-        );
+        ctx.handleResponse(subscriptionDone.thenApply(v -> {
+            varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest);
+            return null;
+        }));
     }
 
     /**
-     * Handles the PATCH request to restore a queue: subscription restore (async) then topic restore (blocking
-     * meta I/O, off the event loop).
+     * Restores a queue: subscription leg async (same as {@link SubscriptionHandlers#restore}), then topic leg
+     * synchronous (same as {@link TopicHandlers#restore}), chained without a worker pool.
      *
      * @param ctx the routing context
      */
@@ -232,25 +229,10 @@ public class QueueHandlers implements RouteProvider {
             requestedBy,
             actionRequest
         );
-        ctx.handleResponse(
-            subscriptionDone.thenCompose(
-                v -> runOnWorker(
-                    ctx,
-                    () -> varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest)
-                )
-            )
-        );
-    }
-
-    /**
-     * Runs blocking work on a Vert.x worker thread. Subscription futures may complete on the event loop; topic
-     * delete/restore must not use {@code thenRun} for store I/O on that thread.
-     */
-    private CompletableFuture<Void> runOnWorker(RoutingContext ctx, Runnable blocking) {
-        return ctx.vertx().<Void>executeBlocking(() -> {
-            blocking.run();
+        ctx.handleResponse(subscriptionDone.thenApply(v -> {
+            varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest);
             return null;
-        }, false).toCompletionStage().toCompletableFuture();
+        }));
     }
 
     /**
