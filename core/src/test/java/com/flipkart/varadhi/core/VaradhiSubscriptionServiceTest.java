@@ -615,7 +615,7 @@ class VaradhiSubscriptionServiceTest {
                 update.getVersion(),
                 update.getDescription(),
                 update.isGrouped(),
-                update.getEndpoint(),
+                update.getEndpointOptional().orElse(null),
                 update.getRetryPolicy(),
                 update.getConsumptionPolicy(),
                 REQUESTED_BY
@@ -1030,7 +1030,7 @@ class VaradhiSubscriptionServiceTest {
         assertEquals(expected.getTopic(), actual.getTopic());
         assertEquals(expected.getDescription(), actual.getDescription());
         assertEquals(expected.isGrouped(), actual.isGrouped());
-        assertEquals(expected.getEndpoint().getProtocol(), actual.getEndpoint().getProtocol());
+        assertEquals(expected.resolveDeliveryEndpoint().getProtocol(), actual.resolveDeliveryEndpoint().getProtocol());
         assertEquals(expected.getRetryPolicy(), actual.getRetryPolicy());
         assertEquals(expected.getConsumptionPolicy(), actual.getConsumptionPolicy());
         assertEquals(expected.getShards().getShardCount(), actual.getShards().getShardCount());
@@ -1044,7 +1044,7 @@ class VaradhiSubscriptionServiceTest {
             to.getVersion(),
             to.getDescription(),
             to.isGrouped(),
-            to.getEndpoint(),
+            to.getEndpointOptional().orElse(null),
             to.getRetryPolicy(),
             to.getConsumptionPolicy(),
             REQUESTED_BY

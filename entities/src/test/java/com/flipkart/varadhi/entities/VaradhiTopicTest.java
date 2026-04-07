@@ -43,7 +43,8 @@ class VaradhiTopicTest {
             () -> assertEquals(VaradhiTopic.INITIAL_VERSION, varadhiTopic.getVersion(), "Version mismatch"),
             () -> assertFalse(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
             () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
-            () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch")
+            () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch"),
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
         );
     }
 

@@ -6,7 +6,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.core.VaradhiQueueService;
+import com.flipkart.varadhi.entities.CodeRange;
+import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
@@ -15,7 +19,9 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.entities.web.QueueResource;
+import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.web.Extensions;
 import com.flipkart.varadhi.web.WebTestBase;
@@ -31,17 +37,21 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -92,11 +102,16 @@ class QueueHandlersTest extends WebTestBase {
         // Async handlers (handleResponse); must not use wrapBlocking — same as production nonBlocking routes.
         Route deleteRoute = router.delete("/projects/:project/queues/:queue").handler(queueHandlers::delete);
         Route restoreRoute = router.patch("/projects/:project/queues/:queue/restore").handler(queueHandlers::restore);
+        Route updateRoute = router.put("/projects/:project/queues/:queue").handler(bodyHandler).handler(ctx -> {
+            queueHandlers.setRequestBody(ctx);
+            ctx.next();
+        }).handler(queueHandlers::update);
         setupFailureHandler(deleteRoute);
         setupFailureHandler(restoreRoute);
+        setupFailureHandler(updateRoute);
 
         router.getRoutes().forEach(r -> {
-            if (r != deleteRoute && r != restoreRoute) {
+            if (r != deleteRoute && r != restoreRoute && r != updateRoute) {
                 setupFailureHandler(r);
             }
         });
@@ -204,10 +219,118 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     @Test
+    void updateQueue_withValidRequest_returnsQueueResponse() throws InterruptedException {
+        QueueResource body = sampleQueueResource();
+        body.setVersion(2);
+        VaradhiTopic topic = topicForQueue();
+        VaradhiSubscription updated = subscriptionForQueue(topic);
+        updated.setVersion(3);
+
+        when(varadhiQueueService.updateQueue(eq(DEFAULT_PROJECT_NAME), eq(QUEUE_NAME), any(), any(), any())).thenReturn(
+            CompletableFuture.completedFuture(new VaradhiQueueService.QueueResult(topic, updated))
+        );
+
+        QueueHandlers.QueueResponse resp = sendRequestWithEntity(
+            createRequest(HttpMethod.PUT, queueUrl(project)),
+            body,
+            WebTestBase.c(QueueHandlers.QueueResponse.class)
+        );
+
+        assertEquals(QUEUE_NAME, resp.queueName());
+        assertEquals(DEFAULT_PROJECT_NAME, resp.project());
+        assertEquals(SubscriptionResource.from(updated).getRetryPolicy(), resp.subscription().getRetryPolicy());
+        verify(varadhiQueueService).updateQueue(eq(DEFAULT_PROJECT_NAME), eq(QUEUE_NAME), any(), any(), any());
+    }
+
+    @Test
+    void updateQueue_projectMismatch_returns400() throws InterruptedException {
+        QueueResource body = sampleQueueResource();
+        body.setProject("wrong-project");
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.PUT, queueUrl(project)),
+            body,
+            HTTP_BAD_REQUEST,
+            "Project name mismatch between URL and request body.",
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    void getQueue_whenServiceThrowsNotFound_returns404() throws InterruptedException {
+        String msg = "QUEUE(project1/queue1) not found";
+        doThrow(new ResourceNotFoundException(msg)).when(varadhiQueueService).get(project.getName(), QUEUE_NAME);
+
+        sendRequestWithoutPayload(createRequest(HttpMethod.GET, queueUrl(project)), HTTP_NOT_FOUND, msg);
+    }
+
+    @Test
+    void createQueue_whenServiceThrowsInvalidOperation_returns409() throws InterruptedException {
+        String msg = "Cannot create queue: conflict.";
+        doThrow(new InvalidOperationForResourceException(msg)).when(varadhiQueueService)
+                                                              .create(any(), eq(project), any());
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.POST, queuesUrl(project)),
+            sampleQueueResource(),
+            HTTP_CONFLICT,
+            msg,
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    void createQueue_passesRetryPolicyAndTargetClientIdsToService() throws InterruptedException {
+        RetryPolicy customRetry = new RetryPolicy(
+            new CodeRange[] {new CodeRange(503, 503)},
+            RetryPolicy.BackoffType.EXPONENTIAL,
+            2,
+            2,
+            2,
+            5
+        );
+        Map<String, String> clients = Map.of("http://callback.example/push", "client-b");
+        QueueResource body = new QueueResource(
+            QUEUE_NAME,
+            0,
+            DEFAULT_PROJECT_NAME,
+            null,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            customRetry,
+            com.flipkart.varadhi.entities.Constants.QueueDefaults.CONSUMPTION_POLICY,
+            null,
+            clients,
+            SubscriptionTestUtils.getSubscriptionDefaultProperties()
+        );
+        VaradhiTopic topic = topicForQueue();
+        VaradhiSubscription subscription = subscriptionForQueue(topic);
+        when(varadhiQueueService.create(any(), eq(project), any())).thenReturn(
+            new VaradhiQueueService.QueueResult(topic, subscription)
+        );
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.POST, queuesUrl(project)),
+            body,
+            WebTestBase.c(QueueHandlers.QueueResponse.class)
+        );
+
+        ArgumentCaptor<QueueResource> cap = ArgumentCaptor.forClass(QueueResource.class);
+        verify(varadhiQueueService).create(cap.capture(), eq(project), any());
+        assertEquals(customRetry, cap.getValue().getRetryPolicy());
+        assertEquals("client-b", cap.getValue().getTargetClientIds().get("http://callback.example/push"));
+    }
+
+    @Test
     void restoreQueue_afterSubscriptionFuture_runsTopicRestore() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PATCH, queueUrl(project) + "/restore");
         doReturn(CompletableFuture.completedFuture(null)).when(varadhiQueueService)
-                                                         .restoreQueueSubscription(
+                                                         .restoreQueue(
                                                              eq(project.getName()),
                                                              eq(QUEUE_NAME),
                                                              any(),
@@ -216,10 +339,41 @@ class QueueHandlersTest extends WebTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        InOrder inOrder = inOrder(varadhiQueueService);
-        inOrder.verify(varadhiQueueService)
-               .restoreQueueSubscription(eq(project.getName()), eq(QUEUE_NAME), any(), any());
-        inOrder.verify(varadhiQueueService).restoreQueueTopic(eq(project.getName()), eq(QUEUE_NAME), any());
+        verify(varadhiQueueService, times(1)).restoreQueue(eq(project.getName()), eq(QUEUE_NAME), any(), any());
+    }
+
+    @Test
+    void restoreQueue_whenServiceReturnsFailedFuture_returns404() throws InterruptedException {
+        String msg = "Cannot restore queue 'queue1': default subscription not found.";
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PATCH, queueUrl(project) + "/restore");
+        doReturn(CompletableFuture.failedFuture(new ResourceNotFoundException(msg))).when(varadhiQueueService)
+                                                                                    .restoreQueue(
+                                                                                        eq(project.getName()),
+                                                                                        eq(QUEUE_NAME),
+                                                                                        any(),
+                                                                                        any()
+                                                                                    );
+
+        sendRequestWithoutPayload(request, HTTP_NOT_FOUND, msg);
+    }
+
+    @Test
+    void deleteQueue_whenServiceReturnsFailedFuture_returns404() throws InterruptedException {
+        String msg = "SUBSCRIPTION(project1/sub_queue1) not found";
+        HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, queueUrl(project));
+        doReturn(CompletableFuture.failedFuture(new ResourceNotFoundException(msg))).when(varadhiQueueService)
+                                                                                    .deleteQueue(
+                                                                                        eq(project.getName()),
+                                                                                        eq(QUEUE_NAME),
+                                                                                        eq(project),
+                                                                                        any(),
+                                                                                        eq(
+                                                                                            ResourceDeletionType.SOFT_DELETE
+                                                                                        ),
+                                                                                        any()
+                                                                                    );
+
+        sendRequestWithoutPayload(request, HTTP_NOT_FOUND, msg);
     }
 
     private void verifyDelete(ResourceDeletionType expectedType, String queryDeletionType) throws InterruptedException {
@@ -230,7 +384,7 @@ class QueueHandlersTest extends WebTestBase {
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.DELETE, url);
         doReturn(CompletableFuture.completedFuture(null)).when(varadhiQueueService)
-                                                         .deleteQueueSubscription(
+                                                         .deleteQueue(
                                                              eq(project.getName()),
                                                              eq(QUEUE_NAME),
                                                              eq(project),
@@ -241,18 +395,14 @@ class QueueHandlersTest extends WebTestBase {
 
         sendRequestWithoutPayload(request, HTTP_NO_CONTENT);
 
-        InOrder inOrder = inOrder(varadhiQueueService);
-        inOrder.verify(varadhiQueueService)
-               .deleteQueueSubscription(
-                   eq(project.getName()),
-                   eq(QUEUE_NAME),
-                   eq(project),
-                   any(),
-                   eq(expectedType),
-                   any()
-               );
-        inOrder.verify(varadhiQueueService)
-               .deleteQueueTopic(eq(project.getName()), eq(QUEUE_NAME), eq(expectedType), any());
+        verify(varadhiQueueService, times(1)).deleteQueue(
+            eq(project.getName()),
+            eq(QUEUE_NAME),
+            eq(project),
+            any(),
+            eq(expectedType),
+            any()
+        );
     }
 
     private static QueueResource sampleQueueResource() {
@@ -268,10 +418,11 @@ class QueueHandlersTest extends WebTestBase {
             null,
             null,
             null,
+            com.flipkart.varadhi.entities.Constants.QueueDefaults.RETRY_POLICY,
+            com.flipkart.varadhi.entities.Constants.QueueDefaults.CONSUMPTION_POLICY,
             null,
-            null,
-            null,
-            Map.of(TARGET_CLIENT_KEY, "test")
+            Map.of(TARGET_CLIENT_KEY, "test"),
+            SubscriptionTestUtils.getSubscriptionDefaultProperties()
         );
     }
 

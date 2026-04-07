@@ -165,7 +165,7 @@ public class ShardOperation extends MetaStoreEntity implements Operation {
                 subscription.getProject()
             );
             this.grouped = subscription.isGrouped();
-            this.endpoint = subscription.getEndpoint();
+            this.endpoint = subscription.resolveDeliveryEndpoint();
             this.consumptionPolicy = subscription.getConsumptionPolicy();
             this.retryPolicy = subscription.getRetryPolicy();
             this.shard = shard;

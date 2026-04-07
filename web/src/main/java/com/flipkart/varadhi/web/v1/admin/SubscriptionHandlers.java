@@ -267,7 +267,7 @@ public class SubscriptionHandlers implements RouteProvider {
                 subscription.getVersion(),
                 subscription.getDescription(),
                 subscription.isGrouped(),
-                subscription.getEndpoint(),
+                subscription.getEndpointOptional().orElse(null),
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy(),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)

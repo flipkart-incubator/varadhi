@@ -18,6 +18,11 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
     private final String nfrFilterName;
+    private final TopicCategory topicCategory;
+
+    public enum TopicCategory {
+        TOPIC, QUEUE
+    }
 
     /**
      * Constructs a new VaradhiTopic instance.
@@ -28,7 +33,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param capacity       the capacity policy of the topic
      * @param internalTopics the internal topics associated with this topic
      * @param status         the status of the topic
-     * @param nfrFilterName the name of the filter applied for NFR; {@code : null} if not set
+     * @param nfrFilterName  the name of the filter applied for NFR; {@code : null} if not set
+     * @param topicCategory
      */
     private VaradhiTopic(
         String name,
@@ -37,13 +43,15 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TopicCapacityPolicy capacity,
         Map<String, SegmentedStorageTopic> internalTopics,
         LifecycleStatus status,
-        String nfrFilterName
+        String nfrFilterName,
+        TopicCategory topicCategory
     ) {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
         this.nfrFilterName = nfrFilterName;
+        this.topicCategory = topicCategory != null ? topicCategory : TopicCategory.TOPIC;
         this.status = status;
     }
 
@@ -75,6 +83,22 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy
     ) {
+        return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC);
+    }
+
+    /**
+     * Same as {@link #of(String, String, boolean, TopicCapacityPolicy, LifecycleStatus.ActionCode, String)} but
+     * sets {@link TopicCategory} (e.g. {@link TopicCategory#QUEUE} for the topic leg of a queue).
+     */
+    public static VaradhiTopic of(
+        String project,
+        String name,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActionCode actionCode,
+        String nfrStrategy,
+        TopicCategory topicCategory
+    ) {
         return new VaradhiTopic(
             fqn(project, name),
             INITIAL_VERSION,
@@ -82,7 +106,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             capacity,
             new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
-            nfrStrategy
+            nfrStrategy,
+            topicCategory
         );
     }
 

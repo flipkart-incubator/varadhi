@@ -27,7 +27,7 @@ public abstract class Versioned {
         this(name, INITIAL_VERSION);
     }
 
-    /** No-arg constructor for subclasses that set name/version after construction (e.g. JSON deserialization). */
+    /** No-arg constructor for subclasses that set name/version after construction (e.g. JSON serialization). */
     protected Versioned() {
         this.name = null;
         this.version = INITIAL_VERSION;

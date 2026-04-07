@@ -2,11 +2,14 @@ package com.flipkart.varadhi.entities.web;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +31,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
     @NotBlank
     private final String description;
 
-    @NotNull
+    /** Optional; when absent at runtime, delivery may use {@link VaradhiSubscription#resolveDeliveryEndpoint()}. */
+    @Getter (AccessLevel.NONE)
     private final Endpoint endpoint;
 
     @NotNull
@@ -45,10 +49,10 @@ public class SubscriptionResource extends BaseResource implements Validatable {
 
     /**
      * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
-     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #endpoint}), value = client id.
-     * One entry is typical for topics; queues use one entry per logical endpoint. String keys are used instead of
-     * {@link Endpoint} as map keys for a JSON-friendly contract; {@link #endpoint} carries the primary endpoint
-     * configuration.
+     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #getEndpointOptional()} when
+     * present), value = client id. One entry is typical for topics; queues use one entry per logical endpoint. When
+     * no explicit endpoint is set, the callback URL may appear only in these keys (see
+     * {@link VaradhiSubscription#resolveDeliveryEndpoint()}).
      */
     @NotNull
     private final Map<String, String> targetClientIds;
@@ -63,7 +67,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * @param topicProject      The project of the topic associated with the subscription.
      * @param description       The description of the subscription.
      * @param grouped           Indicates if the subscription is grouped.
-     * @param endpoint          The endpoint associated with the subscription.
+     * @param endpoint          The endpoint associated with the subscription ({@code null} if not specified).
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
@@ -97,6 +101,11 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
         this.targetClientIds = VaradhiSubscription.validateTargetClientIds(targetClientIds);
+    }
+
+    @JsonGetter ("endpoint")
+    public Optional<Endpoint> getEndpointOptional() {
+        return Optional.ofNullable(endpoint);
     }
 
     /**
@@ -170,7 +179,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
             topicProject,
             subscription.getDescription(),
             subscription.isGrouped(),
-            subscription.getEndpoint(),
+            subscription.getEndpointOptional().orElse(null),
             subscription.getRetryPolicy(),
             subscription.getConsumptionPolicy(),
             subscription.getProperties(),
