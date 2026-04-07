@@ -264,7 +264,7 @@ public class VaradhiTopicService {
      *
      * @param varadhiTopic the Varadhi topic whose state is to be updated
      */
-    private void updateTopicState(VaradhiTopic varadhiTopic) {
+    public void updateTopicState(VaradhiTopic varadhiTopic) {
         try {
             topicStore.update(varadhiTopic);
         } catch (Exception e) {

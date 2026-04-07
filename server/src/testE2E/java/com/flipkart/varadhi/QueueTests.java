@@ -99,7 +99,9 @@ public class QueueTests extends E2EBase {
             null,
             null,
             null,
-            Map.of("http://localhost:8080", "test")
+            null,
+            Map.of("http://localhost:8080", "test"),
+            null
         );
     }
 }

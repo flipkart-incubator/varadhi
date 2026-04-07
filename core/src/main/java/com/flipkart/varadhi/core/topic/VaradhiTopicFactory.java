@@ -61,6 +61,18 @@ public class VaradhiTopicFactory {
     }
 
     /**
+     * Like {@link #get(Project, TopicResource)} but marks the entity as {@link VaradhiTopic.TopicCategory#QUEUE}
+     * (topic leg of a queue).
+     */
+    public VaradhiTopic getForQueue(Project project, TopicResource topicResource) {
+        topicResource.setCapacity(Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy));
+
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
+        planDeployment(project, varadhiTopic);
+        return varadhiTopic;
+    }
+
+    /**
      * Plans the deployment of the VaradhiTopic by creating and associating an internal storage topic.
      *
      * @param project      the project associated with the topic

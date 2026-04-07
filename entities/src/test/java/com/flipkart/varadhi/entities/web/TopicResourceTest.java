@@ -111,7 +111,21 @@ class TopicResourceTest {
             () -> assertEquals("projectName", varadhiTopic.getProjectName()),
             () -> assertTrue(varadhiTopic.isGrouped()),
             () -> assertNotNull(varadhiTopic.getCapacity()),
-            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode())
+            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode()),
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
         );
+    }
+
+    @Test
+    void toVaradhiTopic_WithQueueCategory_UsesQueueTopicCategory() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
+        assertEquals(VaradhiTopic.TopicCategory.QUEUE, varadhiTopic.getTopicCategory());
     }
 }

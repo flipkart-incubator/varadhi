@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web.v1.admin;
 import com.flipkart.varadhi.core.RequestActionType;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.VaradhiQueueService;
+import com.flipkart.varadhi.entities.Constants;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
@@ -27,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
@@ -36,11 +36,6 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_QUEUE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
@@ -49,12 +44,26 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 
 /**
- * Handler for Queue CRUD and restore. Delegates to {@link VaradhiQueueService}.
+ * Handler for queue CRUD, update, and restore. Delegates to {@link VaradhiQueueService}. Update follows
+ * {@link SubscriptionHandlers#update(RoutingContext)} for the subscription leg; {@code version} is the subscription
+ * version for optimistic locking. The topic leg of the body is persisted before the subscription update
+ * (see {@link VaradhiQueueService#updateQueue}). {@link #setRequestBody} fills omitted subscription properties,
+ * retry policy, and consumption policy using {@link Constants.QueueDefaults} (same values as former {@code QueueResource} defaults).
  */
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class QueueHandlers implements RouteProvider {
     private static final String API_NAME = "QUEUE";
+
+    /** Applied in {@link #setRequestBody} when the client omits subscription properties (aligned with subscription test defaults). */
+    private static final Map<String, String> DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES = Map.of(
+        Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
+        "100",
+        Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT,
+        "20",
+        Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT,
+        "100"
+    );
 
     private final VaradhiQueueService varadhiQueueService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
@@ -72,29 +81,28 @@ public class QueueHandlers implements RouteProvider {
         return new SubRoutes(
             "/v1/projects/:project/queues",
             List.of(
-                RouteDefinition.get(LIST, API_NAME, "")
-                               .authorize(TOPIC_LIST)
-                               .authorize(SUBSCRIPTION_LIST)
-                               .build(this::getHierarchies, this::list),
+                RouteDefinition.get(LIST, API_NAME, "").authorize(TOPIC_LIST).build(this::getHierarchies, this::list),
                 RouteDefinition.get(GET, API_NAME, "/:queue")
                                .authorize(TOPIC_GET)
-                               .authorize(SUBSCRIPTION_GET)
                                .build(this::getHierarchies, this::get),
                 RouteDefinition.post(CREATE, API_NAME, "")
                                .hasBody()
                                .bodyParser(this::setRequestBody)
                                .authorize(TOPIC_CREATE)
-                               .authorize(SUBSCRIPTION_CREATE)
                                .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
+                RouteDefinition.put(UPDATE, API_NAME, "/:queue")
+                               .nonBlocking()
+                               .hasBody()
+                               .bodyParser(this::setRequestBody)
+                               .authorize(TOPIC_UPDATE)
+                               .build(this::getHierarchies, this::update),
                 RouteDefinition.delete(DELETE, API_NAME, "/:queue")
                                .nonBlocking()
-                               .authorize(SUBSCRIPTION_DELETE)
                                .authorize(TOPIC_DELETE)
                                .build(this::getHierarchies, this::delete),
                 RouteDefinition.patch(RESTORE, API_NAME, "/:queue/restore")
                                .nonBlocking()
-                               .authorize(SUBSCRIPTION_UPDATE)
                                .authorize(TOPIC_UPDATE)
                                .build(this::getHierarchies, this::restore)
             )
@@ -103,6 +111,19 @@ public class QueueHandlers implements RouteProvider {
 
     public void setRequestBody(RoutingContext ctx) {
         QueueResource body = ctx.body().asValidatedPojo(QueueResource.class);
+        String name = body.getName();
+        if (name != null) {
+            body.setName(name.trim());
+        }
+        if (body.getProperties() == null || body.getProperties().isEmpty()) {
+            body.setProperties(Map.copyOf(DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES));
+        }
+        if (body.getRetryPolicy() == null) {
+            body.setRetryPolicy(Constants.QueueDefaults.RETRY_POLICY);
+        }
+        if (body.getConsumptionPolicy() == null) {
+            body.setConsumptionPolicy(Constants.QueueDefaults.CONSUMPTION_POLICY);
+        }
         ctx.put(REQUEST_BODY, body);
     }
 
@@ -112,12 +133,15 @@ public class QueueHandlers implements RouteProvider {
 
         if (hasBody) {
             QueueResource queueResource = ctx.get(REQUEST_BODY);
-            String queueName = queueResource.getName() != null ? queueResource.getName().trim() : "";
+            String queueNameFromPath = ctx.pathParam(PATH_PARAM_QUEUE);
+            String effectiveQueueName = (queueNameFromPath != null && !queueNameFromPath.isBlank()) ?
+                queueNameFromPath :
+                (queueResource.getName() != null ? queueResource.getName() : "");
             return Map.ofEntries(
-                Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, queueName)),
+                Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, effectiveQueueName)),
                 Map.entry(
                     ResourceType.SUBSCRIPTION,
-                    new SubscriptionHierarchy(project, QueueResource.getDefaultSubscriptionName(queueName))
+                    new SubscriptionHierarchy(project, QueueResource.getDefaultSubscriptionName(effectiveQueueName))
                 )
             );
         }
@@ -166,7 +190,6 @@ public class QueueHandlers implements RouteProvider {
         QueueResource queueResource = ctx.get(REQUEST_BODY);
         LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
         Project project = projectCache.getOrThrow(projectName).getEntity();
-
         VaradhiQueueService.QueueResult result = varadhiQueueService.create(queueResource, project, actionCode);
         QueueResponse response = new QueueResponse(
             queueResource.getName(),
@@ -178,9 +201,41 @@ public class QueueHandlers implements RouteProvider {
     }
 
     /**
-     * Deletes a queue: subscription leg async via {@link com.flipkart.varadhi.core.VaradhiSubscriptionService} (same as
-     * {@link SubscriptionHandlers#delete}), then topic leg synchronous via {@link com.flipkart.varadhi.core.VaradhiTopicService}
-     * (same as {@link TopicHandlers#delete}), chained on the subscription completion thread without a worker pool.
+     * Updates a queue (default subscription fields). Same semantics as {@link SubscriptionHandlers#update(RoutingContext)}.
+     */
+    public void update(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
+        QueueResource queueResource = ctx.get(REQUEST_BODY);
+        validateProjectConsistency(projectName, queueResource.getProject());
+        if (!queueName.equals(queueResource.getName())) {
+            throw new IllegalArgumentException("Queue name in path must match request body name.");
+        }
+        LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
+        String requestedBy = ctx.getIdentityOrDefault();
+
+        ctx.handleResponse(
+            varadhiQueueService.updateQueue(projectName, queueName, queueResource, requestedBy, actionCode)
+                               .thenApply(
+                                   result -> new QueueResponse(
+                                       queueName,
+                                       projectName,
+                                       TopicResource.from(result.topic()),
+                                       SubscriptionResource.from(result.subscription())
+                                   )
+                               )
+        );
+    }
+
+    private static void validateProjectConsistency(String projectPath, String projectInRequest) {
+        if (projectInRequest == null || !projectPath.equals(projectInRequest)) {
+            throw new IllegalArgumentException("Project name mismatch between URL and request body.");
+        }
+    }
+
+    /**
+     * Deletes a queue. Async composition (subscription then topic) is entirely inside
+     * {@link VaradhiQueueService#deleteQueue}; this method only forwards the resulting future to the response helper.
      *
      * @param ctx the routing context
      */
@@ -197,23 +252,13 @@ public class QueueHandlers implements RouteProvider {
         Project project = projectCache.getOrThrow(projectName).getEntity();
         String requestedBy = ctx.getIdentityOrDefault();
 
-        CompletableFuture<Void> subscriptionDone = varadhiQueueService.deleteQueueSubscription(
-            projectName,
-            queueName,
-            project,
-            requestedBy,
-            deletionType,
-            actionRequest
+        ctx.handleResponse(
+            varadhiQueueService.deleteQueue(projectName, queueName, project, requestedBy, deletionType, actionRequest)
         );
-        ctx.handleResponse(subscriptionDone.thenApply(v -> {
-            varadhiQueueService.deleteQueueTopic(projectName, queueName, deletionType, actionRequest);
-            return null;
-        }));
     }
 
     /**
-     * Restores a queue: subscription leg async (same as {@link SubscriptionHandlers#restore}), then topic leg
-     * synchronous (same as {@link TopicHandlers#restore}), chained without a worker pool.
+     * Restores a queue. Async composition lives in {@link VaradhiQueueService#restoreQueue}.
      *
      * @param ctx the routing context
      */
@@ -223,16 +268,7 @@ public class QueueHandlers implements RouteProvider {
         String queueName = getQueueName(ctx);
         String requestedBy = ctx.getIdentityOrDefault();
 
-        CompletableFuture<Void> subscriptionDone = varadhiQueueService.restoreQueueSubscription(
-            projectName,
-            queueName,
-            requestedBy,
-            actionRequest
-        );
-        ctx.handleResponse(subscriptionDone.thenApply(v -> {
-            varadhiQueueService.restoreQueueTopic(projectName, queueName, actionRequest);
-            return null;
-        }));
+        ctx.handleResponse(varadhiQueueService.restoreQueue(projectName, queueName, requestedBy, actionRequest));
     }
 
     /**
