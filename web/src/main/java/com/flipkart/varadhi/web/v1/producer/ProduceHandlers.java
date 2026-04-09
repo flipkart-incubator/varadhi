@@ -121,8 +121,10 @@ public class ProduceHandlers implements RouteProvider {
         // Potential solution: Use getByteBuf().array() to access the backing array directly,
         // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        boolean queueBackedTopic = varadhiQueueService != null
-            && varadhiQueueService.isQueueBackedTopic(projectName, topicName);
+        boolean queueBackedTopic = varadhiQueueService != null && varadhiQueueService.isQueueBackedTopic(
+            projectName,
+            topicName
+        );
         Message messageToProduce = buildMessageToProduce(
             payload,
             ctx.request().headers(),
@@ -179,12 +181,7 @@ public class ProduceHandlers implements RouteProvider {
      * @param producerIdentity The identity of the producer
      * @return A Message object ready for production
      */
-    Message buildMessageToProduce(
-        byte[] payload,
-        MultiMap headers,
-        String producerIdentity,
-        boolean queueBackedTopic
-    ) {
+    Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity, boolean queueBackedTopic) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
         Message message = new SimpleMessage(payload, compliantHeaders);
         if (queueBackedTopic) {
