@@ -25,7 +25,6 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
-import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
@@ -321,7 +320,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
             producerService,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
-            projectCache
+            projectCache,
+            varadhiQueueService
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 
@@ -393,17 +393,9 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testQueueProduceRejectedWhenQueueHeadersMissing() {
-        Route queueRoute = router.post("/projects/:project/queues/:queue/produce");
-        queueRoute.handler(bodyHandler).handler(ctx -> {
-            ctx.put(ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchiesForQueueProduce(ctx, true));
-            ctx.next();
-        }).handler(ctx -> {
-            telemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
-            ctx.next();
-        }).handler(produceHandlers::produceToQueue);
-        setupFailureHandler(queueRoute);
+        Mockito.when(varadhiQueueService.isQueueBackedTopic(eq("project1"), eq("topic1"))).thenReturn(true);
 
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, "/projects/project1/queues/topic1/produce");
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
         request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
         sendRequestAndParseResponse(
@@ -417,21 +409,12 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
+        Mockito.when(varadhiQueueService.isQueueBackedTopic(eq("project1"), eq("topic1"))).thenReturn(true);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
 
-        Route queueRoute = router.post("/projects/:project/queues/:queue/produce");
-        queueRoute.handler(bodyHandler).handler(ctx -> {
-            ctx.put(ContextKeys.RESOURCE_HIERARCHY, produceHandlers.getHierarchiesForQueueProduce(ctx, true));
-            ctx.next();
-        }).handler(ctx -> {
-            telemetryConfigurator.addRequestSpanAndLog(ctx, "Produce", new TelemetryType(true, true, true));
-            ctx.next();
-        }).handler(produceHandlers::produceToQueue);
-        setupFailureHandler(queueRoute);
-
-        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, "/projects/project1/queues/topic1/produce");
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
         request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
         request.putHeader(StdHeaders.get().httpMethod().value(), "POST");

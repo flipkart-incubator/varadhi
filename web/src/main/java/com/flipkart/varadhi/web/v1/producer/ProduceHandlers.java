@@ -4,6 +4,7 @@ import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.Constants.HttpCodes;
 import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiQueueService;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
@@ -49,11 +50,14 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 @RequiredArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private static final String API_NAME = "TOPIC";
-    private static final String QUEUE_PRODUCE_API_NAME = "QUEUE";
     private final ProducerService producerService;
     private final MessageConfiguration msgConfig;
     private final String produceRegion;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
+    /**
+     * When null (e.g. produce-only deployment without cluster), queue-backed header rules are not applied.
+     */
+    private final VaradhiQueueService varadhiQueueService;
 
     /**
      * Returns the list of route definitions for message production endpoints.
@@ -71,13 +75,7 @@ public class ProduceHandlers implements RouteProvider {
                                .nonBlocking()
                                .metricsEnabled()
                                .authorize(ResourceAction.TOPIC_PRODUCE)
-                               .build(this::getHierarchies, this::produce),
-                RouteDefinition.post(Constants.MethodNames.PRODUCE, QUEUE_PRODUCE_API_NAME, "/queues/:queue/produce")
-                               .hasBody()
-                               .nonBlocking()
-                               .metricsEnabled()
-                               .authorize(ResourceAction.TOPIC_PRODUCE)
-                               .build(this::getHierarchiesForQueueProduce, this::produceToQueue)
+                               .build(this::getHierarchies, this::produce)
             )
         ).get();
     }
@@ -95,14 +93,6 @@ public class ProduceHandlers implements RouteProvider {
         return Map.of(
             ResourceType.TOPIC,
             new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PathParams.PATH_PARAM_TOPIC))
-        );
-    }
-
-    public Map<ResourceType, ResourceHierarchy> getHierarchiesForQueueProduce(RoutingContext ctx, boolean hasBody) {
-        Project project = projectCache.getOrThrow(ctx.request().getParam(PathParams.PATH_PARAM_PROJECT)).getEntity();
-        return Map.of(
-            ResourceType.TOPIC,
-            new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PathParams.PATH_PARAM_QUEUE))
         );
     }
 
@@ -131,44 +121,13 @@ public class ProduceHandlers implements RouteProvider {
         // Potential solution: Use getByteBuf().array() to access the backing array directly,
         // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduce(payload, ctx.request().headers(), ctx.getIdentityOrDefault());
-        CompletableFuture<ProduceResult> result = producerService.produceToTopic(messageToProduce, topicFQN);
-        result.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
-            if (produceResult != null) {
-                if (produceResult.isSuccess()) {
-                    ctx.endRequestWithResponse(produceResult.getMessageId());
-                } else {
-                    ctx.endRequestWithStatusAndErrorMsg(
-                        getHttpStatusForProduceStatus(produceResult.getProduceStatus()),
-                        produceResult.getFailureReason()
-                    );
-                }
-            } else {
-                log.error(
-                    "produceToTopic({}, {}) failed unexpectedly.",
-                    messageToProduce.getMessageId(),
-                    topicFQN,
-                    failure
-                );
-                ctx.fail(failure);
-            }
-        }));
-    }
-
-    /**
-     * Produces to the topic backing the named queue; requires headers configured with {@code requiredBy} {@code Queue}
-     * or {@code Both}.
-     */
-    public void produceToQueue(RoutingContext ctx) {
-        String projectName = ctx.pathParam(PathParams.PATH_PARAM_PROJECT);
-        String queueName = ctx.pathParam(PathParams.PATH_PARAM_QUEUE);
-        String topicFQN = VaradhiTopic.fqn(projectName, queueName);
-
-        byte[] payload = ctx.body().buffer().getBytes();
-        Message messageToProduce = buildMessageToProduceForQueue(
+        boolean queueBackedTopic = varadhiQueueService != null
+            && varadhiQueueService.isQueueBackedTopic(projectName, topicName);
+        Message messageToProduce = buildMessageToProduce(
             payload,
             ctx.request().headers(),
-            ctx.getIdentityOrDefault()
+            ctx.getIdentityOrDefault(),
+            queueBackedTopic
         );
         CompletableFuture<ProduceResult> result = producerService.produceToTopic(messageToProduce, topicFQN);
         result.whenComplete((produceResult, failure) -> ctx.vertx().runOnContext((Void) -> {
@@ -183,7 +142,7 @@ public class ProduceHandlers implements RouteProvider {
                 }
             } else {
                 log.error(
-                    "produceToQueue({}, {}) failed unexpectedly.",
+                    "produceToTopic({}, {}) failed unexpectedly.",
                     messageToProduce.getMessageId(),
                     topicFQN,
                     failure
@@ -220,20 +179,19 @@ public class ProduceHandlers implements RouteProvider {
      * @param producerIdentity The identity of the producer
      * @return A Message object ready for production
      */
-    Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity) {
+    Message buildMessageToProduce(
+        byte[] payload,
+        MultiMap headers,
+        String producerIdentity,
+        boolean queueBackedTopic
+    ) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
         Message message = new SimpleMessage(payload, compliantHeaders);
-        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
-        compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
-        compliantHeaders.put(StdHeaders.get().producerIdentity(), producerIdentity);
-        compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
-        return message;
-    }
-
-    Message buildMessageToProduceForQueue(byte[] payload, MultiMap headers, String producerIdentity) {
-        Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
-        Message message = new SimpleMessage(payload, compliantHeaders);
-        MessageRequestValidator.ensureHeaderSemanticsAndSizeForQueueProduce(msgConfig, message);
+        if (queueBackedTopic) {
+            MessageRequestValidator.ensureHeaderSemanticsAndSizeForQueueProduce(msgConfig, message);
+        } else {
+            MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
+        }
         compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
         compliantHeaders.put(StdHeaders.get().producerIdentity(), producerIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));

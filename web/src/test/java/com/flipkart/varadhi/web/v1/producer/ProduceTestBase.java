@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.web.v1.producer;
 
+import com.flipkart.varadhi.core.VaradhiQueueService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.config.MessageHeaderUtils;
 import com.flipkart.varadhi.core.config.MetricsOptions;
@@ -24,6 +25,7 @@ public class ProduceTestBase extends WebTestBase {
     ProjectService projectService;
     OrgService orgService;
     VaradhiTopicService varadhiTopicService;
+    VaradhiQueueService varadhiQueueService;
     String deployedRegion = "region1";
 
     ArgumentCaptor<Message> msgCapture;
@@ -42,6 +44,8 @@ public class ProduceTestBase extends WebTestBase {
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
         varadhiTopicService = mock(VaradhiTopicService.class);
+        varadhiQueueService = mock(VaradhiQueueService.class);
+        when(varadhiQueueService.isQueueBackedTopic(any(), any())).thenReturn(false);
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),
@@ -54,7 +58,8 @@ public class ProduceTestBase extends WebTestBase {
             producerService,
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
-            projectCache
+            projectCache,
+            varadhiQueueService
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

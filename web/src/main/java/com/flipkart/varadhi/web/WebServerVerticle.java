@@ -221,15 +221,25 @@ public class WebServerVerticle extends AbstractVerticle {
     private void setupEntityServicesForAdminApis() {
         log.info("Setting up entity services for API Usecases: {}", apiUsecases);
 
-        // Create message exchange for communication
-        MessageExchange messageExchange = clusterManager.getExchange(vertx);
-
         // Initialize basic services
         serviceRegistry.registerIfAbsent(OrgService.class, () -> new OrgService(metaStore.orgs(), metaStore.teams()));
         serviceRegistry.registerIfAbsent(TeamService.class, () -> new TeamService(metaStore));
         serviceRegistry.registerIfAbsent(ProjectService.class, () -> new ProjectService(metaStore));
 
-        // Initialize topic service
+        registerClusterBackedEntityServices();
+    }
+
+    /**
+     * Registers topic, subscription, and DLQ services that need a cluster {@link MessageExchange}.
+     * Idempotent via {@code registerIfAbsent}. Used for admin APIs; also invoked from produce setup when this
+     * verticle runs produce-only ({@link APIUsecases#PRODUCE}) so {@link VaradhiQueueService} can be wired.
+     * No-op when {@code clusterManager == null} (e.g. JMH produce benchmark).
+     */
+    private void registerClusterBackedEntityServices() {
+        if (clusterManager == null) {
+            return;
+        }
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
         serviceRegistry.registerIfAbsent(
             VaradhiTopicService.class,
             () -> new VaradhiTopicService(
@@ -239,15 +249,11 @@ public class WebServerVerticle extends AbstractVerticle {
                 metaStore.projects()
             )
         );
-
-        // Initialize controller client and related services
         ControllerApi controllerClient = new ControllerRestClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
         );
-
-        // Initialize subscription and DLQ services
         serviceRegistry.registerIfAbsent(
             VaradhiSubscriptionService.class,
             () -> new VaradhiSubscriptionService(
@@ -263,9 +269,10 @@ public class WebServerVerticle extends AbstractVerticle {
         );
     }
 
-
     private void setupEntityServicesForProduceApis() {
-        // Initialize producer service
+        if (!apiUsecases.hasAdmin()) {
+            registerClusterBackedEntityServices();
+        }
         serviceRegistry.register(
             ProducerService.class,
             new ProducerService(
@@ -416,12 +423,7 @@ public class WebServerVerticle extends AbstractVerticle {
             verticleConfig.deployedRegion()
         );
 
-        VaradhiQueueService varadhiQueueService = new VaradhiQueueService(
-            varadhiTopicFactory,
-            serviceRegistry.get(VaradhiTopicService.class),
-            serviceRegistry.get(VaradhiSubscriptionService.class),
-            subscriptionFactory
-        );
+        VaradhiQueueService varadhiQueueService = createVaradhiQueueService(varadhiTopicFactory, subscriptionFactory);
 
         // Add management entity routes if not in lean deployment
         routes.addAll(getManagementEntitiesApiRoutes());
@@ -485,18 +487,48 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
+    private VaradhiQueueService createVaradhiQueueService(
+        VaradhiTopicFactory varadhiTopicFactory,
+        VaradhiSubscriptionFactory subscriptionFactory
+    ) {
+        return new VaradhiQueueService(
+            varadhiTopicFactory,
+            serviceRegistry.get(VaradhiTopicService.class),
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            subscriptionFactory
+        );
+    }
+
     /**
      * Gets produce API routes.
      *
      * @return a list of produce API route definitions
      */
     private List<RouteDefinition> getProduceApiRoutes() {
+        VaradhiQueueService varadhiQueueService = null;
+        if (serviceRegistry.contains(VaradhiTopicService.class) && serviceRegistry.contains(
+            VaradhiSubscriptionService.class
+        )) {
+            VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
+                messagingStackProvider.getStorageTopicFactory(),
+                verticleConfig.deployedRegion(),
+                verticleConfig.defaultTopicCapacity()
+            );
+            VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(
+                messagingStackProvider.getStorageTopicService(),
+                messagingStackProvider.getSubscriptionFactory(),
+                messagingStackProvider.getStorageTopicFactory(),
+                verticleConfig.deployedRegion()
+            );
+            varadhiQueueService = createVaradhiQueueService(varadhiTopicFactory, subscriptionFactory);
+        }
         return new ArrayList<>(
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
-                cacheRegistry.getCache(ResourceType.PROJECT)
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                varadhiQueueService
             ).get()
         );
     }
@@ -602,6 +634,10 @@ public class WebServerVerticle extends AbstractVerticle {
                 return;
             }
             services.put(clazz, Objects.requireNonNull(serviceSupplier.get(), "Service cannot be null"));
+        }
+
+        boolean contains(Class<?> clazz) {
+            return services.containsKey(clazz);
         }
 
         /**

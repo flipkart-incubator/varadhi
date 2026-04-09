@@ -148,6 +148,19 @@ public class VaradhiQueueService {
     }
 
     /**
+     * Whether the named topic is queue-backed: the topic exists and the default queue subscription
+     * ({@link QueueResource#getDefaultSubscriptionName(String)}) exists and targets this topic.
+     */
+    public boolean isQueueBackedTopic(String projectName, String topicName) {
+        String topicKey = topicFqn(projectName, topicName);
+        if (!varadhiTopicService.exists(topicKey)) {
+            return false;
+        }
+        VaradhiTopic topic = varadhiTopicService.get(topicKey);
+//        topic.getTopicC
+    }
+
+    /**
      * Lists queue names in the project (topics that have the default queue subscription).
      */
     public List<String> list(String projectName, boolean includeInactive) {

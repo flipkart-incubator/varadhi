@@ -56,16 +56,13 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
     public void addRequestSpanAndLog(RoutingContext ctx, String apiName, TelemetryType telemetryType) {
         long start = System.currentTimeMillis();
         String project = ctx.request().getParam(PathParams.PATH_PARAM_PROJECT);
-        String topicOrQueue = firstNonEmpty(
-            ctx.request().getParam(PathParams.PATH_PARAM_TOPIC),
-            ctx.request().getParam(PathParams.PATH_PARAM_QUEUE)
-        );
+        String topic = ctx.request().getParam(PathParams.PATH_PARAM_TOPIC);
 
-        if (Strings.isNullOrEmpty(topicOrQueue) || Strings.isNullOrEmpty(project)) {
-            throw new BadRequestException("Missing required parameters: project and topic or queue");
+        if (Strings.isNullOrEmpty(topic) || Strings.isNullOrEmpty(project)) {
+            throw new BadRequestException("Missing required parameters: project and topic");
         }
 
-        String fqn = VaradhiTopic.fqn(project, topicOrQueue);
+        String fqn = VaradhiTopic.fqn(project, topic);
         Span span = telemetryType.traces() ? addRequestSpan(apiName, fqn) : null;
 
         ctx.addEndHandler(ar -> {
@@ -143,10 +140,4 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
         log.info(sb.toString());
     }
 
-    private static String firstNonEmpty(String a, String b) {
-        if (!Strings.isNullOrEmpty(a)) {
-            return a;
-        }
-        return b;
-    }
 }
