@@ -89,10 +89,10 @@ public class ProduceHandlers implements RouteProvider {
      * @return Map of resource type to resource hierarchy
      */
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        Project project = projectCache.getOrThrow(ctx.request().getParam(PathParams.PATH_PARAM_PROJECT)).getEntity();
+        Project project = projectCache.getOrThrow(ctx.pathParam(PathParams.PATH_PARAM_PROJECT)).getEntity();
         return Map.of(
             ResourceType.TOPIC,
-            new Hierarchies.TopicHierarchy(project, ctx.request().getParam(PathParams.PATH_PARAM_TOPIC))
+            new Hierarchies.TopicHierarchy(project, ctx.pathParam(PathParams.PATH_PARAM_TOPIC))
         );
     }
 

@@ -128,7 +128,7 @@ public class QueueHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
+        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getOrThrow(projectName).getEntity();
 
         if (hasBody) {
@@ -146,8 +146,8 @@ public class QueueHandlers implements RouteProvider {
             );
         }
 
-        String queueName = ctx.request().getParam(PATH_PARAM_QUEUE);
-        if (queueName == null) {
+        String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
+        if (queueName == null || queueName.isBlank()) {
             return Map.of(ResourceType.PROJECT, new ProjectHierarchy(project));
         }
         return Map.ofEntries(

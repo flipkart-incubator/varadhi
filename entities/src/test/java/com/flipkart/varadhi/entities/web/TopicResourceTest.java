@@ -65,8 +65,24 @@ class TopicResourceTest {
             () -> assertEquals("projectName", topicResource.getProject()),
             () -> assertTrue(topicResource.isGrouped()),
             () -> assertNotNull(topicResource.getCapacity()),
-            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, topicResource.getActionCode())
+            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, topicResource.getActionCode()),
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, topicResource.getTopicCategory())
         );
+    }
+
+    @Test
+    void from_CopiesQueueTopicCategory() {
+        VaradhiTopic queueTopic = VaradhiTopic.of(
+            "projectName",
+            "topicName",
+            false,
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.QUEUE
+        );
+        TopicResource topicResource = TopicResource.from(queueTopic);
+        assertEquals(VaradhiTopic.TopicCategory.QUEUE, topicResource.getTopicCategory());
     }
 
     @Test
