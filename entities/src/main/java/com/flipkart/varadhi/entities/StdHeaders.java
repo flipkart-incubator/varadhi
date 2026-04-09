@@ -173,16 +173,12 @@ public class StdHeaders {
     }
 
     /**
-     * Header names for {@link HeaderSpec} entries required on queue produce ({@link RequiredBy#Queue} or
-     * {@link RequiredBy#Both}).
+     * Header names required when producing to a queue: message id and queue HTTP target headers only (not reply-to).
      */
     @JsonIgnore
     public List<String> getHeaderNamesRequiredForQueueProduce() {
-        return Stream.of(msgIdSpec(), replyToHttpUri(), replyToHttpMethod(), replyTo(), httpUri(), httpMethod())
-                     .filter(spec -> {
-                         RequiredBy r = spec.requiredBy();
-                         return r == RequiredBy.Queue || r == RequiredBy.Both;
-                     })
+        return Stream.of(msgIdSpec(), httpUri(), httpMethod())
+                     .filter(spec -> spec.requiredBy().isRequiredOnQueueProduce())
                      .map(HeaderSpec::value)
                      .toList();
     }

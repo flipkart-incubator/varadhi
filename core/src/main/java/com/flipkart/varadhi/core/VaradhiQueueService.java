@@ -157,7 +157,7 @@ public class VaradhiQueueService {
             return false;
         }
         VaradhiTopic topic = varadhiTopicService.get(topicKey);
-//        topic.getTopicC
+        return topic.getTopicCategory() == VaradhiTopic.TopicCategory.QUEUE;
     }
 
     /**

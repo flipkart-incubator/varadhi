@@ -19,8 +19,8 @@ public class MessageRequestValidator {
     }
 
     /**
-     * Like {@link #ensureHeaderSemanticsAndSize} but requires every configured header whose {@code requiredBy} is
-     * {@code Queue} or {@code Both} (queue produce).
+     * Like {@link #ensureHeaderSemanticsAndSize} but requires every configured header whose
+     * {@link com.flipkart.varadhi.entities.RequiredBy#isRequiredOnQueueProduce()} is true (queue produce).
      */
     public static void ensureHeaderSemanticsAndSizeForQueueProduce(MessageConfiguration msgConfig, Message message) {
         msgConfig.ensureQueueProduceRequiredHeaders(message.getHeaders());

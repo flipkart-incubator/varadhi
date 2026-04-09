@@ -49,13 +49,13 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.Both),
+                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.mandatoryHeaderRequiredForProduce()),
                 "VARADHI_GROUP_ID",
                 "VARADHI_CALLBACK_CODES",
                 "VARADHI_REQUEST_TIMEOUT",
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", RequiredBy.Callback),
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", RequiredBy.Callback),
-                new HeaderSpec("VARADHI_REPLY_TO", RequiredBy.Callback),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", RequiredBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", RequiredBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_REPLY_TO", RequiredBy.mandatoryHeaderRequiredForProduce()),
                 new HeaderSpec("VARADHI_HTTP_URI", RequiredBy.Queue),
                 new HeaderSpec("VARADHI_HTTP_METHOD", RequiredBy.Queue),
                 "VARADHI_CONTENT_TYPE",

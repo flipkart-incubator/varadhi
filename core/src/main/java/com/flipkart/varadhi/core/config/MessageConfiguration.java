@@ -81,8 +81,8 @@ public class MessageConfiguration {
     }
 
     /**
-     * Ensures all standard headers marked {@link com.flipkart.varadhi.entities.RequiredBy#Queue} or
-     * {@link com.flipkart.varadhi.entities.RequiredBy#Both} are present (queue produce API).
+     * Ensures all standard headers whose {@link com.flipkart.varadhi.entities.RequiredBy#isRequiredOnQueueProduce()}
+     * is true are present (queue produce API).
      */
     public void ensureQueueProduceRequiredHeaders(Multimap<String, String> headers) {
         stdHeaders.getHeaderNamesRequiredForQueueProduce().forEach(key -> {
