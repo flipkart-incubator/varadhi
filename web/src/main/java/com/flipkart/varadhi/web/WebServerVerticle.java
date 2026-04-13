@@ -22,7 +22,7 @@ import com.flipkart.varadhi.web.subscription.dlq.DlqService;
 import com.flipkart.varadhi.core.OrgService;
 import com.flipkart.varadhi.core.ProjectService;
 import com.flipkart.varadhi.core.RegionService;
-import com.flipkart.varadhi.core.SubscriptionService;
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
 import com.flipkart.varadhi.core.TeamService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
