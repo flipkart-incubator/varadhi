@@ -615,7 +615,7 @@ class VaradhiSubscriptionServiceTest {
                 update.getVersion(),
                 update.getDescription(),
                 update.isGrouped(),
-                update.getEndpointOptional().orElse(null),
+                update.getEndpoint().orElse(null),
                 update.getRetryPolicy(),
                 update.getConsumptionPolicy(),
                 REQUESTED_BY
@@ -1044,7 +1044,7 @@ class VaradhiSubscriptionServiceTest {
             to.getVersion(),
             to.getDescription(),
             to.isGrouped(),
-            to.getEndpointOptional().orElse(null),
+            to.getEndpoint().orElse(null),
             to.getRetryPolicy(),
             to.getConsumptionPolicy(),
             REQUESTED_BY

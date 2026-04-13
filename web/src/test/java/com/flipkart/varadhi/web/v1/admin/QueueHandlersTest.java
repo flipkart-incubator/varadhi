@@ -74,9 +74,11 @@ class QueueHandlersTest extends WebTestBase {
 
     private RequestTelemetryConfigurator requestTelemetryConfigurator;
 
+    private AutoCloseable openMocksHandle;
+
     @BeforeEach
     void preTest() throws InterruptedException {
-        MockitoAnnotations.openMocks(this);
+        openMocksHandle = MockitoAnnotations.openMocks(this);
         super.setUp();
         requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
         Resource.EntityResource<Project> projectResource = Resource.of(project, ResourceType.PROJECT);
@@ -87,7 +89,7 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     private void setupRoutes() {
-        router.post("/projects/:project/queues").handler(bodyHandler).handler(ctx -> {
+        router.post("/v1/projects/:project/queues").handler(bodyHandler).handler(ctx -> {
             queueHandlers.setRequestBody(ctx);
             ctx.next();
         }).handler(ctx -> {
@@ -95,14 +97,15 @@ class QueueHandlersTest extends WebTestBase {
             ctx.next();
         }).handler(wrapBlocking(queueHandlers::create));
 
-        router.get("/projects/:project/queues/:queue").handler(wrapBlocking(queueHandlers::get));
+        router.get("/v1/projects/:project/queues/:queue").handler(wrapBlocking(queueHandlers::get));
 
-        router.get("/projects/:project/queues").handler(bodyHandler).handler(wrapBlocking(queueHandlers::list));
+        router.get("/v1/projects/:project/queues").handler(bodyHandler).handler(wrapBlocking(queueHandlers::list));
 
         // Async handlers (handleResponse); must not use wrapBlocking — same as production nonBlocking routes.
-        Route deleteRoute = router.delete("/projects/:project/queues/:queue").handler(queueHandlers::delete);
-        Route restoreRoute = router.patch("/projects/:project/queues/:queue/restore").handler(queueHandlers::restore);
-        Route updateRoute = router.put("/projects/:project/queues/:queue").handler(bodyHandler).handler(ctx -> {
+        Route deleteRoute = router.delete("/v1/projects/:project/queues/:queue").handler(queueHandlers::delete);
+        Route restoreRoute = router.patch("/v1/projects/:project/queues/:queue/restore")
+                                   .handler(queueHandlers::restore);
+        Route updateRoute = router.put("/v1/projects/:project/queues/:queue").handler(bodyHandler).handler(ctx -> {
             queueHandlers.setRequestBody(ctx);
             ctx.next();
         }).handler(queueHandlers::update);
@@ -118,7 +121,10 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     @AfterEach
-    void postTest() throws InterruptedException {
+    void postTest() throws Exception {
+        if (openMocksHandle != null) {
+            openMocksHandle.close();
+        }
         super.tearDown();
     }
 
@@ -446,7 +452,7 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     private static String queuesUrl(Project p) {
-        return String.join("/", "/projects", p.getName(), "queues");
+        return String.join("/", "/v1/projects", p.getName(), "queues");
     }
 
     private static String queueUrl(Project p) {

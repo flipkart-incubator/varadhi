@@ -53,16 +53,21 @@ public class VaradhiTopicService {
      */
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
+        boolean alreadyExists = exists(varadhiTopic.getName());
+        if (alreadyExists) {
+            VaradhiTopic existingTopic = get(varadhiTopic.getName());
+            if (!existingTopic.isRetriable()) {
+                throw new DuplicateResourceException(
+                    String.format("Topic '%s' already exists.", varadhiTopic.getName())
+                );
+            }
+            assertRetriableCreateCompatible(existingTopic, varadhiTopic);
+        }
+
         try {
-            if (!exists(varadhiTopic.getName())) {
+            if (!alreadyExists) {
                 topicStore.create(varadhiTopic);
             } else {
-                VaradhiTopic existingTopic = get(varadhiTopic.getName());
-                if (!existingTopic.isRetriable()) {
-                    throw new DuplicateResourceException(
-                        String.format("Topic '%s' already exists.", varadhiTopic.getName())
-                    );
-                }
                 topicStore.update(varadhiTopic);
             }
 
@@ -73,6 +78,32 @@ public class VaradhiTopicService {
             throw e;
         } finally {
             updateTopicState(varadhiTopic);
+        }
+    }
+
+    /**
+     * Ensures a retried create does not change identity fields established on the first attempt
+     * (category, ordering mode). Those must stay stable across {@link LifecycleStatus.State#CREATE_FAILED} retries.
+     */
+    private void assertRetriableCreateCompatible(VaradhiTopic existing, VaradhiTopic requested) {
+        if (existing.getTopicCategory() != requested.getTopicCategory()) {
+            throw new InvalidOperationForResourceException(
+                ("Cannot retry topic creation for '%s': stored topic has category %s but request has %s. "
+                 + "Use the same API and category as the original create.").formatted(
+                     existing.getName(),
+                     existing.getTopicCategory(),
+                     requested.getTopicCategory()
+                 )
+            );
+        }
+        if (existing.isGrouped() != requested.isGrouped()) {
+            throw new InvalidOperationForResourceException(
+                ("Cannot retry topic creation for '%s': stored topic has grouped=%s but request has grouped=%s.").formatted(
+                    existing.getName(),
+                    existing.isGrouped(),
+                    requested.isGrouped()
+                )
+            );
         }
     }
 

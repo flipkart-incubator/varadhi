@@ -58,6 +58,11 @@ public class SubscriptionResource extends BaseResource implements Validatable {
     private final Map<String, String> targetClientIds;
 
     /**
+     * Optional HTTP callback code-range policy for queue-style subscriptions; {@code null} if not used.
+     */
+    private final CallbackConfig callbackConfig;
+
+    /**
      * Constructs a new SubscriptionResource.
      *
      * @param name              The name of the subscription.
@@ -73,6 +78,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * @param properties        Additional properties for the subscription.
      * @param actionCode        The actor code associated with the subscription.
      * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
+     * @param callbackConfig    optional callback config ({@code null} for topic-style subscriptions).
      */
     private SubscriptionResource(
         String name,
@@ -87,7 +93,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
         LifecycleStatus.ActionCode actionCode,
-        Map<String, String> targetClientIds
+        Map<String, String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         super(name, version);
         setProject(project);
@@ -101,6 +108,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
         this.targetClientIds = VaradhiSubscription.validateTargetClientIds(targetClientIds);
+        this.callbackConfig = callbackConfig;
     }
 
     @JsonGetter ("endpoint")
@@ -127,6 +135,42 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         LifecycleStatus.ActionCode actionCode,
         Map<String, String> targetClientIds
     ) {
+        return of(
+            name,
+            project,
+            topic,
+            topicProject,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            properties,
+            actionCode,
+            targetClientIds,
+            null
+        );
+    }
+
+    /**
+     * Same as {@link #of(String, String, String, String, String, boolean, Endpoint, RetryPolicy, ConsumptionPolicy, Map, LifecycleStatus.ActionCode, Map)}
+     * with optional {@link CallbackConfig} for queue-style subscriptions.
+     */
+    public static SubscriptionResource of(
+        String name,
+        String project,
+        String topic,
+        String topicProject,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode,
+        Map<String, String> targetClientIds,
+        CallbackConfig callbackConfig
+    ) {
         return new SubscriptionResource(
             name,
             INITIAL_VERSION,
@@ -140,7 +184,8 @@ public class SubscriptionResource extends BaseResource implements Validatable {
             consumptionPolicy,
             properties,
             actionCode,
-            targetClientIds
+            targetClientIds,
+            callbackConfig
         );
     }
 
@@ -179,12 +224,13 @@ public class SubscriptionResource extends BaseResource implements Validatable {
             topicProject,
             subscription.getDescription(),
             subscription.isGrouped(),
-            subscription.getEndpointOptional().orElse(null),
+            subscription.getEndpoint().orElse(null),
             subscription.getRetryPolicy(),
             subscription.getConsumptionPolicy(),
             subscription.getProperties(),
             subscription.getStatus().getActionCode(),
-            subscription.getTargetClientIds()
+            subscription.getTargetClientIds(),
+            subscription.getCallbackConfig()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;
@@ -195,11 +241,6 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      *
      * @return The internal name for the subscription.
      */
-    /** Whether the subscription is grouped; uses base resource grouped flag. */
-    public boolean isGrouped() {
-        return Boolean.TRUE.equals(getGrouped());
-    }
-
     @JsonIgnore
     public String getSubscriptionInternalName() {
         return buildInternalName(getProject(), getName());

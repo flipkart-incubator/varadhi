@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.flipkart.varadhi.common.Constants.VARADHI_ADMIN_IDENTITY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -300,7 +301,7 @@ public class QueueHandlers implements RouteProvider {
     }
 
     private boolean isVaradhiAdmin(String identity) {
-        return Objects.equals(identity, "varadhi-admin");
+        return Objects.equals(identity, VARADHI_ADMIN_IDENTITY);
     }
 
     /**

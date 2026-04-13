@@ -66,7 +66,7 @@ class VaradhiSubscriptionTest {
             () -> assertEquals("topic1", subscription.getTopic()),
             () -> assertEquals("description", subscription.getDescription()),
             () -> assertTrue(subscription.isGrouped()),
-            () -> assertTrue(subscription.getEndpointOptional().isPresent()),
+            () -> assertTrue(subscription.getEndpoint().isPresent()),
             () -> assertNotNull(subscription.getRetryPolicy()),
             () -> assertNotNull(subscription.getConsumptionPolicy()),
             () -> assertNotNull(subscription.getShards()),
@@ -92,7 +92,7 @@ class VaradhiSubscriptionTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             Map.of(callback.toString(), "c1")
         );
-        assertTrue(subscription.getEndpointOptional().isEmpty());
+        assertTrue(subscription.getEndpoint().isEmpty());
         Endpoint resolved = subscription.resolveDeliveryEndpoint();
         assertTrue(resolved instanceof Endpoint.HttpEndpoint);
         assertEquals(callback, ((Endpoint.HttpEndpoint)resolved).getUri());

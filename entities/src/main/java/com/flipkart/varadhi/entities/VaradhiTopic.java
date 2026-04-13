@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents a topic in the Varadhi.
@@ -33,8 +34,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param capacity       the capacity policy of the topic
      * @param internalTopics the internal topics associated with this topic
      * @param status         the status of the topic
-     * @param nfrFilterName  the name of the filter applied for NFR; {@code : null} if not set
-     * @param topicCategory
+     * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
+     * @param topicCategory  topic vs queue classification; must not be {@code null}
      */
     private VaradhiTopic(
         String name,
@@ -51,7 +52,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.capacity = capacity;
         this.internalTopics = internalTopics;
         this.nfrFilterName = nfrFilterName;
-        this.topicCategory = topicCategory != null ? topicCategory : TopicCategory.TOPIC;
+        this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.status = status;
     }
 

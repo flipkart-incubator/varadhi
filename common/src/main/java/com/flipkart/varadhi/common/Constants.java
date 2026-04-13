@@ -20,6 +20,9 @@ public class Constants {
     public static final String SYSTEM_IDENTITY = "System";
     public static final String ANONYMOUS_IDENTITY = "Anonymous";
 
+    /** Identity string treated as Varadhi admin for action-code selection in admin handlers (e.g. queue/topic restore). */
+    public static final String VARADHI_ADMIN_IDENTITY = "varadhi-admin";
+
     // Handler name for entity events.
     public static final String ENTITY_EVENTS_HANDLER = "entity-events";
 

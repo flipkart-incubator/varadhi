@@ -157,7 +157,7 @@ public class TopicHandlers implements RouteProvider {
 
         Project project = projectCache.getOrThrow(topicResource.getProject()).getEntity();
 
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
         varadhiTopicService.create(varadhiTopic, project);
         ctx.endApiWithResponse(TopicResource.from(varadhiTopic));
     }

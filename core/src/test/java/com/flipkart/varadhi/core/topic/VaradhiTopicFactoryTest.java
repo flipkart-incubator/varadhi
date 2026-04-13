@@ -55,7 +55,7 @@ class VaradhiTopicFactoryTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         assertNotNull(varadhiTopic);
         SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
@@ -80,7 +80,7 @@ class VaradhiTopicFactoryTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
         SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
         PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
 

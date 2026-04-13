@@ -53,11 +53,6 @@ public class TopicResource extends BaseResource implements Validatable {
         this.nfrFilterName = nfrFilterName;
     }
 
-    /** Whether the topic is grouped; uses base resource grouped flag. */
-    public boolean isGrouped() {
-        return Boolean.TRUE.equals(getGrouped());
-    }
-
     /**
      * Creates a new grouped TopicResource instance.
      *

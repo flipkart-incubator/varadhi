@@ -97,8 +97,11 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.targetClientIds = validateTargetClientIds(targetClientIds);
     }
 
+    /**
+     * Can be null in case of queue where only default endpoint is there
+     */
     @JsonGetter ("endpoint")
-    public Optional<Endpoint> getEndpointOptional() {
+    public Optional<Endpoint> getEndpoint() {
         return Optional.ofNullable(endpoint);
     }
 

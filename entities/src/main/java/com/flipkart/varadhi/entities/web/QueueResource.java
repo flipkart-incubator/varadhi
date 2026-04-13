@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.Validatable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -19,10 +20,12 @@ import java.util.Map;
 @Getter
 @Setter
 @EqualsAndHashCode (callSuper = true)
+@ValidateResource (message = "Invalid Queue name. Check naming constraints.", max = 64)
 public class QueueResource extends BaseResource implements Validatable {
     private static final String QUEUE_SUBSCRIPTION_PREFIX = "sub_";
 
     // Queue extra fields (for topic part)
+    /** primary zone for produce path (topic leg). */
     private String activeProduceZone;
     private TopicCapacityPolicy capacity;
     private LifecycleStatus.ActionCode actionCode;
@@ -57,8 +60,8 @@ public class QueueResource extends BaseResource implements Validatable {
     ) {
         super(name, version);
         setProject(project);
-        setSecured(secured);
-        setGrouped(grouped);
+        setSecured(Boolean.TRUE.equals(secured));
+        setGrouped(Boolean.TRUE.equals(grouped));
         setAppId(appId);
         setNfrStrategy(nfrStrategy);
         this.activeProduceZone = activeProduceZone;
@@ -73,9 +76,14 @@ public class QueueResource extends BaseResource implements Validatable {
     }
 
     /**
-     * Default subscription name for a queue (topic name + suffix).
+     * Default subscription name for a queue (topic name with {@code sub_} prefix).
+     *
+     * @throws IllegalArgumentException if {@code queueOrTopicName} is null or blank
      */
     public static String getDefaultSubscriptionName(String queueOrTopicName) {
+        if (queueOrTopicName == null || queueOrTopicName.isBlank()) {
+            throw new IllegalArgumentException("Queue or topic name cannot be null or blank.");
+        }
         return QUEUE_SUBSCRIPTION_PREFIX + queueOrTopicName;
     }
 
@@ -90,7 +98,7 @@ public class QueueResource extends BaseResource implements Validatable {
             this.nfrFilterName :
             (this.getNfrStrategy() != null ? this.getNfrStrategy() : "");
 
-        if (Boolean.TRUE.equals(this.getGrouped())) {
+        if (this.isGrouped()) {
             return TopicResource.grouped(this.getName(), projectName, cap, code, nfr);
         }
         return TopicResource.unGrouped(this.getName(), projectName, cap, code, nfr);
@@ -106,7 +114,6 @@ public class QueueResource extends BaseResource implements Validatable {
         String topicName = getName();
         String subName = getDefaultSubscriptionName(topicName);
         String description = "Queue subscription for " + topicName;
-        boolean grouped = Boolean.TRUE.equals(getGrouped());
         LifecycleStatus.ActionCode code = actionCode != null ? actionCode : LifecycleStatus.ActionCode.USER_ACTION;
         return SubscriptionResource.of(
             subName,
@@ -114,13 +121,14 @@ public class QueueResource extends BaseResource implements Validatable {
             topicName,
             projectName,
             description,
-            grouped,
+            isGrouped(),
             null,
             retryPolicy,
             consumptionPolicy,
             properties,
             code,
-            targetClientIds
+            targetClientIds,
+            callbackConfig
         );
     }
 }

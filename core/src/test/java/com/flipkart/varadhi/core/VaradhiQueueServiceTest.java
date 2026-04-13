@@ -85,7 +85,7 @@ class VaradhiQueueServiceTest {
 
         assertEquals(queueTopic, result.topic());
         assertEquals(sub, result.subscription());
-        verify(topicFactory, never()).getForQueue(any(), any());
+        verify(topicFactory, never()).get(any(), any(), any());
         verify(topicService, never()).create(any(), any());
         verify(subscriptionService, never()).createSubscription(any(), any(), any());
     }
@@ -97,7 +97,7 @@ class VaradhiQueueServiceTest {
 
         when(topicService.exists(topicKey)).thenReturn(false);
         when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
-        when(topicFactory.getForQueue(eq(project), any())).thenReturn(newQueueTopic);
+        when(topicFactory.get(eq(project), any(), eq(VaradhiTopic.TopicCategory.QUEUE))).thenReturn(newQueueTopic);
         when(topicService.get(topicKey)).thenReturn(newQueueTopic);
         when(subscriptionFactory.get(any(), eq(project), eq(newQueueTopic))).thenReturn(built);
         when(subscriptionService.createSubscription(eq(newQueueTopic), eq(built), eq(project))).thenReturn(built);
@@ -143,7 +143,9 @@ class VaradhiQueueServiceTest {
 
         when(topicService.exists(topicKey)).thenReturn(true);
         when(subscriptionService.exists(subscriptionKey)).thenReturn(false);
-        when(topicFactory.getForQueue(eq(project), any())).thenReturn(requestedQueueTopic);
+        when(topicFactory.get(eq(project), any(), eq(VaradhiTopic.TopicCategory.QUEUE))).thenReturn(
+            requestedQueueTopic
+        );
         doThrow(new DuplicateResourceException("exists")).when(topicService).create(any(), any());
         when(topicService.get(topicKey)).thenReturn(plainTopic);
 
@@ -178,7 +180,7 @@ class VaradhiQueueServiceTest {
 
         when(topicService.exists(topicKey)).thenReturn(true);
         when(subscriptionService.exists(subscriptionKey)).thenReturn(false);
-        when(topicFactory.getForQueue(eq(project), any())).thenReturn(requested);
+        when(topicFactory.get(eq(project), any(), eq(VaradhiTopic.TopicCategory.QUEUE))).thenReturn(requested);
         doThrow(new DuplicateResourceException("exists")).when(topicService).create(any(), any());
         when(topicService.get(topicKey)).thenReturn(existing);
 
@@ -222,7 +224,7 @@ class VaradhiQueueServiceTest {
 
         when(topicService.exists(topicKey)).thenReturn(false);
         when(subscriptionService.exists(subscriptionKey)).thenReturn(false);
-        when(topicFactory.getForQueue(eq(project), any())).thenReturn(newQueueTopic);
+        when(topicFactory.get(eq(project), any(), eq(VaradhiTopic.TopicCategory.QUEUE))).thenReturn(newQueueTopic);
         when(topicService.get(topicKey)).thenReturn(newQueueTopic);
         when(subscriptionFactory.get(any(), eq(project), eq(newQueueTopic))).thenReturn(built);
         when(subscriptionService.createSubscription(any(), any(), any())).thenReturn(built);

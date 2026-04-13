@@ -111,7 +111,7 @@ class SubscriptionResourceTest {
             () -> assertEquals(PROJECT_NAME, subscriptionResource.getTopicProject()),
             () -> assertEquals(varadhiSubscription.getDescription(), subscriptionResource.getDescription()),
             () -> assertEquals(varadhiSubscription.isGrouped(), subscriptionResource.isGrouped()),
-            () -> assertEquals(varadhiSubscription.getEndpointOptional(), subscriptionResource.getEndpointOptional()),
+            () -> assertEquals(varadhiSubscription.getEndpoint(), subscriptionResource.getEndpointOptional()),
             () -> assertEquals(varadhiSubscription.getRetryPolicy(), subscriptionResource.getRetryPolicy()),
             () -> assertEquals(varadhiSubscription.getConsumptionPolicy(), subscriptionResource.getConsumptionPolicy()),
             () -> assertEquals(varadhiSubscription.getProperties(), subscriptionResource.getProperties()),
