@@ -144,13 +144,15 @@ private final Set<TopicTag> tags;                           // PROD, NON_PROD, H
 **RegionStatus** - Enum for region availability status
 - **Values:**
   - `AVAILABLE` - Region is fully available for both produce and consume
-  - `UNAVAILABLE` - Region is completely unavailable
-  - `PRODUCE_UNAVAILABLE` - Region available for consume but not produce
-  - `CONSUME_UNAVAILABLE` - Region available for produce but not consume
+  - `UNAVAILABLE` - Region is completely unavailable (e.g. full region failure or network isolation)
+  - `PRODUCE_UNAVAILABLE` - Region available for consume but not produce (produce layer down)
+  - `CONSUME_UNAVAILABLE` - Region available for produce but not consume (consume layer down)
+  - `MSP_UNAVAILABLE` - Varadhi components are up but the **messaging stack** (e.g. Pulsar) is unavailable in the region; message-stack operations are not available while other availability checks may still reflect partial service
 - **Methods:**
+  - `boolean isMessageStackAvailable()` - `true` only for `AVAILABLE` (excludes `MSP_UNAVAILABLE`)
   - `boolean isProduceAvailable()` - Checks if produce operations are available
   - `boolean isConsumeAvailable()` - Checks if consume operations are available
-  - `boolean isAvailable()` - Checks if region is fully available
+  - `boolean isAvailable()` - Checks if region is fully available (`AVAILABLE` only)
 
 **TopicTag** - Enum for topic classification
 - **Values:**
@@ -177,7 +179,7 @@ private final Set<TopicTag> tags;                           // PROD, NON_PROD, H
 | API | Description |
 |-----|-------------|
 | **Create Region** | Register a new region (e.g. with a name and initial status). Used when onboarding a new data center or zone. |
-| **Update Region Status** | Update the availability status of an existing region (e.g. set to `AVAILABLE`, `UNAVAILABLE`, `PRODUCE_UNAVAILABLE`, `CONSUME_UNAVAILABLE`). Used during incidents or recovery. |
+| **Update Region Status** | Update the availability status of an existing region (e.g. set to `AVAILABLE`, `UNAVAILABLE`, `PRODUCE_UNAVAILABLE`, `CONSUME_UNAVAILABLE`, `MSP_UNAVAILABLE`). Used during incidents or recovery. |
 | **Delete Region** | Remove a region from the system. Typically used when decommissioning a zone; may be guarded by checks (e.g. no topics/subscriptions still using the region). |
 
 **Notes:**
