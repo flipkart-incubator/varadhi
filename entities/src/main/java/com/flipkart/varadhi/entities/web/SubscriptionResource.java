@@ -49,7 +49,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
 
     /**
      * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
-     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #getEndpointOptional()} when
+     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #getEndpoint()} when
      * present), value = client id. One entry is typical for topics; queues use one entry per logical endpoint. When
      * no explicit endpoint is set, the callback URL may appear only in these keys (see
      * {@link VaradhiSubscription#resolveDeliveryEndpoint()}).
@@ -111,8 +111,12 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         this.callbackConfig = callbackConfig;
     }
 
+    /**
+     * Endpoint can be null in case of queue
+     * @return Optional of endpoint
+     */
     @JsonGetter ("endpoint")
-    public Optional<Endpoint> getEndpointOptional() {
+    public Optional<Endpoint> getEndpoint() {
         return Optional.ofNullable(endpoint);
     }
 

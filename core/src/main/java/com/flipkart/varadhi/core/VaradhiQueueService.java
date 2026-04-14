@@ -215,7 +215,7 @@ public class VaradhiQueueService {
             queue.getVersion(),
             subRes.getDescription(),
             subRes.isGrouped(),
-            subRes.getEndpointOptional().orElse(null),
+            subRes.getEndpoint().orElse(null),
             subRes.getRetryPolicy(),
             subRes.getConsumptionPolicy(),
             requestedBy

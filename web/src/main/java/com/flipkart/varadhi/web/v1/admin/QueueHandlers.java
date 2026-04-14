@@ -41,7 +41,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 
 /**
@@ -90,7 +89,6 @@ public class QueueHandlers implements RouteProvider {
                                .hasBody()
                                .bodyParser(this::setRequestBody)
                                .authorize(TOPIC_CREATE)
-                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
                 RouteDefinition.put(UPDATE, API_NAME, "/:queue")
                                .nonBlocking()

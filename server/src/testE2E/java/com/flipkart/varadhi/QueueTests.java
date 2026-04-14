@@ -1,9 +1,11 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
+import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
+import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -151,6 +154,179 @@ public class QueueTests extends E2EBase {
 
         queues = getTopics(makeListRequest(getQueuesUri(project), 200));
         Assertions.assertTrue(queues.contains(queueName));
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void createQueue_rejectedWhenPlainTopicExistsWithSameName() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String sharedName = "queue_plain_topic_conflict";
+        TopicResource plainTopic = TopicResource.unGrouped(
+            sharedName,
+            project.getName(),
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            "test"
+        );
+        makeCreateRequest(getTopicsUri(project), plainTopic, 200);
+
+        String expectedReason = "Cannot create queue '%s': a topic with this name already exists as TOPIC; "
+                                + "queues require topic category QUEUE. Choose a different queue name.".formatted(
+                                    sharedName
+                                );
+        makeCreateRequest(getQueuesUri(project), queueResource(sharedName), 409, expectedReason, true);
+
+        makeDeleteRequest(getTopicsUri(project, sharedName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    /**
+     * If topic creation succeeded but default subscription creation failed (or subscription was removed), a retry of
+     * POST queue should finish wiring the default subscription (see {@code VaradhiQueueService#create}).
+     */
+    @Test
+    public void createQueue_retryCompletesWhenTopicExistsButDefaultSubscriptionMissing() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_retry_orphan_sub";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+
+        makeDeleteRequest(
+            getSubscriptionsUri(project, QueueResource.getDefaultSubscriptionName(queueName)),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            204
+        );
+
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        QueueHandlers.QueueResponse got = makeGetRequest(
+            getQueuesUri(project, queueName),
+            QueueHandlers.QueueResponse.class,
+            200
+        );
+        Assertions.assertEquals(queueName, got.queueName());
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void restoreQueue_whenAlreadyActive_isIdempotent204() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_restore_idempotent";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        makePatchRequest(getQueuesUri(project, queueName) + "/restore", 204);
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void restoreQueue_whenQueueNeverExisted_returns404() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String ghost = "queue_restore_never_existed";
+        String expectedReason = "Cannot restore queue '%s': default subscription '%s' not found.".formatted(
+            ghost,
+            QueueResource.getDefaultSubscriptionName(ghost)
+        );
+        makePatchRequest(getQueuesUri(project, ghost) + "/restore", 404, expectedReason, true);
+    }
+
+    @Test
+    public void restoreQueue_whenDefaultSubscriptionRemoved_returns404() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_restore_sub_removed";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        makeDeleteRequest(
+            getSubscriptionsUri(project, QueueResource.getDefaultSubscriptionName(queueName)),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            204
+        );
+
+        String expectedReason = "Cannot restore queue '%s': default subscription '%s' not found.".formatted(
+            queueName,
+            QueueResource.getDefaultSubscriptionName(queueName)
+        );
+        makePatchRequest(getQueuesUri(project, queueName) + "/restore", 404, expectedReason, true);
+
+        makeDeleteRequest(getTopicsUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void restoreQueue_afterFullHardDelete_returns404() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_restore_after_hard_delete";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+
+        String expectedReason = "Cannot restore queue '%s': default subscription '%s' not found.".formatted(
+            queueName,
+            QueueResource.getDefaultSubscriptionName(queueName)
+        );
+        makePatchRequest(getQueuesUri(project, queueName) + "/restore", 404, expectedReason, true);
+    }
+
+    @Test
+    public void updateQueue_whenNotFound_returns404() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String missing = "queue_update_missing";
+        String expectedReason = "Cannot update queue '%s': default subscription '%s' not found.".formatted(
+            missing,
+            QueueResource.getDefaultSubscriptionName(missing)
+        );
+        makeUpdateRequest(getQueuesUri(project, missing), queueResource(missing), 404, expectedReason, true);
+    }
+
+    @Test
+    public void updateQueue_updatesTargetClientIds() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_update_client_ids";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+
+        QueueHandlers.QueueResponse current = makeGetRequest(
+            getQueuesUri(project, queueName),
+            QueueHandlers.QueueResponse.class,
+            200
+        );
+        QueueResource body = queueResourceFromGetResponse(current);
+        Map<String, String> newTargets = new HashMap<>();
+        newTargets.put("http://localhost:9090", "other-client");
+        body.setTargetClientIds(newTargets);
+
+        QueueHandlers.QueueResponse updated;
+        try (Response putResponse = makeHttpPutRequest(getQueuesUri(project, queueName), body)) {
+            Assertions.assertEquals(200, putResponse.getStatus());
+            updated = putResponse.readEntity(QueueHandlers.QueueResponse.class);
+        }
+        Assertions.assertEquals(newTargets, updated.subscription().getTargetClientIds());
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void updateQueue_updatesRetryPolicy() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+        String queueName = "queue_update_retry";
+        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+
+        QueueHandlers.QueueResponse current = makeGetRequest(
+            getQueuesUri(project, queueName),
+            QueueHandlers.QueueResponse.class,
+            200
+        );
+        QueueResource body = queueResourceFromGetResponse(current);
+        RetryPolicy rp = current.subscription().getRetryPolicy();
+        RetryPolicy newRp = new RetryPolicy(
+            rp.getRetryCodes(),
+            rp.getBackoffType(),
+            rp.getMinBackoff(),
+            rp.getMaxBackoff(),
+            rp.getMultiplier(),
+            rp.getRetryAttempts() + 2
+        );
+        body.setRetryPolicy(newRp);
+
+        QueueHandlers.QueueResponse updated;
+        try (Response putResponse = makeHttpPutRequest(getQueuesUri(project, queueName), body)) {
+            Assertions.assertEquals(200, putResponse.getStatus());
+            updated = putResponse.readEntity(QueueHandlers.QueueResponse.class);
+        }
+        Assertions.assertEquals(newRp.getRetryAttempts(), updated.subscription().getRetryPolicy().getRetryAttempts());
 
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
