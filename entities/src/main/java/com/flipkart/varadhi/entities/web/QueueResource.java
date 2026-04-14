@@ -96,7 +96,7 @@ public class QueueResource extends BaseResource implements Validatable {
         LifecycleStatus.ActionCode code = actionCode != null ? actionCode : LifecycleStatus.ActionCode.USER_ACTION;
         String nfr = this.nfrFilterName != null ?
             this.nfrFilterName :
-            (this.getNfrStrategy() != null ? this.getNfrStrategy() : "");
+            this.getNfrStrategy() != null ? this.getNfrStrategy() : "";
 
         if (this.isGrouped()) {
             return TopicResource.grouped(this.getName(), projectName, cap, code, nfr);

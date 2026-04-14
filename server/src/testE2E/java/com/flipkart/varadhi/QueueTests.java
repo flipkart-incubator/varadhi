@@ -332,6 +332,7 @@ public class QueueTests extends E2EBase {
     }
 
     private static QueueResource queueResource(String queueName) {
+        //valid value or default  (UTil queeuResource)
         return new QueueResource(
             queueName,
             0,

@@ -27,7 +27,6 @@ import static com.flipkart.varadhi.entities.web.QueueResource.getDefaultSubscrip
  * Service for queue CRUD, update, and restore. A queue is implemented as a topic plus a default
  * queue-style subscription (subscription name = {@link QueueResource#getDefaultSubscriptionName(String)}).
  * <p>
- * {@link #updateQueue} persists the topic leg from the body via {@link VaradhiTopicService#updateTopicState(VaradhiTopic)}
  * (merged with the stored topic’s version, lifecycle status, and internal storage topics), then updates the default
  * subscription (same contract as {@link VaradhiSubscriptionService#updateSubscription}).
  */
@@ -184,8 +183,7 @@ public class VaradhiQueueService {
      * on subscription PUT.
      * <p>
      * Topic metadata is taken from {@link QueueResource#toTopicResource(String, LifecycleStatus.ActionCode)} and
-     * written with {@link VaradhiTopicService#updateTopicState(VaradhiTopic)} before the subscription update so
-     * grouping validation sees the latest topic.
+     * subscription update
      *
      * @param projectName  project from the path
      * @param queueName    queue name from the path (must equal {@link QueueResource#getName()} on the body)
@@ -207,7 +205,6 @@ public class VaradhiQueueService {
         }
         QueueFqn queueFqn = new QueueFqn(projectName, queueName);
         assertDefaultQueueLinked(queueFqn, "update");
-        persistQueueTopicFromBody(queueFqn, queue, actionCode);
 
         SubscriptionResource subRes = queue.toSubscriptionResource(projectName, actionCode);
         return varadhiSubscriptionService.updateSubscription(
@@ -265,10 +262,12 @@ public class VaradhiQueueService {
         ResourceDeletionType deletionType,
         RequestActionType actionRequest
     ) {
-        if (!varadhiTopicService.exists(queueFqn.topicFqn())) {
+        final VaradhiTopic topic;
+        try {
+            topic = varadhiTopicService.get(queueFqn.topicFqn());
+        } catch (ResourceNotFoundException e) {
             return;
         }
-        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
         boolean needTopicDelete = deletionType == ResourceDeletionType.HARD_DELETE || topic.isActive();
         if (needTopicDelete) {
             varadhiTopicService.delete(queueFqn.topicFqn(), deletionType, actionRequest);
@@ -296,7 +295,7 @@ public class VaradhiQueueService {
             return CompletableFuture.completedFuture(null);
         }
         if (sub.isActive()) {
-            subscriptionPhase = CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         } else {
             subscriptionPhase = varadhiSubscriptionService.restoreSubscription(
                 queueFqn.subscriptionFqn(),
@@ -309,8 +308,10 @@ public class VaradhiQueueService {
     }
 
     private void restoreQueueTopicAfterSubscription(QueueFqn queueFqn, RequestActionType actionRequest) {
-        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
-        if (topic == null) {
+        final VaradhiTopic topic;
+        try {
+            topic = varadhiTopicService.get(queueFqn.topicFqn());
+        } catch (ResourceNotFoundException e) {
             throw new ResourceNotFoundException(
                 "Cannot restore queue '%s': topic not found.".formatted(queueFqn.queueName())
             );
@@ -321,37 +322,6 @@ public class VaradhiQueueService {
             );
         }
         varadhiTopicService.restore(queueFqn.topicFqn(), actionRequest);
-    }
-
-    /**
-     * Writes the queue body’s topic leg using {@link VaradhiTopicService#updateTopicState(VaradhiTopic)} for the
-     * queue’s backing topic. The merged model is {@code queue.toTopicResource(...).toVaradhiTopic(QUEUE)} with the
-     * stored topic’s version, lifecycle status, and internal topics so the metastore is not reset to a
-     * creating/empty topic.
-     */
-    private void persistQueueTopicFromBody(
-        QueueFqn queueFqn,
-        QueueResource queue,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        VaradhiTopic stored = varadhiTopicService.get(queueFqn.topicFqn());
-        if (stored.getTopicCategory() != VaradhiTopic.TopicCategory.QUEUE) {
-            throw new InvalidOperationForResourceException(
-                "Cannot update queue '%s': underlying topic is not a queue topic.".formatted(queue.getName())
-            );
-        }
-        VaradhiTopic updated = queue.toTopicResource(queueFqn.projectName(), actionCode)
-                                    .toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
-        updated.setVersion(stored.getVersion() + 1);
-        updated.setStatus(
-            new LifecycleStatus(
-                stored.getStatus().getState(),
-                stored.getStatus().getMessage(),
-                stored.getStatus().getActionCode()
-            )
-        );
-        stored.getInternalTopics().forEach(updated::addInternalTopic);
-        varadhiTopicService.updateTopicState(updated);
     }
 
     /**

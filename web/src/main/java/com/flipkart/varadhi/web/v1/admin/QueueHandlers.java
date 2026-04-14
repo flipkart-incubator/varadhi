@@ -37,11 +37,7 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_QUEUE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 /**
  * Handler for queue CRUD, update, and restore. Delegates to {@link VaradhiQueueService}. Update follows
@@ -89,6 +85,7 @@ public class QueueHandlers implements RouteProvider {
                                .hasBody()
                                .bodyParser(this::setRequestBody)
                                .authorize(TOPIC_CREATE)
+                               .authorize(TOPIC_SUBSCRIBE)
                                .build(this::getHierarchies, this::create),
                 RouteDefinition.put(UPDATE, API_NAME, "/:queue")
                                .nonBlocking()

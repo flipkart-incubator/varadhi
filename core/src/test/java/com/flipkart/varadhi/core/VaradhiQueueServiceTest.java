@@ -389,10 +389,11 @@ class VaradhiQueueServiceTest {
             "user",
             ACTION
         ).join();
-
-        verify(topicService).updateTopicState(any(VaradhiTopic.class));
         assertEquals(topic, result.topic());
         assertEquals(updated, result.subscription());
+        verify(topicService, never()).create(any(), any());
+        verify(topicService, never()).delete(any(), any(), any());
+        verify(topicService, never()).restore(any(), any());
     }
 
     @Test
@@ -417,7 +418,7 @@ class VaradhiQueueServiceTest {
     }
 
     @Test
-    void updateQueue_persistsTopicCapacityFromBody_beforeSubscriptionUpdate() {
+    void updateQueue_bodyTopicCapacityDoesNotPersistToTopicService() {
         VaradhiTopic topic = activeQueueTopic();
         VaradhiSubscription sub = activeLinkedSubscription(topic);
         VaradhiSubscription updated = activeLinkedSubscription(topic);
@@ -445,31 +446,9 @@ class VaradhiQueueServiceTest {
 
         queueService.updateQueue(PROJECT_NAME, QUEUE_NAME, body, "user", ACTION).join();
 
-        ArgumentCaptor<VaradhiTopic> topicCap = ArgumentCaptor.forClass(VaradhiTopic.class);
-        verify(topicService).updateTopicState(topicCap.capture());
-        assertEquals(TopicCapacityPolicy.getDefault(), topicCap.getValue().getCapacity());
-        assertEquals(VaradhiTopic.TopicCategory.QUEUE, topicCap.getValue().getTopicCategory());
-    }
-
-    @Test
-    void updateQueue_whenStoredTopicIsNotQueueCategory_throwsInvalidOperation() {
-        VaradhiTopic plainTopic = queueTopic(VaradhiTopic.TopicCategory.TOPIC);
-        plainTopic.markCreated();
-        VaradhiSubscription sub = activeLinkedSubscription(plainTopic);
-
-        when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
-        when(topicService.exists(topicKey)).thenReturn(true);
-        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
-        when(topicService.get(topicKey)).thenReturn(plainTopic);
-
-        QueueResource body = sampleQueueResource();
-        body.setCapacity(CAPACITY);
-
-        InvalidOperationForResourceException ex = assertThrows(
-            InvalidOperationForResourceException.class,
-            () -> queueService.updateQueue(PROJECT_NAME, QUEUE_NAME, body, "user", ACTION)
-        );
-        assertTrue(ex.getMessage().contains("not a queue topic"));
+        verify(topicService, never()).create(any(), any());
+        verify(topicService, never()).delete(any(), any(), any());
+        verify(topicService, never()).restore(any(), any());
     }
 
     private VaradhiTopic queueTopic(VaradhiTopic.TopicCategory category) {
