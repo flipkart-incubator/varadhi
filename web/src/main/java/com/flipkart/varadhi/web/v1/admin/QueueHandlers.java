@@ -51,16 +51,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 public class QueueHandlers implements RouteProvider {
     private static final String API_NAME = "QUEUE";
 
-    /** Applied in {@link #setRequestBody} when the client omits subscription properties (aligned with subscription test defaults). */
-    private static final Map<String, String> DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES = Map.of(
-        Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
-        "100",
-        Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT,
-        "20",
-        Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT,
-        "100"
-    );
-
     private final VaradhiQueueService varadhiQueueService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
 
@@ -112,7 +102,7 @@ public class QueueHandlers implements RouteProvider {
             body.setName(name.trim());
         }
         if (body.getProperties() == null || body.getProperties().isEmpty()) {
-            body.setProperties(Map.copyOf(DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES));
+            body.setProperties(Map.copyOf(Constants.QueueDefaults.SUBSCRIPTION_PROPERTIES));
         }
         if (body.getRetryPolicy() == null) {
             body.setRetryPolicy(Constants.QueueDefaults.RETRY_POLICY);

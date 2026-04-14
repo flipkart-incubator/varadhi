@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.entities.web;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.varadhi.entities.CallbackConfig;
+import com.flipkart.varadhi.entities.Constants;
 import com.flipkart.varadhi.entities.ConsumptionPolicy;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RetryPolicy;
@@ -40,23 +43,30 @@ public class QueueResource extends BaseResource implements Validatable {
     /** Subscription properties (same semantics as {@link SubscriptionResource#getProperties()}). */
     private Map<String, String> properties;
 
+    /**
+     * Full constructor used for HTTP JSON binding: {@link JsonCreator} marks this as Jackson’s single property-based
+     * creator so deserialization picks it even when other constructors exist (e.g. the 3-arg preset). Each
+     * {@link JsonProperty} names the JSON field bound to that parameter; without them, Vert.x/Jackson may fail with
+     * “no Creators exist” or choose the wrong constructor.
+     */
+    @JsonCreator
     public QueueResource(
-        String name,
-        int version,
-        String project,
-        Boolean secured,
-        Boolean grouped,
-        String appId,
-        String nfrStrategy,
-        String activeProduceZone,
-        TopicCapacityPolicy capacity,
-        LifecycleStatus.ActionCode actionCode,
-        String nfrFilterName,
-        RetryPolicy retryPolicy,
-        ConsumptionPolicy consumptionPolicy,
-        CallbackConfig callbackConfig,
-        Map<String, String> targetClientIds,
-        Map<String, String> properties
+        @JsonProperty ("name") String name,
+        @JsonProperty ("version") int version,
+        @JsonProperty ("project") String project,
+        @JsonProperty ("secured") Boolean secured,
+        @JsonProperty ("grouped") Boolean grouped,
+        @JsonProperty ("appId") String appId,
+        @JsonProperty ("nfrStrategy") String nfrStrategy,
+        @JsonProperty ("activeProduceZone") String activeProduceZone,
+        @JsonProperty ("capacity") TopicCapacityPolicy capacity,
+        @JsonProperty ("actionCode") LifecycleStatus.ActionCode actionCode,
+        @JsonProperty ("nfrFilterName") String nfrFilterName,
+        @JsonProperty ("retryPolicy") RetryPolicy retryPolicy,
+        @JsonProperty ("consumptionPolicy") ConsumptionPolicy consumptionPolicy,
+        @JsonProperty ("callbackConfig") CallbackConfig callbackConfig,
+        @JsonProperty ("targetClientIds") Map<String, String> targetClientIds,
+        @JsonProperty ("properties") Map<String, String> properties
     ) {
         super(name, version);
         setProject(project);
@@ -73,6 +83,31 @@ public class QueueResource extends BaseResource implements Validatable {
         this.callbackConfig = callbackConfig;
         this.targetClientIds = targetClientIds;
         this.properties = properties;
+    }
+
+    /**
+     * Minimal construction with {@link Constants.QueueDefaults} for topic/subscription fields. {@code targetClientIds}
+     * and {@code callbackConfig} stay unset until callers assign them.
+     */
+    public QueueResource(String name, int version, String project) {
+        this(
+            name,
+            version,
+            project,
+            Constants.QueueDefaults.SECURED,
+            Constants.QueueDefaults.GROUPED,
+            Constants.QueueDefaults.APP_ID,
+            Constants.QueueDefaults.NFR_STRATEGY,
+            Constants.QueueDefaults.ACTIVE_PRODUCE_ZONE,
+            Constants.QueueDefaults.defaultCapacity(),
+            Constants.QueueDefaults.ACTION_CODE,
+            Constants.QueueDefaults.NFR_FILTER_NAME,
+            Constants.QueueDefaults.RETRY_POLICY,
+            Constants.QueueDefaults.CONSUMPTION_POLICY,
+            null,
+            null,
+            Constants.QueueDefaults.subscriptionPropertiesCopy()
+        );
     }
 
     /**

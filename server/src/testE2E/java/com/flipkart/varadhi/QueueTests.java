@@ -1,12 +1,6 @@
 package com.flipkart.varadhi;
 
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.LifecycleStatus;
-import com.flipkart.varadhi.entities.Org;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.ResourceDeletionType;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.Team;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import com.flipkart.varadhi.entities.web.TopicResource;
@@ -332,25 +326,7 @@ public class QueueTests extends E2EBase {
     }
 
     private static QueueResource queueResource(String queueName) {
-        //valid value or default  (UTil queeuResource)
-        return new QueueResource(
-            queueName,
-            0,
-            project.getName(),
-            null,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            Map.of("http://localhost:8080", "test"),
-            null
-        );
+        return new QueueResource(queueName, 0, project.getName());
     }
 
     /**
