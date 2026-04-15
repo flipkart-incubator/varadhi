@@ -35,7 +35,6 @@ jobs:
         run: docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test
       - name: Setup the environment
         run: |
-          export JMXDISABLE=true
           docker compose --profile test -f setup/docker/compose.yml down -v
           docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
       - name: Debug Zookeeper on Failure
