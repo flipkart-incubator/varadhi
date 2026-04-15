@@ -27,14 +27,13 @@ import java.util.Map;
 public class QueueResource extends BaseResource implements Validatable {
     private static final String QUEUE_SUBSCRIPTION_PREFIX = "sub_";
 
-    // Queue extra fields (for topic part)
     /** primary zone for produce path (topic leg). */
     private String activeProduceZone;
     private TopicCapacityPolicy capacity;
     private LifecycleStatus.ActionCode actionCode;
     private String nfrFilterName;
 
-    // Queue extra fields (for subscription part); parallelism is ConsumptionPolicy.maxParallelism on the subscription
+    /** Queue extra fields (for subscription part); parallelism is ConsumptionPolicy.maxParallelism on the subscription */
     private RetryPolicy retryPolicy;
     private ConsumptionPolicy consumptionPolicy;
     private CallbackConfig callbackConfig;

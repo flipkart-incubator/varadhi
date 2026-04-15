@@ -8,7 +8,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
@@ -103,27 +102,6 @@ public class VaradhiSubscription extends LifecycleEntity {
     @JsonGetter ("endpoint")
     public Optional<Endpoint> getEndpoint() {
         return Optional.ofNullable(endpoint);
-    }
-
-    /**
-     * HTTP endpoint used to deliver messages: {@link #endpoint} when set; otherwise an {@link Endpoint.HttpEndpoint}
-     * built from the lexicographically first {@link #targetClientIds} key (queue-style callbacks often encode the URL
-     * only in that map). HTTP defaults match prior queue placeholder behavior for the non-URI fields.
-     */
-    public Endpoint resolveDeliveryEndpoint() {
-        if (endpoint != null) {
-            return endpoint;
-        }
-        String uriKey = targetClientIds.keySet()
-                                       .stream()
-                                       .sorted()
-                                       .findFirst()
-                                       .orElseThrow(
-                                           () -> new IllegalStateException(
-                                               "subscription has no endpoint and no target client ids"
-                                           )
-                                       );
-        return new Endpoint.HttpEndpoint(URI.create(uriKey), "POST", "application/json", 500, 500, false);
     }
 
     /**

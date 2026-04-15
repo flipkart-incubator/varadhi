@@ -122,7 +122,7 @@ public class QueueHandlers implements RouteProvider {
             String queueNameFromPath = ctx.pathParam(PATH_PARAM_QUEUE);
             String effectiveQueueName = (queueNameFromPath != null && !queueNameFromPath.isBlank()) ?
                 queueNameFromPath :
-                (queueResource.getName() != null ? queueResource.getName() : "");
+                queueResource.getName() != null ? queueResource.getName() : "";
             return Map.ofEntries(
                 Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, effectiveQueueName)),
                 Map.entry(
@@ -214,7 +214,7 @@ public class QueueHandlers implements RouteProvider {
     }
 
     private static void validateProjectConsistency(String projectPath, String projectInRequest) {
-        if (projectInRequest == null || !projectPath.equals(projectInRequest)) {
+        if (!projectPath.equals(projectInRequest)) {
             throw new IllegalArgumentException("Project name mismatch between URL and request body.");
         }
     }
@@ -279,7 +279,6 @@ public class QueueHandlers implements RouteProvider {
     }
 
     private RequestActionType createResourceActionRequest(RoutingContext ctx) {
-        String requestedBy = ctx.getIdentityOrDefault();
         LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
         return new RequestActionType(actionCode, message);

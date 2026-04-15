@@ -108,25 +108,7 @@ public class VaradhiQueueService {
             varadhiTopicService.create(varadhiTopic, project);
         } catch (DuplicateResourceException e) {
             VaradhiTopic existingTopic = varadhiTopicService.get(queueFqn.topicFqn());
-            if (existingTopic.getTopicCategory() != varadhiTopic.getTopicCategory()) {
-                throw new InvalidOperationForResourceException(
-                    ("Cannot create queue '%s': a topic with this name already exists as %s; "
-                     + "queues require topic category QUEUE. Choose a different queue name.").formatted(
-                         queueName,
-                         existingTopic.getTopicCategory()
-                     )
-                );
-            }
-            if (existingTopic.isGrouped() != varadhiTopic.isGrouped()) {
-                throw new InvalidOperationForResourceException(
-                    ("Cannot create queue '%s': a topic with this name already exists with different ordering "
-                     + "(existing grouped=%s, queue requests grouped=%s). Choose a different queue name.").formatted(
-                         queueName,
-                         existingTopic.isGrouped(),
-                         varadhiTopic.isGrouped()
-                     )
-                );
-            }
+            VaradhiTopicService.assertTopicIdentityCompatibleWithQueueCreate(queueName, existingTopic, varadhiTopic);
         }
 
         VaradhiTopic createdTopic = varadhiTopicService.get(queueFqn.topicFqn());
@@ -220,7 +202,7 @@ public class VaradhiQueueService {
     }
 
     /**
-     * Deletes a queue: removes the default subscription asynchronously when required (controller-backed), then
+     * Deletes a queue: removes the default subscription asynchronously when it exists (controller-backed), then
      * removes the topic synchronously when that phase completes. Idempotent.
      */
     public CompletableFuture<Void> deleteQueue(
@@ -237,19 +219,13 @@ public class VaradhiQueueService {
         if (!varadhiSubscriptionService.exists(queueFqn.subscriptionFqn())) {
             subscriptionPhase = CompletableFuture.completedFuture(null);
         } else {
-            VaradhiSubscription sub = varadhiSubscriptionService.getSubscription(queueFqn.subscriptionFqn());
-            boolean needSubscriptionDelete = deletionType == ResourceDeletionType.HARD_DELETE || sub.isActive();
-            if (!needSubscriptionDelete) {
-                subscriptionPhase = CompletableFuture.completedFuture(null);
-            } else {
-                subscriptionPhase = varadhiSubscriptionService.deleteSubscription(
-                    queueFqn.subscriptionFqn(),
-                    project,
-                    requestedBy,
-                    deletionType,
-                    actionRequest
-                );
-            }
+            subscriptionPhase = varadhiSubscriptionService.deleteSubscription(
+                queueFqn.subscriptionFqn(),
+                project,
+                requestedBy,
+                deletionType,
+                actionRequest
+            );
         }
 
         return subscriptionPhase.thenRun(
@@ -262,16 +238,12 @@ public class VaradhiQueueService {
         ResourceDeletionType deletionType,
         RequestActionType actionRequest
     ) {
-        final VaradhiTopic topic;
         try {
-            topic = varadhiTopicService.get(queueFqn.topicFqn());
+            varadhiTopicService.get(queueFqn.topicFqn());
         } catch (ResourceNotFoundException e) {
             return;
         }
-        boolean needTopicDelete = deletionType == ResourceDeletionType.HARD_DELETE || topic.isActive();
-        if (needTopicDelete) {
-            varadhiTopicService.delete(queueFqn.topicFqn(), deletionType, actionRequest);
-        }
+        varadhiTopicService.delete(queueFqn.topicFqn(), deletionType, actionRequest);
     }
 
     /**
@@ -289,26 +261,26 @@ public class VaradhiQueueService {
         VaradhiSubscription sub = assertDefaultQueueLinked(queueFqn, "restore");
         VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
         CompletableFuture<Void> subscriptionPhase;
-        // Subscription restore throws if not inactive (VaradhiSubscriptionService#restoreSubscription); keep
-        // sub.isActive() branches so queue restore stays idempotent when the default sub is already active.
+        // Both active: nothing to do. If only the subscription is active (e.g. topic restore failed on a prior
+        // attempt), still run the topic phase so retries can complete — do not return early on sub.isActive() alone.
         if (sub.isActive() && topic.isActive()) {
             return CompletableFuture.completedFuture(null);
         }
-        if (sub.isActive()) {
-            return CompletableFuture.completedFuture(null);
-        } else {
+        if (!sub.isActive()) {
             subscriptionPhase = varadhiSubscriptionService.restoreSubscription(
                 queueFqn.subscriptionFqn(),
                 requestedBy,
                 actionRequest
             ).thenCompose(s -> CompletableFuture.completedFuture(null));
+        } else {
+            subscriptionPhase = CompletableFuture.completedFuture(null);
         }
 
         return subscriptionPhase.thenRun(() -> restoreQueueTopicAfterSubscription(queueFqn, actionRequest));
     }
 
     private void restoreQueueTopicAfterSubscription(QueueFqn queueFqn, RequestActionType actionRequest) {
-        final VaradhiTopic topic;
+        VaradhiTopic topic;
         try {
             topic = varadhiTopicService.get(queueFqn.topicFqn());
         } catch (ResourceNotFoundException e) {
@@ -316,10 +288,8 @@ public class VaradhiQueueService {
                 "Cannot restore queue '%s': topic not found.".formatted(queueFqn.queueName())
             );
         }
-        if (!topic.isInactive()) {
-            throw new InvalidOperationForResourceException(
-                "Topic for queue '%s' is not in a restorable inactive state.".formatted(queueFqn.queueName())
-            );
+        if (topic.isActive()) {
+            return;
         }
         varadhiTopicService.restore(queueFqn.topicFqn(), actionRequest);
     }

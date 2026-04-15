@@ -76,29 +76,6 @@ class VaradhiSubscriptionTest {
     }
 
     @Test
-    void resolveDeliveryEndpoint_whenAbsent_usesLexicographicallyFirstTargetClientKey() {
-        URI callback = URI.create("http://callback.example/push");
-        VaradhiSubscription subscription = VaradhiSubscription.of(
-            "sub1",
-            "project1",
-            "topic1",
-            "description",
-            false,
-            null,
-            DEFAULT_RETRY_POLICY,
-            DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS,
-            Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(callback.toString(), "c1")
-        );
-        assertTrue(subscription.getEndpoint().isEmpty());
-        Endpoint resolved = subscription.resolveDeliveryEndpoint();
-        assertTrue(resolved instanceof Endpoint.HttpEndpoint);
-        assertEquals(callback, ((Endpoint.HttpEndpoint)resolved).getUri());
-    }
-
-    @Test
     void createSubscription_InvalidProject_ThrowsException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             VaradhiSubscription.of(

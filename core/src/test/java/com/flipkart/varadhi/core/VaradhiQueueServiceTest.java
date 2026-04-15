@@ -23,11 +23,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static com.flipkart.varadhi.entities.web.QueueResource.getDefaultSubscriptionName;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +73,22 @@ class VaradhiQueueServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         queueService = new VaradhiQueueService(topicFactory, topicService, subscriptionService, subscriptionFactory);
+    }
+
+    @Test
+    void get_loadsTopicAndDefaultSubscriptionByFqn() {
+        VaradhiTopic topic = activeQueueTopic();
+        VaradhiSubscription sub = activeLinkedSubscription(topic);
+
+        when(topicService.get(topicKey)).thenReturn(topic);
+        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
+
+        VaradhiQueueService.QueueResult result = queueService.get(PROJECT_NAME, QUEUE_NAME);
+
+        assertEquals(topic, result.topic());
+        assertEquals(sub, result.subscription());
+        verify(topicService).get(topicKey);
+        verify(subscriptionService).getSubscription(subscriptionKey);
     }
 
     @Test
@@ -191,6 +211,44 @@ class VaradhiQueueServiceTest {
     }
 
     @Test
+    void create_whenQueueNameNull_throwsIllegalArgument() {
+        QueueResource body = sampleQueueResource();
+        body.setName(null);
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> queueService.create(body, project, ACTION)
+        );
+        assertTrue(ex.getMessage().contains("Queue name"));
+        verify(topicService, never()).create(any(), any());
+    }
+
+    @Test
+    void create_whenQueueNameBlank_throwsIllegalArgument() {
+        QueueResource body = sampleQueueResource();
+        body.setName("  \t  ");
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> queueService.create(body, project, ACTION)
+        );
+        assertTrue(ex.getMessage().contains("Queue name"));
+        verify(topicService, never()).create(any(), any());
+    }
+
+    @Test
+    void updateQueue_whenQueueNameBlank_throwsIllegalArgument() {
+        QueueResource body = sampleQueueResource();
+        body.setName("");
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> queueService.updateQueue(PROJECT_NAME, QUEUE_NAME, body, "user", ACTION)
+        );
+        assertTrue(ex.getMessage().contains("Queue name"));
+    }
+
+    @Test
     void create_passesCustomRetryPolicyAndTargetClientIdsToSubscriptionFactory() {
         VaradhiTopic newQueueTopic = queueTopic(VaradhiTopic.TopicCategory.QUEUE);
         VaradhiSubscription built = activeLinkedSubscription(newQueueTopic);
@@ -240,11 +298,9 @@ class VaradhiQueueServiceTest {
     @Test
     void deleteQueue_afterSubscriptionFutureCompletes_deletesTopic() {
         CompletableFuture<Void> subPhase = new CompletableFuture<>();
-        VaradhiSubscription sub = activeLinkedSubscription(activeQueueTopic());
         VaradhiTopic topic = activeQueueTopic();
 
         when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
-        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
         when(
             subscriptionService.deleteSubscription(
                 eq(subscriptionKey),
@@ -270,6 +326,60 @@ class VaradhiQueueServiceTest {
         subPhase.complete(null);
         all.join();
         verify(topicService).delete(eq(topicKey), eq(ResourceDeletionType.HARD_DELETE), any());
+    }
+
+    @Test
+    void deleteQueue_softDelete_deletesSubscriptionThenTopic() {
+        CompletableFuture<Void> subPhase = CompletableFuture.completedFuture(null);
+        VaradhiTopic topic = activeQueueTopic();
+
+        when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
+        when(
+            subscriptionService.deleteSubscription(
+                eq(subscriptionKey),
+                eq(project),
+                any(),
+                eq(ResourceDeletionType.SOFT_DELETE),
+                any()
+            )
+        ).thenReturn(subPhase);
+        when(topicService.get(topicKey)).thenReturn(topic);
+
+        queueService.deleteQueue(
+            PROJECT_NAME,
+            QUEUE_NAME,
+            project,
+            "user",
+            ResourceDeletionType.SOFT_DELETE,
+            new RequestActionType(ACTION, "")
+        ).join();
+
+        verify(subscriptionService).deleteSubscription(
+            eq(subscriptionKey),
+            eq(project),
+            any(),
+            eq(ResourceDeletionType.SOFT_DELETE),
+            any()
+        );
+        verify(topicService).delete(eq(topicKey), eq(ResourceDeletionType.SOFT_DELETE), any());
+    }
+
+    @Test
+    void deleteQueue_whenTopicNotFoundAfterSubscription_skipsTopicDelete() {
+        when(subscriptionService.exists(subscriptionKey)).thenReturn(false);
+        when(topicService.get(topicKey)).thenThrow(new ResourceNotFoundException("topic missing"));
+
+        queueService.deleteQueue(
+            PROJECT_NAME,
+            QUEUE_NAME,
+            project,
+            "user",
+            ResourceDeletionType.HARD_DELETE,
+            new RequestActionType(ACTION, "")
+        ).join();
+
+        verify(subscriptionService, never()).deleteSubscription(any(), any(), any(), any(), any());
+        verify(topicService, never()).delete(any(), any(), any());
     }
 
     @Test
@@ -352,6 +462,108 @@ class VaradhiQueueServiceTest {
 
         verify(subscriptionService).restoreSubscription(eq(subscriptionKey), any(), any());
         verify(topicService).restore(eq(topicKey), any());
+    }
+
+    @Test
+    void restoreQueue_whenSubscriptionActiveAndTopicInactive_restoresTopicOnly() {
+        VaradhiTopic topic = queueTopic(VaradhiTopic.TopicCategory.QUEUE);
+        topic.markInactive(ACTION, "");
+        VaradhiSubscription sub = activeLinkedSubscription(topic);
+
+        when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
+        when(topicService.exists(topicKey)).thenReturn(true);
+        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
+        when(topicService.get(topicKey)).thenReturn(topic);
+
+        queueService.restoreQueue(PROJECT_NAME, QUEUE_NAME, "u", new RequestActionType(ACTION, "")).join();
+
+        verify(subscriptionService, never()).restoreSubscription(any(), any(), any());
+        verify(topicService).restore(eq(topicKey), any());
+    }
+
+    @Test
+    void restoreQueue_whenTopicNotInactive_propagatesFromTopicRestore() {
+        VaradhiTopic topic = queueTopic(VaradhiTopic.TopicCategory.QUEUE);
+        topic.markCreateFailed("storage error");
+        VaradhiSubscription sub = activeLinkedSubscription(topic);
+
+        when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
+        when(topicService.exists(topicKey)).thenReturn(true);
+        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
+        when(topicService.get(topicKey)).thenReturn(topic);
+        doThrow(new InvalidOperationForResourceException("not restorable")).when(topicService)
+                                                                           .restore(eq(topicKey), any());
+
+        CompletionException ex = assertThrows(
+            CompletionException.class,
+            () -> queueService.restoreQueue(PROJECT_NAME, QUEUE_NAME, "u", new RequestActionType(ACTION, "")).join()
+        );
+        assertInstanceOf(InvalidOperationForResourceException.class, ex.getCause());
+        verify(topicService).restore(eq(topicKey), any());
+    }
+
+    @Test
+    void restoreQueue_whenSubscriptionInactiveAndTopicActive_restoresSubscription_skipsTopicRestore() {
+        VaradhiTopic topic = activeQueueTopic();
+        VaradhiSubscription sub = inactiveLinkedSubscription(topic);
+
+        when(subscriptionService.exists(subscriptionKey)).thenReturn(true);
+        when(topicService.exists(topicKey)).thenReturn(true);
+        when(subscriptionService.getSubscription(subscriptionKey)).thenReturn(sub);
+        when(topicService.get(topicKey)).thenReturn(topic);
+        when(subscriptionService.restoreSubscription(eq(subscriptionKey), any(), any())).thenReturn(
+            CompletableFuture.completedFuture(sub)
+        );
+
+        queueService.restoreQueue(PROJECT_NAME, QUEUE_NAME, "u", new RequestActionType(ACTION, "")).join();
+
+        verify(subscriptionService).restoreSubscription(eq(subscriptionKey), any(), any());
+        verify(topicService, never()).restore(any(), any());
+    }
+
+    @Test
+    void list_returnsIntersectionOfProjectTopicsAndDefaultSubscriptions_includeInactiveFalse() {
+        String q2 = "q2";
+        String topicKeyQ2 = VaradhiTopic.fqn(PROJECT_NAME, q2);
+        String subKeyQ2 = SubscriptionResource.buildInternalName(PROJECT_NAME, getDefaultSubscriptionName(q2));
+
+        when(topicService.list(PROJECT_NAME, false)).thenReturn(
+            List.of(topicKey, topicKeyQ2, VaradhiTopic.fqn("other", "x"))
+        );
+        when(subscriptionService.getSubscriptionList(PROJECT_NAME, false)).thenReturn(List.of(subscriptionKey));
+
+        List<String> names = queueService.list(PROJECT_NAME, false);
+
+        assertIterableEquals(List.of(QUEUE_NAME), names);
+        verify(topicService).list(PROJECT_NAME, false);
+        verify(subscriptionService).getSubscriptionList(PROJECT_NAME, false);
+    }
+
+    @Test
+    void list_returnsQueuesInTopicListOrder_whenBothSubscriptionsExist() {
+        String q2 = "q2";
+        String topicKeyQ2 = VaradhiTopic.fqn(PROJECT_NAME, q2);
+        String subKeyQ2 = SubscriptionResource.buildInternalName(PROJECT_NAME, getDefaultSubscriptionName(q2));
+
+        when(topicService.list(PROJECT_NAME, false)).thenReturn(List.of(topicKeyQ2, topicKey));
+        when(subscriptionService.getSubscriptionList(PROJECT_NAME, false)).thenReturn(
+            List.of(subscriptionKey, subKeyQ2)
+        );
+
+        List<String> names = queueService.list(PROJECT_NAME, false);
+
+        assertIterableEquals(List.of(q2, QUEUE_NAME), names);
+    }
+
+    @Test
+    void list_passesIncludeInactiveTrueToTopicAndSubscriptionStores() {
+        when(topicService.list(PROJECT_NAME, true)).thenReturn(List.of());
+        when(subscriptionService.getSubscriptionList(PROJECT_NAME, true)).thenReturn(List.of());
+
+        queueService.list(PROJECT_NAME, true);
+
+        verify(topicService).list(PROJECT_NAME, true);
+        verify(subscriptionService).getSubscriptionList(PROJECT_NAME, true);
     }
 
     @Test

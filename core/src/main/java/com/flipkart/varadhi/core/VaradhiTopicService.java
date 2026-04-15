@@ -15,12 +15,17 @@ import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Service class for managing Varadhi topics.
  */
 @Slf4j
 public class VaradhiTopicService {
+
+    private static final String QUEUE_TOPIC_IDENTITY_MISMATCH =
+        "Cannot create queue '%s': a topic with this name already exists with a different %s (existing: %s, requested: %s). Choose a different queue name.";
 
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
@@ -58,10 +63,12 @@ public class VaradhiTopicService {
             VaradhiTopic existingTopic = get(varadhiTopic.getName());
             if (!existingTopic.isRetriable()) {
                 throw new DuplicateResourceException(
-                    String.format("Topic '%s' already exists.", varadhiTopic.getName())
+                    String.format(
+                        "%s '%s' already exists.".formatted(varadhiTopic.getTopicCategory(), varadhiTopic.getName())
+                    )
                 );
             }
-            assertRetriableCreateCompatible(existingTopic, varadhiTopic);
+            assertRetriableCreateCompatibleInternal(existingTopic, varadhiTopic);
         }
 
         try {
@@ -85,25 +92,63 @@ public class VaradhiTopicService {
      * Ensures a retried create does not change identity fields established on the first attempt
      * (category, ordering mode). Those must stay stable across {@link LifecycleStatus.State#CREATE_FAILED} retries.
      */
-    private void assertRetriableCreateCompatible(VaradhiTopic existing, VaradhiTopic requested) {
-        if (existing.getTopicCategory() != requested.getTopicCategory()) {
-            throw new InvalidOperationForResourceException(
-                ("Cannot retry topic creation for '%s': stored topic has category %s but request has %s. "
-                 + "Use the same API and category as the original create.").formatted(
-                     existing.getName(),
-                     existing.getTopicCategory(),
-                     requested.getTopicCategory()
-                 )
-            );
+    private void assertRetriableCreateCompatibleInternal(VaradhiTopic existing, VaradhiTopic requested) {
+        assertTopicCreateIdentityMatches(
+            existing,
+            requested,
+            () -> ("Cannot retry topic creation for '%s': stored topic has category %s but request has %s. "
+                   + "Use the same API and category as the original create.").formatted(
+                       existing.getName(),
+                       existing.getTopicCategory(),
+                       requested.getTopicCategory()
+                   ),
+            () -> ("Cannot retry topic creation for '%s': stored topic has grouped=%s but request has grouped=%s.").formatted(
+                existing.getName(),
+                existing.isGrouped(),
+                requested.isGrouped()
+            )
+        );
+    }
+
+    /**
+     * When queue create hits {@link DuplicateResourceException} because a non-retriable topic already uses the
+     * queue name, ensures the existing topic matches the queue identity (category, grouping). Static so queue unit
+     * tests with a mocked {@link VaradhiTopicService} still execute real checks.
+     */
+    public static void assertTopicIdentityCompatibleWithQueueCreate(
+        String queueName,
+        VaradhiTopic existing,
+        VaradhiTopic requested
+    ) {
+        assertTopicCreateIdentityMatches(
+            existing,
+            requested,
+            () -> QUEUE_TOPIC_IDENTITY_MISMATCH.formatted(
+                queueName,
+                "Topic category",
+                existing.getTopicCategory(),
+                requested.getTopicCategory()
+            ),
+            () -> QUEUE_TOPIC_IDENTITY_MISMATCH.formatted(
+                queueName,
+                "grouping",
+                existing.isGrouped(),
+                requested.isGrouped()
+            )
+        );
+    }
+
+    private static void assertTopicCreateIdentityMatches(
+        VaradhiTopic existing,
+        VaradhiTopic requested,
+        Supplier<String> categoryMismatchMessage,
+        Supplier<String> groupedMismatchMessage
+    ) {
+        if (!Objects.equals(existing.getTopicCategory(), requested.getTopicCategory())) {
+            throw new InvalidOperationForResourceException(categoryMismatchMessage.get());
         }
-        if (existing.isGrouped() != requested.isGrouped()) {
-            throw new InvalidOperationForResourceException(
-                ("Cannot retry topic creation for '%s': stored topic has grouped=%s but request has grouped=%s.").formatted(
-                    existing.getName(),
-                    existing.isGrouped(),
-                    requested.isGrouped()
-                )
-            );
+        if (!Objects.equals(existing.isGrouped(), requested.isGrouped())) {
+            throw new InvalidOperationForResourceException(groupedMismatchMessage.get());
         }
     }
 
@@ -212,7 +257,9 @@ public class VaradhiTopicService {
         }
 
         if (!varadhiTopic.isInactive()) {
-            throw new InvalidOperationForResourceException("Only inactive topics can be restored.");
+            throw new InvalidOperationForResourceException(
+                "%s '%s' is not in a restorable inactive state.".formatted(varadhiTopic.getTopicCategory(), topicName)
+            );
         }
 
         LifecycleStatus.ActionCode lastAction = varadhiTopic.getStatus().getActionCode();

@@ -31,7 +31,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
     @NotBlank
     private final String description;
 
-    /** Optional; when absent at runtime, delivery may use {@link VaradhiSubscription#resolveDeliveryEndpoint()}. */
+    /** Optional; queue-style subscriptions may omit this when callback details live only in {@link #targetClientIds}. */
     @Getter (AccessLevel.NONE)
     private final Endpoint endpoint;
 
@@ -51,8 +51,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
      * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
      * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #getEndpoint()} when
      * present), value = client id. One entry is typical for topics; queues use one entry per logical endpoint. When
-     * no explicit endpoint is set, the callback URL may appear only in these keys (see
-     * {@link VaradhiSubscription#resolveDeliveryEndpoint()}).
+     * no explicit endpoint is set, the callback URL may appear only in these keys.
      */
     @NotNull
     private final Map<String, String> targetClientIds;
