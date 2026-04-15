@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  * Service class for managing Varadhi topics.
@@ -68,7 +67,7 @@ public class VaradhiTopicService {
                     )
                 );
             }
-            assertRetriableCreateCompatibleInternal(existingTopic, varadhiTopic);
+            assertTopicIdentityCompatibleWithQueueCreate(varadhiTopic.getTopicName(), existingTopic, varadhiTopic);
         }
 
         try {
@@ -89,66 +88,48 @@ public class VaradhiTopicService {
     }
 
     /**
-     * Ensures a retried create does not change identity fields established on the first attempt
-     * (category, ordering mode). Those must stay stable across {@link LifecycleStatus.State#CREATE_FAILED} retries.
-     */
-    private void assertRetriableCreateCompatibleInternal(VaradhiTopic existing, VaradhiTopic requested) {
-        assertTopicCreateIdentityMatches(
-            existing,
-            requested,
-            () -> ("Cannot retry topic creation for '%s': stored topic has category %s but request has %s. "
-                   + "Use the same API and category as the original create.").formatted(
-                       existing.getName(),
-                       existing.getTopicCategory(),
-                       requested.getTopicCategory()
-                   ),
-            () -> ("Cannot retry topic creation for '%s': stored topic has grouped=%s but request has grouped=%s.").formatted(
-                existing.getName(),
-                existing.isGrouped(),
-                requested.isGrouped()
-            )
-        );
-    }
-
-    /**
      * When queue create hits {@link DuplicateResourceException} because a non-retriable topic already uses the
      * queue name, ensures the existing topic matches the queue identity (category, grouping). Static so queue unit
      * tests with a mocked {@link VaradhiTopicService} still execute real checks.
      */
     public static void assertTopicIdentityCompatibleWithQueueCreate(
-        String queueName,
+        String topicName,
         VaradhiTopic existing,
         VaradhiTopic requested
     ) {
-        assertTopicCreateIdentityMatches(
-            existing,
-            requested,
-            () -> QUEUE_TOPIC_IDENTITY_MISMATCH.formatted(
-                queueName,
-                "Topic category",
-                existing.getTopicCategory(),
-                requested.getTopicCategory()
-            ),
-            () -> QUEUE_TOPIC_IDENTITY_MISMATCH.formatted(
-                queueName,
-                "grouping",
-                existing.isGrouped(),
-                requested.isGrouped()
-            )
+        assertTopicInfoIsSame(
+            topicName,
+            existing.getTopicCategory(),
+            existing.getTopicCategory(),
+            requested.getTopicCategory(),
+            "Topic Category"
+        );
+        assertTopicInfoIsSame(
+            topicName,
+            existing.getTopicCategory(),
+            existing.isGrouped(),
+            requested.isGrouped(),
+            "Grouped"
         );
     }
 
-    private static void assertTopicCreateIdentityMatches(
-        VaradhiTopic existing,
-        VaradhiTopic requested,
-        Supplier<String> categoryMismatchMessage,
-        Supplier<String> groupedMismatchMessage
+    private static void assertTopicInfoIsSame(
+        String topicName,
+        VaradhiTopic.TopicCategory topicCategory,
+        Object existing,
+        Object requested,
+        String fieldName
     ) {
-        if (!Objects.equals(existing.getTopicCategory(), requested.getTopicCategory())) {
-            throw new InvalidOperationForResourceException(categoryMismatchMessage.get());
-        }
-        if (!Objects.equals(existing.isGrouped(), requested.isGrouped())) {
-            throw new InvalidOperationForResourceException(groupedMismatchMessage.get());
+        if (!Objects.equals(existing, requested)) {
+            String message =
+                "Existing %s %s has different values than in request for %s. Current value: %s. Value in Request: %s.".formatted(
+                    topicCategory,
+                    topicName,
+                    fieldName,
+                    existing,
+                    requested
+                );
+            throw new InvalidOperationForResourceException(message);
         }
     }
 
