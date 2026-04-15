@@ -542,19 +542,19 @@ class QueueHandlersTest extends WebTestBase {
         return subscriptionForQueueOnProject(project, topic);
     }
 
-    private static VaradhiSubscription subscriptionForQueueOnProject(Project p, VaradhiTopic topic) {
+    private static VaradhiSubscription subscriptionForQueueOnProject(Project project, VaradhiTopic topic) {
         return SubscriptionTestUtils.createUngroupedSubscription(
             QueueResource.getDefaultSubscriptionName(QUEUE_NAME),
-            p,
+            project,
             topic
         );
     }
 
-    private static String queuesUrl(Project p) {
-        return String.join("/", "/v1/projects", p.getName(), "queues");
+    private static String queuesUrl(Project project) {
+        return String.join("/", "/v1/projects", project.getName(), "queues");
     }
 
-    private static String queueUrl(Project p) {
-        return String.join("/", queuesUrl(p), QUEUE_NAME);
+    private static String queueUrl(Project project) {
+        return String.join("/", queuesUrl(project), QUEUE_NAME);
     }
 }
