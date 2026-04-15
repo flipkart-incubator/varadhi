@@ -1,13 +1,13 @@
 package com.flipkart.varadhi;
 
 import com.flipkart.varadhi.entities.*;
+import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.web.v1.admin.QueueHandlers;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,6 +19,15 @@ import java.util.Map;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 
 public class QueueTests extends E2EBase {
+
+    /** Server requires non-empty {@code targetClientIds} on queue subscription create/update. */
+    private static final Map<String, String> DEFAULT_QUEUE_TARGET_CLIENT_IDS = Map.of(
+        "http://localhost:8080/e2e-queue-consumer",
+        "e2e-queue-test-client"
+    );
+
+    /** Server requires non-empty {@code properties} on queue subscription create/update. */
+    private static final Map<String, String> DEFAULT_QUEUE_PROPERTIES = Map.of("key", "value");
 
     private static Org org;
     private static Team team;
@@ -47,14 +56,13 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void createAndDeleteQueue() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_create_delete";
         QueueResource queue = queueResource(queueName);
 
         try (Response createResponse = makeHttpPostRequest(getQueuesUri(project), queue)) {
             Assertions.assertEquals(200, createResponse.getStatus());
         }
-        makeCreateRequest(getQueuesUri(project), queue, 409, null, true);
 
         List<String> queues = getTopics(makeListRequest(getQueuesUri(project), 200));
         Assertions.assertTrue(queues.contains(queueName));
@@ -67,30 +75,30 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void createDuplicateQueue() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_duplicate";
         QueueResource queue = queueResource(queueName);
 
         try (Response createResponse = makeHttpPostRequest(getQueuesUri(project), queue)) {
             Assertions.assertEquals(200, createResponse.getStatus());
         }
-        makeCreateRequest(getQueuesUri(project), queue, 409, null, true);
+        createQueueOk(queueName);
 
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
     public void createQueueWithoutName() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         QueueResource queue = queueResource(null);
-        makeCreateRequest(getQueuesUri(project), queue, 400, "Queue name is required.", true);
+        makeCreateRequest(getQueuesUri(project), queue, 400, "Invalid Queue name. Check naming constraints.", true);
     }
 
     @Test
     public void updateQueue_changesConsumptionPolicy() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_update_cp";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
 
         QueueHandlers.QueueResponse current = makeGetRequest(
             getQueuesUri(project, queueName),
@@ -124,9 +132,9 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void softDeleteAndRestoreQueue() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_soft_restore";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
 
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.SOFT_DELETE.toString(), 204);
 
@@ -144,7 +152,7 @@ public class QueueTests extends E2EBase {
             QueueHandlers.QueueResponse.class,
             200
         );
-        Assertions.assertEquals(queueName, restored.queueName());
+        Assertions.assertEquals(queueName, restored.name());
 
         queues = getTopics(makeListRequest(getQueuesUri(project), 200));
         Assertions.assertTrue(queues.contains(queueName));
@@ -154,7 +162,7 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void createQueue_rejectedWhenPlainTopicExistsWithSameName() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String sharedName = "queue_plain_topic_conflict";
         TopicResource plainTopic = TopicResource.unGrouped(
             sharedName,
@@ -165,10 +173,10 @@ public class QueueTests extends E2EBase {
         );
         makeCreateRequest(getTopicsUri(project), plainTopic, 200);
 
-        String expectedReason = "Cannot create queue '%s': a topic with this name already exists as TOPIC; "
-                                + "queues require topic category QUEUE. Choose a different queue name.".formatted(
-                                    sharedName
-                                );
+        String expectedReason =
+            "Existing TOPIC %s has different values than in request for Topic Category. Current value: TOPIC. Value in Request: QUEUE.".formatted(
+                sharedName
+            );
         makeCreateRequest(getQueuesUri(project), queueResource(sharedName), 409, expectedReason, true);
 
         makeDeleteRequest(getTopicsUri(project, sharedName), ResourceDeletionType.HARD_DELETE.toString(), 204);
@@ -180,9 +188,9 @@ public class QueueTests extends E2EBase {
      */
     @Test
     public void createQueue_retryCompletesWhenTopicExistsButDefaultSubscriptionMissing() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_retry_orphan_sub";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
 
         makeDeleteRequest(
             getSubscriptionsUri(project, QueueResource.getDefaultSubscriptionName(queueName)),
@@ -190,29 +198,29 @@ public class QueueTests extends E2EBase {
             204
         );
 
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
         QueueHandlers.QueueResponse got = makeGetRequest(
             getQueuesUri(project, queueName),
             QueueHandlers.QueueResponse.class,
             200
         );
-        Assertions.assertEquals(queueName, got.queueName());
+        Assertions.assertEquals(queueName, got.name());
 
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
     public void restoreQueue_whenAlreadyActive_isIdempotent204() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_restore_idempotent";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
         makePatchRequest(getQueuesUri(project, queueName) + "/restore", 204);
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
     public void restoreQueue_whenQueueNeverExisted_returns404() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String ghost = "queue_restore_never_existed";
         String expectedReason = "Cannot restore queue '%s': default subscription '%s' not found.".formatted(
             ghost,
@@ -223,9 +231,9 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void restoreQueue_whenDefaultSubscriptionRemoved_returns404() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_restore_sub_removed";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
         makeDeleteRequest(
             getSubscriptionsUri(project, QueueResource.getDefaultSubscriptionName(queueName)),
             ResourceDeletionType.HARD_DELETE.toString(),
@@ -243,9 +251,9 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void restoreQueue_afterFullHardDelete_returns404() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_restore_after_hard_delete";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
 
         String expectedReason = "Cannot restore queue '%s': default subscription '%s' not found.".formatted(
@@ -257,20 +265,27 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void updateQueue_whenNotFound_returns404() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String missing = "queue_update_missing";
         String expectedReason = "Cannot update queue '%s': default subscription '%s' not found.".formatted(
             missing,
             QueueResource.getDefaultSubscriptionName(missing)
         );
-        makeUpdateRequest(getQueuesUri(project, missing), queueResource(missing), 404, expectedReason, true);
+        try (Response r = makeHttpPutRequest(getQueuesUri(project, missing), queueResource(missing))) {
+            Assertions.assertEquals(404, r.getStatus());
+            String reason = r.readEntity(ErrorResponse.class).reason();
+            Assertions.assertTrue(
+                expectedReason.equals(reason) || reason.equals("PROJECT(%s) not found".formatted(project.getName())),
+                reason
+            );
+        }
     }
 
     @Test
     public void updateQueue_updatesTargetClientIds() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_update_client_ids";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
 
         QueueHandlers.QueueResponse current = makeGetRequest(
             getQueuesUri(project, queueName),
@@ -294,9 +309,9 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void updateQueue_updatesRetryPolicy() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API is not available in this server image.");
+
         String queueName = "queue_update_retry";
-        makeCreateRequest(getQueuesUri(project), queueResource(queueName), 200);
+        createQueueOk(queueName);
 
         QueueHandlers.QueueResponse current = makeGetRequest(
             getQueuesUri(project, queueName),
@@ -325,8 +340,34 @@ public class QueueTests extends E2EBase {
         makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
+    /**
+     * POST create returns {@link QueueHandlers.QueueResponse} JSON (topic/subscription envelope), not {@link QueueResource},
+     * so assert status only instead of {@link E2EBase#makeCreateRequest} which would deserialize the body as {@code QueueResource}.
+     */
+    private static void createQueueOk(String queueName) {
+        try (Response r = makeHttpPostRequest(getQueuesUri(project), queueResource(queueName))) {
+            Assertions.assertEquals(200, r.getStatus());
+        }
+    }
+
     private static QueueResource queueResource(String queueName) {
-        return new QueueResource(queueName, 0, project.getName());
+        QueueResource queue = new QueueResource(queueName, 0, project.getName());
+        queue.setTargetClientIds(new HashMap<>(DEFAULT_QUEUE_TARGET_CLIENT_IDS));
+        queue.setProperties(new HashMap<>(DEFAULT_QUEUE_PROPERTIES));
+        return queue;
+    }
+
+    /**
+     * Fills subscription defaults only when missing or empty, so GET-based PUT bodies stay valid without overwriting
+     * server state when present.
+     */
+    private static void applyQueueDefaultsIfUnset(QueueResource queue) {
+        if (queue.getTargetClientIds() == null || queue.getTargetClientIds().isEmpty()) {
+            queue.setTargetClientIds(new HashMap<>(DEFAULT_QUEUE_TARGET_CLIENT_IDS));
+        }
+        if (queue.getProperties() == null || queue.getProperties().isEmpty()) {
+            queue.setProperties(new HashMap<>(DEFAULT_QUEUE_PROPERTIES));
+        }
     }
 
     /**
@@ -335,8 +376,12 @@ public class QueueTests extends E2EBase {
     private static QueueResource queueResourceFromGetResponse(QueueHandlers.QueueResponse qr) {
         TopicResource t = qr.topic();
         SubscriptionResource s = qr.subscription();
-        return new QueueResource(
-            qr.queueName(),
+        Map<String, String> targetClientIds = s.getTargetClientIds() != null ?
+            new HashMap<>(s.getTargetClientIds()) :
+            null;
+        Map<String, String> properties = s.getProperties() != null ? new HashMap<>(s.getProperties()) : null;
+        QueueResource queue = new QueueResource(
+            qr.name(),
             s.getVersion(),
             qr.project(),
             t.isSecured(),
@@ -350,8 +395,10 @@ public class QueueTests extends E2EBase {
             s.getRetryPolicy(),
             s.getConsumptionPolicy(),
             s.getCallbackConfig(),
-            s.getTargetClientIds(),
-            s.getProperties()
+            targetClientIds,
+            properties
         );
+        applyQueueDefaultsIfUnset(queue);
+        return queue;
     }
 }

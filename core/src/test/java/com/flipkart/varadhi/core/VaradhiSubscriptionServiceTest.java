@@ -618,6 +618,8 @@ class VaradhiSubscriptionServiceTest {
                 update.getEndpoint().orElse(null),
                 update.getRetryPolicy(),
                 update.getConsumptionPolicy(),
+                update.getProperties(),
+                update.getTargetClientIds(),
                 REQUESTED_BY
             ).get()
         );
@@ -1070,6 +1072,8 @@ class VaradhiSubscriptionServiceTest {
             to.getEndpoint().orElse(null),
             to.getRetryPolicy(),
             to.getConsumptionPolicy(),
+            to.getProperties(),
+            to.getTargetClientIds(),
             REQUESTED_BY
         );
     }

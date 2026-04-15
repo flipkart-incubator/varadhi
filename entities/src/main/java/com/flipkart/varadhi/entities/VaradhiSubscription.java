@@ -36,7 +36,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Target client IDs keyed by consumer endpoint identifier (topic: usually one entry, often under
      * queues: one entry per endpoint with that endpoint's client id).
      */
-    private final Map<String, String> targetClientIds;
+    private Map<String, String> targetClientIds;
     /**
      * Callback config required for queue endpoint
      */

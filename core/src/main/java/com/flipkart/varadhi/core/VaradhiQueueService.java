@@ -197,6 +197,8 @@ public class VaradhiQueueService {
             subRes.getEndpoint().orElse(null),
             subRes.getRetryPolicy(),
             subRes.getConsumptionPolicy(),
+            subRes.getProperties(),
+            subRes.getTargetClientIds(),
             requestedBy
         ).thenApply(updated -> new QueueResult(varadhiTopicService.get(queueFqn.topicFqn()), updated));
     }

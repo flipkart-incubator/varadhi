@@ -145,7 +145,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, created.queueName());
+        assertEquals(QUEUE_NAME, created.name());
         assertEquals(project.getName(), created.project());
         verify(varadhiQueueService).create(any(), eq(project), any());
         var spans = spanExporter.getFinishedSpanItems();
@@ -203,7 +203,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, response.queueName());
+        assertEquals(QUEUE_NAME, response.name());
         assertEquals(project.getName(), response.project());
         assertEquals(QUEUE_NAME, response.topic().getName());
         verify(varadhiQueueService).get(project.getName(), QUEUE_NAME);
@@ -280,7 +280,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, resp.queueName());
+        assertEquals(QUEUE_NAME, resp.name());
         assertEquals(DEFAULT_PROJECT_NAME, resp.project());
         assertEquals(SubscriptionResource.from(updated).getRetryPolicy(), resp.subscription().getRetryPolicy());
         verify(varadhiQueueService).updateQueue(eq(DEFAULT_PROJECT_NAME), eq(QUEUE_NAME), any(), any(), any());
@@ -348,7 +348,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, response.queueName());
+        assertEquals(QUEUE_NAME, response.name());
         assertEquals(altProject, response.project());
         verify(varadhiQueueService).get(altProject, QUEUE_NAME);
     }
