@@ -160,7 +160,7 @@ public class SubscriptionTests extends E2EBase {
             created.getTopicProject(),
             "desc updated",
             created.isGrouped(),
-            created.getEndpoint(),
+            created.getEndpoint().orElse(null),
             created.getRetryPolicy(),
             created.getConsumptionPolicy(),
             created.getProperties(),

@@ -36,16 +36,16 @@ import static com.flipkart.varadhi.common.Constants.MethodNames.UPDATE;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_SUBSCRIPTION;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
+import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
+import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_CREATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_DELETE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.SUBSCRIPTION_UPDATE;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_IGNORE_CONSTRAINTS;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
-import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.Versioned.NAME_SEPARATOR;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 
 /**
@@ -263,7 +263,7 @@ public class SubscriptionHandlers implements RouteProvider {
                 subscription.getVersion(),
                 subscription.getDescription(),
                 subscription.isGrouped(),
-                subscription.getEndpoint(),
+                subscription.getEndpoint().orElse(null),
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy(),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)

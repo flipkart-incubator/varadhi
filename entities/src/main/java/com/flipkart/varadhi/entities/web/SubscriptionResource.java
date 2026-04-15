@@ -2,11 +2,14 @@ package com.flipkart.varadhi.entities.web;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,10 +20,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Subscription name. Check naming constraints.", max = 64)
-public class SubscriptionResource extends Versioned implements Validatable {
-
-    @NotBlank
-    private final String project;
+public class SubscriptionResource extends BaseResource implements Validatable {
 
     @NotBlank
     private final String topic;
@@ -31,9 +31,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
     @NotBlank
     private final String description;
 
-    private final boolean grouped;
-
-    @NotNull
+    /** Optional; queue-style subscriptions may omit this when callback details live only in {@link #targetClientIds}. */
+    @Getter (AccessLevel.NONE)
     private final Endpoint endpoint;
 
     @NotNull
@@ -50,13 +49,17 @@ public class SubscriptionResource extends Versioned implements Validatable {
 
     /**
      * Target client id per consumer endpoint: key = stable endpoint identifier (for HTTP consumers, commonly
-     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #endpoint}), value = client id.
-     * One entry is typical for topics; queues use one entry per logical endpoint. String keys are used instead of
-     * {@link Endpoint} as map keys for a JSON-friendly contract; {@link #endpoint} carries the primary endpoint
-     * configuration.
+     * {@link Endpoint.HttpEndpoint#getUri()}{@code .toString()} aligned with {@link #getEndpoint()} when
+     * present), value = client id. One entry is typical for topics; queues use one entry per logical endpoint. When
+     * no explicit endpoint is set, the callback URL may appear only in these keys.
      */
     @NotNull
     private final Map<String, String> targetClientIds;
+
+    /**
+     * Optional HTTP callback code-range policy for queue-style subscriptions; {@code null} if not used.
+     */
+    private final CallbackConfig callbackConfig;
 
     /**
      * Constructs a new SubscriptionResource.
@@ -68,12 +71,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
      * @param topicProject      The project of the topic associated with the subscription.
      * @param description       The description of the subscription.
      * @param grouped           Indicates if the subscription is grouped.
-     * @param endpoint          The endpoint associated with the subscription.
+     * @param endpoint          The endpoint associated with the subscription ({@code null} if not specified).
      * @param retryPolicy       The retry policy for the subscription.
      * @param consumptionPolicy The consumption policy for the subscription.
      * @param properties        Additional properties for the subscription.
      * @param actionCode        The actor code associated with the subscription.
      * @param targetClientIds   Endpoint id → client id; at least one non-blank mapping required.
+     * @param callbackConfig    optional callback config ({@code null} for topic-style subscriptions).
      */
     private SubscriptionResource(
         String name,
@@ -88,20 +92,31 @@ public class SubscriptionResource extends Versioned implements Validatable {
         ConsumptionPolicy consumptionPolicy,
         Map<String, String> properties,
         LifecycleStatus.ActionCode actionCode,
-        Map<String, String> targetClientIds
+        Map<String, String> targetClientIds,
+        CallbackConfig callbackConfig
     ) {
         super(name, version);
-        this.project = project;
+        setProject(project);
+        setGrouped(grouped);
         this.topic = topic;
         this.topicProject = topicProject;
         this.description = description;
-        this.grouped = grouped;
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
         this.properties = properties == null ? new HashMap<>() : properties;
         this.actionCode = actionCode;
         this.targetClientIds = VaradhiSubscription.validateTargetClientIds(targetClientIds);
+        this.callbackConfig = callbackConfig;
+    }
+
+    /**
+     * Endpoint can be null in case of queue
+     * @return Optional of endpoint
+     */
+    @JsonGetter ("endpoint")
+    public Optional<Endpoint> getEndpoint() {
+        return Optional.ofNullable(endpoint);
     }
 
     /**
@@ -123,6 +138,42 @@ public class SubscriptionResource extends Versioned implements Validatable {
         LifecycleStatus.ActionCode actionCode,
         Map<String, String> targetClientIds
     ) {
+        return of(
+            name,
+            project,
+            topic,
+            topicProject,
+            description,
+            grouped,
+            endpoint,
+            retryPolicy,
+            consumptionPolicy,
+            properties,
+            actionCode,
+            targetClientIds,
+            null
+        );
+    }
+
+    /**
+     * Same as {@link #of(String, String, String, String, String, boolean, Endpoint, RetryPolicy, ConsumptionPolicy, Map, LifecycleStatus.ActionCode, Map)}
+     * with optional {@link CallbackConfig} for queue-style subscriptions.
+     */
+    public static SubscriptionResource of(
+        String name,
+        String project,
+        String topic,
+        String topicProject,
+        String description,
+        boolean grouped,
+        Endpoint endpoint,
+        RetryPolicy retryPolicy,
+        ConsumptionPolicy consumptionPolicy,
+        Map<String, String> properties,
+        LifecycleStatus.ActionCode actionCode,
+        Map<String, String> targetClientIds,
+        CallbackConfig callbackConfig
+    ) {
         return new SubscriptionResource(
             name,
             INITIAL_VERSION,
@@ -136,7 +187,8 @@ public class SubscriptionResource extends Versioned implements Validatable {
             consumptionPolicy,
             properties,
             actionCode,
-            targetClientIds
+            targetClientIds,
+            callbackConfig
         );
     }
 
@@ -175,12 +227,13 @@ public class SubscriptionResource extends Versioned implements Validatable {
             topicProject,
             subscription.getDescription(),
             subscription.isGrouped(),
-            subscription.getEndpoint(),
+            subscription.getEndpoint().orElse(null),
             subscription.getRetryPolicy(),
             subscription.getConsumptionPolicy(),
             subscription.getProperties(),
             subscription.getStatus().getActionCode(),
-            subscription.getTargetClientIds()
+            subscription.getTargetClientIds(),
+            subscription.getCallbackConfig()
         );
         subResource.setVersion(subscription.getVersion());
         return subResource;
@@ -193,6 +246,6 @@ public class SubscriptionResource extends Versioned implements Validatable {
      */
     @JsonIgnore
     public String getSubscriptionInternalName() {
-        return buildInternalName(project, getName());
+        return buildInternalName(getProject(), getName());
     }
 }

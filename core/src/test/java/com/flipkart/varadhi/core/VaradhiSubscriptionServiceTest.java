@@ -615,7 +615,7 @@ class VaradhiSubscriptionServiceTest {
                 update.getVersion(),
                 update.getDescription(),
                 update.isGrouped(),
-                update.getEndpoint(),
+                update.getEndpoint().orElse(null),
                 update.getRetryPolicy(),
                 update.getConsumptionPolicy(),
                 REQUESTED_BY
@@ -1030,12 +1030,35 @@ class VaradhiSubscriptionServiceTest {
         assertEquals(expected.getTopic(), actual.getTopic());
         assertEquals(expected.getDescription(), actual.getDescription());
         assertEquals(expected.isGrouped(), actual.isGrouped());
-        assertEquals(expected.getEndpoint().getProtocol(), actual.getEndpoint().getProtocol());
+        assertEquals(expected.getTargetClientIds(), actual.getTargetClientIds());
+        assertSubscriptionEndpointsEqual(expected, actual);
         assertEquals(expected.getRetryPolicy(), actual.getRetryPolicy());
         assertEquals(expected.getConsumptionPolicy(), actual.getConsumptionPolicy());
         assertEquals(expected.getShards().getShardCount(), actual.getShards().getShardCount());
         assertEquals(expected.getStatus().getState(), actual.getStatus().getState());
         assertEquals(expected.getProperties(), actual.getProperties());
+    }
+
+    private static void assertSubscriptionEndpointsEqual(VaradhiSubscription expected, VaradhiSubscription actual) {
+        var eOpt = expected.getEndpoint();
+        var aOpt = actual.getEndpoint();
+        assertEquals(eOpt.isPresent(), aOpt.isPresent(), "endpoint presence mismatch");
+        if (eOpt.isEmpty()) {
+            return;
+        }
+        Endpoint e = eOpt.get();
+        Endpoint a = aOpt.get();
+        assertEquals(e.getProtocol(), a.getProtocol());
+        if (e instanceof Endpoint.HttpEndpoint he && a instanceof Endpoint.HttpEndpoint ha) {
+            assertEquals(he.getUri(), ha.getUri());
+            assertEquals(he.getMethod(), ha.getMethod());
+            assertEquals(he.getContentType(), ha.getContentType());
+            assertEquals(he.getConnectTimeoutMs(), ha.getConnectTimeoutMs());
+            assertEquals(he.getRequestTimeoutMs(), ha.getRequestTimeoutMs());
+            assertEquals(he.isHttp2Supported(), ha.isHttp2Supported());
+        } else {
+            assertEquals(eOpt, aOpt);
+        }
     }
 
     private CompletableFuture<VaradhiSubscription> updateSubscription(VaradhiSubscription to) {
@@ -1044,7 +1067,7 @@ class VaradhiSubscriptionServiceTest {
             to.getVersion(),
             to.getDescription(),
             to.isGrouped(),
-            to.getEndpoint(),
+            to.getEndpoint().orElse(null),
             to.getRetryPolicy(),
             to.getConsumptionPolicy(),
             REQUESTED_BY

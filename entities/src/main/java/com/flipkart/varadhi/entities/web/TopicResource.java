@@ -6,25 +6,18 @@ import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.Versioned;
-import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 
 /**
- * Represents a topic resource in the Varadhi system.
+ * Represents a topic resource in the Varadhi system (API request/response and factory input).
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
 @ValidateResource (message = "Invalid Topic name. Check naming constraints.", max = 64)
-public class TopicResource extends Versioned implements Validatable {
-
-    @NotBlank
-    private final String project;
-
-    private final boolean grouped;
+public class TopicResource extends BaseResource implements Validatable {
 
     @Setter
     private TopicCapacityPolicy capacity;
@@ -53,8 +46,8 @@ public class TopicResource extends Versioned implements Validatable {
         String nfrFilterName
     ) {
         super(name, version);
-        this.project = project;
-        this.grouped = grouped;
+        setProject(project);
+        setGrouped(grouped);
         this.capacity = capacity;
         this.actionCode = actionCode;
         this.nfrFilterName = nfrFilterName;
@@ -127,6 +120,21 @@ public class TopicResource extends Versioned implements Validatable {
      * @return a new VaradhiTopic instance
      */
     public VaradhiTopic toVaradhiTopic() {
-        return VaradhiTopic.of(project, getName(), grouped, capacity, actionCode, nfrFilterName);
+        return toVaradhiTopic(VaradhiTopic.TopicCategory.TOPIC);
+    }
+
+    /**
+     * Converts this TopicResource to a {@link VaradhiTopic} with the given {@link VaradhiTopic.TopicCategory}.
+     */
+    public VaradhiTopic toVaradhiTopic(VaradhiTopic.TopicCategory topicCategory) {
+        return VaradhiTopic.of(
+            getProject(),
+            getName(),
+            isGrouped(),
+            capacity,
+            actionCode,
+            nfrFilterName,
+            topicCategory
+        );
     }
 }

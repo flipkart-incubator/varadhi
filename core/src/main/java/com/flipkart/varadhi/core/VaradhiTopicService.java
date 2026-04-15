@@ -15,13 +15,13 @@ import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Service class for managing Varadhi topics.
  */
 @Slf4j
 public class VaradhiTopicService {
-
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
     private final SubscriptionStore subscriptionStore;
@@ -53,16 +53,23 @@ public class VaradhiTopicService {
      */
     public void create(VaradhiTopic varadhiTopic, Project project) {
         log.info("Creating Varadhi topic: {}", varadhiTopic.getName());
+        boolean alreadyExists = exists(varadhiTopic.getName());
+        if (alreadyExists) {
+            VaradhiTopic existingTopic = get(varadhiTopic.getName());
+            if (!existingTopic.isRetriable()) {
+                throw new DuplicateResourceException(
+                    String.format(
+                        "%s '%s' already exists.".formatted(varadhiTopic.getTopicCategory(), varadhiTopic.getName())
+                    )
+                );
+            }
+            assertTopicIdempotency(existingTopic, varadhiTopic);
+        }
+
         try {
-            if (!exists(varadhiTopic.getName())) {
+            if (!alreadyExists) {
                 topicStore.create(varadhiTopic);
             } else {
-                VaradhiTopic existingTopic = get(varadhiTopic.getName());
-                if (!existingTopic.isRetriable()) {
-                    throw new DuplicateResourceException(
-                        String.format("Topic '%s' already exists.", varadhiTopic.getName())
-                    );
-                }
                 topicStore.update(varadhiTopic);
             }
 
@@ -73,6 +80,48 @@ public class VaradhiTopicService {
             throw e;
         } finally {
             updateTopicState(varadhiTopic);
+        }
+    }
+
+    /**
+     * When queue create hits {@link DuplicateResourceException} because a non-retriable topic already uses the
+     * queue name, ensures the existing topic matches the queue identity (category, grouping). Static so queue unit
+     * tests with a mocked {@link VaradhiTopicService} still execute real checks.
+     */
+    public static void assertTopicIdempotency(VaradhiTopic existing, VaradhiTopic requested) {
+        assertTopicInfoIsSame(
+            requested.getTopicName(),
+            existing.getTopicCategory(),
+            existing.getTopicCategory(),
+            requested.getTopicCategory(),
+            "Topic Category"
+        );
+        assertTopicInfoIsSame(
+            requested.getTopicName(),
+            existing.getTopicCategory(),
+            existing.isGrouped(),
+            requested.isGrouped(),
+            "Grouped"
+        );
+    }
+
+    private static void assertTopicInfoIsSame(
+        String topicName,
+        VaradhiTopic.TopicCategory topicCategory,
+        Object existing,
+        Object requested,
+        String fieldName
+    ) {
+        if (!Objects.equals(existing, requested)) {
+            String message =
+                "Existing %s %s has different values than in request for %s. Current value: %s. Value in Request: %s.".formatted(
+                    topicCategory,
+                    topicName,
+                    fieldName,
+                    existing,
+                    requested
+                );
+            throw new InvalidOperationForResourceException(message);
         }
     }
 
@@ -181,7 +230,9 @@ public class VaradhiTopicService {
         }
 
         if (!varadhiTopic.isInactive()) {
-            throw new InvalidOperationForResourceException("Only inactive topics can be restored.");
+            throw new InvalidOperationForResourceException(
+                "%s '%s' is not in a restorable inactive state.".formatted(varadhiTopic.getTopicCategory(), topicName)
+            );
         }
 
         LifecycleStatus.ActionCode lastAction = varadhiTopic.getStatus().getActionCode();

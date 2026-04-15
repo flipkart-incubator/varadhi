@@ -3,6 +3,7 @@ package com.flipkart.varadhi.web;
 import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -29,6 +30,7 @@ import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
 
+import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
 import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -414,6 +416,13 @@ public class WebServerVerticle extends AbstractVerticle {
             verticleConfig.deployedRegion()
         );
 
+        VaradhiQueueService varadhiQueueService = new VaradhiQueueService(
+            varadhiTopicFactory,
+            serviceRegistry.get(VaradhiTopicService.class),
+            serviceRegistry.get(VaradhiSubscriptionService.class),
+            subscriptionFactory
+        );
+
         // Add management entity routes if not in lean deployment
         routes.addAll(getManagementEntitiesApiRoutes());
 
@@ -441,6 +450,8 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         routes.addAll(subscriptionActionHandler.get());
+
+        routes.addAll(new QueueHandlers(varadhiQueueService, cacheRegistry.getCache(ResourceType.PROJECT)).get());
 
         routes.addAll(
             new DlqHandlers(

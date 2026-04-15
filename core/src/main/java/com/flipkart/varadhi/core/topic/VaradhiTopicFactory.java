@@ -45,17 +45,18 @@ public class VaradhiTopicFactory {
     }
 
     /**
-     * Creates a VaradhiTopic instance based on the provided project and topic resource.
+     * Creates a VaradhiTopic instance based on the provided project, topic resource, and topic category.
      *
      * @param project       the project associated with the topic
-     * @param topicResource the topic resource containing topic details
+     * @param topicResource the topic model containing topic details
+     * @param category      the topic category (e.g. {@link VaradhiTopic.TopicCategory#TOPIC} or {@link VaradhiTopic.TopicCategory#QUEUE})
      *
      * @return the created VaradhiTopic instance
      */
-    public VaradhiTopic get(Project project, TopicResource topicResource) {
+    public VaradhiTopic get(Project project, TopicResource topicResource, VaradhiTopic.TopicCategory category) {
         topicResource.setCapacity(Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy));
 
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);
         planDeployment(project, varadhiTopic);
         return varadhiTopic;
     }

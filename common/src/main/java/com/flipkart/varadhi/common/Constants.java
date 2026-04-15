@@ -20,6 +20,9 @@ public class Constants {
     public static final String SYSTEM_IDENTITY = "System";
     public static final String ANONYMOUS_IDENTITY = "Anonymous";
 
+    /** Identity string treated as Varadhi admin for action-code selection in admin handlers (e.g. queue/topic restore). */
+    public static final String VARADHI_ADMIN_IDENTITY = "varadhi-admin";
+
     // Handler name for entity events.
     public static final String ENTITY_EVENTS_HANDLER = "entity-events";
 
@@ -37,6 +40,7 @@ public class Constants {
         public static final String PATH_PARAM_PROJECT = "project";
         public static final String PATH_PARAM_TOPIC = "topic";
         public static final String PATH_PARAM_SUBSCRIPTION = "subscription";
+        public static final String PATH_PARAM_QUEUE = "queue";
         public static final String PATH_PARAM_ORG_FILTER_NAME = "orgFilterName";
 
         private PathParams() {

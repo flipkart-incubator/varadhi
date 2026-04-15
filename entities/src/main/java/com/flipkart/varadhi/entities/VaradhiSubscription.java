@@ -1,12 +1,15 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Strings;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Represents a subscription in the Varadhi.
@@ -22,6 +25,7 @@ public class VaradhiSubscription extends LifecycleEntity {
     private final String topic;
     private String description;
     private boolean grouped;
+    @Getter (AccessLevel.NONE)
     private Endpoint endpoint;
     private RetryPolicy retryPolicy;
     private ConsumptionPolicy consumptionPolicy;
@@ -90,6 +94,14 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.status = status;
         this.properties = validateProperties(properties);
         this.targetClientIds = validateTargetClientIds(targetClientIds);
+    }
+
+    /**
+     * Can be null in case of queue where only default endpoint is there
+     */
+    @JsonGetter ("endpoint")
+    public Optional<Endpoint> getEndpoint() {
+        return Optional.ofNullable(endpoint);
     }
 
     /**

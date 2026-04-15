@@ -66,7 +66,7 @@ class VaradhiSubscriptionTest {
             () -> assertEquals("topic1", subscription.getTopic()),
             () -> assertEquals("description", subscription.getDescription()),
             () -> assertTrue(subscription.isGrouped()),
-            () -> assertNotNull(subscription.getEndpoint()),
+            () -> assertTrue(subscription.getEndpoint().isPresent()),
             () -> assertNotNull(subscription.getRetryPolicy()),
             () -> assertNotNull(subscription.getConsumptionPolicy()),
             () -> assertNotNull(subscription.getShards()),

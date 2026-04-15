@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicResourceTest {
@@ -69,6 +70,33 @@ class TopicResourceTest {
     }
 
     @Test
+    void validate_RejectsBlankProject() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, topicResource::validate);
+        assertTrue(ex.getMessage().contains("project"));
+    }
+
+    @Test
+    void validate_RejectsNullProject() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        topicResource.setProject(null);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, topicResource::validate);
+        assertTrue(ex.getMessage().contains("project"));
+    }
+
+    @Test
     void toVaradhiTopic_ConvertsToVaradhiTopic() {
         TopicResource topicResource = TopicResource.grouped(
             "topicName",
@@ -83,7 +111,21 @@ class TopicResourceTest {
             () -> assertEquals("projectName", varadhiTopic.getProjectName()),
             () -> assertTrue(varadhiTopic.isGrouped()),
             () -> assertNotNull(varadhiTopic.getCapacity()),
-            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode())
+            () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode()),
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
         );
+    }
+
+    @Test
+    void toVaradhiTopic_WithQueueCategory_UsesQueueTopicCategory() {
+        TopicResource topicResource = TopicResource.unGrouped(
+            "topicName",
+            "projectName",
+            new TopicCapacityPolicy(),
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "test"
+        );
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
+        assertEquals(VaradhiTopic.TopicCategory.QUEUE, varadhiTopic.getTopicCategory());
     }
 }
