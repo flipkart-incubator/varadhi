@@ -65,7 +65,7 @@ public class TopicTests extends E2EBase {
         Assertions.assertEquals(topic.isGrouped(), r.isGrouped());
         Assertions.assertNotNull(r.getCapacity());
         String errorDuplicateTopic = String.format(
-            "Topic '%s' already exists.",
+            "TOPIC '%s' already exists.",
             String.join(NAME_SEPARATOR, topic.getProject(), topic.getName())
         );
 
