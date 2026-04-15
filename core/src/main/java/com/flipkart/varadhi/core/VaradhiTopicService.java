@@ -22,10 +22,6 @@ import java.util.Objects;
  */
 @Slf4j
 public class VaradhiTopicService {
-
-    private static final String QUEUE_TOPIC_IDENTITY_MISMATCH =
-        "Cannot create queue '%s': a topic with this name already exists with a different %s (existing: %s, requested: %s). Choose a different queue name.";
-
     private final StorageTopicService storageTopicService;
     private final TopicStore topicStore;
     private final SubscriptionStore subscriptionStore;
@@ -67,7 +63,7 @@ public class VaradhiTopicService {
                     )
                 );
             }
-            assertTopicIdentityCompatibleWithQueueCreate(varadhiTopic.getTopicName(), existingTopic, varadhiTopic);
+            assertTopicIdempotency(existingTopic, varadhiTopic);
         }
 
         try {
@@ -92,20 +88,16 @@ public class VaradhiTopicService {
      * queue name, ensures the existing topic matches the queue identity (category, grouping). Static so queue unit
      * tests with a mocked {@link VaradhiTopicService} still execute real checks.
      */
-    public static void assertTopicIdentityCompatibleWithQueueCreate(
-        String topicName,
-        VaradhiTopic existing,
-        VaradhiTopic requested
-    ) {
+    public static void assertTopicIdempotency(VaradhiTopic existing, VaradhiTopic requested) {
         assertTopicInfoIsSame(
-            topicName,
+            requested.getTopicName(),
             existing.getTopicCategory(),
             existing.getTopicCategory(),
             requested.getTopicCategory(),
             "Topic Category"
         );
         assertTopicInfoIsSame(
-            topicName,
+            requested.getTopicName(),
             existing.getTopicCategory(),
             existing.isGrouped(),
             requested.isGrouped(),

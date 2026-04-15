@@ -108,7 +108,7 @@ public class VaradhiQueueService {
             varadhiTopicService.create(varadhiTopic, project);
         } catch (DuplicateResourceException e) {
             VaradhiTopic existingTopic = varadhiTopicService.get(queueFqn.topicFqn());
-            VaradhiTopicService.assertTopicIdentityCompatibleWithQueueCreate(queueName, existingTopic, varadhiTopic);
+            VaradhiTopicService.assertTopicIdempotency(existingTopic, varadhiTopic);
         }
 
         VaradhiTopic createdTopic = varadhiTopicService.get(queueFqn.topicFqn());
