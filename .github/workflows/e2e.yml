@@ -37,6 +37,11 @@ jobs:
         run: |
           docker compose --profile test -f setup/docker/compose.yml down -v
           docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
+      - name: Debug Zookeeper on Failure
+        if: failure()  # This only runs if the previous step fails
+        run: |
+          docker compose --profile test -f setup/docker/compose.yml logs zookeeper
+          docker inspect zookeeper
       - name: Run the test
         run: ./gradlew test testE2E
       - name: Publish Test Results
