@@ -586,6 +586,8 @@ class VaradhiQueueServiceTest {
                 any(),
                 any(),
                 any(),
+                any(),
+                any(),
                 eq("user")
             )
         ).thenReturn(CompletableFuture.completedFuture(updated));
@@ -645,6 +647,8 @@ class VaradhiQueueServiceTest {
                 anyInt(),
                 any(),
                 anyBoolean(),
+                any(),
+                any(),
                 any(),
                 any(),
                 any(),

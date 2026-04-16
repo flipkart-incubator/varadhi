@@ -291,11 +291,6 @@ public class QueueHandlers implements RouteProvider {
     /**
      * Response DTO for GET queue: topic + default subscription.
      */
-    public record QueueResponse(
-        String queueName,
-        String project,
-        TopicResource topic,
-        SubscriptionResource subscription
-    ) {
+    public record QueueResponse(String name, String project, TopicResource topic, SubscriptionResource subscription) {
     }
 }

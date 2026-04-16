@@ -19,6 +19,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
@@ -168,6 +169,8 @@ public class VaradhiSubscriptionService {
         Endpoint endpoint,
         RetryPolicy retryPolicy,
         ConsumptionPolicy consumptionPolicy,
+        Map<String, String> properties,
+        Map<String, String> targetClientIds,
         String requestedBy
     ) {
         VaradhiSubscription subscription = getValidatedSubscription(subscriptionName);
@@ -182,7 +185,8 @@ public class VaradhiSubscriptionService {
             subscription.setEndpoint(endpoint);
             subscription.setRetryPolicy(retryPolicy);
             subscription.setConsumptionPolicy(consumptionPolicy);
-
+            subscription.setProperties(properties);
+            subscription.setTargetClientIds(targetClientIds);
             subscriptionStore.update(subscription);
             return subscription;
         });

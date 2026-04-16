@@ -440,6 +440,8 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                 any(),
                 any(),
                 any(),
+                any(),
+                any(),
                 any()
             )
         ).thenReturn(CompletableFuture.completedFuture(subscription));
@@ -512,6 +514,8 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
                                                                        anyInt(),
                                                                        anyString(),
                                                                        anyBoolean(),
+                                                                       any(),
+                                                                       any(),
                                                                        any(),
                                                                        any(),
                                                                        any(),

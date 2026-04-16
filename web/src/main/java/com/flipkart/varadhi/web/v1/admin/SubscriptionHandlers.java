@@ -266,6 +266,8 @@ public class SubscriptionHandlers implements RouteProvider {
                 subscription.getEndpoint().orElse(null),
                 subscription.getRetryPolicy(),
                 subscription.getConsumptionPolicy(),
+                subscription.getProperties(),
+                subscription.getTargetClientIds(),
                 Extensions.RoutingContextExtension.getIdentityOrDefault(ctx)
             ).thenApply(SubscriptionResource::from)
         );
