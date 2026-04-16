@@ -46,6 +46,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 class VaradhiTopicServiceTest {
 
@@ -181,6 +182,71 @@ class VaradhiTopicServiceTest {
         verify(metaStore.topics(), never()).create(varadhiTopic);
         verify(metaStore.topics(), times(2)).update(varadhiTopic);
         verify(storageTopicService, times(1)).create(project, pulsarStorageTopic, varadhiTopic.getCapacity());
+    }
+
+    @Test
+    void createVaradhiTopic_RetriableTopicCategoryMismatch_ThrowsInvalidOperation() {
+        VaradhiTopic existing = VaradhiTopic.of(
+            project.getName(),
+            TOPIC_NAME,
+            false,
+            DEFAULT_CAPACITY_POLICY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC
+        );
+        existing.markCreateFailed("previous failure");
+
+        VaradhiTopic requested = VaradhiTopic.of(
+            project.getName(),
+            TOPIC_NAME,
+            false,
+            DEFAULT_CAPACITY_POLICY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.QUEUE
+        );
+
+        when(topicStore.exists(vTopicName)).thenReturn(true);
+        when(topicStore.get(vTopicName)).thenReturn(existing);
+
+        assertThrows(InvalidOperationForResourceException.class, () -> varadhiTopicService.create(requested, project));
+
+        verify(topicStore, never()).update(any());
+        verify(topicStore, never()).create(any());
+        verify(storageTopicService, never()).create(any(), any(), any());
+    }
+
+    @Test
+    void createVaradhiTopic_RetriableTopicGroupedMismatch_ThrowsInvalidOperation() {
+        VaradhiTopic existing = VaradhiTopic.of(
+            project.getName(),
+            TOPIC_NAME,
+            true,
+            DEFAULT_CAPACITY_POLICY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC
+        );
+        existing.markCreateFailed("previous failure");
+
+        VaradhiTopic requested = VaradhiTopic.of(
+            project.getName(),
+            TOPIC_NAME,
+            false,
+            DEFAULT_CAPACITY_POLICY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC
+        );
+
+        when(topicStore.exists(vTopicName)).thenReturn(true);
+        when(topicStore.get(vTopicName)).thenReturn(existing);
+
+        assertThrows(InvalidOperationForResourceException.class, () -> varadhiTopicService.create(requested, project));
+
+        verify(topicStore, never()).update(any());
+        verify(storageTopicService, never()).create(any(), any(), any());
     }
 
     @Test
@@ -539,7 +605,7 @@ class VaradhiTopicServiceTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null
         );
-        return varadhiTopicFactory.get(project, topicResource);
+        return varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
     }
 
     private VaradhiTopic mockDeleteSetup() {

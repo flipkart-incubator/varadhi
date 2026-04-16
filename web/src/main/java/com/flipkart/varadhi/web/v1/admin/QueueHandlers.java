@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.flipkart.varadhi.common.Constants.VARADHI_ADMIN_IDENTITY;
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.*;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
@@ -36,12 +37,7 @@ import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_QUEUE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_DELETION_TYPE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_INCLUDE_INACTIVE;
 import static com.flipkart.varadhi.common.Constants.QueryParams.QUERY_PARAM_MESSAGE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_CREATE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_DELETE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_LIST;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_SUBSCRIBE;
-import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.*;
 
 /**
  * Handler for queue CRUD, update, and restore. Delegates to {@link VaradhiQueueService}. Update follows
@@ -54,16 +50,6 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
 public class QueueHandlers implements RouteProvider {
     private static final String API_NAME = "QUEUE";
-
-    /** Applied in {@link #setRequestBody} when the client omits subscription properties (aligned with subscription test defaults). */
-    private static final Map<String, String> DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES = Map.of(
-        Constants.SubscriptionProperties.UNSIDELINE_API_MESSAGE_COUNT,
-        "100",
-        Constants.SubscriptionProperties.UNSIDELINE_API_GROUP_COUNT,
-        "20",
-        Constants.SubscriptionProperties.GETMESSAGES_API_MESSAGES_LIMIT,
-        "100"
-    );
 
     private final VaradhiQueueService varadhiQueueService;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
@@ -116,7 +102,7 @@ public class QueueHandlers implements RouteProvider {
             body.setName(name.trim());
         }
         if (body.getProperties() == null || body.getProperties().isEmpty()) {
-            body.setProperties(Map.copyOf(DEFAULT_QUEUE_SUBSCRIPTION_PROPERTIES));
+            body.setProperties(Map.copyOf(Constants.QueueDefaults.SUBSCRIPTION_PROPERTIES));
         }
         if (body.getRetryPolicy() == null) {
             body.setRetryPolicy(Constants.QueueDefaults.RETRY_POLICY);
@@ -128,7 +114,7 @@ public class QueueHandlers implements RouteProvider {
     }
 
     public Map<ResourceType, ResourceHierarchy> getHierarchies(RoutingContext ctx, boolean hasBody) {
-        String projectName = ctx.pathParam(PATH_PARAM_PROJECT);
+        String projectName = ctx.request().getParam(PATH_PARAM_PROJECT);
         Project project = projectCache.getOrThrow(projectName).getEntity();
 
         if (hasBody) {
@@ -136,7 +122,7 @@ public class QueueHandlers implements RouteProvider {
             String queueNameFromPath = ctx.pathParam(PATH_PARAM_QUEUE);
             String effectiveQueueName = (queueNameFromPath != null && !queueNameFromPath.isBlank()) ?
                 queueNameFromPath :
-                (queueResource.getName() != null ? queueResource.getName() : "");
+                queueResource.getName() != null ? queueResource.getName() : "";
             return Map.ofEntries(
                 Map.entry(ResourceType.TOPIC, new TopicHierarchy(project, effectiveQueueName)),
                 Map.entry(
@@ -146,8 +132,8 @@ public class QueueHandlers implements RouteProvider {
             );
         }
 
-        String queueName = ctx.pathParam(PATH_PARAM_QUEUE);
-        if (queueName == null || queueName.isBlank()) {
+        String queueName = ctx.request().getParam(PATH_PARAM_QUEUE);
+        if (queueName == null) {
             return Map.of(ResourceType.PROJECT, new ProjectHierarchy(project));
         }
         return Map.ofEntries(
@@ -228,7 +214,7 @@ public class QueueHandlers implements RouteProvider {
     }
 
     private static void validateProjectConsistency(String projectPath, String projectInRequest) {
-        if (projectInRequest == null || !projectPath.equals(projectInRequest)) {
+        if (!projectPath.equals(projectInRequest)) {
             throw new IllegalArgumentException("Project name mismatch between URL and request body.");
         }
     }
@@ -293,24 +279,18 @@ public class QueueHandlers implements RouteProvider {
     }
 
     private RequestActionType createResourceActionRequest(RoutingContext ctx) {
-        String requestedBy = ctx.getIdentityOrDefault();
         LifecycleStatus.ActionCode actionCode = getActionCode(ctx);
         String message = ctx.queryParam(QUERY_PARAM_MESSAGE).stream().findFirst().orElse("");
         return new RequestActionType(actionCode, message);
     }
 
     private boolean isVaradhiAdmin(String identity) {
-        return Objects.equals(identity, "varadhi-admin");
+        return Objects.equals(identity, VARADHI_ADMIN_IDENTITY);
     }
 
     /**
      * Response DTO for GET queue: topic + default subscription.
      */
-    public record QueueResponse(
-        String queueName,
-        String project,
-        TopicResource topic,
-        SubscriptionResource subscription
-    ) {
+    public record QueueResponse(String name, String project, TopicResource topic, SubscriptionResource subscription) {
     }
 }

@@ -20,11 +20,30 @@ import lombok.Setter;
 @JsonInclude (JsonInclude.Include.NON_NULL)
 public abstract class BaseResource extends Versioned {
 
+    /**
+     * Varadhi project that owns this resource; forms part of the fully-qualified name together with {@code name}.
+     */
     @NotBlank (message = "project must not be null or blank")
     protected String project;
-    protected Boolean secured;
-    protected Boolean grouped;
+
+    /**
+     * Whether the resource is treated as secured (e.g. authenticated access expectations).
+     */
+    protected boolean secured;
+
+    /**
+     * When {@code true}, order semantics apply for the topic or subscription leg.
+     */
+    protected boolean grouped;
+
+    /**
+     * Optional identifier of the owning appId
+     */
     protected String appId;
+
+    /**
+     * NFR filter name to be used for the produce leg
+     */
     protected String nfrStrategy;
 
     /** For subclasses that supply name and version at construction (TopicResource, SubscriptionResource). */

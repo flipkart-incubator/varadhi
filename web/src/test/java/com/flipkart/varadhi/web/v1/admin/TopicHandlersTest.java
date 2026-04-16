@@ -98,7 +98,7 @@ class TopicHandlersTest extends WebTestBase {
         TopicResource topicResource = getTopicResource(project);
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
 
-        doReturn(varadhiTopic).when(varadhiTopicFactory).get(project, topicResource);
+        doReturn(varadhiTopic).when(varadhiTopicFactory).get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         TopicResource createdTopic = sendRequestWithEntity(
             createRequest(HttpMethod.POST, getTopicsUrl(project)),

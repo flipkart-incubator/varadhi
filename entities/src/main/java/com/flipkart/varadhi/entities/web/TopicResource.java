@@ -65,11 +65,6 @@ public class TopicResource extends BaseResource implements Validatable {
         this.topicCategory = topicCategory;
     }
 
-    /** Whether the topic is grouped; uses base resource grouped flag. */
-    public boolean isGrouped() {
-        return Boolean.TRUE.equals(getGrouped());
-    }
-
     /**
      * Creates a new grouped TopicResource instance.
      *

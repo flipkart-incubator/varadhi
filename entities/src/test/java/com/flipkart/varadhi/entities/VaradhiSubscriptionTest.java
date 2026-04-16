@@ -66,36 +66,13 @@ class VaradhiSubscriptionTest {
             () -> assertEquals("topic1", subscription.getTopic()),
             () -> assertEquals("description", subscription.getDescription()),
             () -> assertTrue(subscription.isGrouped()),
-            () -> assertTrue(subscription.getEndpointOptional().isPresent()),
+            () -> assertTrue(subscription.getEndpoint().isPresent()),
             () -> assertNotNull(subscription.getRetryPolicy()),
             () -> assertNotNull(subscription.getConsumptionPolicy()),
             () -> assertNotNull(subscription.getShards()),
             () -> assertNotNull(subscription.getProperties()),
             () -> assertEquals(LifecycleStatus.State.CREATING, subscription.getStatus().getState())
         );
-    }
-
-    @Test
-    void resolveDeliveryEndpoint_whenAbsent_usesLexicographicallyFirstTargetClientKey() {
-        URI callback = URI.create("http://callback.example/push");
-        VaradhiSubscription subscription = VaradhiSubscription.of(
-            "sub1",
-            "project1",
-            "topic1",
-            "description",
-            false,
-            null,
-            DEFAULT_RETRY_POLICY,
-            DEFAULT_CONSUMPTION_POLICY,
-            DEFAULT_SHARDS,
-            Map.of("key", "value"),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            Map.of(callback.toString(), "c1")
-        );
-        assertTrue(subscription.getEndpointOptional().isEmpty());
-        Endpoint resolved = subscription.resolveDeliveryEndpoint();
-        assertTrue(resolved instanceof Endpoint.HttpEndpoint);
-        assertEquals(callback, ((Endpoint.HttpEndpoint)resolved).getUri());
     }
 
     @Test

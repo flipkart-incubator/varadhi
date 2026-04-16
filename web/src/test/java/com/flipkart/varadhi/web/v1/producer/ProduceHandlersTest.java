@@ -52,7 +52,7 @@ import static org.mockito.Mockito.verify;
 public class ProduceHandlersTest extends ProduceTestBase {
 
     private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
-    private static final int OVERSIZED_HEADER_KEY_LENGTH = 101;
+    private static final int OVERSIZED_HEADER_KEY_LENGTH = 102;
 
     @Override
     public void tearDown() throws InterruptedException {

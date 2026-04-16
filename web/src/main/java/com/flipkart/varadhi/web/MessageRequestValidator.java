@@ -29,6 +29,7 @@ public class MessageRequestValidator {
 
     private static void validateIdHeadersAndRequestSize(MessageConfiguration msgConfig, Message message) {
         validateIdHeader(msgConfig, StdHeaders.get().groupId(), message.getHeaders());
+        validateIdHeader(msgConfig, StdHeaders.get().msgId(), message.getHeaders());
 
         int totalSizeBytes = message.getTotalSizeBytes();
         if (totalSizeBytes > msgConfig.getMaxRequestSize()) {

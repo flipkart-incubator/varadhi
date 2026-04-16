@@ -288,6 +288,15 @@ public class E2EBase {
         processRequest(makeHttpPatchRequest(targetUrl), expectedStatus);
     }
 
+    public static void makePatchRequest(
+        String targetUrl,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
+        processRequest(makeHttpPatchRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
+    }
+
     private static <T> T processRequest(Response response, int expectedStatus, Class<T> clazz) {
         assertNotNull(response);
         assertEquals(expectedStatus, response.getStatus());

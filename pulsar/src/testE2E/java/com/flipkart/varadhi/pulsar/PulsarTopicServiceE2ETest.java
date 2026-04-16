@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.pulsar;
 
-import java.util.List;
 
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -13,6 +12,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 
 public class PulsarTopicServiceE2ETest extends PulsarE2ETestBase {

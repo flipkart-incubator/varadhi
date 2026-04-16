@@ -51,6 +51,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,9 +75,11 @@ class QueueHandlersTest extends WebTestBase {
 
     private RequestTelemetryConfigurator requestTelemetryConfigurator;
 
+    private AutoCloseable openMocksHandle;
+
     @BeforeEach
     void preTest() throws InterruptedException {
-        MockitoAnnotations.openMocks(this);
+        openMocksHandle = MockitoAnnotations.openMocks(this);
         super.setUp();
         requestTelemetryConfigurator = RequestTelemetryConfigurator.getDefault(spanProvider);
         Resource.EntityResource<Project> projectResource = Resource.of(project, ResourceType.PROJECT);
@@ -87,7 +90,7 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     private void setupRoutes() {
-        router.post("/projects/:project/queues").handler(bodyHandler).handler(ctx -> {
+        router.post("/v1/projects/:project/queues").handler(bodyHandler).handler(ctx -> {
             queueHandlers.setRequestBody(ctx);
             ctx.next();
         }).handler(ctx -> {
@@ -95,14 +98,15 @@ class QueueHandlersTest extends WebTestBase {
             ctx.next();
         }).handler(wrapBlocking(queueHandlers::create));
 
-        router.get("/projects/:project/queues/:queue").handler(wrapBlocking(queueHandlers::get));
+        router.get("/v1/projects/:project/queues/:queue").handler(wrapBlocking(queueHandlers::get));
 
-        router.get("/projects/:project/queues").handler(bodyHandler).handler(wrapBlocking(queueHandlers::list));
+        router.get("/v1/projects/:project/queues").handler(bodyHandler).handler(wrapBlocking(queueHandlers::list));
 
         // Async handlers (handleResponse); must not use wrapBlocking — same as production nonBlocking routes.
-        Route deleteRoute = router.delete("/projects/:project/queues/:queue").handler(queueHandlers::delete);
-        Route restoreRoute = router.patch("/projects/:project/queues/:queue/restore").handler(queueHandlers::restore);
-        Route updateRoute = router.put("/projects/:project/queues/:queue").handler(bodyHandler).handler(ctx -> {
+        Route deleteRoute = router.delete("/v1/projects/:project/queues/:queue").handler(queueHandlers::delete);
+        Route restoreRoute = router.patch("/v1/projects/:project/queues/:queue/restore")
+                                   .handler(queueHandlers::restore);
+        Route updateRoute = router.put("/v1/projects/:project/queues/:queue").handler(bodyHandler).handler(ctx -> {
             queueHandlers.setRequestBody(ctx);
             ctx.next();
         }).handler(queueHandlers::update);
@@ -118,7 +122,10 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     @AfterEach
-    void postTest() throws InterruptedException {
+    void postTest() throws Exception {
+        if (openMocksHandle != null) {
+            openMocksHandle.close();
+        }
         super.tearDown();
     }
 
@@ -138,12 +145,49 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, created.queueName());
+        assertEquals(QUEUE_NAME, created.name());
         assertEquals(project.getName(), created.project());
         verify(varadhiQueueService).create(any(), eq(project), any());
         var spans = spanExporter.getFinishedSpanItems();
         Assertions.assertEquals(1, spans.size());
         Assertions.assertEquals("CreateQueue", spans.get(0).getAttributes().get(AttributeKey.stringKey("api")));
+    }
+
+    /**
+     * Missing queue name is rejected by {@link com.flipkart.varadhi.entities.web.QueueResource} bean validation
+     * ({@link com.flipkart.varadhi.entities.ValidateResource}) before {@link VaradhiQueueService#create} runs.
+     * E2E may assert {@code "Queue name is required."} when that layer is skipped or ordered differently.
+     */
+    @Test
+    void createQueue_withoutName_returns400() throws InterruptedException {
+        QueueResource body = sampleQueueResource();
+        body.setName(null);
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.POST, queuesUrl(project)),
+            body,
+            HTTP_BAD_REQUEST,
+            "Invalid Queue name. Check naming constraints.",
+            WebTestBase.c(ErrorResponse.class)
+        );
+
+        verify(varadhiQueueService, never()).create(any(), any(), any());
+    }
+
+    @Test
+    void createQueue_blankNameAfterTrim_returns400() throws InterruptedException {
+        QueueResource body = sampleQueueResource();
+        body.setName("  \t  ");
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.POST, queuesUrl(project)),
+            body,
+            HTTP_BAD_REQUEST,
+            "Invalid Queue name. Check naming constraints.",
+            WebTestBase.c(ErrorResponse.class)
+        );
+
+        verify(varadhiQueueService, never()).create(any(), any(), any());
     }
 
     @Test
@@ -159,7 +203,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, response.queueName());
+        assertEquals(QUEUE_NAME, response.name());
         assertEquals(project.getName(), response.project());
         assertEquals(QUEUE_NAME, response.topic().getName());
         verify(varadhiQueueService).get(project.getName(), QUEUE_NAME);
@@ -236,7 +280,7 @@ class QueueHandlersTest extends WebTestBase {
             WebTestBase.c(QueueHandlers.QueueResponse.class)
         );
 
-        assertEquals(QUEUE_NAME, resp.queueName());
+        assertEquals(QUEUE_NAME, resp.name());
         assertEquals(DEFAULT_PROJECT_NAME, resp.project());
         assertEquals(SubscriptionResource.from(updated).getRetryPolicy(), resp.subscription().getRetryPolicy());
         verify(varadhiQueueService).updateQueue(eq(DEFAULT_PROJECT_NAME), eq(QUEUE_NAME), any(), any(), any());
@@ -254,6 +298,59 @@ class QueueHandlersTest extends WebTestBase {
             "Project name mismatch between URL and request body.",
             WebTestBase.c(ErrorResponse.class)
         );
+    }
+
+    @Test
+    void updateQueue_queueNameMismatch_returns400() throws InterruptedException {
+        QueueResource body = sampleQueueResource();
+        body.setName("other-queue");
+
+        sendRequestWithEntity(
+            createRequest(HttpMethod.PUT, queueUrl(project)),
+            body,
+            HTTP_BAD_REQUEST,
+            "Queue name in path must match request body name.",
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    void listQueues_pathProjectForwardedToService() throws InterruptedException {
+        String altProject = "alt-project";
+        Project altProjectEntity = Project.of(altProject, "", TEAM_NAME, ORG_NAME);
+
+        when(varadhiQueueService.list(altProject, false)).thenReturn(List.of("q-a"));
+
+        @SuppressWarnings ("unchecked")
+        List<String> out = sendRequestWithoutPayload(
+            createRequest(HttpMethod.GET, queuesUrl(altProjectEntity)),
+            WebTestBase.c(List.class)
+        );
+
+        assertEquals(1, out.size());
+        assertEquals("q-a", out.get(0));
+        verify(varadhiQueueService).list(altProject, false);
+    }
+
+    @Test
+    void getQueue_pathProjectForwardedToService() throws InterruptedException {
+        String altProject = "alt-project";
+        Project alt = Project.of(altProject, "", TEAM_NAME, ORG_NAME);
+
+        VaradhiTopic topic = topicForQueueOnProject(alt);
+        VaradhiSubscription subscription = subscriptionForQueueOnProject(alt, topic);
+        when(varadhiQueueService.get(altProject, QUEUE_NAME)).thenReturn(
+            new VaradhiQueueService.QueueResult(topic, subscription)
+        );
+
+        QueueHandlers.QueueResponse response = sendRequestWithoutPayload(
+            createRequest(HttpMethod.GET, String.join("/", "/v1/projects", altProject, "queues", QUEUE_NAME)),
+            WebTestBase.c(QueueHandlers.QueueResponse.class)
+        );
+
+        assertEquals(QUEUE_NAME, response.name());
+        assertEquals(altProject, response.project());
+        verify(varadhiQueueService).get(altProject, QUEUE_NAME);
     }
 
     @Test
@@ -427,9 +524,13 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     private VaradhiTopic topicForQueue() {
+        return topicForQueueOnProject(project);
+    }
+
+    private static VaradhiTopic topicForQueueOnProject(Project p) {
         TopicResource tr = TopicResource.grouped(
             QUEUE_NAME,
-            project.getName(),
+            p.getName(),
             Constants.DEFAULT_TOPIC_CAPACITY,
             LifecycleStatus.ActionCode.USER_ACTION,
             "test"
@@ -438,6 +539,10 @@ class QueueHandlersTest extends WebTestBase {
     }
 
     private VaradhiSubscription subscriptionForQueue(VaradhiTopic topic) {
+        return subscriptionForQueueOnProject(project, topic);
+    }
+
+    private static VaradhiSubscription subscriptionForQueueOnProject(Project project, VaradhiTopic topic) {
         return SubscriptionTestUtils.createUngroupedSubscription(
             QueueResource.getDefaultSubscriptionName(QUEUE_NAME),
             project,
@@ -445,11 +550,11 @@ class QueueHandlersTest extends WebTestBase {
         );
     }
 
-    private static String queuesUrl(Project p) {
-        return String.join("/", "/projects", p.getName(), "queues");
+    private static String queuesUrl(Project project) {
+        return String.join("/", "/v1/projects", project.getName(), "queues");
     }
 
-    private static String queueUrl(Project p) {
-        return String.join("/", queuesUrl(p), QUEUE_NAME);
+    private static String queueUrl(Project project) {
+        return String.join("/", queuesUrl(project), QUEUE_NAME);
     }
 }

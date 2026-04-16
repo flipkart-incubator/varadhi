@@ -27,7 +27,6 @@ import static com.flipkart.varadhi.entities.web.QueueResource.getDefaultSubscrip
  * Service for queue CRUD, update, and restore. A queue is implemented as a topic plus a default
  * queue-style subscription (subscription name = {@link QueueResource#getDefaultSubscriptionName(String)}).
  * <p>
- * {@link #updateQueue} persists the topic leg from the body via {@link VaradhiTopicService#updateTopicState(VaradhiTopic)}
  * (merged with the stored topic’s version, lifecycle status, and internal storage topics), then updates the default
  * subscription (same contract as {@link VaradhiSubscriptionService#updateSubscription}).
  */
@@ -56,6 +55,24 @@ public class VaradhiQueueService {
     public record QueueResult(VaradhiTopic topic, VaradhiSubscription subscription) {
     }
 
+
+    /**
+     * Fully-qualified names for a queue: backing topic and default subscription within a project.
+     */
+    private record QueueFqn(String projectName, String queueName) {
+        String defaultSubscriptionName() {
+            return getDefaultSubscriptionName(queueName);
+        }
+
+        String topicFqn() {
+            return String.join(NAME_SEPARATOR, projectName, queueName);
+        }
+
+        String subscriptionFqn() {
+            return SubscriptionResource.buildInternalName(projectName, defaultSubscriptionName());
+        }
+    }
+
     /**
      * Creates a queue (topic + default subscription) for the given project and action code.
      * <p>
@@ -76,51 +93,25 @@ public class VaradhiQueueService {
         validateQueueName(queue);
         String projectName = project.getName();
         String queueName = queue.getName();
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
 
-        String topicKey = topicFqn(projectName, queueName);
-        String defaultSubscriptionName = getDefaultSubscriptionName(queueName);
-        String subscriptionKey = subscriptionFqn(projectName, defaultSubscriptionName);
-
-        if (varadhiTopicService.exists(topicKey) && varadhiSubscriptionService.exists(subscriptionKey)) {
-            VaradhiSubscription existingSub = varadhiSubscriptionService.getSubscription(subscriptionKey);
-            if (!topicKey.equals(existingSub.getTopic())) {
-                throw new InvalidOperationForResourceException(
-                    ("Cannot create queue '%s': the default subscription '%s' for this queue name already exists "
-                     + "but is not attached to the queue's topic '%s'. Choose a different queue name, or remove "
-                     + "or fix the conflicting subscription.").formatted(queueName, defaultSubscriptionName, topicKey)
-                );
-            }
+        if (varadhiTopicService.exists(queueFqn.topicFqn()) && varadhiSubscriptionService.exists(
+            queueFqn.subscriptionFqn()
+        )) {
+            assertDefaultQueueLinked(queueFqn, "create");
             return get(projectName, queueName);
         }
 
         TopicResource topicResource = queue.toTopicResource(projectName, actionCode);
-        VaradhiTopic varadhiTopic = varadhiTopicFactory.getForQueue(project, topicResource);
+        VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.QUEUE);
         try {
             varadhiTopicService.create(varadhiTopic, project);
         } catch (DuplicateResourceException e) {
-            VaradhiTopic existingTopic = varadhiTopicService.get(topicKey);
-            if (existingTopic.getTopicCategory() != varadhiTopic.getTopicCategory()) {
-                throw new InvalidOperationForResourceException(
-                    ("Cannot create queue '%s': a topic with this name already exists as %s; "
-                     + "queues require topic category QUEUE. Choose a different queue name.").formatted(
-                         queueName,
-                         existingTopic.getTopicCategory()
-                     )
-                );
-            }
-            if (existingTopic.isGrouped() != varadhiTopic.isGrouped()) {
-                throw new InvalidOperationForResourceException(
-                    ("Cannot create queue '%s': a topic with this name already exists with different ordering "
-                     + "(existing grouped=%s, queue requests grouped=%s). Choose a different queue name.").formatted(
-                         queueName,
-                         existingTopic.isGrouped(),
-                         varadhiTopic.isGrouped()
-                     )
-                );
-            }
+            VaradhiTopic existingTopic = varadhiTopicService.get(queueFqn.topicFqn());
+            VaradhiTopicService.assertTopicIdempotency(existingTopic, varadhiTopic);
         }
 
-        VaradhiTopic createdTopic = varadhiTopicService.get(topicKey);
+        VaradhiTopic createdTopic = varadhiTopicService.get(queueFqn.topicFqn());
         SubscriptionResource subscriptionResource = queue.toSubscriptionResource(projectName, actionCode);
         VaradhiSubscription varadhiSubscription = varadhiSubscriptionFactory.get(
             subscriptionResource,
@@ -139,25 +130,10 @@ public class VaradhiQueueService {
      * Gets a queue by project and queue name (returns the topic and default subscription).
      */
     public QueueResult get(String projectName, String queueName) {
-        String topicFqn = topicFqn(projectName, queueName);
-        String subFqn = subscriptionFqn(projectName, getDefaultSubscriptionName(queueName));
-
-        VaradhiTopic topic = varadhiTopicService.get(topicFqn);
-        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(subFqn);
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
+        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
+        VaradhiSubscription subscription = varadhiSubscriptionService.getSubscription(queueFqn.subscriptionFqn());
         return new QueueResult(topic, subscription);
-    }
-
-    /**
-     * Whether the named topic is queue-backed: the topic exists and the default queue subscription
-     * ({@link QueueResource#getDefaultSubscriptionName(String)}) exists and targets this topic.
-     */
-    public boolean isQueueBackedTopic(String projectName, String topicName) {
-        String topicKey = topicFqn(projectName, topicName);
-        if (!varadhiTopicService.exists(topicKey)) {
-            return false;
-        }
-        VaradhiTopic topic = varadhiTopicService.get(topicKey);
-        return topic.getTopicCategory() == VaradhiTopic.TopicCategory.QUEUE;
     }
 
     /**
@@ -176,7 +152,7 @@ public class VaradhiQueueService {
         return topicNames.stream()
                          .filter(
                              topicName -> subscriptionNames.contains(
-                                 subscriptionFqn(projectName, getDefaultSubscriptionName(topicName))
+                                 new QueueFqn(projectName, topicName).subscriptionFqn()
                              )
                          )
                          .toList();
@@ -189,8 +165,7 @@ public class VaradhiQueueService {
      * on subscription PUT.
      * <p>
      * Topic metadata is taken from {@link QueueResource#toTopicResource(String, LifecycleStatus.ActionCode)} and
-     * written with {@link VaradhiTopicService#updateTopicState(VaradhiTopic)} before the subscription update so
-     * grouping validation sees the latest topic.
+     * subscription update
      *
      * @param projectName  project from the path
      * @param queueName    queue name from the path (must equal {@link QueueResource#getName()} on the body)
@@ -210,25 +185,26 @@ public class VaradhiQueueService {
         if (!queueName.equals(queue.getName())) {
             throw new IllegalArgumentException("Queue name in path must match request body name.");
         }
-        String topicKey = topicFqn(projectName, queueName);
-        assertDefaultQueueLinked(projectName, queueName, "update");
-        persistQueueTopicFromBody(topicKey, queue, projectName, actionCode);
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
+        assertDefaultQueueLinked(queueFqn, "update");
 
         SubscriptionResource subRes = queue.toSubscriptionResource(projectName, actionCode);
         return varadhiSubscriptionService.updateSubscription(
-            subscriptionFqn(projectName, getDefaultSubscriptionName(queueName)),
+            queueFqn.subscriptionFqn(),
             queue.getVersion(),
             subRes.getDescription(),
             subRes.isGrouped(),
-            subRes.getEndpointOptional().orElse(null),
+            subRes.getEndpoint().orElse(null),
             subRes.getRetryPolicy(),
             subRes.getConsumptionPolicy(),
+            subRes.getProperties(),
+            subRes.getTargetClientIds(),
             requestedBy
-        ).thenApply(updated -> new QueueResult(varadhiTopicService.get(topicKey), updated));
+        ).thenApply(updated -> new QueueResult(varadhiTopicService.get(queueFqn.topicFqn()), updated));
     }
 
     /**
-     * Deletes a queue: removes the default subscription asynchronously when required (controller-backed), then
+     * Deletes a queue: removes the default subscription asynchronously when it exists (controller-backed), then
      * removes the topic synchronously when that phase completes. Idempotent.
      */
     public CompletableFuture<Void> deleteQueue(
@@ -239,48 +215,50 @@ public class VaradhiQueueService {
         ResourceDeletionType deletionType,
         RequestActionType actionRequest
     ) {
-        String defaultSubName = getDefaultSubscriptionName(queueName);
-        String subFqn = subscriptionFqn(projectName, defaultSubName);
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
 
         CompletableFuture<Void> subscriptionPhase;
-        if (!varadhiSubscriptionService.exists(subFqn)) {
+        if (!varadhiSubscriptionService.exists(queueFqn.subscriptionFqn())) {
             subscriptionPhase = CompletableFuture.completedFuture(null);
         } else {
-            VaradhiSubscription sub = varadhiSubscriptionService.getSubscription(subFqn);
-            boolean needSubscriptionDelete = deletionType == ResourceDeletionType.HARD_DELETE || sub.isActive();
-            if (!needSubscriptionDelete) {
-                subscriptionPhase = CompletableFuture.completedFuture(null);
-            } else {
-                subscriptionPhase = varadhiSubscriptionService.deleteSubscription(
-                    subFqn,
-                    project,
-                    requestedBy,
-                    deletionType,
-                    actionRequest
-                );
-            }
+            subscriptionPhase = varadhiSubscriptionService.deleteSubscription(
+                queueFqn.subscriptionFqn(),
+                project,
+                requestedBy,
+                deletionType,
+                actionRequest
+            );
         }
 
         return subscriptionPhase.thenRun(
-            () -> deleteQueueTopicAfterSubscription(projectName, queueName, deletionType, actionRequest)
+            () -> deleteQueueTopicAfterSubscription(queueFqn, deletionType, actionRequest)
         );
     }
 
+    /**
+     * Whether the named topic is queue-backed: the topic exists and the default queue subscription
+     * ({@link QueueResource#getDefaultSubscriptionName(String)}) exists and targets this topic.
+     */
+    public boolean isQueueBackedTopic(String projectName, String queueName) {
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
+        if (!varadhiTopicService.exists(queueFqn.topicFqn())) {
+            return false;
+        }
+        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
+        return topic.getTopicCategory() == VaradhiTopic.TopicCategory.QUEUE;
+    }
+
     private void deleteQueueTopicAfterSubscription(
-        String projectName,
-        String queueName,
+        QueueFqn queueFqn,
         ResourceDeletionType deletionType,
         RequestActionType actionRequest
     ) {
-        String topicKey = topicFqn(projectName, queueName);
-        if (!varadhiTopicService.exists(topicKey)) {
+        try {
+            varadhiTopicService.get(queueFqn.topicFqn());
+        } catch (ResourceNotFoundException e) {
             return;
         }
-        VaradhiTopic topic = varadhiTopicService.get(topicKey);
-        boolean needTopicDelete = deletionType == ResourceDeletionType.HARD_DELETE || topic.isActive();
-        if (needTopicDelete) {
-            varadhiTopicService.delete(topicKey, deletionType, actionRequest);
-        }
+        varadhiTopicService.delete(queueFqn.topicFqn(), deletionType, actionRequest);
     }
 
     /**
@@ -293,117 +271,79 @@ public class VaradhiQueueService {
         String requestedBy,
         RequestActionType actionRequest
     ) {
-        String defaultSubName = getDefaultSubscriptionName(queueName);
-        String subFqn = subscriptionFqn(projectName, defaultSubName);
-        String topicKey = topicFqn(projectName, queueName);
+        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
 
-        assertDefaultQueueLinked(projectName, queueName, "restore");
-
-        VaradhiSubscription sub = varadhiSubscriptionService.getSubscription(subFqn);
-        VaradhiTopic topic = varadhiTopicService.get(topicKey);
+        VaradhiSubscription sub = assertDefaultQueueLinked(queueFqn, "restore");
+        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
         CompletableFuture<Void> subscriptionPhase;
+        // Both active: nothing to do. If only the subscription is active (e.g. topic restore failed on a prior
+        // attempt), still run the topic phase so retries can complete — do not return early on sub.isActive() alone.
         if (sub.isActive() && topic.isActive()) {
-            subscriptionPhase = CompletableFuture.completedFuture(null);
-        } else if (sub.isActive()) {
-            subscriptionPhase = CompletableFuture.completedFuture(null);
-        } else if (!sub.isInactive()) {
-            throw new InvalidOperationForResourceException(
-                "Subscription '%s' is not in a restorable inactive state.".formatted(defaultSubName)
-            );
+            return CompletableFuture.completedFuture(null);
+        }
+        if (!sub.isActive()) {
+            subscriptionPhase = varadhiSubscriptionService.restoreSubscription(
+                queueFqn.subscriptionFqn(),
+                requestedBy,
+                actionRequest
+            ).thenCompose(s -> CompletableFuture.completedFuture(null));
         } else {
-            subscriptionPhase = varadhiSubscriptionService.restoreSubscription(subFqn, requestedBy, actionRequest)
-                                                          .thenCompose(s -> CompletableFuture.completedFuture(null));
+            subscriptionPhase = CompletableFuture.completedFuture(null);
         }
 
-        return subscriptionPhase.thenRun(
-            () -> restoreQueueTopicAfterSubscription(projectName, queueName, actionRequest)
-        );
+        return subscriptionPhase.thenRun(() -> restoreQueueTopicAfterSubscription(queueFqn, actionRequest));
     }
 
-    private void restoreQueueTopicAfterSubscription(
-        String projectName,
-        String queueName,
-        RequestActionType actionRequest
-    ) {
-        String topicKey = topicFqn(projectName, queueName);
-        if (!varadhiTopicService.exists(topicKey)) {
-            throw new ResourceNotFoundException("Cannot restore queue '%s': topic not found.".formatted(queueName));
+    private void restoreQueueTopicAfterSubscription(QueueFqn queueFqn, RequestActionType actionRequest) {
+        VaradhiTopic topic;
+        try {
+            topic = varadhiTopicService.get(queueFqn.topicFqn());
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException(
+                "Cannot restore queue '%s': topic not found.".formatted(queueFqn.queueName())
+            );
         }
-        VaradhiTopic topic = varadhiTopicService.get(topicKey);
         if (topic.isActive()) {
             return;
         }
-        if (!topic.isInactive()) {
-            throw new InvalidOperationForResourceException(
-                "Topic for queue '%s' is not in a restorable inactive state.".formatted(queueName)
-            );
-        }
-        varadhiTopicService.restore(topicKey, actionRequest);
+        varadhiTopicService.restore(queueFqn.topicFqn(), actionRequest);
     }
 
     /**
-     * Writes the queue body’s topic leg using {@link VaradhiTopicService#updateTopicState(VaradhiTopic)}. The argument
-     * is {@code queue.toTopicResource(...).toVaradhiTopic(QUEUE)} merged with the stored topic’s version, lifecycle
-     * status, and internal topics so the metastore is not reset to a creating/empty topic.
+     * Ensures the default queue subscription and backing topic exist and reference each other.
+     *
+     * @return the loaded default subscription (caller may reuse to avoid a second metastore read)
      */
-    private void persistQueueTopicFromBody(
-        String topicKey,
-        QueueResource queue,
-        String projectName,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        VaradhiTopic stored = varadhiTopicService.get(topicKey);
-        if (stored.getTopicCategory() != VaradhiTopic.TopicCategory.QUEUE) {
-            throw new InvalidOperationForResourceException(
-                "Cannot update queue '%s': underlying topic is not a queue topic.".formatted(queue.getName())
-            );
-        }
-        VaradhiTopic updated = queue.toTopicResource(projectName, actionCode)
-                                    .toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
-        updated.setVersion(stored.getVersion() + 1);
-        updated.setStatus(
-            new LifecycleStatus(
-                stored.getStatus().getState(),
-                stored.getStatus().getMessage(),
-                stored.getStatus().getActionCode()
-            )
-        );
-        stored.getInternalTopics().forEach(updated::addInternalTopic);
-        varadhiTopicService.updateTopicState(updated);
-    }
-
-    private void assertDefaultQueueLinked(String projectName, String queueName, String verb) {
-        String defaultSubName = getDefaultSubscriptionName(queueName);
-        String subFqn = subscriptionFqn(projectName, defaultSubName);
-        String topicKey = topicFqn(projectName, queueName);
-
-        if (!varadhiSubscriptionService.exists(subFqn)) {
+    private VaradhiSubscription assertDefaultQueueLinked(QueueFqn queueFqn, String verb) {
+        if (!varadhiSubscriptionService.exists(queueFqn.subscriptionFqn())) {
             throw new ResourceNotFoundException(
-                "Cannot %s queue '%s': default subscription '%s' not found.".formatted(verb, queueName, defaultSubName)
+                "Cannot %s queue '%s': default subscription '%s' not found.".formatted(
+                    verb,
+                    queueFqn.queueName(),
+                    queueFqn.defaultSubscriptionName()
+                )
             );
         }
-        if (!varadhiTopicService.exists(topicKey)) {
-            throw new ResourceNotFoundException("Cannot %s queue '%s': topic not found.".formatted(verb, queueName));
+        if (!varadhiTopicService.exists(queueFqn.topicFqn())) {
+            throw new ResourceNotFoundException(
+                "Cannot %s queue '%s': topic not found.".formatted(verb, queueFqn.queueName())
+            );
         }
-        VaradhiSubscription sub = varadhiSubscriptionService.getSubscription(subFqn);
-        if (!topicKey.equals(sub.getTopic())) {
+        VaradhiSubscription sub = varadhiSubscriptionService.getSubscription(queueFqn.subscriptionFqn());
+        if (!queueFqn.topicFqn().equals(sub.getTopic())) {
             throw new InvalidOperationForResourceException(
-                "Subscription '%s' is not attached to topic for queue '%s'.".formatted(defaultSubName, queueName)
+                "Subscription '%s' is not attached to topic for queue '%s'.".formatted(
+                    queueFqn.defaultSubscriptionName(),
+                    queueFqn.queueName()
+                )
             );
         }
+        return sub;
     }
 
     private static void validateQueueName(QueueResource queue) {
         if (queue.getName() == null || queue.getName().isBlank()) {
             throw new IllegalArgumentException("Queue name is required.");
         }
-    }
-
-    private static String topicFqn(String project, String queueOrTopicName) {
-        return String.join(NAME_SEPARATOR, project, queueOrTopicName);
-    }
-
-    private static String subscriptionFqn(String project, String subscriptionName) {
-        return SubscriptionResource.buildInternalName(project, subscriptionName);
     }
 }

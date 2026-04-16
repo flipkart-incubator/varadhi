@@ -8,7 +8,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,7 +36,7 @@ public class VaradhiSubscription extends LifecycleEntity {
      * Target client IDs keyed by consumer endpoint identifier (topic: usually one entry, often under
      * queues: one entry per endpoint with that endpoint's client id).
      */
-    private final Map<String, String> targetClientIds;
+    private Map<String, String> targetClientIds;
     /**
      * Callback config required for queue endpoint
      */
@@ -97,30 +96,12 @@ public class VaradhiSubscription extends LifecycleEntity {
         this.targetClientIds = validateTargetClientIds(targetClientIds);
     }
 
-    @JsonGetter ("endpoint")
-    public Optional<Endpoint> getEndpointOptional() {
-        return Optional.ofNullable(endpoint);
-    }
-
     /**
-     * HTTP endpoint used to deliver messages: {@link #endpoint} when set; otherwise an {@link Endpoint.HttpEndpoint}
-     * built from the lexicographically first {@link #targetClientIds} key (queue-style callbacks often encode the URL
-     * only in that map). HTTP defaults match prior queue placeholder behavior for the non-URI fields.
+     * Can be null in case of queue where only default endpoint is there
      */
-    public Endpoint resolveDeliveryEndpoint() {
-        if (endpoint != null) {
-            return endpoint;
-        }
-        String uriKey = targetClientIds.keySet()
-                                       .stream()
-                                       .sorted()
-                                       .findFirst()
-                                       .orElseThrow(
-                                           () -> new IllegalStateException(
-                                               "subscription has no endpoint and no target client ids"
-                                           )
-                                       );
-        return new Endpoint.HttpEndpoint(URI.create(uriKey), "POST", "application/json", 500, 500, false);
+    @JsonGetter ("endpoint")
+    public Optional<Endpoint> getEndpoint() {
+        return Optional.ofNullable(endpoint);
     }
 
     /**

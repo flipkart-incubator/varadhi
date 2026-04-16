@@ -88,13 +88,14 @@ public final class VaradhiSubscriptionFactory {
             topic.getName(),
             subscriptionResource.getDescription(),
             subscriptionResource.isGrouped(),
-            subscriptionResource.getEndpointOptional().orElse(null),
+            subscriptionResource.getEndpoint().orElse(null),
             subscriptionResource.getRetryPolicy(),
             subscriptionResource.getConsumptionPolicy(),
             shards,
             subscriptionResource.getProperties(),
             subscriptionResource.getActionCode(),
-            subscriptionResource.getTargetClientIds()
+            subscriptionResource.getTargetClientIds(),
+            subscriptionResource.getCallbackConfig()
         );
     }
 
