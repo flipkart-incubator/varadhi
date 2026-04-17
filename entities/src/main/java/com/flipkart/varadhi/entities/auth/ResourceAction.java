@@ -69,7 +69,22 @@ public enum ResourceAction {
     IAM_POLICY_GET(ResourceType.IAM_POLICY, Action.GET), IAM_POLICY_SET(
         ResourceType.IAM_POLICY,
         Action.SET
-    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE);
+    ), IAM_POLICY_DELETE(ResourceType.IAM_POLICY, Action.DELETE),
+
+    /**
+     * Actions related to region resources (logical zones / DCs).
+     * <p>
+     * {@link #REGION_LIST} uses {@link ResourceType#ROOT} so authorization matches {@link #ORG_LIST}: list calls
+     * are not scoped to a single named region instance; the authz layer uses a root hierarchy with path {@code "/"},
+     * consistent with other global list actions.
+     */
+    REGION_CREATE(ResourceType.REGION, Action.CREATE), REGION_UPDATE(ResourceType.REGION, Action.UPDATE), REGION_GET(
+        ResourceType.REGION,
+        Action.GET
+    ), REGION_LIST(
+        ResourceType.ROOT,
+        Action.LIST
+    ), REGION_DELETE(ResourceType.REGION, Action.DELETE);
 
     /**
      * The type of resource associated with the action.

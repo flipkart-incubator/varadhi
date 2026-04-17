@@ -23,7 +23,8 @@ import lombok.Getter;
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "TEAM"),
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "IAM_POLICY"),
     @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "TOPIC"),
-    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "SUBSCRIPTION")})
+    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "SUBSCRIPTION"),
+    @JsonSubTypes.Type (value = Resource.EntityResource.class, name = "REGION")})
 @Getter
 public class Resource extends Versioned {
     @JsonProperty ("resourceType")
@@ -48,7 +49,8 @@ public class Resource extends Versioned {
             @JsonSubTypes.Type (value = Team.class, name = "TEAM"),
             @JsonSubTypes.Type (value = IamPolicyRecord.class, name = "IAM_POLICY"),
             @JsonSubTypes.Type (value = VaradhiTopic.class, name = "TOPIC"),
-            @JsonSubTypes.Type (value = VaradhiSubscription.class, name = "SUBSCRIPTION"),})
+            @JsonSubTypes.Type (value = VaradhiSubscription.class, name = "SUBSCRIPTION"),
+            @JsonSubTypes.Type (value = Region.class, name = "REGION"),})
         private final T entity;
 
         @JsonCreator

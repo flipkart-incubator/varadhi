@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.spi.mock;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -13,6 +15,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OrgStore;
 import com.flipkart.varadhi.spi.db.ProjectStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TeamStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
@@ -35,6 +38,7 @@ public class InMemoryMetaStore implements MetaStore {
     private final ConcurrentMap<String, byte[]> projects = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, byte[]> topics = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, byte[]> subscriptions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, byte[]> regions = new ConcurrentHashMap<>();
 
     @SneakyThrows
     private <T> byte[] toBytes(T object) {
@@ -69,6 +73,11 @@ public class InMemoryMetaStore implements MetaStore {
     @Override
     public SubscriptionStore subscriptions() {
         return new InMemorySubscriptionStore();
+    }
+
+    @Override
+    public RegionStore regions() {
+        return new InMemoryRegionStore();
     }
 
     @Override
@@ -238,6 +247,51 @@ public class InMemoryMetaStore implements MetaStore {
                 throw new MetaStoreException("Project does not exist: " + projectName);
             }
             projects.remove(projectName);
+        }
+    }
+
+
+    private class InMemoryRegionStore implements RegionStore {
+        @Override
+        public void create(Region region) {
+            String key = region.getName();
+            if (regions.containsKey(key)) {
+                throw new MetaStoreException("Region already exists: " + key);
+            }
+            regions.put(key, toBytes(region));
+        }
+
+        @Override
+        public void update(Region region) {
+            String key = region.getName();
+            if (!regions.containsKey(key)) {
+                throw new ResourceNotFoundException("Region(" + key + ") not found.");
+            }
+            regions.put(key, toBytes(region));
+        }
+
+        @Override
+        public Region get(String regionName) {
+            byte[] bytes = regions.get(regionName);
+            return bytes == null ? null : fromBytes(bytes, Region.class);
+        }
+
+        @Override
+        public List<Region> getAll() {
+            return regions.values().stream().map(r -> fromBytes(r, Region.class)).toList();
+        }
+
+        @Override
+        public boolean exists(String regionName) {
+            return regions.containsKey(regionName);
+        }
+
+        @Override
+        public void delete(String regionName) {
+            if (!regions.containsKey(regionName)) {
+                throw new MetaStoreException("Region does not exist: " + regionName);
+            }
+            regions.remove(regionName);
         }
     }
 

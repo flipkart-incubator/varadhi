@@ -13,6 +13,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OrgStore;
 import com.flipkart.varadhi.spi.db.ProjectStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TeamStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
@@ -24,6 +25,7 @@ import static com.flipkart.varadhi.db.ZNode.EVENT;
 import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
 import static com.flipkart.varadhi.db.ZNode.ORG;
 import static com.flipkart.varadhi.db.ZNode.PROJECT;
+import static com.flipkart.varadhi.db.ZNode.REGION;
 import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
 import static com.flipkart.varadhi.db.ZNode.TEAM;
@@ -42,6 +44,7 @@ import static com.flipkart.varadhi.db.ZNode.TOPIC;
  *   <li>Topics</li>
  *   <li>Subscriptions</li>
  *   <li>IAM Policies</li>
+ *   <li>Regions</li>
  *   <li>Events</li>
  * </ul>
  */
@@ -75,6 +78,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC));
         zkMetaStore.createZNode(ZNode.ofEntityType(SUBSCRIPTION));
         zkMetaStore.createZNode(ZNode.ofEntityType(IAM_POLICY));
+        zkMetaStore.createZNode(ZNode.ofEntityType(REGION));
         zkMetaStore.createZNode(ZNode.ofEntityType(EVENT));
     }
 
@@ -403,6 +407,44 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         }
     };
 
+    private final RegionStore regionStore = new RegionStore() {
+        @Override
+        public void create(Region region) {
+            ZNode znode = ZNode.ofRegion(region.getName());
+            zkMetaStore.createTrackedZNodeWithData(znode, region, MetaStoreEntityType.REGION);
+        }
+
+        @Override
+        public void update(Region region) {
+            ZNode znode = ZNode.ofRegion(region.getName());
+            zkMetaStore.updateTrackedZNodeWithData(znode, region, MetaStoreEntityType.REGION);
+        }
+
+        @Override
+        public Region get(String regionName) {
+            ZNode znode = ZNode.ofRegion(regionName);
+            return zkMetaStore.getZNodeDataAsPojo(znode, Region.class);
+        }
+
+        @Override
+        public List<Region> getAll() {
+            ZNode znode = ZNode.ofEntityType(REGION);
+            return zkMetaStore.listChildren(znode).stream().map(this::get).toList();
+        }
+
+        @Override
+        public boolean exists(String regionName) {
+            ZNode znode = ZNode.ofRegion(regionName);
+            return zkMetaStore.zkPathExist(znode);
+        }
+
+        @Override
+        public void delete(String regionName) {
+            ZNode znode = ZNode.ofRegion(regionName);
+            zkMetaStore.deleteTrackedZNode(znode, MetaStoreEntityType.REGION);
+        }
+    };
+
     private final TopicStore topicStore = new TopicStore() {
         /**
          * Creates a new topic.
@@ -699,6 +741,11 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
     @Override
     public SubscriptionStore subscriptions() {
         return subscriptionStore;
+    }
+
+    @Override
+    public RegionStore regions() {
+        return regionStore;
     }
 
     @Override
