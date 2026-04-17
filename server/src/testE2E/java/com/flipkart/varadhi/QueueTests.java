@@ -9,7 +9,6 @@ import com.flipkart.varadhi.web.v1.admin.QueueHandlers;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -259,7 +258,6 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void queueProduce_endToEnd_withRequiredHeaders_succeeds() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
 
         String queueName = "queue_e2e_produce_ok";
         createQueueOk(queueName);
@@ -288,7 +286,6 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void queueProduce_endToEnd_missingHttpMethod_returnsBadRequest() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
 
         String queueName = "queue_e2e_produce_bad_hdr";
         createQueueOk(queueName);
@@ -301,11 +298,9 @@ public class QueueTests extends E2EBase {
         headers.put(HDR_HTTP_URI, callbackUri);
 
         String produceUri = getProduceUri(project, queueName);
-        try (Response response = postProduceWithHeaders(
-            produceUri,
-            "{\"e2e\":\"missing-method\"}".getBytes(),
-            headers
-        )) {
+        try (
+            Response response = postProduceWithHeaders(produceUri, "{\"e2e\":\"missing-method\"}".getBytes(), headers)
+        ) {
             Assertions.assertEquals(400, response.getStatus());
             ErrorResponse err = response.readEntity(ErrorResponse.class);
             Assertions.assertTrue(
@@ -319,7 +314,6 @@ public class QueueTests extends E2EBase {
 
     @Test
     public void queueProduce_endToEnd_missingMessageId_returnsBadRequest() {
-        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
 
         String queueName = "queue_e2e_produce_no_msgid";
         createQueueOk(queueName);
@@ -330,11 +324,7 @@ public class QueueTests extends E2EBase {
         headers.put(HDR_HTTP_METHOD, "POST");
 
         String produceUri = getProduceUri(project, queueName);
-        try (Response response = postProduceWithHeaders(
-            produceUri,
-            "{\"e2e\":\"no-msg-id\"}".getBytes(),
-            headers
-        )) {
+        try (Response response = postProduceWithHeaders(produceUri, "{\"e2e\":\"no-msg-id\"}".getBytes(), headers)) {
             Assertions.assertEquals(400, response.getStatus());
             ErrorResponse err = response.readEntity(ErrorResponse.class);
             Assertions.assertTrue(

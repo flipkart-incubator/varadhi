@@ -1,18 +1,23 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 /**
- * Spec for a standard header: header name value and queue-produce classification ({@link RequiredBy}).
+ * Spec for a standard header: header name value and queue-produce classification ({@link MandatoryBy}).
+ * <p>
+ * is omitted, it defaults to {@link MandatoryBy#Both} (same intent as {@link MandatoryBy#mandatoryHeaderRequiredForProduce()}
+ * in Java).
  */
-@JsonDeserialize (using = HeaderSpecDeserializer.class)
-public record HeaderSpec(String value, RequiredBy requiredBy) {
+public record HeaderSpec(String value, MandatoryBy mandatoryBy) {
+
+    public HeaderSpec {
+        if (mandatoryBy == null) {
+            mandatoryBy = MandatoryBy.None;
+        }
+    }
 
     /**
-     * For backward compatibility: when config has a plain string (e.g. msgId: "X_MESSAGE_ID"),
-     * deserialize with {@link RequiredBy#mandatoryHeaderRequiredForProduce()}.
+     * For callers that only supply the header name; uses {@link MandatoryBy#Both}.
      */
     public static HeaderSpec fromString(String value) {
-        return new HeaderSpec(value, RequiredBy.mandatoryHeaderRequiredForProduce());
+        return new HeaderSpec(value, MandatoryBy.None);
     }
 }

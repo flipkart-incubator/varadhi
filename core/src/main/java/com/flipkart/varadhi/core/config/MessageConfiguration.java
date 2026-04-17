@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.flipkart.varadhi.entities.MandatoryBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
@@ -81,7 +82,7 @@ public class MessageConfiguration {
     }
 
     /**
-     * Ensures all standard headers whose {@link com.flipkart.varadhi.entities.RequiredBy#isRequiredOnQueueProduce()}
+     * Ensures all standard headers whose {@link MandatoryBy#isRequiredOnQueueProduce()}
      * is true are present (queue produce API).
      */
     public void ensureQueueProduceRequiredHeaders(Multimap<String, String> headers) {

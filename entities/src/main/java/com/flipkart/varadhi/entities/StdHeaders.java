@@ -113,7 +113,7 @@ public class StdHeaders {
     }
 
     /**
-     * Full spec for message-ID header (value + requiredBy).
+     * Full spec for message-ID header (value + mandatoryBy).
      */
     public HeaderSpec msgIdSpec() {
         return this.msgId;
@@ -182,7 +182,7 @@ public class StdHeaders {
     @JsonIgnore
     public List<String> getHeaderNamesRequiredForQueueProduce() {
         return Stream.of(msgIdSpec(), httpUri(), httpMethod())
-                     .filter(spec -> spec.requiredBy().isRequiredOnQueueProduce())
+                     .filter(spec -> spec.mandatoryBy().isRequiredOnQueueProduce())
                      .map(HeaderSpec::value)
                      .toList();
     }

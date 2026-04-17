@@ -113,6 +113,25 @@ public class PulsarTopicService implements StorageTopicService {
                 log.warn("Pulsar topic {} not found, skipping delete.", topicName);
                 return;
             }
+            // Varadhi caches Pulsar producers across produce calls; Pulsar rejects non-force delete (HTTP 412)
+            // while those producers (or subscriptions) are still connected.
+            if (e instanceof PulsarAdminException.PreconditionFailedException) {
+                deletePartitionedTopicForce(topicName);
+                return;
+            }
+            throw new MessagingException(e);
+        }
+    }
+
+    private void deletePartitionedTopicForce(String topicName) {
+        try {
+            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, true);
+            log.info("Force-deleted pulsar topic {} after non-force delete was rejected.", topicName);
+        } catch (PulsarAdminException e) {
+            if (e instanceof PulsarAdminException.NotFoundException) {
+                log.warn("Pulsar topic {} not found on force delete, skipping.", topicName);
+                return;
+            }
             throw new MessagingException(e);
         }
     }

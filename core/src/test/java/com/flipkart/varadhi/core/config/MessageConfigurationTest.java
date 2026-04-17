@@ -3,7 +3,7 @@ package com.flipkart.varadhi.core.config;
 import java.util.List;
 
 import com.flipkart.varadhi.entities.HeaderSpec;
-import com.flipkart.varadhi.entities.RequiredBy;
+import com.flipkart.varadhi.entities.MandatoryBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -49,15 +49,15 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_MESSAGE_ID", MandatoryBy.mandatoryHeaderRequiredForProduce()),
                 new HeaderSpec("VARADHI_GROUP_ID", null),
                 new HeaderSpec("VARADHI_CALLBACK_CODES", null),
                 new HeaderSpec("VARADHI_REQUEST_TIMEOUT", null),
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", RequiredBy.mandatoryHeaderRequiredForProduce()),
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", RequiredBy.mandatoryHeaderRequiredForProduce()),
-                new HeaderSpec("VARADHI_REPLY_TO", RequiredBy.mandatoryHeaderRequiredForProduce()),
-                new HeaderSpec("VARADHI_HTTP_URI", RequiredBy.Queue),
-                new HeaderSpec("VARADHI_HTTP_METHOD", RequiredBy.Queue),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", MandatoryBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", MandatoryBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_REPLY_TO", MandatoryBy.mandatoryHeaderRequiredForProduce()),
+                new HeaderSpec("VARADHI_HTTP_URI", MandatoryBy.Queue),
+                new HeaderSpec("VARADHI_HTTP_METHOD", MandatoryBy.Queue),
                 new HeaderSpec("VARADHI_CONTENT_TYPE", null),
                 new HeaderSpec("VARADHI_PRODUCE_IDENTITY", null),
                 new HeaderSpec("VARADHI_PRODUCE_REGION", null),

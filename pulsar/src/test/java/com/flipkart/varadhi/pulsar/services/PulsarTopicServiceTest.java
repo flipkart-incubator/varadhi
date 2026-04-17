@@ -18,7 +18,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class PulsarTopicServiceTest {
     private static final String TEST_TOPIC = "testTopic";
@@ -112,5 +121,52 @@ public class PulsarTopicServiceTest {
         verify(topics, times(1)).createPartitionedTopic(eq(topic.getName()), eq(1));
         verify(tenants, times(1)).createTenant(eq(projectNew.getOrg()), any());
         verify(namespaces, times(1)).createNamespace(eq(newNamespace));
+    }
+
+    @Test
+    public void testDelete_nonForceSucceeds() throws PulsarAdminException {
+        String topicName = "persistent/t/a/clean";
+        doNothing().when(topics).deletePartitionedTopic(eq(topicName), eq(false));
+        pulsarTopicService.delete(project, topicName);
+        verify(topics).deletePartitionedTopic(topicName, false);
+        verify(topics, never()).deletePartitionedTopic(eq(topicName), eq(true));
+    }
+
+    @Test
+    public void testDelete_retriesWithForceOnPreconditionFailed() throws PulsarAdminException {
+        String topicName = "persistent/t/a/busy";
+        doThrow(
+            new PulsarAdminException.PreconditionFailedException(
+                new RuntimeException("412"),
+                "Topic has active producers/subscriptions",
+                412
+            )
+        ).when(topics).deletePartitionedTopic(eq(topicName), eq(false));
+        doNothing().when(topics).deletePartitionedTopic(eq(topicName), eq(true));
+        pulsarTopicService.delete(project, topicName);
+        verify(topics).deletePartitionedTopic(topicName, false);
+        verify(topics).deletePartitionedTopic(topicName, true);
+    }
+
+    @Test
+    public void testDelete_forceDeleteNotFoundIsIgnored() throws PulsarAdminException {
+        String topicName = "persistent/t/a/gone";
+        doThrow(
+            new PulsarAdminException.PreconditionFailedException(
+                new RuntimeException("412"),
+                "Topic has active producers/subscriptions",
+                412
+            )
+        ).when(topics).deletePartitionedTopic(eq(topicName), eq(false));
+        doThrow(new PulsarAdminException.NotFoundException(new RuntimeException(""), "not found", 404)).when(topics)
+                                                                                                       .deletePartitionedTopic(
+                                                                                                           eq(
+                                                                                                               topicName
+                                                                                                           ),
+                                                                                                           eq(true)
+                                                                                                       );
+        pulsarTopicService.delete(project, topicName);
+        verify(topics).deletePartitionedTopic(topicName, false);
+        verify(topics).deletePartitionedTopic(topicName, true);
     }
 }

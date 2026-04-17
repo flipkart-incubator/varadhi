@@ -221,7 +221,7 @@ public class ProduceBenchmarkTest {
                         allowedPrefix: [ "X_", "X-" ]
                             msgId:
                                                                          value: "X_MESSAGE_ID"
-                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                         mandatoryBy: Both
                                                                        groupId:
                                                                          value: "X_GROUP_ID"
                                                                        callbackCodes:
@@ -236,22 +236,22 @@ public class ProduceBenchmarkTest {
                                                                          value: "X_REPLY_TO"
                                                                        httpUri:
                                                                          value: "X_HTTP_URI"
-                                                                         requiredBy: Queue
+                                                                         mandatoryBy: Queue
                                                                        httpMethod:
                                                                          value: "X_HTTP_METHOD"
-                                                                         requiredBy: Queue
+                                                                         mandatoryBy: Queue
                                                                        httpContentType:
                                                                          value: "X_CONTENT_TYPE"
-                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                         mandatoryBy: Both
                                                                        producerIdentity:
                                                                          value: "X_PRODUCE_IDENTITY"
-                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                         mandatoryBy: Both
                                                                        produceRegion:
                                                                          value: "X_PRODUCE_REGION"
-                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                         mandatoryBy: Both
                                                                        produceTimestamp:
-                                                                       value: "X_PRODUCE_TIMESTAMP"
-                                                                       requiredBy: mandatoryHeaderRequiredForProduce
+                                                                         value: "X_PRODUCE_TIMESTAMP"
+                                                                         mandatoryBy: Both
 
                 tracesEnabled: true
 
