@@ -178,12 +178,15 @@ private final Set<TopicTag> tags;                           // PROD, NON_PROD, H
 
 | API | Description |
 |-----|-------------|
-| **Create Region** | Register a new region (e.g. with a name and initial status). Used when onboarding a new data center or zone. |
-| **Update Region Status** | Update the availability status of an existing region (e.g. set to `AVAILABLE`, `UNAVAILABLE`, `PRODUCE_UNAVAILABLE`, `CONSUME_UNAVAILABLE`, `MSP_UNAVAILABLE`). Used during incidents or recovery. |
-| **Delete Region** | Remove a region from the system. Typically used when decommissioning a zone; may be guarded by checks (e.g. no topics/subscriptions still using the region). |
+| **List Regions** | `GET /v1/regions` — returns all regions. |
+| **Get Region** | `GET /v1/regions/:region` — returns one region. The `:region` segment must satisfy the same naming rules as create bodies; invalid names → HTTP 400, unknown valid name → HTTP 404. |
+| **Create Region** | `POST /v1/regions` — body is `RegionCreateRequest` JSON: `{ "name", "status" }` only (version and entity type are assigned by the server). |
+| **Update Region Status** | `PATCH /v1/regions/:region` — body is `{ "status": "<RegionStatus>" }`. Updates mutable status; region id is immutable after create. |
+| **Delete Region** | `DELETE /v1/regions/:region` — remove a region. Path validation matches create (400 vs 404 as above). |
 
 **Notes:**
-- RegionHandler works with the **Region** and **RegionName** entities and **RegionStatus** enum.
+- RegionHandler uses **RegionCreateRequest** / **RegionStatusUpdateRequest** for write bodies; persisted **Region** extends **MetaStoreEntity** (name, version, entity type) for responses and metastore.
+- **RegionHandler** works with the **Region** and **RegionName** entities and **RegionStatus** enum.
 - These APIs are intended for administrative/operational use (e.g. by controllers or ops tooling), not for regular produce/consume traffic.
 
 ### Key Changes

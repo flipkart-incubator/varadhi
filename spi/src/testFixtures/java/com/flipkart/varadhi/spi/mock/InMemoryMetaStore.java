@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.spi.mock;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
@@ -256,6 +257,15 @@ public class InMemoryMetaStore implements MetaStore {
             String key = region.getName();
             if (regions.containsKey(key)) {
                 throw new MetaStoreException("Region already exists: " + key);
+            }
+            regions.put(key, toBytes(region));
+        }
+
+        @Override
+        public void update(Region region) {
+            String key = region.getName();
+            if (!regions.containsKey(key)) {
+                throw new ResourceNotFoundException("Region(" + key + ") not found.");
             }
             regions.put(key, toBytes(region));
         }

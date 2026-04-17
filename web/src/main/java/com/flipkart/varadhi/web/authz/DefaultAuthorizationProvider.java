@@ -153,6 +153,7 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         addResourceContextForLeafNode(resourceContextTuples, action, segments);
         addResourceContextForProjectNode(resourceContextTuples, segments);
         addResourceContextForTeamNode(resourceContextTuples, segments);
+        // REGION_GET/UPDATE/DELETE use ResourceType.REGION; REGION_LIST uses ROOT (same pattern as ORG_LIST).
         if (action.getResourceType() == ResourceType.REGION) {
             addResourceContextForRegionNode(resourceContextTuples, segments);
         } else {

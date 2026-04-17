@@ -6,6 +6,7 @@ import com.flipkart.varadhi.db.ZKMetaStore;
 import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RegionStatus;
+import com.flipkart.varadhi.entities.web.RegionCreateRequest;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -52,19 +53,20 @@ class RegionServiceTest {
     @Test
     void createGetGetAllExistsDelete() {
         RegionName name = new RegionName("dc1");
-        Region region = Region.of(name, RegionStatus.AVAILABLE);
+        Region expected = Region.of(name, RegionStatus.AVAILABLE);
 
-        Region created = regionService.createRegion(region);
-        assertEquals(region, created);
+        Region created = regionService.createRegion(new RegionCreateRequest(name.value(), RegionStatus.AVAILABLE));
+        assertEquals(expected.getName(), created.getName());
+        assertEquals(expected.getStatus(), created.getStatus());
 
         assertTrue(regionService.regionExists(name.value()));
         Region loaded = regionService.getRegion(name.value());
-        assertEquals(region.getName(), loaded.getName());
-        assertEquals(region.getStatus(), loaded.getStatus());
+        assertEquals(expected.getName(), loaded.getName());
+        assertEquals(expected.getStatus(), loaded.getStatus());
 
         List<Region> all = regionService.getRegions();
         assertEquals(1, all.size());
-        assertEquals(region.getName(), all.get(0).getName());
+        assertEquals(regionService.getRegion(name.value()).getName(), all.get(0).getName());
 
         regionService.deleteRegion(name.value());
         assertFalse(regionService.regionExists(name.value()));
@@ -72,9 +74,9 @@ class RegionServiceTest {
 
     @Test
     void getRegions_whenStoreHasMultipleRegions_returnsAllOrderedByName() {
-        regionService.createRegion(Region.of(new RegionName("dc-c"), RegionStatus.AVAILABLE));
-        regionService.createRegion(Region.of(new RegionName("dc-a"), RegionStatus.UNAVAILABLE));
-        regionService.createRegion(Region.of(new RegionName("dc-b"), RegionStatus.PRODUCE_UNAVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("dc-c", RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("dc-a", RegionStatus.UNAVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("dc-b", RegionStatus.PRODUCE_UNAVAILABLE));
 
         List<Region> all = regionService.getRegions();
         assertEquals(3, all.size());
@@ -84,8 +86,8 @@ class RegionServiceTest {
 
     @Test
     void getRegion_and_regionExists_whenStoreHasMultipleRegions() {
-        regionService.createRegion(Region.of(new RegionName("r-east"), RegionStatus.AVAILABLE));
-        regionService.createRegion(Region.of(new RegionName("r-west"), RegionStatus.CONSUME_UNAVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("r-east", RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("r-west", RegionStatus.CONSUME_UNAVAILABLE));
 
         assertTrue(regionService.regionExists("r-east"));
         assertTrue(regionService.regionExists("r-west"));
@@ -98,16 +100,16 @@ class RegionServiceTest {
 
     @Test
     void getRegion_whenMissingButStoreNotEmpty_throwsResourceNotFoundException() {
-        regionService.createRegion(Region.of(new RegionName("present"), RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("present", RegionStatus.AVAILABLE));
 
         assertThrows(ResourceNotFoundException.class, () -> regionService.getRegion("absent"));
     }
 
     @Test
     void deleteRegion_whenMultipleRegions_removesOnlyTarget() {
-        regionService.createRegion(Region.of(new RegionName("keep-1"), RegionStatus.AVAILABLE));
-        regionService.createRegion(Region.of(new RegionName("remove-me"), RegionStatus.AVAILABLE));
-        regionService.createRegion(Region.of(new RegionName("keep-2"), RegionStatus.UNAVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("keep-1", RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("remove-me", RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("keep-2", RegionStatus.UNAVAILABLE));
 
         regionService.deleteRegion("remove-me");
 
@@ -120,8 +122,24 @@ class RegionServiceTest {
 
     @Test
     void deleteRegion_whenMissingButStoreNotEmpty_throwsResourceNotFoundException() {
-        regionService.createRegion(Region.of(new RegionName("only"), RegionStatus.AVAILABLE));
+        regionService.createRegion(new RegionCreateRequest("only", RegionStatus.AVAILABLE));
 
         assertThrows(ResourceNotFoundException.class, () -> regionService.deleteRegion("ghost"));
+    }
+
+    @Test
+    void updateRegionStatus_updatesStatusAndPreservesName() {
+        regionService.createRegion(new RegionCreateRequest("upd-reg", RegionStatus.AVAILABLE));
+
+        Region updated = regionService.updateRegionStatus("upd-reg", RegionStatus.MSP_UNAVAILABLE);
+
+        assertEquals("upd-reg", updated.getName());
+        assertEquals(RegionStatus.MSP_UNAVAILABLE, updated.getStatus());
+        assertEquals(RegionStatus.MSP_UNAVAILABLE, regionService.getRegion("upd-reg").getStatus());
+    }
+
+    @Test
+    void updateRegionStatus_whenMissing_throwsResourceNotFoundException() {
+        assertThrows(ResourceNotFoundException.class, () -> regionService.updateRegionStatus("nope", RegionStatus.AVAILABLE));
     }
 }
