@@ -42,7 +42,7 @@ public enum RegionStatus {
      * @return {@code true} if message stack is available, {@code false} otherwise
      */
     public boolean isMessageStackAvailable() {
-        return this != MSP_UNAVAILABLE && this == AVAILABLE;
+        return this != MSP_UNAVAILABLE && this != UNAVAILABLE;
     }
 
     /**

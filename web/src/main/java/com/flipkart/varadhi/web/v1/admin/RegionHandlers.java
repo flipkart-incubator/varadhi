@@ -67,7 +67,7 @@ public class RegionHandlers implements RouteProvider {
             Region region = ctx.get(REQUEST_BODY);
             return Map.of(ResourceType.REGION, new Hierarchies.RegionHierarchy(region.getName()));
         }
-        String regionName = ctx.request().getParam(PATH_PARAM_REGION);
+        String regionName = ctx.pathParam(PATH_PARAM_REGION);
         if (regionName == null) {
             return Map.of(ResourceType.ROOT, new Hierarchies.RootHierarchy());
         }
