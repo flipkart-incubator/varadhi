@@ -9,6 +9,7 @@ import com.flipkart.varadhi.web.v1.admin.QueueHandlers;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +29,14 @@ public class QueueTests extends E2EBase {
 
     /** Server requires non-empty {@code properties} on queue subscription create/update. */
     private static final Map<String, String> DEFAULT_QUEUE_PROPERTIES = Map.of("key", "value");
+
+    /**
+     * Standard header names from {@code conf/configuration.yml} (queue produce requires message id, queue HTTP
+     * target URI and method).
+     */
+    private static final String HDR_MESSAGE_ID = "X_MESSAGE_ID";
+    private static final String HDR_HTTP_URI = "X_HTTP_URI";
+    private static final String HDR_HTTP_METHOD = "X_HTTP_METHOD";
 
     private static Org org;
     private static Team team;
@@ -246,6 +255,95 @@ public class QueueTests extends E2EBase {
         makePatchRequest(getQueuesUri(project, queueName) + "/restore", 404, expectedReason, true);
 
         makeDeleteRequest(getTopicsUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void queueProduce_endToEnd_withRequiredHeaders_succeeds() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
+
+        String queueName = "queue_e2e_produce_ok";
+        createQueueOk(queueName);
+
+        String messageId = "e2e-q-produce-" + System.currentTimeMillis();
+        String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
+        byte[] payload = "{\"e2e\":\"queue-produce\"}".getBytes();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(HDR_MESSAGE_ID, messageId);
+        headers.put(HDR_HTTP_URI, callbackUri);
+        headers.put(HDR_HTTP_METHOD, "POST");
+        headers.put("X_TRACE_E2E", "queue-produce-trace");
+
+        String produceUri = getProduceUri(project, queueName);
+        try (Response response = postProduceWithHeaders(produceUri, payload, headers)) {
+            int status = response.getStatus();
+            String raw = response.readEntity(String.class);
+            Assertions.assertEquals(200, status, raw);
+            String returnedId = JsonMapper.jsonDeserialize(raw, String.class);
+            Assertions.assertEquals(messageId, returnedId);
+        }
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void queueProduce_endToEnd_missingHttpMethod_returnsBadRequest() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
+
+        String queueName = "queue_e2e_produce_bad_hdr";
+        createQueueOk(queueName);
+
+        String messageId = "e2e-q-produce-bad-" + System.currentTimeMillis();
+        String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(HDR_MESSAGE_ID, messageId);
+        headers.put(HDR_HTTP_URI, callbackUri);
+
+        String produceUri = getProduceUri(project, queueName);
+        try (Response response = postProduceWithHeaders(
+            produceUri,
+            "{\"e2e\":\"missing-method\"}".getBytes(),
+            headers
+        )) {
+            Assertions.assertEquals(400, response.getStatus());
+            ErrorResponse err = response.readEntity(ErrorResponse.class);
+            Assertions.assertTrue(
+                err.reason().contains("Missing required header " + HDR_HTTP_METHOD + " for queue produce"),
+                err.reason()
+            );
+        }
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+    }
+
+    @Test
+    public void queueProduce_endToEnd_missingMessageId_returnsBadRequest() {
+        Assumptions.assumeTrue(queueApiAvailable, "Queue API not available in this environment");
+
+        String queueName = "queue_e2e_produce_no_msgid";
+        createQueueOk(queueName);
+
+        String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
+        Map<String, String> headers = new HashMap<>();
+        headers.put(HDR_HTTP_URI, callbackUri);
+        headers.put(HDR_HTTP_METHOD, "POST");
+
+        String produceUri = getProduceUri(project, queueName);
+        try (Response response = postProduceWithHeaders(
+            produceUri,
+            "{\"e2e\":\"no-msg-id\"}".getBytes(),
+            headers
+        )) {
+            Assertions.assertEquals(400, response.getStatus());
+            ErrorResponse err = response.readEntity(ErrorResponse.class);
+            Assertions.assertTrue(
+                err.reason().contains("Missing required header " + HDR_MESSAGE_ID + " for queue produce"),
+                err.reason()
+            );
+        }
+
+        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test

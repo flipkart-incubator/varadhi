@@ -15,6 +15,8 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.util.Map;
 import jakarta.ws.rs.ext.ContextResolver;
 import jakarta.ws.rs.ext.Provider;
 import org.glassfish.jersey.client.ClientConfig;
@@ -101,6 +103,28 @@ public class E2EBase {
 
     public static String getQueuesUri(Project project, String queueName) {
         return buildUri(getQueuesUri(project), queueName);
+    }
+
+    /**
+     * POST produce URL for a topic or queue (same path shape: {@code /v1/projects/{project}/topics/{name}/produce}).
+     */
+    public static String getProduceUri(Project project, String topicOrQueueName) {
+        return buildUri(VARADHI_BASE_URI, "v1", "projects", project.getName(), "topics", topicOrQueueName, "produce");
+    }
+
+    /**
+     * Produce with a raw body and arbitrary request headers (e.g. {@code X_MESSAGE_ID}, queue {@code X_HTTP_URI}).
+     */
+    public static Response postProduceWithHeaders(String produceUri, byte[] payload, Map<String, String> headers) {
+        var invocation = CLIENT.target(produceUri)
+                               .request(MediaType.APPLICATION_JSON_TYPE)
+                               .accept(MediaType.APPLICATION_JSON_TYPE)
+                               .header(USER_ID_HEADER, SUPER_USER);
+        if (headers != null) {
+            headers.forEach(invocation::header);
+        }
+        byte[] body = payload != null ? payload : new byte[0];
+        return invocation.post(Entity.entity(body, MediaType.APPLICATION_OCTET_STREAM_TYPE));
     }
 
     public static List<Org> getOrgs(Response response) {

@@ -69,7 +69,6 @@ messageConfiguration:
       requiredBy: Queue
     httpContentType:
       value: "X_CONTENT_TYPE"
-      requiredBy: mandatoryHeaderRequiredForProduce
     producerIdentity:
       value: "X_PRODUCE_IDENTITY"
       requiredBy: mandatoryHeaderRequiredForProduce
