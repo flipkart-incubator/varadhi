@@ -219,28 +219,39 @@ public class ProduceBenchmarkTest {
                     filterNonCompliantHeaders: true
                     headers:
                         allowedPrefix: [ "X_", "X-" ]
-                        msgId:
-                          value: "X_MESSAGE_ID"
-                          requiredBy: mandatoryHeaderRequiredForProduce
-                        groupId: "X_GROUP_ID"
-                        callbackCodes: "X_CALLBACK_CODES"
-                        requestTimeout: "X_REQUEST_TIMEOUT"
-                        replyToHttpUri:
-                          value: "X_REPLY_TO_HTTP_URI"
-                        replyToHttpMethod:
-                          value: "X_REPLY_TO_HTTP_METHOD"
-                        replyTo:
-                          value: "X_REPLY_TO"
-                        httpUri:
-                          value: "X_HTTP_URI"
-                          requiredBy: Queue
-                        httpMethod:
-                          value: "X_HTTP_METHOD"
-                          requiredBy: Queue
-                        httpContentType: "X_CONTENT_TYPE"
-                        producerIdentity: "X_PRODUCE_IDENTITY"
-                        produceRegion: "X_PRODUCE_REGION"
-                        produceTimestamp: "X_PRODUCE_TIMESTAMP"
+                            msgId:
+                                                                         value: "X_MESSAGE_ID"
+                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                       groupId:
+                                                                         value: "X_GROUP_ID"
+                                                                       callbackCodes:
+                                                                         value: "X_CALLBACK_CODES"
+                                                                       requestTimeout:
+                                                                         value: "X_REQUEST_TIMEOUT"
+                                                                       replyToHttpUri:
+                                                                         value: "X_REPLY_TO_HTTP_URI"
+                                                                       replyToHttpMethod:
+                                                                         value: "X_REPLY_TO_HTTP_METHOD"
+                                                                       replyTo:
+                                                                         value: "X_REPLY_TO"
+                                                                       httpUri:
+                                                                         value: "X_HTTP_URI"
+                                                                         requiredBy: Queue
+                                                                       httpMethod:
+                                                                         value: "X_HTTP_METHOD"
+                                                                         requiredBy: Queue
+                                                                       httpContentType:
+                                                                         value: "X_CONTENT_TYPE"
+                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                       producerIdentity:
+                                                                         value: "X_PRODUCE_IDENTITY"
+                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                       produceRegion:
+                                                                         value: "X_PRODUCE_REGION"
+                                                                         requiredBy: mandatoryHeaderRequiredForProduce
+                                                                       produceTimestamp:
+                                                                       value: "X_PRODUCE_TIMESTAMP"
+                                                                       requiredBy: mandatoryHeaderRequiredForProduce
 
                 tracesEnabled: true
 

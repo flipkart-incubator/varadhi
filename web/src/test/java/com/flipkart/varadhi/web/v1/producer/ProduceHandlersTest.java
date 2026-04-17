@@ -87,7 +87,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
+        request.putHeader(StdHeaders.get().callbackCodes().value(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
@@ -198,7 +198,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
+        request.putHeader(StdHeaders.get().callbackCodes().value(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         MultiMap multimap = new HeadersMultiMap();
         multimap.add("X_HEADER1", "h1v1");

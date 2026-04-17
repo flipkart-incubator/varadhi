@@ -189,9 +189,9 @@ public class ProduceHandlers implements RouteProvider {
         } else {
             MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
         }
-        compliantHeaders.put(StdHeaders.get().produceRegion(), produceRegion);
-        compliantHeaders.put(StdHeaders.get().producerIdentity(), producerIdentity);
-        compliantHeaders.put(StdHeaders.get().produceTimestamp(), Long.toString(System.currentTimeMillis()));
+        compliantHeaders.put(StdHeaders.get().produceRegion().value(), produceRegion);
+        compliantHeaders.put(StdHeaders.get().producerIdentity().value(), producerIdentity);
+        compliantHeaders.put(StdHeaders.get().produceTimestamp().value(), Long.toString(System.currentTimeMillis()));
         return message;
     }
 

@@ -314,9 +314,9 @@ class ProducerServiceTests {
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), getMessageId());
-        headers.put(StdHeaders.get().producerIdentity(), "ANONYMOUS");
-        headers.put(StdHeaders.get().produceRegion(), region);
-        headers.put(StdHeaders.get().produceTimestamp(), System.currentTimeMillis() + "");
+        headers.put(StdHeaders.get().producerIdentity().value(), "ANONYMOUS");
+        headers.put(StdHeaders.get().produceRegion().value(), region);
+        headers.put(StdHeaders.get().produceTimestamp().value(), System.currentTimeMillis() + "");
         byte[] payload = null;
         if (payloadSize > 0) {
             payload = new byte[payloadSize];

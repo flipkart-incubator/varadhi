@@ -58,7 +58,7 @@ public class PreProduceHandlerTest extends ProduceTestBase {
     @Test
     public void testProduceWithMultiValueHeaderIsSingleHeader() {
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
+        request.putHeader(StdHeaders.get().callbackCodes().value(), "host1, host2");
         request.putHeader("x_header1", List.of("value1", "value2", "value3", "value4"));
         request.putHeader("x_header3", "value3");
         String messageIdObtained = sendRequestWithPayload(request, payload, WebTestBase.c(String.class));

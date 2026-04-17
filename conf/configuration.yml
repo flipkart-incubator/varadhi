@@ -49,9 +49,12 @@ messageConfiguration:
     msgId:
       value: "X_MESSAGE_ID"
       requiredBy: mandatoryHeaderRequiredForProduce
-    groupId: "X_GROUP_ID"
-    callbackCodes: "X_CALLBACK_CODES"
-    requestTimeout: "X_REQUEST_TIMEOUT"
+    groupId:
+      value: "X_GROUP_ID"
+    callbackCodes:
+      value: "X_CALLBACK_CODES"
+    requestTimeout:
+      value: "X_REQUEST_TIMEOUT"
     replyToHttpUri:
       value: "X_REPLY_TO_HTTP_URI"
     replyToHttpMethod:
@@ -64,10 +67,19 @@ messageConfiguration:
     httpMethod:
       value: "X_HTTP_METHOD"
       requiredBy: Queue
-    httpContentType: "X_CONTENT_TYPE"
-    producerIdentity: "X_PRODUCE_IDENTITY"
-    produceRegion: "X_PRODUCE_REGION"
-    produceTimestamp: "X_PRODUCE_TIMESTAMP"
+    httpContentType:
+      value: "X_CONTENT_TYPE"
+      requiredBy: mandatoryHeaderRequiredForProduce
+    producerIdentity:
+      value: "X_PRODUCE_IDENTITY"
+      requiredBy: mandatoryHeaderRequiredForProduce
+    produceRegion:
+      value: "X_PRODUCE_REGION"
+      requiredBy: mandatoryHeaderRequiredForProduce
+    produceTimestamp:
+      value: "X_PRODUCE_TIMESTAMP"
+      requiredBy: mandatoryHeaderRequiredForProduce
+
   maxIdHeaderSize: 100
   maxRequestSize: 5242880
   filterNonCompliantHeaders: true

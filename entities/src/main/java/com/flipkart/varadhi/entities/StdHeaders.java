@@ -31,18 +31,18 @@ public class StdHeaders {
 
     private final List<String> allowedPrefix;
     private final HeaderSpec msgId;
-    private final String groupId;
-    private final String callbackCodes;
-    private final String requestTimeout;
+    private final HeaderSpec groupId;
+    private final HeaderSpec callbackCodes;
+    private final HeaderSpec requestTimeout;
     private final HeaderSpec replyToHttpUri;
     private final HeaderSpec replyToHttpMethod;
     private final HeaderSpec replyTo;
     private final HeaderSpec httpUri;
     private final HeaderSpec httpMethod;
-    private final String httpContentType;
-    private final String producerIdentity;
-    private final String produceRegion;
-    private final String produceTimestamp;
+    private final HeaderSpec httpContentType;
+    private final HeaderSpec producerIdentity;
+    private final HeaderSpec produceRegion;
+    private final HeaderSpec produceTimestamp;
     private final List<String> allHeaders;
 
     @JsonCreator
@@ -50,18 +50,18 @@ public class StdHeaders {
     public StdHeaders(
         @JsonProperty ("allowedPrefix") List<String> allowedPrefix,
         @JsonProperty ("msgId") HeaderSpec msgId,
-        @JsonProperty ("groupId") String groupId,
-        @JsonProperty ("callbackCodes") String callbackCodes,
-        @JsonProperty ("requestTimeout") String requestTimeout,
+        @JsonProperty ("groupId") HeaderSpec groupId,
+        @JsonProperty ("callbackCodes") HeaderSpec callbackCodes,
+        @JsonProperty ("requestTimeout") HeaderSpec requestTimeout,
         @JsonProperty ("replyToHttpUri") HeaderSpec replyToHttpUri,
         @JsonProperty ("replyToHttpMethod") HeaderSpec replyToHttpMethod,
         @JsonProperty ("replyTo") HeaderSpec replyTo,
         @JsonProperty ("httpUri") HeaderSpec httpUri,
         @JsonProperty ("httpMethod") HeaderSpec httpMethod,
-        @JsonProperty ("httpContentType") String httpContentType,
-        @JsonProperty ("producerIdentity") String producerIdentity,
-        @JsonProperty ("produceRegion") String produceRegion,
-        @JsonProperty ("produceTimestamp") String produceTimestamp
+        @JsonProperty ("httpContentType") HeaderSpec httpContentType,
+        @JsonProperty ("producerIdentity") HeaderSpec producerIdentity,
+        @JsonProperty ("produceRegion") HeaderSpec produceRegion,
+        @JsonProperty ("produceTimestamp") HeaderSpec produceTimestamp
     ) {
         this.allowedPrefix = Collections.unmodifiableList(allowedPrefix);
         this.msgId = msgId;
@@ -79,18 +79,18 @@ public class StdHeaders {
         this.produceTimestamp = produceTimestamp;
         this.allHeaders = List.of(
             this.msgId.value(),
-            this.groupId,
-            this.callbackCodes,
-            this.requestTimeout,
+            this.groupId.value(),
+            this.callbackCodes.value(),
+            this.requestTimeout.value(),
             this.replyToHttpUri.value(),
             this.replyToHttpMethod.value(),
             this.replyTo.value(),
             this.httpUri.value(),
             this.httpMethod.value(),
-            this.httpContentType,
-            this.producerIdentity,
-            this.produceRegion,
-            this.produceTimestamp
+            this.httpContentType.value(),
+            this.producerIdentity.value(),
+            this.produceRegion.value(),
+            this.produceTimestamp.value()
         );
     }
 
@@ -119,15 +119,19 @@ public class StdHeaders {
         return this.msgId;
     }
 
-    public String groupId() {
+    public HeaderSpec groupIdSpec() {
         return this.groupId;
     }
 
-    public String callbackCodes() {
+    public String groupId() {
+        return this.groupId.value();
+    }
+
+    public HeaderSpec callbackCodes() {
         return this.callbackCodes;
     }
 
-    public String requestTimeout() {
+    public HeaderSpec requestTimeout() {
         return this.requestTimeout;
     }
 
@@ -151,19 +155,19 @@ public class StdHeaders {
         return this.httpMethod;
     }
 
-    public String httpContentType() {
+    public HeaderSpec httpContentType() {
         return this.httpContentType;
     }
 
-    public String producerIdentity() {
+    public HeaderSpec producerIdentity() {
         return this.producerIdentity;
     }
 
-    public String produceRegion() {
+    public HeaderSpec produceRegion() {
         return this.produceRegion;
     }
 
-    public String produceTimestamp() {
+    public HeaderSpec produceTimestamp() {
         return this.produceTimestamp;
     }
 
