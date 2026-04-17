@@ -4,7 +4,6 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import lombok.EqualsAndHashCode;
@@ -28,15 +27,6 @@ public class TopicResource extends BaseResource implements Validatable {
     private final String nfrFilterName;
 
     /**
-     * Persisted classification ({@link VaradhiTopic.TopicCategory}): plain topic vs queue leg.
-     * Populated on responses via {@link #from(VaradhiTopic)}. Topic admin create/update still uses
-     * {@link #toVaradhiTopic()} → {@link VaradhiTopic.TopicCategory#TOPIC}; queues set {@code QUEUE} in core via
-     * {@link #toVaradhiTopic(VaradhiTopic.TopicCategory)}.
-     */
-    @JsonInclude (JsonInclude.Include.NON_NULL)
-    private final VaradhiTopic.TopicCategory topicCategory;
-
-    /**
      * Constructs a new TopicResource instance.
      *
      * @param name      the name of the topic
@@ -53,8 +43,7 @@ public class TopicResource extends BaseResource implements Validatable {
         boolean grouped,
         TopicCapacityPolicy capacity,
         LifecycleStatus.ActionCode actionCode,
-        String nfrFilterName,
-        VaradhiTopic.TopicCategory topicCategory
+        String nfrFilterName
     ) {
         super(name, version);
         setProject(project);
@@ -62,7 +51,6 @@ public class TopicResource extends BaseResource implements Validatable {
         this.capacity = capacity;
         this.actionCode = actionCode;
         this.nfrFilterName = nfrFilterName;
-        this.topicCategory = topicCategory;
     }
 
     /**
@@ -82,16 +70,7 @@ public class TopicResource extends BaseResource implements Validatable {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy
     ) {
-        return new TopicResource(
-            name,
-            INITIAL_VERSION,
-            project,
-            true,
-            capacity,
-            actionCode,
-            nfrStrategy,
-            VaradhiTopic.TopicCategory.TOPIC
-        );
+        return new TopicResource(name, INITIAL_VERSION, project, true, capacity, actionCode, nfrStrategy);
     }
 
     /**
@@ -111,16 +90,7 @@ public class TopicResource extends BaseResource implements Validatable {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy
     ) {
-        return new TopicResource(
-            name,
-            INITIAL_VERSION,
-            project,
-            false,
-            capacity,
-            actionCode,
-            nfrStrategy,
-            VaradhiTopic.TopicCategory.TOPIC
-        );
+        return new TopicResource(name, INITIAL_VERSION, project, false, capacity, actionCode, nfrStrategy);
     }
 
     /**
@@ -140,8 +110,7 @@ public class TopicResource extends BaseResource implements Validatable {
             varadhiTopic.isGrouped(),
             varadhiTopic.getCapacity(),
             varadhiTopic.getStatus().getActionCode(),
-            varadhiTopic.getNfrFilterName(),
-            varadhiTopic.getTopicCategory()
+            varadhiTopic.getNfrFilterName()
         );
     }
 
