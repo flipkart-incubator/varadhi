@@ -245,13 +245,13 @@ public class ProduceBenchmarkTest {
                                                                          mandatoryBy: Both
                                                                        producerIdentity:
                                                                          value: "X_PRODUCE_IDENTITY"
-                                                                         mandatoryBy: Both
+                                                                         mandatoryBy: None
                                                                        produceRegion:
                                                                          value: "X_PRODUCE_REGION"
-                                                                         mandatoryBy: Both
+                                                                         mandatoryBy: None
                                                                        produceTimestamp:
                                                                          value: "X_PRODUCE_TIMESTAMP"
-                                                                         mandatoryBy: Both
+                                                                         mandatoryBy: None
 
                 tracesEnabled: true
 

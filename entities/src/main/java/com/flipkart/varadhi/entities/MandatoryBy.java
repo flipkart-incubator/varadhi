@@ -4,9 +4,9 @@ package com.flipkart.varadhi.entities;
  * Classifies standard headers for queue produce: required only on queue produce ({@link #Queue}), or for shared
  * usage including queue produce ({@link #Both} / {@link #mandatoryHeaderRequiredForProduce()}).
  * <p>
- * In YAML/JSON, serialize as {@code Queue} or {@code Both}. Headers that are not required on queue produce may omit
- * {@code mandatoryBy} on {@link HeaderSpec} (it defaults to {@link #Both}). Those specs are not included in
- * {@link com.flipkart.varadhi.entities.StdHeaders#getHeaderNamesRequiredForQueueProduce()}.
+ * In YAML/JSON, serialize as {@code None}, {@code Queue}, or {@code Both}. On {@link HeaderSpec}, a missing
+ * {@code mandatoryBy} defaults to {@link #None}. {@link com.flipkart.varadhi.entities.StdHeaders#getHeaderNamesRequiredForQueueProduce()}
+ * lists every header whose {@code mandatoryBy} is {@link #Queue} or {@link #Both}.
  */
 public enum MandatoryBy {
     None, Queue,

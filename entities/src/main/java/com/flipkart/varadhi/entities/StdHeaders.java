@@ -2,7 +2,6 @@ package com.flipkart.varadhi.entities;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -43,6 +42,9 @@ public class StdHeaders {
     private final HeaderSpec producerIdentity;
     private final HeaderSpec produceRegion;
     private final HeaderSpec produceTimestamp;
+    /** All configured standard header specs, stable iteration order. */
+    private final List<HeaderSpec> allHeaderSpecs;
+    /** Uppercase header name strings derived from {@link #allHeaderSpecs} (for validation only). */
     private final List<String> allHeaders;
 
     @JsonCreator
@@ -77,21 +79,22 @@ public class StdHeaders {
         this.producerIdentity = producerIdentity;
         this.produceRegion = produceRegion;
         this.produceTimestamp = produceTimestamp;
-        this.allHeaders = List.of(
-            this.msgId.value(),
-            this.groupId.value(),
-            this.callbackCodes.value(),
-            this.requestTimeout.value(),
-            this.replyToHttpUri.value(),
-            this.replyToHttpMethod.value(),
-            this.replyTo.value(),
-            this.httpUri.value(),
-            this.httpMethod.value(),
-            this.httpContentType.value(),
-            this.producerIdentity.value(),
-            this.produceRegion.value(),
-            this.produceTimestamp.value()
+        this.allHeaderSpecs = List.of(
+            this.msgId,
+            this.groupId,
+            this.callbackCodes,
+            this.requestTimeout,
+            this.replyToHttpUri,
+            this.replyToHttpMethod,
+            this.replyTo,
+            this.httpUri,
+            this.httpMethod,
+            this.httpContentType,
+            this.producerIdentity,
+            this.produceRegion,
+            this.produceTimestamp
         );
+        this.allHeaders = this.allHeaderSpecs.stream().map(HeaderSpec::value).toList();
     }
 
     /*
@@ -177,13 +180,14 @@ public class StdHeaders {
     }
 
     /**
-     * Header names required when producing to a queue: message id and queue HTTP target headers only (not reply-to).
+     * Header names required when producing to a queue: every configured header whose {@link MandatoryBy} is
+     * {@link MandatoryBy#Queue} or {@link MandatoryBy#Both} ({@link MandatoryBy#isRequiredOnQueueProduce()}).
      */
     @JsonIgnore
     public List<String> getHeaderNamesRequiredForQueueProduce() {
-        return Stream.of(msgIdSpec(), httpUri(), httpMethod())
-                     .filter(spec -> spec.mandatoryBy().isRequiredOnQueueProduce())
-                     .map(HeaderSpec::value)
-                     .toList();
+        return allHeaderSpecs.stream()
+                             .filter(spec -> spec.mandatoryBy().isRequiredOnQueueProduce())
+                             .map(HeaderSpec::value)
+                             .toList();
     }
 }

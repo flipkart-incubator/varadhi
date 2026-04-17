@@ -2,8 +2,6 @@ package com.flipkart.varadhi.entities;
 
 /**
  * Spec for a standard header: header name value and queue-produce classification ({@link MandatoryBy}).
- * <p>
- * is omitted, it defaults to {@link MandatoryBy#Both} (same intent as {@link MandatoryBy#mandatoryHeaderRequiredForProduce()}
  * in Java).
  */
 public record HeaderSpec(String value, MandatoryBy mandatoryBy) {

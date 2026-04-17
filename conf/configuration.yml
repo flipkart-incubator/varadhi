@@ -71,13 +71,10 @@ messageConfiguration:
       value: "X_CONTENT_TYPE"
     producerIdentity:
       value: "X_PRODUCE_IDENTITY"
-      mandatoryBy: Both
     produceRegion:
       value: "X_PRODUCE_REGION"
-      mandatoryBy: Both
     produceTimestamp:
       value: "X_PRODUCE_TIMESTAMP"
-      mandatoryBy: Both
 
   maxIdHeaderSize: 100
   maxRequestSize: 5242880
