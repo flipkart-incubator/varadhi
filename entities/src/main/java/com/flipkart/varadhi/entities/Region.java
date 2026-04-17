@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Represents a region in Varadhi.
@@ -15,18 +15,21 @@ import lombok.Setter;
  * Status can change at runtime based on region health and failures.
  * <p>
  * Extends {@link MetaStoreEntity} so it can be persisted via the metastore (e.g. ZooKeeper).
+ * <p>
+ * Unknown JSON properties are ignored so clients may send extra fields without failing deserialization
+ * (prefer {@link com.flipkart.varadhi.entities.web.RegionCreateRequest} for create APIs).
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
+@JsonIgnoreProperties (ignoreUnknown = true)
 @ValidateResource (message = "Invalid Region name. Check naming constraints.")
 public class Region extends MetaStoreEntity implements Validatable {
 
     /**
-     * The current availability status of the region.
-     * This can change at runtime based on region health.
+     * The current availability status of the region. Immutable on an instance; use {@link #withStatus(RegionStatus)}
+     * to produce a copy with a different status (e.g. during {@code PATCH /v1/regions/:region}).
      */
-    @Setter
-    private RegionStatus status;
+    private final RegionStatus status;
 
     public Region(String name, int version, RegionStatus status) {
         super(name, version, MetaStoreEntityType.REGION);
@@ -38,6 +41,16 @@ public class Region extends MetaStoreEntity implements Validatable {
      */
     public static Region of(RegionName regionName, RegionStatus status) {
         return new Region(regionName.value(), INITIAL_VERSION, status);
+    }
+
+    /**
+     * Returns a new {@code Region} with the given status; preserves name and version. Mirrors Lombok's {@code @With}
+     * semantics (kept manual because {@code @With} cannot see fields inherited from {@link MetaStoreEntity}).
+     * <p>
+     * If the new status is identical to the current one the same instance is returned (no-op copy).
+     */
+    public Region withStatus(RegionStatus newStatus) {
+        return this.status == newStatus ? this : new Region(getName(), getVersion(), newStatus);
     }
 
     /**

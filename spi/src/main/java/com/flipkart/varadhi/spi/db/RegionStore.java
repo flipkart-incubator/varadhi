@@ -26,6 +26,14 @@ public interface RegionStore {
     void create(Region region);
 
     /**
+     * Persists changes to an existing region (e.g. status update). The entity must carry the current version for CAS.
+     *
+     * @param region the region to update (must not be null)
+     * @throws com.flipkart.varadhi.common.exceptions.ResourceNotFoundException if the region does not exist
+     */
+    void update(Region region);
+
+    /**
      * Loads a region by its name (the string value of {@link com.flipkart.varadhi.entities.RegionName}).
      *
      * @param regionName region identifier (same as {@link com.flipkart.varadhi.entities.MetaStoreEntity#getName()})

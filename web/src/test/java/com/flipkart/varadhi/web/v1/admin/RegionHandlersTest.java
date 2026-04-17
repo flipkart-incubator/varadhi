@@ -8,12 +8,15 @@ import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RegionStatus;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
+import com.flipkart.varadhi.entities.web.RegionCreateRequest;
+import com.flipkart.varadhi.entities.web.RegionStatusUpdateRequest;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.web.WebTestBase;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -44,10 +48,16 @@ public class RegionHandlersTest extends WebTestBase {
         regionHandlers = new RegionHandlers(regionService);
 
         Route routeCreate = router.post(REGIONS_PATH).handler(bodyHandler).handler(ctx -> {
-            regionHandlers.setRegion(ctx);
+            regionHandlers.setRegionCreate(ctx);
             ctx.next();
         }).handler(wrapBlocking(regionHandlers::create));
         setupFailureHandler(routeCreate);
+
+        Route routePatch = router.patch(REGIONS_PATH + "/:region").handler(bodyHandler).handler(ctx -> {
+            regionHandlers.setRegionStatusUpdate(ctx);
+            ctx.next();
+        }).handler(wrapBlocking(regionHandlers::patchStatus));
+        setupFailureHandler(routePatch);
 
         Route routeGet = router.get(REGIONS_PATH + "/:region").handler(wrapBlocking(regionHandlers::get));
         setupFailureHandler(routeGet);
@@ -71,18 +81,21 @@ public class RegionHandlersTest extends WebTestBase {
     @Test
     public void testRegionCreate() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, REGIONS_PATH);
-        Region region = Region.of(new RegionName("valid-region"), RegionStatus.AVAILABLE);
-        doReturn(region).when(regionService).createRegion(eq(region));
+        RegionCreateRequest reqBody = new RegionCreateRequest("valid-region", RegionStatus.AVAILABLE);
+        Region region = reqBody.toRegion();
+        doReturn(region).when(regionService).createRegion(any(RegionCreateRequest.class));
 
-        Region created = sendRequestWithEntity(request, region, WebTestBase.c(Region.class));
+        Region created = sendRequestWithEntity(request, reqBody, WebTestBase.c(Region.class));
         Assertions.assertEquals(region, created);
-        verify(regionService, times(1)).createRegion(eq(region));
+        verify(regionService, times(1)).createRegion(any(RegionCreateRequest.class));
 
         String duplicateMsg = "Region(valid-region) already exists.";
-        doThrow(new DuplicateResourceException(duplicateMsg)).when(regionService).createRegion(eq(region));
+        doThrow(new DuplicateResourceException(duplicateMsg)).when(regionService).createRegion(
+            any(RegionCreateRequest.class)
+        );
         ErrorResponse response = sendRequestWithEntity(
             request,
-            region,
+            reqBody,
             409,
             duplicateMsg,
             WebTestBase.c(ErrorResponse.class)
@@ -90,8 +103,8 @@ public class RegionHandlersTest extends WebTestBase {
         Assertions.assertEquals(duplicateMsg, response.reason());
 
         String internal = "ZK write failed";
-        doThrow(new MetaStoreException(internal)).when(regionService).createRegion(eq(region));
-        response = sendRequestWithEntity(request, region, 500, internal, WebTestBase.c(ErrorResponse.class));
+        doThrow(new MetaStoreException(internal)).when(regionService).createRegion(any(RegionCreateRequest.class));
+        response = sendRequestWithEntity(request, reqBody, 500, internal, WebTestBase.c(ErrorResponse.class));
         Assertions.assertEquals(internal, response.reason());
     }
 
@@ -109,8 +122,8 @@ public class RegionHandlersTest extends WebTestBase {
     private void sendInvalidName(String name) throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, REGIONS_PATH);
         String err = "Invalid Region name. Check naming constraints.";
-        Region region = new Region(name, Region.INITIAL_VERSION, RegionStatus.AVAILABLE);
-        ErrorResponse response = sendRequestWithEntity(request, region, 400, err, WebTestBase.c(ErrorResponse.class));
+        RegionCreateRequest body = new RegionCreateRequest(name, RegionStatus.AVAILABLE);
+        ErrorResponse response = sendRequestWithEntity(request, body, 400, err, WebTestBase.c(ErrorResponse.class));
         Assertions.assertEquals(err, response.reason());
     }
 
@@ -127,6 +140,26 @@ public class RegionHandlersTest extends WebTestBase {
         String notFound = "Region(my-region) not found.";
         doThrow(new ResourceNotFoundException(notFound)).when(regionService).getRegion(region.getName());
         sendRequestWithoutPayload(request, 404, notFound);
+    }
+
+    @Test
+    public void testRegionGet_invalidPath_returns400() throws InterruptedException {
+        HttpRequest<Buffer> request = createRequest(HttpMethod.GET, regionUrl("ab"));
+        HttpResponse<Buffer> response = executeRequest(request, null);
+        Assertions.assertEquals(400, response.statusCode());
+        verify(regionService, times(0)).getRegion(any());
+    }
+
+    @Test
+    public void testRegionPatchStatus() throws InterruptedException {
+        Region updated = Region.of(new RegionName("my-region"), RegionStatus.UNAVAILABLE);
+        HttpRequest<Buffer> request = createRequest(HttpMethod.PATCH, regionUrl("my-region"));
+        RegionStatusUpdateRequest body = new RegionStatusUpdateRequest(RegionStatus.UNAVAILABLE);
+        doReturn(updated).when(regionService).updateRegionStatus(eq("my-region"), eq(RegionStatus.UNAVAILABLE));
+
+        Region result = sendRequestWithEntity(request, body, WebTestBase.c(Region.class));
+        Assertions.assertEquals(updated, result);
+        verify(regionService, times(1)).updateRegionStatus(eq("my-region"), eq(RegionStatus.UNAVAILABLE));
     }
 
     @Test

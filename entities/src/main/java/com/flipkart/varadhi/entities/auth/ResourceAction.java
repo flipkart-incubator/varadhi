@@ -73,8 +73,15 @@ public enum ResourceAction {
 
     /**
      * Actions related to region resources (logical zones / DCs).
+     * <p>
+     * {@link #REGION_LIST} uses {@link ResourceType#ROOT} so authorization matches {@link #ORG_LIST}: list calls
+     * are not scoped to a single named region instance; the authz layer uses a root hierarchy with path {@code "/"},
+     * consistent with other global list actions.
      */
-    REGION_CREATE(ResourceType.REGION, Action.CREATE), REGION_GET(ResourceType.REGION, Action.GET), REGION_LIST(
+    REGION_CREATE(ResourceType.REGION, Action.CREATE), REGION_UPDATE(ResourceType.REGION, Action.UPDATE), REGION_GET(
+        ResourceType.REGION,
+        Action.GET
+    ), REGION_LIST(
         ResourceType.ROOT,
         Action.LIST
     ), REGION_DELETE(ResourceType.REGION, Action.DELETE);

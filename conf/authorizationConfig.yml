@@ -16,6 +16,7 @@ roleDefinitions:
       - ORG_LIST
       - ORG_PROJECT_MIGRATE
       - REGION_CREATE
+      - REGION_UPDATE
       - REGION_GET
       - REGION_LIST
       - REGION_DELETE
@@ -43,6 +44,7 @@ roleDefinitions:
       - ORG_LIST
       - REGION_GET
       - REGION_LIST
+      - REGION_UPDATE
       - TEAM_GET
       - TEAM_LIST
       - PROJECT_GET

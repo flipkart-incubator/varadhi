@@ -415,6 +415,12 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         }
 
         @Override
+        public void update(Region region) {
+            ZNode znode = ZNode.ofRegion(region.getName());
+            zkMetaStore.updateTrackedZNodeWithData(znode, region, MetaStoreEntityType.REGION);
+        }
+
+        @Override
         public Region get(String regionName) {
             ZNode znode = ZNode.ofRegion(regionName);
             return zkMetaStore.getZNodeDataAsPojo(znode, Region.class);

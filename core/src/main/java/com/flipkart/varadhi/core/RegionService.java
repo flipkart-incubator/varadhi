@@ -1,6 +1,9 @@
 package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.Region;
+import com.flipkart.varadhi.entities.RegionStatus;
+import com.flipkart.varadhi.entities.web.RegionCreateRequest;
 import com.flipkart.varadhi.spi.db.RegionStore;
 
 import java.util.List;
@@ -21,14 +24,25 @@ public class RegionService {
     }
 
     /**
-     * Persists a new region.
-     *
-     * @param region the region to create
-     * @return the same region instance after persistence
+     * Persists a new region. The request must contain only name and status; version is assigned by the store.
      */
-    public Region createRegion(Region region) {
+    public Region createRegion(RegionCreateRequest request) {
+        Region region = request.toRegion();
         regionStore.create(region);
         return region;
+    }
+
+    /**
+     * Updates the status of an existing region (optimistic locking uses the version from the loaded entity).
+     */
+    public Region updateRegionStatus(String regionName, RegionStatus newStatus) {
+        Region current = regionStore.get(regionName);
+        if (current == null) {
+            throw new ResourceNotFoundException(String.format("Region(%s) not found.", regionName));
+        }
+        Region updated = current.withStatus(newStatus);
+        regionStore.update(updated);
+        return updated;
     }
 
     /**
