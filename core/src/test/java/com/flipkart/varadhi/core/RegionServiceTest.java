@@ -140,6 +140,9 @@ class RegionServiceTest {
 
     @Test
     void updateRegionStatus_whenMissing_throwsResourceNotFoundException() {
-        assertThrows(ResourceNotFoundException.class, () -> regionService.updateRegionStatus("nope", RegionStatus.AVAILABLE));
+        assertThrows(
+            ResourceNotFoundException.class,
+            () -> regionService.updateRegionStatus("nope", RegionStatus.AVAILABLE)
+        );
     }
 }

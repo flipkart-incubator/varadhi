@@ -81,10 +81,7 @@ public enum ResourceAction {
     REGION_CREATE(ResourceType.REGION, Action.CREATE), REGION_UPDATE(ResourceType.REGION, Action.UPDATE), REGION_GET(
         ResourceType.REGION,
         Action.GET
-    ), REGION_LIST(
-        ResourceType.ROOT,
-        Action.LIST
-    ), REGION_DELETE(ResourceType.REGION, Action.DELETE);
+    ), REGION_LIST(ResourceType.ROOT, Action.LIST), REGION_DELETE(ResourceType.REGION, Action.DELETE);
 
     /**
      * The type of resource associated with the action.

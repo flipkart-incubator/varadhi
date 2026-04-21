@@ -90,9 +90,8 @@ public class RegionHandlersTest extends WebTestBase {
         verify(regionService, times(1)).createRegion(any(RegionCreateRequest.class));
 
         String duplicateMsg = "Region(valid-region) already exists.";
-        doThrow(new DuplicateResourceException(duplicateMsg)).when(regionService).createRegion(
-            any(RegionCreateRequest.class)
-        );
+        doThrow(new DuplicateResourceException(duplicateMsg)).when(regionService)
+                                                             .createRegion(any(RegionCreateRequest.class));
         ErrorResponse response = sendRequestWithEntity(
             request,
             reqBody,
