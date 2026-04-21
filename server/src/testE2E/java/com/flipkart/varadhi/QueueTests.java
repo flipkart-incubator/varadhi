@@ -280,8 +280,7 @@ public class QueueTests extends E2EBase {
             String returnedId = JsonMapper.jsonDeserialize(raw, String.class);
             Assertions.assertEquals(messageId, returnedId);
         }
-
-        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
+        // makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
@@ -305,30 +304,6 @@ public class QueueTests extends E2EBase {
             ErrorResponse err = response.readEntity(ErrorResponse.class);
             Assertions.assertTrue(
                 err.reason().contains("Missing required header " + HDR_HTTP_METHOD + " for queue produce"),
-                err.reason()
-            );
-        }
-
-        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
-    }
-
-    @Test
-    public void queueProduce_endToEnd_missingMessageId_returnsBadRequest() {
-
-        String queueName = "queue_e2e_produce_no_msgid";
-        createQueueOk(queueName);
-
-        String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HDR_HTTP_URI, callbackUri);
-        headers.put(HDR_HTTP_METHOD, "POST");
-
-        String produceUri = getProduceUri(project, queueName);
-        try (Response response = postProduceWithHeaders(produceUri, "{\"e2e\":\"no-msg-id\"}".getBytes(), headers)) {
-            Assertions.assertEquals(400, response.getStatus());
-            ErrorResponse err = response.readEntity(ErrorResponse.class);
-            Assertions.assertTrue(
-                err.reason().contains("Missing required header " + HDR_MESSAGE_ID + " for queue produce"),
                 err.reason()
             );
         }

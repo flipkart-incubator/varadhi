@@ -321,7 +321,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
             projectCache,
-            varadhiQueueService
+            queueBackedTopicCheck
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 
@@ -393,7 +393,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testQueueProduceRejectedWhenQueueHeadersMissing() {
-        Mockito.when(varadhiQueueService.isQueueBackedTopic(eq("project1"), eq("topic1"))).thenReturn(true);
+        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -408,8 +408,24 @@ public class ProduceHandlersTest extends ProduceTestBase {
     }
 
     @Test
+    public void testQueueProduceRejectedWhenMessageIdMissing() {
+        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        request.putHeader(StdHeaders.get().httpMethod().value(), "POST");
+        sendRequestAndParseResponse(
+            request,
+            payload,
+            400,
+            "Missing required header " + StdHeaders.get().msgId(),
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
     public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
-        Mockito.when(varadhiQueueService.isQueueBackedTopic(eq("project1"), eq("topic1"))).thenReturn(true);
+        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));

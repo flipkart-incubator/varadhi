@@ -235,19 +235,6 @@ public class VaradhiQueueService {
         );
     }
 
-    /**
-     * Whether the named topic is queue-backed: the topic exists and the default queue subscription
-     * ({@link QueueResource#getDefaultSubscriptionName(String)}) exists and targets this topic.
-     */
-    public boolean isQueueBackedTopic(String projectName, String queueName) {
-        QueueFqn queueFqn = new QueueFqn(projectName, queueName);
-        if (!varadhiTopicService.exists(queueFqn.topicFqn())) {
-            return false;
-        }
-        VaradhiTopic topic = varadhiTopicService.get(queueFqn.topicFqn());
-        return topic.getTopicCategory() == VaradhiTopic.TopicCategory.QUEUE;
-    }
-
     private void deleteQueueTopicAfterSubscription(
         QueueFqn queueFqn,
         ResourceDeletionType deletionType,

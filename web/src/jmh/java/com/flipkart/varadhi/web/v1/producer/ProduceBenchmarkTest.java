@@ -218,41 +218,46 @@ public class ProduceBenchmarkTest {
                     maxRequestSize: 5242880
                     filterNonCompliantHeaders: true
                     headers:
-                        allowedPrefix: [ "X_", "X-" ]
+                            allowedPrefix: [ "X_", "X-" ]
                             msgId:
-                                                                         value: "X_MESSAGE_ID"
-                                                                         mandatoryBy: Both
-                                                                       groupId:
-                                                                         value: "X_GROUP_ID"
-                                                                       callbackCodes:
-                                                                         value: "X_CALLBACK_CODES"
-                                                                       requestTimeout:
-                                                                         value: "X_REQUEST_TIMEOUT"
-                                                                       replyToHttpUri:
-                                                                         value: "X_REPLY_TO_HTTP_URI"
-                                                                       replyToHttpMethod:
-                                                                         value: "X_REPLY_TO_HTTP_METHOD"
-                                                                       replyTo:
-                                                                         value: "X_REPLY_TO"
-                                                                       httpUri:
-                                                                         value: "X_HTTP_URI"
-                                                                         mandatoryBy: Queue
-                                                                       httpMethod:
-                                                                         value: "X_HTTP_METHOD"
-                                                                         mandatoryBy: Queue
-                                                                       httpContentType:
-                                                                         value: "X_CONTENT_TYPE"
-                                                                         mandatoryBy: Both
-                                                                       producerIdentity:
-                                                                         value: "X_PRODUCE_IDENTITY"
-                                                                         mandatoryBy: None
-                                                                       produceRegion:
-                                                                         value: "X_PRODUCE_REGION"
-                                                                         mandatoryBy: None
-                                                                       produceTimestamp:
-                                                                         value: "X_PRODUCE_TIMESTAMP"
-                                                                         mandatoryBy: None
-
+                              value: "X_MESSAGE_ID"
+                              requiredBy: All
+                            groupId:
+                              value: "X_GROUP_ID"
+                              requiredBy: None
+                            callbackCodes:
+                              value: "X_CALLBACK_CODES"
+                              requiredBy: None
+                            requestTimeout:
+                              value: "X_REQUEST_TIMEOUT"
+                              requiredBy: None
+                            replyToHttpUri:
+                              value: "X_REPLY_TO_HTTP_URI"
+                              requiredBy: None
+                            replyToHttpMethod:
+                              value: "X_REPLY_TO_HTTP_METHOD"
+                              requiredBy: None
+                            replyTo:
+                              value: "X_REPLY_TO"
+                              requiredBy: None
+                            httpUri:
+                              value: "X_HTTP_URI"
+                              requiredBy: Queue
+                            httpMethod:
+                              value: "X_HTTP_METHOD"
+                              requiredBy: Queue
+                            httpContentType:
+                              value: "X_CONTENT_TYPE"
+                              requiredBy: None
+                            producerIdentity:
+                              value: "X_PRODUCE_IDENTITY"
+                              requiredBy: None
+                            produceRegion:
+                              value: "X_PRODUCE_REGION"
+                              requiredBy: None
+                            produceTimestamp:
+                              value: "X_PRODUCE_TIMESTAMP"
+                              requiredBy: None
                 tracesEnabled: true
 
                 httpServerOptions:

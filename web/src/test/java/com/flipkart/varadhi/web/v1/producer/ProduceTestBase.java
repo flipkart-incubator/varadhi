@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.web.v1.producer;
 
-import com.flipkart.varadhi.core.VaradhiQueueService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.core.config.MessageHeaderUtils;
 import com.flipkart.varadhi.core.config.MetricsOptions;
@@ -14,6 +13,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
+import java.util.function.Predicate;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -25,7 +26,8 @@ public class ProduceTestBase extends WebTestBase {
     ProjectService projectService;
     OrgService orgService;
     VaradhiTopicService varadhiTopicService;
-    VaradhiQueueService varadhiQueueService;
+    @SuppressWarnings ("unchecked")
+    Predicate<String> queueBackedTopicCheck;
     String deployedRegion = "region1";
 
     ArgumentCaptor<Message> msgCapture;
@@ -44,8 +46,8 @@ public class ProduceTestBase extends WebTestBase {
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
         varadhiTopicService = mock(VaradhiTopicService.class);
-        varadhiQueueService = mock(VaradhiQueueService.class);
-        when(varadhiQueueService.isQueueBackedTopic(any(), any())).thenReturn(false);
+        queueBackedTopicCheck = mock(Predicate.class);
+        when(queueBackedTopicCheck.test(any())).thenReturn(false);
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),
@@ -59,7 +61,7 @@ public class ProduceTestBase extends WebTestBase {
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
             projectCache,
-            varadhiQueueService
+            queueBackedTopicCheck
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

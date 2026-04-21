@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.web;
 
 import com.flipkart.varadhi.core.config.MessageConfiguration;
-import com.flipkart.varadhi.entities.MandatoryBy;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.Multimap;
@@ -14,17 +13,12 @@ public class MessageRequestValidator {
      * 
      * @param msgConfig
      */
-    public static void ensureHeaderSemanticsAndSize(MessageConfiguration msgConfig, Message message) {
-        msgConfig.ensureRequiredHeaders(message.getHeaders());
-        validateIdHeadersAndRequestSize(msgConfig, message);
-    }
-
-    /**
-     * Like {@link #ensureHeaderSemanticsAndSize} but requires every configured header whose
-     * {@link MandatoryBy#isRequiredOnQueueProduce()} is true (queue produce).
-     */
-    public static void ensureHeaderSemanticsAndSizeForQueueProduce(MessageConfiguration msgConfig, Message message) {
-        msgConfig.ensureQueueProduceRequiredHeaders(message.getHeaders());
+    public static void ensureHeaderSemanticsAndSize(
+        MessageConfiguration msgConfig,
+        Message message,
+        boolean queueBackedTopic
+    ) {
+        msgConfig.ensureRequiredHeaders(message.getHeaders(), queueBackedTopic);
         validateIdHeadersAndRequestSize(msgConfig, message);
     }
 

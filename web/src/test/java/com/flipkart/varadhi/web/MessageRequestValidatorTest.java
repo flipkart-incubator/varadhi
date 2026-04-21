@@ -29,7 +29,10 @@ public class MessageRequestValidatorTest extends WebTestBase {
                  .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
-        Assertions.assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders));
+        Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> msgConfig.ensureRequiredHeaders(varadhiHeaders, false)
+        );
     }
 
     @Test
@@ -42,7 +45,7 @@ public class MessageRequestValidatorTest extends WebTestBase {
 
         IllegalArgumentException ex = Assertions.assertThrows(
             IllegalArgumentException.class,
-            () -> MessageRequestValidator.ensureHeaderSemanticsAndSizeForQueueProduce(msgConfig, message)
+            () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, true)
         );
         Assertions.assertTrue(ex.getMessage().contains("Missing required header"));
         Assertions.assertTrue(ex.getMessage().contains("queue produce"));
@@ -69,12 +72,12 @@ public class MessageRequestValidatorTest extends WebTestBase {
 
         if (shouldPass) {
             Assertions.assertDoesNotThrow(
-                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message)
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, false)
             );
         } else {
             IllegalArgumentException exception = Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message)
+                () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, false)
             );
             Assertions.assertTrue(exception.getMessage().contains("Request size exceeds allowed limit"));
         }

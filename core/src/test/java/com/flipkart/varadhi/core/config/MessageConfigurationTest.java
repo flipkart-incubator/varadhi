@@ -3,7 +3,7 @@ package com.flipkart.varadhi.core.config;
 import java.util.List;
 
 import com.flipkart.varadhi.entities.HeaderSpec;
-import com.flipkart.varadhi.entities.MandatoryBy;
+import com.flipkart.varadhi.entities.RequiredBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -49,19 +49,19 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                new HeaderSpec("VARADHI_MESSAGE_ID", MandatoryBy.mandatoryHeaderRequiredForProduce()),
-                new HeaderSpec("VARADHI_GROUP_ID", null),
-                new HeaderSpec("VARADHI_CALLBACK_CODES", null),
-                new HeaderSpec("VARADHI_REQUEST_TIMEOUT", null),
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", MandatoryBy.None),
-                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", MandatoryBy.None),
-                new HeaderSpec("VARADHI_REPLY_TO", MandatoryBy.None),
-                new HeaderSpec("VARADHI_HTTP_URI", MandatoryBy.Queue),
-                new HeaderSpec("VARADHI_HTTP_METHOD", MandatoryBy.Queue),
-                new HeaderSpec("VARADHI_CONTENT_TYPE", null),
-                new HeaderSpec("VARADHI_PRODUCE_IDENTITY", null),
-                new HeaderSpec("VARADHI_PRODUCE_REGION", null),
-                new HeaderSpec("VARADHI_PRODUCE_TIMESTAMP", null)
+                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.produce()),
+                new HeaderSpec("VARADHI_GROUP_ID", RequiredBy.None),
+                new HeaderSpec("VARADHI_CALLBACK_CODES", RequiredBy.None),
+                new HeaderSpec("VARADHI_REQUEST_TIMEOUT", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO", RequiredBy.None),
+                new HeaderSpec("VARADHI_HTTP_URI", RequiredBy.Queue),
+                new HeaderSpec("VARADHI_HTTP_METHOD", RequiredBy.Queue),
+                new HeaderSpec("VARADHI_CONTENT_TYPE", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_IDENTITY", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_REGION", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_TIMESTAMP", RequiredBy.None)
             ),
             100,
             2000,
@@ -84,6 +84,6 @@ public class MessageConfigurationTest {
                  .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
-        assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders));
+        assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders, false));
     }
 }

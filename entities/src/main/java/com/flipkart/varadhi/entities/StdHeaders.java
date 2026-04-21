@@ -116,7 +116,7 @@ public class StdHeaders {
     }
 
     /**
-     * Full spec for message-ID header (value + mandatoryBy).
+     * Full spec for message-ID header (value + requiredBy).
      */
     public HeaderSpec msgIdSpec() {
         return this.msgId;
@@ -180,13 +180,13 @@ public class StdHeaders {
     }
 
     /**
-     * Header names required when producing to a queue: every configured header whose {@link MandatoryBy} is
-     * {@link MandatoryBy#Queue} or {@link MandatoryBy#Both} ({@link MandatoryBy#isRequiredOnQueueProduce()}).
+     * Header names required when producing to a queue: every configured header whose {@link RequiredBy} is
+     * {@link RequiredBy#Queue} or {@link RequiredBy#All} ({@link RequiredBy#isRequiredOnQueueProduce()}).
      */
     @JsonIgnore
     public List<String> getHeaderNamesRequiredForQueueProduce() {
         return allHeaderSpecs.stream()
-                             .filter(spec -> spec.mandatoryBy().isRequiredOnQueueProduce())
+                             .filter(spec -> spec.requiredBy().isRequiredOnQueueProduce())
                              .map(HeaderSpec::value)
                              .toList();
     }

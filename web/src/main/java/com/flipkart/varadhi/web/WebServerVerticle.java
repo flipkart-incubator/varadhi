@@ -7,6 +7,7 @@ import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
@@ -59,6 +60,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -183,12 +185,12 @@ public class WebServerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         vertx.executeBlocking(() -> {
             log.info("Starting WebServer verticle");
+            if (apiUsecases.hasProduce()) {
+                setupEntityServicesForProduceApis();
+            }
             if (apiUsecases.hasAdmin()) {
                 setupEntityServicesForAdminApis();
                 performLeanDeployValidations();
-            }
-            if (apiUsecases.hasProduce()) {
-                setupEntityServicesForProduceApis();
             }
             return null;
         }).compose(v -> startHttpServer()).onSuccess(v -> {
@@ -503,22 +505,13 @@ public class WebServerVerticle extends AbstractVerticle {
      * @return a list of produce API route definitions
      */
     private List<RouteDefinition> getProduceApiRoutes() {
-        VaradhiQueueService varadhiQueueService = null;
-        if (serviceRegistry.contains(VaradhiTopicService.class) && serviceRegistry.contains(
-            VaradhiSubscriptionService.class
-        )) {
-            VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
-                messagingStackProvider.getStorageTopicFactory(),
-                verticleConfig.deployedRegion(),
-                verticleConfig.defaultTopicCapacity()
+        Predicate<String> queueBackedTopicCheck = null;
+        if (serviceRegistry.contains(VaradhiTopicService.class)) {
+            VaradhiTopicService topicService = serviceRegistry.get(VaradhiTopicService.class);
+            queueBackedTopicCheck = topicFqn -> topicService.matchesCategory(
+                topicFqn,
+                VaradhiTopic.TopicCategory.QUEUE
             );
-            VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(
-                messagingStackProvider.getStorageTopicService(),
-                messagingStackProvider.getSubscriptionFactory(),
-                messagingStackProvider.getStorageTopicFactory(),
-                verticleConfig.deployedRegion()
-            );
-            varadhiQueueService = createVaradhiQueueService(varadhiTopicFactory, subscriptionFactory);
         }
         return new ArrayList<>(
             new ProduceHandlers(
@@ -526,7 +519,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
                 cacheRegistry.getCache(ResourceType.PROJECT),
-                varadhiQueueService
+                queueBackedTopicCheck
             ).get()
         );
     }

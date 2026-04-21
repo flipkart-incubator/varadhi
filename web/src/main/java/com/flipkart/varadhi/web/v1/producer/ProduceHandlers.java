@@ -4,7 +4,6 @@ import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.Constants.HttpCodes;
 import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.VaradhiQueueService;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
@@ -30,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
@@ -55,9 +55,10 @@ public class ProduceHandlers implements RouteProvider {
     private final String produceRegion;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     /**
-     * When null (e.g. produce-only deployment without cluster), queue-backed header rules are not applied.
+     * When null (e.g. produce-only deployment without topic metadata), queue-backed header rules are not applied.
+     * Otherwise tests topic FQN, typically {@code fqn -> topicService.matchesCategory(fqn, VaradhiTopic.TopicCategory.QUEUE)}.
      */
-    private final VaradhiQueueService varadhiQueueService;
+    private final Predicate<String> queueBackedTopicCheck;
 
     /**
      * Returns the list of route definitions for message production endpoints.
@@ -121,10 +122,7 @@ public class ProduceHandlers implements RouteProvider {
         // Potential solution: Use getByteBuf().array() to access the backing array directly,
         // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        boolean queueBackedTopic = varadhiQueueService != null && varadhiQueueService.isQueueBackedTopic(
-            projectName,
-            topicName
-        );
+        boolean queueBackedTopic = queueBackedTopicCheck != null && queueBackedTopicCheck.test(topicFQN);
         Message messageToProduce = buildMessageToProduce(
             payload,
             ctx.request().headers(),
@@ -184,11 +182,7 @@ public class ProduceHandlers implements RouteProvider {
     Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity, boolean queueBackedTopic) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
         Message message = new SimpleMessage(payload, compliantHeaders);
-        if (queueBackedTopic) {
-            MessageRequestValidator.ensureHeaderSemanticsAndSizeForQueueProduce(msgConfig, message);
-        } else {
-            MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message);
-        }
+        MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, queueBackedTopic);
         compliantHeaders.put(StdHeaders.get().produceRegion().value(), produceRegion);
         compliantHeaders.put(StdHeaders.get().producerIdentity().value(), producerIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp().value(), Long.toString(System.currentTimeMillis()));

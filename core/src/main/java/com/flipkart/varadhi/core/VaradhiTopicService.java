@@ -192,9 +192,7 @@ public class VaradhiTopicService {
      */
     public void handleHardDelete(VaradhiTopic varadhiTopic, RequestActionType actionRequest) {
         log.info("Hard deleting Varadhi topic: {}", varadhiTopic.getName());
-
         Project project = projectStore.get(varadhiTopic.getProjectName());
-
         try {
             varadhiTopic.markDeleting(actionRequest.actionCode(), "Starting Topic Deletion");
             topicStore.update(varadhiTopic);
@@ -293,6 +291,17 @@ public class VaradhiTopicService {
      */
     public boolean exists(String topicName) {
         return topicStore.exists(topicName);
+    }
+
+    /**
+     * Whether {@code topicFqn} exists and its stored category equals {@code topicCategory} (e.g. {@link
+     * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules).
+     */
+    public boolean matchesCategory(String topicFqn, VaradhiTopic.TopicCategory topicCategory) {
+        if (!exists(topicFqn)) {
+            return false;
+        }
+        return get(topicFqn).getTopicCategory() == topicCategory;
     }
 
     /**
