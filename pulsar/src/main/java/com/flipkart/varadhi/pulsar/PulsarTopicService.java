@@ -111,7 +111,9 @@ public class PulsarTopicService implements StorageTopicService {
         } catch (PulsarAdminException e) {
             if (e instanceof PulsarAdminException.NotFoundException) {
                 log.warn("Pulsar topic {} not found, skipping delete.", topicName);
+                return;
             }
+            throw new MessagingException(e);
         }
     }
 

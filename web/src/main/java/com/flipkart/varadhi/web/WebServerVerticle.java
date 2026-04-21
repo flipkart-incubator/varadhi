@@ -487,18 +487,6 @@ public class WebServerVerticle extends AbstractVerticle {
         return routes;
     }
 
-    private VaradhiQueueService createVaradhiQueueService(
-        VaradhiTopicFactory varadhiTopicFactory,
-        VaradhiSubscriptionFactory subscriptionFactory
-    ) {
-        return new VaradhiQueueService(
-            varadhiTopicFactory,
-            serviceRegistry.get(VaradhiTopicService.class),
-            serviceRegistry.get(VaradhiSubscriptionService.class),
-            subscriptionFactory
-        );
-    }
-
     /**
      * Gets produce API routes.
      *
