@@ -52,7 +52,7 @@ import static org.mockito.Mockito.verify;
 public class ProduceHandlersTest extends ProduceTestBase {
 
     private static final int MAX_REQUEST_SIZE = 5 * 1024 * 1024;
-    private static final int OVERSIZED_HEADER_KEY_LENGTH = 102;
+    private static final int OVERSIZED_HEADER_KEY_LENGTH = 101;
 
     @Override
     public void tearDown() throws InterruptedException {
@@ -402,7 +402,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             request,
             payload,
             400,
-            "Missing required header " + StdHeaders.get().httpMethod().value() + " for queue produce",
+            "Missing required headers: " + StdHeaders.get().httpMethod().value() + " (required for queue produce)",
             WebTestBase.c(ErrorResponse.class)
         );
     }
@@ -418,7 +418,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             request,
             payload,
             400,
-            "Missing required header " + StdHeaders.get().msgId(),
+            "Missing required headers: " + StdHeaders.get().msgId() + " (required for queue produce)",
             WebTestBase.c(ErrorResponse.class)
         );
     }

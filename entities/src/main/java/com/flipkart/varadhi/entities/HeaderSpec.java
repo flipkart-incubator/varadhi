@@ -5,7 +5,4 @@ package com.flipkart.varadhi.entities;
  * in Java).
  */
 public record HeaderSpec(String value, RequiredBy requiredBy) {
-
-    public HeaderSpec {
-    }
 }

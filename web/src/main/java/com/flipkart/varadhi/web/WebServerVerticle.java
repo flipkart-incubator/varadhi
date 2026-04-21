@@ -185,12 +185,12 @@ public class WebServerVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         vertx.executeBlocking(() -> {
             log.info("Starting WebServer verticle");
-            if (apiUsecases.hasProduce()) {
-                setupEntityServicesForProduceApis();
-            }
             if (apiUsecases.hasAdmin()) {
                 setupEntityServicesForAdminApis();
                 performLeanDeployValidations();
+            }
+            if (apiUsecases.hasProduce()) {
+                setupEntityServicesForProduceApis();
             }
             return null;
         }).compose(v -> startHttpServer()).onSuccess(v -> {

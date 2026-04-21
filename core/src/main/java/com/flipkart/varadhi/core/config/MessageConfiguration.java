@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.core.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.flipkart.varadhi.entities.RequiredBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.Multimap;
 import jakarta.validation.constraints.NotNull;
@@ -74,25 +74,24 @@ public class MessageConfiguration {
      * @param headers which must be normalized
      */
     public void ensureRequiredHeaders(Multimap<String, String> headers, boolean queueBackedTopic) {
-        getRequiredHeaders().forEach(key -> {
-            if (!headers.containsKey(key)) {
-                throw new IllegalArgumentException(String.format("Missing required header %s", key));
-            }
-        });
-        if (queueBackedTopic) {
-            ensureQueueProduceRequiredHeaders(headers);
-        }
-    }
+        List<String> missingHeaders = new ArrayList<>();
 
-    /**
-     * Ensures all standard headers whose {@link RequiredBy#isRequiredOnQueueProduce()}
-     * is true are present (queue produce API).
-     */
-    public void ensureQueueProduceRequiredHeaders(Multimap<String, String> headers) {
-        stdHeaders.getHeaderNamesRequiredForQueueProduce().forEach(key -> {
-            if (!headers.containsKey(key)) {
-                throw new IllegalArgumentException(String.format("Missing required header %s for queue produce", key));
+        if (queueBackedTopic) {
+            for (String key : stdHeaders.getHeaderNamesRequiredForQueueProduce()) {
+                if (!headers.containsKey(key)) {
+                    missingHeaders.add(key + " (required for queue produce)");
+                }
             }
-        });
+        } else {
+            for (String key : getRequiredHeaders()) {
+                if (!headers.containsKey(key)) {
+                    missingHeaders.add(key);
+                }
+            }
+        }
+
+        if (!missingHeaders.isEmpty()) {
+            throw new IllegalArgumentException("Missing required headers: " + String.join(", ", missingHeaders));
+        }
     }
 }

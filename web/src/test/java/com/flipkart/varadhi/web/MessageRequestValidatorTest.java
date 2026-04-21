@@ -47,7 +47,7 @@ public class MessageRequestValidatorTest extends WebTestBase {
             IllegalArgumentException.class,
             () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, true)
         );
-        Assertions.assertTrue(ex.getMessage().contains("Missing required header"));
+        Assertions.assertTrue(ex.getMessage().contains("Missing required headers"));
         Assertions.assertTrue(ex.getMessage().contains("queue produce"));
     }
 
