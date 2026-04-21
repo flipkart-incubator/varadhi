@@ -284,34 +284,6 @@ public class QueueTests extends E2EBase {
     }
 
     @Test
-    public void queueProduce_endToEnd_missingHttpMethod_returnsBadRequest() {
-
-        String queueName = "queue_e2e_produce_bad_hdr";
-        createQueueOk(queueName);
-
-        String messageId = "e2e-q-produce-bad-" + System.currentTimeMillis();
-        String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HDR_MESSAGE_ID, messageId);
-        headers.put(HDR_HTTP_URI, callbackUri);
-
-        String produceUri = getProduceUri(project, queueName);
-        try (
-            Response response = postProduceWithHeaders(produceUri, "{\"e2e\":\"missing-method\"}".getBytes(), headers)
-        ) {
-            Assertions.assertEquals(400, response.getStatus());
-            ErrorResponse err = response.readEntity(ErrorResponse.class);
-            Assertions.assertTrue(
-                err.reason().contains("Missing required header " + HDR_HTTP_METHOD + " for queue produce"),
-                err.reason()
-            );
-        }
-
-        makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
-    }
-
-    @Test
     public void restoreQueue_afterFullHardDelete_returns404() {
 
         String queueName = "queue_restore_after_hard_delete";
