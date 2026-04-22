@@ -71,7 +71,7 @@ public class QueueTests extends E2EBase {
 
     @AfterAll
     public static void tearDown() {
-        cleanupOrgs(List.of(org, produceOrg));
+        cleanupOrgs(List.of(org));
     }
 
     @Test
@@ -291,11 +291,6 @@ public class QueueTests extends E2EBase {
             String returnedId = JsonMapper.jsonDeserialize(raw, String.class);
             Assertions.assertEquals(messageId, returnedId);
         }
-        makeDeleteRequest(
-            getQueuesUri(produceProject, PRODUCE_E2E_QUEUE_NAME),
-            ResourceDeletionType.HARD_DELETE.toString(),
-            204
-        );
     }
 
     @Test

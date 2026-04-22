@@ -174,7 +174,7 @@ public class E2EBase {
         cleanupSubscriptionsOnProject(project);
         List<String> existingTopics = getTopics(makeListRequest(getTopicsUri(project), EXPECTED_STATUS_OK));
         if (!existingTopics.isEmpty()) {
-            cleanupSubscriptionsOnTopics(existingTopics, project.getName());
+            cleanupSubscriptionsOnTopicsForTopicOwnerOrg(existingTopics, project);
             existingTopics.forEach(topic -> cleanupTopic(topic, project));
         }
         makeDeleteRequest(getProjectUri(project), EXPECTED_STATUS_204);
@@ -188,42 +188,54 @@ public class E2EBase {
         );
     }
 
-    public static void cleanupSubscriptionsOnTopics(List<String> topicNames, String projectName) {
-        getOrgs(makeListRequest(getOrgsUri(), EXPECTED_STATUS_OK)).forEach(
-            org -> getTeams(makeListRequest(getTeamsUri(org.getName()), EXPECTED_STATUS_OK)).forEach(
-                team -> getProjects(
-                    makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK)
-                ).forEach(
-                    project -> getSubscriptions(makeListRequest(getSubscriptionsUri(project), EXPECTED_STATUS_OK))
-                                                                                                                  .forEach(
-                                                                                                                      sub -> {
-                                                                                                                          SubscriptionResource res =
-                                                                                                                              makeGetRequest(
+    /**
+     * Deletes subscriptions that target any of {@code topicNames} living in {@code topicOwnerProject}, scanning only
+     * projects under {@code topicOwnerProject}'s org (not every org on the server).
+     */
+    public static void cleanupSubscriptionsOnTopicsForTopicOwnerOrg(
+        List<String> topicNames,
+        Project topicOwnerProject
+    ) {
+        String topicProjectName = topicOwnerProject.getName();
+        String orgName = topicOwnerProject.getOrg();
+        getTeams(makeListRequest(getTeamsUri(orgName), EXPECTED_STATUS_OK)).forEach(
+            team -> getProjects(makeListRequest(getProjectListUri(team.getOrg(), team.getName()), EXPECTED_STATUS_OK))
+                                                                                                                      .forEach(
+                                                                                                                          project -> getSubscriptions(
+                                                                                                                              makeListRequest(
                                                                                                                                   getSubscriptionsUri(
-                                                                                                                                      project,
-                                                                                                                                      sub
+                                                                                                                                      project
                                                                                                                                   ),
-                                                                                                                                  SubscriptionResource.class,
                                                                                                                                   EXPECTED_STATUS_OK
-                                                                                                                              );
-                                                                                                                          if (topicNames.contains(
-                                                                                                                              res.getTopic()
-                                                                                                                          ) && projectName.equals(
-                                                                                                                              res.getTopicProject()
-                                                                                                                          )) {
-                                                                                                                              makeDeleteRequest(
-                                                                                                                                  getSubscriptionsUri(
-                                                                                                                                      project,
-                                                                                                                                      sub
-                                                                                                                                  ),
-                                                                                                                                  ResourceDeletionType.HARD_DELETE.toString(),
-                                                                                                                                  EXPECTED_STATUS_204
-                                                                                                                              );
-                                                                                                                          }
-                                                                                                                      }
-                                                                                                                  )
-                )
-            )
+                                                                                                                              )
+                                                                                                                          ).forEach(
+                                                                                                                              sub -> {
+                                                                                                                                  SubscriptionResource res =
+                                                                                                                                      makeGetRequest(
+                                                                                                                                          getSubscriptionsUri(
+                                                                                                                                              project,
+                                                                                                                                              sub
+                                                                                                                                          ),
+                                                                                                                                          SubscriptionResource.class,
+                                                                                                                                          EXPECTED_STATUS_OK
+                                                                                                                                      );
+                                                                                                                                  if (topicNames.contains(
+                                                                                                                                      res.getTopic()
+                                                                                                                                  ) && topicProjectName.equals(
+                                                                                                                                      res.getTopicProject()
+                                                                                                                                  )) {
+                                                                                                                                      makeDeleteRequest(
+                                                                                                                                          getSubscriptionsUri(
+                                                                                                                                              project,
+                                                                                                                                              sub
+                                                                                                                                          ),
+                                                                                                                                          ResourceDeletionType.HARD_DELETE.toString(),
+                                                                                                                                          EXPECTED_STATUS_204
+                                                                                                                                      );
+                                                                                                                                  }
+                                                                                                                              }
+                                                                                                                          )
+                                                                                                                      )
         );
     }
 
