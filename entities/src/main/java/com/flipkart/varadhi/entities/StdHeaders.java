@@ -47,12 +47,7 @@ public class StdHeaders {
     private final List<HeaderSpec> allHeaderSpecs;
     /** Uppercase header name strings derived from {@link #allHeaderSpecs} (for validation only). */
     private final List<String> allHeaders;
-    /**
-     * Immutable name lists derived once from {@link #allHeaderSpecs} (see
-     * {@link ProduceRequiredHeaderNameLists#fromSpecs(List)}).
-     */
-    private final List<String> headerNamesRequiredForQueueProduce;
-    private final List<String> headerNamesRequiredForProduce;
+    private final ProduceRequiredHeaderNames produceRequiredHeaderNames;
 
     @JsonCreator
     @VisibleForTesting
@@ -102,9 +97,7 @@ public class StdHeaders {
             this.produceTimestamp
         );
         this.allHeaders = this.allHeaderSpecs.stream().map(HeaderSpec::value).toList();
-        ProduceRequiredHeaderNameLists produceLists = ProduceRequiredHeaderNameLists.fromSpecs(this.allHeaderSpecs);
-        this.headerNamesRequiredForQueueProduce = produceLists.queueProduce();
-        this.headerNamesRequiredForProduce = produceLists.standardProduce();
+        this.produceRequiredHeaderNames = ProduceRequiredHeaderNames.fromSpecs(this.allHeaderSpecs);
     }
 
     /*
@@ -190,28 +183,18 @@ public class StdHeaders {
     }
 
     /**
-     * Header names required when producing to a queue: every configured header whose {@link RequiredBy} is
-     * {@link RequiredBy#Queue} or {@link RequiredBy#All} ({@link RequiredBy#isRequiredOnQueueProduce()}).
+     * Cached required header name lists for produce: {@link ProduceRequiredHeaderNames#queueProduce()} (queue or All)
+     * vs {@link ProduceRequiredHeaderNames#standardProduce()} (All only).
      */
-    @JsonIgnore
-    public List<String> getHeaderNamesRequiredForQueueProduce() {
-        return headerNamesRequiredForQueueProduce;
-    }
-
-    /**
-     * Header names required when producing to resource: every configured header whose {@link RequiredBy} is
-     * {@link RequiredBy#All}
-     */
-    @JsonIgnore
-    public List<String> getHeaderNamesRequiredForProduce() {
-        return headerNamesRequiredForProduce;
+    public ProduceRequiredHeaderNames produceRequiredHeaderNames() {
+        return produceRequiredHeaderNames;
     }
 
     /**
      * Single pass over header specs to build both required-name lists (stable {@link HeaderSpec#value()} order).
      */
-    private record ProduceRequiredHeaderNameLists(List<String> queueProduce, List<String> standardProduce) {
-        private static ProduceRequiredHeaderNameLists fromSpecs(List<HeaderSpec> specs) {
+    public record ProduceRequiredHeaderNames(List<String> queueProduce, List<String> standardProduce) {
+        private static ProduceRequiredHeaderNames fromSpecs(List<HeaderSpec> specs) {
             List<String> queue = new ArrayList<>();
             List<String> standard = new ArrayList<>();
             for (HeaderSpec spec : specs) {
@@ -223,7 +206,7 @@ public class StdHeaders {
                     standard.add(spec.value());
                 }
             }
-            return new ProduceRequiredHeaderNameLists(List.copyOf(queue), List.copyOf(standard));
+            return new ProduceRequiredHeaderNames(List.copyOf(queue), List.copyOf(standard));
         }
     }
 }

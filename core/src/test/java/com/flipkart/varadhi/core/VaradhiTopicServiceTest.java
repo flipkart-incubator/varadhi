@@ -600,9 +600,8 @@ class VaradhiTopicServiceTest {
     @Test
     void getTopic_whenTopicDoesNotExist_returnsEmpty() {
         String fqn = VaradhiTopic.fqn("p1", "q1");
-        when(topicStore.exists(fqn)).thenReturn(false);
+        when(topicStore.get(fqn)).thenThrow(ResourceNotFoundException.class);
         assertFalse(varadhiTopicService.getTopic(fqn).isPresent());
-        verify(topicStore, never()).get(any());
     }
 
     @Test

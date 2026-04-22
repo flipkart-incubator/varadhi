@@ -23,7 +23,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,7 +48,6 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
  */
 @Slf4j
 @ExtensionMethod ({RequestBodyExtension.class, RoutingContextExtension.class})
-@RequiredArgsConstructor
 public class ProduceHandlers implements RouteProvider {
     private static final String API_NAME = "TOPIC";
     private final ProducerService producerService;
@@ -57,11 +55,28 @@ public class ProduceHandlers implements RouteProvider {
     private final String produceRegion;
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     /**
-     * When null (e.g. produce-only deployment without topic metadata), queue-backed header rules are not applied.
-     * Otherwise a lookup such as {@code topicService::getTopic}; category is evaluated with
-     * {@link VaradhiTopicService#matchesCategory(VaradhiTopic, VaradhiTopic.TopicCategory)}.
+     * Resolves whether the topic FQN is queue-backed for header validation. Built once in the constructor from
+     * {@code topicLookup} (e.g. {@code topicService::getTopic}) plus
+     * {@link VaradhiTopicService#matchesCategory(VaradhiTopic, VaradhiTopic.TopicCategory)} for {@link VaradhiTopic.TopicCategory#QUEUE}.
+     * When {@code topicLookup} is null (produce-only without topic metadata), this always returns {@code false}.
      */
-    private final Function<String, Optional<VaradhiTopic>> topicLookup;
+    private final Function<String, Boolean> isQueue;
+
+    public ProduceHandlers(
+        ProducerService producerService,
+        MessageConfiguration msgConfig,
+        String produceRegion,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        Function<String, Optional<VaradhiTopic>> topicLookup
+    ) {
+        this.producerService = producerService;
+        this.msgConfig = msgConfig;
+        this.produceRegion = produceRegion;
+        this.projectCache = projectCache;
+        this.isQueue = topicLookup == null ?
+            ProduceHandlers::neverQueue :
+            fqn -> topicLookup.apply(fqn).map(ProduceHandlers::isQueue).orElse(false);
+    }
 
     /**
      * Returns the list of route definitions for message production endpoints.
@@ -125,14 +140,7 @@ public class ProduceHandlers implements RouteProvider {
         // Potential solution: Use getByteBuf().array() to access the backing array directly,
         // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        boolean queueBackedTopic = topicLookup.apply(topicFQN)
-                                              .map(
-                                                  t -> VaradhiTopicService.matchesCategory(
-                                                      t,
-                                                      VaradhiTopic.TopicCategory.QUEUE
-                                                  )
-                                              )
-                                              .orElse(false);
+        boolean queueBackedTopic = isQueue.apply(topicFQN);
         Message messageToProduce = buildMessageToProduce(
             payload,
             ctx.request().headers(),
@@ -189,6 +197,7 @@ public class ProduceHandlers implements RouteProvider {
      * @param producerIdentity The identity of the producer
      * @return A Message object ready for production
      */
+
     Message buildMessageToProduce(byte[] payload, MultiMap headers, String producerIdentity, boolean queueBackedTopic) {
         Multimap<String, String> compliantHeaders = filterCompliantHeaders(headers);
         Message message = new SimpleMessage(payload, compliantHeaders);
@@ -197,6 +206,14 @@ public class ProduceHandlers implements RouteProvider {
         compliantHeaders.put(StdHeaders.get().producerIdentity().value(), producerIdentity);
         compliantHeaders.put(StdHeaders.get().produceTimestamp().value(), Long.toString(System.currentTimeMillis()));
         return message;
+    }
+
+    private static boolean neverQueue(@SuppressWarnings ("unused") String topicFqn) {
+        return false;
+    }
+
+    private static boolean isQueue(VaradhiTopic t) {
+        return VaradhiTopicService.matchesCategory(t, VaradhiTopic.TopicCategory.QUEUE);
     }
 
     /**

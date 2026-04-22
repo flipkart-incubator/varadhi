@@ -70,12 +70,11 @@ public class MessageConfiguration {
     /**
      * @param headers which must be normalized
      */
-    public void ensureRequiredHeaders(Multimap<String, String> headers, boolean queueBackedTopic) {
+    public void ensureRequiredHeaders(Multimap<String, String> headers, boolean isQueue) {
         List<String> missingHeaders = new ArrayList<>();
-        List<String> requiredHeaderNames = queueBackedTopic ?
-            stdHeaders.getHeaderNamesRequiredForQueueProduce() :
-            stdHeaders.getHeaderNamesRequiredForProduce();
-        ;
+        List<String> requiredHeaderNames = isQueue ?
+            stdHeaders.produceRequiredHeaderNames().queueProduce() :
+            stdHeaders.produceRequiredHeaderNames().standardProduce();
         for (String key : requiredHeaderNames) {
             if (!headers.containsKey(key)) {
                 missingHeaders.add(key);

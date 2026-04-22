@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -306,10 +307,11 @@ public class VaradhiTopicService {
      * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules).
      */
     public Optional<VaradhiTopic> getTopic(String topicFqn) {
-        if (!exists(topicFqn)) {
+        try {
+            return Optional.of(get(topicFqn));
+        } catch (ResourceNotFoundException e) {
             return Optional.empty();
         }
-        return Optional.of(get(topicFqn));
     }
 
     /**

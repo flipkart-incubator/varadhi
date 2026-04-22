@@ -5,7 +5,7 @@ package com.flipkart.varadhi.entities;
  * usage including queue produce ({@link #All}}).
  * <p>
  * In YAML/JSON, serialize as {@code None}, {@code Queue}, or {@code All}. On {@link HeaderSpec}, a missing
- * {@code requiredBy} defaults to {@link #None}. {@link com.flipkart.varadhi.entities.StdHeaders#getHeaderNamesRequiredForQueueProduce()}
+ * {@code requiredBy} defaults to {@link #None}.
  * lists every header whose {@code requiredBy} is {@link #Queue} or {@link #All}.
  */
 public enum RequiredBy {

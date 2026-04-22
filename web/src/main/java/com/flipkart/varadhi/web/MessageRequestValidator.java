@@ -13,12 +13,8 @@ public class MessageRequestValidator {
      * 
      * @param msgConfig
      */
-    public static void ensureHeaderSemanticsAndSize(
-        MessageConfiguration msgConfig,
-        Message message,
-        boolean queueBackedTopic
-    ) {
-        msgConfig.ensureRequiredHeaders(message.getHeaders(), queueBackedTopic);
+    public static void ensureHeaderSemanticsAndSize(MessageConfiguration msgConfig, Message message, boolean isQueue) {
+        msgConfig.ensureRequiredHeaders(message.getHeaders(), isQueue);
         validateIdHeadersAndRequestSize(msgConfig, message);
     }
 
