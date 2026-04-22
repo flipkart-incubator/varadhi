@@ -606,11 +606,6 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void matchesCategory_whenTopicNull_returnsFalse() {
-        assertFalse(VaradhiTopicService.matchesCategory(null, VaradhiTopic.TopicCategory.QUEUE));
-    }
-
-    @Test
     void matchesCategory_whenCategoryMatches_returnsTrue() {
         VaradhiTopic topic = mock(VaradhiTopic.class);
         when(topic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);

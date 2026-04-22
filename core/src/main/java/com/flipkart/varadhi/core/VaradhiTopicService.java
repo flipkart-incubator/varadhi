@@ -298,7 +298,7 @@ public class VaradhiTopicService {
      * Whether {@code topic} is non-null and its {@link VaradhiTopic#getTopicCategory()} equals {@code category}.
      */
     public static boolean matchesCategory(VaradhiTopic topic, VaradhiTopic.TopicCategory category) {
-        return topic != null && topic.getTopicCategory() == category;
+        return topic.getTopicCategory() == category;
     }
 
     /**

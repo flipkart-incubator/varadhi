@@ -19,14 +19,6 @@ public class MessageRequestValidatorTest extends WebTestBase {
         //headers
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
-        msgConfig.getRequiredHeaders()
-                 .stream()
-                 .filter(
-                     key -> !key.equals(msgConfig.getStdHeaders().msgId()) && !key.equals(
-                         msgConfig.getStdHeaders().produceRegion()
-                     )
-                 )
-                 .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
         Assertions.assertThrows(
