@@ -106,7 +106,10 @@ public class PulsarTopicService implements StorageTopicService {
     @Override
     public void delete(Project project, String topicName) {
         try {
-            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, false);
+            /**
+                TODO: remove this force true flag enabled for E2E currently
+             **/
+            clientProvider.getAdminClient().topics().deletePartitionedTopic(topicName, true);
             log.debug("Deleted the pulsar topic:{}", topicName);
         } catch (PulsarAdminException e) {
             if (e instanceof PulsarAdminException.NotFoundException) {

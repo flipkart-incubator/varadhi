@@ -40,7 +40,6 @@ public class QueueTests extends E2EBase {
     private static Org org;
     private static Team team;
     private static Project project;
-    private static boolean queueApiAvailable;
 
     /**
      * Separate hierarchy for queue produce E2E only. Intentionally <strong>not</strong> passed to {@link E2EBase#cleanupOrgs}
@@ -68,15 +67,11 @@ public class QueueTests extends E2EBase {
         makeCreateRequest(getOrgsUri(), produceOrg, 200);
         makeCreateRequest(getTeamsUri(produceTeam.getOrg()), produceTeam, 200);
         makeCreateRequest(getProjectCreateUri(), produceProject, 200);
-
-        try (Response response = makeHttpGetRequest(getQueuesUri(project))) {
-            queueApiAvailable = response.getStatus() != 404;
-        }
     }
 
     @AfterAll
     public static void tearDown() {
-        cleanupOrgs(List.of(org));
+        cleanupOrgs(List.of(org, produceOrg));
     }
 
     @Test
@@ -296,6 +291,11 @@ public class QueueTests extends E2EBase {
             String returnedId = JsonMapper.jsonDeserialize(raw, String.class);
             Assertions.assertEquals(messageId, returnedId);
         }
+        makeDeleteRequest(
+            getQueuesUri(produceProject, PRODUCE_E2E_QUEUE_NAME),
+            ResourceDeletionType.HARD_DELETE.toString(),
+            204
+        );
     }
 
     @Test
