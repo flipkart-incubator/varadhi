@@ -7,7 +7,7 @@ public class TestStdHeaders {
     public static StdHeaders get() {
         return new StdHeaders(
             List.of("X_", "X-"),
-            new HeaderSpec("X_MESSAGE_ID", RequiredBy.produce()),
+            new HeaderSpec("X_MESSAGE_ID", RequiredBy.All),
             new HeaderSpec("X_GROUP_ID", RequiredBy.None),
             new HeaderSpec("X_CALLBACK_CODES", RequiredBy.None),
             new HeaderSpec("X_REQUEST_TIMEOUT", RequiredBy.None),

@@ -49,7 +49,7 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.produce()),
+                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.All),
                 new HeaderSpec("VARADHI_GROUP_ID", RequiredBy.None),
                 new HeaderSpec("VARADHI_CALLBACK_CODES", RequiredBy.None),
                 new HeaderSpec("VARADHI_REQUEST_TIMEOUT", RequiredBy.None),

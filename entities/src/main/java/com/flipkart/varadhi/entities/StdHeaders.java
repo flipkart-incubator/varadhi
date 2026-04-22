@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,6 +47,12 @@ public class StdHeaders {
     private final List<HeaderSpec> allHeaderSpecs;
     /** Uppercase header name strings derived from {@link #allHeaderSpecs} (for validation only). */
     private final List<String> allHeaders;
+    /**
+     * Immutable name lists derived once from {@link #allHeaderSpecs} (see
+     * {@link ProduceRequiredHeaderNameLists#fromSpecs(List)}).
+     */
+    private final List<String> headerNamesRequiredForQueueProduce;
+    private final List<String> headerNamesRequiredForProduce;
 
     @JsonCreator
     @VisibleForTesting
@@ -95,6 +102,9 @@ public class StdHeaders {
             this.produceTimestamp
         );
         this.allHeaders = this.allHeaderSpecs.stream().map(HeaderSpec::value).toList();
+        ProduceRequiredHeaderNameLists produceLists = ProduceRequiredHeaderNameLists.fromSpecs(this.allHeaderSpecs);
+        this.headerNamesRequiredForQueueProduce = produceLists.queueProduce();
+        this.headerNamesRequiredForProduce = produceLists.standardProduce();
     }
 
     /*
@@ -185,9 +195,35 @@ public class StdHeaders {
      */
     @JsonIgnore
     public List<String> getHeaderNamesRequiredForQueueProduce() {
-        return allHeaderSpecs.stream()
-                             .filter(spec -> spec.requiredBy().isRequiredOnQueueProduce())
-                             .map(HeaderSpec::value)
-                             .toList();
+        return headerNamesRequiredForQueueProduce;
+    }
+
+    /**
+     * Header names required when producing to resource: every configured header whose {@link RequiredBy} is
+     * {@link RequiredBy#All}
+     */
+    @JsonIgnore
+    public List<String> getHeaderNamesRequiredForProduce() {
+        return headerNamesRequiredForProduce;
+    }
+
+    /**
+     * Single pass over header specs to build both required-name lists (stable {@link HeaderSpec#value()} order).
+     */
+    private record ProduceRequiredHeaderNameLists(List<String> queueProduce, List<String> standardProduce) {
+        private static ProduceRequiredHeaderNameLists fromSpecs(List<HeaderSpec> specs) {
+            List<String> queue = new ArrayList<>();
+            List<String> standard = new ArrayList<>();
+            for (HeaderSpec spec : specs) {
+                RequiredBy rb = spec.requiredBy();
+                if (rb.isRequiredOnQueueProduce()) {
+                    queue.add(spec.value());
+                }
+                if (rb.isRequiredOnProduce()) {
+                    standard.add(spec.value());
+                }
+            }
+            return new ProduceRequiredHeaderNameLists(List.copyOf(queue), List.copyOf(standard));
+        }
     }
 }

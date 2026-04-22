@@ -42,6 +42,16 @@ public class QueueTests extends E2EBase {
     private static Project project;
     private static boolean queueApiAvailable;
 
+    /**
+     * Separate hierarchy for queue produce E2E only. Intentionally <strong>not</strong> passed to {@link E2EBase#cleanupOrgs}
+     * in {@link #tearDown()} so org/project/queue used for produce can stay on the server.
+     */
+    private static Org produceOrg;
+    private static Team produceTeam;
+    private static Project produceProject;
+
+    private static final String PRODUCE_E2E_QUEUE_NAME = "queue_e2e_produce_ok";
+
     @BeforeAll
     public static void setup() {
         org = Org.of("queue_org");
@@ -51,6 +61,13 @@ public class QueueTests extends E2EBase {
         makeCreateRequest(getOrgsUri(), org, 200);
         makeCreateRequest(getTeamsUri(team.getOrg()), team, 200);
         makeCreateRequest(getProjectCreateUri(), project, 200);
+
+        produceOrg = Org.of("queue_produce_org");
+        produceTeam = Team.of("queue_produce_team", produceOrg.getName());
+        produceProject = Project.of("queue_produce_project", "", produceTeam.getName(), produceTeam.getOrg());
+        makeCreateRequest(getOrgsUri(), produceOrg, 200);
+        makeCreateRequest(getTeamsUri(produceTeam.getOrg()), produceTeam, 200);
+        makeCreateRequest(getProjectCreateUri(), produceProject, 200);
 
         try (Response response = makeHttpGetRequest(getQueuesUri(project))) {
             queueApiAvailable = response.getStatus() != 404;
@@ -259,8 +276,7 @@ public class QueueTests extends E2EBase {
     @Test
     public void queueProduce_endToEnd_withRequiredHeaders_succeeds() {
 
-        String queueName = "queue_e2e_produce_ok";
-        createQueueOk(queueName);
+        createQueueOkOnProject(produceProject, PRODUCE_E2E_QUEUE_NAME);
 
         String messageId = "e2e-q-produce-" + System.currentTimeMillis();
         String callbackUri = DEFAULT_QUEUE_TARGET_CLIENT_IDS.keySet().iterator().next();
@@ -272,7 +288,7 @@ public class QueueTests extends E2EBase {
         headers.put(HDR_HTTP_METHOD, "POST");
         headers.put("X_TRACE_E2E", "queue-produce-trace");
 
-        String produceUri = getProduceUri(project, queueName);
+        String produceUri = getProduceUri(produceProject, PRODUCE_E2E_QUEUE_NAME);
         try (Response response = postProduceWithHeaders(produceUri, payload, headers)) {
             int status = response.getStatus();
             String raw = response.readEntity(String.class);
@@ -280,7 +296,6 @@ public class QueueTests extends E2EBase {
             String returnedId = JsonMapper.jsonDeserialize(raw, String.class);
             Assertions.assertEquals(messageId, returnedId);
         }
-        // makeDeleteRequest(getQueuesUri(project, queueName), ResourceDeletionType.HARD_DELETE.toString(), 204);
     }
 
     @Test
@@ -379,13 +394,26 @@ public class QueueTests extends E2EBase {
      * so assert status only instead of {@link E2EBase#makeCreateRequest} which would deserialize the body as {@code QueueResource}.
      */
     private static void createQueueOk(String queueName) {
-        try (Response r = makeHttpPostRequest(getQueuesUri(project), queueResource(queueName))) {
+        createQueueOkOnProject(project, queueName);
+    }
+
+    private static void createQueueOkOnProject(Project targetProject, String queueName) {
+        try (
+            Response r = makeHttpPostRequest(
+                getQueuesUri(targetProject),
+                queueResourceOnProject(targetProject, queueName)
+            )
+        ) {
             Assertions.assertEquals(200, r.getStatus());
         }
     }
 
     private static QueueResource queueResource(String queueName) {
-        QueueResource queue = new QueueResource(queueName, 0, project.getName());
+        return queueResourceOnProject(project, queueName);
+    }
+
+    private static QueueResource queueResourceOnProject(Project targetProject, String queueName) {
+        QueueResource queue = new QueueResource(queueName, 0, targetProject.getName());
         queue.setTargetClientIds(new HashMap<>(DEFAULT_QUEUE_TARGET_CLIENT_IDS));
         queue.setProperties(new HashMap<>(DEFAULT_QUEUE_PROPERTIES));
         return queue;

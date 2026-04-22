@@ -48,7 +48,7 @@ public class MessageRequestValidatorTest extends WebTestBase {
             () -> MessageRequestValidator.ensureHeaderSemanticsAndSize(msgConfig, message, true)
         );
         Assertions.assertTrue(ex.getMessage().contains("Missing required headers"));
-        Assertions.assertTrue(ex.getMessage().contains("queue produce"));
+        Assertions.assertTrue(ex.getMessage().contains(StdHeaders.get().httpMethod().value()));
     }
 
     @ParameterizedTest

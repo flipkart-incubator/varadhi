@@ -69,7 +69,7 @@ services:
 
 
   zookeeper:
-    image: zookeeper:3.9.2
+    image: zookeeper:3.7.1
     container_name: zookeeper
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "*"

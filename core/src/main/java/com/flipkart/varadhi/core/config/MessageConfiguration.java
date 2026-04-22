@@ -27,6 +27,12 @@ public class MessageConfiguration {
 
     private final List<String> requiredHeaders;
 
+    /**
+     * Same reference as {@link StdHeaders#getHeaderNamesRequiredForQueueProduce()} (immutable, built once with
+     * {@code StdHeaders}). Held here so {@link #ensureRequiredHeaders} does not re-resolve names per produce request.
+     */
+    private final List<String> queueProduceRequiredHeaderNames;
+
     @JsonCreator
     public MessageConfiguration(
         @JsonProperty ("headers") StdHeaders stdHeaders,
@@ -38,7 +44,8 @@ public class MessageConfiguration {
         this.maxIdHeaderSize = maxIdHeaderSize;
         this.maxRequestSize = maxRequestSize;
         this.filterNonCompliantHeaders = filterNonCompliantHeaders;
-        this.requiredHeaders = List.of(stdHeaders.msgId());
+        this.requiredHeaders = stdHeaders.getHeaderNamesRequiredForProduce();
+        this.queueProduceRequiredHeaderNames = stdHeaders.getHeaderNamesRequiredForQueueProduce();
         validate();
     }
 
@@ -75,18 +82,10 @@ public class MessageConfiguration {
      */
     public void ensureRequiredHeaders(Multimap<String, String> headers, boolean queueBackedTopic) {
         List<String> missingHeaders = new ArrayList<>();
-
-        if (queueBackedTopic) {
-            for (String key : stdHeaders.getHeaderNamesRequiredForQueueProduce()) {
-                if (!headers.containsKey(key)) {
-                    missingHeaders.add(key + " (required for queue produce)");
-                }
-            }
-        } else {
-            for (String key : getRequiredHeaders()) {
-                if (!headers.containsKey(key)) {
-                    missingHeaders.add(key);
-                }
+        List<String> requiredHeaderNames = queueBackedTopic ? queueProduceRequiredHeaderNames : requiredHeaders;
+        for (String key : requiredHeaderNames) {
+            if (!headers.containsKey(key)) {
+                missingHeaders.add(key);
             }
         }
 

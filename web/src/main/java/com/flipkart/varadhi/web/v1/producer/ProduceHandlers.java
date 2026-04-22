@@ -4,6 +4,7 @@ import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.Constants.HttpCodes;
 import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.ResourceReadCache;
+import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.core.config.MessageConfiguration;
 import com.flipkart.varadhi.entities.*;
@@ -28,8 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Predicate;
+import java.util.function.Function;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 
@@ -56,9 +58,10 @@ public class ProduceHandlers implements RouteProvider {
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     /**
      * When null (e.g. produce-only deployment without topic metadata), queue-backed header rules are not applied.
-     * Otherwise tests topic FQN, typically {@code fqn -> topicService.matchesCategory(fqn, VaradhiTopic.TopicCategory.QUEUE)}.
+     * Otherwise a lookup such as {@code topicService::getTopic}; category is evaluated with
+     * {@link VaradhiTopicService#matchesCategory(VaradhiTopic, VaradhiTopic.TopicCategory)}.
      */
-    private final Predicate<String> queueBackedTopicCheck;
+    private final Function<String, Optional<VaradhiTopic>> topicLookup;
 
     /**
      * Returns the list of route definitions for message production endpoints.
@@ -122,7 +125,14 @@ public class ProduceHandlers implements RouteProvider {
         // Potential solution: Use getByteBuf().array() to access the backing array directly,
         // but need to implement proper bounds handling for partial buffer reads
         byte[] payload = ctx.body().buffer().getBytes();
-        boolean queueBackedTopic = queueBackedTopicCheck != null && queueBackedTopicCheck.test(topicFQN);
+        boolean queueBackedTopic = topicLookup.apply(topicFQN)
+                                              .map(
+                                                  t -> VaradhiTopicService.matchesCategory(
+                                                      t,
+                                                      VaradhiTopic.TopicCategory.QUEUE
+                                                  )
+                                              )
+                                              .orElse(false);
         Message messageToProduce = buildMessageToProduce(
             payload,
             ctx.request().headers(),

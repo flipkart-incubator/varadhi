@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Service class for managing Varadhi topics.
@@ -294,14 +295,21 @@ public class VaradhiTopicService {
     }
 
     /**
+     * Whether {@code topic} is non-null and its {@link VaradhiTopic#getTopicCategory()} equals {@code category}.
+     */
+    public static boolean matchesCategory(VaradhiTopic topic, VaradhiTopic.TopicCategory category) {
+        return topic != null && topic.getTopicCategory() == category;
+    }
+
+    /**
      * Whether {@code topicFqn} exists and its stored category equals {@code topicCategory} (e.g. {@link
      * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules).
      */
-    public boolean matchesCategory(String topicFqn, VaradhiTopic.TopicCategory topicCategory) {
+    public Optional<VaradhiTopic> getTopic(String topicFqn) {
         if (!exists(topicFqn)) {
-            return false;
+            return Optional.empty();
         }
-        return get(topicFqn).getTopicCategory() == topicCategory;
+        return Optional.of(get(topicFqn));
     }
 
     /**

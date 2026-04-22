@@ -8,6 +8,7 @@ import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerService;
@@ -38,6 +39,7 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.entities.TopicState.*;
@@ -321,7 +323,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
             projectCache,
-            queueBackedTopicCheck
+            topicLookup
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 
@@ -393,7 +395,9 @@ public class ProduceHandlersTest extends ProduceTestBase {
 
     @Test
     public void testQueueProduceRejectedWhenQueueHeadersMissing() {
-        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
@@ -402,14 +406,16 @@ public class ProduceHandlersTest extends ProduceTestBase {
             request,
             payload,
             400,
-            "Missing required headers: " + StdHeaders.get().httpMethod().value() + " (required for queue produce)",
+            "Missing required headers: " + StdHeaders.get().httpMethod().value(),
             WebTestBase.c(ErrorResponse.class)
         );
     }
 
     @Test
     public void testQueueProduceRejectedWhenMessageIdMissing() {
-        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
@@ -418,14 +424,16 @@ public class ProduceHandlersTest extends ProduceTestBase {
             request,
             payload,
             400,
-            "Missing required headers: " + StdHeaders.get().msgId() + " (required for queue produce)",
+            "Missing required headers: " + StdHeaders.get().msgId(),
             WebTestBase.c(ErrorResponse.class)
         );
     }
 
     @Test
     public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
-        Mockito.when(queueBackedTopicCheck.test(eq(topicFullName))).thenReturn(true);
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));

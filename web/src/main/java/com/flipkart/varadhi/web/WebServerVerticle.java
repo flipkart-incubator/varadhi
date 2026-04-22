@@ -53,14 +53,8 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Predicate;
+import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -493,13 +487,10 @@ public class WebServerVerticle extends AbstractVerticle {
      * @return a list of produce API route definitions
      */
     private List<RouteDefinition> getProduceApiRoutes() {
-        Predicate<String> queueBackedTopicCheck = null;
+        Function<String, Optional<VaradhiTopic>> topicLookup = null;
         if (serviceRegistry.contains(VaradhiTopicService.class)) {
             VaradhiTopicService topicService = serviceRegistry.get(VaradhiTopicService.class);
-            queueBackedTopicCheck = topicFqn -> topicService.matchesCategory(
-                topicFqn,
-                VaradhiTopic.TopicCategory.QUEUE
-            );
+            topicLookup = topicService::getTopic;
         }
         return new ArrayList<>(
             new ProduceHandlers(
@@ -507,7 +498,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
                 cacheRegistry.getCache(ResourceType.PROJECT),
-                queueBackedTopicCheck
+                topicLookup
             ).get()
         );
     }
