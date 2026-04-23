@@ -296,15 +296,9 @@ public class VaradhiTopicService {
     }
 
     /**
-     * Whether {@code topic} is non-null and its {@link VaradhiTopic#getTopicCategory()} equals {@code category}.
-     */
-    public static boolean matchesCategory(VaradhiTopic topic, VaradhiTopic.TopicCategory category) {
-        return topic.getTopicCategory() == category;
-    }
-
-    /**
-     * Whether {@code topicFqn} exists and its stored category equals {@code topicCategory} (e.g. {@link
-     * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules).
+     * Whether {@code topicFqn} exists and its stored category equals the expected one (e.g. {@link
+     * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules). Callers should use
+     * {@link VaradhiTopic#isCategory(VaradhiTopic.TopicCategory)} on the returned topic.
      */
     public Optional<VaradhiTopic> getTopic(String topicFqn) {
         try {

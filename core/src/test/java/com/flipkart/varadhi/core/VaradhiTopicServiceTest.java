@@ -605,47 +605,23 @@ class VaradhiTopicServiceTest {
     }
 
     @Test
-    void matchesCategory_whenCategoryMatches_returnsTrue() {
-        VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
-        assertTrue(VaradhiTopicService.matchesCategory(topic, VaradhiTopic.TopicCategory.QUEUE));
-    }
-
-    @Test
-    void matchesCategory_whenCategoryDiffers_returnsFalse() {
-        VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.TOPIC);
-        assertFalse(VaradhiTopicService.matchesCategory(topic, VaradhiTopic.TopicCategory.QUEUE));
-    }
-
-    @Test
-    void getTopic_whenStoredCategoryIsQueue_matchesQueueCategory() {
+    void getTopic_whenStoredCategoryIsQueue_returnsTopicWithQueueCategory() {
         String fqn = VaradhiTopic.fqn("p1", "q1");
         when(topicStore.exists(fqn)).thenReturn(true);
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        when(topic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
         when(topicStore.get(fqn)).thenReturn(topic);
-        assertTrue(
-            VaradhiTopicService.matchesCategory(
-                varadhiTopicService.getTopic(fqn).orElseThrow(),
-                VaradhiTopic.TopicCategory.QUEUE
-            )
-        );
+        assertTrue(varadhiTopicService.getTopic(fqn).orElseThrow().isCategory(VaradhiTopic.TopicCategory.QUEUE));
     }
 
     @Test
-    void getTopic_whenStoredCategoryIsTopic_doesNotMatchQueueCategory() {
+    void getTopic_whenStoredCategoryIsTopic_returnsTopicThatIsNotQueue() {
         String fqn = VaradhiTopic.fqn("p1", "t1");
         when(topicStore.exists(fqn)).thenReturn(true);
         VaradhiTopic topic = mock(VaradhiTopic.class);
-        when(topic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.TOPIC);
+        when(topic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(false);
         when(topicStore.get(fqn)).thenReturn(topic);
-        assertFalse(
-            VaradhiTopicService.matchesCategory(
-                varadhiTopicService.getTopic(fqn).orElseThrow(),
-                VaradhiTopic.TopicCategory.QUEUE
-            )
-        );
+        assertFalse(varadhiTopicService.getTopic(fqn).orElseThrow().isCategory(VaradhiTopic.TopicCategory.QUEUE));
     }
 
     private VaradhiTopic createVaradhiTopicMock() {

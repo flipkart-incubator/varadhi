@@ -396,7 +396,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     @Test
     public void testQueueProduceRejectedWhenQueueHeadersMissing() {
         VaradhiTopic queueTopic = mock(VaradhiTopic.class);
-        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
         Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -414,7 +414,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     @Test
     public void testQueueProduceRejectedWhenMessageIdMissing() {
         VaradhiTopic queueTopic = mock(VaradhiTopic.class);
-        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
         Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
@@ -432,7 +432,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
     @Test
     public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
         VaradhiTopic queueTopic = mock(VaradhiTopic.class);
-        Mockito.when(queueTopic.getTopicCategory()).thenReturn(VaradhiTopic.TopicCategory.QUEUE);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
         Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
         ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
         doReturn(CompletableFuture.completedFuture(result)).when(producerService)
