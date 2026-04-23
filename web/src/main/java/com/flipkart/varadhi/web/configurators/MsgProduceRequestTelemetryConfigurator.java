@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import com.flipkart.varadhi.common.Constants.PathParams;
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -54,11 +55,11 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
 
     public void addRequestSpanAndLog(RoutingContext ctx, String apiName, TelemetryType telemetryType) {
         long start = System.currentTimeMillis();
-        String topic = ctx.request().getParam("topic");
-        String project = ctx.request().getParam("project");
+        String project = ctx.request().getParam(PathParams.PATH_PARAM_PROJECT);
+        String topic = ctx.request().getParam(PathParams.PATH_PARAM_TOPIC);
 
         if (Strings.isNullOrEmpty(topic) || Strings.isNullOrEmpty(project)) {
-            throw new BadRequestException("Missing required parameters: topic or project");
+            throw new BadRequestException("Missing required parameters: project and topic");
         }
 
         String fqn = VaradhiTopic.fqn(project, topic);
@@ -138,4 +139,5 @@ public class MsgProduceRequestTelemetryConfigurator implements RouteConfigurator
         requestTags.forEach((k, v) -> sb.append(" ").append(k.getKey()).append("=").append(v));
         log.info(sb.toString());
     }
+
 }

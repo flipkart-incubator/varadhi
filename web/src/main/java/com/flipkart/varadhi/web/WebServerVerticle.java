@@ -7,6 +7,7 @@ import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
@@ -52,13 +53,8 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -491,12 +487,18 @@ public class WebServerVerticle extends AbstractVerticle {
      * @return a list of produce API route definitions
      */
     private List<RouteDefinition> getProduceApiRoutes() {
+        Function<String, Optional<VaradhiTopic>> topicLookup = null;
+        if (serviceRegistry.contains(VaradhiTopicService.class)) {
+            VaradhiTopicService topicService = serviceRegistry.get(VaradhiTopicService.class);
+            topicLookup = topicService::getTopic;
+        }
         return new ArrayList<>(
             new ProduceHandlers(
                 serviceRegistry.get(ProducerService.class),
                 configuration.getMessageConfiguration(),
                 verticleConfig.deployedRegion(),
-                cacheRegistry.getCache(ResourceType.PROJECT)
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                topicLookup
             ).get()
         );
     }
@@ -602,6 +604,10 @@ public class WebServerVerticle extends AbstractVerticle {
                 return;
             }
             services.put(clazz, Objects.requireNonNull(serviceSupplier.get(), "Service cannot be null"));
+        }
+
+        boolean contains(Class<?> clazz) {
+            return services.containsKey(clazz);
         }
 
         /**

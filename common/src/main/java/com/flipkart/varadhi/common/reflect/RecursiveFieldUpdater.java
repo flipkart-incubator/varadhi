@@ -2,6 +2,7 @@ package com.flipkart.varadhi.common.reflect;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -22,11 +23,18 @@ public class RecursiveFieldUpdater {
         BiFunction<String, V, V> updateFunction,
         String path
     ) {
-        if (obj == null)
+        if (obj == null) {
             return;
+        }
+        if (obj instanceof Enum) {
+            return;
+        }
 
         Class<?> clazz = obj.getClass();
         for (Field field : clazz.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             field.setAccessible(true);
             String fieldPath = path.isEmpty() ? field.getName() : path + "." + field.getName();
 

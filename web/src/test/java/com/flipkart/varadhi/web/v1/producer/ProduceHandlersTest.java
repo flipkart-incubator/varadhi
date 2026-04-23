@@ -8,6 +8,7 @@ import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.produce.ProducerService;
@@ -38,6 +39,7 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.entities.TopicState.*;
@@ -87,7 +89,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
+        request.putHeader(StdHeaders.get().callbackCodes().value(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         request.putHeader("x_header1", List.of("h1v1", "h1v2"));
         request.putHeader("X_HEADER2", "h2v1");
@@ -198,7 +200,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
                                                            .produceToTopic(msgCapture.capture(), eq(topicFullName));
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader(StdHeaders.get().msgId(), messageId);
-        request.putHeader(StdHeaders.get().callbackCodes(), "host1, host2");
+        request.putHeader(StdHeaders.get().callbackCodes().value(), "host1, host2");
         request.putHeader("RandomHeader", "value1");
         MultiMap multimap = new HeadersMultiMap();
         multimap.add("X_HEADER1", "h1v1");
@@ -320,7 +322,8 @@ public class ProduceHandlersTest extends ProduceTestBase {
             producerService,
             MessageHeaderUtils.getTestConfiguration(filterNonCompliantHeaders),
             deployedRegion,
-            projectCache
+            projectCache,
+            topicLookup
         );
         Multimap<String, String> copiedHeaders = produceHandlers.filterCompliantHeaders(headers);
 
@@ -360,7 +363,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(OVERSIZED_HEADER_KEY_LENGTH);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
         sendRequestAndParseResponse(
             request,
             payload,
@@ -375,7 +378,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         String randomString = RandomString.make(99);
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
         request.putHeader("X_MESSAGE_ID", randomString);
-        request.putHeader(StdHeaders.get().httpUri(), "host1, host2");
+        request.putHeader(StdHeaders.get().httpUri().value(), "host1, host2");
 
         // Create a body with a size greater than 5MB. 5MB = 5 * 1024 * 1024 bytes.
         byte[] largeBody = new byte[MAX_REQUEST_SIZE + 1]; // Byte array of size greater than 5MB
@@ -388,6 +391,60 @@ public class ProduceHandlersTest extends ProduceTestBase {
             "Request size exceeds allowed limit of 5242880 bytes.",
             WebTestBase.c(ErrorResponse.class)
         );
+    }
+
+    @Test
+    public void testQueueProduceRejectedWhenQueueHeadersMissing() {
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        sendRequestAndParseResponse(
+            request,
+            payload,
+            400,
+            "Missing required headers: " + StdHeaders.get().httpMethod().value(),
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    public void testQueueProduceRejectedWhenMessageIdMissing() {
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        request.putHeader(StdHeaders.get().httpMethod().value(), "POST");
+        sendRequestAndParseResponse(
+            request,
+            payload,
+            400,
+            "Missing required headers: " + StdHeaders.get().msgId(),
+            WebTestBase.c(ErrorResponse.class)
+        );
+    }
+
+    @Test
+    public void testQueueProduceSucceedsWithQueueAndBothHeaders() {
+        VaradhiTopic queueTopic = mock(VaradhiTopic.class);
+        Mockito.when(queueTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
+        Mockito.when(topicLookup.apply(eq(topicFullName))).thenReturn(Optional.of(queueTopic));
+        ProduceResult result = ProduceResult.of(messageId, Result.of(new DummyProducer.DummyOffset(10)));
+        doReturn(CompletableFuture.completedFuture(result)).when(producerService)
+                                                           .produceToTopic(msgCapture.capture(), eq(topicFullName));
+
+        HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);
+        request.putHeader(StdHeaders.get().msgId(), messageId);
+        request.putHeader(StdHeaders.get().httpUri().value(), "https://example.com/hook");
+        request.putHeader(StdHeaders.get().httpMethod().value(), "POST");
+        String messageIdObtained = sendRequestWithPayload(request, payload, WebTestBase.c(String.class));
+        Assertions.assertEquals(messageId, messageIdObtained);
+        verify(producerService).produceToTopic(any(), eq(topicFullName));
     }
 
 }
