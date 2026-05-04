@@ -89,12 +89,7 @@ public class RegionTests extends E2EBase {
         String missingRegion = "nonexistent-region";
 
         // GET non-existent region
-        makeGetRequest(
-            getRegionUri(missingRegion),
-            404,
-            String.format("Region(%s) not found.", missingRegion),
-            true
-        );
+        makeGetRequest(getRegionUri(missingRegion), 404, String.format("Region(%s) not found.", missingRegion), true);
 
         // DELETE non-existent region
         makeDeleteRequest(

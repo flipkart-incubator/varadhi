@@ -178,13 +178,13 @@ public class E2EBase {
      */
     public static void cleanupRegions(List<String> regionNames) {
         getRegions(makeListRequest(getRegionsUri(), EXPECTED_STATUS_OK)).stream()
-                                                                       .filter(r -> regionNames.contains(r.getName()))
-                                                                       .forEach(
-                                                                           r -> makeDeleteRequest(
-                                                                               getRegionUri(r.getName()),
-                                                                               EXPECTED_STATUS_204
-                                                                           )
-                                                                       );
+                                                                        .filter(r -> regionNames.contains(r.getName()))
+                                                                        .forEach(
+                                                                            r -> makeDeleteRequest(
+                                                                                getRegionUri(r.getName()),
+                                                                                EXPECTED_STATUS_204
+                                                                            )
+                                                                        );
     }
 
     public static void cleanupOrgs(List<Org> orgs) {

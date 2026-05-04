@@ -6,6 +6,8 @@ import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RegionStatus;
 import com.flipkart.varadhi.entities.Validatable;
 
+import java.util.Objects;
+
 /**
  * Request body for {@code POST /v1/regions}. Clients send only {@code name} and {@code status};
  * version and entity type are assigned by the server when persisting {@link Region}.
@@ -15,6 +17,7 @@ public record RegionCreateRequest(String name, RegionStatus status) implements V
 
     @Override
     public void validate() {
+        Objects.requireNonNull(name, "Region Name cannot be null");
         new Region(name, Region.INITIAL_VERSION, status).validate();
     }
 

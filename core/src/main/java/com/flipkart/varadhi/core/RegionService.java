@@ -5,9 +5,9 @@ import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.RegionStatus;
 import com.flipkart.varadhi.entities.web.RegionCreateRequest;
 import com.flipkart.varadhi.spi.db.RegionStore;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Service layer for {@link Region} metadata.
@@ -15,13 +15,10 @@ import java.util.Objects;
  * Delegates to {@link RegionStore}; use this class from handlers and other services instead of
  * accessing the store directly.
  */
+@RequiredArgsConstructor
 public class RegionService {
 
     private final RegionStore regionStore;
-
-    public RegionService(RegionStore regionStore) {
-        this.regionStore = Objects.requireNonNull(regionStore, "RegionStore cannot be null");
-    }
 
     /**
      * Persists a new region. The request must contain only name and status; version is assigned by the store.
