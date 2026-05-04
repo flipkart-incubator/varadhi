@@ -73,7 +73,13 @@ public class ProduceHandlers implements RouteProvider {
         this.msgConfig = msgConfig;
         this.produceRegion = produceRegion;
         this.projectCache = projectCache;
-        this.isQueue = fqn -> topicLookup == null || topicLookup.apply(fqn).map(ProduceHandlers::isQueue).orElse(false);
+        this.isQueue = fqn -> topicLookup == null || topicLookup.apply(fqn)
+                                                                .map(
+                                                                    topic -> topic.isCategory(
+                                                                        VaradhiTopic.TopicCategory.QUEUE
+                                                                    )
+                                                                )
+                                                                .orElse(false);
     }
 
     /**
