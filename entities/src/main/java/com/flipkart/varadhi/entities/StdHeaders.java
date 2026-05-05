@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,38 +30,42 @@ public class StdHeaders {
     }
 
     private final List<String> allowedPrefix;
-    private final String msgId;
-    private final String groupId;
-    private final String callbackCodes;
-    private final String requestTimeout;
-    private final String replyToHttpUri;
-    private final String replyToHttpMethod;
-    private final String replyTo;
-    private final String httpUri;
-    private final String httpMethod;
-    private final String httpContentType;
-    private final String producerIdentity;
-    private final String produceRegion;
-    private final String produceTimestamp;
+    private final HeaderSpec msgId;
+    private final HeaderSpec groupId;
+    private final HeaderSpec callbackCodes;
+    private final HeaderSpec requestTimeout;
+    private final HeaderSpec replyToHttpUri;
+    private final HeaderSpec replyToHttpMethod;
+    private final HeaderSpec replyTo;
+    private final HeaderSpec httpUri;
+    private final HeaderSpec httpMethod;
+    private final HeaderSpec httpContentType;
+    private final HeaderSpec producerIdentity;
+    private final HeaderSpec produceRegion;
+    private final HeaderSpec produceTimestamp;
+    /** All configured standard header specs, stable iteration order. */
+    private final List<HeaderSpec> allHeaderSpecs;
+    /** Uppercase header name strings derived from {@link #allHeaderSpecs} (for validation only). */
     private final List<String> allHeaders;
+    private final ProduceRequiredHeaderNames produceRequiredHeaderNames;
 
     @JsonCreator
     @VisibleForTesting
     public StdHeaders(
         @JsonProperty ("allowedPrefix") List<String> allowedPrefix,
-        @JsonProperty ("msgId") String msgId,
-        @JsonProperty ("groupId") String groupId,
-        @JsonProperty ("callbackCodes") String callbackCodes,
-        @JsonProperty ("requestTimeout") String requestTimeout,
-        @JsonProperty ("replyToHttpUri") String replyToHttpUri,
-        @JsonProperty ("replyToHttpMethod") String replyToHttpMethod,
-        @JsonProperty ("replyTo") String replyTo,
-        @JsonProperty ("httpUri") String httpUri,
-        @JsonProperty ("httpMethod") String httpMethod,
-        @JsonProperty ("httpContentType") String httpContentType,
-        @JsonProperty ("producerIdentity") String producerIdentity,
-        @JsonProperty ("produceRegion") String produceRegion,
-        @JsonProperty ("produceTimestamp") String produceTimestamp
+        @JsonProperty ("msgId") HeaderSpec msgId,
+        @JsonProperty ("groupId") HeaderSpec groupId,
+        @JsonProperty ("callbackCodes") HeaderSpec callbackCodes,
+        @JsonProperty ("requestTimeout") HeaderSpec requestTimeout,
+        @JsonProperty ("replyToHttpUri") HeaderSpec replyToHttpUri,
+        @JsonProperty ("replyToHttpMethod") HeaderSpec replyToHttpMethod,
+        @JsonProperty ("replyTo") HeaderSpec replyTo,
+        @JsonProperty ("httpUri") HeaderSpec httpUri,
+        @JsonProperty ("httpMethod") HeaderSpec httpMethod,
+        @JsonProperty ("httpContentType") HeaderSpec httpContentType,
+        @JsonProperty ("producerIdentity") HeaderSpec producerIdentity,
+        @JsonProperty ("produceRegion") HeaderSpec produceRegion,
+        @JsonProperty ("produceTimestamp") HeaderSpec produceTimestamp
     ) {
         this.allowedPrefix = Collections.unmodifiableList(allowedPrefix);
         this.msgId = msgId;
@@ -76,7 +81,7 @@ public class StdHeaders {
         this.producerIdentity = producerIdentity;
         this.produceRegion = produceRegion;
         this.produceTimestamp = produceTimestamp;
-        this.allHeaders = List.of(
+        this.allHeaderSpecs = List.of(
             this.msgId,
             this.groupId,
             this.callbackCodes,
@@ -91,6 +96,8 @@ public class StdHeaders {
             this.produceRegion,
             this.produceTimestamp
         );
+        this.allHeaders = this.allHeaderSpecs.stream().map(HeaderSpec::value).toList();
+        this.produceRequiredHeaderNames = ProduceRequiredHeaderNames.fromSpecs(this.allHeaderSpecs);
     }
 
     /*
@@ -104,60 +111,102 @@ public class StdHeaders {
         return this.allowedPrefix;
     }
 
+    /**
+     * Header name for message ID (for use in required-headers and request handling).
+     */
     public String msgId() {
+        return this.msgId.value();
+    }
+
+    /**
+     * Full spec for message-ID header (value + requiredBy).
+     */
+    public HeaderSpec msgIdSpec() {
         return this.msgId;
     }
 
-    public String groupId() {
+    public HeaderSpec groupIdSpec() {
         return this.groupId;
     }
 
-    public String callbackCodes() {
+    public String groupId() {
+        return this.groupId.value();
+    }
+
+    public HeaderSpec callbackCodes() {
         return this.callbackCodes;
     }
 
-    public String requestTimeout() {
+    public HeaderSpec requestTimeout() {
         return this.requestTimeout;
     }
 
-    public String replyToHttpUri() {
+    public HeaderSpec replyToHttpUri() {
         return this.replyToHttpUri;
     }
 
-    public String replyToHttpMethod() {
+    public HeaderSpec replyToHttpMethod() {
         return this.replyToHttpMethod;
     }
 
-    public String replyTo() {
+    public HeaderSpec replyTo() {
         return this.replyTo;
     }
 
-    public String httpUri() {
+    public HeaderSpec httpUri() {
         return this.httpUri;
     }
 
-    public String httpMethod() {
+    public HeaderSpec httpMethod() {
         return this.httpMethod;
     }
 
-    public String httpContentType() {
+    public HeaderSpec httpContentType() {
         return this.httpContentType;
     }
 
-    public String producerIdentity() {
+    public HeaderSpec producerIdentity() {
         return this.producerIdentity;
     }
 
-    public String produceRegion() {
+    public HeaderSpec produceRegion() {
         return this.produceRegion;
     }
 
-    public String produceTimestamp() {
+    public HeaderSpec produceTimestamp() {
         return this.produceTimestamp;
     }
 
     @JsonIgnore
     public List<String> getAllHeaderNames() {
         return allHeaders;
+    }
+
+    /**
+     * Cached required header name lists for produce: {@link ProduceRequiredHeaderNames#queueProduce()} (queue or All)
+     * vs {@link ProduceRequiredHeaderNames#standardProduce()} (All only).
+     */
+    public ProduceRequiredHeaderNames produceRequiredHeaderNames() {
+        return produceRequiredHeaderNames;
+    }
+
+    /**
+     * Single pass over header specs to build both required-name lists (stable {@link HeaderSpec#value()} order).
+     */
+    public record ProduceRequiredHeaderNames(List<String> queueProduce, List<String> standardProduce) {
+        private static ProduceRequiredHeaderNames fromSpecs(List<HeaderSpec> specs) {
+            List<String> queue = new ArrayList<>();
+            List<String> standard = new ArrayList<>();
+            for (HeaderSpec spec : specs) {
+                RequiredBy rb = spec.requiredBy();
+                if (rb.isRequiredOnQueueProduce()) {
+                    queue.add(spec.value());
+                }
+                if (rb.isRequiredOnProduce()) {
+                    standard.add(spec.value());
+                }
+            }
+            return new ProduceRequiredHeaderNames(List.copyOf(queue), List.copyOf(standard));
+        }
     }
 }

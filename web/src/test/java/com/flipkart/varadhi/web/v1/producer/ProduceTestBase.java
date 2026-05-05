@@ -13,6 +13,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.ext.web.Route;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Optional;
+import java.util.function.Function;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -24,6 +27,8 @@ public class ProduceTestBase extends WebTestBase {
     ProjectService projectService;
     OrgService orgService;
     VaradhiTopicService varadhiTopicService;
+    @SuppressWarnings ("unchecked")
+    Function<String, Optional<VaradhiTopic>> topicLookup;
     String deployedRegion = "region1";
 
     ArgumentCaptor<Message> msgCapture;
@@ -42,6 +47,8 @@ public class ProduceTestBase extends WebTestBase {
         orgService = mock(OrgService.class);
         producerService = mock(ProducerService.class);
         varadhiTopicService = mock(VaradhiTopicService.class);
+        topicLookup = mock(Function.class);
+        when(topicLookup.apply(any())).thenReturn(Optional.empty());
         telemetryConfigurator = new MsgProduceRequestTelemetryConfigurator(
             spanProvider,
             new SimpleMeterRegistry(),
@@ -54,7 +61,8 @@ public class ProduceTestBase extends WebTestBase {
             producerService,
             MessageHeaderUtils.getTestConfiguration(),
             deployedRegion,
-            projectCache
+            projectCache,
+            topicLookup
         );
         route = router.post("/projects/:project/topics/:topic/produce");
         msgCapture = ArgumentCaptor.forClass(Message.class);

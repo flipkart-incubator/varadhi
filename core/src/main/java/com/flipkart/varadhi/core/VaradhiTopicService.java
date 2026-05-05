@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Service class for managing Varadhi topics.
@@ -192,9 +194,7 @@ public class VaradhiTopicService {
      */
     public void handleHardDelete(VaradhiTopic varadhiTopic, RequestActionType actionRequest) {
         log.info("Hard deleting Varadhi topic: {}", varadhiTopic.getName());
-
         Project project = projectStore.get(varadhiTopic.getProjectName());
-
         try {
             varadhiTopic.markDeleting(actionRequest.actionCode(), "Starting Topic Deletion");
             topicStore.update(varadhiTopic);
@@ -293,6 +293,19 @@ public class VaradhiTopicService {
      */
     public boolean exists(String topicName) {
         return topicStore.exists(topicName);
+    }
+
+    /**
+     * Whether {@code topicFqn} exists and its stored category equals the expected one (e.g. {@link
+     * VaradhiTopic.TopicCategory#QUEUE} for queue produce header rules). Callers should use
+     * {@link VaradhiTopic#isCategory(VaradhiTopic.TopicCategory)} on the returned topic.
+     */
+    public Optional<VaradhiTopic> getTopic(String topicFqn) {
+        try {
+            return Optional.of(get(topicFqn));
+        } catch (ResourceNotFoundException e) {
+            return Optional.empty();
+        }
     }
 
     /**

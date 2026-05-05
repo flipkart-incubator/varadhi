@@ -597,6 +597,33 @@ class VaradhiTopicServiceTest {
         assertEquals(topicNames, allTopics);
     }
 
+    @Test
+    void getTopic_whenTopicDoesNotExist_returnsEmpty() {
+        String fqn = VaradhiTopic.fqn("p1", "q1");
+        when(topicStore.get(fqn)).thenThrow(ResourceNotFoundException.class);
+        assertFalse(varadhiTopicService.getTopic(fqn).isPresent());
+    }
+
+    @Test
+    void getTopic_whenStoredCategoryIsQueue_returnsTopicWithQueueCategory() {
+        String fqn = VaradhiTopic.fqn("p1", "q1");
+        when(topicStore.exists(fqn)).thenReturn(true);
+        VaradhiTopic topic = mock(VaradhiTopic.class);
+        when(topic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(true);
+        when(topicStore.get(fqn)).thenReturn(topic);
+        assertTrue(varadhiTopicService.getTopic(fqn).orElseThrow().isCategory(VaradhiTopic.TopicCategory.QUEUE));
+    }
+
+    @Test
+    void getTopic_whenStoredCategoryIsTopic_returnsTopicThatIsNotQueue() {
+        String fqn = VaradhiTopic.fqn("p1", "t1");
+        when(topicStore.exists(fqn)).thenReturn(true);
+        VaradhiTopic topic = mock(VaradhiTopic.class);
+        when(topic.isCategory(VaradhiTopic.TopicCategory.QUEUE)).thenReturn(false);
+        when(topicStore.get(fqn)).thenReturn(topic);
+        assertFalse(varadhiTopicService.getTopic(fqn).orElseThrow().isCategory(VaradhiTopic.TopicCategory.QUEUE));
+    }
+
     private VaradhiTopic createVaradhiTopicMock() {
         TopicResource topicResource = TopicResource.grouped(
             TOPIC_NAME,

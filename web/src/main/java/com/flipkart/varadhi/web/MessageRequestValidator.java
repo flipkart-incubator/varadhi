@@ -13,15 +13,16 @@ public class MessageRequestValidator {
      * 
      * @param msgConfig
      */
-    public static void ensureHeaderSemanticsAndSize(MessageConfiguration msgConfig, Message message) {
-        msgConfig.ensureRequiredHeaders(message.getHeaders());
+    public static void ensureHeaderSemanticsAndSize(MessageConfiguration msgConfig, Message message, boolean isQueue) {
+        msgConfig.ensureRequiredHeaders(message.getHeaders(), isQueue);
+        validateIdHeadersAndRequestSize(msgConfig, message);
+    }
 
-        validateIdHeader(msgConfig, StdHeaders.get().msgId(), message.getHeaders());
+    private static void validateIdHeadersAndRequestSize(MessageConfiguration msgConfig, Message message) {
         validateIdHeader(msgConfig, StdHeaders.get().groupId(), message.getHeaders());
+        validateIdHeader(msgConfig, StdHeaders.get().msgId(), message.getHeaders());
 
         int totalSizeBytes = message.getTotalSizeBytes();
-
-        // If the total size of the headerNames and body exceeds the allowed limit, throw an exception
         if (totalSizeBytes > msgConfig.getMaxRequestSize()) {
             throw new IllegalArgumentException(
                 String.format("Request size exceeds allowed limit of %d bytes.", msgConfig.getMaxRequestSize())

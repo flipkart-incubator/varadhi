@@ -2,6 +2,8 @@ package com.flipkart.varadhi.core.config;
 
 import java.util.List;
 
+import com.flipkart.varadhi.entities.HeaderSpec;
+import com.flipkart.varadhi.entities.RequiredBy;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -47,19 +49,19 @@ public class MessageConfigurationTest {
         return new MessageConfiguration(
             new StdHeaders(
                 prefixes,
-                "VARADHI_MESSAGE_ID",
-                "VARADHI_GROUP_ID",
-                "VARADHI_CALLBACK_CODES",
-                "VARADHI_REQUEST_TIMEOUT",
-                "VARADHI_REPLY_TO_HTTP_URI",
-                "VARADHI_REPLY_TO_HTTP_METHOD",
-                "VARADHI_REPLY_TO",
-                "VARADHI_HTTP_URI",
-                "VARADHI_HTTP_METHOD",
-                "VARADHI_CONTENT_TYPE",
-                "VARADHI_PRODUCE_IDENTITY",
-                "VARADHI_PRODUCE_REGION",
-                "VARADHI_PRODUCE_TIMESTAMP"
+                new HeaderSpec("VARADHI_MESSAGE_ID", RequiredBy.All),
+                new HeaderSpec("VARADHI_GROUP_ID", RequiredBy.None),
+                new HeaderSpec("VARADHI_CALLBACK_CODES", RequiredBy.None),
+                new HeaderSpec("VARADHI_REQUEST_TIMEOUT", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_URI", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO_HTTP_METHOD", RequiredBy.None),
+                new HeaderSpec("VARADHI_REPLY_TO", RequiredBy.None),
+                new HeaderSpec("VARADHI_HTTP_URI", RequiredBy.Queue),
+                new HeaderSpec("VARADHI_HTTP_METHOD", RequiredBy.Queue),
+                new HeaderSpec("VARADHI_CONTENT_TYPE", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_IDENTITY", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_REGION", RequiredBy.None),
+                new HeaderSpec("VARADHI_PRODUCE_TIMESTAMP", RequiredBy.None)
             ),
             100,
             2000,
@@ -72,16 +74,8 @@ public class MessageConfigurationTest {
         MessageConfiguration msgConfig = MessageHeaderUtils.getTestConfiguration();
         Multimap<String, String> varadhiHeaders = ArrayListMultimap.create();
         varadhiHeaders.put("Header1", "value1");
-        msgConfig.getRequiredHeaders()
-                 .stream()
-                 .filter(
-                     key -> !key.equals(msgConfig.getStdHeaders().msgId()) && !key.equals(
-                         msgConfig.getStdHeaders().produceRegion()
-                     )
-                 )
-                 .forEach(key -> varadhiHeaders.put(key, String.format("%s_sometext", key)));
         varadhiHeaders.put("Header2", "value2");
         varadhiHeaders.put("x_header1", "value1");
-        assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders));
+        assertThrows(IllegalArgumentException.class, () -> msgConfig.ensureRequiredHeaders(varadhiHeaders, false));
     }
 }

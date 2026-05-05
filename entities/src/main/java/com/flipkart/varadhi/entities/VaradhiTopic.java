@@ -160,4 +160,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
     }
+
+    /**
+     * Whether this topic's {@link #getTopicCategory() category} equals {@code category}.
+     *
+     * @param category the category to compare against; must not be {@code null}
+     * @return {@code true} if the topic's category equals {@code category}
+     */
+    public boolean isCategory(TopicCategory category) {
+        return this.topicCategory == category;
+    }
 }

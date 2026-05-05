@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -24,8 +25,6 @@ public class MessageConfiguration {
     @NotNull
     private final boolean filterNonCompliantHeaders;
 
-    private final List<String> requiredHeaders;
-
     @JsonCreator
     public MessageConfiguration(
         @JsonProperty ("headers") StdHeaders stdHeaders,
@@ -37,7 +36,6 @@ public class MessageConfiguration {
         this.maxIdHeaderSize = maxIdHeaderSize;
         this.maxRequestSize = maxRequestSize;
         this.filterNonCompliantHeaders = filterNonCompliantHeaders;
-        this.requiredHeaders = List.of(stdHeaders.msgId());
         validate();
     }
 
@@ -72,11 +70,19 @@ public class MessageConfiguration {
     /**
      * @param headers which must be normalized
      */
-    public void ensureRequiredHeaders(Multimap<String, String> headers) {
-        getRequiredHeaders().forEach(key -> {
+    public void ensureRequiredHeaders(Multimap<String, String> headers, boolean isQueue) {
+        List<String> missingHeaders = new ArrayList<>();
+        List<String> requiredHeaderNames = isQueue ?
+            stdHeaders.produceRequiredHeaderNames().queueProduce() :
+            stdHeaders.produceRequiredHeaderNames().standardProduce();
+        for (String key : requiredHeaderNames) {
             if (!headers.containsKey(key)) {
-                throw new IllegalArgumentException(String.format("Missing required header %s", key));
+                missingHeaders.add(key);
             }
-        });
+        }
+
+        if (!missingHeaders.isEmpty()) {
+            throw new IllegalArgumentException("Missing required headers: " + String.join(", ", missingHeaders));
+        }
     }
 }

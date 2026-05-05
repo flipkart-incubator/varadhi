@@ -144,6 +144,38 @@ class VaradhiTopicTest {
     }
 
     @Test
+    void isCategory_WithMatchingCategory_ReturnsTrue() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC));
+    }
+
+    @Test
+    void isCategory_WithDifferentCategory_ReturnsFalse() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE));
+    }
+
+    @Test
+    void isCategory_WithQueueTopic_MatchesQueueCategory() {
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            false,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.QUEUE
+        );
+
+        assertAll(
+            () -> assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)),
+            () -> assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC))
+        );
+    }
+
+    @Test
     void markInactive_ChangesStatusToInactive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 

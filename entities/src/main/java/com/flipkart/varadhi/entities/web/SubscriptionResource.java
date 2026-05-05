@@ -101,6 +101,7 @@ public class SubscriptionResource extends BaseResource implements Validatable {
         this.topic = topic;
         this.topicProject = topicProject;
         this.description = description;
+        this.grouped = grouped;
         this.endpoint = endpoint;
         this.retryPolicy = retryPolicy;
         this.consumptionPolicy = consumptionPolicy;
