@@ -211,10 +211,6 @@ public class ProduceHandlers implements RouteProvider {
         return message;
     }
 
-    private static boolean isQueue(VaradhiTopic topic) {
-        return topic.isCategory(VaradhiTopic.TopicCategory.QUEUE);
-    }
-
     /**
      * Converting headers to uppercase and filtering non-compliant ones.
      * This step is necessary as Vert.x's MultiMap is already case-insensitive,
