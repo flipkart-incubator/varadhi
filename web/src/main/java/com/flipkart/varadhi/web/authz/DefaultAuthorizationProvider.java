@@ -153,7 +153,12 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         addResourceContextForLeafNode(resourceContextTuples, action, segments);
         addResourceContextForProjectNode(resourceContextTuples, segments);
         addResourceContextForTeamNode(resourceContextTuples, segments);
-        addResourceContextForOrgNode(resourceContextTuples, segments);
+        // REGION_GET/UPDATE/DELETE use ResourceType.REGION; REGION_LIST uses ROOT (same pattern as ORG_LIST).
+        if (action.getResourceType() == ResourceType.REGION) {
+            addResourceContextForRegionNode(resourceContextTuples, segments);
+        } else {
+            addResourceContextForOrgNode(resourceContextTuples, segments);
+        }
 
         return resourceContextTuples;
     }
@@ -203,10 +208,32 @@ public class DefaultAuthorizationProvider implements AuthorizationProvider, Auto
         List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
         String[] segments
     ) {
+        if (segments.length == 0) {
+            return;
+        }
         resourceIdTuples.add(
             Pair.of(
                 ResourceType.ORG,
                 new ResourceContext(ResourceType.ORG, segments[0], "/orgs/%s".formatted(segments[0]))
+            )
+        );
+    }
+
+    /**
+     * Adds region-level IAM context for {@link ResourceAction}s whose {@link ResourceAction#getResourceType()} is
+     * {@link ResourceType#REGION} (single-segment path: region id).
+     */
+    private void addResourceContextForRegionNode(
+        List<Pair<ResourceType, ResourceContext>> resourceIdTuples,
+        String[] segments
+    ) {
+        if (segments.length == 0) {
+            return;
+        }
+        resourceIdTuples.add(
+            Pair.of(
+                ResourceType.REGION,
+                new ResourceContext(ResourceType.REGION, segments[0], "/regions/%s".formatted(segments[0]))
             )
         );
     }

@@ -15,6 +15,11 @@ roleDefinitions:
       - ORG_GET
       - ORG_LIST
       - ORG_PROJECT_MIGRATE
+      - REGION_CREATE
+      - REGION_UPDATE
+      - REGION_GET
+      - REGION_LIST
+      - REGION_DELETE
       - TEAM_CREATE
       - TEAM_UPDATE
       - TEAM_DELETE
@@ -37,6 +42,9 @@ roleDefinitions:
     permissions:
       - ORG_GET
       - ORG_LIST
+      - REGION_GET
+      - REGION_LIST
+      - REGION_UPDATE
       - TEAM_GET
       - TEAM_LIST
       - PROJECT_GET

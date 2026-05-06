@@ -3,6 +3,7 @@ package com.flipkart.varadhi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.Team;
@@ -53,6 +54,8 @@ public class E2EBase {
         return String.join("/", segments);
     }
 
+    // --- URI helpers ---
+
     public static String getOrgsUri() {
         return buildUri(VARADHI_BASE_URI, "v1", "orgs");
     }
@@ -79,6 +82,14 @@ public class E2EBase {
 
     public static String getProjectUri(Project project) {
         return buildUri(getProjectCreateUri(), project.getName());
+    }
+
+    public static String getRegionsUri() {
+        return buildUri(VARADHI_BASE_URI, "v1", "regions");
+    }
+
+    public static String getRegionUri(String regionName) {
+        return buildUri(getRegionsUri(), regionName);
     }
 
     public static String getTopicsUri(Project project) {
@@ -127,6 +138,8 @@ public class E2EBase {
         return invocation.post(Entity.entity(body, MediaType.APPLICATION_OCTET_STREAM_TYPE));
     }
 
+    // --- Response readers ---
+
     public static List<Org> getOrgs(Response response) {
         return response.readEntity(new GenericType<>() {
         });
@@ -142,6 +155,11 @@ public class E2EBase {
         });
     }
 
+    public static List<Region> getRegions(Response response) {
+        return response.readEntity(new GenericType<>() {
+        });
+    }
+
     public static List<String> getTopics(Response response) {
         return response.readEntity(new GenericType<>() {
         });
@@ -150,6 +168,23 @@ public class E2EBase {
     public static List<String> getSubscriptions(Response response) {
         return response.readEntity(new GenericType<>() {
         });
+    }
+
+    // --- Cleanup helpers ---
+
+    /**
+     * Deletes every region by name that currently exists. Regions are global (not scoped under an org),
+     * so cleanup uses name-based matching to keep test runs idempotent.
+     */
+    public static void cleanupRegions(List<String> regionNames) {
+        getRegions(makeListRequest(getRegionsUri(), EXPECTED_STATUS_OK)).stream()
+                                                                        .filter(r -> regionNames.contains(r.getName()))
+                                                                        .forEach(
+                                                                            r -> makeDeleteRequest(
+                                                                                getRegionUri(r.getName()),
+                                                                                EXPECTED_STATUS_204
+                                                                            )
+                                                                        );
     }
 
     public static void cleanupOrgs(List<Org> orgs) {
@@ -249,8 +284,21 @@ public class E2EBase {
         );
     }
 
+    // --- Request helpers ---
+
+    /** POST — request and response are the same type (e.g. Org, Team). */
     public static <T> T makeCreateRequest(String targetUrl, T entity, int expectedStatus) {
         return processRequest(makeHttpPostRequest(targetUrl, entity), expectedStatus, (Class<T>)entity.getClass());
+    }
+
+    /** POST — request body type differs from the response type (e.g. RegionCreateRequest → Region). */
+    public static <REQ, RES> RES makeCreateRequest(
+        String targetUrl,
+        REQ entity,
+        int expectedStatus,
+        Class<RES> responseClass
+    ) {
+        return processRequest(makeHttpPostRequest(targetUrl, entity), expectedStatus, responseClass);
     }
 
     public static <T> void makeCreateRequest(
@@ -320,10 +368,12 @@ public class E2EBase {
         processRequest(makeHttpDeleteRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
     }
 
+    /** PATCH — no body (legacy; sends empty JSON object). */
     public static void makePatchRequest(String targetUrl, int expectedStatus) {
         processRequest(makeHttpPatchRequest(targetUrl), expectedStatus);
     }
 
+    /** PATCH — no body with error assertion. */
     public static void makePatchRequest(
         String targetUrl,
         int expectedStatus,
@@ -332,6 +382,29 @@ public class E2EBase {
     ) {
         processRequest(makeHttpPatchRequest(targetUrl), expectedStatus, expectedResponse, isErrored);
     }
+
+    /** PATCH — with typed body; returns a typed response (e.g. RegionStatusUpdateRequest → Region). */
+    public static <REQ, RES> RES makePatchRequest(
+        String targetUrl,
+        REQ entity,
+        int expectedStatus,
+        Class<RES> responseClass
+    ) {
+        return processRequest(makeHttpPatchRequest(targetUrl, entity), expectedStatus, responseClass);
+    }
+
+    /** PATCH — with typed body and error assertion. */
+    public static <T> void makePatchRequest(
+        String targetUrl,
+        T entity,
+        int expectedStatus,
+        String expectedResponse,
+        boolean isErrored
+    ) {
+        processRequest(makeHttpPatchRequest(targetUrl, entity), expectedStatus, expectedResponse, isErrored);
+    }
+
+    // --- Low-level HTTP methods ---
 
     private static <T> T processRequest(Response response, int expectedStatus, Class<T> clazz) {
         assertNotNull(response);
@@ -395,12 +468,22 @@ public class E2EBase {
                      .delete();
     }
 
+    /** PATCH with no body — sends empty JSON object `{}`. */
     public static Response makeHttpPatchRequest(String targetUrl) {
         return CLIENT.target(targetUrl)
                      .request(MediaType.APPLICATION_JSON_TYPE)
                      .header(USER_ID_HEADER, SUPER_USER)
                      .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                      .method("PATCH", Entity.json("{}"));
+    }
+
+    /** PATCH with a typed body. */
+    public static <T> Response makeHttpPatchRequest(String targetUrl, T entity) {
+        return CLIENT.target(targetUrl)
+                     .request(MediaType.APPLICATION_JSON_TYPE)
+                     .header(USER_ID_HEADER, SUPER_USER)
+                     .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                     .method("PATCH", Entity.entity(entity, MediaType.APPLICATION_JSON_TYPE));
     }
 
     @Provider

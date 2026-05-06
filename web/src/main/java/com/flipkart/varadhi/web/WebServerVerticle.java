@@ -20,6 +20,11 @@ import com.flipkart.varadhi.web.configurators.MsgProduceRequestTelemetryConfigur
 import com.flipkart.varadhi.web.configurators.RequestBodyParsingConfigurator;
 import com.flipkart.varadhi.web.configurators.RequestTelemetryConfigurator;
 import com.flipkart.varadhi.web.subscription.dlq.DlqService;
+import com.flipkart.varadhi.core.OrgService;
+import com.flipkart.varadhi.core.ProjectService;
+import com.flipkart.varadhi.core.RegionService;
+import com.flipkart.varadhi.core.VaradhiSubscriptionService;
+import com.flipkart.varadhi.core.TeamService;
 import com.flipkart.varadhi.core.VaradhiTopicService;
 import com.flipkart.varadhi.spi.ConfigFileResolver;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
@@ -37,6 +42,14 @@ import com.flipkart.varadhi.web.routes.RouteConfigurator;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.v1.HealthCheckHandler;
 import com.flipkart.varadhi.web.v1.admin.*;
+import com.flipkart.varadhi.web.v1.admin.DlqHandlers;
+import com.flipkart.varadhi.web.v1.admin.OrgFilterHandler;
+import com.flipkart.varadhi.web.v1.admin.OrgHandlers;
+import com.flipkart.varadhi.web.v1.admin.ProjectHandlers;
+import com.flipkart.varadhi.web.v1.admin.RegionHandlers;
+import com.flipkart.varadhi.web.v1.admin.SubscriptionHandlers;
+import com.flipkart.varadhi.web.v1.admin.TeamHandlers;
+import com.flipkart.varadhi.web.v1.admin.TopicHandlers;
 import com.flipkart.varadhi.web.v1.authz.IamPolicyHandlers;
 import com.flipkart.varadhi.web.v1.producer.ProduceHandlers;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -224,6 +237,7 @@ public class WebServerVerticle extends AbstractVerticle {
         serviceRegistry.registerIfAbsent(OrgService.class, () -> new OrgService(metaStore.orgs(), metaStore.teams()));
         serviceRegistry.registerIfAbsent(TeamService.class, () -> new TeamService(metaStore));
         serviceRegistry.registerIfAbsent(ProjectService.class, () -> new ProjectService(metaStore));
+        serviceRegistry.registerIfAbsent(RegionService.class, () -> new RegionService(metaStore.regions()));
 
         // Initialize topic service
         serviceRegistry.registerIfAbsent(
@@ -477,6 +491,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 ).get()
             );
             routes.addAll(new OrgFilterHandler(serviceRegistry.get(OrgService.class)).get());
+            routes.addAll(new RegionHandlers(serviceRegistry.get(RegionService.class)).get());
         }
         return routes;
     }
