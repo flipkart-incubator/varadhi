@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.RegionStatus;
 import com.flipkart.varadhi.entities.web.RegionCreateRequest;
 import com.flipkart.varadhi.entities.web.RegionStatusUpdateRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,11 +31,11 @@ public class RegionTests extends E2EBase {
     @Test
     public void testRegionCRUD() {
         // Create two regions and verify the returned entity matches the request
-        Region created1 = makeCreateRequest(getRegionsUri(), region1Req, 200, Region.class);
+        Region created1 = makeCreateRequest(getRegionsUri(), region1Req, HttpResponseStatus.OK.code(), Region.class);
         Assertions.assertEquals(region1Req.name(), created1.getName());
         Assertions.assertEquals(region1Req.status(), created1.getStatus());
 
-        Region created2 = makeCreateRequest(getRegionsUri(), region2Req, 200, Region.class);
+        Region created2 = makeCreateRequest(getRegionsUri(), region2Req, HttpResponseStatus.OK.code(), Region.class);
         Assertions.assertEquals(region2Req.name(), created2.getName());
         Assertions.assertEquals(region2Req.status(), created2.getStatus());
 
@@ -42,44 +43,49 @@ public class RegionTests extends E2EBase {
         makeCreateRequest(
             getRegionsUri(),
             region1Req,
-            409,
+            HttpResponseStatus.CONFLICT.code(),
             String.format("Region(%s) already exists.", region1Req.name()),
             true
         );
 
         // Get by name
-        Region fetched = makeGetRequest(getRegionUri(region1Req.name()), Region.class, 200);
+        Region fetched = makeGetRequest(getRegionUri(region1Req.name()), Region.class, HttpResponseStatus.OK.code());
         Assertions.assertEquals(region1Req.name(), fetched.getName());
         Assertions.assertEquals(region1Req.status(), fetched.getStatus());
 
         // List must contain both regions
-        List<Region> allRegions = getRegions(makeListRequest(getRegionsUri(), 200));
+        List<Region> allRegions = getRegions(makeListRequest(getRegionsUri(), HttpResponseStatus.OK.code()));
         Assertions.assertTrue(allRegions.stream().anyMatch(r -> r.getName().equals(region1Req.name())));
         Assertions.assertTrue(allRegions.stream().anyMatch(r -> r.getName().equals(region2Req.name())));
 
         // Patch status: flip region1 to UNAVAILABLE
         RegionStatusUpdateRequest patchReq = new RegionStatusUpdateRequest(RegionStatus.UNAVAILABLE);
-        Region patched = makePatchRequest(getRegionUri(region1Req.name()), patchReq, 200, Region.class);
+        Region patched = makePatchRequest(
+            getRegionUri(region1Req.name()),
+            patchReq,
+            HttpResponseStatus.OK.code(),
+            Region.class
+        );
         Assertions.assertEquals(region1Req.name(), patched.getName());
         Assertions.assertEquals(RegionStatus.UNAVAILABLE, patched.getStatus());
 
         // Confirm patched status is persisted via GET
-        Region afterPatch = makeGetRequest(getRegionUri(region1Req.name()), Region.class, 200);
+        Region afterPatch = makeGetRequest(getRegionUri(region1Req.name()), Region.class, HttpResponseStatus.OK.code());
         Assertions.assertEquals(RegionStatus.UNAVAILABLE, afterPatch.getStatus());
 
         // Delete region1
-        makeDeleteRequest(getRegionUri(region1Req.name()), 204);
+        makeDeleteRequest(getRegionUri(region1Req.name()), HttpResponseStatus.NO_CONTENT.code());
 
         // GET after delete must return 404
         makeGetRequest(
             getRegionUri(region1Req.name()),
-            404,
+            HttpResponseStatus.NOT_FOUND.code(),
             String.format("Region(%s) not found.", region1Req.name()),
             true
         );
 
         // List after delete must not contain region1 but still contain region2
-        List<Region> regionsAfterDelete = getRegions(makeListRequest(getRegionsUri(), 200));
+        List<Region> regionsAfterDelete = getRegions(makeListRequest(getRegionsUri(), HttpResponseStatus.OK.code()));
         Assertions.assertFalse(regionsAfterDelete.stream().anyMatch(r -> r.getName().equals(region1Req.name())));
         Assertions.assertTrue(regionsAfterDelete.stream().anyMatch(r -> r.getName().equals(region2Req.name())));
     }
@@ -89,12 +95,17 @@ public class RegionTests extends E2EBase {
         String missingRegion = "nonexistent-region";
 
         // GET non-existent region
-        makeGetRequest(getRegionUri(missingRegion), 404, String.format("Region(%s) not found.", missingRegion), true);
+        makeGetRequest(
+            getRegionUri(missingRegion),
+            HttpResponseStatus.NOT_FOUND.code(),
+            String.format("Region(%s) not found.", missingRegion),
+            true
+        );
 
         // DELETE non-existent region
         makeDeleteRequest(
             getRegionUri(missingRegion),
-            404,
+            HttpResponseStatus.NOT_FOUND.code(),
             String.format("Region(%s) not found.", missingRegion),
             true
         );
@@ -104,17 +115,17 @@ public class RegionTests extends E2EBase {
         makePatchRequest(
             getRegionUri(missingRegion),
             patchReq,
-            404,
+            HttpResponseStatus.NOT_FOUND.code(),
             String.format("Region(%s) not found.", missingRegion),
             true
         );
 
         // Create region1 then verify a second create with same name fails
-        makeCreateRequest(getRegionsUri(), region1Req, 200, Region.class);
+        makeCreateRequest(getRegionsUri(), region1Req, HttpResponseStatus.OK.code(), Region.class);
         makeCreateRequest(
             getRegionsUri(),
             region1Req,
-            409,
+            HttpResponseStatus.CONFLICT.code(),
             String.format("Region(%s) already exists.", region1Req.name()),
             true
         );

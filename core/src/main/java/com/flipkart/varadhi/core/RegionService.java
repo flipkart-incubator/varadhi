@@ -43,7 +43,7 @@ public class RegionService {
     }
 
     /**
-     * Loads a region by id.
+     * Loads a region by region name.
      *
      * @param regionName metastore region name (see {@link Region#getName()})
      * @return the region

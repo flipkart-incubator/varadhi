@@ -149,7 +149,7 @@ private final Set<TopicTag> tags;                           // PROD, NON_PROD, H
   - `CONSUME_UNAVAILABLE` - Region available for produce but not consume (consume layer down)
   - `MSP_UNAVAILABLE` - Varadhi components are up but the **messaging stack** (e.g. Pulsar) is unavailable in the region; message-stack operations are not available while other availability checks may still reflect partial service
 - **Methods:**
-  - `boolean isMessageStackAvailable()` - `true` only for `AVAILABLE` (excludes `MSP_UNAVAILABLE`)
+  - `boolean isMessageStackAvailable()` - `true` for `AVAILABLE`, `PRODUCE_UNAVAILABLE`, and `CONSUME_UNAVAILABLE`; `false` for `UNAVAILABLE` and `MSP_UNAVAILABLE`
   - `boolean isProduceAvailable()` - Checks if produce operations are available
   - `boolean isConsumeAvailable()` - Checks if consume operations are available
   - `boolean isAvailable()` - Checks if region is fully available (`AVAILABLE` only)
