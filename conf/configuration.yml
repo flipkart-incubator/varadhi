@@ -2,7 +2,6 @@ deployedRegion: "default"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
-  region: default
   maxQps: 5000
   networkMBps: 30
 

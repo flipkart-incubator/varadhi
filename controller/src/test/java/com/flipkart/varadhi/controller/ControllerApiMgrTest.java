@@ -21,8 +21,6 @@ import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.NodeCapacity;
-import com.flipkart.varadhi.core.config.MemberConfig;
-import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.core.cluster.NodeProvider;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,8 +79,7 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity(),
-            new RegionName(MemberConfig.BOOTSTRAP_REGION)
+            new NodeCapacity()
         );
         ConsumerInfo consumerInfo = ConsumerInfo.from(memberInfo);
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
@@ -101,8 +98,7 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity(),
-            new RegionName(MemberConfig.BOOTSTRAP_REGION)
+            new NodeCapacity()
         );
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doReturn(CompletableFuture.failedFuture(new ReplyException(ReplyFailure.NO_HANDLERS, "Host not available.")))
@@ -124,8 +120,7 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity(),
-            new RegionName(MemberConfig.BOOTSTRAP_REGION)
+            new NodeCapacity()
         );
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doThrow(new RuntimeException("Some unknown failure.")).when(consumerApi).getConsumerInfo();
