@@ -101,6 +101,7 @@ varadhi:
       retryMaxBackOffInSeconds: 60
     member:
       roles: [ "Server", "Controller" ]
+      region: default
       cpuCount: 1
       networkMBps: 100
     ports:

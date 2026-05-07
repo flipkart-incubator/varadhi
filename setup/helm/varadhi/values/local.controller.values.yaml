@@ -25,6 +25,7 @@ varadhi:
     authorizationEnabled: true
     member:
       roles: [ "Controller" ]
+      region: default
       cpuCount: 1
       networkMBps: 100
 
