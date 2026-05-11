@@ -55,14 +55,6 @@ docker compose --profile dev -f setup/docker/compose.yml down
 docker compose --profile dev -f setup/docker/compose.yml down -v
 ```
 
-### Troubleshooting
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| `connection timed out: /10.5.5.3:6650` | Pulsar advertising Docker-internal IP | Ensure `PULSAR_ADVERTISED_ADDRESS=localhost` is set |
-| Pulsar healthcheck times out / OOMKilled | Docker Desktop memory too low | Increase Docker memory to 6+ GB |
-| `PROJECT(x) not found` after creating project | Async cache propagation delay | The `create_entities.sh` script handles this with polling |
-
 ## Integration Tests (E2E)
 
 ```bash
