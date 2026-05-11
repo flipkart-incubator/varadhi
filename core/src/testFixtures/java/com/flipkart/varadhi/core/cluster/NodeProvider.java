@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.core.cluster;
 
-import com.flipkart.varadhi.core.config.MemberConfig;
-import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.Assignment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +14,6 @@ public class NodeProvider {
     public static List<ConsumerNode> getConsumerNodes(int numNodes) {
         return getConsumerNodes(numNodes, getNodeCapacity(5000, 100000));
     }
-
-    public static final RegionName TEST_REGION = new RegionName(MemberConfig.BOOTSTRAP_REGION);
 
     public static List<ConsumerNode> getConsumerNodes(int numNodes, NodeCapacity capacity) {
         List<ConsumerNode> nodes = new ArrayList<>();
@@ -29,7 +26,7 @@ public class NodeProvider {
                         0,
                         new ComponentKind[] {ComponentKind.Consumer},
                         capacity,
-                        TEST_REGION
+                        RegionName.BOOTSTRAP_REGION
                     )
                 )
             );
@@ -39,7 +36,14 @@ public class NodeProvider {
 
     public static ConsumerNode getConsumerNode(String nodeName, NodeCapacity capacity) {
         return new ConsumerNode(
-            new MemberInfo(nodeName, "", 0, new ComponentKind[] {ComponentKind.Consumer}, capacity, TEST_REGION)
+            new MemberInfo(
+                nodeName,
+                "",
+                0,
+                new ComponentKind[] {ComponentKind.Consumer},
+                capacity,
+                RegionName.BOOTSTRAP_REGION
+            )
         );
     }
 

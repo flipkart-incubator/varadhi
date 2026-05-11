@@ -9,6 +9,13 @@ import java.util.Objects;
  */
 public record RegionName(String value) {
 
+    /**
+     * Special region name that is accepted during cluster bootstrapping when no regions have been registered in the
+     * metastore yet. Once at least one region exists in the metastore every node must be configured with a valid,
+     * registered region name.
+     */
+    public static final RegionName BOOTSTRAP_REGION = new RegionName("default");
+
     public RegionName {
         Objects.requireNonNull(value, "region name cannot be null");
         if (value.isBlank()) {

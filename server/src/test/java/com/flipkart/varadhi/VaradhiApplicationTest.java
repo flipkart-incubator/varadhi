@@ -4,7 +4,6 @@ import com.flipkart.varadhi.common.exceptions.InvalidConfigException;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.NodeCapacity;
-import com.flipkart.varadhi.core.config.MemberConfig;
 import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RegionStatus;
@@ -15,15 +14,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class VaradhiApplicationTest {
 
-    private static final RegionName BOOTSTRAP = new RegionName(MemberConfig.BOOTSTRAP_REGION);
     private static final RegionName KNOWN_REGION = new RegionName("dc1");
-    private static final RegionName UNKNOWN_REGION = new RegionName("dc2");
+    private static final RegionName UNKNOWN_REGION_NAME = new RegionName("dc2");
 
     private InMemoryMetaStore metaStore;
 
@@ -36,20 +32,20 @@ class VaradhiApplicationTest {
 
     @Test
     void validateMemberRegion_emptyStore_bootstrapRegion_passes() {
-        MemberInfo member = memberWith(BOOTSTRAP);
+        MemberInfo member = memberWith(RegionName.BOOTSTRAP_REGION);
         assertDoesNotThrow(() -> VaradhiApplication.validateMemberRegion(member, getAllRegions()));
     }
 
     @Test
     void validateMemberRegion_emptyStore_nonBootstrapRegion_throwsInvalidConfig() {
-        MemberInfo member = memberWith(UNKNOWN_REGION);
+        MemberInfo member = memberWith(UNKNOWN_REGION_NAME);
 
         InvalidConfigException ex = assertThrows(
             InvalidConfigException.class,
             () -> VaradhiApplication.validateMemberRegion(member, getAllRegions())
         );
         assertTrue(
-            ex.getMessage().contains(MemberConfig.BOOTSTRAP_REGION),
+            ex.getMessage().contains(RegionName.BOOTSTRAP_REGION.value()),
             "Error message should tell operator to use the bootstrap sentinel"
         );
         assertTrue(ex.getMessage().contains("bootstrapping"), "Error message should mention bootstrapping context");
@@ -68,14 +64,14 @@ class VaradhiApplicationTest {
     @Test
     void validateMemberRegion_storeHasRegions_configuredRegionMissing_throwsInvalidConfig() {
         registerRegion(KNOWN_REGION);
-        MemberInfo member = memberWith(UNKNOWN_REGION);
+        MemberInfo member = memberWith(UNKNOWN_REGION_NAME);
 
         InvalidConfigException ex = assertThrows(
             InvalidConfigException.class,
             () -> VaradhiApplication.validateMemberRegion(member, getAllRegions())
         );
         assertTrue(
-            ex.getMessage().contains(UNKNOWN_REGION.value()),
+            ex.getMessage().contains(UNKNOWN_REGION_NAME.value()),
             "Error message should name the misconfigured region"
         );
         assertTrue(
@@ -88,13 +84,13 @@ class VaradhiApplicationTest {
     void validateMemberRegion_storeHasRegions_bootstrapSentinelNotSpecial_throwsInvalidConfig() {
         // Once regions are provisioned the bootstrap sentinel is no longer a free pass
         registerRegion(KNOWN_REGION);
-        MemberInfo member = memberWith(BOOTSTRAP);
+        MemberInfo member = memberWith(RegionName.BOOTSTRAP_REGION);
 
         InvalidConfigException ex = assertThrows(
             InvalidConfigException.class,
             () -> VaradhiApplication.validateMemberRegion(member, getAllRegions())
         );
-        assertTrue(ex.getMessage().contains(BOOTSTRAP.value()));
+        assertTrue(ex.getMessage().contains(RegionName.BOOTSTRAP_REGION.value()));
     }
 
     @Test

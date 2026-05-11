@@ -92,7 +92,7 @@ public class VaradhiApplication {
         // Set up member info and core services
         CoreServices services = new CoreServices(config.base, configResolver);
 
-        MemberInfo memberInfo = getMemberInfo(config.base.getMember());
+        MemberInfo memberInfo = getMemberInfo(config.base.getMember(), config.base.getDeployedRegion());
         validateMemberRegion(memberInfo, services.getMetaStoreProvider().getMetaStore().regions().getAll());
 
         VaradhiZkClusterManager clusterManager = getClusterManager(config.base, memberInfo.hostname());
@@ -135,7 +135,7 @@ public class VaradhiApplication {
      * @param memberConfig the member configuration
      * @return member information object
      */
-    private static MemberInfo getMemberInfo(MemberConfig memberConfig) {
+    private static MemberInfo getMemberInfo(MemberConfig memberConfig, String region) {
         String hostName = HostUtils.getHostName();
         String hostAddress = HostUtils.getHostAddress();
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
@@ -147,7 +147,7 @@ public class VaradhiApplication {
             memberConfig.getClusterPort(),
             memberConfig.getRoles(),
             provisionedCapacity,
-            new RegionName(memberConfig.getRegion())
+            new RegionName(region)
         );
     }
 
@@ -171,7 +171,7 @@ public class VaradhiApplication {
      * Validates that the region configured in {@link MemberInfo} is registered in the metastore.
      * <p>
      * Bootstrapping exception: when the region store is empty (first-ever boot before any regions have been
-     * provisioned), the sentinel value {@value com.flipkart.varadhi.core.config.MemberConfig#BOOTSTRAP_REGION}
+     * provisioned), the sentinel value {@code com.flipkart.varadhi.entities.RegionName.BOOTSTRAP_REGION.name}
      * is accepted and a warning is logged. Any other name is rejected so a misconfigured node fails fast.
      * Once regions exist in the store the configured name must be present, otherwise startup is aborted.
      *
@@ -181,12 +181,12 @@ public class VaradhiApplication {
         String configuredRegion = memberInfo.region().value();
 
         if (registeredRegions.isEmpty()) {
-            if (!MemberConfig.BOOTSTRAP_REGION.equals(configuredRegion)) {
+            if (!RegionName.BOOTSTRAP_REGION.value().equals(configuredRegion)) {
                 throw new InvalidConfigException(
                     String.format(
                         "No regions are registered in the metastore (bootstrapping). "
                                   + "Set member.region to '%s' until regions are provisioned via the Region API.",
-                        MemberConfig.BOOTSTRAP_REGION
+                        RegionName.BOOTSTRAP_REGION.value()
                     )
                 );
             }
