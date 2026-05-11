@@ -1,6 +1,6 @@
 # base image for this should be jre based on instead of jdk.
 # Ubuntu 24.04.1 LTS
-FROM eclipse-temurin:21.0.5_11-jdk
+FROM jfrog.fkinternal.com/docker-hub/library/eclipse-temurin:sha256__263fcee35698f7f1febc329ddefdfabf7686732d907dc8ad22670aa4e41f0dc1
 ARG SKIP_CERT_CHECK=false
 ARG VARADHI_HOME=.
 ARG ZOOKEEPER_VERSION=3.6.0

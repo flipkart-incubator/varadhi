@@ -31,12 +31,44 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ./gradlew build test
 ```
 
-## Integration Tests
+## Local Development Setup
+
+```bash
+### It requires Apache Pulsar (message broker) and ZooKeeper (metadata store). Start them using Docker Compose:
+> **Note:** `PULSAR_ADVERTISED_ADDRESS=localhost` is required so that Pulsar advertises a host-reachable address.
+> Without this, the Varadhi server (running on your host) won't be able to connect to Pulsar's binary protocol port.
+
+PULSAR_ADVERTISED_ADDRESS=localhost docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 300
+
+### Start Server
+./gradlew run
+
+curl http://localhost:18488/v1/health-check
+
+### Create Sample Entities
+bash setup/create_entities.sh myorg myteam myproject mytopic
+
+### Stopping Dependencies
+docker compose --profile dev -f setup/docker/compose.yml down
+
+### To also remove data volumes (clean start next time):
+docker compose --profile dev -f setup/docker/compose.yml down -v
+```
+
+### Troubleshooting
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| `connection timed out: /10.5.5.3:6650` | Pulsar advertising Docker-internal IP | Ensure `PULSAR_ADVERTISED_ADDRESS=localhost` is set |
+| Pulsar healthcheck times out / OOMKilled | Docker Desktop memory too low | Increase Docker memory to 6+ GB |
+| `PROJECT(x) not found` after creating project | Async cache propagation delay | The `create_entities.sh` script handles this with polling |
+
+## Integration Tests (E2E)
 
 ```bash
 ./gradlew copyDependencies copyE2EConfig -x test
 
-docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg
+docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test --build-arg SKIP_CERT_CHECK=true
 
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 

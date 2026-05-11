@@ -58,7 +58,7 @@ services:
     volumes:
       - pulsarconf:/pulsar/conf
       - pulsardata:/pulsar/data
-    command: bin/pulsar standalone --advertised-address 10.5.5.3
+    command: bin/pulsar standalone --advertised-address ${PULSAR_ADVERTISED_ADDRESS:-10.5.5.3}
     restart: "no"
     healthcheck:
       test: ./bin/pulsar-admin tenants list
@@ -69,11 +69,11 @@ services:
 
 
   zookeeper:
-    image: zookeeper:3.9.2
+    image: bitnamilegacy/zookeeper:3.9.2
     container_name: zookeeper
     environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
       ZOO_4LW_COMMANDS_WHITELIST: "*"
-      ZOO_ADMINSERVER_ENABLED: false
     profiles: [ "test", "dev", "zk" , "dev-metric"]
     networks:
       hostnet:
