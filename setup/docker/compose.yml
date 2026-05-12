@@ -69,7 +69,7 @@ services:
 
 
   zookeeper:
-    image: bitnamilegacy/zookeeper:3.9.2
+    image: zookeeper:3.9.2
     container_name: zookeeper
     environment:
       ALLOW_ANONYMOUS_LOGIN: "yes"
