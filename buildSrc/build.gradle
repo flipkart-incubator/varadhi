@@ -11,5 +11,5 @@ repositories {
 dependencies {
     // Makes the com.vanniktech.maven.publish plugin available to convention plugins
     // so they can apply it via the plugins { } block.
-    implementation "com.vanniktech:gradle-maven-publish-plugin:0.30.0"
+    implementation "com.vanniktech:gradle-maven-publish-plugin:0.33.0"
 }
