@@ -72,8 +72,8 @@ services:
     image: zookeeper:3.9.2
     container_name: zookeeper
     environment:
-      ALLOW_ANONYMOUS_LOGIN: "yes"
       ZOO_4LW_COMMANDS_WHITELIST: "*"
+      ZOO_ADMINSERVER_ENABLED: false
     profiles: [ "test", "dev", "zk" , "dev-metric"]
     networks:
       hostnet:
