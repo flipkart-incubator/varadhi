@@ -17,6 +17,14 @@ import lombok.Getter;
 @JsonIgnoreProperties (ignoreUnknown = true)
 public class AppConfiguration implements Validatable {
 
+    /**
+     * Deployment region this node belongs to.
+     * <p>
+     * Must match a region registered in the metastore. During initial cluster bootstrapping (no regions in the
+     * metastore yet) the value {} is accepted so the first node can start without
+     * pre-existing region metadata. Actual region names must be provisioned via the Region API and this field must be
+     * updated before the node restarts.
+     */
     @NotBlank (message = "Deployed region must be specified")
     private String deployedRegion;
 
