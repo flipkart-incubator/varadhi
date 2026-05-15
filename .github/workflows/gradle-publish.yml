@@ -39,7 +39,7 @@ jobs:
     # The com.vanniktech.maven.publish plugin reads these as Gradle project properties.
     # ORG_GRADLE_PROJECT_<name> env vars are automatically exposed by Gradle as project properties.
     - name: Publish to Maven Central repository
-      run: ./gradlew publishToMavenCentral --no-configuration-cache
+      run: ./gradlew publishToMavenCentral
       env:
         ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
