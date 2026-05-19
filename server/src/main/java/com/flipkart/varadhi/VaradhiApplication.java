@@ -51,6 +51,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -89,8 +90,11 @@ public class VaradhiApplication {
         StdHeaders.init(config.base.getMessageConfiguration().getStdHeaders());
 
         // Set up member info and core services
-        MemberInfo memberInfo = getMemberInfo(config.base.getMember());
         CoreServices services = new CoreServices(config.base, configResolver);
+
+        MemberInfo memberInfo = getMemberInfo(config.base.getMember(), config.base.getDeployedRegion());
+        validateMemberRegion(memberInfo, services.getMetaStoreProvider().getMetaStore().regions().getAll());
+
         VaradhiZkClusterManager clusterManager = getClusterManager(config.base, memberInfo.hostname());
 
         Future<Pair<Vertx, Map<ComponentKind, Verticle>>> initFuture = createClusteredVertx(
@@ -131,7 +135,7 @@ public class VaradhiApplication {
      * @param memberConfig the member configuration
      * @return member information object
      */
-    private static MemberInfo getMemberInfo(MemberConfig memberConfig) {
+    private static MemberInfo getMemberInfo(MemberConfig memberConfig, String region) {
         String hostName = HostUtils.getHostName();
         String hostAddress = HostUtils.getHostAddress();
         int networkKBps = memberConfig.getNetworkMBps() * 1000;
@@ -142,7 +146,8 @@ public class VaradhiApplication {
             hostAddress,
             memberConfig.getClusterPort(),
             memberConfig.getRoles(),
-            provisionedCapacity
+            provisionedCapacity,
+            new RegionName(region)
         );
     }
 
@@ -160,6 +165,50 @@ public class VaradhiApplication {
         ).setSendTimeout(config.getDeliveryOptions().getTimeoutMs());
 
         return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, host);
+    }
+
+    /**
+     * Validates that the region configured in {@link MemberInfo} is registered in the metastore.
+     * <p>
+     * Bootstrapping exception: when the region store is empty (first-ever boot before any regions have been
+     * provisioned), the sentinel value {@code com.flipkart.varadhi.entities.RegionName.BOOTSTRAP_REGION.name}
+     * is accepted and a warning is logged. Any other name is rejected so a misconfigured node fails fast.
+     * Once regions exist in the store the configured name must be present, otherwise startup is aborted.
+     *
+     * @throws InvalidConfigException if the region name is invalid given the current metastore state
+     */
+    static void validateMemberRegion(MemberInfo memberInfo, List<Region> registeredRegions) {
+        String configuredRegion = memberInfo.region().value();
+
+        if (registeredRegions.isEmpty()) {
+            if (!RegionName.BOOTSTRAP_REGION.value().equals(configuredRegion)) {
+                throw new InvalidConfigException(
+                    String.format(
+                        "No regions are registered in the metastore (bootstrapping). "
+                                  + "Set member.region to '%s' until regions are provisioned via the Region API.",
+                        RegionName.BOOTSTRAP_REGION.value()
+                    )
+                );
+            }
+            log.warn(
+                "No regions registered in metastore; member '{}' starting in bootstrap mode with region '{}'.",
+                memberInfo.hostname(),
+                configuredRegion
+            );
+            return;
+        }
+
+        boolean regionExists = registeredRegions.stream().anyMatch(r -> r.getName().equals(configuredRegion));
+        if (!regionExists) {
+            throw new InvalidConfigException(
+                String.format(
+                    "Configured region '%s' is not registered in the metastore. Known regions: %s.",
+                    configuredRegion,
+                    registeredRegions.stream().map(Region::getName).toList()
+                )
+            );
+        }
+        log.debug("Member '{}' region '{}' validated against metastore.", memberInfo.hostname(), configuredRegion);
     }
 
     /**

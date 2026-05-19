@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class MemberConfig {
+
     @NotEmpty
     private ComponentKind[] roles;
     private int clusterPort;
