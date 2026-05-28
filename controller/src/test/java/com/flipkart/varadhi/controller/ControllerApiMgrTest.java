@@ -1,12 +1,24 @@
 package com.flipkart.varadhi.controller;
 
-import static com.flipkart.varadhi.common.TestHelper.*;
-import static com.flipkart.varadhi.core.cluster.NodeProvider.getAssignment;
-import static com.flipkart.varadhi.core.cluster.NodeProvider.getConsumerNodes;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.controller.config.OperationsConfig;
+import com.flipkart.varadhi.core.cluster.*;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
+import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.SubscriptionTestUtils;
+import com.flipkart.varadhi.entities.SubscriptionUnitShard;
+import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
+import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import io.vertx.core.eventbus.ReplyException;
+import io.vertx.core.eventbus.ReplyFailure;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,31 +28,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.flipkart.varadhi.core.cluster.ComponentKind;
-import com.flipkart.varadhi.core.cluster.ConsumerInfo;
-import com.flipkart.varadhi.core.cluster.ConsumerNode;
-import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.core.cluster.NodeCapacity;
-import com.flipkart.varadhi.core.cluster.NodeProvider;
-import com.flipkart.varadhi.spi.db.SubscriptionStore;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
-import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.controller.config.OperationsConfig;
-import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.SubscriptionTestUtils;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.cluster.*;
-import com.flipkart.varadhi.spi.db.MetaStore;
-import com.flipkart.varadhi.spi.db.MetaStoreException;
-import com.flipkart.varadhi.spi.db.OpStore;
-
-import io.vertx.core.eventbus.ReplyException;
-import io.vertx.core.eventbus.ReplyFailure;
+import static com.flipkart.varadhi.common.TestHelper.*;
+import static com.flipkart.varadhi.core.cluster.NodeProvider.getAssignment;
+import static com.flipkart.varadhi.core.cluster.NodeProvider.getConsumerNodes;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 public class ControllerApiMgrTest {
 
@@ -79,7 +73,8 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity()
+            new NodeCapacity(),
+            RegionName.BOOTSTRAP_REGION
         );
         ConsumerInfo consumerInfo = ConsumerInfo.from(memberInfo);
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
@@ -98,7 +93,8 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity()
+            new NodeCapacity(),
+            RegionName.BOOTSTRAP_REGION
         );
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doReturn(CompletableFuture.failedFuture(new ReplyException(ReplyFailure.NO_HANDLERS, "Host not available.")))
@@ -120,7 +116,8 @@ public class ControllerApiMgrTest {
             "",
             0,
             new ComponentKind[] {ComponentKind.Consumer},
-            new NodeCapacity()
+            new NodeCapacity(),
+            RegionName.BOOTSTRAP_REGION
         );
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doThrow(new RuntimeException("Some unknown failure.")).when(consumerApi).getConsumerInfo();

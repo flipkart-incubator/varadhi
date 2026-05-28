@@ -2,7 +2,8 @@
 # They are provided by a third-party and are governed by
 # separate terms of service, privacy policy, and support
 # documentation.
-# This workflow will build a package using Gradle and then publish it to GitHub packages when a release is created
+# This workflow will build a package using Gradle and then publish it to Maven Central.
+# Requires secrets: MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_TOKEN, FOSS_GPG_KEY, FOSS_GPG_PASSPHRASE
 # For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#Publishing-using-gradle
 
 name: Gradle Publish
@@ -19,7 +20,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
@@ -32,15 +33,15 @@ jobs:
       with:
         gradle-version: "8.10.2"
 
-    - name: Execute Gradle build 
+    - name: Execute Gradle build
       run: ./gradlew clean build
 
-    # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
-    # the publishing section of your build.gradle
-    - name: Publish to Clojars repository
-      run: ./gradlew publish
+    # The com.vanniktech.maven.publish plugin reads these as Gradle project properties.
+    # ORG_GRADLE_PROJECT_<name> env vars are automatically exposed by Gradle as project properties.
+    - name: Publish to Maven Central repository
+      run: ./gradlew publishToMavenCentral
       env:
-        CLOJARS_USERNAME: flipkartoss
-        CLOJARS_PASSWORD: ${{ secrets.DEPLOY_TOKEN }}
-        GPG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        GPG_SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PWD }}
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.FOSS_GPG_KEY }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.FOSS_GPG_PASSPHRASE }}
