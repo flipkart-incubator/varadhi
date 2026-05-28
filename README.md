@@ -31,27 +31,24 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ./gradlew build test
 ```
 
-## Local Development Setup
+## Dev Setup
+Start Apache Pulsar (message broker) and ZooKeeper (metadata store) with Docker Compose, then run the Varadhi server on your host with Gradle.
+
+> **Note:** `PULSAR_ADVERTISED_ADDRESS=localhost` is required so that Pulsar advertises a host-reachable address. Without this, the server (running on your host) will not be able to connect to Pulsar's binary protocol port.
 
 ```bash
-### It requires Apache Pulsar (message broker) and ZooKeeper (metadata store). Start them using Docker Compose:
-> **Note:** `PULSAR_ADVERTISED_ADDRESS=localhost` is required so that Pulsar advertises a host-reachable address.
-> Without this, the Varadhi server (running on your host) won't be able to connect to Pulsar's binary protocol port.
-
 PULSAR_ADVERTISED_ADDRESS=localhost docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 300
+```
 
-### Start Server
-./gradlew run
-
-curl http://localhost:18488/v1/health-check
+`./gradlew run` starts a long-running server (it does not return until you stop it). Run the commands below in **another terminal** while it is running.
 
 ### Create Sample Entities
-bash setup/create_entities.sh myorg myteam myproject mytopic
+```bash
+bash setup/create_entities.sh default_org team default_project default_topic
+```
 
 ### Stopping Dependencies
-docker compose --profile dev -f setup/docker/compose.yml down
-
-### To also remove data volumes (clean start next time):
+```bash
 docker compose --profile dev -f setup/docker/compose.yml down -v
 ```
 
@@ -60,7 +57,7 @@ docker compose --profile dev -f setup/docker/compose.yml down -v
 ```bash
 ./gradlew copyDependencies copyE2EConfig -x test
 
-docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg ENV=test --build-arg SKIP_CERT_CHECK=true
+docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg SKIP_CERT_CHECK=true
 
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 
