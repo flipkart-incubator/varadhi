@@ -70,7 +70,7 @@ sequenceDiagram
     OpExec->>ConsumerApi: dispatch shard op (event bus)
     Note over ConsumerApi,OpMgr: ▶ 3. Report back
     ConsumerApi-->>OpMgr: update(shard-op state)
-    OpMgr->>ZK: update op state; retry on failure
+    OpMgr->>ZK: update op state, retry on failure
 ```
 
 **Notes**: operations are **serialized per subscription** (ordering key) and run in parallel across subscriptions (`operation-manager` thread pool). A newer operation preempts a pending retry of an older one. A persist failure on the failure path can block that subscription's queue head — see `operation-manager` runtime characteristics in L3.
@@ -95,7 +95,7 @@ sequenceDiagram
     participant ZK as zookeeper
 
     AuthN->>AuthN: run pluggable handler → set USER_CONTEXT (else 401)
-    AuthZ->>AuthZ: build resource hierarchy (org→…→leaf); superuser bypass
+    AuthZ->>AuthZ: build resource hierarchy (org→…→leaf), superuser bypass
     AuthZ->>Iam: get role bindings for subject (built-in provider only)
     Iam->>ZK: read IAM policy
     ZK-->>Iam: policy record
@@ -136,8 +136,8 @@ sequenceDiagram
     Note over Ingress,Prod: → flow.auth.request-authorization (TOPIC_PRODUCE)
     Ingress->>Prod: produce(message) [non-blocking / event loop]
     Note over Prod,Pulsar: ▶ 1. Validate & resolve
-    Prod->>Prod: filter/validate headers; resolve topic (shared.resource-cache)
-    Prod->>Prod: org NFR filter; capacity check
+    Prod->>Prod: filter/validate headers, resolve topic (shared.resource-cache)
+    Prod->>Prod: org NFR filter, capacity check
     Note over Prod,Pulsar: ▶ 2. Publish
     Prod->>Pulsar: produceAsync (cached producer)
     Pulsar-->>Prod: offset / failure
@@ -179,7 +179,7 @@ sequenceDiagram
 sequenceDiagram
     box varadhi-consumer
         participant Poller as varadhi-consumer.message-poller
-        participant Loop as varadhi-consumer.message-consumption
+        participant Engine as varadhi-consumer.message-consumption
         participant FC as varadhi-consumer.flow-control
         participant Deliver as varadhi-consumer.message-delivery
         participant Fail as varadhi-consumer.message-failure-routing
@@ -189,20 +189,20 @@ sequenceDiagram
 
     Poller->>Pulsar: poll main + retry topics
     Pulsar-->>Poller: message batch
-    Poller->>Loop: next batch (tracked for ack)
-    Note over Loop,FC: ▶ 1. Gate (parallelism + error-rate throttle)
-    Loop->>FC: acquire delivery slot
+    Poller->>Engine: next batch (tracked for ack)
+    Note over Engine,FC: ▶ 1. Gate (parallelism + error-rate throttle)
+    Engine->>FC: acquire delivery slot
     Note over Deliver,Endpoint: ▶ 2. Deliver (HTTP push)
-    Loop->>Deliver: deliver(message)
+    Engine->>Deliver: deliver(message)
     Deliver->>Endpoint: HTTP request
     Endpoint-->>Deliver: 2xx | non-2xx
     alt delivery success (2xx)
-        Loop->>Poller: ack (commit offset)
+        Engine->>Poller: ack (commit offset)
     else delivery failure (non-2xx / error)
         Note over Fail,Pulsar: ▶ 3. Escalate
-        Loop->>Fail: route failed message
+        Engine->>Fail: route failed message
         Fail->>Pulsar: produce to next queue (retry₁→…→retryₙ→DLQ)
-        Loop->>Poller: ack original (moved on)
+        Engine->>Poller: ack original (moved on)
     end
 ```
 
@@ -342,7 +342,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    subgraph varadhi-controller
+    subgraph ctrl["varadhi-controller"]
         Coord[varadhi-controller.subscription-coordinator]
         Assign[varadhi-controller.assignment-manager]
         OpExec[varadhi-controller.operation-executors]
