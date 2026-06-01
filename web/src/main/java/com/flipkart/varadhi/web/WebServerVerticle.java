@@ -252,6 +252,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize controller client and related services
         ControllerApi controllerClient = new ControllerRestClient(messageExchange);
+        serviceRegistry.registerIfAbsent(ControllerApi.class, () -> controllerClient);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
@@ -467,6 +468,13 @@ public class WebServerVerticle extends AbstractVerticle {
             new DlqHandlers(
                 serviceRegistry.get(DlqService.class),
                 serviceRegistry.get(VaradhiSubscriptionService.class),
+                cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
+        );
+
+        routes.addAll(
+            new com.flipkart.varadhi.web.v1.admin.TopicFailoverHandlers(
+                serviceRegistry.get(ControllerApi.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
             ).get()
         );

@@ -341,6 +341,15 @@ public class ControllerVerticle extends AbstractVerticle {
         // Register send handler for updates
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
 
+        // Pod -> controller failover acks (send semantics: fire-and-forget on the wire).
+        messageRouter.sendHandler(ROUTE_CONTROLLER, "failoverAck", handler::failoverAck);
+
+        // REST -> controller failover request endpoints.
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "createFailover", handler::createFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "getFailover", handler::getFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "abortFailover", handler::abortFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, "listActiveFailovers", handler::listActiveFailovers);
+
         log.info("Controller API handlers registered successfully");
     }
 
