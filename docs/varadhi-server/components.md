@@ -232,7 +232,7 @@ Serves dead-letter browse and unsideline operations for a subscription. Because 
 
 #### Notes for Coding Agents
 
-- This component is the source of the direct `varadhi-server → varadhi-consumer` edge that is **not yet reflected** in `docs/containers.md` (flagged for an out-of-band L2 update). If you change DLQ fan-out, update L2.
+- This component is the source of the direct `varadhi-server → varadhi-consumer` edge (DLQ browse/unsideline over the event bus), reflected in `docs/containers.md`. If you change DLQ fan-out, keep that L2 edge in sync.
 - DLQ fan-out targets shards by assignment; correctness depends on the controller/consumer shard model — coordinate changes with those containers.
 
 ---

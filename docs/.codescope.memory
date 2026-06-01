@@ -50,9 +50,6 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - The HTTP-entry component is named `http-ingress`, because it is the container's single HTTP entry point rather than a multi-backend API gateway.
 - The DLQ component is named `dlq-service` (matching the `DlqService` class), because its DLQ fan-out is request-scoped, not standing orchestration.
 
-### Corrections
-- A direct `varadhi-server → varadhi-consumer` interaction exists — DLQ browse/unsideline over the event bus via `DlqService`/`ConsumerClientFactoryImpl` — and is currently missing from `docs/containers.md`.
-
 ## Components — varadhi-consumer
 
 ### Scope
@@ -67,6 +64,13 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 ### Scope (exclusion)
 - Group-ordering code (`consumer.ordering.*`, `GroupedMessageSrc`, `GroupedProcessingLoop`) is excluded from the component model, because it is unwired — `VaradhiConsumerImpl#connectUnsafe` throws for grouped subscriptions.
 
-### Corrections
-- `varadhi-consumer` consumes the main + retry topics and produces to the retry + DLQ topics (it does not consume the DLQ), correcting `docs/containers.md` wording that it consumes RQ/DLQ.
-- `varadhi-consumer` does not access the metastore directly — it uses ZooKeeper only as cluster manager (membership), and shard/subscription metadata arrives in the controller's `ShardOperation.StartData` — correcting L2's "metadata lookups".
+## Components — varadhi-controller
+
+### Scope
+- varadhi-controller's own code is the `controller` module (assignment, operation executors, events, cluster API), because `core`/`spi`/`entities` and the bootstrap are shared; the assignment *strategy* is own while core allocation primitives are shared.
+
+### Boundaries
+- `subscription-coordinator` (`ControllerApiMgr`) is a component separate from `controller-api`, because its coordination logic (state validation, op creation, membership→reassign) is substantial — unlike the consumer's thin ApiMgr which was folded in.
+- `operation-executors` is a component separate from `operation-manager`, because the executors own the consumer-dispatch side effect and each operation's steps, distinct from the generic queue/retry/persist engine.
+- The assignment strategy (`AssignmentStrategy`/`LeastAssignedStrategy`) stays inside `assignment-manager`, because the manager and its single strategy are cohesive and the strategy is not a cross-cutting gate applied elsewhere.
+- `event-distributor` is a Cross-Cutting Provider, because it provides cluster-wide cache-coherence infrastructure (watch metastore → fan out to all nodes).
