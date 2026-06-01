@@ -2,6 +2,7 @@ package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 import static com.flipkart.varadhi.db.ZNode.SHARD_OP;
 import static com.flipkart.varadhi.db.ZNode.SUB_OP;
+import static com.flipkart.varadhi.db.ZNode.TOPIC_FAILOVER_OP;
 
 /**
  * Implementation of the Operation Store using ZooKeeper as the underlying storage.
@@ -36,6 +38,7 @@ public class OpStoreImpl implements OpStore {
     private void ensureEntityTypePathExists() {
         zkMetaStore.createZNode(ZNode.ofEntityType(SUB_OP));
         zkMetaStore.createZNode(ZNode.ofEntityType(SHARD_OP));
+        zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC_FAILOVER_OP));
     }
 
     /**
@@ -159,5 +162,46 @@ public class OpStoreImpl implements OpStore {
     public void updateShardOp(ShardOperation operation) {
         ZNode znode = ZNode.ofShardOperation(operation.getName());
         zkMetaStore.updateZNodeWithData(znode, operation);
+    }
+
+    /* ============== Topic Failover Operations ============== */
+
+    @Override
+    public void createTopicFailoverOp(TopicFailoverOperation operation) {
+        zkMetaStore.createZNodeWithData(ZNode.ofTopicFailoverOp(operation.getName()), operation);
+    }
+
+    @Override
+    public TopicFailoverOperation getTopicFailoverOp(String operationId) {
+        return zkMetaStore.getZNodeDataAsPojo(ZNode.ofTopicFailoverOp(operationId), TopicFailoverOperation.class);
+    }
+
+    @Override
+    public void updateTopicFailoverOp(TopicFailoverOperation operation) {
+        zkMetaStore.updateZNodeWithData(ZNode.ofTopicFailoverOp(operation.getName()), operation);
+    }
+
+    @Override
+    public void deleteTopicFailoverOp(String operationId) {
+        zkMetaStore.deleteZNode(ZNode.ofTopicFailoverOp(operationId));
+    }
+
+    @Override
+    public boolean topicFailoverOpExists(String operationId) {
+        return zkMetaStore.zkPathExist(ZNode.ofTopicFailoverOp(operationId));
+    }
+
+    @Override
+    public List<TopicFailoverOperation> getAllTopicFailoverOps() {
+        // TODO: paginated / on-demand listing once we expect many concurrent failovers.
+        return zkMetaStore.listChildren(ZNode.ofEntityType(TOPIC_FAILOVER_OP))
+                          .stream()
+                          .map(this::getTopicFailoverOp)
+                          .toList();
+    }
+
+    @Override
+    public List<TopicFailoverOperation> getActiveTopicFailoverOps() {
+        return getAllTopicFailoverOps().stream().filter(op -> !op.isDone()).toList();
     }
 }

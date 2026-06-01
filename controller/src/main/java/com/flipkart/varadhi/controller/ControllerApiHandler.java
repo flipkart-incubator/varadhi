@@ -1,10 +1,12 @@
 package com.flipkart.varadhi.controller;
 
+import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -57,5 +59,46 @@ public class ControllerApiHandler {
             log.error("Shard update ({}) failed {}.", opResponse, throwable.getMessage());
             return null;
         });
+    }
+
+    /**
+     * Pod -> controller failover ack. Wired into the cluster bus as a
+     * {@code messageRouter.sendHandler(...)} (fire-and-forget on the wire);
+     * routing inside the controller goes through {@link OperationMgr#recordFailoverAck}
+     * which dispatches to the live {@code StageAwaiter}.
+     */
+    public void failoverAck(ClusterMessage message) {
+        FailoverStatusUpdate update = message.getData(FailoverStatusUpdate.class);
+        try {
+            controllerMgr.recordFailoverAck(update);
+        } catch (Exception e) {
+            log.error("Failed to record failover ack {}: {}", update, e.getMessage(), e);
+        }
+    }
+
+    public CompletableFuture<ResponseMessage> createFailover(ClusterMessage message) {
+        ControllerRestClient.TopicFailoverWireRequest req = message.getRequest(
+            ControllerRestClient.TopicFailoverWireRequest.class
+        );
+        return controllerMgr.createTopicFailover(req.topicFqn(), req.request(), req.requestedBy())
+                            .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> getFailover(ClusterMessage message) {
+        String topicFqn = message.getRequest(String.class);
+        return controllerMgr.getTopicFailover(topicFqn)
+                            .thenApply(opt -> message.getResponseMessage(opt.orElse(null)));
+    }
+
+    public CompletableFuture<ResponseMessage> abortFailover(ClusterMessage message) {
+        ControllerRestClient.TopicFailoverWireRequest req = message.getRequest(
+            ControllerRestClient.TopicFailoverWireRequest.class
+        );
+        return controllerMgr.abortTopicFailover(req.topicFqn(), req.requestedBy())
+                            .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> listActiveFailovers(ClusterMessage message) {
+        return controllerMgr.listActiveTopicFailovers().thenApply(message::getResponseMessage);
     }
 }

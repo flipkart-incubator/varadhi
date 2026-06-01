@@ -1,8 +1,12 @@
 package com.flipkart.varadhi.controller;
 
+import com.flipkart.varadhi.controller.failover.StageAwaiter;
+import com.flipkart.varadhi.controller.failover.StageAwaiterRegistry;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -24,6 +28,13 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
+
+    /**
+     * Optional dependency wired post-construct (so the existing constructor signature
+     * keeps working). Required only for topic-failover ops: {@link #recordFailoverAck}
+     * looks up the per-stage barrier here.
+     */
+    private volatile StageAwaiterRegistry stageAwaiterRegistry;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
         this.opStore = opStore;
@@ -202,6 +213,88 @@ public class OperationMgr {
     void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         opStore.createSubOp(subOp);
         enqueue(subOp, opExecutor);
+    }
+
+    /* ============== Topic Failover Operations ============== */
+
+    /**
+     * Wire the awaiter registry. Called once during controller bootstrap, before
+     * any topic-failover op is enqueued. Calling it more than once replaces the
+     * binding (intended only for test reset).
+     */
+    public void setStageAwaiterRegistry(StageAwaiterRegistry registry) {
+        this.stageAwaiterRegistry = registry;
+    }
+
+    public StageAwaiterRegistry getStageAwaiterRegistry() {
+        return stageAwaiterRegistry;
+    }
+
+    /**
+     * Enqueue an in-flight failover op for execution. Mirrors {@link #enqueue} but for
+     * {@link TopicFailoverOperation}; OpTask ordering and retry semantics are reused.
+     */
+    public void enqueueTopicFailoverOp(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        OpTask opTask = new OpTask(opExecutor, t -> opStore.updateTopicFailoverOp((TopicFailoverOperation)t), op);
+        enqueueOpTask(opTask);
+    }
+
+    /**
+     * Persist the op (untracked) and enqueue it. Callers typically also create the
+     * FTO atomically in the same multi-txn beforehand — see {@code TopicFailoverOpExecutor}.
+     */
+    public void createAndEnqueueTopicFailoverOp(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        opStore.createTopicFailoverOp(op);
+        enqueueTopicFailoverOp(op, opExecutor);
+    }
+
+    /**
+     * Persist the latest in-memory state of a topic-failover op to ZK. Called by the
+     * executor at each stage transition so that REST {@code GET .../failover} reads
+     * the freshest snapshot.
+     */
+    public void persistTopicFailoverOp(TopicFailoverOperation op) {
+        opStore.updateTopicFailoverOp(op);
+    }
+
+    /**
+     * Funnel pod -> controller acks into the live {@link StageAwaiter} for
+     * {@code (opId, stage)}. Drops the ack (with a log line) if no awaiter is
+     * currently expecting one — typically because the controller already timed
+     * out or the op completed.
+     */
+    public void recordFailoverAck(FailoverStatusUpdate update) {
+        if (stageAwaiterRegistry == null) {
+            log.warn("recordFailoverAck called before StageAwaiterRegistry was wired; dropping {}", update);
+            return;
+        }
+        StageAwaiter awaiter = stageAwaiterRegistry.get(update.getOpId(), update.getStage());
+        if (awaiter == null) {
+            log.info("No live awaiter for opId={} stage={}; dropping ack from {}", update.getOpId(), update.getStage(), update.getHostname());
+            return;
+        }
+        if (awaiter.fenceVersion() != update.getFenceVersion()) {
+            log.info(
+                "Stale fence on ack: opId={} stage={} host={} ackFence={} awaiterFence={}; dropping",
+                update.getOpId(),
+                update.getStage(),
+                update.getHostname(),
+                update.getFenceVersion(),
+                awaiter.fenceVersion()
+            );
+            return;
+        }
+        awaiter.recordAck(update.getHostname(), update.isOk(), update.getErrorMsg());
+    }
+
+    /** Returns every in-flight topic-failover op. Used by leader-election rehydrate. */
+    public List<TopicFailoverOperation> getActiveTopicFailoverOps() {
+        return opStore.getActiveTopicFailoverOps();
+    }
+
+    /** Loads a single topic-failover op directly from the store. */
+    public TopicFailoverOperation getTopicFailoverOp(String operationId) {
+        return opStore.getTopicFailoverOp(operationId);
     }
 
     public void submitShardOp(ShardOperation shardOp, boolean isRetry) {

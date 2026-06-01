@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.Region;
 import com.flipkart.varadhi.entities.Team;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverTransitionObject;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
@@ -23,6 +24,7 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 import lombok.SneakyThrows;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,6 +41,7 @@ public class InMemoryMetaStore implements MetaStore {
     private final ConcurrentMap<String, byte[]> topics = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, byte[]> subscriptions = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, byte[]> regions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, byte[]> topicFailovers = new ConcurrentHashMap<>();
 
     @SneakyThrows
     private <T> byte[] toBytes(T object) {
@@ -343,6 +346,35 @@ public class InMemoryMetaStore implements MetaStore {
                 throw new MetaStoreException("Topic does not exist: " + topicName);
             }
             topics.remove(topicName);
+        }
+
+        @Override
+        public void createFailover(FailoverTransitionObject fto) {
+            if (topicFailovers.containsKey(fto.getName())) {
+                throw new MetaStoreException("Failover already exists: " + fto.getName());
+            }
+            topicFailovers.put(fto.getName(), toBytes(fto));
+        }
+
+        @Override
+        public Optional<FailoverTransitionObject> getFailover(String topicFqn) {
+            byte[] b = topicFailovers.get(topicFqn);
+            return b == null ? Optional.empty() : Optional.of(fromBytes(b, FailoverTransitionObject.class));
+        }
+
+        @Override
+        public boolean hasFailover(String topicFqn) {
+            return topicFailovers.containsKey(topicFqn);
+        }
+
+        @Override
+        public void deleteFailover(String topicFqn) {
+            topicFailovers.remove(topicFqn);
+        }
+
+        @Override
+        public List<FailoverTransitionObject> getAllActiveFailovers() {
+            return topicFailovers.values().stream().map(b -> fromBytes(b, FailoverTransitionObject.class)).toList();
         }
     }
 

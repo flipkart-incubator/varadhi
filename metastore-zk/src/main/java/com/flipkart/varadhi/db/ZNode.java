@@ -51,6 +51,17 @@ public final class ZNode {
     public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation", "%s");
     public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent", "%s");
 
+    /*
+     *   Topic failover pointer/L2 entity. Name is the parent topic FQN so per-topic
+     *   uniqueness is enforced by ZK znode creation; lives under a flat dir to make
+     *   "list all active failovers" cheap.
+     */
+    public static final ZNodeKind TOPIC_FAILOVER = new ZNodeKind("TopicFailover", "%s");
+    /* Same as above but for subscription failovers (future use). */
+    public static final ZNodeKind SUB_FAILOVER = new ZNodeKind("SubFailover", "%s");
+    /* Orchestration entity for topic failover ops. Name is the operationId (UUID). */
+    public static final ZNodeKind TOPIC_FAILOVER_OP = new ZNodeKind("TopicFailoverOperation", "%s");
+
     private final String name;
     private final String kind;
     private final String path;
@@ -114,6 +125,22 @@ public final class ZNode {
 
     public static ZNode ofEntityChange(String changeNodeName) {
         return new ZNode(changeNodeName, EVENT.kind(), EVENT.resolvePath(ENTITIES_BASE_PATH, changeNodeName));
+    }
+
+    public static ZNode ofTopicFailover(String topicFqn) {
+        return new ZNode(topicFqn, TOPIC_FAILOVER.kind(), TOPIC_FAILOVER.resolvePath(ENTITIES_BASE_PATH, topicFqn));
+    }
+
+    public static ZNode ofSubFailover(String subFqn) {
+        return new ZNode(subFqn, SUB_FAILOVER.kind(), SUB_FAILOVER.resolvePath(ENTITIES_BASE_PATH, subFqn));
+    }
+
+    public static ZNode ofTopicFailoverOp(String operationId) {
+        return new ZNode(
+            operationId,
+            TOPIC_FAILOVER_OP.kind(),
+            TOPIC_FAILOVER_OP.resolvePath(ENTITIES_BASE_PATH, operationId)
+        );
     }
 
     public static ZNode ofEntityType(ZNodeKind kind) {

@@ -47,8 +47,21 @@ public class MessageExchange {
         }
     }
 
+    /**
+     * Fire-and-forget broadcast to every consumer registered for
+     * {@code <routeName>.<apiName>.publish}. Unlike {@link #send}/{@link #request}
+     * there is no per-delivery acknowledgement; failures are logged but not surfaced
+     * to the caller. The returned future completes synchronously once the message
+     * has been handed off to the Vert.x event bus (publish is non-blocking).
+     */
     public void publish(String routeName, String apiName, ClusterMessage msg) {
-        throw new UnsupportedOperationException("publish not implemented");
+        String apiPath = getPath(routeName, apiName, RouteMethod.PUBLISH);
+        try {
+            vertxEventBus.publish(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions);
+            log.debug("publish({}, {}) dispatched.", apiPath, msg.getId());
+        } catch (Exception e) {
+            log.error("publish({}, {}) failed: {}", apiPath, msg.getId(), e.getMessage());
+        }
     }
 
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
