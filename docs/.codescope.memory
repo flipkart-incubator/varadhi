@@ -74,3 +74,12 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - `operation-executors` is a component separate from `operation-manager`, because the executors own the consumer-dispatch side effect and each operation's steps, distinct from the generic queue/retry/persist engine.
 - The assignment strategy (`AssignmentStrategy`/`LeastAssignedStrategy`) stays inside `assignment-manager`, because the manager and its single strategy are cohesive and the strategy is not a cross-cutting gate applied elsewhere.
 - `event-distributor` is a Cross-Cutting Provider, because it provides cluster-wide cache-coherence infrastructure (watch metastore → fan out to all nodes).
+
+## Flows
+
+### Scope & modularity
+- The ~30 admin endpoints are documented as one `pattern.control-plane-request` (not per-endpoint flows), because they share an identical ingress→auth→handler→entity-service→metastore path differing only in handler/entity.
+- start/stop/unsideline/reassign are documented as one `pattern.subscription-operation`, because they share the coordinator→operation-manager→executor→consumer→report path differing only in the executor and assign/unassign direction.
+- Request authn+authz is documented once as `flow.auth.request-authorization` and referenced, because it is an identical sub-path of every authenticated server route (control-plane + produce).
+- `flow.subscription.start` is documented as the canonical instance of `pattern.subscription-operation`; stop/unsideline/reassign are not given separate diagrams because they only vary the executor.
+- Trivial/lifecycle flows (health-check, node-bootstrap, controller-leadership, subscription-state-query) are excluded, because the user scoped flows to patterns + central/deviating flows.
