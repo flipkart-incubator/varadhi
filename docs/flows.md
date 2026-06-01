@@ -38,7 +38,10 @@ sequenceDiagram
     Ingress-->>Admin: HTTP response
 ```
 
-**Notes**: control-plane handlers run **blocking on the Vert.x worker pool** (`http-ingress`); the behaviour-chain order (authn → hierarchy → authz) is architecturally significant. `authorization` reads role bindings via `iam-policy-management` only when the built-in provider is configured.
+**Notes / runtime**:
+- Control-plane handlers run **blocking on the Vert.x worker pool** (`http-ingress`) — worker-pool saturation throttles *all* control-plane throughput (blast radius), independent of the produce event-loop path.
+- The behaviour-chain order (authn → hierarchy → authz) is architecturally significant; auth is **fail-closed** (401/403). `authorization` reads role bindings via `iam-policy-management` only when the built-in provider is configured.
+- **Availability**: writes require ZooKeeper (no fallback); reads of org/project/topic can be served from `shared.resource-cache`, so reads survive a brief metastore blip while writes do not.
 
 ---
 
@@ -73,7 +76,10 @@ sequenceDiagram
     OpMgr->>ZK: update op state, retry on failure
 ```
 
-**Notes**: operations are **serialized per subscription** (ordering key) and run in parallel across subscriptions (`operation-manager` thread pool). A newer operation preempts a pending retry of an older one. A persist failure on the failure path can block that subscription's queue head — see `operation-manager` runtime characteristics in L3.
+**Notes / runtime**:
+- Operations are **serialized per subscription** (ordering key) and run in parallel across subscriptions (`operation-manager` thread pool). A newer operation preempts a pending retry of an older one.
+- A persist failure on the failure path can **head-of-line-block that subscription's queue** — see `operation-manager` runtime characteristics in L3.
+- **SPOF**: all operations run on the single active controller (no leader election) — a controller outage pauses all subscription operations until restart, when in-flight ops are re-queued during leadership state-restore.
 
 ---
 
@@ -163,9 +169,10 @@ sequenceDiagram
 | Pulsar publish fails | `varadhi-server.produce-service` | 500 | |
 
 #### Runtime Characteristics
-- **Performance shape**: the hot path; the only **non-blocking / event-loop** route — blocking work here stalls the event loop.
-- **Eventually consistent**: topic/project/org lookups come from `shared.resource-cache`, refreshed via `flow.cache.entity-event-propagation`; a just-created topic may briefly 404 until the cache catches up.
-- **What blocks**: produce availability depends on Pulsar; the producer is cached with an access-based TTL.
+- **Availability**: topic/project/org are read from the in-process `shared.resource-cache`, so produce keeps serving metadata during a **ZooKeeper outage** (fail-open reads) — it hard-fails only if **Pulsar** (the write target) is down. But authorization (`varadhi-server.authorization`) reads IAM policy from its **own** metastore connection with no cache, so an authz-metastore outage rejects produce (fail-closed) even though the produce path itself wouldn't need ZK.
+- **Performance shape**: the system's hot path and the **only non-blocking / event-loop** route — must stay async to Pulsar; blocking work here stalls the event loop for all in-flight produces. Producers are cached (Caffeine, access-TTL) so steady state avoids producer setup. Per-topic capacity policy throttles (429) by design.
+- **Consistency / durability**: **at-least-once with no dedup** — a client retry after an ambiguous response creates a duplicate; durability is whatever Pulsar acks. For grouped topics, produce hashes by GroupId to a partition (produce-side ordering only — end-to-end ordered *delivery* is inactive, consumer grouped path unwired).
+- **Eventually consistent**: a just-created topic can briefly 404 on a node until `flow.cache.entity-event-propagation` refreshes that node's cache.
 
 ---
 
@@ -225,9 +232,10 @@ sequenceDiagram
 | Failure-path produce slow/failing | `varadhi-consumer.message-failure-routing` | in-flight backs up → consumption slows | backpressure |
 
 #### Runtime Characteristics
-- **What blocks**: all shard processing on a node runs on a **single `execution-context` thread** — a blocking/slow task stalls every shard on that node.
-- **Performance shape**: bounded by `flow-control` parallelism and `maxInFlightMessages` backpressure; retry topics are consumed with a fixed delay.
-- **Delivery guarantee**: **at-least-once** — endpoints must be idempotent. Per-GroupId ordering is **not** active (grouped consumption is unwired).
+- **Blast radius (node-level)**: every shard on a node shares **one `execution-context` thread** and **one `HttpClient`** — a blocking task or a slow/stalled subscriber endpoint contends with, and can starve, every other shard on that node. There is no per-subscription isolation within a node.
+- **Availability / degradation**: endpoint failures degrade gracefully — non-2xx routes the message to retry→DLQ rather than erroring, and a rising error rate trips `flow-control`'s dynamic throttle (intentional brownout). But the failure path **also writes to Pulsar**, so if Pulsar is unavailable the retry/DLQ produce can't drain, in-flight backs up, and `maxInFlightMessages` backpressure halts consumption for that shard.
+- **Consistency / durability**: **at-least-once** — the offset is acked only after the delivery outcome is decided (delivered, or moved to retry/DLQ), so a crash between push and ack redelivers; endpoints must be idempotent. Per-GroupId ordering is **not** active (grouped unwired). The DLQ is terminal (no automatic redelivery).
+- **Performance shape**: throughput is bounded by `flow-control` parallelism and `maxInFlightMessages`; retry topics are consumed with a fixed delay; shutdown blocks while draining in-flight.
 
 ---
 
@@ -283,9 +291,10 @@ sequenceDiagram
 | Shard start dispatch fails | `varadhi-controller.operation-executors` | shard-op failed → op retry | per `RetryPolicy` |
 
 #### Runtime Characteristics
-- **What blocks**: operations for the same subscription are **serialized** (`operation-manager` ordering key); a stuck op (e.g. failure-path persist error) blocks that subscription's queue.
-- **Eventually consistent**: acceptance is async — the HTTP caller gets an operation handle; shards come online as executors complete. Subscription state is assembled by querying consumers.
-- `stop`, `unsideline`, `reassign` follow the same pattern; only the executor and assign/unassign direction differ.
+- **Blast radius / SPOF**: all subscription operations run on the **single active controller** (no leader election yet) — if it is down, no start/stop/unsideline happens until it restarts. Within the controller, ops are **serialized per subscription**; a stuck op (e.g. an `OpStore` write failure on the failure path) head-of-line-blocks *that subscription's* queue only — other subscriptions proceed in parallel (bounded by `maxConcurrentOps`).
+- **Availability / recovery**: shard-dispatch failures to consumers retry with backoff (`RetryPolicy`); on controller restart, leadership state-restore re-queues in-flight operations and drops assignments of departed consumers. Recovery of already-failed operations beyond restart is a known gap.
+- **Consistency / correctness**: assignments (`AssignmentStore`) and operations (`OpStore`) are persisted in ZooKeeper; assignment is idempotent (skips already-assigned shards). Partial starts are **not rolled back** — if some shards fail, the rest stay assigned/running and the op is retried.
+- **Performance shape**: acceptance is async (caller gets an operation handle); shards come online as executors complete; subscription state is assembled by querying each shard's consumer. `stop`/`unsideline`/`reassign` share this profile (executor + assign/unassign direction differ).
 
 ---
 
@@ -328,9 +337,10 @@ sequenceDiagram
 | A node leaves mid-event | `varadhi-controller.event-distributor` | removed as participant | unblocks the event |
 
 #### Runtime Characteristics
-- **What blocks**: an event commits (and the source change is marked processed) **only after every participating node acknowledges** it — a stuck node delays that event's completion.
-- **Eventually consistent**: this is the propagation mechanism behind `shared.resource-cache` staleness; produce/admin reads on other nodes see a change only after this completes.
-- **Performance shape**: per-member virtual-thread senders + a single committer; fan-out is concurrent across nodes.
+- **Blast radius (cluster-wide)**: the committer processes one event at a time and waits for **all** nodes to ack before advancing, so a single slow/unreachable node **head-of-line-blocks propagation for the entire cluster** until that node leaves (and is cleaned up) or shutdown. And because there is a single controller with no failover, a controller outage means **no propagation at all**.
+- **Availability / degradation**: lagging nodes are retried per-node with backoff (Failsafe); a node that leaves is dropped as a participant, unblocking the event. Reads **fail-open on staleness** — `varadhi-server`/`varadhi-consumer` keep serving from their last-known `shared.resource-cache` while propagation is delayed or halted (so a controller outage degrades freshness, not availability).
+- **Consistency**: "applied only after all-ack" gives strong convergence *when healthy* but trades availability for it (above). UPSERT refreshes / INVALIDATE evicts a cache entry; the staleness window equals propagation latency — unbounded if a node is stuck.
+- **Performance shape**: per-member virtual-thread senders fan out concurrently; the single committer thread is the serialization point.
 
 ---
 
@@ -372,9 +382,10 @@ flowchart TD
 | Reassign op fails | `varadhi-controller.operation-manager` | retried | per `RetryPolicy` |
 
 #### Runtime Characteristics
-- **What blocks**: reassignment runs through `pattern.subscription-operation`, so per-subscription serialization applies; assignment mutations are single-threaded in `assignment-manager`.
-- **Performance shape**: rebalance cost scales with the departed node's shard count; each orphaned shard is an independent reassign operation.
-- **Note**: there is **no leader election** — a single active controller is assumed, so rebalance is driven by that one controller (see memory / L2).
+- **Availability / detection latency**: rebalance is triggered by a cluster-membership change, which depends on the **ZooKeeper session timeout (~60s configured)** — a crashed consumer's shards stay **down until the session expires and reassignment completes**. And since rebalance runs on the **single controller with no leader election**, a controller outage means no rebalance happens at all.
+- **Blast radius**: a departing node's shards are all unavailable until reassigned and restarted on survivors; reassignments contend for the **single-threaded `assignment-manager`** and the per-subscription op queues. If no surviving node has capacity, shards stay **silently unassigned** — a delivery gap with no error surfaced.
+- **Consistency / recovery**: assignments are idempotent and persisted in `AssignmentStore`; in-memory node capacity is rebuilt from the store + consumer info on controller restart. Each orphaned shard is an independent reassign op (parallel across subscriptions).
+- **Performance shape**: rebalance cost scales with the departed node's shard count.
 
 ---
 
