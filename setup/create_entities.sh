@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-BASE_URL="http://localhost:18488"
-MAX_RETRIES=5
-RETRY_INTERVAL=1
+BASE_URL="${BASE_URL:-http://localhost:18488}"
+MAX_RETRIES="${MAX_RETRIES:-5}"
+RETRY_INTERVAL="${RETRY_INTERVAL:-1}"
 
 # 4 params: org, team, project, topic
 if [ "$#" -ne 4 ]; then
@@ -14,7 +14,7 @@ wait_for_resource() {
   local url=$1
   local name=$2
   for i in $(seq 1 $MAX_RETRIES); do
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" --header 'x_user_id: thanos' "$url")
+    STATUS=$(curl -sS --connect-timeout 3 --max-time 5 -o /dev/null -w "%{http_code}" --header 'x_user_id: thanos' "$url")
     if [ "$STATUS" = "200" ]; then
       echo "$name is ready"
       return 0

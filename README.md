@@ -40,7 +40,10 @@ Start Apache Pulsar (message broker) and ZooKeeper (metadata store) with Docker 
 PULSAR_ADVERTISED_ADDRESS=localhost docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 300
 ```
 
-`./gradlew run` starts a long-running server (it does not return until you stop it). Run the commands below in **another terminal** while it is running.
+Starts a long-running server (it does not return until you stop it). Run the commands below in **another terminal** while it is running.
+```bash
+./gradlew run
+```
 
 ### Create Sample Entities
 ```bash
