@@ -39,7 +39,7 @@ What Varadhi provides to its consumers (see [Main Concepts](https://github.com/f
 - **Failure handling** — retriable (soft) failures go to **Retry Queues** (configurable RetryPolicy, up to 3 retries); non-retriable (hard) failures go to **Dead Letter Queues** for later, explicit redelivery. See [Effective Failure Handling in Flipkart's Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc).
 - **Message ordering / grouping** — optional per-topic/subscription ordered delivery at **GroupId** granularity, preserved across retries and dead-lettering. See [Message Ordering](https://github.com/flipkart-incubator/varadhi/wiki/Message-Ordering).
 - **Server-side filtering** — subscriptions can filter on message headers so consumers receive only messages of interest (topics/subscriptions only, not queues).
-- **Multi-tenancy** — hierarchical Org → Team → Project isolation with RBAC/IAM. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
+- **Multi-tenancy** — hierarchical Org → Team → Project isolation with RBAC/IAM. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenancy-Model).
 - **Pluggable backends** — messaging stack and metadata store are behind SPIs (Apache Pulsar and ZooKeeper are the default implementations).
 - **Observability** — Micrometer metrics exported via OpenTelemetry (OTLP), plus distributed tracing. See [Metrics Documentation](https://github.com/flipkart-incubator/varadhi/wiki/Varadhi-Metrics-Documentation).
 

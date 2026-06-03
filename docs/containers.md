@@ -34,6 +34,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 **Purpose**: The front door. Hosts two HTTP-facing surfaces on the same server: the **control-plane REST API** (manage orgs, teams, projects, topics, subscriptions, IAM role bindings, regions) and the **produce REST API** (`POST .../topics/{topic}/produce`). On produce, it validates message headers, applies authn/authz, and writes the message to the messaging stack. Subscription/topic lifecycle actions that require cluster coordination are delegated to the controller. (L1 notes this server can optionally be split into a control-plane-only and a produce-only server; today it is modeled as one container.)
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
 | pulsar | Pulsar client (binary 6650) + admin (HTTP 8080) | writes / calls | Produce messages; provision/manage storage topics |
@@ -57,6 +58,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 **Purpose**: The cluster's coordination brain. It assigns subscriptions to consumer nodes, tracks consumer membership, and orchestrates subscription/topic lifecycle operations (start/stop, retries of operations). It assumes leadership on start (cluster leader election/handover is **not yet implemented**) and carries **no produce/consume data-path traffic** — it operates over the cluster event bus and metadata store only. It is also the cluster-wide distributor of metastore entity-change events (see Internal Concepts).
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
 | zookeeper | ZK / Curator | reads / writes | Assignments + operations + metadata; cluster manager (membership) |

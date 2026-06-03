@@ -234,7 +234,7 @@ sequenceDiagram
 #### Runtime Characteristics
 - **Blast radius (node-level)**: every shard on a node shares **one `execution-context` thread** and **one `HttpClient`** — a blocking task or a slow/stalled subscriber endpoint contends with, and can starve, every other shard on that node. There is no per-subscription isolation within a node.
 - **Availability / degradation**: endpoint failures degrade gracefully — non-2xx routes the message to retry→DLQ rather than erroring, and a rising error rate trips `flow-control`'s dynamic throttle (intentional brownout). But the failure path **also writes to Pulsar**, so if Pulsar is unavailable the retry/DLQ produce can't drain, in-flight backs up, and `maxInFlightMessages` backpressure halts consumption for that shard.
-- **Consistency / durability**: **at-least-once** — the offset is acked only after the delivery outcome is decided (delivered, or moved to retry/DLQ), so a crash between push and ack redelivers; endpoints must be idempotent. Per-GroupId ordering is **not** active (grouped unwired). The DLQ is terminal (no automatic redelivery).
+- **Consistency / durability**: **at-least-once** — the offset is acked only after the delivery outcome is decided (delivered, or moved to retry/DLQ), so a crash between push and ack redelivers; endpoints must be idempotent. Per-GroupId ordering is **not** implemented yet. The DLQ is terminal (no automatic redelivery).
 - **Performance shape**: throughput is bounded by `flow-control` parallelism and `maxInFlightMessages`; retry topics are consumed with a fixed delay; shutdown blocks while draining in-flight.
 
 ---
