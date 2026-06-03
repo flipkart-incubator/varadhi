@@ -1,0 +1,85 @@
+# Codescope Memory
+
+Durable judgment calls about this repo — each a decision plus its *why* — that future doc runs must honor. Not an activity log, not status, not a restatement of the docs. See `naming-conventions.md` and `memory-conventions.md` for the governing spec. Supersede entries in place; never append contradictions.
+
+## System Context
+
+### Scope & maturity
+- Varadhi is documented as pre-production (WIP) with concrete SLA/throughput/availability numbers left as TODO, because it is not yet productionized and its APIs are in Draft.
+- Ownership is modeled as OSS maintainers plus GitHub Issues with no internal oncall, because Varadhi is published as a Flipkart-incubated OSS distribution.
+- The proposed Global-Topics design in `docs/TOPIC_MODEL_STRUCTURE.md` (RegionName/RegionStatus, tags, factory methods) is excluded from the system-context doc — region/geo-replication is kept only as a stated capability — because it is internal/proposed implementation detail.
+
+### Classification
+- Pulsar and ZooKeeper are internal infrastructure — team-provisioned pluggable SPI backends (Pulsar = messaging stack, ZK = metastore), not external dependencies — because Varadhi provisions and operates them; at container level they are modeled as Infrastructure containers.
+
+### Authn
+- Authentication is documented as pluggable with no single production mechanism asserted, because the default handler (header-based) and the OpenAPI spec (JWT) disagree and the production mechanism is not finalized.
+
+### Sourcing
+- Docs link to the GitHub Wiki rather than duplicating it, because the wiki is the canonical upstream source.
+
+## Containers
+
+### Modeling
+- `varadhi-server`, `varadhi-controller`, and `varadhi-consumer` are modeled as three separate containers despite sharing one application image, because they deploy/scale/fail independently in the target topology.
+- The container inventory is closed at these three app containers plus their infrastructure (no frontends, cron jobs, serverless functions, or out-of-repo services), because the user confirmed it.
+- Prometheus and Grafana are excluded from the container model while `otel-collector` is included, because otel-collector sits on Varadhi's metrics-export path whereas Prometheus/Grafana are downstream observability backends.
+
+### Corrections
+- `ControllerRestClient` and `ConsumerClient` communicate over the Vert.x clustered event bus, not HTTP REST, because the "Rest"/"Client" names are misnomers (the code uses event-bus send/request).
+- The `messaging/` directory is excluded from module/container analysis as a stale build artifact, because it is not declared in `settings.gradle`.
+
+## Components — varadhi-server
+
+### Scope
+- varadhi-server's own code is the `web`, `web-spi`, and `producer` modules plus the Server-role parts of `server`, because the `controller`/`consumer` modules belong to the other containers (co-packaged but separable by build).
+
+### Boundaries
+- `shared.app-bootstrap` (`VaradhiApplication` + `CuratorFrameworkCreator`) is a shared component owned by no single container, because it is role-agnostic and boots all three containers (a verticle per `member.role`).
+- Handlers backed by shared `core` services live in `http-ingress`, while handlers whose backing service is server's own code form a vertical with it (`produce-service`, `dlq-service`, `iam-policy-management`), because component grouping follows code ownership.
+- `iam-policy-management` is a separate component from `authorization`, because policy storage/CRUD and the RBAC decision engine are distinct concerns.
+- `web.hierarchy` belongs to `authorization`, because it exists to produce the resource path the authorization check consumes.
+- `request-telemetry` is its own component (a behaviour-chain stage alongside authn/authz), because generic per-request instrumentation is distinct from produce-service's produce metrics.
+- The Caffeine producer cache stays inside `produce-service` rather than a separate State Manager, because it is an implementation detail of producer resolution.
+- The `web-spi` auth contracts belong to `authentication`/`authorization` as their pluggability interfaces, because they define those components' SPI.
+
+### Scope (conditional)
+- `iam-policy-management` is wired only with the built-in `DefaultAuthorizationProvider`; under a custom/external authz provider it is absent, because IAM policy management is then owned outside Varadhi.
+
+### Naming
+- The HTTP-entry component is named `http-ingress`, because it is the container's single HTTP entry point rather than a multi-backend API gateway.
+- The DLQ component is named `dlq-service` (matching the `DlqService` class), because its DLQ fan-out is request-scoped, not standing orchestration.
+
+## Components — varadhi-consumer
+
+### Scope
+- varadhi-consumer's own code is the `consumer` module, because `core`/`spi`/`entities`/`common` and the bootstrap are shared.
+
+### Boundaries
+- The per-shard consumer engine is split by side effect — `message-consumption` (orchestration), `message-poller` (consume), `message-delivery` (deliver), `message-failure-routing` (RQ/DLQ produce) — because each owns a distinct boundary effect.
+- `flow-control` is its own component, because parallelism plus dynamic error-rate throttling is a distinct rate-control mechanism.
+- `execution-context` is its own component, because the single-thread-per-node executor is an architecturally significant ordering/contention property.
+- `telemetry` is a standalone component for consumer metrics, because metrics emission is a distinct concern (parallel to `varadhi-server.request-telemetry`).
+
+### Scope (exclusion)
+- Group-ordering code (`consumer.ordering.*`, `GroupedMessageSrc`, `GroupedProcessingLoop`) is excluded from the component model, because it is unwired — `VaradhiConsumerImpl#connectUnsafe` throws for grouped subscriptions.
+
+## Components — varadhi-controller
+
+### Scope
+- varadhi-controller's own code is the `controller` module (assignment, operation executors, events, cluster API), because `core`/`spi`/`entities` and the bootstrap are shared; the assignment *strategy* is own while core allocation primitives are shared.
+
+### Boundaries
+- `subscription-coordinator` (`ControllerApiMgr`) is a component separate from `controller-api`, because its coordination logic (state validation, op creation, membership→reassign) is substantial — unlike the consumer's thin ApiMgr which was folded in.
+- `operation-executors` is a component separate from `operation-manager`, because the executors own the consumer-dispatch side effect and each operation's steps, distinct from the generic queue/retry/persist engine.
+- The assignment strategy (`AssignmentStrategy`/`LeastAssignedStrategy`) stays inside `assignment-manager`, because the manager and its single strategy are cohesive and the strategy is not a cross-cutting gate applied elsewhere.
+- `event-distributor` is a Cross-Cutting Provider, because it provides cluster-wide cache-coherence infrastructure (watch metastore → fan out to all nodes).
+
+## Flows
+
+### Scope & modularity
+- The ~30 admin endpoints are documented as one `pattern.control-plane-request` (not per-endpoint flows), because they share an identical ingress→auth→handler→entity-service→metastore path differing only in handler/entity.
+- start/stop/unsideline/reassign are documented as one `pattern.subscription-operation`, because they share the coordinator→operation-manager→executor→consumer→report path differing only in the executor and assign/unassign direction.
+- Request authn+authz is documented once as `flow.auth.request-authorization` and referenced, because it is an identical sub-path of every authenticated server route (control-plane + produce).
+- `flow.subscription.start` is documented as the canonical instance of `pattern.subscription-operation`; stop/unsideline/reassign are not given separate diagrams because they only vary the executor.
+- Trivial/lifecycle flows (health-check, node-bootstrap, controller-leadership, subscription-state-query) are excluded, because the user scoped flows to patterns + central/deviating flows.

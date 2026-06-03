@@ -47,3 +47,4 @@ setup/docker/configs/varadhi-auto-generated/*
 
 # coverage results
 **/*testE2E.exec
+.codescope
