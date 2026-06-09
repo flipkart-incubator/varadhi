@@ -31,12 +31,36 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ./gradlew build test
 ```
 
-## Integration Tests
+## Dev Setup
+Start Apache Pulsar (message broker) and ZooKeeper (metadata store) with Docker Compose, then run the Varadhi server on your host with Gradle.
+
+> **Note:** `PULSAR_ADVERTISED_ADDRESS=localhost` is required so that Pulsar advertises a host-reachable address. Without this, the server (running on your host) will not be able to connect to Pulsar's binary protocol port.
+
+```bash
+PULSAR_ADVERTISED_ADDRESS=localhost docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 300
+```
+
+Starts a long-running server (it does not return until you stop it). Run the commands below in **another terminal** while it is running.
+```bash
+./gradlew run
+```
+
+### Create Sample Entities
+```bash
+bash setup/create_entities.sh default_org team default_project default_topic
+```
+
+### Stopping Dependencies
+```bash
+docker compose --profile dev -f setup/docker/compose.yml down -v
+```
+
+## Integration Tests (E2E)
 
 ```bash
 ./gradlew copyDependencies copyE2EConfig -x test
 
-docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg
+docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg SKIP_CERT_CHECK=true
 
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 
