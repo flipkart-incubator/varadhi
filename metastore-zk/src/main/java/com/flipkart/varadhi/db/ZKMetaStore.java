@@ -428,6 +428,122 @@ public class ZKMetaStore implements AutoCloseable {
     }
 
     /**
+     * Executes an arbitrary list of pre-built {@link CuratorOp}s as one atomic ZK transaction.
+     * Use the helper builders ({@link #createOp}, {@link #createOpWithData}, {@link #setDataOp},
+     * {@link #setDataOpTracked}, {@link #deleteOp}, {@link #deleteOpTracked}) to assemble the
+     * argument list — they handle path / version / tracked-event sentinel construction.
+     *
+     * <p>This is the multi-write entry point used by the topic failover executor to flip the
+     * Op (untracked) and the Topic (tracked, with version) in one shot.
+     *
+     * <p>If the txn succeeds, the resulting {@link CuratorTransactionResult}s are scanned for
+     * {@code SET_DATA} results and the matching tracked entity's {@link MetaStoreEntity#setVersion(int)}
+     * is updated so callers see the post-txn version.
+     *
+     * @param ops          curator transaction ops, built via the helpers below.
+     * @param versionUpdates entities whose version should be patched from the txn result.
+     *                       Pass each tracked entity that participated in a {@code setData} op.
+     * @throws MetaStoreException if any operation in the transaction fails
+     */
+    public void multi(List<CuratorOp> ops, List<MetaStoreEntity> versionUpdates) {
+        if (ops.isEmpty()) {
+            return;
+        }
+        try {
+            var results = zkCurator.transaction().forOperations(ops);
+            logFailedOperations(results);
+            if (versionUpdates != null && !versionUpdates.isEmpty()) {
+                for (MetaStoreEntity e : versionUpdates) {
+                    updateDataObjectVersion(e, results);
+                }
+            }
+        } catch (KeeperException e) {
+            logKeeperExceptionDetails(e, ops);
+            throw new MetaStoreException(String.format("Multi-txn failed with %d ops", ops.size()), e);
+        } catch (Exception e) {
+            throw new MetaStoreException(String.format("Multi-txn failed with %d ops", ops.size()), e);
+        }
+    }
+
+    /** Build an untracked create-with-empty-payload op for use with {@link #multi}. */
+    public CuratorOp createOp(ZNode znode) {
+        try {
+            return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build createOp for " + znode.getPath(), e);
+        }
+    }
+
+    /** Build an untracked create-with-data op for use with {@link #multi}. */
+    public <T extends MetaStoreEntity> CuratorOp createOpWithData(ZNode znode, T entity) {
+        try {
+            byte[] json = JsonMapper.jsonSerialize(entity).getBytes(StandardCharsets.UTF_8);
+            return zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), json);
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build createOpWithData for " + znode.getPath(), e);
+        }
+    }
+
+    /**
+     * Build an untracked setData op for use with {@link #multi}.
+     * Uses the entity's {@link MetaStoreEntity#getVersion()} for optimistic concurrency.
+     * No L1 change event is emitted — use for Op/FTO state.
+     */
+    public <T extends MetaStoreEntity> CuratorOp setDataOp(ZNode znode, T entity) {
+        try {
+            byte[] json = JsonMapper.jsonSerialize(entity).getBytes(StandardCharsets.UTF_8);
+            return zkCurator.transactionOp().setData().withVersion(entity.getVersion()).forPath(znode.getPath(), json);
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build setDataOp for " + znode.getPath(), e);
+        }
+    }
+
+    /**
+     * Build a tracked setData op (with the L1 change-event sentinel) for use with {@link #multi}.
+     * Returns two ops: the setData itself and the sequential event znode create.
+     * Use for Topic/Subscription/Project writes that should fan out via the L1 pipeline.
+     */
+    public <T extends MetaStoreEntity> List<CuratorOp> setDataOpTracked(
+        ZNode znode,
+        T entity,
+        MetaStoreEntityType entityType
+    ) {
+        try {
+            byte[] json = JsonMapper.jsonSerialize(entity).getBytes(StandardCharsets.UTF_8);
+            CuratorOp set = zkCurator.transactionOp()
+                                     .setData()
+                                     .withVersion(entity.getVersion())
+                                     .forPath(znode.getPath(), json);
+            return List.of(set, createChangeEventZNode(znode.getName(), entityType));
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build setDataOpTracked for " + znode.getPath(), e);
+        }
+    }
+
+    /** Build an untracked delete op for use with {@link #multi}. */
+    public CuratorOp deleteOp(ZNode znode) {
+        try {
+            return zkCurator.transactionOp().delete().forPath(znode.getPath());
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build deleteOp for " + znode.getPath(), e);
+        }
+    }
+
+    /**
+     * Build a tracked delete op (with the L1 change-event sentinel) for use with {@link #multi}.
+     */
+    public List<CuratorOp> deleteOpTracked(ZNode znode, MetaStoreEntityType entityType) {
+        try {
+            return List.of(
+                zkCurator.transactionOp().delete().forPath(znode.getPath()),
+                createChangeEventZNode(znode.getName(), entityType)
+            );
+        } catch (Exception e) {
+            throw new MetaStoreException("Failed to build deleteOpTracked for " + znode.getPath(), e);
+        }
+    }
+
+    /**
      * Executes multiple ZNode operations in a single atomic transaction.
      * All operations will either succeed or fail together - there is no partial success.
      *

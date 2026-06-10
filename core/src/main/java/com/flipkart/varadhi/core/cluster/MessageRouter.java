@@ -85,8 +85,23 @@ public class MessageRouter {
         });
     }
 
+    /**
+     * Registers a handler that is invoked on every node which subscribes to
+     * {@code <routeName>.<apiName>.publish}. Unlike {@link #sendHandler} the
+     * caller is not expected to reply: exceptions from the handler are caught
+     * and logged but never propagated back to the publisher.
+     */
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new UnsupportedOperationException("handlePublish not implemented");
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
+        vertxEventBus.consumer(apiPath, message -> {
+            try {
+                ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
+                log.debug("Received msg via - publish({}, {})", apiPath, msg.getId());
+                handler.handle(msg);
+            } catch (Exception e) {
+                log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+            }
+        });
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {

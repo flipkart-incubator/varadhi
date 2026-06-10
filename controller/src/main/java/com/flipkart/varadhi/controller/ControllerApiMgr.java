@@ -1,7 +1,11 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.controller.failover.TopicFailoverOpExecutor;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicFailoverTransactions;
+import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
@@ -15,6 +19,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.AssignmentState;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
@@ -22,12 +27,17 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverTransitionObject;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverTransition;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
@@ -37,6 +47,15 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;
     private final OperationMgr operationMgr;
+
+    /**
+     * Optional dependencies wired post-construct (so the existing 4-arg constructor
+     * keeps compiling). Topic-failover REST endpoints require all three; the
+     * subscription endpoints don't touch them.
+     */
+    private volatile TopicStore topicStore;
+    private volatile TopicFailoverTransactions failoverTxns;
+    private volatile Supplier<TopicFailoverOpExecutor> failoverExecutorFactory;
 
     public ControllerApiMgr(
         OperationMgr operationMgr,
@@ -48,6 +67,22 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         this.assignmentManager = assignmentManager;
         this.subscriptionStore = subscriptionStore;
         this.operationMgr = operationMgr;
+    }
+
+    /**
+     * Wire in topic-failover dependencies. Called once during controller bootstrap
+     * after all collaborators (executor, broadcaster, awaiter registry) have been
+     * assembled. Until this is called, the failover REST methods reject with
+     * {@code IllegalStateException}.
+     */
+    public void wireTopicFailover(
+        TopicStore topicStore,
+        TopicFailoverTransactions failoverTxns,
+        Supplier<TopicFailoverOpExecutor> failoverExecutorFactory
+    ) {
+        this.topicStore = topicStore;
+        this.failoverTxns = failoverTxns;
+        this.failoverExecutorFactory = failoverExecutorFactory;
     }
 
     @Override
@@ -295,6 +330,140 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         VaradhiSubscription subscription = subscriptionStore.get(operation.getData().getSubscriptionId());
         OpExecutor<OrderedOperation> executor = getOpExecutor(operation, subscription);
         operationMgr.enqueue(operation, executor);
+    }
+
+    /* ============== Topic Failover ============== */
+
+    @Override
+    public CompletableFuture<TopicFailoverTransition> createTopicFailover(
+        String topicFqn,
+        TopicFailoverRequest request,
+        String requestedBy
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            requireFailoverWired();
+            VaradhiTopic topic = topicStore.get(topicFqn);
+            if (topic == null) {
+                throw new ResourceNotFoundException("Topic not found: " + topicFqn);
+            }
+            if (topicStore.hasFailover(topicFqn)) {
+                throw new InvalidOperationForResourceException(
+                    "Topic " + topicFqn + " already has an in-flight failover; abort it before starting a new one."
+                );
+            }
+            String targetRegion = request.getToRegion();
+            if (targetRegion == null || targetRegion.isBlank()) {
+                throw new IllegalArgumentException("toRegion is required");
+            }
+            if (topic.getProduceTopicForRegion(targetRegion) == null) {
+                throw new InvalidOperationForResourceException(
+                    "Target region " + targetRegion + " is not configured for topic " + topicFqn
+                );
+            }
+
+            String sourceRegion = resolveActiveRegion(topic, targetRegion);
+            TopicFailoverOperation op = TopicFailoverOperation.create(
+                topicFqn,
+                sourceRegion,
+                targetRegion,
+                request.isWaitForReplicationLagToClear(),
+                request.isSkipValidation(),
+                requestedBy
+            );
+            FailoverTransitionObject fto = FailoverTransitionObject.forTopic(topicFqn, op.getId());
+
+            failoverTxns.createFailoverWithOp(op, fto);
+            log.info("Created topic failover op {} for {} (source={} target={})",
+                op.getId(), topicFqn, sourceRegion, targetRegion);
+
+            operationMgr.enqueueTopicFailoverOp(op, failoverExecutorFactory.get());
+            return TopicFailoverTransition.from(op);
+        });
+    }
+
+    @Override
+    public CompletableFuture<Optional<TopicFailoverTransition>> getTopicFailover(String topicFqn) {
+        return CompletableFuture.supplyAsync(() -> {
+            requireFailoverWired();
+            Optional<FailoverTransitionObject> fto = topicStore.getFailover(topicFqn);
+            if (fto.isEmpty()) {
+                return Optional.<TopicFailoverTransition>empty();
+            }
+            return Optional.of(TopicFailoverTransition.from(loadOp(fto.get().getOperationId())));
+        });
+    }
+
+    @Override
+    public CompletableFuture<TopicFailoverTransition> abortTopicFailover(String topicFqn, String requestedBy) {
+        return CompletableFuture.supplyAsync(() -> {
+            requireFailoverWired();
+            FailoverTransitionObject fto = topicStore.getFailover(topicFqn)
+                .orElseThrow(() -> new ResourceNotFoundException("No active failover for topic " + topicFqn));
+            TopicFailoverOperation op = loadOp(fto.getOperationId());
+            if (!op.getCurrentStage().isAbortable()) {
+                throw new InvalidOperationForResourceException(
+                    "Failover for " + topicFqn + " is past " + op.getCurrentStage() + " and cannot be aborted."
+                );
+            }
+            op.markFail("Aborted by " + requestedBy);
+            // Persist the abort intent; the executor's exceptionallyCompose will pick this
+            // up on the next stage transition and run cleanup. We deliberately don't try
+            // to interrupt the running CompletableFuture chain — letting it finish the
+            // current stage barrier is safer than racing.
+            failoverTxns.commitFailure(op, topicFqn);
+            return TopicFailoverTransition.from(op);
+        });
+    }
+
+    /** Forwards a pod-side ack to {@link OperationMgr} for stage-barrier dispatch. */
+    public void recordFailoverAck(com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate update) {
+        operationMgr.recordFailoverAck(update);
+    }
+
+    @Override
+    public CompletableFuture<List<TopicFailoverTransition>> listActiveTopicFailovers() {
+        return CompletableFuture.supplyAsync(() -> {
+            requireFailoverWired();
+            List<TopicFailoverOperation> live = operationMgr.getActiveTopicFailoverOps();
+            return live.stream().map(TopicFailoverTransition::from).toList();
+        });
+    }
+
+    private TopicFailoverOperation loadOp(String operationId) {
+        TopicFailoverOperation op = operationMgr.getTopicFailoverOp(operationId);
+        if (op == null) {
+            throw new ResourceNotFoundException("TopicFailoverOperation " + operationId + " not found");
+        }
+        return op;
+    }
+
+    private void requireFailoverWired() {
+        if (topicStore == null || failoverTxns == null || failoverExecutorFactory == null) {
+            throw new IllegalStateException(
+                "Topic failover dependencies are not wired; ControllerApiMgr.wireTopicFailover(...) must be called during bootstrap."
+            );
+        }
+    }
+
+    /**
+     * Picks the region currently in {@code Producing} state (skipping {@code targetRegion}).
+     * Falls back to "any non-target region" if no clear "Producing" winner exists — the
+     * executor's SWITCH stage will surface a clearer error in that pathological case.
+     */
+    private String resolveActiveRegion(VaradhiTopic topic, String targetRegion) {
+        return topic.getInternalTopics().entrySet().stream()
+                    .filter(e -> !e.getKey().equals(targetRegion))
+                    .filter(e -> e.getValue() != null && e.getValue().getTopicState() != null
+                                 && e.getValue().getTopicState().isProduceAllowed())
+                    .map(java.util.Map.Entry::getKey)
+                    .findFirst()
+                    .orElseGet(() -> topic.getInternalTopics().keySet().stream()
+                                          .filter(r -> !r.equals(targetRegion))
+                                          .findFirst()
+                                          .orElseThrow(() -> new InvalidOperationForResourceException(
+                                              "Topic " + topic.getName() + " has no source region distinct from "
+                                              + targetRegion
+                                          )));
     }
 
     private OpExecutor<OrderedOperation> getOpExecutor(

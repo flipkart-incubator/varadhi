@@ -6,6 +6,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.entities.auth.IamPolicyRecord;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverTransitionObject;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.spi.db.IamPolicyStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
@@ -20,6 +21,7 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.flipkart.varadhi.db.ZNode.EVENT;
 import static com.flipkart.varadhi.db.ZNode.IAM_POLICY;
@@ -30,6 +32,7 @@ import static com.flipkart.varadhi.db.ZNode.RESOURCE_NAME_SEPARATOR;
 import static com.flipkart.varadhi.db.ZNode.SUBSCRIPTION;
 import static com.flipkart.varadhi.db.ZNode.TEAM;
 import static com.flipkart.varadhi.db.ZNode.TOPIC;
+import static com.flipkart.varadhi.db.ZNode.TOPIC_FAILOVER;
 
 /**
  * Implementation of the metadata store for Varadhi using ZooKeeper as the backend.
@@ -80,6 +83,7 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         zkMetaStore.createZNode(ZNode.ofEntityType(IAM_POLICY));
         zkMetaStore.createZNode(ZNode.ofEntityType(REGION));
         zkMetaStore.createZNode(ZNode.ofEntityType(EVENT));
+        zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC_FAILOVER));
     }
 
 
@@ -542,6 +546,47 @@ public final class VaradhiMetaStore implements MetaStore, IamPolicyStore.Provide
         public void delete(String topicName) {
             ZNode znode = ZNode.ofTopic(topicName);
             zkMetaStore.deleteTrackedZNode(znode, MetaStoreEntityType.TOPIC);
+        }
+
+        @Override
+        public void createFailover(FailoverTransitionObject fto) {
+            ZNode znode = ZNode.ofTopicFailover(fto.getName());
+            zkMetaStore.createZNodeWithData(znode, fto);
+        }
+
+        @Override
+        public Optional<FailoverTransitionObject> getFailover(String topicFqn) {
+            ZNode znode = ZNode.ofTopicFailover(topicFqn);
+            if (!zkMetaStore.zkPathExist(znode)) {
+                return Optional.empty();
+            }
+            try {
+                return Optional.of(zkMetaStore.getZNodeDataAsPojo(znode, FailoverTransitionObject.class));
+            } catch (ResourceNotFoundException e) {
+                return Optional.empty();
+            }
+        }
+
+        @Override
+        public boolean hasFailover(String topicFqn) {
+            return zkMetaStore.zkPathExist(ZNode.ofTopicFailover(topicFqn));
+        }
+
+        @Override
+        public void deleteFailover(String topicFqn) {
+            ZNode znode = ZNode.ofTopicFailover(topicFqn);
+            if (zkMetaStore.zkPathExist(znode)) {
+                zkMetaStore.deleteZNode(znode);
+            }
+        }
+
+        @Override
+        public List<FailoverTransitionObject> getAllActiveFailovers() {
+            return zkMetaStore.listChildren(ZNode.ofEntityType(TOPIC_FAILOVER))
+                              .stream()
+                              .map(name -> getFailover(name).orElse(null))
+                              .filter(java.util.Objects::nonNull)
+                              .toList();
         }
     };
 

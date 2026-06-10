@@ -6,7 +6,9 @@ public enum MetaStoreEntityType {
         "subscription"
     ), IAM_POLICY("iam_policy"), SUBSCRIPTION_OPERATION("subscription_operation"), SHARD_OPERATION(
         "shard_operation"
-    ), REGION("region");
+    ), REGION("region"), TOPIC_FAILOVER("topic_failover"), SUB_FAILOVER("sub_failover"), TOPIC_FAILOVER_OPERATION(
+        "topic_failover_operation"
+    );
 
     private final String type;
 
