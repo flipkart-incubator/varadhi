@@ -85,8 +85,24 @@ public class MessageRouter {
         });
     }
 
+    /**
+     * Registers a handler for broadcast (publish) messages. Every node that registers a
+     * handler at {@code <routeName>.<apiName>.publish} receives a copy of each published
+     * message. Publish is fire-and-forget, so unlike {@link #sendHandler} and
+     * {@link #requestHandler} no reply is sent back to the publisher.
+     */
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new UnsupportedOperationException("handlePublish not implemented");
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
+        vertxEventBus.consumer(apiPath, message -> {
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
+            log.debug("Received msg via - publish({}, {})", apiPath, msg.getId());
+            try {
+                handler.handle(msg);
+            } catch (Exception e) {
+                // Publish is fire-and-forget; there is no publisher to notify of failures.
+                log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+            }
+        });
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {
