@@ -28,5 +28,5 @@ dependencies {
 
     // demo
     testImplementation(libs.vertx.web)
-    testImplementation 'io.dropwizard.metrics:metrics-core:4.2.25'
+    testImplementation(libs.metrics.core)
 }

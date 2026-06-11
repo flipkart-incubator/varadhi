@@ -16,9 +16,9 @@ At runtime: producers hit **varadhi-server** to publish; the server writes to **
 
 | Container | Kind | Tech | Purpose |
 |---|---|---|---|
-| varadhi-server | App | Java 21 / Vert.x (shared `varadhi` image, `roles:[Server]`) | Hosts the control-plane REST API and the produce REST API; writes messages to the messaging stack |
-| varadhi-controller | App | Java 21 / Vert.x (shared image, `roles:[Controller]`) | Cluster brain: assigns subscriptions to consumers and orchestrates subscription/topic lifecycle operations; single active instance (no leader election yet) |
-| varadhi-consumer | App | Java 21 / Vert.x (shared image, `roles:[Consumer]`) | Delivery worker fleet: consumes from the messaging stack and pushes messages over HTTP to subscriber endpoints; manages retries, DLQ, and ordering |
+| varadhi-server | App | Java 25 / Vert.x (shared `varadhi` image, `roles:[Server]`) | Hosts the control-plane REST API and the produce REST API; writes messages to the messaging stack |
+| varadhi-controller | App | Java 25 / Vert.x (shared image, `roles:[Controller]`) | Cluster brain: assigns subscriptions to consumers and orchestrates subscription/topic lifecycle operations; single active instance (no leader election yet) |
+| varadhi-consumer | App | Java 25 / Vert.x (shared image, `roles:[Consumer]`) | Delivery worker fleet: consumes from the messaging stack and pushes messages over HTTP to subscriber endpoints; manages retries, DLQ, and ordering |
 | pulsar | Infrastructure | Apache Pulsar 3.3.x | Messaging-stack SPI default: durable message storage and delivery substrate |
 | zookeeper | Infrastructure | Apache ZooKeeper 3.9.x | Dual role: metadata store (metastore SPI default) **and** Vert.x cluster manager (node discovery + event bus coordination) |
 | otel-collector | Infrastructure | OpenTelemetry Collector | Receives OTLP metrics/traces from the app containers; exposes a Prometheus scrape endpoint |
@@ -30,7 +30,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 ### varadhi-server
 
 **Kind**: App
-**Tech**: Java 21 / Vert.x. Shared `varadhi` image run with `member.roles:[Server]`.
+**Tech**: Java 25 / Vert.x. Shared `varadhi` image run with `member.roles:[Server]`.
 **Purpose**: The front door. Hosts two HTTP-facing surfaces on the same server: the **control-plane REST API** (manage orgs, teams, projects, topics, subscriptions, IAM role bindings, regions) and the **produce REST API** (`POST .../topics/{topic}/produce`). On produce, it validates message headers, applies authn/authz, and writes the message to the messaging stack. Subscription/topic lifecycle actions that require cluster coordination are delegated to the controller. (L1 notes this server can optionally be split into a control-plane-only and a produce-only server; today it is modeled as one container.)
 
 **Relationships**:
@@ -54,7 +54,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 ### varadhi-controller
 
 **Kind**: App
-**Tech**: Java 21 / Vert.x. Shared `varadhi` image run with `member.roles:[Controller]`. Helm deploys it with **no service** (`service: null`) — it is not part of the request-serving path.
+**Tech**: Java 25 / Vert.x. Shared `varadhi` image run with `member.roles:[Controller]`. Helm deploys it with **no service** (`service: null`) — it is not part of the request-serving path.
 **Purpose**: The cluster's coordination brain. It assigns subscriptions to consumer nodes, tracks consumer membership, and orchestrates subscription/topic lifecycle operations (start/stop, retries of operations). It assumes leadership on start (cluster leader election/handover is **not yet implemented**) and carries **no produce/consume data-path traffic** — it operates over the cluster event bus and metadata store only. It is also the cluster-wide distributor of metastore entity-change events (`concept.entity-change-event`).
 
 **Relationships**:
@@ -77,7 +77,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 ### varadhi-consumer
 
 **Kind**: App
-**Tech**: Java 21 / Vert.x. Shared `varadhi` image run with `member.roles:[Consumer]`.
+**Tech**: Java 25 / Vert.x. Shared `varadhi` image run with `member.roles:[Consumer]`.
 **Purpose**: The delivery worker fleet. Each consumer node owns the subscriptions (`concept.subscription`) assigned to it by the controller (see `concept.assignment`), reads messages from the messaging stack (main + retry topics), produces failed messages to retry/DLQ topics, and **pushes** each message over HTTP to the subscriber endpoint configured on the subscription. It enforces the subscription's RetryPolicy and ConsumptionPolicy: non-2xx responses move messages to the `concept.retry-queue` or `concept.dead-letter-queue`. **Grouped / ordered consumption (`concept.grouping`) is not implemented yet** — only the ungrouped delivery path is live.
 
 **Relationships**:
