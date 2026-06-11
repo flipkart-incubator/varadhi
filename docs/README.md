@@ -18,7 +18,7 @@ Start broad and zoom in: **L1 → L2 → L3 → Flows**. Structure (what exists)
 | [varadhi-server/components.md](./varadhi-server/components.md) | varadhi-server | http-ingress, produce-service, authentication, authorization, iam-policy-management, dlq-service, request-telemetry |
 | [varadhi-controller/components.md](./varadhi-controller/components.md) | varadhi-controller | controller-api, subscription-coordinator, operation-executors, operation-manager, assignment-manager, event-distributor |
 | [varadhi-consumer/components.md](./varadhi-consumer/components.md) | varadhi-consumer | consumer-api, message-poller, flow-control, message-consumption, consumers-manager, message-delivery, message-failure-routing, execution-context, telemetry |
-| [shared-components.md](./shared-components.md) | (cross-container) | shared.app-bootstrap, shared.cluster-rpc, shared.entity-services, shared.resource-cache, shared.backend-spi, shared.commons |
+| [shared-components.md](./shared-components.md) | (cross-container) | shared.app-bootstrap, shared.cluster-rpc, shared.entity-services, shared.resource-cache, shared.metadata-spi, shared.messaging-spi, shared.commons |
 
 ## Conventions & memory
 
