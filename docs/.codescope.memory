@@ -1,6 +1,6 @@
 # Codescope Memory
 
-Durable judgment calls about this repo — each a decision plus its *why* — that future doc runs must honor. Not an activity log, not status, not a restatement of the docs. See `naming-conventions.md` and `memory-conventions.md` for the governing spec. Supersede entries in place; never append contradictions.
+Durable judgment calls about this repo — each a decision plus its *why* — that future doc runs must honor. Not an activity log, not status, not a restatement of the docs. Supersede entries in place; never append contradictions.
 
 ## System Context
 
@@ -11,6 +11,8 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 
 ### Classification
 - Pulsar and ZooKeeper are internal infrastructure — team-provisioned pluggable SPI backends (Pulsar = messaging stack, ZK = metastore), not external dependencies — because Varadhi provisions and operates them; at container level they are modeled as Infrastructure containers.
+- `ext.identity-provider` and `ext.authorization-provider` are the L1 External Services registry entries for pluggable authn/authz backends Varadhi calls but does not run — because they are deployment-specific remote systems, not containers Varadhi operates.
+- Subscriber / consumer application endpoints are **not** `ext.` nodes — they are per-subscription delivery URLs (a class of actor/target), not a single named external service — because each subscription carries its own endpoint configuration.
 
 ### Authn
 - Authentication is documented as pluggable with no single production mechanism asserted, because the default handler (header-based) and the OpenAPI spec (JWT) disagree and the production mechanism is not finalized.
@@ -20,14 +22,28 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 
 ## Containers
 
+### Relationships (collaborates)
+- L2 Relationships use binary Direction (`calls` / `called-by`) with read/write/publish nuance in Purpose and Protocol, because the manifest stores direction as a normalized attr and compound values (`reads / writes`) do not round-trip cleanly.
+- Slash-separated Communicates-With cells must list full container IDs (`varadhi-server`, not `server` or bare `controller`), because the parser splits on `/` and each token is a node assertion.
+- Prometheus is omitted from otel-collector's Relationships table, because it is a downstream observability backend — not a container in this model (metrics path ends at otel-collector).
+
 ### Modeling
 - `varadhi-server`, `varadhi-controller`, and `varadhi-consumer` are modeled as three separate containers despite sharing one application image, because they deploy/scale/fail independently in the target topology.
 - The container inventory is closed at these three app containers plus their infrastructure (no frontends, cron jobs, serverless functions, or out-of-repo services), because the user confirmed it.
 - Prometheus and Grafana are excluded from the container model while `otel-collector` is included, because otel-collector sits on Varadhi's metrics-export path whereas Prometheus/Grafana are downstream observability backends.
 
+### Internal Concepts
+- The clustered event bus and the cluster-manager role are not modeled as `concept.<name>` Internal Concepts (kept in the Overview; modeled at L3 as the `shared.cluster-rpc` shared component), because they are infrastructure mechanisms/transports — data flows *through* them — not cross-boundary domain entities.
+- Member roles (Server/Controller/Consumer) are not an Internal Concept, because they mirror the three containers themselves (a C4 structural distinction), not a domain entity that crosses boundaries.
+
 ### Corrections
 - `ControllerRestClient` and `ConsumerClient` communicate over the Vert.x clustered event bus, not HTTP REST, because the "Rest"/"Client" names are misnomers (the code uses event-bus send/request).
 - The `messaging/` directory is excluded from module/container analysis as a stale build artifact, because it is not declared in `settings.gradle`.
+
+## Shared Components
+
+### Boundaries
+- The backend SPI is modeled as two shared components, `shared.metadata-spi` (the `spi.db` package; metastore contracts) and `shared.messaging-spi` (the `spi.services` package; messaging contracts), rather than one `shared.backend-spi`, because they are independent seams with different implementations (metastore-zk vs pulsar) and disjoint consumers (controller uses only metadata; consumer uses only messaging).
 
 ## Components — varadhi-server
 
@@ -46,6 +62,9 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 ### Scope (conditional)
 - `iam-policy-management` is wired only with the built-in `DefaultAuthorizationProvider`; under a custom/external authz provider it is absent, because IAM policy management is then owned outside Varadhi.
 
+### Collaborators (collaborates)
+- Multi-target Collaborators rows use fully qualified component IDs (`varadhi-server.authorization`, not bare `authorization`), because slash-separated table cells are split and each token must resolve to a manifest node.
+
 ### Naming
 - The HTTP-entry component is named `http-ingress`, because it is the container's single HTTP entry point rather than a multi-backend API gateway.
 - The DLQ component is named `dlq-service` (matching the `DlqService` class), because its DLQ fan-out is request-scoped, not standing orchestration.
@@ -63,6 +82,9 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 
 ### Scope (exclusion)
 - Group-ordering code (`consumer.ordering.*`, `GroupedMessageSrc`, `GroupedProcessingLoop`) is excluded from the component model, because it is unwired — `VaradhiConsumerImpl#connectUnsafe` throws for grouped subscriptions.
+
+### Scope (stubs)
+- `consumer-api` registers `unsideline` and DLQ `getMessages*` handlers but implements them as stubs (no-op / empty response), because the control-plane and flow contracts document the intended paths while consumer-side work is unfinished — model the surface in `consumer-api`, not separate stub components, and do not imply live behavior in L1/L2 prose.
 
 ## Components — varadhi-controller
 
@@ -83,3 +105,6 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - Request authn+authz is documented once as `flow.auth.request-authorization` and referenced, because it is an identical sub-path of every authenticated server route (control-plane + produce).
 - `flow.subscription.start` is documented as the canonical instance of `pattern.subscription-operation`; stop/unsideline/reassign are not given separate diagrams because they only vary the executor.
 - Trivial/lifecycle flows (health-check, node-bootstrap, controller-leadership, subscription-state-query) are excluded, because the user scoped flows to patterns + central/deviating flows.
+
+### Anchors
+- Operation-retry claims in flows anchor the controller `RetryPolicy` (`/controller/src/main/java/com/flipkart/varadhi/controller/RetryPolicy.java`), not the same-named `entities` `RetryPolicy`, because the two distinct classes serve different retries — controller `RetryPolicy` retries `OrderedOperation`s (subscription-operation retry), while `entities` `RetryPolicy` holds the message-delivery retry config (retry codes / backoff).

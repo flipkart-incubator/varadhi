@@ -36,8 +36,8 @@ What Varadhi provides to its consumers (see [Main Concepts](https://github.com/f
 - **Pub/Sub messaging** — produce to a topic; one or more independent subscriptions each receive the full message stream (broadcast / choreography).
 - **Point-to-Point queues** — each message carries its destination endpoint; optional callback enables async request/response and orchestration patterns.
 - **Push delivery with at-least-once guarantee** — Varadhi delivers messages to the subscription's configured HTTP endpoint and tracks success/failure.
-- **Failure handling** — retriable (soft) failures go to **Retry Queues** (configurable RetryPolicy, up to 3 retries); non-retriable (hard) failures go to **Dead Letter Queues** for later, explicit redelivery. See [Effective Failure Handling in Flipkart's Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc).
-- **Message ordering / grouping** — optional per-topic/subscription ordered delivery at **GroupId** granularity, preserved across retries and dead-lettering. See [Message Ordering](https://github.com/flipkart-incubator/varadhi/wiki/Message-Ordering).
+- **Failure handling** — retriable (soft) failures go to **Retry Queues** (configurable RetryPolicy); non-retriable (hard) failures go to **Dead Letter Queues** for later, explicit redelivery. See [Effective Failure Handling in Flipkart's Message Bus](https://blog.flipkart.tech/effective-failure-handling-in-flipkarts-message-bus-436c36be76cc).
+- **Message ordering / grouping** — *intended* per-**GroupId** ordering (see [Message Ordering](https://github.com/flipkart-incubator/varadhi/wiki/Message-Ordering)); produce can route by GroupId, but **end-to-end grouped delivery on the consumer is not implemented yet**.
 - **Server-side filtering** — subscriptions can filter on message headers so consumers receive only messages of interest (topics/subscriptions only, not queues).
 - **Multi-tenancy** — hierarchical Org → Team → Project isolation with RBAC/IAM. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenancy-Model).
 - **Pluggable backends** — messaging stack and metadata store are behind SPIs (Apache Pulsar and ZooKeeper are the default implementations).
@@ -50,7 +50,7 @@ What Varadhi provides to its consumers (see [Main Concepts](https://github.com/f
 - Topic-based pub/sub and point-to-point queue delivery (with optional callbacks).
 - Push delivery to consumer HTTP endpoints with at-least-once semantics.
 - Retry Queues and Dead Letter Queues for soft/hard delivery failures.
-- Ordered (grouped) delivery at GroupId granularity.
+- Ordered (grouped) delivery at GroupId granularity *(intended; consumer delivery path not implemented yet)*.
 - Server-side, header-based message filtering.
 - Multi-tenant resource hierarchy and RBAC/IAM administration.
 - Storage-backend and metastore abstraction (Pulsar / ZooKeeper defaults).
@@ -68,10 +68,22 @@ See the [Roadmap](https://github.com/flipkart-incubator/varadhi/wiki/Roadmap) fo
 
 ## External Dependencies
 
-### Services
-| System | Relationship | Purpose |
-|---|---|---|
-| Subscriber / consumer application endpoints | delivers-to (push) | Varadhi pushes messages over HTTP to the endpoint configured on each subscription; for queues, the per-message destination (and optional callback target). |
+**Classification test** — decides what each dependency *is* and where it lives:
+- **External service** — a remote system Varadhi **calls but does not run** (a deployment's token issuer, a centralized authorization service). Minted here as an `ext.<name>` node and referenced by ID from L2–L4.
+- **Datastore / broker / coordination** — even when externally hosted, Pulsar and ZooKeeper are run-or-managed **infrastructure** → **containers** (`containers.md`), not `ext.`.
+- **Actor** — humans or client apps that call *Varadhi* (producers, administrators) or receive push delivery at a **per-subscription URL** (subscriber endpoints). Actors and per-subscription delivery targets stay free-form labels — they are not a single greppable `ext.` node.
+
+### External Services
+
+Services Varadhi **calls but does not run**. Each is defined **once** here with a node-defining `ext.<name>` heading and referenced by that ID elsewhere.
+
+#### ext.identity-provider — Identity Provider
+**Relationship**: depends-on (authentication)
+**Purpose**: Issues or validates credentials for API authentication. The default deployment uses a header-based handler; the OpenAPI spec models JWT bearer auth. Authentication is pluggable — the production mechanism is not finalized; integrators supply an `AuthenticationHandlerProvider` implementation.
+
+#### ext.authorization-provider — Authorization Provider
+**Relationship**: depends-on (authorization, optional)
+**Purpose**: External RBAC / policy decision service used **instead of** the built-in `DefaultAuthorizationProvider`. When configured, IAM policy management inside Varadhi is not wired and role bindings live in this provider.
 
 ### Backing Infrastructure (deployment prerequisites)
 These are deployed **for** Varadhi and operated as part of it (not external integrations). They are documented here and under [Operational Context](#operational-context), and intentionally **excluded from the outside-in diagram**.
@@ -86,37 +98,45 @@ Listed for operators; **not shown in the diagram** to keep the outside-in view f
 
 | System | Purpose |
 |---|---|
-| OpenTelemetry collector → Prometheus / Grafana | Receives OTLP metrics/traces for monitoring and visualization. |
-| Identity provider / token issuer | Issues/validates credentials for API authentication. The default handler is header-based (`UserHeaderAuthenticationHandler`); the OpenAPI spec models JWT bearer auth. Authentication is pluggable; the production mechanism is not finalized. |
+| OpenTelemetry collector → Prometheus / Grafana | Receives OTLP metrics/traces for monitoring and visualization (`otel-collector` is a **container**; Prometheus/Grafana are downstream). |
 
 ## Public Concepts
 
 Canonical reference: [Main Concepts](https://github.com/flipkart-incubator/varadhi/wiki/Main-Concepts) and [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
 
-### Message
+### concept.message — Message
 A two-part entity: an opaque **payload** (raw bytes — Varadhi attaches no semantics) and **metadata** carried as HTTP request **headers** that tell Varadhi how to handle it. See [Message Configurability](https://github.com/flipkart-incubator/varadhi/wiki/Message-Configurability).
 - *Gotcha:* header names are **configurable per deployment** (e.g. `X_MESSAGE_ID`, `X_GROUP_ID`). Don't hardcode names; confirm the target deployment's convention. A Message ID header is required; Group ID is required only for grouped topics.
 
-### Topic
+### concept.topic — Topic
 A named stream of messages, identified globally as `{project}/{topic}`. Supports pub/sub and broadcast. Has a `grouped` flag (ordering) and a capacity policy (throughput/QPS guard rails).
 
-### Subscription
-A named, **push-based** consumer of a topic, identified as `{project}/{subscription}`. Defines the delivery endpoint, RetryPolicy, ConsumptionPolicy, optional filter, and ordered/unordered delivery. A topic can have many independent subscriptions.
+### concept.subscription — Subscription
+A named, **push-based** consumer of a topic, identified as `{project}/{subscription}`. Defines the delivery endpoint, RetryPolicy, ConsumptionPolicy, optional filter, and ordered/unordered delivery intent. A topic can have many independent subscriptions. **Per-GroupId ordered delivery is not implemented on the consumer yet** — only unordered delivery is live.
 
-### Queue
+### concept.queue — Queue
 A topic + auto-created subscription pair for **point-to-point** delivery; each message carries its destination endpoint. Optional **callback** enables request/response. Users cannot create subscriptions on a queue. Queues do **not** support filtering.
 
-### Retry Queue / Dead Letter Queue
-Internal destinations for failed deliveries: retriable failures are re-attempted from Retry Queues; hard failures land in the DLQ for explicit, operator/consumer-initiated redelivery.
+### concept.retry-queue — Retry Queue
+Destination for retriable (soft) delivery failures; messages are re-attempted from here per the subscription's RetryPolicy.
 
-### Filter
+### concept.dead-letter-queue — Dead Letter Queue
+Destination for non-retriable (hard) delivery failures; messages land here for explicit, operator/consumer-initiated redelivery (managed via the control-plane API).
+
+### concept.filter — Filter
 A condition over message headers, evaluated on the **first** delivery attempt only; non-matching messages are treated as delivered for bookkeeping. Topic/subscription only.
 
-### Grouping / Ordering
-Ordering is enforced per **GroupId** (not per partition). Messages of the same GroupId are delivered in produce order, even across retries/DLQ; different GroupIds may be delivered concurrently and out of relative order. See [Message Ordering](https://github.com/flipkart-incubator/varadhi/wiki/Message-Ordering).
+### concept.grouping — Grouping / Ordering
+*Intended* semantics: ordering per **GroupId** (not per partition) — same GroupId in produce order, even across retries/DLQ; different GroupIds may be delivered concurrently and out of relative order. See [Message Ordering](https://github.com/flipkart-incubator/varadhi/wiki/Message-Ordering). **Not implemented end-to-end yet**: produce may hash by GroupId; the consumer grouped path is unwired (ungrouped delivery only).
 
-### Org / Team / Project (resource hierarchy)
-Org → Team → Project; messaging resources (topics/subscriptions/queues) live under a Project. Project names are globally unique per deployment; a resource's project association is immutable. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
+### concept.org — Org
+Top of the resource hierarchy (Org → Team → Project); the tenancy/isolation root under which teams and projects live. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
+
+### concept.team — Team
+A grouping within an Org that owns one or more Projects. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
+
+### concept.project — Project
+The unit that messaging resources (topics/subscriptions/queues) live under. Project names are globally unique per deployment; a resource's project association is immutable. See [Tenancy Model](https://github.com/flipkart-incubator/varadhi/wiki/Tenanacy-Model).
 
 ## Public Contracts
 
@@ -130,14 +150,14 @@ Org → Team → Project; messaging resources (topics/subscriptions/queues) live
 ### Produce REST API
 **Type**: REST (HTTP/JSON) — `POST /v1/projects/{project}/topics/{topic}/produce`
 **Reference**: [`docs/api.yaml`](./api.yaml); message headers in [Message Configurability](https://github.com/flipkart-incubator/varadhi/wiki/Message-Configurability).
-**Consistency**: At-least-once persistence/delivery (MVP). Ordered delivery available for grouped topics (GroupId granularity).
-**Performance**: Per-topic capacity policy enforces guard rails (config defaults: ~400 KBps throughput, ~100 QPS, read fan-out 2; max request size 5 MB). [TODO: no published global SLA.]
+**Consistency**: At-least-once persistence (MVP). Produce may route grouped topics by GroupId; **ordered delivery to subscribers is not implemented yet**.
+**Performance**: Per-topic capacity policy enforces throughput / QPS rate limits. Other guard rails such as request-size are platform constants applible to all topics and defined in deployment config. [TODO: no published global SLA.]
 **Protocols**: HTTP/1.1 and HTTP/2 (ALPN). gRPC and alternate protocols are on the roadmap.
 
 ### Push delivery contract (Varadhi → subscriber endpoint)
 **Type**: Outbound HTTP request to the subscription's configured endpoint.
 **Behavior**: Varadhi delivers the message payload and propagates configured headers (e.g. message id, produce identity/region/timestamp). Non-2xx responses are treated as delivery failures and routed to Retry Queue / DLQ per policy. For queues, an optional callback delivers a response back to the publisher.
-**Consistency**: At-least-once (consumers should be idempotent). Ordering preserved per GroupId for grouped subscriptions, including across failures.
+**Consistency**: At-least-once (subscribers should be idempotent). **Per-GroupId ordering is not implemented on the consumer yet** — only unordered push delivery is live.
 **Performance**: Governed by the subscription's ConsumptionPolicy (latency/parallelism/failure-recovery preferences). [TODO: no published delivery-latency SLA.]
 
 ## Operational Context
@@ -167,7 +187,7 @@ Things to know before integrating:
 
 - **Pre-production / WIP** — APIs are in *Draft* and may change; not yet running in production; no finalized SLAs.
 - **At-least-once only** — no exactly-once or deduplication today; consumers must be idempotent.
-- **Ordering is per-GroupId**, not per-partition — relative order *across* different GroupIds is not guaranteed (differs from Kafka per-partition ordering; closer to Pulsar key-shared).
+- **Grouped / ordered delivery is not implemented yet** on the consumer — only the ungrouped path is live. When implemented, ordering is intended per-GroupId (not per-partition); relative order across different GroupIds would not be guaranteed.
 - **Push-only delivery** — consumers must expose an HTTP endpoint; there is no client pull/poll API.
 - **Configurable header names** — message header names are deployment-specific; integrators must confirm the target deployment's convention.
 - **Single backend implementation today** — Apache Pulsar (messaging) and ZooKeeper (metastore) are the only shipped implementations; Kafka is on the roadmap.
@@ -189,4 +209,4 @@ flowchart TD
     Varadhi -- "push delivery (HTTP)" --> Subscriber[Subscriber / Consumer App Endpoints]
 ```
 
-> Backing infrastructure (Apache Pulsar, ZooKeeper), observability (OpenTelemetry/Prometheus/Grafana), and the identity provider are intentionally omitted from this outside-in diagram; see [External Dependencies](#external-dependencies) and [Operational Context](#operational-context).
+> Backing infrastructure (Apache Pulsar, ZooKeeper), observability (OpenTelemetry/Prometheus/Grafana), and external services (`ext.identity-provider`, optional `ext.authorization-provider`) are intentionally omitted from this outside-in diagram; see [External Dependencies](#external-dependencies) and [Operational Context](#operational-context).
