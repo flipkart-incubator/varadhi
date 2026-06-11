@@ -1,6 +1,6 @@
 # base image for this should be jre based on instead of jdk.
 # Ubuntu 24.04.1 LTS
-FROM eclipse-temurin:21.0.5_11-jdk
+FROM eclipse-temurin:25-jdk
 ARG SKIP_CERT_CHECK=false
 ARG VARADHI_HOME=.
 ARG ZOOKEEPER_VERSION=3.6.0
@@ -12,10 +12,12 @@ ENV JVM_DEBUG_PORT=""
 # Varadhi Server
 EXPOSE $PORT
 
-# Install common debug tools
-RUN apt-get update && apt-get install -y dstat iptables
-RUN apt-get install -y sudo atop screen procps iftop net-tools jq iptables lsof iotop sysstat
-RUN apt-get install -y tcpdump ngrep libcap2-bin
+# Install common debug tools and utilities used by the image build and health checks
+RUN apt-get update && apt-get install -y \
+    curl wget \
+    dstat iptables sudo atop screen procps iftop net-tools jq lsof iotop sysstat \
+    tcpdump ngrep libcap2-bin \
+    && rm -rf /var/lib/apt/lists/*
 RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/tcpdump
 RUN setcap cap_net_raw,cap_net_admin=eip /usr/bin/ngrep
 

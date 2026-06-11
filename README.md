@@ -22,7 +22,7 @@ spec and other detailed information.
 
 ## Try locally
 
-Give it a go locally on your machine. You will require java 21, docker & python.
+Give it a go locally on your machine. You will require Java 25, docker & python.
 Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/Try-Locally)
 
 ## Build
@@ -58,10 +58,11 @@ docker compose --profile dev -f setup/docker/compose.yml down -v
 ## Integration Tests (E2E)
 
 ```bash
-./gradlew copyDependencies copyE2EConfig -x test
+./gradlew clean build copyDependencies copyE2EConfig
 
 docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg SKIP_CERT_CHECK=true
 
+docker compose --profile test -f setup/docker/compose.yml down -v
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 
 ./gradlew testE2E

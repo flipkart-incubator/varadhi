@@ -63,7 +63,7 @@ Refer to `docs/module-structure.png` for a visual representation of module depen
 - **Build conventions:** Shared logic in `buildSrc/src/main/groovy/com.flipkart.varadhi.java-common-conventions.gradle`
 - **Test fixtures:** Modules use `java-test-fixtures` plugin for shared test utilities. Fixtures are used to define dummy, mock and in-memory implementations of interfaces for testing. All classes interacting with outer world (DB, message bus, HTTP) must have some sort of mock or in-memory implementation defined in test fixtures.
 - **Config copying:** Dynamic config generation via `copyConfigForModule()` and `copyConfigToDir()` functions
-- **Java 21:** Project uses Java 21 with `--parameters` compiler flag for reflection
+- **Java 25:** Project uses Java 25 with `--parameters` compiler flag for reflection
 - **Legacy libraries:** Use classpath (not module-path) for non-modularized JARs like Curator
 
 ## Deployment & Configuration

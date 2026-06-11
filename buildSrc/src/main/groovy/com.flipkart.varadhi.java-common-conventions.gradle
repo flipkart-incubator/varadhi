@@ -28,7 +28,7 @@ def loadProperties(path) {
 }
 
 ext {
-    jacoco_version = "0.8.10"
+    jacoco_version = "0.8.15"
 
     copyConfigToDir = { overridesFile, destination ->
         return {
@@ -97,9 +97,9 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
-    sourceCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
 }
 
 spotless {
@@ -115,13 +115,13 @@ spotless {
         cleanthat()
         eclipse('4.33').configFile(file("$rootDir/codestyle.xml"))
         endWithNewline()
-        targetExclude 'setup/docker/configs/varadhi-auto-generated/**'
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', 'docs/**'
         // licenseHeader '/* Licensed under Apache-2.0 (C)$YEAR */'
     }
     json {
         target '**/*.json'
         simple().indentWithSpaces(4)
-        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', '.vscode/**'
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', '.vscode/**', 'docs/**'
     }
 }
 
@@ -137,7 +137,7 @@ tasks.register('copyDependencies', Copy) {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release.set(21)
+    options.release.set(25)
 }
 
 tasks.withType(JavaCompile).configureEach {

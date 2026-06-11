@@ -4,7 +4,6 @@ import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * offset.
  */
 
-@ThreadSafe
 public interface InMemoryPartition {
 
     int add(byte[] message);

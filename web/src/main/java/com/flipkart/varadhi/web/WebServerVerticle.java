@@ -644,7 +644,7 @@ public class WebServerVerticle extends AbstractVerticle {
     }
 
 
-    public static enum APIUsecases {
+    public enum APIUsecases {
         ADMIN, PRODUCE, ALL;
 
         boolean hasAdmin() {
