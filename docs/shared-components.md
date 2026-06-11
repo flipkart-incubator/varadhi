@@ -2,59 +2,68 @@
 
 Cross-container, in-repo modules that Varadhi's app containers (`varadhi-server`, `varadhi-controller`, `varadhi-consumer`) depend on. They are **not** owned by any single container.
 
-> Names follow `naming-conventions.md` (`shared.<role>`); the **Location** line in each entry maps the role name to its source module. Entries are evidence-based from the component fact-gathering passes; `Used By` and per-module depth expand as more containers are analyzed. Unverified depth is marked `[TODO]`.
-
 ## shared.app-bootstrap
 
-**Location**: `server/src/main/java/com/flipkart/varadhi/VaradhiApplication.java`, `server/.../utils/CuratorFrameworkCreator.java`, `server/.../LoggingSpanExporter.java`
-**Purpose**: Role-agnostic application bootstrap. Loads/validates configuration, builds `CoreServices`, creates the ZooKeeper-backed cluster manager and clustered Vert.x, initializes resource read caches + the cluster event dispatcher, and deploys the per-role verticle(s): `Server`→`WebServerVerticle`, `Controller`→`ControllerVerticle`, `Consumer`→`ConsumerVerticle`.
-**Public API**: `VaradhiApplication#main`, `VaradhiApplication#getComponentVerticles` (role→verticle mapping), `CuratorFrameworkCreator#create`.
+**Location**: [VaradhiApplication](/server/src/main/java/com/flipkart/varadhi/VaradhiApplication.java), [CuratorFrameworkCreator](/server/src/main/java/com/flipkart/varadhi/utils/CuratorFrameworkCreator.java)
+**Purpose**: Role-agnostic application bootstrap. Loads/validates configuration, builds `CoreServices`, creates the ZooKeeper-backed cluster manager and clustered Vert.x, initializes the resource read caches + the cluster event dispatcher, and deploys the per-role verticle(s) selected by `member.roles` (`Server`/`Controller`/`Consumer`).
+**Public Interface**: [VaradhiApplication](/server/src/main/java/com/flipkart/varadhi/VaradhiApplication.java) is the composition root — the process `main` boots the app through it and gets the role→verticle wiring; [CuratorFrameworkCreator](/server/src/main/java/com/flipkart/varadhi/utils/CuratorFrameworkCreator.java) builds the shared ZooKeeper client. Internal wiring (verticle construction, region validation) is not a caller surface.
 **Used By**: all three app containers (the role(s) a process runs are chosen by `member.roles`).
-**Runtime Characteristics**: Single composition root. Fails fast at startup — validates the member region against the metastore (`VaradhiApplication#validateMemberRegion`) and exits the process on verticle-deploy failure (`VaradhiApplication#main` `onFailure` → `System.exit(-1)`).
+**Runtime Characteristics**: Single composition root. Fails fast at startup — validates the member region against the metastore and exits the process on verticle-deploy failure. [VaradhiApplication](/server/src/main/java/com/flipkart/varadhi/VaradhiApplication.java)
 
 ## shared.cluster-rpc
 
-**Location**: `core/src/main/java/com/flipkart/varadhi/core/cluster/*`
-**Purpose**: Vert.x clustered event-bus abstraction and cluster membership for inter-container RPC, with ZooKeeper as the cluster manager.
-**Public API**: `MessageExchange` (`#send` fire-and-track, `#request` await-response); `MessageRouter` — both the **sending** side and the **receiving** side (`#sendHandler` / `#requestHandler` register handlers keyed by node id / route); `VaradhiClusterManager` / `VaradhiZkClusterManager` (incl. `#getAllMembers`, `#addMembershipListener`); `MembershipListener` (node join/left); `ControllerApi` / `ControllerConsumerApi` + `ControllerRestClient` / `ControllerConsumerClient`; `ConsumerApi` / `ConsumerClientFactory` / `ConsumerClientFactoryImpl` / `ConsumerClient`; entity events (`core.cluster.events`: `ResourceEventListener`, `ResourceEvent`, `EventType`, `ResourceEventDispatcher`; nodes receive on `ENTITY_EVENTS_HANDLER`).
+**Location**: [core.cluster package](/core/src/main/java/com/flipkart/varadhi/core/cluster)
+**Purpose**: The Vert.x clustered event-bus abstraction and cluster membership used for inter-container RPC, with ZooKeeper as the cluster manager. It is also the transport that distributes `concept.entity-change-event`s to all nodes for cache coherence.
+**Public Interface**: Callers send/receive cluster RPC through [MessageExchange](/core/src/main/java/com/flipkart/varadhi/core/cluster/MessageExchange.java) (fire-and-track send / await-response request) and register inbound handlers through [MessageRouter](/core/src/main/java/com/flipkart/varadhi/core/cluster/MessageRouter.java); membership is observed through [VaradhiClusterManager](/core/src/main/java/com/flipkart/varadhi/core/cluster/VaradhiClusterManager.java) (members + join/leave listeners). The controller↔consumer RPC contracts and `concept.entity-change-event` distribution ([ResourceEventDispatcher](/core/src/main/java/com/flipkart/varadhi/core/cluster/events/ResourceEventDispatcher.java)) ride on top of these. Concrete client/handler types are implementation detail behind these facades.
 **Used By**:
-- `varadhi-server` — `ControllerRestClient` (subscription lifecycle ops), `ConsumerClientFactoryImpl` (DLQ shard calls), `ResourceEventDispatcher` (cache freshness).
-- `varadhi-consumer` — `MessageRouter#sendHandler`/`#requestHandler` (registers its inbound cluster-RPC handlers by consumerId), `ControllerConsumerClient#update` (reports shard-op completion/failure).
-- `varadhi-controller` — registers `ROUTE_CONTROLLER` handlers and **implements** `ControllerApi`/`ControllerConsumerApi`; calls consumers via `ConsumerClientFactory`; uses `MembershipListener` + `#getAllMembers`; fans entity events to **all** nodes via `MessageExchange#request(hostname, ENTITY_EVENTS_HANDLER, …)`.
-**Runtime Characteristics**: `#request` awaits a response bounded by the configured send timeout (`DeliveryOptions`); transport rides the clustered event bus, so availability is tied to the ZooKeeper cluster manager. Despite the `*RestClient` name, transport is the event bus, not HTTP.
+- `varadhi-server` — calls the controller for subscription lifecycle ops and consumer shards for DLQ calls; dispatches `concept.entity-change-event`s for cache freshness.
+- `varadhi-consumer` — registers inbound cluster-RPC handlers (keyed by consumerId) and reports shard-op completion/failure to the controller.
+- `varadhi-controller` — implements the controller RPC contracts, calls consumers, tracks membership, and fans `concept.entity-change-event`s to **all** nodes.
+**Runtime Characteristics**: `request` awaits a response bounded by the configured send timeout (a tunable knob); transport rides the clustered event bus, so availability is tied to the ZooKeeper cluster manager. Despite the `*RestClient` naming, transport is the event bus, not HTTP. [MessageExchange](/core/src/main/java/com/flipkart/varadhi/core/cluster/MessageExchange.java)
 
 ## shared.entity-services
 
-**Location**: `core/src/main/java/com/flipkart/varadhi/core/` (`OrgService`, `TeamService`, `ProjectService`, `RegionService`, `VaradhiTopicService`, `VaradhiSubscriptionService`, `VaradhiQueueService`, `VaradhiTopicFactory`, `VaradhiSubscriptionFactory`, `ShardProvisioner`)
-**Purpose**: Business logic for managing the resource hierarchy and messaging resources over the metastore and messaging-stack SPIs. `varadhi-server`'s control-plane HTTP handlers are thin shells over these services.
-**Public API**: the `*Service` classes (CRUD + lifecycle of org/team/project/region/topic/subscription/queue), the `*Factory` classes, `ShardProvisioner`.
-**Used By**: `varadhi-server` (`http-ingress` control-plane handlers; topic/subscription lookups); also controller (subscription lifecycle). 
-**Runtime Characteristics**: Side effects target the metastore (zookeeper) and messaging stack (pulsar). `[TODO: per-service failure/consistency semantics — core not scanned in depth]`
+**Location**: [core package](/core/src/main/java/com/flipkart/varadhi/core) (`*Service`, `*Factory`, [ShardProvisioner](/core/src/main/java/com/flipkart/varadhi/core/subscription/ShardProvisioner.java))
+**Purpose**: Business logic for managing the resource hierarchy (`concept.org`, `concept.team`, `concept.project`) and messaging resources (`concept.topic`, `concept.subscription`, `concept.queue`) over the metastore and messaging-stack SPIs. `varadhi-server`'s control-plane HTTP handlers are thin shells over these services.
+**Public Interface**: The `*Service` facades — [OrgService](/core/src/main/java/com/flipkart/varadhi/core/OrgService.java), [VaradhiTopicService](/core/src/main/java/com/flipkart/varadhi/core/VaradhiTopicService.java), [VaradhiSubscriptionService](/core/src/main/java/com/flipkart/varadhi/core/VaradhiSubscriptionService.java), and peers for team/project/region/queue: callers perform CRUD + lifecycle on the resource-hierarchy and messaging `concept.*` entities through them. Entity construction ([ShardProvisioner](/core/src/main/java/com/flipkart/varadhi/core/subscription/ShardProvisioner.java) and the `*Factory` types) sits behind these services.
+**Used By**: `varadhi-server` (`http-ingress` control-plane handlers; topic/subscription lookups); also `varadhi-controller` (subscription lifecycle).
+**Runtime Characteristics**: Side effects target the metastore and messaging stack. `[TODO: per-service failure/consistency semantics — core not scanned in depth]`
 
 ## shared.resource-cache
 
-**Location**: `core/.../ResourceReadCache`, `core/.../ResourceReadCacheRegistry`, `core/.../OrgReadCache`
-**Purpose**: In-process caches of ORG/PROJECT/TOPIC resources, preloaded from the metastore at startup and kept fresh via cluster entity events. Serves hot-path reads (notably produce) without hitting the metastore per request.
-**Public API**: `ResourceReadCache#get` / `#create` / `#preload`, `ResourceReadCacheRegistry#register` / `#getCache`, `OrgReadCache`.
+**Location**: [ResourceReadCache](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCache.java), [ResourceReadCacheRegistry](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCacheRegistry.java)
+**Purpose**: In-process caches of `concept.org` / `concept.project` / `concept.topic` resources, preloaded from the metastore at startup and kept fresh via `concept.entity-change-event`s. Serves hot-path reads (notably produce) without hitting the metastore per request.
+**Public Interface**: [ResourceReadCache](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCache.java) is the read boundary (get / create / preload a cache); [ResourceReadCacheRegistry](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCacheRegistry.java) registers and hands out the per-resource caches.
 **Used By**: `varadhi-server` (`produce-service` topic/project/org lookups + NFR filter; control-plane handlers' project lookups).
-**Runtime Characteristics**: **Eventually consistent** — updates arrive asynchronously via `ResourceEventDispatcher` cluster events; reads can be stale within the event-propagation window. Preloaded at startup (`VaradhiApplication#initializeEventManager`). `[TODO: staleness window magnitude]`
+**Runtime Characteristics**: **Eventually consistent** — updates arrive asynchronously via `concept.entity-change-event` distribution, so reads can be stale within the event-propagation window. [ResourceReadCache](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCache.java) Preloaded at startup. [VaradhiApplication](/server/src/main/java/com/flipkart/varadhi/VaradhiApplication.java)
 
-## shared.backend-spi
+## shared.metadata-spi
 
-**Location**: `spi/src/main/java/com/flipkart/varadhi/spi/` (`db`: `MetaStore`, `MetaStoreProvider`, `IamPolicyStore`, `AssignmentStore`, `OpStore`, `SubscriptionStore`, `*Store`, `MetaStoreEventListener`, `MetaStoreChangeEvent`; `services`: `Producer`, `ProducerFactory`, `MessagingStackProvider`, `StorageTopicService`, `StorageSubscriptionService`)
-**Purpose**: Pluggable interfaces abstracting the metadata store (ZooKeeper default, via `metastore-zk`) and the messaging stack (Pulsar default, via `pulsar`).
-**Public API**: `MetaStore` (`orgs()`/`teams()`/`projects()`/`regions()`/`topics()`/`subscriptions()`, `IamPolicyStore.Provider#iamPolicies()`), `MetaStoreProvider` (`getMetaStore`/`getAssignmentStore`/`getOpStore`); **assignment/operation** — `AssignmentStore` (create/delete/get assignments), `OpStore` (create/update sub- and shard-operations, `getPendingSubOps`); **change watch** — `MetaStore#registerEventListener`, `MetaStoreEventListener`, `MetaStoreChangeEvent`; **messaging** — `Producer#produceAsync` + `ProducerFactory#newProducer`, `Consumer` (+ `Offset`) + `ConsumerFactory#newConsumer`, `MessagingStackProvider` (`getProducerFactory`/`getConsumerFactory`/`getStorageTopicService`/`getStorageSubscriptionService`/`getSubscriptionFactory`/`getStorageTopicFactory`).
+**Location**: [spi.db package](/spi/src/main/java/com/flipkart/varadhi/spi/db)
+**Purpose**: Pluggable interface abstracting the metadata store (metastore SPI) — the seam behind which ZooKeeper is the default implementation. Persists the resource hierarchy (`concept.org`, `concept.team`, `concept.project`, `concept.topic`, `concept.subscription`), `concept.assignment`s, and operation state.
+**Public Interface**: [MetaStore](/spi/src/main/java/com/flipkart/varadhi/spi/db/MetaStore.java) / [MetaStoreProvider](/spi/src/main/java/com/flipkart/varadhi/spi/db/MetaStoreProvider.java) are the boundary: callers read/write the resource-hierarchy entities, the `concept.assignment` and operation stores, and the IAM policy store, and register a change-watch over metastore mutations (the source of `concept.entity-change-event`s). Concrete `*Store` types are detail behind the provider.
 **Used By**:
-- `varadhi-server` — metastore access, IAM policy store, `Producer`/`ProducerFactory` (produce), provisioning services.
-- `varadhi-consumer` — `Consumer`/`ConsumerFactory` (consume main + retry topics), `Producer`/`ProducerFactory` (produce to retry/DLQ). No direct `MetaStore` use found.
-- `varadhi-controller` — `AssignmentStore` (shard assignments), `OpStore` (operation persistence), `SubscriptionStore` reads, and the metastore change **watch** (`registerEventListener`).
-Implemented by `metastore-zk` (→ zookeeper) and `pulsar` (→ pulsar).
-**Runtime Characteristics**: Contracts only; runtime behavior is the implementation's (see the `zookeeper` and `pulsar` infrastructure containers in `docs/containers.md`).
+- `varadhi-server` — metastore access; IAM policy store.
+- `varadhi-controller` — `concept.assignment` store, operation persistence, subscription reads, and the metastore change **watch**.
+- `varadhi-consumer` — no direct `MetaStore` use found.
+Implemented by `metastore-zk` (→ zookeeper).
+**Runtime Characteristics**: Contracts only; runtime behavior is the implementation's (see the `zookeeper` infrastructure container in [containers.md](./containers.md)).
+
+## shared.messaging-spi
+
+**Location**: [spi.services package](/spi/src/main/java/com/flipkart/varadhi/spi/services)
+**Purpose**: Pluggable interface abstracting the messaging stack (messaging SPI) — the seam behind which Pulsar is the default implementation. Produces and consumes `concept.message`s against `concept.storage-topic`s.
+**Public Interface**: [MessagingStackProvider](/spi/src/main/java/com/flipkart/varadhi/spi/services/MessagingStackProvider.java) is the boundary: it vends producer/consumer factories ([Producer](/spi/src/main/java/com/flipkart/varadhi/spi/services/Producer.java)) and the storage-topic/subscription services through which `concept.message`s are produced and consumed against `concept.storage-topic`s. Concrete factory types are detail behind the provider.
+**Used By**:
+- `varadhi-server` — producer factory (produce); storage-topic/subscription provisioning.
+- `varadhi-consumer` — consumer/producer factories (consume main + retry topics; produce to retry/DLQ).
+Implemented by `pulsar` (→ pulsar).
+**Runtime Characteristics**: Contracts only; runtime behavior is the implementation's (see the `pulsar` infrastructure container in [containers.md](./containers.md)).
 
 ## shared.commons
 
-**Location**: `common/`, `entities/`
-**Purpose**: `common` = shared utilities (`Constants`, `Result`, exceptions, host/reflection helpers); `entities` = the domain model (`Message`, `VaradhiTopic`, `Org`/`Team`/`Project`, auth types, `StdHeaders`, etc.).
-**Public API**: data types + helpers used across all modules.
+**Location**: [common](/common), [entities](/entities)
+**Purpose**: `common` = shared utilities (constants, result/exception types, host/reflection helpers); `entities` = the code types behind the domain model — including the classes that back `concept.message`, `concept.topic`, `concept.org` / `concept.team` / `concept.project`, auth types, and message headers (`StdHeaders`).
+**Public Interface**: Foundational data types + helpers imported across all modules; no behavioral facade.
 **Used By**: all modules.
 **Runtime Characteristics**: None of architectural note — foundational libraries.

@@ -8,7 +8,7 @@ Varadhi is built and shipped as a **single application image**. What a running p
 
 This view models the three roles as three distinct App containers — **varadhi-server**, **varadhi-controller**, and **varadhi-consumer** — because they scale, deploy, and fail independently in the target topology, even though they share one codebase and image.
 
-The three app containers form a **Vert.x cluster**. They communicate with each other over the **Vert.x clustered event bus** (send/request semantics), and **ZooKeeper serves as the cluster manager** that handles node discovery and event-bus coordination. ZooKeeper plays a second role too: it is the **metadata store** for all Varadhi entities (orgs, teams, projects, topics, subscriptions, role bindings, assignments). **Apache Pulsar** is the messaging substrate — it durably stores messages and is what producers write to and consumers read from. Both Pulsar and ZooKeeper are pluggable behind SPIs; these are their default implementations.
+The three app containers form a **Vert.x cluster**. They communicate with each other over the **Vert.x clustered event bus** (send/request semantics), and **ZooKeeper serves as the cluster manager** that handles node discovery and event bus coordination. ZooKeeper plays a second role too: it is the **metadata store** for all Varadhi entities (orgs, teams, projects, topics, subscriptions, role bindings, assignments). **Apache Pulsar** is the messaging substrate — it durably stores messages and is what producers write to and consumers read from. Both Pulsar and ZooKeeper are pluggable behind SPIs; these are their default implementations.
 
 At runtime: producers hit **varadhi-server** to publish; the server writes to **pulsar**. **varadhi-controller** assigns subscriptions to consumers and orchestrates their lifecycle. **varadhi-consumer** reads from **pulsar** and pushes each message over HTTP to the subscriber application endpoint configured on the subscription (an external system — see L1). Metrics from all three roles flow out via OTLP to **otel-collector**.
 
@@ -20,7 +20,7 @@ At runtime: producers hit **varadhi-server** to publish; the server writes to **
 | varadhi-controller | App | Java 21 / Vert.x (shared image, `roles:[Controller]`) | Cluster brain: assigns subscriptions to consumers and orchestrates subscription/topic lifecycle operations; single active instance (no leader election yet) |
 | varadhi-consumer | App | Java 21 / Vert.x (shared image, `roles:[Consumer]`) | Delivery worker fleet: consumes from the messaging stack and pushes messages over HTTP to subscriber endpoints; manages retries, DLQ, and ordering |
 | pulsar | Infrastructure | Apache Pulsar 3.3.x | Messaging-stack SPI default: durable message storage and delivery substrate |
-| zookeeper | Infrastructure | Apache ZooKeeper 3.9.x | Dual role: metadata store (metastore SPI default) **and** Vert.x cluster manager (node discovery + event-bus coordination) |
+| zookeeper | Infrastructure | Apache ZooKeeper 3.9.x | Dual role: metadata store (metastore SPI default) **and** Vert.x cluster manager (node discovery + event bus coordination) |
 | otel-collector | Infrastructure | OpenTelemetry Collector | Receives OTLP metrics/traces from the app containers; exposes a Prometheus scrape endpoint |
 
 Prometheus and Grafana sit downstream of otel-collector for storage and visualization; they are described under [References](#references) and omitted from the diagram to keep it focused.
@@ -37,12 +37,12 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
-| pulsar | Pulsar client (binary 6650) + admin (HTTP 8080) | writes / calls | Produce messages; provision/manage storage topics |
-| zookeeper | ZK / Curator | reads / writes | Control-plane metadata; cluster membership |
-| varadhi-controller | Vert.x clustered event bus | calls (send/request) | Delegate subscription/topic lifecycle operations |
-| varadhi-consumer | Vert.x clustered event bus (request) | calls | DLQ browse/unsideline — fan out to consumer shards |
+| pulsar | Pulsar client (binary 6650) + admin (HTTP 8080) | calls | Produce messages; provision/manage storage topics |
+| zookeeper | ZK / Curator | calls | Control-plane metadata read/write; cluster membership |
+| varadhi-controller | Vert.x clustered event bus | calls | Delegate subscription/topic lifecycle operations (send/request) |
+| varadhi-consumer | Vert.x clustered event bus | calls | DLQ browse/unsideline — fan out to consumer shards (request) |
 | varadhi-controller | Vert.x clustered event bus | called-by | Receive entity-change events (cache-coherence refresh) |
-| otel-collector | OTLP/HTTP (4318) | writes | Export metrics / traces |
+| otel-collector | OTLP/HTTP (4318) | calls | Export metrics / traces |
 
 **Gotchas**:
 - Message **header names are configurable** per deployment (`messageConfiguration.headers`); the produce contract depends on the deployed convention, not hardcoded names.
@@ -55,17 +55,17 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 
 **Kind**: App
 **Tech**: Java 21 / Vert.x. Shared `varadhi` image run with `member.roles:[Controller]`. Helm deploys it with **no service** (`service: null`) — it is not part of the request-serving path.
-**Purpose**: The cluster's coordination brain. It assigns subscriptions to consumer nodes, tracks consumer membership, and orchestrates subscription/topic lifecycle operations (start/stop, retries of operations). It assumes leadership on start (cluster leader election/handover is **not yet implemented**) and carries **no produce/consume data-path traffic** — it operates over the cluster event bus and metadata store only. It is also the cluster-wide distributor of metastore entity-change events (see Internal Concepts).
+**Purpose**: The cluster's coordination brain. It assigns subscriptions to consumer nodes, tracks consumer membership, and orchestrates subscription/topic lifecycle operations (start/stop, retries of operations). It assumes leadership on start (cluster leader election/handover is **not yet implemented**) and carries **no produce/consume data-path traffic** — it operates over the cluster event bus and metadata store only. It is also the cluster-wide distributor of metastore entity-change events (`concept.entity-change-event`).
 
 **Relationships**:
 
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
-| zookeeper | ZK / Curator | reads / writes | Assignments + operations + metadata; cluster manager (membership) |
-| varadhi-consumer | Vert.x clustered event bus (send/request) | calls | Assign subscriptions; start/stop; operational commands |
-| varadhi-server, varadhi-consumer | Vert.x clustered event bus (request) | calls | Fan out entity-change events to all nodes (cache coherence) |
+| zookeeper | ZK / Curator | calls | Assignments + operations + metadata read/write; cluster manager (membership) |
+| varadhi-consumer | Vert.x clustered event bus | calls | Assign subscriptions; start/stop; operational commands (send/request) |
+| varadhi-server, varadhi-consumer | Vert.x clustered event bus | calls | Fan out entity-change events to all nodes (cache coherence; request) |
 | varadhi-server | Vert.x clustered event bus | called-by | Receive lifecycle operations triggered via the control plane |
-| otel-collector | OTLP/HTTP (4318) | writes | Export metrics / traces |
+| otel-collector | OTLP/HTTP (4318) | calls | Export metrics / traces |
 
 **Gotchas**:
 - Authentication is disabled on the controller deployment (`authenticationEnabled: false`) since it serves no external API — it relies on cluster-internal trust. Don't expose it like the server.
@@ -78,22 +78,23 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 
 **Kind**: App
 **Tech**: Java 21 / Vert.x. Shared `varadhi` image run with `member.roles:[Consumer]`.
-**Purpose**: The delivery worker fleet. Each consumer node owns the subscriptions assigned to it by the controller, reads messages from the messaging stack (main + retry topics), produces failed messages to retry/DLQ topics, and **pushes** each message over HTTP to the subscriber endpoint configured on the subscription. It enforces the subscription's RetryPolicy and ConsumptionPolicy: non-2xx responses move messages to Retry Queues or the Dead Letter Queue, and for grouped subscriptions it preserves per-GroupId ordering across failures.
+**Purpose**: The delivery worker fleet. Each consumer node owns the subscriptions (`concept.subscription`) assigned to it by the controller (see `concept.assignment`), reads messages from the messaging stack (main + retry topics), produces failed messages to retry/DLQ topics, and **pushes** each message over HTTP to the subscriber endpoint configured on the subscription. It enforces the subscription's RetryPolicy and ConsumptionPolicy: non-2xx responses move messages to the `concept.retry-queue` or `concept.dead-letter-queue`. **Grouped / ordered consumption (`concept.grouping`) is not implemented yet** — only the ungrouped delivery path is live.
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
-| pulsar | Pulsar client (binary 6650) | reads / writes | Consume from main + retry topics; produce failed messages to retry/DLQ topics |
-| varadhi-controller | Vert.x clustered event bus (send/request) | called-by | Receive subscription assignments + lifecycle commands; entity-change events (cache-coherence refresh) |
-| varadhi-server | Vert.x clustered event bus (request) | called-by | DLQ browse/unsideline requests |
-| zookeeper | ZK / Curator (via cluster manager) | reads | Cluster membership only — no direct metastore access (shard metadata arrives via controller commands) |
+| pulsar | Pulsar client (binary 6650) | calls | Consume from main + retry topics; produce failed messages to retry/DLQ topics |
+| varadhi-controller | Vert.x clustered event bus | called-by | Receive subscription assignments + lifecycle commands; entity-change events (cache-coherence refresh; send/request) |
+| varadhi-server | Vert.x clustered event bus | called-by | DLQ browse/unsideline requests (request) |
+| zookeeper | ZK / Curator (via cluster manager) | calls | Cluster membership read (no direct metastore access — shard metadata arrives via controller commands) |
 | subscriber application endpoints (external) | HTTP/1.1, HTTP/2 (push) | calls | Deliver messages; queue request/response callbacks |
-| otel-collector | OTLP/HTTP (4318) | writes | Export metrics / traces |
+| otel-collector | OTLP/HTTP (4318) | calls | Export metrics / traces |
 
 **Gotchas**:
 - Delivery is **at-least-once** — subscriber endpoints must be idempotent.
-- Ordering is enforced **per GroupId, not per partition**; different groups may be delivered concurrently and out of relative order (differs from Kafka per-partition ordering, closer to Pulsar key-shared).
-- A subscription filter is evaluated **only on the first delivery attempt**; retried/dead-lettered messages are not re-filtered.
+- **Grouped ordering is not live on the consumer path** — `concept.grouping` metadata and produce-side partition routing exist, but the consumer connect path rejects grouped subscriptions today. When implemented, ordering is intended **per GroupId, not per partition** (different groups concurrent; see `concept.grouping` in system-context).
+- A subscription `concept.filter` is evaluated **only on the first delivery attempt**; retried/dead-lettered messages are not re-filtered.
 
 ---
 
@@ -104,6 +105,7 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 **Purpose**: The messaging substrate behind the messaging-stack SPI. It durably stores produced messages and is the source consumers read from. Varadhi also provisions per-topic storage topics (and retry/DLQ topics) on it. Apache Kafka support is on the roadmap as an alternative SPI implementation; Pulsar is the only shipped implementation today.
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
 | varadhi-server | Pulsar client + admin | called-by | Message produce; storage-topic provisioning |
@@ -118,9 +120,10 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 
 **Kind**: Infrastructure
 **Tech**: Apache ZooKeeper 3.9.x (standalone in compose; StatefulSet in `setup/helm/zookeeper`).
-**Purpose**: Serves two distinct functions for Varadhi. (1) **Metadata store** (metastore SPI default): persists JSON-formatted Varadhi entities — orgs, teams, projects, topics, subscriptions, role bindings, and consumer assignments. (2) **Vert.x cluster manager**: backs node discovery, membership, and clustered-event-bus coordination for the three app roles.
+**Purpose**: Serves two distinct functions for Varadhi. (1) **Metadata store** (metastore SPI default): persists JSON-formatted Varadhi entities — orgs, teams, projects, topics, subscriptions, role bindings, and consumer assignments. (2) **Vert.x cluster manager**: backs node discovery, membership, and clustered-event bus coordination for the three app roles.
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
 | varadhi-server | ZK / Curator | called-by | Metadata read/write; membership |
@@ -140,10 +143,12 @@ Prometheus and Grafana sit downstream of otel-collector for storage and visualiz
 **Purpose**: Central metrics/trace sink for the app containers. Receives OTLP over HTTP (port 4318) from server/controller/consumer and exposes a Prometheus-format scrape endpoint (port 8889). Decouples the application from specific monitoring backends.
 
 **Relationships**:
+
 | Communicates With | Protocol | Direction | Purpose |
 |---|---|---|---|
-| varadhi-server / controller / consumer | OTLP/HTTP (4318) | called-by | Receive metrics / traces |
-| prometheus | HTTP scrape (8889) | called-by | Expose metrics for scraping |
+| varadhi-server | OTLP/HTTP (4318) | called-by | Receive metrics / traces |
+| varadhi-controller | OTLP/HTTP (4318) | called-by | Receive metrics / traces |
+| varadhi-consumer | OTLP/HTTP (4318) | called-by | Receive metrics / traces |
 
 ---
 
@@ -181,23 +186,18 @@ flowchart TD
 
 ## Internal Concepts
 
-### Member roles & lean vs split deployment
-A Varadhi process assumes one or more `member.roles` (`Server`, `Controller`, `Consumer`). Lean/local runs enable all three in one process; the intended production topology runs them as separate deployments (and fleets). The same image and codebase serve all roles.
+Domain entities that **cross container boundaries inside the system** but are not part of the consumer-facing surface. Each is defined **once** here, carries a `concept.<name>` ID, and is referenced by that ID from component docs and flows rather than redefined per container. Being defined here (L2) rather than in [system-context.md](./system-context.md) Public Concepts (L1) is what makes a concept **internal**.
 
-### Clustered event bus & cluster manager
-Inter-role communication uses the Vert.x clustered event bus (send = fire-and-track, request = await response). Membership and transport coordination are provided by a ZooKeeper-backed cluster manager — i.e. ZooKeeper is the Vert.x cluster manager, distinct from its metadata-store role.
+(Architectural mechanisms a new developer must understand — member roles & lean-vs-split deployment, the Vert.x clustered event bus, and ZooKeeper's dual metastore/cluster-manager role — are described in the [Overview](#overview), not here; they are not domain entities.)
 
-### ZooKeeper's dual role
-ZooKeeper is both the **metastore** (persisted Varadhi entities) and the **cluster manager** (membership/coordination). This is worth calling out because the two concerns are often separate systems elsewhere.
+### concept.storage-topic — Storage Topic
+A user-facing `concept.topic` maps to one or more internal **storage topics** on the messaging stack (segmented for scaling), plus retry and DLQ topics. The mapping is managed by Varadhi; producers and consumers interact with the Varadhi `concept.topic`, not the raw storage topics.
 
-### Storage topic vs Varadhi topic
-A user-facing Varadhi topic maps to one or more internal **storage topics** on the messaging stack (segmented for scaling), plus retry and DLQ topics. The mapping is managed by Varadhi; consumers and producers interact with the Varadhi topic, not the raw storage topics.
+### concept.assignment — Assignment
+Which consumer node owns which `concept.subscription`. The controller computes and persists assignments and pushes lifecycle commands to consumers over the event bus; assignments live in the metastore.
 
-### Assignment
-The controller computes and persists **assignments** (which consumer node owns which subscription) and pushes lifecycle commands to consumers over the event bus. Assignments live in the metastore.
-
-### Entity event distribution (cache coherence)
-The controller watches the metastore for entity changes (topics, subscriptions, projects, orgs, regions) and fans them out to **all** app nodes over the event bus; each node refreshes its in-process resource cache. An event is treated as applied only once every node acknowledges it.
+### concept.entity-change-event — Entity Change Event
+A metastore change to a Varadhi entity (`concept.topic`, `concept.subscription`, `concept.project`, `concept.org`, regions) that the controller fans out to **all** app nodes over the event bus so each refreshes its in-process resource cache. An event is treated as applied only once every node acknowledges it.
 
 ## References
 
