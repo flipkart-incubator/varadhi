@@ -20,6 +20,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final TopicCapacityPolicy capacity;
     private final String nfrFilterName;
     private final TopicCategory topicCategory;
+    private final Map<String, Double> produceRegionWeights;
+    private final MessageSizeProfile messageSizeProfile;
+    private final RateLimiterMode rateLimiterMode;
 
     public enum TopicCategory {
         TOPIC, QUEUE
@@ -36,6 +39,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param status         the status of the topic
      * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory  topic vs queue classification; must not be {@code null}
+     * @param produceRegionWeights per-region produce budget weights; nullable until defaulted
+     * @param messageSizeProfile observed message size profile; nullable until defaulted
+     * @param rateLimiterMode per-topic rate limiter rollout mode; nullable until defaulted
      */
     private VaradhiTopic(
         String name,
@@ -45,14 +51,22 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         Map<String, SegmentedStorageTopic> internalTopics,
         LifecycleStatus status,
         String nfrFilterName,
-        TopicCategory topicCategory
+        TopicCategory topicCategory,
+        Map<String, Double> produceRegionWeights,
+        MessageSizeProfile messageSizeProfile,
+        RateLimiterMode rateLimiterMode
     ) {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.internalTopics = internalTopics;
+        this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
+        this.produceRegionWeights = produceRegionWeights != null ?
+            new HashMap<>(produceRegionWeights) :
+            new HashMap<>();
+        this.messageSizeProfile = messageSizeProfile;
+        this.rateLimiterMode = rateLimiterMode;
         this.status = status;
     }
 
@@ -100,6 +114,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         String nfrStrategy,
         TopicCategory topicCategory
     ) {
+        return of(project, name, grouped, capacity, actionCode, nfrStrategy, topicCategory, null, null, null);
+    }
+
+    public static VaradhiTopic of(
+        String project,
+        String name,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActionCode actionCode,
+        String nfrStrategy,
+        TopicCategory topicCategory,
+        Map<String, Double> produceRegionWeights,
+        MessageSizeProfile messageSizeProfile,
+        RateLimiterMode rateLimiterMode
+    ) {
         return new VaradhiTopic(
             fqn(project, name),
             INITIAL_VERSION,
@@ -108,7 +137,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
-            topicCategory
+            topicCategory,
+            produceRegionWeights,
+            messageSizeProfile,
+            rateLimiterMode
         );
     }
 
@@ -131,6 +163,16 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      */
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
+    }
+
+    /**
+     * Replaces the produce-region weight map (e.g. after defaulting in the topic factory).
+     */
+    public void setProduceRegionWeights(Map<String, Double> weights) {
+        this.produceRegionWeights.clear();
+        if (weights != null) {
+            this.produceRegionWeights.putAll(weights);
+        }
     }
 
     /**

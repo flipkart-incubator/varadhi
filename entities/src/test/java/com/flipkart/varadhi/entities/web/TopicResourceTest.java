@@ -1,9 +1,13 @@
 package com.flipkart.varadhi.entities.web;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.MessageSizeProfile;
+import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -113,6 +117,33 @@ class TopicResourceTest {
             () -> assertNotNull(varadhiTopic.getCapacity()),
             () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode()),
             () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
+        );
+    }
+
+    @Test
+    void fromAndToVaradhiTopic_PreservesRateLimiterFields() {
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(
+            "projectName",
+            "topicName",
+            true,
+            new TopicCapacityPolicy(100, 400, 2, 2),
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            "test",
+            VaradhiTopic.TopicCategory.TOPIC,
+            Map.of("region-a", 1.0),
+            new MessageSizeProfile(256, 1024),
+            RateLimiterMode.enforced
+        );
+
+        TopicResource roundTripped = TopicResource.from(varadhiTopic);
+        VaradhiTopic restored = roundTripped.toVaradhiTopic();
+
+        assertAll(
+            () -> assertEquals(Map.of("region-a", 1.0), roundTripped.getProduceRegionWeights()),
+            () -> assertEquals(256, roundTripped.getMessageSizeProfile().getAvgMsgSizeBytes()),
+            () -> assertEquals(RateLimiterMode.enforced, roundTripped.getRateLimiterMode()),
+            () -> assertEquals(RateLimiterMode.enforced, restored.getRateLimiterMode()),
+            () -> assertEquals(1024, restored.getMessageSizeProfile().getMaxMsgSizeBytes())
         );
     }
 

@@ -1,11 +1,15 @@
 package com.flipkart.varadhi.entities.web;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.MessageSizeProfile;
+import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
+
+import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +28,16 @@ public class TopicResource extends BaseResource implements Validatable {
 
     @Setter
     private LifecycleStatus.ActionCode actionCode;
+
+    @Setter
+    private Map<String, Double> produceRegionWeights;
+
+    @Setter
+    private MessageSizeProfile messageSizeProfile;
+
+    @Setter
+    private RateLimiterMode rateLimiterMode;
+
     private final String nfrFilterName;
 
     /**
@@ -103,7 +117,7 @@ public class TopicResource extends BaseResource implements Validatable {
     public static TopicResource from(VaradhiTopic varadhiTopic) {
         VaradhiTopicName fqn = VaradhiTopicName.parse(varadhiTopic.getName());
 
-        return new TopicResource(
+        TopicResource resource = new TopicResource(
             fqn.getTopicName(),
             varadhiTopic.getVersion(),
             fqn.getProjectName(),
@@ -112,6 +126,10 @@ public class TopicResource extends BaseResource implements Validatable {
             varadhiTopic.getStatus().getActionCode(),
             varadhiTopic.getNfrFilterName()
         );
+        resource.setProduceRegionWeights(varadhiTopic.getProduceRegionWeights());
+        resource.setMessageSizeProfile(varadhiTopic.getMessageSizeProfile());
+        resource.setRateLimiterMode(varadhiTopic.getRateLimiterMode());
+        return resource;
     }
 
     /**
@@ -134,7 +152,10 @@ public class TopicResource extends BaseResource implements Validatable {
             capacity,
             actionCode,
             nfrFilterName,
-            topicCategory
+            topicCategory,
+            produceRegionWeights,
+            messageSizeProfile,
+            rateLimiterMode
         );
     }
 }

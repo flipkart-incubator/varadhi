@@ -37,4 +37,18 @@ public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
     public static TopicCapacityPolicy getDefault() {
         return new TopicCapacityPolicy(100, 1000, 1, 2);
     }
+
+    /**
+     * Floors {@link #qps} and {@link #throughputKBps} at 1 (VIP-0001 §8/§11.1).
+     */
+    public static int floorRate(int value) {
+        return Math.max(1, value);
+    }
+
+    /**
+     * Returns a copy of this policy with {@link #qps} and {@link #throughputKBps} floored at 1.
+     */
+    public TopicCapacityPolicy applyFloors() {
+        return new TopicCapacityPolicy(floorRate(qps), floorRate(throughputKBps), readFanOut, retentionPeriodInDays);
+    }
 }

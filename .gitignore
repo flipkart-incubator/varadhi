@@ -47,4 +47,8 @@ setup/docker/configs/varadhi-auto-generated/*
 
 # coverage results
 **/*testE2E.exec
-.codescope
+.codescope/
+
+# skills. ignored for now. Its a personal choice.
+.claude/
+skills-lock.json

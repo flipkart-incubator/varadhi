@@ -29,4 +29,7 @@ public class WebConfiguration extends AppConfiguration {
 
     @NotNull
     private RestOptions restOptions;
+
+    @NotNull
+    private RateLimiterOptions rateLimiterOptions = new RateLimiterOptions();
 }
