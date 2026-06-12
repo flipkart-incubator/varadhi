@@ -71,7 +71,7 @@ public class VaradhiTopicFactory {
      */
     public VaradhiTopic get(Project project, TopicResource topicResource, VaradhiTopic.TopicCategory category) {
         topicResource.setCapacity(
-            Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy).applyFloors()
+            Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy)
         );
 
         MessageSizeProfile messageSizeProfile = Optional.ofNullable(topicResource.getMessageSizeProfile())

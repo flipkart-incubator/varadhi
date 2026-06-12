@@ -75,14 +75,12 @@ class VaradhiTopicFactoryRateLimitTest {
     }
 
     @Test
-    void get_AppliesCapacityFloors() {
-        TopicResource resource = baseResource(new TopicCapacityPolicy(0, 0, 2, 2), null, null);
+    void get_PreservesCapacityAsProvided() {
+        TopicCapacityPolicy capacity = new TopicCapacityPolicy(0, 0, 2, 2);
+        TopicResource resource = baseResource(capacity, null, null);
         VaradhiTopic topic = factory.get(project, resource, VaradhiTopic.TopicCategory.TOPIC);
 
-        assertAll(
-            () -> assertEquals(1, topic.getCapacity().getQps()),
-            () -> assertEquals(1, topic.getCapacity().getThroughputKBps())
-        );
+        assertEquals(capacity, topic.getCapacity());
     }
 
     @Test

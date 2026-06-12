@@ -5,7 +5,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Resolves {@code produceRegionWeights} with partial-map semantics (VIP-0001 §14).
+ * Resolves {@code produceRegionWeights} with partial-map semantics: explicit weights must sum to at most 1,
+ * and any unset produce regions receive an even share of the remainder.
  */
 final class ProduceRegionWeightsResolver {
 

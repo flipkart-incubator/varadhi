@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Validates qps/throughput consistency against the message size profile (VIP-0001 §8).
+ * Validates that topic throughput can sustain the configured qps given the message size profile.
  */
 final class TopicCapacityConsistencyValidator {
 
