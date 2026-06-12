@@ -111,6 +111,7 @@ spotless {
         endWithNewline()
     }
     java {
+        target 'src/**/*.java'
         removeUnusedImports()
         cleanthat()
         eclipse('4.33').configFile(file("$rootDir/codestyle.xml"))
@@ -119,9 +120,9 @@ spotless {
         // licenseHeader '/* Licensed under Apache-2.0 (C)$YEAR */'
     }
     json {
-        target '**/*.json'
+        target '*.json', 'src/**/*.json', 'setup/**/*.json'
         simple().indentWithSpaces(4)
-        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', '.vscode/**', 'docs/**'
+        targetExclude 'setup/docker/configs/varadhi-auto-generated/**', '.vscode/**'
     }
 }
 
