@@ -36,3 +36,14 @@ Start broad and zoom in: **L1 → L2 → L3 → Flows**. Structure (what exists)
 |---|---|
 | [api.yaml](./api.yaml) | OpenAPI 3.0 spec (control-plane + produce APIs); rendered at the [hosted Swagger UI](https://flipkart-incubator.github.io/varadhi/). |
 | [TOPIC_MODEL_STRUCTURE.md](./TOPIC_MODEL_STRUCTURE.md) | Design note: current topic model + proposed Global Topics / multi-region (internal/proposed; not all wired). |
+
+## Optional: local GitHub Wiki clone
+
+Canonical wiki content lives on [GitHub Wiki](https://github.com/flipkart-incubator/varadhi/wiki). For offline editing, clone it next to this repo and symlink it:
+
+```bash
+git clone https://github.com/flipkart-incubator/varadhi.wiki.git ../varadhi.wiki
+ln -s ../../varadhi.wiki docs/wiki
+```
+
+`docs/wiki` is gitignored so CI and fresh clones are not broken when the wiki repo is absent.
