@@ -15,8 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -26,11 +27,13 @@ import java.util.concurrent.CompletableFuture;
  * handle the namespacing all the paths. This should allow usage of curator client for other purposes other than just
  * cluster
  * management. We also need to remove curator.close() from leave method, in case the curator instance is provided.
+ * 
+ * TODO: watch on the membership list, so that fetch are quick.
  */
 @Slf4j
 public class VaradhiZkClusterManager extends ZookeeperClusterManager implements VaradhiClusterManager {
     private final DeliveryOptions deliveryOptions;
-    private final RetryPolicy<NodeInfo> NodeInfoRetryPolicy = RetryPolicy.<NodeInfo>builder()
+    private final RetryPolicy<NodeInfo> nodeInfoRetryPolicy = RetryPolicy.<NodeInfo>builder()
                                                                          .withMaxAttempts(10)
                                                                          .withDelay(Duration.ofMillis(200))
                                                                          .onRetry(
@@ -51,12 +54,18 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
 
     @Override
     public Future<List<MemberInfo>> getAllMembers() {
+        return getMembersByNodeId().map(members -> List.copyOf(members.values()));
+    }
+
+    @Override
+    public Future<Map<String, MemberInfo>> getMembersByNodeId() {
         log.info("Fetching all cluster members...");
-        List<CompletableFuture<MemberInfo>> allFutures = new ArrayList<>();
+        Map<String, CompletableFuture<MemberInfo>> futuresByNodeId = new HashMap<>();
         getNodes().forEach(nodeId -> {
             log.debug("Fetching info for node: {}", nodeId);
-            allFutures.add(
-                Failsafe.with(NodeInfoRetryPolicy)
+            futuresByNodeId.put(
+                nodeId,
+                Failsafe.with(nodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
                         .thenApply(nodeInfo -> {
                             log.debug("Successfully fetched info for node: {}", nodeId);
@@ -69,9 +78,13 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                         })
             );
         });
+        CompletableFuture<?>[] all = futuresByNodeId.values().toArray(new CompletableFuture[0]);
         return Future.fromCompletionStage(
-            CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0]))
-                             .thenApply(v -> allFutures.stream().map(CompletableFuture::join).toList())
+            CompletableFuture.allOf(all).thenApply(v -> {
+                Map<String, MemberInfo> members = HashMap.newHashMap(futuresByNodeId.size());
+                futuresByNodeId.forEach((nodeId, future) -> members.put(nodeId, future.join()));
+                return members;
+            })
         );
     }
 
@@ -81,7 +94,7 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
             @Override
             public void nodeAdded(String nodeId) {
                 log.debug("Node {} joined.", nodeId);
-                Failsafe.with(NodeInfoRetryPolicy)
+                Failsafe.with(nodeInfoRetryPolicy)
                         .getStageAsync(() -> fetchNodeInfo(nodeId).toCompletionStage())
                         .whenComplete((nodeInfo, throwable) -> {
                             if (throwable != null) {
@@ -91,7 +104,7 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                                 try {
                                     log.debug("Member {} joined from {}:{}.", nodeId, nodeInfo.host(), nodeInfo.port());
                                     MemberInfo memberInfo = nodeInfo.metadata().mapTo(MemberInfo.class);
-                                    listener.joined(memberInfo).exceptionally(t -> {
+                                    listener.joined(nodeId, memberInfo).exceptionally(t -> {
                                         log.error("MembershipListener.joined({}) failed, {}.", nodeId, t.getMessage());
                                         return null;
                                     });

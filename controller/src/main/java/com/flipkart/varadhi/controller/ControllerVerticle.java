@@ -352,8 +352,8 @@ public class ControllerVerticle extends AbstractVerticle {
     private void setupMembershipListener(ControllerApiMgr controllerApiMgr) {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
-            public CompletableFuture<Void> joined(MemberInfo memberInfo) {
-                log.info("Member joined: {}", memberInfo);
+            public CompletableFuture<Void> joined(String nodeId, MemberInfo memberInfo) {
+                log.info("Member joined: {} ({})", nodeId, memberInfo);
 
                 if (memberInfo.hasRole(ComponentKind.Consumer)) {
                     ConsumerNode consumerNode = new ConsumerNode(memberInfo);
