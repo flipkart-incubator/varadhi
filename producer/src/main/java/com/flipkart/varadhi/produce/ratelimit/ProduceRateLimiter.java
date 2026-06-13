@@ -1,18 +1,28 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
+import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 /**
  * Facade for per-topic rate limiting on the produce path (VIP-0001).
- * <p>
- * Phase 2: registry, lazy {@link TopicRateLimiter} creation, and membership-driven quota refresh.
- * Mode gating, kill switch, and {@code check(...)} throttling are added in Phase 3.
  */
+@Slf4j
 public final class ProduceRateLimiter {
+
+    private static final ProduceRateLimiter DISABLED = new ProduceRateLimiter(
+        false,
+        RateLimiterMode.disabled,
+        null,
+        0,
+        () -> 0L,
+        null,
+        RateLimitTelemetry.NOOP
+    );
 
     private static final class RegistryEntry {
         final TopicRateLimiter limiter;
@@ -24,32 +34,104 @@ public final class ProduceRateLimiter {
         }
     }
 
+    private final boolean enabled;
+    private final RateLimiterMode defaultMode;
     private final PerPodTopicQuotaProvider quotaProvider;
     private final int windowSecs;
     private final LongSupplier nanoTime;
+    private final RateLimitTelemetry telemetry;
     private final ConcurrentHashMap<String, RegistryEntry> registry = new ConcurrentHashMap<>();
     private volatile long quotaEpoch;
 
+    public static ProduceRateLimiter disabled() {
+        return DISABLED;
+    }
+
     public ProduceRateLimiter(
+        RateLimiterMode defaultMode,
         PerPodTopicQuotaProvider quotaProvider,
         int windowSecs,
         LongSupplier nanoTime,
         PodCountProvider podCountProvider
     ) {
+        this(defaultMode, quotaProvider, windowSecs, nanoTime, podCountProvider, RateLimitTelemetry.NOOP);
+    }
+
+    ProduceRateLimiter(
+        RateLimiterMode defaultMode,
+        PerPodTopicQuotaProvider quotaProvider,
+        int windowSecs,
+        LongSupplier nanoTime,
+        PodCountProvider podCountProvider,
+        RateLimitTelemetry telemetry
+    ) {
+        this(true, defaultMode, quotaProvider, windowSecs, nanoTime, podCountProvider, telemetry);
+    }
+
+    private ProduceRateLimiter(
+        boolean enabled,
+        RateLimiterMode defaultMode,
+        PerPodTopicQuotaProvider quotaProvider,
+        int windowSecs,
+        LongSupplier nanoTime,
+        PodCountProvider podCountProvider,
+        RateLimitTelemetry telemetry
+    ) {
+        this.enabled = enabled;
+        this.defaultMode = defaultMode;
         this.quotaProvider = quotaProvider;
         this.windowSecs = windowSecs;
         this.nanoTime = nanoTime;
-        podCountProvider.addCountChangeListener(this::markQuotasStale);
+        this.telemetry = telemetry;
+        if (enabled) {
+            podCountProvider.addCountChangeListener(this::markQuotasStale);
+        }
     }
 
     /**
-     * Returns the limiter for {@code topic}, refreshing its quota when membership (or other global
-     * quota inputs) have changed since the last access.
+     * @return {@code true} if produce should be throttled (429)
      */
+    public boolean check(VaradhiTopic topic, long messageBytes) {
+        if (!enabled) {
+            return false;
+        }
+        try {
+            RateLimiterMode mode = resolveMode(topic);
+            if (mode == RateLimiterMode.disabled) {
+                return false;
+            }
+            TopicRateLimiter limiter = resolveLimiter(topic);
+            if (limiter.tryAcquire(messageBytes)) {
+                return false;
+            }
+            if (mode == RateLimiterMode.shadow) {
+                telemetry.wouldHaveThrottled();
+                return false;
+            }
+            telemetry.enforcedThrottled();
+            return true;
+        } catch (RuntimeException e) {
+            // TODO: see if telemetry is required here.
+            log.warn("Rate limit check failed open for topic {}", topic.getName(), e);
+            return false;
+        }
+    }
+
+    public void removeTopic(String topicFqn) {
+        if (enabled) {
+            registry.remove(topicFqn);
+        }
+    }
+
     TopicRateLimiter resolveLimiter(VaradhiTopic topic) {
         RegistryEntry entry = registry.computeIfAbsent(topic.getName(), ignored -> createEntry(topic));
         refreshQuotaIfStale(entry, topic);
         return entry.limiter;
+    }
+
+    private RateLimiterMode resolveMode(VaradhiTopic topic) {
+        RateLimiterMode mode = topic.getRateLimiterMode();
+        return mode != null ? mode : defaultMode;
     }
 
     private void markQuotasStale() {

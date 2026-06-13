@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -19,16 +20,16 @@ class PodCountProviderTest {
         clusterManager.replaceMembers(
             Map.of("server-1", server("server-1"), "server-2", server("server-2"), "consumer-1", consumer("consumer-1"))
         );
-        PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.withRole(membership, ComponentKind.Server, 1));
 
         assertEquals(2, podCount.getAsInt());
-        assertEquals(1, countChangeNotifications.get());
+        assertEquals(0, countChangeNotifications.get());
     }
 
     @Test
     void withRole_FloorsAtMinCount() {
         clusterManager.replaceMembers(Map.of("consumer-1", consumer("consumer-1")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.withRole(membership, ComponentKind.Server, 1));
 
         assertEquals(1, podCount.getAsInt());
     }
@@ -36,7 +37,7 @@ class PodCountProviderTest {
     @Test
     void withRole_UpdatesOnMatchingJoinAndLeave() {
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.withRole(membership, ComponentKind.Server, 1));
         countChangeNotifications.set(0);
 
         clusterManager.simulateJoin("server-2", server("server-2"));
@@ -51,7 +52,7 @@ class PodCountProviderTest {
     @Test
     void withRole_IgnoresNonMatchingJoinAndLeave() {
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.withRole(membership, ComponentKind.Server, 1));
         countChangeNotifications.set(0);
 
         clusterManager.simulateJoin("consumer-2", consumer("consumer-2"));
@@ -64,7 +65,7 @@ class PodCountProviderTest {
     @Test
     void all_CountsEveryMember() {
         clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "consumer-1", consumer("consumer-1")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.all(membership));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.all(membership));
 
         assertEquals(2, podCount.getAsInt());
     }
@@ -72,7 +73,7 @@ class PodCountProviderTest {
     @Test
     void all_UpdatesWhenAnyMemberJoinsOrLeaves() {
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.all(membership));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.all(membership));
         countChangeNotifications.set(0);
 
         clusterManager.simulateJoin("consumer-1", consumer("consumer-1"));
@@ -83,18 +84,19 @@ class PodCountProviderTest {
     @Test
     void keepsLastKnownCountOnSeedFailure() {
         clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "server-2", server("server-2")));
-        PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
+        PodCountProvider podCount = createPodCount(() -> PodCountProvider.withRole(membership, ComponentKind.Server, 1));
         assertEquals(2, podCount.getAsInt());
 
         clusterManager.failNextSeed();
-        podCount.start();
+        membership.start();
 
         assertEquals(2, podCount.getAsInt());
     }
 
-    private PodCountProvider startPodCount(PodCountProvider podCount) {
+    private PodCountProvider createPodCount(Supplier<PodCountProvider> factory) {
+        membership.start();
+        PodCountProvider podCount = factory.get();
         podCount.addCountChangeListener(countChangeNotifications::incrementAndGet);
-        podCount.start();
         return podCount;
     }
 

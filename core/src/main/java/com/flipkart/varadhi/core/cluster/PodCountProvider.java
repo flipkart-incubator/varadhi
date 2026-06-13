@@ -7,11 +7,14 @@ import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 
 /**
- * Live pod count over {@link ClusterMembershipView}, filtered by a {@link Predicate} on
+ * Live pod count over a started {@link ClusterMembershipView}, filtered by a {@link Predicate} on
  * {@link MemberInfo}.
  * <p>
  * Notifies listeners only when the counted value changes. {@code minCount} floors
  * {@link #getAsInt()} — use {@code 1} for fail-open even-split produce math (VIP §13).
+ * <p>
+ * The membership view must already be {@linkplain ClusterMembershipView#start() started} before
+ * construction; this class does not own that lifecycle.
  */
 @Slf4j
 public final class PodCountProvider implements IntSupplier {
@@ -30,6 +33,7 @@ public final class PodCountProvider implements IntSupplier {
         this.minCount = minCount;
         this.podCount = minCount;
         membership.addMembershipChangeListener(this::updateCountIfChanged);
+        updateCountIfChanged();
     }
 
     /** Count every cluster member (all roles). */
@@ -59,10 +63,6 @@ public final class PodCountProvider implements IntSupplier {
         int minCount
     ) {
         return new PodCountProvider(membership, memberFilter, minCount);
-    }
-
-    public void start() {
-        membership.start();
     }
 
     @Override
