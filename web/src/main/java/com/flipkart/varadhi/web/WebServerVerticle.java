@@ -416,7 +416,8 @@ public class WebServerVerticle extends AbstractVerticle {
         VaradhiTopicFactory varadhiTopicFactory = new VaradhiTopicFactory(
             messagingStackProvider.getStorageTopicFactory(),
             verticleConfig.deployedRegion(),
-            verticleConfig.defaultTopicCapacity()
+            verticleConfig.defaultTopicCapacity(),
+            configuration.getRateLimiterOptions().getDefaultMode()
         );
 
         VaradhiSubscriptionFactory subscriptionFactory = new VaradhiSubscriptionFactory(

@@ -122,6 +122,13 @@ restOptions:
     qps: 100
     readFanOut: 2
 
+rateLimiterOptions:
+  enabled: false
+  defaultMode: disabled
+  fallbackBuffer: 0.25
+  windowSecs: 1
+  minPodQps: 1
+
 authenticationOptions:
   configFile: "authn.yml"
   handlerProviderClassName: "com.flipkart.varadhi.web.authn.UserHeaderAuthenticationHandler"

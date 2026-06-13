@@ -47,7 +47,13 @@ setup/docker/configs/varadhi-auto-generated/*
 
 # coverage results
 **/*testE2E.exec
-.codescope
+
+# temporary directory for doc generator
+.codescope/
+
+# skills. ignored for now. Its a personal choice.
+.claude/
+skills-lock.json
 
 # local clone of the GitHub wiki (optional dev convenience; see docs/README.md)
 docs/wiki

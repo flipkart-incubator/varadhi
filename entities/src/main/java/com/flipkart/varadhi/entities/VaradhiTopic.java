@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -17,9 +19,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
     private final boolean grouped;
-    private final TopicCapacityPolicy capacity;
+
     private final String nfrFilterName;
     private final TopicCategory topicCategory;
+
+    /**
+     * Override per topic. If producer config is disabled, this is ignored.
+     */
+    @Nullable
+    private final RateLimiterMode rateLimiterMode;
+
+    private final TopicCapacityPolicy capacity;
+    private final Map<String, Double> perRegionQuotaWeights;
+
+    // TODO: decide on where topic related auxiliary data lives. This data largely is not going to be used by crud, main produce or consume flow. But they power secondary functionalities. 
+    private final MessageSizeProfile messageSizeProfile;
 
     public enum TopicCategory {
         TOPIC, QUEUE
@@ -36,6 +50,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param status         the status of the topic
      * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory  topic vs queue classification; must not be {@code null}
+     * @param perRegionQuotaWeights per-region fraction of global produce quota; nullable until defaulted
+     * @param messageSizeProfile observed message size profile; nullable until defaulted
+     * @param rateLimiterMode per-topic rate limiter rollout mode; nullable until defaulted
      */
     private VaradhiTopic(
         String name,
@@ -45,14 +62,22 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         Map<String, SegmentedStorageTopic> internalTopics,
         LifecycleStatus status,
         String nfrFilterName,
-        TopicCategory topicCategory
+        TopicCategory topicCategory,
+        Map<String, Double> perRegionQuotaWeights,
+        MessageSizeProfile messageSizeProfile,
+        RateLimiterMode rateLimiterMode
     ) {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.internalTopics = internalTopics;
+        this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
+        this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
+            new HashMap<>(perRegionQuotaWeights) :
+            new HashMap<>();
+        this.messageSizeProfile = messageSizeProfile;
+        this.rateLimiterMode = rateLimiterMode;
         this.status = status;
     }
 
@@ -100,6 +125,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         String nfrStrategy,
         TopicCategory topicCategory
     ) {
+        return of(project, name, grouped, capacity, actionCode, nfrStrategy, topicCategory, null, null, null);
+    }
+
+    public static VaradhiTopic of(
+        String project,
+        String name,
+        boolean grouped,
+        TopicCapacityPolicy capacity,
+        LifecycleStatus.ActionCode actionCode,
+        String nfrStrategy,
+        TopicCategory topicCategory,
+        Map<String, Double> perRegionQuotaWeights,
+        MessageSizeProfile messageSizeProfile,
+        RateLimiterMode rateLimiterMode
+    ) {
         return new VaradhiTopic(
             fqn(project, name),
             INITIAL_VERSION,
@@ -108,7 +148,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
-            topicCategory
+            topicCategory,
+            perRegionQuotaWeights,
+            messageSizeProfile,
+            rateLimiterMode
         );
     }
 
