@@ -23,9 +23,19 @@ final class PerRegionQuotaWeightsResolver {
             return evenSplit(produceRegions);
         }
 
-        for (String region : explicitWeights.keySet()) {
-            if (!produceRegions.contains(region)) {
-                throw new IllegalArgumentException("Unknown produce region in perRegionQuotaWeights: " + region);
+        for (Map.Entry<String, Double> entry : explicitWeights.entrySet()) {
+            if (!produceRegions.contains(entry.getKey())) {
+                throw new IllegalArgumentException(
+                    "Unknown produce region in perRegionQuotaWeights: " + entry.getKey()
+                );
+            }
+            double weight = entry.getValue();
+            // Guard before summing: a NaN slips past both the sum and total checks (every NaN
+            // comparison is false), and a negative/>1 weight yields an invalid quota downstream.
+            if (!Double.isFinite(weight) || weight < 0.0 || weight > 1.0) {
+                throw new IllegalArgumentException(
+                    "perRegionQuotaWeights value for " + entry.getKey() + " must be in [0, 1]: " + weight
+                );
             }
         }
 

@@ -16,18 +16,18 @@ final class TopicCapacityConsistencyValidator {
     }
 
     static void validate(TopicCapacityPolicy capacity, MessageSizeProfile messageSizeProfile) {
-        int minMsgSizeBytes = messageSizeProfile.getMaxMsgSizeBytes();
+        int maxMsgSizeBytes = messageSizeProfile.getMaxMsgSizeBytes();
         int avgMsgSizeBytes = messageSizeProfile.getAvgMsgSizeBytes();
-        long minRequiredBytesPerSec = (long)capacity.getQps() * minMsgSizeBytes;
-        long actualBytesPerSec = (long)capacity.getThroughputKBps() * 1024L;
+        long maxRequiredBytesPerSec = (long) capacity.getQps() * maxMsgSizeBytes;
+        long actualBytesPerSec = (long) capacity.getThroughputKBps() * 1024L;
 
-        if (actualBytesPerSec < minRequiredBytesPerSec) {
+        if (actualBytesPerSec < maxRequiredBytesPerSec) {
             throw new IllegalArgumentException(
                 String.format(
                     "throughputKBps (%d) is below qps (%d) x maxMsgSizeBytes (%d)",
                     capacity.getThroughputKBps(),
                     capacity.getQps(),
-                    minMsgSizeBytes
+                    maxMsgSizeBytes
                 )
             );
         }

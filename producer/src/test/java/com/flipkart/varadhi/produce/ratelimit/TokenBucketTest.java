@@ -131,7 +131,7 @@ class TokenBucketTest {
     void debit_ConcurrentDebitsHaveNoLostUpdates() throws InterruptedException {
         int threads = 8;
         int debitsPerThread = 10_000;
-        long total = (long) threads * debitsPerThread;
+        long total = (long)threads * debitsPerThread;
         // Clock stays frozen at 0, so no refill happens; only CAS debits mutate state.
         TokenBucket bucket = new TokenBucket(virtualNanos::get, 1, total);
 
@@ -157,5 +157,27 @@ class TokenBucketTest {
         pool.shutdownNow();
 
         assertEquals(0L, bucket.tokensForTest());
+    }
+
+    @Test
+    void debit_StaleNowDoesNotRegressLastNano() {
+        TokenBucket bucket = new TokenBucket(virtualNanos::get, 1, 10);
+        bucket.debit(1, 200L);
+        assertEquals(200L, bucket.lastNanoForTest());
+
+        bucket.debit(1, 100L);
+        assertEquals(200L, bucket.lastNanoForTest());
+    }
+
+    @Test
+    void refill_AtMaxCapacityDoesNotWrapNegative() {
+        TokenBucket bucket = new TokenBucket(virtualNanos::get, 4, Long.MAX_VALUE / 2);
+        assertEquals(Long.MAX_VALUE, bucket.capacity());
+
+        bucket.debit(1_000_000L);
+        virtualNanos.addAndGet(10 * NS_PER_SEC);
+
+        assertTrue(bucket.tokensForTest() >= 0L);
+        assertEquals(Long.MAX_VALUE, bucket.tokensForTest());
     }
 }

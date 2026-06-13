@@ -45,7 +45,7 @@ public final class EvenSplitPerPodTopicQuotaProvider implements PerPodTopicQuota
 
         long bytesQuota = ceilToLong(capacity.getThroughputKBps() * 1024L * regionWeight * splitFactor);
         int maxMsgSize = maxMsgSizeBytes(topic.getMessageSizeProfile());
-        bytesQuota = Math.max(bytesQuota, (long) qpsQuota * maxMsgSize);
+        bytesQuota = Math.max(bytesQuota, (long)qpsQuota * maxMsgSize);
 
         return new PerPodTopicQuota(qpsQuota, bytesQuota);
     }
@@ -74,7 +74,7 @@ public final class EvenSplitPerPodTopicQuotaProvider implements PerPodTopicQuota
             return 0;
         }
         double ceiled = Math.ceil(value);
-        return ceiled > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) ceiled;
+        return ceiled > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int)ceiled;
     }
 
     private static long ceilToLong(double value) {
@@ -82,6 +82,6 @@ public final class EvenSplitPerPodTopicQuotaProvider implements PerPodTopicQuota
             return 0L;
         }
         double ceiled = Math.ceil(value);
-        return ceiled > Long.MAX_VALUE ? Long.MAX_VALUE : (long) ceiled;
+        return ceiled > Long.MAX_VALUE ? Long.MAX_VALUE : (long)ceiled;
     }
 }

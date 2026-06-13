@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EvenSplitPerPodTopicQuotaProviderTest {
@@ -61,6 +62,13 @@ class EvenSplitPerPodTopicQuotaProviderTest {
         PerPodTopicQuota quota = provider().quotaFor(topic);
 
         assertEquals(32, quota.qpsQuota());
+    }
+
+    @Test
+    void quotaFor_RejectsMissingDeploymentRegion() {
+        VaradhiTopic topic = topic(new TopicCapacityPolicy(100, 1000, 1, 2), Map.of("other", 1.0), null);
+
+        assertThrows(IllegalArgumentException.class, () -> provider().quotaFor(topic));
     }
 
     @Test

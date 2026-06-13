@@ -41,11 +41,7 @@ public final class TopicRateLimiter {
     private final TokenBucket bytesBucket;
     private volatile PerPodTopicQuota lastQuota;
 
-    public TopicRateLimiter(
-        LongSupplier nanoTime,
-        int windowSecs,
-        PerPodTopicQuota initialQuota
-    ) {
+    public TopicRateLimiter(LongSupplier nanoTime, int windowSecs, PerPodTopicQuota initialQuota) {
         this.nanoTime = nanoTime;
         this.qpsBucket = new TokenBucket(nanoTime, windowSecs, initialQuota.qpsQuota());
         this.bytesBucket = new TokenBucket(nanoTime, windowSecs, initialQuota.bytesQuota());

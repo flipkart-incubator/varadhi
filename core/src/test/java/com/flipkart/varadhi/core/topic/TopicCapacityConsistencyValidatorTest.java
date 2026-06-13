@@ -19,13 +19,13 @@ class TopicCapacityConsistencyValidatorTest {
             IllegalArgumentException.class,
             () -> TopicCapacityConsistencyValidator.validate(capacity, profile)
         );
-        assertTrue(ex.getMessage().contains("throughputKBps"));
+        assertTrue(ex.getMessage().contains("maxMsgSizeBytes"));
     }
 
     @Test
-    void validate_AllowsWhenThroughputMeetsMaxButNotAvgSizedDemand() {
-        TopicCapacityPolicy capacity = new TopicCapacityPolicy(10, 30, 2, 2);
-        MessageSizeProfile profile = new MessageSizeProfile(4096, 1024);
+    void validate_AllowsWhenThroughputMeetsMaxSizedDemand() {
+        TopicCapacityPolicy capacity = new TopicCapacityPolicy(10, 25, 2, 2);
+        MessageSizeProfile profile = new MessageSizeProfile(1024, 2048);
 
         assertDoesNotThrow(() -> TopicCapacityConsistencyValidator.validate(capacity, profile));
     }

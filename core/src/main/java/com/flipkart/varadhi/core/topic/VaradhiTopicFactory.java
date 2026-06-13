@@ -68,9 +68,7 @@ public class VaradhiTopicFactory {
      * @return the created VaradhiTopic instance
      */
     public VaradhiTopic get(Project project, TopicResource topicResource, VaradhiTopic.TopicCategory category) {
-        topicResource.setCapacity(
-            Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy)
-        );
+        topicResource.setCapacity(Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy));
 
         topicResource.setRateLimiterMode(
             Optional.ofNullable(topicResource.getRateLimiterMode()).orElse(defaultRateLimiterMode)
@@ -82,10 +80,7 @@ public class VaradhiTopicFactory {
         }
 
         topicResource.setPerRegionQuotaWeights(
-            PerRegionQuotaWeightsResolver.resolve(
-                topicResource.getPerRegionQuotaWeights(),
-                Set.of(deploymentRegion)
-            )
+            PerRegionQuotaWeightsResolver.resolve(topicResource.getPerRegionQuotaWeights(), Set.of(deploymentRegion))
         );
 
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);

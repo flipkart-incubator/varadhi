@@ -19,16 +19,16 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
     private final boolean grouped;
-    
+
     private final String nfrFilterName;
     private final TopicCategory topicCategory;
-    
+
     /**
      * Override per topic. If producer config is disabled, this is ignored.
      */
     @Nullable
     private final RateLimiterMode rateLimiterMode;
-    
+
     private final TopicCapacityPolicy capacity;
     private final Map<String, Double> perRegionQuotaWeights;
 

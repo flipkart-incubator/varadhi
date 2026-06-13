@@ -126,7 +126,10 @@ public final class TokenBucket {
     public void debit(long cost, long now) {
         while (true) {
             BucketState current = state.get();
-            BucketState updated = new BucketState(now, refill(current, now) - cost);
+            // A stale (smaller) now from a racing thread that won a later CAS must not move lastNano
+            // backward, or the elapsed window would be recounted on the next refill (over-refill).
+            long effectiveNow = Math.max(current.lastNano, now);
+            BucketState updated = new BucketState(effectiveNow, refill(current, effectiveNow) - cost);
             if (state.compareAndSet(current, updated)) {
                 return;
             }
@@ -138,13 +141,23 @@ public final class TokenBucket {
         return refill(current, nanoTime.getAsLong());
     }
 
+    long lastNanoForTest() {
+        return state.get().lastNano;
+    }
+
     private long refill(BucketState current, long now) {
         if (now <= current.lastNano) {
             return current.tokens;
         }
-        long elapsedNanos = Math.min(now - current.lastNano, (long) windowSecs * NS_PER_SEC);
+        long elapsedNanos = Math.min(now - current.lastNano, (long)windowSecs * NS_PER_SEC);
         long added = tokensForElapsed(elapsedNanos, ratePerSecond);
-        return Math.min(capacity, current.tokens + added);
+        // added is non-negative; saturate on overflow so an extreme capacity stays fail-open
+        // (a wrapped-negative sum would falsely reject all traffic).
+        long refilled = current.tokens + added;
+        if (refilled < current.tokens) {
+            refilled = Long.MAX_VALUE;
+        }
+        return Math.min(capacity, refilled);
     }
 
     /**
