@@ -27,10 +27,10 @@ public class RateLimiterOptions {
     private int windowSecs = 1;
 
     /**
-     * Minimum per-pod QPS share so low-throughput topics are not starved when split across many pods.
-     * Worst-case aggregate over-allow is bounded at {@code podCount × minPodShare}.
+     * Minimum per-pod QPS budget floor so low-throughput topics are not starved when split across many pods.
+     * Worst-case aggregate over-allow is bounded at {@code podCount × minPodQps}.
      * 
      * TODO: candidate for removal. As there is no real use for configurability. decide later.
      */
-    private int minPodShare = 1;
+    private int minPodQps = 1;
 }

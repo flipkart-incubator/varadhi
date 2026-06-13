@@ -127,7 +127,7 @@ rateLimiterOptions:
   defaultMode: disabled
   fallbackBuffer: 0.25
   windowSecs: 1
-  minPodShare: 1
+  minPodQps: 1
 
 authenticationOptions:
   configFile: "authn.yml"
