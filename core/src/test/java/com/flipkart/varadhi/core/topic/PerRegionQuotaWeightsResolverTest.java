@@ -84,10 +84,7 @@ class PerRegionQuotaWeightsResolverTest {
     void resolve_RejectsWhenRemainingWeightTooSmallToSplit() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> PerRegionQuotaWeightsResolver.resolve(
-                Map.of("region-a", 1.0 - 1e-12),
-                Set.of("region-a", "region-b")
-            )
+            () -> PerRegionQuotaWeightsResolver.resolve(Map.of("region-a", 1.0 - 1e-12), Set.of("region-a", "region-b"))
         );
     }
 

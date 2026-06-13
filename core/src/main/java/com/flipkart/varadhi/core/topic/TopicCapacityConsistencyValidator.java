@@ -18,8 +18,8 @@ final class TopicCapacityConsistencyValidator {
     static void validate(TopicCapacityPolicy capacity, MessageSizeProfile messageSizeProfile) {
         int maxMsgSizeBytes = messageSizeProfile.getMaxMsgSizeBytes();
         int avgMsgSizeBytes = messageSizeProfile.getAvgMsgSizeBytes();
-        long maxRequiredBytesPerSec = (long) capacity.getQps() * maxMsgSizeBytes;
-        long actualBytesPerSec = (long) capacity.getThroughputKBps() * 1024L;
+        long maxRequiredBytesPerSec = (long)capacity.getQps() * maxMsgSizeBytes;
+        long actualBytesPerSec = (long)capacity.getThroughputKBps() * 1024L;
 
         if (actualBytesPerSec < maxRequiredBytesPerSec) {
             throw new IllegalArgumentException(
