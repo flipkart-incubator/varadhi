@@ -12,6 +12,12 @@ import lombok.Data;
 @Data
 public class RateLimiterOptions {
 
+    /**
+     * Deployment master kill switch. When {@code false}, the produce rate limiter is a no-op
+     * pass-through (no buckets, no 429) regardless of per-topic {@code rateLimiterMode}.
+     */
+    private boolean enabled = false;
+
     /** Rate-limiter mode for topics that do not set an explicit {@code rateLimiterMode}. */
     private RateLimiterMode defaultMode = RateLimiterMode.disabled;
 
