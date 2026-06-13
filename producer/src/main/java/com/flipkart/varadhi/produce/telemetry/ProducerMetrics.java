@@ -14,17 +14,26 @@ public interface ProducerMetrics {
 
     /**
      * Records the receipt of a message with the specified size in bytes.
-     * @param msgSizeBytes The total size of the received message in bytes. Includes headers and body.
+     *
+     * @param payloadSizeBytes body size in bytes
+     * @param msgSizeBytes total size including headers and body
      */
     void received(int payloadSizeBytes, int msgSizeBytes);
 
     /**
      * Records the result of the message production operation.
      *
-     * @param result The result of the produce operation, containing message ID and status.
-     * @param t The throwable if the produce operation failed, null if it succeeded.
+     * @param result the produce outcome
+     * @param t failure from the async path, or {@code null} on completion
+     * @param messageBytes total message size for rejection byte accounting
      */
-    void accepted(ProduceResult result, Throwable t);
+    void accepted(ProduceResult result, Throwable t, long messageBytes);
+
+    /**
+     * Records a rate-limiter rejection in shadow mode — produce was still allowed.
+     * Uses {@code producer.rejected.*} with {@code shadow=true}.
+     */
+    void shadowRejected(long messageBytes);
 
     void close();
 
@@ -37,7 +46,11 @@ public interface ProducerMetrics {
         }
 
         @Override
-        public void accepted(ProduceResult result, Throwable t) {
+        public void accepted(ProduceResult result, Throwable t, long messageBytes) {
+        }
+
+        @Override
+        public void shadowRejected(long messageBytes) {
         }
 
         @Override

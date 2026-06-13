@@ -11,11 +11,15 @@ import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -45,14 +49,14 @@ class ProduceRateLimiterTest {
 
     @Test
     void check_ShadowMode_AllowsWhenOverQuota() {
-        AtomicInteger wouldHaveThrottled = new AtomicInteger();
         AtomicLong nanos = new AtomicLong(0L);
-        ProduceRateLimiter limiter = shadowLimiter(nanos, wouldHaveThrottled);
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        ProduceRateLimiter limiter = shadowLimiter(nanos, registry);
         VaradhiTopic topic = topic(RateLimiterMode.shadow);
 
         assertFalse(limiter.check(topic, 1));
         assertFalse(limiter.check(topic, 1));
-        assertEquals(1, wouldHaveThrottled.get());
+        assertEquals(1.0, registry.get("producer.rejected.count").tag("shadow", "true").counter().count());
     }
 
     @Test
@@ -88,7 +92,14 @@ class ProduceRateLimiterTest {
             1,
             podCount
         );
-        ProduceRateLimiter facade = new ProduceRateLimiter(RateLimiterMode.disabled, quotaProvider, 1, new AtomicLong(0L)::get, podCount);
+        ProduceRateLimiter facade = new ProduceRateLimiter(
+            RateLimiterMode.disabled,
+            quotaProvider,
+            1,
+            new AtomicLong(0L)::get,
+            podCount,
+            noMetricsTelemetry()
+        );
         VaradhiTopic topic = topic(null);
 
         PerPodTopicQuota before = facade.resolveLimiter(topic).lastQuota();
@@ -112,6 +123,10 @@ class ProduceRateLimiterTest {
         assertNotSame(before, after);
     }
 
+    private static RateLimitTelemetry noMetricsTelemetry() {
+        return new RateLimitTelemetry(ignored -> ProducerMetrics.NOOP);
+    }
+
     private static ProduceRateLimiter enforcedLimiter(AtomicLong nanos) {
         FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
@@ -122,10 +137,17 @@ class ProduceRateLimiterTest {
             1,
             podCount
         );
-        return new ProduceRateLimiter(RateLimiterMode.enforced, quotaProvider, 1, nanos::get, podCount);
+        return new ProduceRateLimiter(
+            RateLimiterMode.enforced,
+            quotaProvider,
+            1,
+            nanos::get,
+            podCount,
+            noMetricsTelemetry()
+        );
     }
 
-    private static ProduceRateLimiter shadowLimiter(AtomicLong nanos, AtomicInteger wouldHaveThrottled) {
+    private static ProduceRateLimiter shadowLimiter(AtomicLong nanos, SimpleMeterRegistry registry) {
         FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
@@ -135,23 +157,18 @@ class ProduceRateLimiterTest {
             1,
             podCount
         );
-        RateLimitTelemetry telemetry = new RateLimitTelemetry() {
-            @Override
-            public void wouldHaveThrottled() {
-                wouldHaveThrottled.incrementAndGet();
-            }
-
-            @Override
-            public void enforcedThrottled() {
-            }
-        };
+        Map<String, ProducerMetrics> cache = new ConcurrentHashMap<>();
+        Function<String, ProducerMetrics> metricsProvider = fqn -> cache.computeIfAbsent(
+            fqn,
+            ignored -> new ProducerMetricsImpl(registry, fqn, REGION)
+        );
         return new ProduceRateLimiter(
             RateLimiterMode.shadow,
             quotaProvider,
             1,
             nanos::get,
             podCount,
-            telemetry
+            new RateLimitTelemetry(metricsProvider)
         );
     }
 
@@ -169,7 +186,14 @@ class ProduceRateLimiterTest {
             1,
             podCount
         );
-        return new ProduceRateLimiter(RateLimiterMode.disabled, quotaProvider, 1, new AtomicLong(0L)::get, podCount);
+        return new ProduceRateLimiter(
+            RateLimiterMode.disabled,
+            quotaProvider,
+            1,
+            new AtomicLong(0L)::get,
+            podCount,
+            noMetricsTelemetry()
+        );
     }
 
     private static PodCountProvider startServerPodCount(FakeVaradhiClusterManager clusterManager) {

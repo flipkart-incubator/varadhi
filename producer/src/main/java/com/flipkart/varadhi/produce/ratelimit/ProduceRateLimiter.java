@@ -3,8 +3,10 @@ package com.flipkart.varadhi.produce.ratelimit;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
@@ -14,6 +16,9 @@ import java.util.function.LongSupplier;
 @Slf4j
 public final class ProduceRateLimiter {
 
+    /** Never invoked; {@link #disabled()} returns before rate-limit work runs. */
+    private static final RateLimitTelemetry UNUSED_TELEMETRY = new RateLimitTelemetry(ignored -> ProducerMetrics.NOOP);
+
     private static final ProduceRateLimiter DISABLED = new ProduceRateLimiter(
         false,
         RateLimiterMode.disabled,
@@ -21,7 +26,7 @@ public final class ProduceRateLimiter {
         0,
         () -> 0L,
         null,
-        RateLimitTelemetry.NOOP
+        UNUSED_TELEMETRY
     );
 
     private static final class RegistryEntry {
@@ -52,16 +57,6 @@ public final class ProduceRateLimiter {
         PerPodTopicQuotaProvider quotaProvider,
         int windowSecs,
         LongSupplier nanoTime,
-        PodCountProvider podCountProvider
-    ) {
-        this(defaultMode, quotaProvider, windowSecs, nanoTime, podCountProvider, RateLimitTelemetry.NOOP);
-    }
-
-    ProduceRateLimiter(
-        RateLimiterMode defaultMode,
-        PerPodTopicQuotaProvider quotaProvider,
-        int windowSecs,
-        LongSupplier nanoTime,
         PodCountProvider podCountProvider,
         RateLimitTelemetry telemetry
     ) {
@@ -82,7 +77,7 @@ public final class ProduceRateLimiter {
         this.quotaProvider = quotaProvider;
         this.windowSecs = windowSecs;
         this.nanoTime = nanoTime;
-        this.telemetry = telemetry;
+        this.telemetry = Objects.requireNonNull(telemetry);
         if (enabled) {
             podCountProvider.addCountChangeListener(this::markQuotasStale);
         }
@@ -105,13 +100,11 @@ public final class ProduceRateLimiter {
                 return false;
             }
             if (mode == RateLimiterMode.shadow) {
-                telemetry.wouldHaveThrottled();
+                telemetry.shadowRejected(topic, messageBytes);
                 return false;
             }
-            telemetry.enforcedThrottled();
             return true;
         } catch (RuntimeException e) {
-            // TODO: see if telemetry is required here.
             log.warn("Rate limit check failed open for topic {}", topic.getName(), e);
             return false;
         }

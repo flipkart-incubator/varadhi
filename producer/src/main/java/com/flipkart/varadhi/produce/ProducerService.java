@@ -217,7 +217,9 @@ public final class ProducerService {
         ProducerMetrics metrics = getMetrics(topicFQN);
         metrics.received(message.getPayload().length, message.getTotalSizeBytes());
 
-        return produceToValidTopic(topic.get().getEntity(), message).whenComplete(metrics::accepted);
+        return produceToValidTopic(topic.get().getEntity(), message).whenComplete(
+            (result, t) -> metrics.accepted(result, t, message.getTotalSizeBytes())
+        );
     }
 
     /**
