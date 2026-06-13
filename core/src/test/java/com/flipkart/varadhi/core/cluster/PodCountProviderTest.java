@@ -17,11 +17,7 @@ class PodCountProviderTest {
     @Test
     void withRole_CountsOnlyMatchingMembers() {
         clusterManager.replaceMembers(
-            Map.of(
-                "server-1", server("server-1"),
-                "server-2", server("server-2"),
-                "consumer-1", consumer("consumer-1")
-            )
+            Map.of("server-1", server("server-1"), "server-2", server("server-2"), "consumer-1", consumer("consumer-1"))
         );
         PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
 
@@ -67,12 +63,7 @@ class PodCountProviderTest {
 
     @Test
     void all_CountsEveryMember() {
-        clusterManager.replaceMembers(
-            Map.of(
-                "server-1", server("server-1"),
-                "consumer-1", consumer("consumer-1")
-            )
-        );
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "consumer-1", consumer("consumer-1")));
         PodCountProvider podCount = startPodCount(PodCountProvider.all(membership));
 
         assertEquals(2, podCount.getAsInt());
@@ -91,9 +82,7 @@ class PodCountProviderTest {
 
     @Test
     void keepsLastKnownCountOnSeedFailure() {
-        clusterManager.replaceMembers(
-            Map.of("server-1", server("server-1"), "server-2", server("server-2"))
-        );
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "server-2", server("server-2")));
         PodCountProvider podCount = startPodCount(PodCountProvider.withRole(membership, ComponentKind.Server, 1));
         assertEquals(2, podCount.getAsInt());
 

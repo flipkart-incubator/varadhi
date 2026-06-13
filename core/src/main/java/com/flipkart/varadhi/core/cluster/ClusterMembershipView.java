@@ -33,11 +33,13 @@ public final class ClusterMembershipView {
         clusterManager.addMembershipListener(membershipListener);
         clusterManager.getMembersByNodeId()
                       .onSuccess(this::seedMembers)
-                      .onFailure(e -> log.warn(
-                          "Failed to seed cluster membership view; keeping last-known snapshot of {} members",
-                          membersByNodeId.size(),
-                          e
-                      ));
+                      .onFailure(
+                          e -> log.warn(
+                              "Failed to seed cluster membership view; keeping last-known snapshot of {} members",
+                              membersByNodeId.size(),
+                              e
+                          )
+                      );
     }
 
     /** Unmodifiable snapshot of the current membership index. */

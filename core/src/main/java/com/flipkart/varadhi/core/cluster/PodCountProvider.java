@@ -24,11 +24,7 @@ public final class PodCountProvider implements IntSupplier {
     private final CopyOnWriteArrayList<Runnable> countChangeListeners = new CopyOnWriteArrayList<>();
     private volatile int podCount;
 
-    private PodCountProvider(
-        ClusterMembershipView membership,
-        Predicate<MemberInfo> memberFilter,
-        int minCount
-    ) {
+    private PodCountProvider(ClusterMembershipView membership, Predicate<MemberInfo> memberFilter, int minCount) {
         this.membership = membership;
         this.memberFilter = memberFilter;
         this.minCount = minCount;

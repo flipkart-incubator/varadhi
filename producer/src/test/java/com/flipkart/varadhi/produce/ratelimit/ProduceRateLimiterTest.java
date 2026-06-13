@@ -36,9 +36,7 @@ class ProduceRateLimiterTest {
     @Test
     void resolveLimiter_RefreshesQuotaLazilyOnMembershipChange() {
         FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
-        clusterManager.replaceMembers(
-            Map.of("server-1", server("server-1"), "server-2", server("server-2"))
-        );
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "server-2", server("server-2")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
 
         EvenSplitPerPodTopicQuotaProvider quotaProvider = new EvenSplitPerPodTopicQuotaProvider(

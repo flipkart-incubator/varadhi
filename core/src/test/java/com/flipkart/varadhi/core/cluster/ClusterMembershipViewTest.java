@@ -18,12 +18,7 @@ class ClusterMembershipViewTest {
 
     @Test
     void snapshot_SeedsFromClusterManager() {
-        clusterManager.replaceMembers(
-            Map.of(
-                "server-1", server("server-1"),
-                "consumer-1", consumer("consumer-1")
-            )
-        );
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "consumer-1", consumer("consumer-1")));
         startWithChangeListener();
 
         assertEquals(2, membership.snapshot().size());

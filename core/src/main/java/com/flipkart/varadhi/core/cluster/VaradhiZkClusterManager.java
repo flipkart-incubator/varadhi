@@ -79,13 +79,11 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
             );
         });
         CompletableFuture<?>[] all = futuresByNodeId.values().toArray(new CompletableFuture[0]);
-        return Future.fromCompletionStage(
-            CompletableFuture.allOf(all).thenApply(v -> {
-                Map<String, MemberInfo> members = HashMap.newHashMap(futuresByNodeId.size());
-                futuresByNodeId.forEach((nodeId, future) -> members.put(nodeId, future.join()));
-                return members;
-            })
-        );
+        return Future.fromCompletionStage(CompletableFuture.allOf(all).thenApply(v -> {
+            Map<String, MemberInfo> members = HashMap.newHashMap(futuresByNodeId.size());
+            futuresByNodeId.forEach((nodeId, future) -> members.put(nodeId, future.join()));
+            return members;
+        }));
     }
 
     @Override
