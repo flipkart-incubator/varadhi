@@ -1,6 +1,8 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -17,12 +19,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
     private final boolean grouped;
-    private final TopicCapacityPolicy capacity;
+    
     private final String nfrFilterName;
     private final TopicCategory topicCategory;
-    private final Map<String, Double> produceRegionWeights;
-    private final MessageSizeProfile messageSizeProfile;
+    
+    /**
+     * Override per topic. If producer config is disabled, this is ignored.
+     */
+    @Nullable
     private final RateLimiterMode rateLimiterMode;
+    
+    private final TopicCapacityPolicy capacity;
+    private final Map<String, Double> perRegionQuotaWeights;
+
+    // TODO: decide on where topic related auxiliary data lives. This data largely is not going to be used by crud, main produce or consume flow. But they power secondary functionalities. 
+    private final MessageSizeProfile messageSizeProfile;
 
     public enum TopicCategory {
         TOPIC, QUEUE
@@ -39,7 +50,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param status         the status of the topic
      * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory  topic vs queue classification; must not be {@code null}
-     * @param produceRegionWeights per-region produce budget weights; nullable until defaulted
+     * @param perRegionQuotaWeights per-region fraction of global produce quota; nullable until defaulted
      * @param messageSizeProfile observed message size profile; nullable until defaulted
      * @param rateLimiterMode per-topic rate limiter rollout mode; nullable until defaulted
      */
@@ -52,7 +63,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
-        Map<String, Double> produceRegionWeights,
+        Map<String, Double> perRegionQuotaWeights,
         MessageSizeProfile messageSizeProfile,
         RateLimiterMode rateLimiterMode
     ) {
@@ -62,8 +73,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
-        this.produceRegionWeights = produceRegionWeights != null ?
-            new HashMap<>(produceRegionWeights) :
+        this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
+            new HashMap<>(perRegionQuotaWeights) :
             new HashMap<>();
         this.messageSizeProfile = messageSizeProfile;
         this.rateLimiterMode = rateLimiterMode;
@@ -125,7 +136,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy,
         TopicCategory topicCategory,
-        Map<String, Double> produceRegionWeights,
+        Map<String, Double> perRegionQuotaWeights,
         MessageSizeProfile messageSizeProfile,
         RateLimiterMode rateLimiterMode
     ) {
@@ -138,7 +149,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
-            produceRegionWeights,
+            perRegionQuotaWeights,
             messageSizeProfile,
             rateLimiterMode
         );
@@ -163,16 +174,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      */
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
-    }
-
-    /**
-     * Replaces the produce-region weight map (e.g. after defaulting in the topic factory).
-     */
-    public void setProduceRegionWeights(Map<String, Double> weights) {
-        this.produceRegionWeights.clear();
-        if (weights != null) {
-            this.produceRegionWeights.putAll(weights);
-        }
     }
 
     /**

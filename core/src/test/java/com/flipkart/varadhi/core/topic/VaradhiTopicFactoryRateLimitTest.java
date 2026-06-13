@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,8 +45,7 @@ class VaradhiTopicFactoryRateLimitTest {
             storageTopicFactory,
             REGION,
             Constants.DEFAULT_TOPIC_CAPACITY,
-            RateLimiterMode.shadow,
-            1024
+            RateLimiterMode.shadow
         );
 
         String vTopicName = project.getName() + "." + TOPIC_NAME;
@@ -55,21 +55,20 @@ class VaradhiTopicFactoryRateLimitTest {
     }
 
     @Test
-    void get_DefaultsProduceRegionWeightsToEvenSplit() {
+    void get_DefaultsPerRegionQuotaWeightsToEvenSplit() {
         TopicResource resource = baseResource(null, null, null);
         VaradhiTopic topic = factory.get(project, resource, VaradhiTopic.TopicCategory.TOPIC);
 
-        assertEquals(Map.of(REGION, 1.0), topic.getProduceRegionWeights());
+        assertEquals(Map.of(REGION, 1.0), topic.getPerRegionQuotaWeights());
     }
 
     @Test
-    void get_DefaultsMessageSizeProfileAndRateLimiterMode() {
+    void get_DefaultsRateLimiterModeAndLeavesMessageSizeProfileUnset() {
         TopicResource resource = baseResource(null, null, null);
         VaradhiTopic topic = factory.get(project, resource, VaradhiTopic.TopicCategory.TOPIC);
 
         assertAll(
-            () -> assertEquals(1024, topic.getMessageSizeProfile().getAvgMsgSizeBytes()),
-            () -> assertEquals(1024, topic.getMessageSizeProfile().getMaxMsgSizeBytes()),
+            () -> assertNull(topic.getMessageSizeProfile()),
             () -> assertEquals(RateLimiterMode.shadow, topic.getRateLimiterMode())
         );
     }
@@ -118,7 +117,7 @@ class VaradhiTopicFactoryRateLimitTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        resource.setProduceRegionWeights(regionWeights);
+        resource.setPerRegionQuotaWeights(regionWeights);
         resource.setRateLimiterMode(mode);
         return resource;
     }

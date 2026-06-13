@@ -1,16 +1,14 @@
 package com.flipkart.varadhi.entities;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
 
 /**
  * Observed average and maximum message sizes for a topic.
  */
-@Data
-@NoArgsConstructor
+@Getter
 public class MessageSizeProfile {
-    private int avgMsgSizeBytes;
-    private int maxMsgSizeBytes;
+    private final int avgMsgSizeBytes;
+    private final int maxMsgSizeBytes;
 
     public MessageSizeProfile(int avgMsgSizeBytes, int maxMsgSizeBytes) {
         this.avgMsgSizeBytes = avgMsgSizeBytes;

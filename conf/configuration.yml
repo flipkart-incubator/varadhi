@@ -126,10 +126,8 @@ rateLimiterOptions:
   enabled: false
   defaultMode: disabled
   fallbackBuffer: 0.25
-  burstSeconds: 1.0
-  minPodShare: 1.0
-  idleBucketTtlSeconds: 3600
-  defaultMsgSizeBytes: 1024
+  windowSecs: 1
+  minPodShare: 1
 
 authenticationOptions:
   configFile: "authn.yml"

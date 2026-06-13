@@ -37,7 +37,7 @@ class VaradhiTopicSerializationTest {
 
         assertAll(
             () -> assertEquals("project1.topic1", topic.getName()),
-            () -> assertTrue(topic.getProduceRegionWeights().isEmpty()),
+            () -> assertTrue(topic.getPerRegionQuotaWeights().isEmpty()),
             () -> assertNull(topic.getMessageSizeProfile()),
             () -> assertNull(topic.getRateLimiterMode())
         );

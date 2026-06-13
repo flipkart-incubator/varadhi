@@ -24,13 +24,13 @@ import lombok.Setter;
 public class TopicResource extends BaseResource implements Validatable {
 
     @Setter
-    private TopicCapacityPolicy capacity;
-
-    @Setter
     private LifecycleStatus.ActionCode actionCode;
 
     @Setter
-    private Map<String, Double> produceRegionWeights;
+    private TopicCapacityPolicy capacity;
+
+    @Setter
+    private Map<String, Double> perRegionQuotaWeights;
 
     @Setter
     private MessageSizeProfile messageSizeProfile;
@@ -38,6 +38,7 @@ public class TopicResource extends BaseResource implements Validatable {
     @Setter
     private RateLimiterMode rateLimiterMode;
 
+    // TODO: evaluate the better name. is it even specific to NFR?
     private final String nfrFilterName;
 
     /**
@@ -126,7 +127,7 @@ public class TopicResource extends BaseResource implements Validatable {
             varadhiTopic.getStatus().getActionCode(),
             varadhiTopic.getNfrFilterName()
         );
-        resource.setProduceRegionWeights(varadhiTopic.getProduceRegionWeights());
+        resource.setPerRegionQuotaWeights(varadhiTopic.getPerRegionQuotaWeights());
         resource.setMessageSizeProfile(varadhiTopic.getMessageSizeProfile());
         resource.setRateLimiterMode(varadhiTopic.getRateLimiterMode());
         return resource;
@@ -153,7 +154,7 @@ public class TopicResource extends BaseResource implements Validatable {
             actionCode,
             nfrFilterName,
             topicCategory,
-            produceRegionWeights,
+            perRegionQuotaWeights,
             messageSizeProfile,
             rateLimiterMode
         );

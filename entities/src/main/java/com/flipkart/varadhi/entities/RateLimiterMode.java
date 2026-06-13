@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 /**
- * Per-topic rate limiter rollout mode: off, observe-only, or enforce limits.
+ * Producer deployment config. (static / dynamic)
  */
 public enum RateLimiterMode {
     disabled, shadow, enforced

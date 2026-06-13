@@ -5,14 +5,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Resolves {@code produceRegionWeights} with partial-map semantics: explicit weights must sum to at most 1,
+ * Resolves {@code perRegionQuotaWeights} with partial-map semantics: explicit weights must sum to at most 1,
  * and any unset produce regions receive an even share of the remainder.
  */
-final class ProduceRegionWeightsResolver {
+final class PerRegionQuotaWeightsResolver {
 
     private static final double WEIGHT_SUM_EPSILON = 1e-9;
 
-    private ProduceRegionWeightsResolver() {
+    private PerRegionQuotaWeightsResolver() {
     }
 
     static Map<String, Double> resolve(Map<String, Double> explicitWeights, Set<String> produceRegions) {
@@ -25,13 +25,13 @@ final class ProduceRegionWeightsResolver {
 
         for (String region : explicitWeights.keySet()) {
             if (!produceRegions.contains(region)) {
-                throw new IllegalArgumentException("Unknown produce region in produceRegionWeights: " + region);
+                throw new IllegalArgumentException("Unknown produce region in perRegionQuotaWeights: " + region);
             }
         }
 
         double explicitSum = explicitWeights.values().stream().mapToDouble(Double::doubleValue).sum();
         if (explicitSum > 1.0 + WEIGHT_SUM_EPSILON) {
-            throw new IllegalArgumentException("produceRegionWeights sum exceeds 1");
+            throw new IllegalArgumentException("perRegionQuotaWeights sum exceeds 1");
         }
 
         Map<String, Double> resolved = new HashMap<>(explicitWeights);
@@ -50,7 +50,7 @@ final class ProduceRegionWeightsResolver {
 
         double total = resolved.values().stream().mapToDouble(Double::doubleValue).sum();
         if (Math.abs(total - 1.0) > WEIGHT_SUM_EPSILON) {
-            throw new IllegalArgumentException("produceRegionWeights must sum to 1");
+            throw new IllegalArgumentException("perRegionQuotaWeights must sum to 1");
         }
         return resolved;
     }

@@ -12,6 +12,7 @@ import com.flipkart.varadhi.entities.web.TopicResource;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Factory class for creating Varadhi topics.
@@ -21,7 +22,6 @@ public class VaradhiTopicFactory {
     private final StorageTopicFactory<? extends StorageTopic> topicFactory;
     private final TopicCapacityPolicy defaultTopicCapacityPolicy;
     private final RateLimiterMode defaultRateLimiterMode;
-    private final int defaultMsgSizeBytes;
 
     /**
      * TODO: This field is currently used to provide a default value for the primary region of the topic being created.
@@ -43,21 +43,19 @@ public class VaradhiTopicFactory {
         String deploymentRegion,
         TopicCapacityPolicy defaultTopicCapacityPolicy
     ) {
-        this(topicFactory, deploymentRegion, defaultTopicCapacityPolicy, RateLimiterMode.disabled, 1024);
+        this(topicFactory, deploymentRegion, defaultTopicCapacityPolicy, RateLimiterMode.disabled);
     }
 
     public VaradhiTopicFactory(
         StorageTopicFactory<? extends StorageTopic> topicFactory,
         String deploymentRegion,
         TopicCapacityPolicy defaultTopicCapacityPolicy,
-        RateLimiterMode defaultRateLimiterMode,
-        int defaultMsgSizeBytes
+        RateLimiterMode defaultRateLimiterMode
     ) {
         this.topicFactory = topicFactory;
         this.defaultTopicCapacityPolicy = defaultTopicCapacityPolicy;
         this.deploymentRegion = deploymentRegion;
         this.defaultRateLimiterMode = defaultRateLimiterMode;
-        this.defaultMsgSizeBytes = defaultMsgSizeBytes;
     }
 
     /**
@@ -74,30 +72,25 @@ public class VaradhiTopicFactory {
             Optional.ofNullable(topicResource.getCapacity()).orElse(defaultTopicCapacityPolicy)
         );
 
-        MessageSizeProfile messageSizeProfile = Optional.ofNullable(topicResource.getMessageSizeProfile())
-                                                        .orElseGet(() -> defaultMessageSizeProfile());
-        topicResource.setMessageSizeProfile(messageSizeProfile);
-
         topicResource.setRateLimiterMode(
             Optional.ofNullable(topicResource.getRateLimiterMode()).orElse(defaultRateLimiterMode)
         );
 
-        TopicCapacityConsistencyValidator.validate(topicResource.getCapacity(), messageSizeProfile);
+        MessageSizeProfile messageSizeProfile = topicResource.getMessageSizeProfile();
+        if (messageSizeProfile != null) {
+            TopicCapacityConsistencyValidator.validate(topicResource.getCapacity(), messageSizeProfile);
+        }
+
+        topicResource.setPerRegionQuotaWeights(
+            PerRegionQuotaWeightsResolver.resolve(
+                topicResource.getPerRegionQuotaWeights(),
+                Set.of(deploymentRegion)
+            )
+        );
 
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);
         planDeployment(project, varadhiTopic);
-
-        varadhiTopic.setProduceRegionWeights(
-            ProduceRegionWeightsResolver.resolve(
-                topicResource.getProduceRegionWeights(),
-                varadhiTopic.getInternalTopics().keySet()
-            )
-        );
         return varadhiTopic;
-    }
-
-    private MessageSizeProfile defaultMessageSizeProfile() {
-        return new MessageSizeProfile(defaultMsgSizeBytes, defaultMsgSizeBytes);
     }
 
     /**
