@@ -59,7 +59,12 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
         // Every stage is acked. Version-gated stages (PREPARE=N, SWITCH=N+1) first wait for
         // the TopicCache to converge; all others ack immediately on receipt.
         if (event.topicVersionToAwait() > 0) {
-            awaitVersionThenAck(event, System.currentTimeMillis() + config.podSwitchWaitMs());
+            // handle() runs on the event-bus thread that delivered this publish. Offload the
+            // version wait to the failover scheduler (the same thread the retry path uses) so
+            // that a first-poll hit — which synchronously pre-warms the producer via a blocking
+            // getProducer(...).join() — cannot stall the event bus on a producer cache miss.
+            long deadlineMs = System.currentTimeMillis() + config.podSwitchWaitMs();
+            scheduler.execute(() -> awaitVersionThenAck(event, deadlineMs)); 
         } else {
             ackOk(event);
         }
