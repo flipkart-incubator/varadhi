@@ -22,7 +22,4 @@ public final class FailoverChannels {
 
     /** Api name (under the controller route) for the pod-to-controller ack. */
     public static final String ACK_API = "failoverAck";
-
-    private FailoverChannels() {
-    }
 }

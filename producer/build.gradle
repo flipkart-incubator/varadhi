@@ -6,7 +6,6 @@ dependencies {
     api(project(':entities'))
     implementation(project(':common'))
     implementation(project(':core'))
-    implementation(project(':spi'))
     implementation(libs.guava)
     implementation(libs.micrometer.core)
     implementation(libs.caffeine)

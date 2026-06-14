@@ -9,11 +9,13 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * controller-side {@code TransitionObject} (which is not replicated to pods).
  *
  * <ul>
- *   <li>{@code fenceVersion} — monotonic per transition; pods echo it back in their
- *       ack so the controller can drop stale acks from a previous stage/attempt.</li>
- *   <li>{@code topicVersionToAwait} — for {@link FailoverStage#SWITCH}, the
- *       {@code VaradhiTopic} version (N+1) the pod must observe in its TopicCache
- *       before acking. {@code 0} means "no version wait" (e.g. PREPARE / terminal).</li>
+ *   <li>{@code topicVersionToAwait} — the {@code VaradhiTopic} version the pod must
+ *       observe in its TopicCache before acking. For {@link FailoverStage#PREPARE} this
+ *       is the current version (N) (readiness check); for {@link FailoverStage#SWITCH}
+ *       it is the post-switch version (N+1). {@code 0} means "no version wait" — the pod
+ *       acks immediately on receipt (e.g. {@link FailoverStage#PENDING},
+ *       {@link FailoverStage#DRAIN}, {@link FailoverStage#COMPLETED},
+ *       {@link FailoverStage#ABORTED}).</li>
  * </ul>
  */
 public record FailoverStageEvent(
@@ -21,49 +23,31 @@ public record FailoverStageEvent(
     String topicFqn,
     String parentKind,
     FailoverStage stage,
-    long fenceVersion,
-    long topicVersionToAwait,
-    String targetRegion
+    long topicVersionToAwait
 ) {
 
     public static final String PARENT_KIND_TOPIC = "topic";
 
     /**
-     * PREPARE: pods in {@code targetRegion} pre-warm their producer; no topic version to await.
-     * Pods in other regions have nothing to warm but still ack the stage.
+     * PREPARE readiness: pods confirm they are alive and caught up to the current topic
+     * version (N) before the switch is applied. A pod that is unreachable or stale fails
+     * this barrier, letting the controller abort with no change applied.
      */
-    public static FailoverStageEvent forPrepare(String opId, String topicFqn, long fenceVersion, String targetRegion) {
-        return new FailoverStageEvent(
-            opId,
-            topicFqn,
-            PARENT_KIND_TOPIC,
-            FailoverStage.PREPARE,
-            fenceVersion,
-            0L,
-            targetRegion
-        );
+    public static FailoverStageEvent forPrepare(String opId, String topicFqn, long currentTopicVersion) {
+        return new FailoverStageEvent(opId, topicFqn, PARENT_KIND_TOPIC, FailoverStage.PREPARE, currentTopicVersion);
     }
 
     /** SWITCH: pods wait until TopicCache reaches {@code topicVersionToAwait} (= N+1), then ack. */
-    public static FailoverStageEvent forSwitch(
-        String opId,
-        String topicFqn,
-        long fenceVersion,
-        long topicVersionToAwait
-    ) {
-        return new FailoverStageEvent(
-            opId,
-            topicFqn,
-            PARENT_KIND_TOPIC,
-            FailoverStage.SWITCH,
-            fenceVersion,
-            topicVersionToAwait,
-            null
-        );
+    public static FailoverStageEvent forSwitch(String opId, String topicFqn, long topicVersionToAwait) {
+        return new FailoverStageEvent(opId, topicFqn, PARENT_KIND_TOPIC, FailoverStage.SWITCH, topicVersionToAwait);
     }
 
-    /** Terminal (COMPLETED / ABORTED) notification; pods have nothing to apply. */
-    public static FailoverStageEvent forTerminal(String opId, String topicFqn, FailoverStage stage, long fenceVersion) {
-        return new FailoverStageEvent(opId, topicFqn, PARENT_KIND_TOPIC, stage, fenceVersion, 0L, null);
+    /**
+     * Any non-version-gated stage ({@link FailoverStage#PENDING}, {@link FailoverStage#DRAIN},
+     * {@link FailoverStage#COMPLETED}, {@link FailoverStage#ABORTED}): the pod has no version
+     * to await and acks immediately on receipt.
+     */
+    public static FailoverStageEvent forStage(String opId, String topicFqn, FailoverStage stage) {
+        return new FailoverStageEvent(opId, topicFqn, PARENT_KIND_TOPIC, stage, 0L);
     }
 }

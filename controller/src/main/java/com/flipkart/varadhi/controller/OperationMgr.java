@@ -352,7 +352,7 @@ public class OperationMgr {
                     log.error("Retry ERROR -- {} not retried due to failure {}", operation, e.getMessage());
                     // failure will be primarily due to DB failure. Task is already removed from the operation queue.
                     // In this case ignore the failure and continue, as a result retry will not be attempted for
-                    // this operation, but that's ok.
+                    // this operation, but that's success.
                 }
             } else {
                 log.error("Operation {} has failed but further retry is not allowed.", operation);

@@ -18,7 +18,6 @@ import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.failover.ControllerFailoverClient;
 import com.flipkart.varadhi.produce.failover.FailoverAckTriggerHandler;
 import com.flipkart.varadhi.produce.failover.PodFailoverConfig;
-import com.flipkart.varadhi.spi.services.BrokerWarmer;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -318,9 +317,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
         FailoverAckTriggerHandler handler = new FailoverAckTriggerHandler(
             HostUtils.getHostName(),
-            verticleConfig.deployedRegion(),
             topicCache,
-            BrokerWarmer.NO_OP,
             new ControllerFailoverClient(messageExchange),
             PodFailoverConfig.defaultConfig(),
             failoverScheduler

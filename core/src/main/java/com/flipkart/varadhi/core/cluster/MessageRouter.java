@@ -49,7 +49,7 @@ public class MessageRouter {
                 // Send ensures only delivery and not execution.
                 // Client will not be aware of any kind of failure either in invocation or in execution of the
                 // message's send handler
-                message.reply("received ok", deliveryOptions);
+                message.reply("received success", deliveryOptions);
             }
         });
     }
