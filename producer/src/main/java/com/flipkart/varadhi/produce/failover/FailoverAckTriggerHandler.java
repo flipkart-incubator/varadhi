@@ -5,26 +5,34 @@ import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.cluster.failover.FailoverStageEvent;
-import com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverAck;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverEvent;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverStage;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 /**
  * Minimal pod-side handler for failover stage broadcasts. It reacts using only the
- * self-contained {@link FailoverStageEvent} and the pod's local {@code TopicCache};
+ * self-contained {@link FailoverEvent} and the pod's local {@code TopicCache};
  * it never reads the controller-side {@code TransitionObject}.
  *
  * <p><b>Every</b> stage is acknowledged. Version-gated stages wait for the local
- * TopicCache to converge before acking; all others ack immediately on receipt:
+ * TopicCache to converge to the <em>exact</em> coordinated version before acking; all
+ * others ack immediately on receipt:
  * <ul>
  *   <li><b>PREPARE</b> ({@code topicVersionToAwait} = N) — readiness: poll the local
- *       TopicCache until it reaches version N, then ack; a stale/unreachable pod times
- *       out and acks failure, letting the controller abort before any change.</li>
+ *       TopicCache until it observes exactly version N, then pre-warm this pod's producer
+ *       and ack; a stale/unreachable pod times out, and a pod that cannot warm its producer
+ *       acks failure — both let the controller abort before any change.</li>
  *   <li><b>SWITCH</b> ({@code topicVersionToAwait} = N+1) — convergence: same
- *       version-wait but for N+1, then ack.</li>
+ *       exact-version wait but for N+1, then ack.</li>
+ *   <li>For version-gated stages, if the cache has already moved <em>past</em> the target
+ *       (a skipped version), the pod acks failure, treating it as a concurrent
+ *       modification so the controller can abort/retry.</li>
  *   <li><b>PENDING / DRAIN / COMPLETED / ABORTED</b> ({@code topicVersionToAwait} = 0) —
  *       no version to await; ack immediately so the controller knows the pod processed
  *       the stage.</li>
@@ -34,31 +42,20 @@ import java.util.concurrent.TimeUnit;
  * per-region {@code TopicState}, {@code ProducerService} gates produce automatically.
  */
 @Slf4j
+@AllArgsConstructor
 public final class FailoverAckTriggerHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final FailoverAcker ackClient;
+    private final FailoverAckClient ackClient;
+    /** Pre-warms a (topicFqn, targetRegion) producer (ProducerService::warmProducer); throws on failure. */
+    private final BiConsumer<String, String> producerWarmer;
     private final PodFailoverConfig config;
     private final ScheduledExecutorService scheduler;
 
-    public FailoverAckTriggerHandler(
-        String hostname,
-        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
-        FailoverAcker ackClient,
-        PodFailoverConfig config,
-        ScheduledExecutorService scheduler
-    ) {
-        this.hostname = hostname;
-        this.topicCache = topicCache;
-        this.ackClient = ackClient;
-        this.config = config;
-        this.scheduler = scheduler;
-    }
-
     @Override
     public void handle(ClusterMessage message) {
-        FailoverStageEvent event = message.getData(FailoverStageEvent.class);
+        FailoverEvent event = message.getData(FailoverEvent.class);
         // Every stage is acked. Version-gated stages (PREPARE=N, SWITCH=N+1) first wait for
         // the TopicCache to converge; all others ack immediately on receipt.
         if (event.topicVersionToAwait() > 0) {
@@ -68,17 +65,25 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
         }
     }
 
-    private void awaitVersionThenAck(FailoverStageEvent event, long deadlineMs) {
+    private void awaitVersionThenAck(FailoverEvent event, long deadlineMs) {
         long current = topicCache.get(event.topicFqn()).map(Resource::getVersion).map(Integer::longValue).orElse(-1L);
-        if (current >= event.topicVersionToAwait()) {
-            ackOk(event);
+        long target = event.topicVersionToAwait();
+        if (current == target) {
+            onVersionReached(event);
+            return;
+        }
+        if (current > target) {
+            // The cache jumped past the version the controller coordinated: the topic was
+            // modified concurrently during failover. Fail so the controller can abort/retry
+            // rather than act on a version it never coordinated.
+            ackFail(
+                event,
+                "topic version overshot target " + target + " (current " + current + "), concurrent modification"
+            );
             return;
         }
         if (System.currentTimeMillis() >= deadlineMs) {
-            ackFail(
-                event,
-                "timeout awaiting topic version " + event.topicVersionToAwait() + " (current " + current + ")"
-            );
+            ackFail(event, "timeout awaiting topic version " + target + " (current " + current + ")");
             return;
         }
         scheduler.schedule(
@@ -88,11 +93,32 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
         );
     }
 
-    private void ackOk(FailoverStageEvent event) {
-        ackClient.ack(FailoverStatusUpdate.success(event.opId(), hostname, event.stage()));
+    private void onVersionReached(FailoverEvent event) {
+        // PREPARE doubles as readiness: pre-warm this pod's producer so the target region has a
+        // live producer before SWITCH flips its TopicState to producing. A warm failure fails the
+        // ack, letting the controller abort before any switch.
+        if (event.stage() == FailoverStage.PREPARE) {
+            try {
+                producerWarmer.accept(event.topicFqn(), event.targetRegion());
+            } catch (Exception e) {
+                log.warn(
+                    "Failover PREPARE warm failed for {} op={}: {}",
+                    event.topicFqn(),
+                    event.opId(),
+                    e.getMessage()
+                );
+                ackFail(event, "prepare warm failed: " + e.getMessage());
+                return;
+            }
+        }
+        ackOk(event);
     }
 
-    private void ackFail(FailoverStageEvent event, String errorMsg) {
-        ackClient.ack(FailoverStatusUpdate.failure(event.opId(), hostname, event.stage(), errorMsg));
+    private void ackOk(FailoverEvent event) {
+        ackClient.ack(FailoverAck.success(event.opId(), hostname, event.stage()));
+    }
+
+    private void ackFail(FailoverEvent event, String errorMsg) {
+        ackClient.ack(FailoverAck.failure(event.opId(), hostname, event.stage(), errorMsg));
     }
 }

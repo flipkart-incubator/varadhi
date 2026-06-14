@@ -4,7 +4,8 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.cluster.failover.FailoverChannels;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverAck;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -16,16 +17,13 @@ import lombok.extern.slf4j.Slf4j;
  * the missing host, so the pod simply logs and moves on.
  */
 @Slf4j
-public final class ControllerFailoverClient implements FailoverAcker {
+@AllArgsConstructor
+public final class ControllerFailoverClient implements FailoverAckClient {
 
     private final MessageExchange exchange;
 
-    public ControllerFailoverClient(MessageExchange exchange) {
-        this.exchange = exchange;
-    }
-
     @Override
-    public void ack(FailoverStatusUpdate update) {
+    public void ack(FailoverAck update) {
         ClusterMessage message = ClusterMessage.of(update);
         exchange.send(ControllerApi.ROUTE_CONTROLLER, FailoverChannels.ACK_API, message).exceptionally(t -> {
             log.warn(

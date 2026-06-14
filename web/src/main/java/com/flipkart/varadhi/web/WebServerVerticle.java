@@ -303,7 +303,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
     /**
      * Registers the pod-side failover stage handler on the broadcast bus. The handler is
-     * inert until the controller starts publishing {@code FailoverStageEvent}s, and the
+     * inert until the controller starts publishing {@code FailoverEvent}s, and the
      * produce path itself is unchanged (it already gates on per-region {@code TopicState}).
      */
     private void setupFailoverAckHandler() {
@@ -315,10 +315,12 @@ public class WebServerVerticle extends AbstractVerticle {
         this.failoverScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "failover-switch-wait")
         );
+        ProducerService producerService = serviceRegistry.get(ProducerService.class);
         FailoverAckTriggerHandler handler = new FailoverAckTriggerHandler(
             HostUtils.getHostName(),
             topicCache,
             new ControllerFailoverClient(messageExchange),
+            producerService::warmProducer,
             PodFailoverConfig.defaultConfig(),
             failoverScheduler
         );

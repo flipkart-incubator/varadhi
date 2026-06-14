@@ -49,7 +49,7 @@ public class MessageRouter {
                 // Send ensures only delivery and not execution.
                 // Client will not be aware of any kind of failure either in invocation or in execution of the
                 // message's send handler
-                message.reply("received success", deliveryOptions);
+                message.reply("received ok", deliveryOptions);
             }
         });
     }
@@ -99,7 +99,9 @@ public class MessageRouter {
             try {
                 handler.handle(msg);
             } catch (Exception e) {
-                // Publish is fire-and-forget; there is no publisher to notify of failures.
+                // Publish has no transport-level reply (unlike send/request), so an unexpected
+                // exception here can only be logged. Any application-level acknowledgment is the
+                // handler's responsibility and is sent as a separate message, not a bus reply.
                 log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
             }
         });

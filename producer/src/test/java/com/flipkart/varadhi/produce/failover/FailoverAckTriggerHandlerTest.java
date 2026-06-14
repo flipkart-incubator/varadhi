@@ -4,9 +4,9 @@ import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverAck;
+import com.flipkart.varadhi.entities.cluster.failover.FailoverEvent;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverStage;
-import com.flipkart.varadhi.entities.cluster.failover.FailoverStageEvent;
-import com.flipkart.varadhi.entities.cluster.failover.FailoverStatusUpdate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,15 +29,18 @@ class FailoverAckTriggerHandlerTest {
 
     private static final String OP_ID = "op-1";
     private static final String FQN = "proj.topic1";
+    private static final String TARGET_REGION = "region-b";
 
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private CapturingAcker acker;
+    private CapturingAckClient acker;
+    private RecordingWarmer warmer;
     private ScheduledExecutorService scheduler;
 
     @SuppressWarnings ("unchecked")
     @BeforeEach
     void setup() {
         topicCache = mock(ResourceReadCache.class);
+        warmer = new RecordingWarmer();
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -46,8 +50,8 @@ class FailoverAckTriggerHandlerTest {
     }
 
     private FailoverAckTriggerHandler handler(PodFailoverConfig config) {
-        acker = new CapturingAcker(1);
-        return new FailoverAckTriggerHandler("host-1", topicCache, acker, config, scheduler);
+        acker = new CapturingAckClient(1);
+        return new FailoverAckTriggerHandler("host-1", topicCache, acker, warmer, config, scheduler);
     }
 
     @Test
@@ -56,12 +60,32 @@ class FailoverAckTriggerHandlerTest {
         when(topicCache.get(FQN)).thenReturn(Optional.of(atV10));
         FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forPrepare(OP_ID, FQN, 10)));
+        h.handle(ClusterMessage.of(FailoverEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.PREPARE, ack.stage());
         assertTrue(ack.success());
+        assertTrue(
+            warmer.warmed.contains(FQN + "@" + TARGET_REGION),
+            "PREPARE should pre-warm the target region producer"
+        );
+    }
+
+    @Test
+    void prepareAcksFailureWhenWarmThrows() throws Exception {
+        Resource.EntityResource<VaradhiTopic> atV10 = topicAtVersion(10);
+        when(topicCache.get(FQN)).thenReturn(Optional.of(atV10));
+        warmer.toThrow = new RuntimeException("broker unreachable");
+        FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
+
+        h.handle(ClusterMessage.of(FailoverEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION)));
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        FailoverAck ack = acker.acks.get(0);
+        assertEquals(FailoverStage.PREPARE, ack.stage());
+        assertFalse(ack.success());
+        assertTrue(ack.errorMsg().contains("prepare warm failed"));
     }
 
     @Test
@@ -69,10 +93,10 @@ class FailoverAckTriggerHandlerTest {
         when(topicCache.get(FQN)).thenReturn(Optional.empty());
         FailoverAckTriggerHandler h = handler(new PodFailoverConfig(60L, 10L));
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forPrepare(OP_ID, FQN, 10)));
+        h.handle(ClusterMessage.of(FailoverEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.PREPARE, ack.stage());
         assertFalse(ack.success());
         assertTrue(ack.errorMsg().contains("timeout"));
@@ -84,12 +108,13 @@ class FailoverAckTriggerHandlerTest {
         when(topicCache.get(FQN)).thenReturn(Optional.of(atV11));
         FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forSwitch(OP_ID, FQN, 11)));
+        h.handle(ClusterMessage.of(FailoverEvent.forSwitch(OP_ID, FQN, 11)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.SWITCH, ack.stage());
         assertTrue(ack.success());
+        assertTrue(warmer.warmed.isEmpty(), "SWITCH must not warm the producer");
     }
 
     @Test
@@ -98,7 +123,7 @@ class FailoverAckTriggerHandlerTest {
         when(topicCache.get(FQN)).thenReturn(Optional.empty(), Optional.empty(), Optional.of(atV11));
         FailoverAckTriggerHandler h = handler(new PodFailoverConfig(2000L, 5L));
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forSwitch(OP_ID, FQN, 11)));
+        h.handle(ClusterMessage.of(FailoverEvent.forSwitch(OP_ID, FQN, 11)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         assertTrue(acker.acks.get(0).success());
@@ -109,22 +134,38 @@ class FailoverAckTriggerHandlerTest {
         when(topicCache.get(FQN)).thenReturn(Optional.empty());
         FailoverAckTriggerHandler h = handler(new PodFailoverConfig(60L, 10L));
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forSwitch(OP_ID, FQN, 11)));
+        h.handle(ClusterMessage.of(FailoverEvent.forSwitch(OP_ID, FQN, 11)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertFalse(ack.success());
         assertTrue(ack.errorMsg().contains("timeout"));
+    }
+
+    @Test
+    void switchAcksFailureWhenVersionOvershoots() throws Exception {
+        // Cache skipped past the coordinated version (concurrent modification) => fail fast.
+        Resource.EntityResource<VaradhiTopic> atV12 = topicAtVersion(12);
+        when(topicCache.get(FQN)).thenReturn(Optional.of(atV12));
+        FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
+
+        h.handle(ClusterMessage.of(FailoverEvent.forSwitch(OP_ID, FQN, 11)));
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        FailoverAck ack = acker.acks.get(0);
+        assertEquals(FailoverStage.SWITCH, ack.stage());
+        assertFalse(ack.success());
+        assertTrue(ack.errorMsg().contains("overshot"));
     }
 
     @Test
     void completedAcksOkImmediately() throws Exception {
         FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forStage(OP_ID, FQN, FailoverStage.COMPLETED)));
+        h.handle(ClusterMessage.of(FailoverEvent.forStage(OP_ID, FQN, FailoverStage.COMPLETED)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.COMPLETED, ack.stage());
         assertTrue(ack.success());
     }
@@ -133,10 +174,10 @@ class FailoverAckTriggerHandlerTest {
     void abortedAcksOkImmediately() throws Exception {
         FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forStage(OP_ID, FQN, FailoverStage.ABORTED)));
+        h.handle(ClusterMessage.of(FailoverEvent.forStage(OP_ID, FQN, FailoverStage.ABORTED)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.ABORTED, ack.stage());
         assertTrue(ack.success());
     }
@@ -146,10 +187,10 @@ class FailoverAckTriggerHandlerTest {
         // No version to await => acks without ever consulting the topic cache.
         FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(FailoverStageEvent.forStage(OP_ID, FQN, FailoverStage.DRAIN)));
+        h.handle(ClusterMessage.of(FailoverEvent.forStage(OP_ID, FQN, FailoverStage.DRAIN)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        FailoverStatusUpdate ack = acker.acks.get(0);
+        FailoverAck ack = acker.acks.get(0);
         assertEquals(FailoverStage.DRAIN, ack.stage());
         assertTrue(ack.success());
     }
@@ -161,16 +202,30 @@ class FailoverAckTriggerHandlerTest {
         return res;
     }
 
-    private static final class CapturingAcker implements FailoverAcker {
-        private final CopyOnWriteArrayList<FailoverStatusUpdate> acks = new CopyOnWriteArrayList<>();
+    private static final class RecordingWarmer implements BiConsumer<String, String> {
+        private final CopyOnWriteArrayList<String> warmed = new CopyOnWriteArrayList<>();
+        private volatile RuntimeException toThrow;
+
+        @Override
+        public void accept(String topicFqn, String region) {
+            if (toThrow != null) {
+                throw toThrow;
+            }
+            warmed.add(topicFqn + "@" + region);
+        }
+    }
+
+
+    private static final class CapturingAckClient implements FailoverAckClient {
+        private final CopyOnWriteArrayList<FailoverAck> acks = new CopyOnWriteArrayList<>();
         private final CountDownLatch latch;
 
-        CapturingAcker(int expected) {
+        CapturingAckClient(int expected) {
             this.latch = new CountDownLatch(expected);
         }
 
         @Override
-        public void ack(FailoverStatusUpdate update) {
+        public void ack(FailoverAck update) {
             acks.add(update);
             latch.countDown();
         }

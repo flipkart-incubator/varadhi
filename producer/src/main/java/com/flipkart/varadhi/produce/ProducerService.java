@@ -45,8 +45,9 @@ public final class ProducerService {
      *
      * @param varadhiTopicFQN the full name of the Varadhi topic
      * @param storageTopicId     the storage topic id
+     * @param region             the region the producer produces to
      */
-    private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId) {
+    private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId, String region) {
     }
 
     /**
@@ -133,26 +134,22 @@ public final class ProducerService {
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(key -> loadProducerObject(produceRegion, producerFactory, key));
+                                     .build(key -> loadProducerObject(producerFactory, key));
         this.metricsProvider = metricsRecorderProvider;
     }
 
-    private Producer<? extends Offset> loadProducerObject(
-        String produceRegion,
-        ProducerFactory producerFactory,
-        ProducerCacheKey key
-    ) {
+    private Producer<? extends Offset> loadProducerObject(ProducerFactory producerFactory, ProducerCacheKey key) {
         var topicMaybe = topicCache.get(key.varadhiTopicFQN);
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
-                "Topic(%s) does not exist in region(%s).".formatted(key.varadhiTopicFQN, produceRegion)
+                "Topic(%s) does not exist in region(%s).".formatted(key.varadhiTopicFQN, key.region())
             );
         }
 
         var topic = topicMaybe.get();
 
         return producerFactory.newProducer(
-            topic.getEntity().getProduceTopicForRegion(produceRegion).getTopic(key.storageTopicId),
+            topic.getEntity().getProduceTopicForRegion(key.region()).getTopic(key.storageTopicId),
             topic.getEntity().getCapacity()
         );
     }
@@ -222,7 +219,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic).thenCompose(
+        return getProducer(topic.getName(), storageTopic, produceRegion).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
@@ -235,10 +232,15 @@ public final class ProducerService {
      *
      * @param topicFQN the name of the Varadhi topic (used for caching)
      * @param storageTopic   the storage topic to get a producer for
+     * @param region         the region the producer produces to (part of the cache key)
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer<? extends Offset>> getProducer(String topicFQN, StorageTopic storageTopic) {
-        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId());
+    public CompletableFuture<Producer<? extends Offset>> getProducer(
+        String topicFQN,
+        StorageTopic storageTopic,
+        String region
+    ) {
+        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId(), region);
         Producer<? extends Offset> producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
@@ -254,6 +256,31 @@ public final class ProducerService {
             );
             return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
         }
+    }
+
+    /**
+     * Eagerly creates and caches the producer for the given {@code region}, so that a
+     * subsequent produce does not pay the producer-creation cost. Used during failover
+     * PREPARE to pre-warm the <em>target</em> region before its {@code TopicState} flips to
+     * producing (produce keeps flowing to the old region until SWITCH).
+     * <p>
+     * It is a no-op when the topic has no produce topic configured for {@code region}
+     * (nothing to warm). Any failure to create the producer is propagated to the caller.
+     *
+     * @param topicFQN the full name of the Varadhi topic to warm
+     * @param region   the region whose producer should be pre-created
+     * @throws ResourceNotFoundException if the topic is not present in this pod's cache
+     */
+    public void warmProducer(String topicFQN, String region) {
+        var topic = topicCache.get(topicFQN);
+        if (topic.isEmpty()) {
+            throw new ResourceNotFoundException("Topic(%s) does not exist in region(%s).".formatted(topicFQN, region));
+        }
+        SegmentedStorageTopic internalTopic = topic.get().getEntity().getProduceTopicForRegion(region);
+        if (internalTopic == null) {
+            return;
+        }
+        getProducer(topicFQN, internalTopic.getTopicToProduce(), region).join();
     }
 
     /**

@@ -7,7 +7,7 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * can confirm fleet-wide progress and abort/remediate on a missing or failed ack.
  *
  * <p>This enum is part of the pod-facing <b>wire contract</b> (it travels inside
- * {@link FailoverStageEvent} and {@link FailoverStatusUpdate}). It carries no
+ * {@link FailoverEvent} and {@link FailoverAck}). It carries no
  * controller-only state.
  *
  * <p>Some stages are <i>version-gated</i>: the pod must observe a specific topic version
