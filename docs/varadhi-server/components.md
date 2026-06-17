@@ -4,7 +4,7 @@
 
 `varadhi-server` is a Vert.x application that runs with `member.roles:[Server]` and exposes Varadhi's HTTP surface: the **control-plane** API (`concept.org`, `concept.team`, `concept.project`, regions, `concept.topic`, `concept.subscription`, `concept.queue`, IAM) and the **produce** API. Its internal architecture is a **route + behaviour-chain** design rather than a layered framework: a single verticle ([`http-ingress`](#varadhi-serverhttp-ingress--http-ingress)) builds a route table from `RouteProvider`s and attaches an ordered chain of cross-cutting behaviours to each route — telemetry, authentication, body handling, hierarchy resolution, and authorization.
 
-The components split along a **hybrid-by-ownership** line. Control-plane handlers are thin and delegate to shared `core` entity services, so they live inside `http-ingress`. Where the backing logic is the server's own code, the handler and its service form one vertical component: [`produce-service`](#varadhi-serverproduce-service--produce-service) (the only event-loop / non-blocking path, publishing `concept.message`s to the messaging stack), [`dlq-service`](#varadhi-serverdlq-service--dlq-service) (dead-letter browse/unsideline that fans out to the controller and consumer shards), and [`iam-policy-management`](#varadhi-serveriam-policy-management--iam-policy-management) (IAM policy CRUD, present only with the built-in authz).
+The components split along a **hybrid-by-ownership** line. Control-plane handlers are thin and delegate to shared `core` entity services, so they live inside `http-ingress`. Where the backing logic is the server's own code, the handler and its service form one vertical component: [`produce-service`](#varadhi-serverproduce-service--produce-service) (the only event-loop / non-blocking path, publishing `concept.message`s to the messaging stack), [`dlq-service`](#varadhi-serverdlq-service--dlq-service) (dead-letter browse/unsideline that fans out to the controller and consumer shards), and [`iam-policy-management`](#varadhi-serveriam-policy-management--iam-policy-management) (IAM policy CRUD, present only with the built-in authz). The produce path carries an optional admission guard, [`produce-rate-limiter`](#varadhi-serverproduce-rate-limiter--produce-rate-limiter), which throttles per topic against this pod's even-split share of the topic's produce quota.
 
 Three components implement the cross-cutting chain as distinct mechanisms: [`authentication`](#varadhi-serverauthentication--authentication) and [`authorization`](#varadhi-serverauthorization--authorization-rbac) (both pluggable Policy/Guards; the built-in authz is an RBAC engine over a resource hierarchy) and [`request-telemetry`](#varadhi-serverrequest-telemetry--request-telemetry). The actual domain services, cluster RPC clients, read caches, and persistence/messaging contracts are **shared** (see [shared-components.md](../shared-components.md)), as is the process bootstrap.
 
@@ -16,6 +16,7 @@ Three components implement the cross-cutting chain as distinct mechanisms: [`aut
 | `varadhi-server.authentication` | Policy / Guard | Pluggable request authentication; establishes user context or 401s |
 | `varadhi-server.authorization` | Policy / Guard | Pluggable RBAC over the resource hierarchy; built-in provider evaluates role bindings |
 | `varadhi-server.produce-service` | Application Service + Outbound Gateway | The produce use case: validate headers, filter, resolve/cache producer, publish to the messaging stack |
+| `varadhi-server.produce-rate-limiter` | Policy / Guard | Per-pod per-topic produce admission control; even-split token buckets over live pod count; shadow/enforced modes |
 | `varadhi-server.iam-policy-management` | Application Service (conditional) | IAM policy CRUD persisted in the metastore; only wired with the built-in authz |
 | `varadhi-server.dlq-service` | Application Service | Dead-letter browse/unsideline, fanning out to controller + consumer shards over the event bus |
 | `varadhi-server.request-telemetry` | Cross-Cutting Provider | Per-request span/metrics/error-classification as a behaviour-chain stage |
@@ -138,7 +139,7 @@ Enforces authorization for control-plane and produce actions. The built-in provi
 
 #### Responsibility
 
-Owns the message-produce use case end to end: filter/normalize compliant headers and validate header semantics/size, build the `concept.message`, evaluate the org NFR (server-side) `concept.filter`, resolve and cache the storage producer, publish asynchronously to the messaging stack, map produce status to an HTTP code, and record produce metrics. This is the container's hot path and its sole Outbound Gateway to the messaging stack.
+Owns the message-produce use case end to end: filter/normalize compliant headers and validate header semantics/size, build the `concept.message`, evaluate the org NFR (server-side) `concept.filter`, apply the per-pod produce rate-limit admission check (`varadhi-server.produce-rate-limiter`), resolve and cache the storage producer, publish asynchronously to the messaging stack, map produce status to an HTTP code, and record produce metrics. This is the container's hot path and its sole Outbound Gateway to the messaging stack.
 
 #### Collaborators
 
@@ -147,6 +148,7 @@ Owns the message-produce use case end to end: filter/normalize compliant headers
 | produce HTTP clients | called-by | HTTP/JSON | Receive produce requests (via `http-ingress` behaviour chain) |
 | `shared.messaging-spi` → pulsar | calls | Pulsar client | Publish `concept.message`s to the storage producer |
 | `shared.resource-cache` | calls | method-call | Topic/project/org lookups + NFR filter inputs |
+| `varadhi-server.produce-rate-limiter` | calls | method-call | Per-message throttle decision before publish (when enabled) |
 
 #### Side Effects
 
@@ -158,7 +160,7 @@ Owns the message-produce use case end to end: filter/normalize compliant headers
 
 - **Contention/blocking**: the produce route is the only **`nonBlocking` / event-loop** route. Any blocking work introduced on this path stalls the event loop — keep it async. [ProduceHandlers](/web/src/main/java/com/flipkart/varadhi/web/v1/producer/ProduceHandlers.java)
 - **Consistency**: producers are cached in a Caffeine cache with an access-based expiry (a tunable knob); a producer is reused until it expires. Topic/project/org reads come from eventually-consistent shared caches (`shared.resource-cache`), so very recent metadata changes may not be reflected immediately. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
-- **Failure mode**: a missing/inactive `concept.topic` throws `ResourceNotFoundException`; produce outcomes map to HTTP codes (blocked/not-allowed, throttled, failed). Capacity-based throttling is expected behaviour, not a fault. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
+- **Failure mode**: a missing/inactive `concept.topic` throws `ResourceNotFoundException`; produce outcomes map to HTTP codes (blocked/not-allowed, throttled, failed). Throttling (429) comes from `produce-rate-limiter` rejecting an over-quota message and is expected behaviour, not a fault. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
 
 #### Notes for Coding Agents
 
@@ -166,6 +168,45 @@ Owns the message-produce use case end to end: filter/normalize compliant headers
 - The producer cache key is `(varadhiTopicFQN, storageTopicId)`; changing the key shape affects producer reuse and in-flight producers.
 - Header handling depends on deployment-configured names and non-compliant-header filtering; don't hardcode header names.
 - The org NFR filter is evaluated here on the produce path only — server-side filtering semantics live in this component.
+
+---
+
+### varadhi-server.produce-rate-limiter — Produce Rate Limiter
+
+**Archetype**: Policy / Guard
+**Packages**: `producer.produce.ratelimit`
+**Public Interface**: [ProduceRateLimiter](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/ProduceRateLimiter.java) is the boundary — `produce-service` calls it once per message and gets back a throttle decision (admit / reject-with-429). Per-pod quota sourcing is pluggable behind [PerPodTopicQuotaProvider](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/PerPodTopicQuotaProvider.java); the v1 implementation is an even split ([EvenSplitPerPodTopicQuotaProvider](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/EvenSplitPerPodTopicQuotaProvider.java)).
+
+#### Responsibility
+
+Per-pod, per-topic admission control on the produce hot path (VIP-0001). Derives this pod's share of a `concept.topic`'s global produce quota by even-splitting the topic's configured capacity (qps + throughput) across the **live pod count**, then admits or rejects each message against coupled qps and bytes token buckets. Operates per topic in one of three modes — `disabled`, `shadow` (records would-be rejections but still admits), or `enforced` (rejects over-quota) — defaulting to the deployment's configured mode when a topic sets none. A deployment master switch makes the whole component a no-op pass-through when off.
+
+#### Collaborators
+
+| Communicates With | Direction | Protocol | Purpose |
+|---|---|---|---|
+| `varadhi-server.produce-service` | called-by | method-call | Consulted per message on the produce path; returns the throttle decision |
+| `shared.cluster-rpc` | calls | method-call | Live pod count / membership view drives the per-pod even split (Server-role members) |
+| `shared.resource-cache` | calls | method-call | Subscribes to topic-cache invalidation to drop per-topic limiter state |
+
+#### Side Effects
+
+- **None external** — in-memory token buckets per topic; no I/O on the hot path. [TopicRateLimiter](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/TopicRateLimiter.java)
+- Shadow-mode would-be rejections recorded as produce metrics → otel-collector (via `produce-service`'s per-topic metrics). [RateLimitTelemetry](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/RateLimitTelemetry.java)
+
+#### Runtime Characteristics
+
+- **Failure mode**: **fail-open** — any error during the check admits the message (logged), and the per-pod split floors the pod count at 1, so a degraded membership view never tightens quotas to zero. A guard-rail, not a correctness gate. [ProduceRateLimiter](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/ProduceRateLimiter.java)
+- **Hot path, in-memory only**: per message it reads the monotonic clock once and applies both-or-neither admission across the two buckets. Admission is intentionally *slightly permissive* under concurrent load (check-then-debit is not jointly atomic) — acceptable for a guard-rail. [TopicRateLimiter](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/TopicRateLimiter.java)
+- **Membership reactivity**: per-pod quota is recomputed when the pod count changes — the limiter marks quotas stale and re-applies them lazily on the next check, **retaining** existing bucket token state so in-flight refill/debt is not reset on a membership change. [ProduceRateLimiter](/producer/src/main/java/com/flipkart/varadhi/produce/ratelimit/ProduceRateLimiter.java)
+- **Configurable**: master enable switch, default mode, even-split fallback buffer, bucket window seconds, and a minimum per-pod qps floor are deployment knobs — [RateLimiterOptions](/web/src/main/java/com/flipkart/varadhi/web/config/RateLimiterOptions.java) (`rateLimiterOptions` in config). Wired only when enabled. [WebServerVerticle](/web/src/main/java/com/flipkart/varadhi/web/WebServerVerticle.java)
+
+#### Notes for Coding Agents
+
+- Keep the check non-blocking and allocation-light — it runs on the produce event loop. Do not add I/O or blocking work.
+- **Fail-open is intentional** — a limiter bug must never drop legitimate produce. Preserve the catch-all admit and the pod-count floor.
+- Per-topic state cleanup **follows the topic cache's invalidation** ([ResourceReadCache#addOnInvalidate](/core/src/main/java/com/flipkart/varadhi/core/ResourceReadCache.java)), which is the authoritative source of truth. Do **not** add a parallel listener on entity events to clean up limiter state.
+- Pod count comes from the live cluster membership (`shared.cluster-rpc`), not topic config — the even split is `regionBudget / podCount`. Changing the quota strategy means a new `PerPodTopicQuotaProvider`, not edits to the buckets or the produce hook.
 
 ---
 

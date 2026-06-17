@@ -135,15 +135,18 @@ sequenceDiagram
     box varadhi-server
         participant Ingress as varadhi-server.http-ingress
         participant Prod as varadhi-server.produce-service
+        participant RL as varadhi-server.produce-rate-limiter
     end
     participant Pulsar as pulsar
 
     Producer->>Ingress: POST .../produce (payload + headers)
     Note over Ingress,Prod: → flow.auth.request-authorization (TOPIC_PRODUCE)
     Ingress->>Prod: produce(message) [non-blocking / event loop]
-    Note over Prod,Pulsar: ▶ 1. Validate & resolve
+    Note over Prod,Pulsar: ▶ 1. Validate, filter & admit
     Prod->>Prod: filter/validate headers, resolve topic (shared.resource-cache)
-    Prod->>Prod: org NFR filter, capacity check
+    Prod->>Prod: org NFR filter
+    Prod->>RL: check(topic, messageBytes)
+    RL-->>Prod: admit | throttle (429, enforced mode)
     Note over Prod,Pulsar: ▶ 2. Publish
     Prod->>Pulsar: produceAsync (cached producer)
     Pulsar-->>Prod: offset / failure
@@ -164,13 +167,13 @@ sequenceDiagram
 |---|---|---|---|
 | `concept.topic` missing / inactive | `varadhi-server.produce-service` | 404 / 422 | [ResourceNotFoundException](/common/src/main/java/com/flipkart/varadhi/common/exceptions/ResourceNotFoundException.java) |
 | Produce blocked / not allowed | `varadhi-server.produce-service` | 422 | topic state gate |
-| Over capacity | `varadhi-server.produce-service` | 429 | throttle is expected behaviour |
+| Over per-pod quota | `varadhi-server.produce-rate-limiter` | 429 | enforced mode; shadow mode admits but records the would-be rejection; throttle is expected behaviour |
 | Org NFR filter matches | `varadhi-server.produce-service` | 200, message dropped | treated as delivered for bookkeeping |
 | Pulsar publish fails | `varadhi-server.produce-service` | 500 | |
 
 #### Runtime Characteristics
 - **Availability**: topic/project/org are read from the in-process `shared.resource-cache`, so produce keeps serving metadata during a **ZooKeeper outage** (fail-open reads) — it hard-fails only if **Pulsar** (the write target) is down. But authorization (`varadhi-server.authorization`) reads IAM policy from its **own** metastore connection with no cache, so an authz-metastore outage rejects produce (fail-closed) even though the produce path itself wouldn't need ZK.
-- **Performance shape**: the system's hot path and the **only non-blocking / event-loop** route — must stay async to Pulsar; blocking work here stalls the event loop for all in-flight produces. Producers are cached (Caffeine, access-TTL) so steady state avoids producer setup. Per-topic capacity policy throttles (429) by design.
+- **Performance shape**: the system's hot path and the **only non-blocking / event-loop** route — must stay async to Pulsar; blocking work here stalls the event loop for all in-flight produces. Producers are cached (Caffeine, access-TTL) so steady state avoids producer setup. `varadhi-server.produce-rate-limiter` admits each message against this pod's even-split share of the topic's produce quota (in-memory token buckets, fail-open); over-quota produce throttles (429) by design.
 - **Consistency / durability**: **at-least-once with no dedup** — a client retry after an ambiguous response creates a duplicate; durability is whatever Pulsar acks. For grouped (`concept.grouping`) topics, produce hashes by GroupId to a partition (produce-side ordering only — end-to-end ordered *delivery* is inactive, consumer grouped path unwired).
 - **Eventually consistent**: a just-created topic can briefly 404 on a node until `flow.cache.entity-event-propagation` refreshes that node's cache.
 

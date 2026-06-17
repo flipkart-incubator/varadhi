@@ -57,6 +57,7 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - `web.hierarchy` belongs to `authorization`, because it exists to produce the resource path the authorization check consumes.
 - `request-telemetry` is its own component (a behaviour-chain stage alongside authn/authz), because generic per-request instrumentation is distinct from produce-service's produce metrics.
 - The Caffeine producer cache stays inside `produce-service` rather than a separate State Manager, because it is an implementation detail of producer resolution.
+- The produce rate limiter (VIP-0001, `producer.produce.ratelimit`) is modeled as its own component `produce-rate-limiter` (Policy / Guard) rather than folded into `produce-service`, because per-pod admission control is a distinct rate-control mechanism (mirroring `varadhi-consumer.flow-control`); `produce-service` calls it per message and stays focused on the publish use case.
 - The `web-spi` auth contracts belong to `authentication`/`authorization` as their pluggability interfaces, because they define those components' SPI.
 
 ### Scope (conditional)
