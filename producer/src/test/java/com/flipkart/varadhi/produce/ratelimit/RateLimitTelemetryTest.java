@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
+import com.flipkart.varadhi.common.MockTicker;
 import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.FakeVaradhiClusterManager;
@@ -18,7 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,7 +33,7 @@ class RateLimitTelemetryTest {
     void shadowMode_RecordsShadowRejectionMeters() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         Function<String, ProducerMetrics> metricsProvider = metricsProvider(registry);
-        ProduceRateLimiter limiter = shadowLimiter(new AtomicLong(0L), metricsProvider);
+        ProduceRateLimiter limiter = shadowLimiter(new MockTicker(0L), metricsProvider);
 
         VaradhiTopic topic = topic(RateLimiterMode.shadow);
         assertFalse(limiter.check(topic, 1));
@@ -47,7 +47,7 @@ class RateLimitTelemetryTest {
     void enforcedMode_DoesNotRecordAtLimiterCheck() {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         Function<String, ProducerMetrics> metricsProvider = metricsProvider(registry);
-        ProduceRateLimiter limiter = enforcedLimiter(new AtomicLong(0L), metricsProvider);
+        ProduceRateLimiter limiter = enforcedLimiter(new MockTicker(0L), metricsProvider);
 
         VaradhiTopic topic = topic(RateLimiterMode.enforced);
         assertFalse(limiter.check(topic, 1));
@@ -62,21 +62,21 @@ class RateLimitTelemetryTest {
     }
 
     private static ProduceRateLimiter shadowLimiter(
-        AtomicLong nanos,
+        MockTicker ticker,
         Function<String, ProducerMetrics> metricsProvider
     ) {
-        return limiter(nanos, RateLimiterMode.shadow, metricsProvider);
+        return limiter(ticker, RateLimiterMode.shadow, metricsProvider);
     }
 
     private static ProduceRateLimiter enforcedLimiter(
-        AtomicLong nanos,
+        MockTicker ticker,
         Function<String, ProducerMetrics> metricsProvider
     ) {
-        return limiter(nanos, RateLimiterMode.enforced, metricsProvider);
+        return limiter(ticker, RateLimiterMode.enforced, metricsProvider);
     }
 
     private static ProduceRateLimiter limiter(
-        AtomicLong nanos,
+        MockTicker ticker,
         RateLimiterMode mode,
         Function<String, ProducerMetrics> metricsProvider
     ) {
@@ -95,7 +95,7 @@ class RateLimitTelemetryTest {
             mode,
             quotaProvider,
             1,
-            nanos::get,
+            ticker,
             podCount,
             new RateLimitTelemetry(metricsProvider)
         );

@@ -1,7 +1,8 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
+import com.google.common.base.Ticker;
+
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.LongSupplier;
 
 /**
  * Daemonless token bucket: refill lazily, admit on positive credit, persist tokens on debit.
@@ -11,7 +12,7 @@ import java.util.function.LongSupplier;
  *
  * <h2>Preconditions</h2>
  * <ul>
- *   <li>{@code nanoTime} must be monotonic (e.g. {@link System#nanoTime()}), never wall-clock. The
+ *   <li>{@code ticker} must be monotonic (e.g. {@link Ticker#systemTicker()}), never wall-clock. The
  *       {@code now} passed to the {@link #hasPositiveCredit(long)} / {@link #debit(long, long)}
  *       overloads must come from that same monotonic source.</li>
  *   <li>{@code ratePerSecond} and {@code cost} are non-negative whole units (permits/sec or
@@ -54,7 +55,7 @@ public final class TokenBucket {
 
     private static final long NS_PER_SEC = 1_000_000_000L;
 
-    private final LongSupplier nanoTime;
+    private final Ticker ticker;
     private final int windowSecs;
 
     private volatile long ratePerSecond;
@@ -65,15 +66,15 @@ public final class TokenBucket {
     /**
      * Creates a bucket that starts full (tokens = capacity).
      *
-     * @param nanoTime     monotonic clock source (see preconditions)
+     * @param ticker       monotonic clock source (see preconditions)
      * @param windowSecs   burst window in seconds; {@code capacity = ratePerSecond × windowSecs}
      * @param ratePerSecond refill rate in whole units/sec; negative values are clamped to zero
      */
-    public TokenBucket(LongSupplier nanoTime, int windowSecs, long ratePerSecond) {
-        this.nanoTime = nanoTime;
+    public TokenBucket(Ticker ticker, int windowSecs, long ratePerSecond) {
+        this.ticker = ticker;
         this.windowSecs = windowSecs;
         updateRate(ratePerSecond);
-        long now = nanoTime.getAsLong();
+        long now = ticker.read();
         state.set(new BucketState(now, capacity));
     }
 
@@ -105,13 +106,13 @@ public final class TokenBucket {
      * {@code lastNano} — so this stays an allocation-free read on the hot path.
      */
     public boolean hasPositiveCredit() {
-        return hasPositiveCredit(nanoTime.getAsLong());
+        return hasPositiveCredit(ticker.read());
     }
 
     /**
      * Variant taking a caller-supplied {@code now} so a single admission can share one clock read
      * across both credit checks and debits (see {@link TopicRateLimiter}); avoids redundant
-     * {@code nanoTime} calls and gives a consistent instant for check-then-debit.
+     * {@code ticker.read()} calls and gives a consistent instant for check-then-debit.
      */
     public boolean hasPositiveCredit(long now) {
         return refill(state.get(), now) > 0L;
@@ -119,7 +120,7 @@ public final class TokenBucket {
 
     /** Debits after a successful {@link #hasPositiveCredit()} check; may go negative (bounded debt). */
     public void debit(long cost) {
-        debit(cost, nanoTime.getAsLong());
+        debit(cost, ticker.read());
     }
 
     /** Variant taking a caller-supplied {@code now}; see {@link #hasPositiveCredit(long)}. */
@@ -138,7 +139,7 @@ public final class TokenBucket {
 
     long tokensForTest() {
         BucketState current = state.get();
-        return refill(current, nanoTime.getAsLong());
+        return refill(current, ticker.read());
     }
 
     long lastNanoForTest() {

@@ -4,11 +4,11 @@ import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
+import com.google.common.base.Ticker;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.LongSupplier;
 
 /**
  * Facade for per-topic rate limiting on the produce path (VIP-0001).
@@ -24,7 +24,7 @@ public final class ProduceRateLimiter {
         RateLimiterMode.disabled,
         null,
         0,
-        () -> 0L,
+        Ticker.systemTicker(),
         null,
         UNUSED_TELEMETRY
     );
@@ -43,7 +43,7 @@ public final class ProduceRateLimiter {
     private final RateLimiterMode defaultMode;
     private final PerPodTopicQuotaProvider quotaProvider;
     private final int windowSecs;
-    private final LongSupplier nanoTime;
+    private final Ticker ticker;
     private final RateLimitTelemetry telemetry;
     private final ConcurrentHashMap<String, RegistryEntry> registry = new ConcurrentHashMap<>();
     private volatile long quotaEpoch;
@@ -56,11 +56,11 @@ public final class ProduceRateLimiter {
         RateLimiterMode defaultMode,
         PerPodTopicQuotaProvider quotaProvider,
         int windowSecs,
-        LongSupplier nanoTime,
+        Ticker ticker,
         PodCountProvider podCountProvider,
         RateLimitTelemetry telemetry
     ) {
-        this(true, defaultMode, quotaProvider, windowSecs, nanoTime, podCountProvider, telemetry);
+        this(true, defaultMode, quotaProvider, windowSecs, ticker, podCountProvider, telemetry);
     }
 
     private ProduceRateLimiter(
@@ -68,7 +68,7 @@ public final class ProduceRateLimiter {
         RateLimiterMode defaultMode,
         PerPodTopicQuotaProvider quotaProvider,
         int windowSecs,
-        LongSupplier nanoTime,
+        Ticker ticker,
         PodCountProvider podCountProvider,
         RateLimitTelemetry telemetry
     ) {
@@ -76,7 +76,7 @@ public final class ProduceRateLimiter {
         this.defaultMode = defaultMode;
         this.quotaProvider = quotaProvider;
         this.windowSecs = windowSecs;
-        this.nanoTime = nanoTime;
+        this.ticker = ticker;
         this.telemetry = Objects.requireNonNull(telemetry);
         if (enabled) {
             podCountProvider.addCountChangeListener(this::markQuotasStale);
@@ -134,7 +134,7 @@ public final class ProduceRateLimiter {
     private RegistryEntry createEntry(VaradhiTopic topic) {
         long epoch = quotaEpoch;
         PerPodTopicQuota quota = quotaProvider.quotaFor(topic);
-        TopicRateLimiter limiter = new TopicRateLimiter(nanoTime, windowSecs, quota);
+        TopicRateLimiter limiter = new TopicRateLimiter(ticker, windowSecs, quota);
         return new RegistryEntry(limiter, epoch);
     }
 

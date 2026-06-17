@@ -1,15 +1,16 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
+import com.flipkart.varadhi.common.MockTicker;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicRateLimiterTest {
 
-    private final AtomicLong virtualNanos = new AtomicLong(0L);
+    private final MockTicker ticker = new MockTicker(0L);
 
     @Test
     void tryAcquire_DebitsBothBucketsOnAllow() {
@@ -27,9 +28,9 @@ class TopicRateLimiterTest {
 
         assertFalse(limiter.tryAcquire(1));
 
-        virtualNanos.addAndGet(1_000_000_000L);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(limiter.tryAcquire(1));
-        virtualNanos.addAndGet(1_000_000_000L);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(limiter.tryAcquire(1));
         assertFalse(limiter.tryAcquire(1));
     }
@@ -41,7 +42,7 @@ class TopicRateLimiterTest {
 
         assertFalse(limiter.tryAcquire(1));
 
-        virtualNanos.addAndGet(1_000_000_000L);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(limiter.tryAcquire(1));
     }
 
@@ -63,11 +64,11 @@ class TopicRateLimiterTest {
         assertTrue(limiter.tryAcquire(50));
 
         limiter.applyQuota(new PerPodTopicQuota(100, 100_000));
-        virtualNanos.addAndGet(1_000_000_000L);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(limiter.tryAcquire(50));
     }
 
     private TopicRateLimiter newLimiter(PerPodTopicQuota quota) {
-        return new TopicRateLimiter(virtualNanos::get, 1, quota);
+        return new TopicRateLimiter(ticker, 1, quota);
     }
 }

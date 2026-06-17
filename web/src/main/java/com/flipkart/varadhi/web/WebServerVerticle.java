@@ -17,6 +17,7 @@ import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
 import com.flipkart.varadhi.produce.ratelimit.RateLimitTelemetry;
+import com.google.common.base.Ticker;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
 import com.flipkart.varadhi.web.config.RateLimiterOptions;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
@@ -330,7 +331,7 @@ public class WebServerVerticle extends AbstractVerticle {
             options.getDefaultMode(),
             quotaProvider,
             options.getWindowSecs(),
-            System::nanoTime,
+            Ticker.systemTicker(),
             podCount,
             new RateLimitTelemetry(metricsProvider)
         );

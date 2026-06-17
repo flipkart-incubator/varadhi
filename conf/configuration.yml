@@ -123,7 +123,7 @@ restOptions:
     readFanOut: 2
 
 rateLimiterOptions:
-  enabled: false
+  enabled: true
   defaultMode: disabled
   fallbackBuffer: 0.25
   windowSecs: 1
