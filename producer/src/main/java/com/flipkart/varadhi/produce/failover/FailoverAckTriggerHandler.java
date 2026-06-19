@@ -8,17 +8,25 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverAck;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverEvent;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverStage;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
- * Minimal pod-side handler for failover stage broadcasts. It reacts using only the
- * self-contained {@link FailoverEvent} and the pod's local {@code TopicCache};
- * it never reads the controller-side {@code TransitionObject}.
+ * Minimal pod-side handler for topic-transition stage broadcasts (topic failover and
+ * storage-topic migration alike). It reacts using only the self-contained
+ * {@link FailoverEvent} and the pod's local {@code TopicCache}; it never reads the
+ * controller-side {@code TransitionObject}.
+ *
+ * <p>The stage machine and version-convergence logic are identical across
+ * {@link TransitionType}s; only the PREPARE pre-warm differs and is supplied per type
+ * via {@code prepareActions} (e.g. warm a target-region producer for failover, warm a
+ * target storage-topic producer for migration).
  *
  * <p><b>Every</b> stage is acknowledged. Version-gated stages wait for the local
  * TopicCache to converge to the <em>exact</em> coordinated version before acking; all
@@ -48,8 +56,12 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private final FailoverAckClient ackClient;
-    /** Pre-warms a (topicFqn, targetRegion) producer (ProducerService::warmProducer); throws on failure. */
-    private final BiConsumer<String, String> producerWarmer;
+    /**
+     * PREPARE pre-warm action per {@link TransitionType}. Each accepts
+     * {@code (topicFqn, target)} and pre-creates the producer for the transition's
+     * target (region for failover, storage-topic id for migration); it throws on failure.
+     */
+    private final Map<TransitionType, BiConsumer<String, String>> prepareActions;
     private final PodFailoverConfig config;
     private final ScheduledExecutorService scheduler;
 
@@ -64,7 +76,7 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
             // that a first-poll hit — which synchronously pre-warms the producer via a blocking
             // getProducer(...).join() — cannot stall the event bus on a producer cache miss.
             long deadlineMs = System.currentTimeMillis() + config.podSwitchWaitMs();
-            scheduler.execute(() -> awaitVersionThenAck(event, deadlineMs)); 
+            scheduler.execute(() -> awaitVersionThenAck(event, deadlineMs));
         } else {
             ackOk(event);
         }
@@ -99,17 +111,23 @@ public final class FailoverAckTriggerHandler implements MsgHandler {
     }
 
     private void onVersionReached(FailoverEvent event) {
-        // PREPARE doubles as readiness: pre-warm this pod's producer so the target region has a
-        // live producer before SWITCH flips its TopicState to producing. A warm failure fails the
-        // ack, letting the controller abort before any switch.
+        // PREPARE doubles as readiness: pre-warm this pod's producer so the target has a
+        // live producer before SWITCH flips produce to it. A warm failure fails the ack,
+        // letting the controller abort before any switch.
         if (event.stage() == FailoverStage.PREPARE) {
+            BiConsumer<String, String> warmer = prepareActions.get(event.transitionType());
+            if (warmer == null) {
+                ackFail(event, "no prepare action registered for transition type " + event.transitionType());
+                return;
+            }
             try {
-                producerWarmer.accept(event.topicFqn(), event.targetRegion());
+                warmer.accept(event.topicFqn(), event.target());
             } catch (Exception e) {
                 log.warn(
-                    "Failover PREPARE warm failed for {} op={}: {}",
+                    "Transition PREPARE warm failed for {} op={} type={}: {}",
                     event.topicFqn(),
                     event.opId(),
+                    event.transitionType(),
                     e.getMessage()
                 );
                 ackFail(event, "prepare warm failed: " + e.getMessage());

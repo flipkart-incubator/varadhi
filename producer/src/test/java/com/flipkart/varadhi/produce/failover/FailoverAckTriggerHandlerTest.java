@@ -7,10 +7,12 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverAck;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverEvent;
 import com.flipkart.varadhi.entities.cluster.failover.FailoverStage;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -30,10 +32,12 @@ class FailoverAckTriggerHandlerTest {
     private static final String OP_ID = "op-1";
     private static final String FQN = "proj.topic1";
     private static final String TARGET_REGION = "region-b";
+    private static final String TARGET_STORAGE_TOPIC_ID = "7";
 
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private CapturingAckClient acker;
     private RecordingWarmer warmer;
+    private RecordingWarmer storageWarmer;
     private ScheduledExecutorService scheduler;
 
     @SuppressWarnings ("unchecked")
@@ -41,6 +45,7 @@ class FailoverAckTriggerHandlerTest {
     void setup() {
         topicCache = mock(ResourceReadCache.class);
         warmer = new RecordingWarmer();
+        storageWarmer = new RecordingWarmer();
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -51,7 +56,19 @@ class FailoverAckTriggerHandlerTest {
 
     private FailoverAckTriggerHandler handler(PodFailoverConfig config) {
         acker = new CapturingAckClient(1);
-        return new FailoverAckTriggerHandler("host-1", topicCache, acker, warmer, config, scheduler);
+        return new FailoverAckTriggerHandler(
+            "host-1",
+            topicCache,
+            acker,
+            Map.of(
+                TransitionType.TOPIC_FAILOVER,
+                warmer,
+                TransitionType.STORAGE_MIGRATION,
+                storageWarmer
+            ),
+            config,
+            scheduler
+        );
     }
 
     @Test
@@ -70,6 +87,29 @@ class FailoverAckTriggerHandlerTest {
             warmer.warmed.contains(FQN + "@" + TARGET_REGION),
             "PREPARE should pre-warm the target region producer"
         );
+    }
+
+    @Test
+    void storageMigrationPrepareWarmsTargetStorageTopicAndAcksOk() throws Exception {
+        Resource.EntityResource<VaradhiTopic> atV10 = topicAtVersion(10);
+        when(topicCache.get(FQN)).thenReturn(Optional.of(atV10));
+        FailoverAckTriggerHandler h = handler(PodFailoverConfig.defaultConfig());
+
+        h.handle(
+            ClusterMessage.of(
+                FailoverEvent.forPrepare(OP_ID, FQN, 10, TARGET_STORAGE_TOPIC_ID, TransitionType.STORAGE_MIGRATION)
+            )
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        FailoverAck ack = acker.acks.get(0);
+        assertEquals(FailoverStage.PREPARE, ack.stage());
+        assertTrue(ack.success());
+        assertTrue(
+            storageWarmer.warmed.contains(FQN + "@" + TARGET_STORAGE_TOPIC_ID),
+            "STORAGE_MIGRATION PREPARE should pre-warm the target storage-topic producer"
+        );
+        assertTrue(warmer.warmed.isEmpty(), "failover warmer must not run for a storage migration");
     }
 
     @Test
@@ -207,11 +247,11 @@ class FailoverAckTriggerHandlerTest {
         private volatile RuntimeException toThrow;
 
         @Override
-        public void accept(String topicFqn, String region) {
+        public void accept(String topicFqn, String target) {
             if (toThrow != null) {
                 throw toThrow;
             }
-            warmed.add(topicFqn + "@" + region);
+            warmed.add(topicFqn + "@" + target);
         }
     }
 

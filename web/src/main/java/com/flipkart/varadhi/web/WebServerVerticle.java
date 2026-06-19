@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.failover.ControllerFailoverClient;
 import com.flipkart.varadhi.produce.failover.FailoverAckTriggerHandler;
@@ -316,11 +317,18 @@ public class WebServerVerticle extends AbstractVerticle {
             r -> new Thread(r, "failover-switch-wait")
         );
         ProducerService producerService = serviceRegistry.get(ProducerService.class);
+        // PREPARE pre-warm action per transition type. Only TOPIC_FAILOVER is wired today;
+        // other transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by
+        // registering their own action here.
+        Map<TransitionType, java.util.function.BiConsumer<String, String>> prepareActions = Map.of(
+            TransitionType.TOPIC_FAILOVER,
+            producerService::warmProducer
+        );
         FailoverAckTriggerHandler handler = new FailoverAckTriggerHandler(
             HostUtils.getHostName(),
             topicCache,
             new ControllerFailoverClient(messageExchange),
-            producerService::warmProducer,
+            prepareActions,
             PodFailoverConfig.defaultConfig(),
             failoverScheduler
         );
