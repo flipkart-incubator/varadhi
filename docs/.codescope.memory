@@ -20,6 +20,12 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 ### Sourcing
 - Docs link to the GitHub Wiki rather than duplicating it, because the wiki is the canonical upstream source.
 
+### L1 doc shape
+- L1 External Dependencies is a fact inventory only (listed `ext.*`, shared resources, gateway/network) — no classification prose or internal-infrastructure tables — because integrators need external integrations, not authoring taxonomy; Pulsar and ZooKeeper stay in L2 containers.
+- WIP, roadmap, and not-yet-implemented claims are confined to Known Limitations — because descriptive L1 sections must state present-tense, verifiable facts.
+- Operational Context at L1 defers deployable topology and backing infrastructure to `containers.md` — because container roles and SPI backends are L2 concerns.
+- The L1 system-context diagram includes `ext.identity-provider` and optional `ext.authorization-provider` — because authentication and external authorization are visible deployment integrations.
+
 ## Containers
 
 ### Relationships (collaborates)
