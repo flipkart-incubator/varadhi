@@ -1,15 +1,24 @@
 package com.flipkart.varadhi.web;
 
+import com.flipkart.varadhi.common.utils.HostUtils;
 import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.cluster.failover.FailoverChannels;
 import com.flipkart.varadhi.core.config.MetricsOptions;
+import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.produce.failover.ControllerFailoverClient;
+import com.flipkart.varadhi.produce.failover.FailoverAckTriggerHandler;
+import com.flipkart.varadhi.produce.failover.PodFailoverConfig;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -115,6 +124,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
+    private java.util.concurrent.ScheduledExecutorService failoverScheduler;
 
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
@@ -215,6 +225,9 @@ public class WebServerVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         log.info("Stopping HttpServer");
+        if (failoverScheduler != null) {
+            failoverScheduler.shutdownNow();
+        }
         if (httpServer != null) {
             httpServer.close(stopPromise);
         } else {
@@ -286,6 +299,41 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
+        setupFailoverAckHandler();
+    }
+
+    /**
+     * Registers the pod-side failover stage handler on the broadcast bus. The handler is
+     * inert until the controller starts publishing {@code FailoverEvent}s, and the
+     * produce path itself is unchanged (it already gates on per-region {@code TopicState}).
+     */
+    private void setupFailoverAckHandler() {
+        MessageRouter messageRouter = clusterManager.getRouter(vertx);
+        MessageExchange messageExchange = clusterManager.getExchange(vertx);
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(
+            ResourceType.TOPIC
+        );
+        this.failoverScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "failover-switch-wait")
+        );
+        ProducerService producerService = serviceRegistry.get(ProducerService.class);
+        // PREPARE pre-warm action per transition type. Only TOPIC_FAILOVER is wired today;
+        // other transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by
+        // registering their own action here.
+        Map<TransitionType, java.util.function.BiConsumer<String, String>> prepareActions = Map.of(
+            TransitionType.TOPIC_FAILOVER,
+            producerService::warmProducer
+        );
+        FailoverAckTriggerHandler handler = new FailoverAckTriggerHandler(
+            HostUtils.getHostName(),
+            topicCache,
+            new ControllerFailoverClient(messageExchange),
+            prepareActions,
+            PodFailoverConfig.defaultConfig(),
+            failoverScheduler
+        );
+        messageRouter.publishHandler(FailoverChannels.FAILOVER_ROUTE, FailoverChannels.STAGE_EVENT_API, handler);
+        log.info("Registered failover stage handler for region {}", verticleConfig.deployedRegion());
     }
 
     /**

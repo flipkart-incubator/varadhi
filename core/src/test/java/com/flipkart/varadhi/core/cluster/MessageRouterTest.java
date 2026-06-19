@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.core.cluster;
 
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.entities.JsonMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -70,6 +71,18 @@ public class MessageRouterTest {
         ClusterMessage cm = getClusterMessage("foo");
         Future.fromCompletionStage(me.send("testAddress", "customApi", cm))
               .onComplete(testContext.succeeding(v -> checkpoint.flag()));
+    }
+
+    @Test
+    public void testPublishMessageFansOutToAllHandlers(VertxTestContext testContext) throws Exception {
+        // publish fans out to every registered handler at the same address.
+        Checkpoint checkpoint = testContext.checkpoint(2);
+        Vertx vertx = createClusteredVertx();
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.publishHandler("failover", "stageEvent", message -> checkpoint.flag());
+        mr.publishHandler("failover", "stageEvent", message -> checkpoint.flag());
+        ClusterMessage cm = getClusterMessage("foo");
+        vertx.eventBus().publish("failover.stageEvent.publish", JsonMapper.jsonSerialize(cm));
     }
 
     ClusterMessage getClusterMessage(String data) {
