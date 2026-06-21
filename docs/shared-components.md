@@ -1,3 +1,13 @@
+---
+type: Shared Components
+title: Varadhi — Shared Components
+description: Cross-container, in-repo modules that Varadhi's app containers depend on.
+okf_version: "0.1"
+format_version: "0.1"
+generated_by: component-doc-generation@0.2.0
+timestamp: 2026-06-21T05:31:52Z
+---
+
 # Shared Components
 
 Cross-container, in-repo modules that Varadhi's app containers (`varadhi-server`, `varadhi-controller`, `varadhi-consumer`) depend on. They are **not** owned by any single container.

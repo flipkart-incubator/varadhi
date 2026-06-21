@@ -12,7 +12,8 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 ### Classification
 - Pulsar and ZooKeeper are internal infrastructure — team-provisioned pluggable SPI backends (Pulsar = messaging stack, ZK = metastore), not external dependencies — because Varadhi provisions and operates them; at container level they are modeled as Infrastructure containers.
 - `ext.identity-provider` and `ext.authorization-provider` are the L1 External Services registry entries for pluggable authn/authz backends Varadhi calls but does not run — because they are deployment-specific remote systems, not containers Varadhi operates.
-- Subscriber / consumer application endpoints are **not** `ext.` nodes — they are per-subscription delivery URLs (a class of actor/target), not a single named external service — because each subscription carries its own endpoint configuration.
+- `actor.subscriber` models subscriber / consumer application endpoints (not `ext.`), because each subscription carries its own delivery URL and there is no single named external service to register.
+- The L1 actor registry is `actor.producer`, `actor.subscriber`, `actor.administrator`, and `actor.platform-operator`, because these four role archetypes are the external parties that depend on Varadhi's contracts (produce ingress, push delivery, control plane, deployment operations).
 
 ### Authn
 - Authentication is documented as pluggable with no single production mechanism asserted, because the default handler (header-based) and the OpenAPI spec (JWT) disagree and the production mechanism is not finalized.
@@ -24,7 +25,7 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - L1 External Dependencies is a fact inventory only (listed `ext.*`, shared resources, gateway/network) — no classification prose or internal-infrastructure tables — because integrators need external integrations, not authoring taxonomy; Pulsar and ZooKeeper stay in L2 containers.
 - WIP, roadmap, and not-yet-implemented claims are confined to Known Limitations — because descriptive L1 sections must state present-tense, verifiable facts.
 - Operational Context at L1 defers deployable topology and backing infrastructure to `containers.md` — because container roles and SPI backends are L2 concerns.
-- The L1 system-context diagram includes `ext.identity-provider` and optional `ext.authorization-provider` — because authentication and external authorization are visible deployment integrations.
+- The L1 system-context diagram includes all four `actor.*` registry entries plus `ext.identity-provider` and optional `ext.authorization-provider` — because authentication, external authorization, and the parties that depend on Varadhi are visible deployment integrations.
 
 ## Containers
 
@@ -32,6 +33,7 @@ Durable judgment calls about this repo — each a decision plus its *why* — th
 - L2 Relationships use binary Direction (`calls` / `called-by`) with read/write/publish nuance in Purpose and Protocol, because the manifest stores direction as a normalized attr and compound values (`reads / writes`) do not round-trip cleanly.
 - Slash-separated Communicates-With cells must list full container IDs (`varadhi-server`, not `server` or bare `controller`), because the parser splits on `/` and each token is a node assertion.
 - Prometheus is omitted from otel-collector's Relationships table, because it is a downstream observability backend — not a container in this model (metrics path ends at otel-collector).
+- Actor edges are recorded as first-class `actor.<name>` rows resolving to the L1 registry — `actor.producer` and `actor.administrator` (`called-by`) on varadhi-server, `actor.subscriber` (`calls`) on varadhi-consumer — because actors are boundary nodes in both directions (ingress and outbound push), not free-form labels.
 
 ### Modeling
 - `varadhi-server`, `varadhi-controller`, and `varadhi-consumer` are modeled as three separate containers despite sharing one application image, because they deploy/scale/fail independently in the target topology.

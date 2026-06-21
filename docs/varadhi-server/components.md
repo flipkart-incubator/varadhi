@@ -1,3 +1,14 @@
+---
+type: Components
+title: varadhi-server — Components
+description: Server-role HTTP container internals — route + behaviour-chain ingress, the produce path, auth guards, and DLQ fan-out.
+level: L3
+okf_version: "0.1"
+format_version: "0.1"
+generated_by: component-doc-generation@0.2.0
+timestamp: 2026-06-21T05:29:58Z
+---
+
 # varadhi-server — Components
 
 ## Overview
@@ -37,7 +48,7 @@ Hosts the Server-role HTTP server and is the container's composition root: it co
 
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
-| external admin/control-plane clients | called-by | HTTP/JSON | Receive control-plane + health requests |
+| `actor.administrator` | called-by | HTTP/JSON | Receive control-plane + health requests |
 | `shared.app-bootstrap` | called-by | method-call | Verticle is deployed by `VaradhiApplication` for the Server role |
 | `shared.entity-services` | calls | method-call | Execute control-plane operations (org/team/project/region/topic/subscription/queue) |
 | `shared.cluster-rpc` → `varadhi-controller` | calls | event-bus | Subscription start/stop/state |
@@ -145,7 +156,7 @@ Owns the message-produce use case end to end: filter/normalize compliant headers
 
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
-| produce HTTP clients | called-by | HTTP/JSON | Receive produce requests (via `http-ingress` behaviour chain) |
+| `actor.producer` | called-by | HTTP/JSON | Receive produce requests (via `http-ingress` behaviour chain) |
 | `shared.messaging-spi` → pulsar | calls | Pulsar client | Publish `concept.message`s to the storage producer |
 | `shared.resource-cache` | calls | method-call | Topic/project/org lookups + NFR filter inputs |
 | `varadhi-server.produce-rate-limiter` | calls | method-call | Per-message throttle decision before publish (when enabled) |
@@ -268,7 +279,7 @@ Serves dead-letter browse and unsideline operations for a `concept.subscription`
 
 #### Runtime Characteristics
 
-- **Failure mode**: a scatter-gather across consumer shards — results depend on shard availability; partial-shard unavailability affects DLQ responses. [ShardDlqMsgResponseCollector](/web/src/main/java/com/flipkart/varadhi/web/subscription/dlq/ShardDlqMsgResponseCollector.java) `[exact partial-failure handling TODO]`
+- **Failure mode**: a scatter-gather across consumer shards — results depend on shard availability; partial-shard unavailability affects DLQ responses. [ShardDlqMsgResponseCollector](/web/src/main/java/com/flipkart/varadhi/web/subscription/dlq/ShardDlqMsgResponseCollector.java) [TODO: exact partial-failure handling]
 
 #### Notes for Coding Agents
 
