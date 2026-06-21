@@ -296,6 +296,9 @@ public class ProduceBenchmarkTest {
                         throughputKBps: 400
                         qps: 100
                         readFanOut: 2
+
+                rateLimiterOptions:
+                    enabled: false
                 """;
 
         WebConfiguration webConfig = YamlLoader.loadConfigFromString(configStr, WebConfiguration.class, false);
