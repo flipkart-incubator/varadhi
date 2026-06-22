@@ -20,17 +20,21 @@ public final class ClusterMembershipView {
     private final VaradhiClusterManager clusterManager;
     private final ConcurrentHashMap<String, MemberInfo> membersByNodeId = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
+    private boolean started;
 
     public ClusterMembershipView(VaradhiClusterManager clusterManager) {
         this.clusterManager = clusterManager;
     }
 
     /**
-     * Registers the membership listener and seeds from the cluster snapshot. Idempotent if called
-     * more than once — each call re-registers the listener and re-seeds.
+     * Registers the membership listener and seeds from the cluster snapshot. Idempotent: the
+     * listener is registered at most once; each call re-seeds from the cluster.
      */
     public void start() {
-        clusterManager.addMembershipListener(membershipListener);
+        if (!started) {
+            clusterManager.addMembershipListener(membershipListener);
+            started = true;
+        }
         clusterManager.getMembersByNodeId()
                       .onSuccess(this::seedMembers)
                       .onFailure(
