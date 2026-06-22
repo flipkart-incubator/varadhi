@@ -62,10 +62,11 @@ class TopicRateLimiterTest {
     void applyQuota_ResizesLiveBuckets() {
         TopicRateLimiter limiter = newLimiter(new PerPodTopicQuota(1, 50));
         assertTrue(limiter.tryAcquire(50));
+        assertFalse(limiter.tryAcquire(1));
 
         limiter.applyQuota(new PerPodTopicQuota(100, 100_000));
         ticker.advance(1, TimeUnit.SECONDS);
-        assertTrue(limiter.tryAcquire(50));
+        assertTrue(limiter.tryAcquire(51));
     }
 
     private TopicRateLimiter newLimiter(PerPodTopicQuota quota) {

@@ -80,7 +80,13 @@ public final class PodCountProvider implements IntSupplier {
         if (newCount != previous) {
             podCount = newCount;
             log.info("Pod count changed from {} to {}", previous, newCount);
-            countChangeListeners.forEach(Runnable::run);
+            countChangeListeners.forEach(listener -> {
+                try {
+                    listener.run();
+                } catch (Exception e) {
+                    log.error("Pod count change listener failed", e);
+                }
+            });
         }
     }
 

@@ -166,7 +166,13 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
 
     protected void invalidate(String entityName) {
         resources.remove(entityName);
-        invalidationListeners.forEach(listener -> listener.accept(entityName));
+        invalidationListeners.forEach(listener -> {
+            try {
+                listener.accept(entityName);
+            } catch (Exception e) {
+                log.error("Invalidation listener failed for {}", entityName, e);
+            }
+        });
     }
 
     /**

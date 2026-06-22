@@ -93,6 +93,12 @@ public final class ClusterMembershipView {
     }
 
     private void notifyChangeListeners() {
-        changeListeners.forEach(Runnable::run);
+        changeListeners.forEach(listener -> {
+            try {
+                listener.run();
+            } catch (Exception e) {
+                log.error("Membership change listener failed", e);
+            }
+        });
     }
 }

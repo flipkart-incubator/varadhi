@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /**
  * VIP-0001 §16 produce-path E2E against a running server ({@code rateLimiterOptions.enabled=true} in
@@ -30,6 +32,9 @@ public class RateLimitProduceE2ETest extends E2EBase {
     private static final String HDR_MESSAGE_ID = "X_MESSAGE_ID";
     private static final String RATE_LIMIT_MSG =
         "Produce to Topic/Queue is currently rate limited, try again after sometime.";
+
+    private static final long POLL_INTERVAL_MS = 100;
+    private static final long POLL_TIMEOUT_MS = 10_000;
 
     private static Org org;
     private static Team team;
@@ -45,7 +50,7 @@ public class RateLimitProduceE2ETest extends E2EBase {
         makeCreateRequest(getOrgsUri(), org, EXPECTED_STATUS_OK);
         makeCreateRequest(getTeamsUri(team.getOrg()), team, EXPECTED_STATUS_OK);
         makeCreateRequest(getProjectCreateUri(), project, EXPECTED_STATUS_OK);
-        Thread.sleep(500);
+        waitUntilProjectReadable();
     }
 
     @AfterAll
@@ -76,8 +81,7 @@ public class RateLimitProduceE2ETest extends E2EBase {
         assertProduceStatus(topicName, 200);
         assertProduceThrottled(topicName);
 
-        Thread.sleep(1_100);
-        assertProduceStatus(topicName, 200);
+        waitForProduceStatus(topicName, 200);
     }
 
     @Test
@@ -112,7 +116,7 @@ public class RateLimitProduceE2ETest extends E2EBase {
         );
         makeCreateRequest(getTopicsUri(project), topic, EXPECTED_STATUS_OK);
         trackTopic(topicName);
-        waitForTopicActivation();
+        waitForTopicActivation(topicName);
 
         assertProduceStatus(topicName, 200);
         assertProduceStatus(topicName, 200);
@@ -131,15 +135,50 @@ public class RateLimitProduceE2ETest extends E2EBase {
         topic.setPerRegionQuotaWeights(Map.of("default", 1.0));
         makeCreateRequest(getTopicsUri(project), topic, EXPECTED_STATUS_OK);
         trackTopic(topicName);
-        waitForTopicActivation();
+        waitForTopicActivation(topicName);
     }
 
     private static void trackTopic(String topicName) {
         createdTopics.add(topicName);
     }
 
-    private static void waitForTopicActivation() throws InterruptedException {
-        Thread.sleep(1_000);
+    private static void waitUntilProjectReadable() throws InterruptedException {
+        pollUntil("project " + project.getName() + " readable", () -> {
+            try {
+                Project fetched = makeGetRequest(getProjectUri(project), Project.class, EXPECTED_STATUS_OK);
+                return project.getName().equals(fetched.getName());
+            } catch (AssertionError ignored) {
+                return false;
+            }
+        });
+    }
+
+    private static void waitForTopicActivation(String topicName) throws InterruptedException {
+        waitForProduceStatus(topicName, 200);
+    }
+
+    private static void waitForProduceStatus(String topicName, int expectedStatus) throws InterruptedException {
+        pollUntil(
+            "produce to " + topicName + " returns " + expectedStatus,
+            () -> produceStatus(topicName) == expectedStatus
+        );
+    }
+
+    private static int produceStatus(String topicName) {
+        try (Response response = postProduce(topicName)) {
+            return response.getStatus();
+        }
+    }
+
+    private static void pollUntil(String description, BooleanSupplier condition) throws InterruptedException {
+        long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(POLL_TIMEOUT_MS);
+        while (System.nanoTime() < deadlineNanos) {
+            if (condition.getAsBoolean()) {
+                return;
+            }
+            Thread.sleep(POLL_INTERVAL_MS);
+        }
+        Assertions.assertTrue(condition.getAsBoolean(), description + " within " + POLL_TIMEOUT_MS + "ms");
     }
 
     private static void assertProduceStatus(String topicName, int expectedStatus) {
