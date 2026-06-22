@@ -24,7 +24,7 @@ Behavioral view: how work moves through Varadhi's containers and components in r
 
 ```mermaid
 sequenceDiagram
-    actor actor.administrator as Administrator
+    participant Admin as actor.administrator
     box varadhi-server
         participant Ingress as varadhi-server.http-ingress
         participant Tele as varadhi-server.request-telemetry
@@ -34,7 +34,7 @@ sequenceDiagram
     participant Svc as shared.entity-services
     participant ZK as zookeeper
 
-    actor.administrator->>Ingress: HTTP request (control-plane route)
+    Admin->>Ingress: HTTP request (control-plane route)
     Note over Ingress,AuthZ: ▶ 1. Behaviour chain (per route, ordered)
     Ingress->>Tele: telemetry (span/metrics)
     Ingress->>AuthN: authenticate → USER_CONTEXT
@@ -45,7 +45,7 @@ sequenceDiagram
     Svc->>ZK: read / write entity
     ZK-->>Svc: result
     Svc-->>Ingress: result
-    Ingress-->>actor.administrator: HTTP response
+    Ingress-->>Admin: HTTP response
 ```
 
 **Notes**:
@@ -148,7 +148,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    actor actor.producer as Publisher
+    participant Publisher as actor.producer
     box varadhi-server
         participant Ingress as varadhi-server.http-ingress
         participant Prod as varadhi-server.produce-service
@@ -158,7 +158,7 @@ sequenceDiagram
     participant Pulsar as pulsar
     participant Otel as otel-collector
 
-    actor.producer->>Ingress: POST .../produce (payload + headers)
+    Publisher->>Ingress: POST .../produce (payload + headers)
     Note over Ingress,Prod: → flow.auth.request-authorization (TOPIC_PRODUCE)
     Ingress->>Prod: produce(message) [non-blocking / event loop]
     Note over Prod,Cache: ▶ 1. Validate, filter & admit
@@ -170,7 +170,7 @@ sequenceDiagram
     Prod->>Pulsar: produceAsync (cached producer)
     Pulsar-->>Prod: offset / failure
     Prod->>Otel: produce metrics
-    Prod-->>actor.producer: 200 (messageId) | 4xx/5xx
+    Prod-->>Publisher: 200 (messageId) | 4xx/5xx
 ```
 
 #### Side Effects
@@ -216,17 +216,17 @@ sequenceDiagram
         participant Tele as varadhi-consumer.telemetry
     end
     participant Pulsar as pulsar
-    actor actor.subscriber as Subscriber Endpoint
+    participant Subscriber as actor.subscriber
 
     Poller->>Pulsar: poll main + retry topics
     Pulsar-->>Poller: message batch
     Poller->>Engine: next batch (tracked for ack)
     Note over Engine,FC: ▶ 1. Gate (parallelism + error-rate throttle)
     Engine->>FC: acquire delivery slot
-    Note over Deliver,actor.subscriber: ▶ 2. Deliver (HTTP push)
+    Note over Deliver,Subscriber: ▶ 2. Deliver (HTTP push)
     Engine->>Deliver: deliver(message)
-    Deliver->>actor.subscriber: HTTP request
-    actor.subscriber-->>Deliver: 2xx | non-2xx
+    Deliver->>Subscriber: HTTP request
+    Subscriber-->>Deliver: 2xx | non-2xx
     Engine->>Tele: consumption metrics
     alt delivery success (2xx)
         Engine->>Poller: ack (commit offset)
@@ -273,7 +273,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    actor actor.administrator as Administrator
+    participant Admin as actor.administrator
     participant Server as varadhi-server.http-ingress
     participant RPC as shared.cluster-rpc
     box varadhi-controller
@@ -285,7 +285,7 @@ sequenceDiagram
     participant ConsumerApi as varadhi-consumer.consumer-api
     participant CMgr as varadhi-consumer.consumers-manager
 
-    actor.administrator->>Server: start subscription
+    Admin->>Server: start subscription
     Note over Server: → flow.auth.request-authorization
     Server->>RPC: start (event bus, ROUTE_CONTROLLER)
     RPC->>Coord: forward to controller
@@ -423,20 +423,20 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    actor actor.administrator as Administrator
+    participant Admin as actor.administrator
     participant Ingress as varadhi-server.http-ingress
     participant Svc as shared.entity-services
     participant ZK as zookeeper
     participant Pulsar as pulsar
 
-    actor.administrator->>Ingress: POST topic
+    Admin->>Ingress: POST topic
     Note over Ingress: → flow.auth.request-authorization (TOPIC_CREATE)
     Ingress->>Svc: VaradhiTopicService.create
     Note over Svc,Pulsar: ▶ provisioning deviation (vs plain CRUD)
     Svc->>Pulsar: create storage topic(s) (StorageTopicService)
     Svc->>ZK: persist VaradhiTopic entity
     Svc-->>Ingress: created
-    Ingress-->>actor.administrator: 201
+    Ingress-->>Admin: 201
 ```
 
 #### Side Effects
@@ -468,12 +468,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    actor actor.administrator as Administrator
+    participant Admin as actor.administrator
     participant Dlq as varadhi-server.dlq-service
     participant Coord as varadhi-controller.subscription-coordinator
     participant ConsumerApi as varadhi-consumer.consumer-api
 
-    actor.administrator->>Dlq: DLQ request
+    Admin->>Dlq: DLQ request
     Note over Dlq: → flow.auth.request-authorization
     alt browse (get messages)
         Dlq->>ConsumerApi: get DLQ messages (event bus, fan-out to shards)
@@ -482,7 +482,7 @@ sequenceDiagram
         Note over Coord,ConsumerApi: → pattern.subscription-operation (unsideline)
         Dlq->>Coord: unsideline (event bus)
     end
-    Dlq-->>actor.administrator: response
+    Dlq-->>Admin: response
 ```
 
 #### Side Effects
