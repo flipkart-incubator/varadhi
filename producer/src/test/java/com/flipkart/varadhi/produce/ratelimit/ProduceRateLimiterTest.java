@@ -2,7 +2,7 @@ package com.flipkart.varadhi.produce.ratelimit;
 
 import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
-import com.flipkart.varadhi.core.cluster.FakeVaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.InMemoryVaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.NodeCapacity;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
@@ -82,7 +82,7 @@ class ProduceRateLimiterTest {
 
     @Test
     void resolveLimiter_RefreshesQuotaLazilyOnMembershipChange() {
-        FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+        InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1"), "server-2", server("server-2")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
 
@@ -128,7 +128,7 @@ class ProduceRateLimiterTest {
     }
 
     private static ProduceRateLimiter enforcedLimiter(AtomicLong nanos) {
-        FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+        InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
         EvenSplitPerPodTopicQuotaProvider quotaProvider = new EvenSplitPerPodTopicQuotaProvider(
@@ -148,7 +148,7 @@ class ProduceRateLimiterTest {
     }
 
     private static ProduceRateLimiter shadowLimiter(AtomicLong nanos, SimpleMeterRegistry registry) {
-        FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+        InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
         EvenSplitPerPodTopicQuotaProvider quotaProvider = new EvenSplitPerPodTopicQuotaProvider(
@@ -173,7 +173,7 @@ class ProduceRateLimiterTest {
     }
 
     private static ProduceRateLimiter facadeWithPodCount(int servers) {
-        FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+        InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         Map<String, MemberInfo> members = new java.util.HashMap<>();
         for (int i = 0; i < servers; i++) {
             members.put("server-" + i, server("server-" + i));
@@ -196,7 +196,7 @@ class ProduceRateLimiterTest {
         );
     }
 
-    private static PodCountProvider startServerPodCount(FakeVaradhiClusterManager clusterManager) {
+    private static PodCountProvider startServerPodCount(InMemoryVaradhiClusterManager clusterManager) {
         ClusterMembershipView membership = new ClusterMembershipView(clusterManager);
         membership.start();
         return PodCountProvider.withRole(membership, ComponentKind.Server, 1);

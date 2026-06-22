@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PodCountProviderTest {
 
-    private final FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+    private final InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
     private final ClusterMembershipView membership = new ClusterMembershipView(clusterManager);
     private final AtomicInteger countChangeNotifications = new AtomicInteger();
 
