@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
-import java.util.function.LongSupplier;
+import com.google.common.base.Ticker;
 
 /**
  * Per-topic, per-pod limiter with coupled qps and bytes buckets.
@@ -31,20 +31,20 @@ import java.util.function.LongSupplier;
  * <h2>Hot path</h2>
  * <p>
  * {@link #tryAcquire(long)} reads the monotonic clock once and shares that instant across both
- * credit checks and both debits, avoiding redundant {@code nanoTime} calls (the dominant per-message
+ * credit checks and both debits, avoiding redundant {@code ticker.read()} calls (the dominant per-message
  * cost) and giving a consistent check-then-debit instant.
  */
 public final class TopicRateLimiter {
 
-    private final LongSupplier nanoTime;
+    private final Ticker ticker;
     private final TokenBucket qpsBucket;
     private final TokenBucket bytesBucket;
     private volatile PerPodTopicQuota lastQuota;
 
-    public TopicRateLimiter(LongSupplier nanoTime, int windowSecs, PerPodTopicQuota initialQuota) {
-        this.nanoTime = nanoTime;
-        this.qpsBucket = new TokenBucket(nanoTime, windowSecs, initialQuota.qpsQuota());
-        this.bytesBucket = new TokenBucket(nanoTime, windowSecs, initialQuota.bytesQuota());
+    public TopicRateLimiter(Ticker ticker, int windowSecs, PerPodTopicQuota initialQuota) {
+        this.ticker = ticker;
+        this.qpsBucket = new TokenBucket(ticker, windowSecs, initialQuota.qpsQuota());
+        this.bytesBucket = new TokenBucket(ticker, windowSecs, initialQuota.bytesQuota());
         this.lastQuota = initialQuota;
     }
 
@@ -66,7 +66,7 @@ public final class TopicRateLimiter {
      */
     public boolean tryAcquire(long messageBytes) {
         long bytesCost = Math.max(0L, messageBytes);
-        long now = nanoTime.getAsLong();
+        long now = ticker.read();
         if (qpsBucket.hasPositiveCredit(now) && bytesBucket.hasPositiveCredit(now)) {
             qpsBucket.debit(1, now);
             bytesBucket.debit(bytesCost, now);

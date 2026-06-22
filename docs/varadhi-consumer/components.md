@@ -1,3 +1,14 @@
+---
+type: Components
+title: varadhi-consumer — Components
+description: Consumer-role delivery fleet — per-shard consume/deliver/route engine, flow control, and event-bus control surface.
+level: L3
+okf_version: "0.1"
+format_version: "0.1"
+generated_by: component-doc-generation@0.2.0
+timestamp: 2026-06-21T05:37:39Z
+---
+
 # varadhi-consumer — Components
 
 ## Overview
@@ -17,10 +28,10 @@ Two policy/infra mechanisms support the engine: [`flow-control`](#varadhi-consum
 | `varadhi-consumer.consumer-api` | Inbound Gateway | Receives shard control commands over the event bus; reports op outcomes to the controller |
 | `varadhi-consumer.message-poller` | Inbound Gateway | Polls + tracks messages from main/retry storage subscriptions |
 | `varadhi-consumer.flow-control` | Policy / Guard | Bounds delivery parallelism; dynamic error-rate throttle |
-| `varadhi-consumer.message-consumption` | Application Service | Per-shard engine: orchestrates consume→deliver→route with backpressure |
+| `varadhi-consumer.message-consumption` | Application Service / Use-Case Coordinator | Per-shard engine: orchestrates consume→deliver→route with backpressure |
 | `varadhi-consumer.consumers-manager` | State Manager | Node-level registry of shard consumers + shared node resources |
 | `varadhi-consumer.message-delivery` | Outbound Gateway | Async HTTP push to subscriber endpoints |
-| `varadhi-consumer.message-failure-routing` | Outbound Gateway + Domain | Retry/DLQ escalation + produce of failed messages |
+| `varadhi-consumer.message-failure-routing` | Outbound Gateway + Domain Logic | Retry/DLQ escalation + produce of failed messages |
 | `varadhi-consumer.execution-context` | Cross-Cutting Provider | Single-threaded actor-style task executor |
 | `varadhi-consumer.telemetry` | Cross-Cutting Provider | Consumer-side metrics emission |
 
@@ -40,9 +51,11 @@ The consumer's inbound control surface — there is no HTTP. It registers event 
 
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
-| `shared.cluster-rpc` (← controller/server) | called-by | event-bus | Receive shard control commands |
+| `shared.app-bootstrap` | called-by | method-call | Verticle deployed for the Consumer role |
+| `varadhi-controller` | called-by | event-bus | Receive shard control commands (start/stop/unsideline/status/info) |
+| `varadhi-server` | called-by | event-bus | DLQ get-messages requests |
 | `varadhi-consumer.consumers-manager` | calls | method-call | Apply start/stop; read state/info |
-| `shared.cluster-rpc` → `varadhi-controller` | calls | event-bus | Report op completion/failure |
+| `varadhi-controller` | calls | event-bus | Report op completion/failure |
 
 #### Side Effects
 
@@ -207,7 +220,7 @@ Delivers a `concept.message` to the subscription's configured HTTP endpoint asyn
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
 | `varadhi-consumer.message-consumption` | called-by | method-call | Deliver a polled message |
-| subscriber application endpoint (external) | calls | HTTP/1.1, HTTP/2 | Push the message payload + headers |
+| `actor.subscriber` | calls | HTTP/1.1, HTTP/2 | Push the message payload + headers |
 
 #### Side Effects
 

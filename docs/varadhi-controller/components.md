@@ -1,3 +1,14 @@
+---
+type: Components
+title: varadhi-controller — Components
+description: Controller-role cluster coordination — subscription lifecycle ops, shard assignment, operation engine, and entity-change fan-out.
+level: L3
+okf_version: "0.1"
+format_version: "0.1"
+generated_by: component-doc-generation@0.2.0
+timestamp: 2026-06-21T05:34:34Z
+---
+
 # varadhi-controller — Components
 
 ## Overview
@@ -15,7 +26,7 @@ Cluster RPC, the persistence/assignment/operation stores, and the process bootst
 | Component | Archetype | Responsibility |
 |---|---|---|
 | `varadhi-controller.controller-api` | Inbound Gateway | Inbound cluster-RPC surface + leadership/bootstrap; dispatches to the coordinator |
-| `varadhi-controller.subscription-coordinator` | Application Service / Coordinator | Validates state, creates/enqueues lifecycle ops, handles consumer-node membership |
+| `varadhi-controller.subscription-coordinator` | Application Service / Use-Case Coordinator | Validates state, creates/enqueues lifecycle ops, handles consumer-node membership |
 | `varadhi-controller.operation-executors` | Application Service / Domain | Per-op logic: assign shards + dispatch start/stop/unsideline to consumers |
 | `varadhi-controller.operation-manager` | State Manager | Operation engine: serialized per-entity queues, parallelism, retry, persistence |
 | `varadhi-controller.assignment-manager` | Domain Logic Engine | Shard-to-consumer assignment via a capacity-aware strategy |
@@ -38,7 +49,8 @@ The controller's inbound control surface and composition root. It hosts the vert
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
 | `shared.app-bootstrap` | called-by | method-call | Verticle deployed for the Controller role |
-| `shared.cluster-rpc` (← server/consumer) | called-by | event-bus | Receive `ROUTE_CONTROLLER` commands + shard-op updates |
+| `varadhi-server` | called-by | event-bus | Receive `ROUTE_CONTROLLER` lifecycle commands |
+| `varadhi-consumer` | called-by | event-bus | Receive shard-op updates |
 | `shared.cluster-rpc` | calls | method-call | Membership (members + listeners) |
 | `varadhi-controller.subscription-coordinator` | calls | method-call | Dispatch decoded operations |
 
@@ -49,7 +61,7 @@ The controller's inbound control surface and composition root. It hosts the vert
 #### Runtime Characteristics
 
 - **Failure mode (leadership)**: leadership is **assumed**, not elected — leadership runs unconditionally on start, and bootstrap failure aborts leadership. There is no election or handover, so running more than one controller risks split-brain coordination. (See memory.) [ControllerVerticle](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerVerticle.java)
-- **Startup state restore**: on becoming leader it re-queues pending operations and drops `concept.assignment`s of absent consumers; recovery of already-failed operations is a noted TODO. [ControllerVerticle](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerVerticle.java)
+- **Startup state restore**: on becoming leader it re-queues pending operations and drops `concept.assignment`s of absent consumers; [TODO: recovery of already-failed operations]. [ControllerVerticle](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerVerticle.java)
 
 #### Notes for Coding Agents
 
@@ -185,7 +197,6 @@ Owns shard-to-consumer `concept.assignment`. It computes placements via a plugga
 | `varadhi-controller.subscription-coordinator` | called-by | method-call | Read assignments; node join/leave |
 | `varadhi-controller.operation-executors` | called-by | method-call | Assign/reassign shards for an op |
 | `shared.metadata-spi` | calls | ZK | Persist assignments (`AssignmentStore`) |
-| core package (ConsumerNode) | calls | method-call | Track/free node capacity in-process |
 
 #### Side Effects
 
@@ -218,7 +229,8 @@ Keeps cluster-wide caches coherent. It watches metastore entity changes, transla
 | Communicates With | Direction | Protocol | Purpose |
 |---|---|---|---|
 | `shared.metadata-spi` | called-by | ZK watch | Receive metastore change events |
-| `shared.cluster-rpc` → all nodes | calls | event-bus | Fan out `concept.entity-change-event`s |
+| `varadhi-server` | calls | event-bus | Fan out `concept.entity-change-event`s (cache coherence) |
+| `varadhi-consumer` | calls | event-bus | Fan out `concept.entity-change-event`s (cache coherence) |
 | `shared.cluster-rpc` | calls | method-call | Membership (own listener for sender queues) |
 
 #### Side Effects

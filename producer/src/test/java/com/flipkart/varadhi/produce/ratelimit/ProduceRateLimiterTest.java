@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.produce.ratelimit;
 
+import com.flipkart.varadhi.common.MockTicker;
 import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.InMemoryVaradhiClusterManager;
@@ -18,7 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,8 +39,8 @@ class ProduceRateLimiterTest {
 
     @Test
     void check_EnforcedMode_ThrottlesWhenOverQuota() {
-        AtomicLong nanos = new AtomicLong(0L);
-        ProduceRateLimiter limiter = enforcedLimiter(nanos);
+        MockTicker ticker = new MockTicker(0L);
+        ProduceRateLimiter limiter = enforcedLimiter(ticker);
         VaradhiTopic topic = topic(RateLimiterMode.enforced);
 
         assertFalse(limiter.check(topic, 1));
@@ -49,9 +49,9 @@ class ProduceRateLimiterTest {
 
     @Test
     void check_ShadowMode_AllowsWhenOverQuota() {
-        AtomicLong nanos = new AtomicLong(0L);
+        MockTicker ticker = new MockTicker(0L);
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        ProduceRateLimiter limiter = shadowLimiter(nanos, registry);
+        ProduceRateLimiter limiter = shadowLimiter(ticker, registry);
         VaradhiTopic topic = topic(RateLimiterMode.shadow);
 
         assertFalse(limiter.check(topic, 1));
@@ -61,8 +61,8 @@ class ProduceRateLimiterTest {
 
     @Test
     void check_DisabledMode_PassThroughEvenWhenOverQuota() {
-        AtomicLong nanos = new AtomicLong(0L);
-        ProduceRateLimiter limiter = enforcedLimiter(nanos);
+        MockTicker ticker = new MockTicker(0L);
+        ProduceRateLimiter limiter = enforcedLimiter(ticker);
         VaradhiTopic topic = topic(RateLimiterMode.disabled);
 
         limiter.check(topic, 1);
@@ -96,7 +96,7 @@ class ProduceRateLimiterTest {
             RateLimiterMode.disabled,
             quotaProvider,
             1,
-            new AtomicLong(0L)::get,
+            new MockTicker(0L),
             podCount,
             noMetricsTelemetry()
         );
@@ -112,8 +112,8 @@ class ProduceRateLimiterTest {
 
     @Test
     void removeTopic_DropsRegistryEntry() {
-        AtomicLong nanos = new AtomicLong(0L);
-        ProduceRateLimiter limiter = enforcedLimiter(nanos);
+        MockTicker ticker = new MockTicker(0L);
+        ProduceRateLimiter limiter = enforcedLimiter(ticker);
         VaradhiTopic topic = topic(RateLimiterMode.enforced);
 
         TopicRateLimiter before = limiter.resolveLimiter(topic);
@@ -127,7 +127,7 @@ class ProduceRateLimiterTest {
         return new RateLimitTelemetry(ignored -> ProducerMetrics.NOOP);
     }
 
-    private static ProduceRateLimiter enforcedLimiter(AtomicLong nanos) {
+    private static ProduceRateLimiter enforcedLimiter(MockTicker ticker) {
         InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
@@ -141,13 +141,13 @@ class ProduceRateLimiterTest {
             RateLimiterMode.enforced,
             quotaProvider,
             1,
-            nanos::get,
+            ticker,
             podCount,
             noMetricsTelemetry()
         );
     }
 
-    private static ProduceRateLimiter shadowLimiter(AtomicLong nanos, SimpleMeterRegistry registry) {
+    private static ProduceRateLimiter shadowLimiter(MockTicker ticker, SimpleMeterRegistry registry) {
         InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         PodCountProvider podCount = startServerPodCount(clusterManager);
@@ -166,7 +166,7 @@ class ProduceRateLimiterTest {
             RateLimiterMode.shadow,
             quotaProvider,
             1,
-            nanos::get,
+            ticker,
             podCount,
             new RateLimitTelemetry(metricsProvider)
         );
@@ -190,7 +190,7 @@ class ProduceRateLimiterTest {
             RateLimiterMode.disabled,
             quotaProvider,
             1,
-            new AtomicLong(0L)::get,
+            new MockTicker(0L),
             podCount,
             noMetricsTelemetry()
         );
