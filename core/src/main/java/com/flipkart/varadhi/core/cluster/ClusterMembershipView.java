@@ -20,7 +20,7 @@ public final class ClusterMembershipView {
     private final VaradhiClusterManager clusterManager;
     private final ConcurrentHashMap<String, MemberInfo> membersByNodeId = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
-    private boolean started;
+    private volatile boolean started;
 
     public ClusterMembershipView(VaradhiClusterManager clusterManager) {
         this.clusterManager = clusterManager;
@@ -55,9 +55,18 @@ public final class ClusterMembershipView {
         changeListeners.add(listener);
     }
 
+    /** Stops processing membership updates and clears change listeners. */
+    public void stop() {
+        started = false;
+        changeListeners.clear();
+    }
+
     private final MembershipListener membershipListener = new MembershipListener() {
         @Override
         public CompletableFuture<Void> joined(String nodeId, MemberInfo memberInfo) {
+            if (!started) {
+                return CompletableFuture.completedFuture(null);
+            }
             membersByNodeId.put(nodeId, memberInfo);
             notifyChangeListeners();
             return CompletableFuture.completedFuture(null);
@@ -65,6 +74,9 @@ public final class ClusterMembershipView {
 
         @Override
         public CompletableFuture<Void> left(String nodeId) {
+            if (!started) {
+                return CompletableFuture.completedFuture(null);
+            }
             membersByNodeId.remove(nodeId);
             notifyChangeListeners();
             return CompletableFuture.completedFuture(null);
@@ -72,6 +84,9 @@ public final class ClusterMembershipView {
     };
 
     private void seedMembers(Map<String, MemberInfo> members) {
+        if (!started) {
+            return;
+        }
         membersByNodeId.clear();
         membersByNodeId.putAll(members);
         notifyChangeListeners();

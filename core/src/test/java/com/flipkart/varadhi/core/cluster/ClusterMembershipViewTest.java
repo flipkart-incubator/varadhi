@@ -54,6 +54,19 @@ class ClusterMembershipViewTest {
         assertEquals(1, membership.snapshot().size());
     }
 
+    @Test
+    void stop_IgnoresSubsequentMembershipChanges() {
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
+        startWithChangeListener();
+        changeNotifications.set(0);
+
+        membership.stop();
+        clusterManager.simulateJoin("server-2", server("server-2"));
+
+        assertEquals(1, membership.snapshot().size());
+        assertEquals(0, changeNotifications.get());
+    }
+
     private void startWithChangeListener() {
         membership.addMembershipChangeListener(changeNotifications::incrementAndGet);
         membership.start();

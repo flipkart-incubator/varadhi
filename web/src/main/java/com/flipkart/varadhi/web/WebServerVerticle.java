@@ -125,6 +125,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
+    private ClusterMembershipView clusterMembershipView;
 
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
@@ -225,6 +226,9 @@ public class WebServerVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         log.info("Stopping HttpServer");
+        if (clusterMembershipView != null) {
+            clusterMembershipView.stop();
+        }
         if (httpServer != null) {
             httpServer.close(stopPromise);
         } else {
@@ -317,9 +321,9 @@ public class WebServerVerticle extends AbstractVerticle {
         if (!options.isEnabled()) {
             return ProduceRateLimiter.disabled();
         }
-        ClusterMembershipView membership = new ClusterMembershipView(clusterManager);
-        membership.start();
-        PodCountProvider podCount = PodCountProvider.withRole(membership, ComponentKind.Server, 1);
+        clusterMembershipView = new ClusterMembershipView(clusterManager);
+        clusterMembershipView.start();
+        PodCountProvider podCount = PodCountProvider.withRole(clusterMembershipView, ComponentKind.Server, 1);
         EvenSplitPerPodTopicQuotaProvider quotaProvider = new EvenSplitPerPodTopicQuotaProvider(
             deployedRegion,
             options.getFallbackBuffer(),
