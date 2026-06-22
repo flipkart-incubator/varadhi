@@ -1,0 +1,98 @@
+package com.flipkart.varadhi.core.cluster;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+/**
+ * Live, in-memory index of cluster members keyed by node id.
+ * <p>
+ * Seeds from {@link VaradhiClusterManager#getMembersByNodeId()} and stays current via
+ * {@link MembershipListener}. Intended as a fast local view until membership caching moves into
+ * {@link VaradhiZkClusterManager}.
+ */
+@Slf4j
+public final class ClusterMembershipView {
+
+    private final VaradhiClusterManager clusterManager;
+    private final ConcurrentHashMap<String, MemberInfo> membersByNodeId = new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
+    private volatile boolean started;
+
+    public ClusterMembershipView(VaradhiClusterManager clusterManager) {
+        this.clusterManager = clusterManager;
+    }
+
+    /**
+     * Registers the membership listener and seeds from the cluster snapshot. Idempotent: the
+     * listener is registered at most once; each call re-seeds from the cluster.
+     */
+    public void start() {
+        if (!started) {
+            clusterManager.addMembershipListener(membershipListener);
+            started = true;
+        }
+        clusterManager.getMembersByNodeId()
+                      .onSuccess(this::seedMembers)
+                      .onFailure(
+                          e -> log.warn(
+                              "Failed to seed cluster membership view; keeping last-known snapshot of {} members",
+                              membersByNodeId.size(),
+                              e
+                          )
+                      );
+    }
+
+    /** Unmodifiable snapshot of the current membership index. */
+    public Map<String, MemberInfo> snapshot() {
+        return Map.copyOf(membersByNodeId);
+    }
+
+    public void addMembershipChangeListener(Runnable listener) {
+        changeListeners.add(listener);
+    }
+
+    /** Stops processing membership updates and clears change listeners. */
+    public void stop() {
+        started = false;
+        changeListeners.clear();
+    }
+
+    private final MembershipListener membershipListener = new MembershipListener() {
+        @Override
+        public CompletableFuture<Void> joined(String nodeId, MemberInfo memberInfo) {
+            if (!started) {
+                return CompletableFuture.completedFuture(null);
+            }
+            membersByNodeId.put(nodeId, memberInfo);
+            notifyChangeListeners();
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<Void> left(String nodeId) {
+            if (!started) {
+                return CompletableFuture.completedFuture(null);
+            }
+            membersByNodeId.remove(nodeId);
+            notifyChangeListeners();
+            return CompletableFuture.completedFuture(null);
+        }
+    };
+
+    private void seedMembers(Map<String, MemberInfo> members) {
+        if (!started) {
+            return;
+        }
+        membersByNodeId.clear();
+        membersByNodeId.putAll(members);
+        notifyChangeListeners();
+    }
+
+    private void notifyChangeListeners() {
+        changeListeners.forEach(Runnable::run);
+    }
+}

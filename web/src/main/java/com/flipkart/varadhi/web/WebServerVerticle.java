@@ -9,7 +9,16 @@ import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
+import com.flipkart.varadhi.core.cluster.ComponentKind;
+import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
+import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
+import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
+import com.flipkart.varadhi.produce.ratelimit.RateLimitTelemetry;
+import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
+import com.flipkart.varadhi.web.config.RateLimiterOptions;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -67,6 +76,7 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -115,6 +125,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
+    private ClusterMembershipView clusterMembershipView;
 
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
@@ -215,6 +226,9 @@ public class WebServerVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         log.info("Stopping HttpServer");
+        if (clusterMembershipView != null) {
+            clusterMembershipView.stop();
+        }
         if (httpServer != null) {
             httpServer.close(stopPromise);
         } else {
@@ -275,16 +289,54 @@ public class WebServerVerticle extends AbstractVerticle {
 
 
     private void setupEntityServicesForProduceApis() {
-        // Initialize producer service
+        String deployedRegion = verticleConfig.deployedRegion();
+        ConcurrentHashMap<String, ProducerMetrics> producerMetricsByTopic = new ConcurrentHashMap<>();
+        Function<String, ProducerMetrics> metricsProvider = topicFqn -> producerMetricsByTopic.computeIfAbsent(
+            topicFqn,
+            fqn -> new ProducerMetricsImpl(meterRegistry, fqn, deployedRegion)
+        );
+        ProduceRateLimiter rateLimiter = buildProduceRateLimiter(metricsProvider, deployedRegion);
+        cacheRegistry.getCache(ResourceType.TOPIC).addOnInvalidate(rateLimiter::removeTopic);
+
         serviceRegistry.register(
             ProducerService.class,
             new ProducerService(
-                verticleConfig.deployedRegion(),
+                deployedRegion,
                 messagingStackProvider.getProducerFactory(),
                 cacheRegistry.getCache(ResourceType.ORG),
                 cacheRegistry.getCache(ResourceType.PROJECT),
-                cacheRegistry.getCache(ResourceType.TOPIC)
+                cacheRegistry.getCache(ResourceType.TOPIC),
+                metricsProvider,
+                configuration.getProducerOptions(),
+                rateLimiter
             )
+        );
+    }
+
+    private ProduceRateLimiter buildProduceRateLimiter(
+        Function<String, ProducerMetrics> metricsProvider,
+        String deployedRegion
+    ) {
+        RateLimiterOptions options = configuration.getRateLimiterOptions();
+        if (!options.isEnabled()) {
+            return ProduceRateLimiter.disabled();
+        }
+        clusterMembershipView = new ClusterMembershipView(clusterManager);
+        clusterMembershipView.start();
+        PodCountProvider podCount = PodCountProvider.withRole(clusterMembershipView, ComponentKind.Server, 1);
+        EvenSplitPerPodTopicQuotaProvider quotaProvider = new EvenSplitPerPodTopicQuotaProvider(
+            deployedRegion,
+            options.getFallbackBuffer(),
+            options.getMinPodQps(),
+            podCount
+        );
+        return new ProduceRateLimiter(
+            options.getDefaultMode(),
+            quotaProvider,
+            options.getWindowSecs(),
+            System::nanoTime,
+            podCount,
+            new RateLimitTelemetry(metricsProvider)
         );
     }
 

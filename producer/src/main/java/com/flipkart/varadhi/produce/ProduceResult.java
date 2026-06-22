@@ -65,6 +65,14 @@ public class ProduceResult {
         return new ProduceResult(messageId, ProduceStatus.Filtered, null, null);
     }
 
+    public static ProduceResult ofThrottled(String messageId) {
+        return new ProduceResult(messageId, ProduceStatus.Throttled, null, null);
+    }
+
+    public boolean isThrottled() {
+        return produceStatus == ProduceStatus.Throttled;
+    }
+
     /**
      * Checks if the produce operation was successful.
      *

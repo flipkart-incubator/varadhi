@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -54,6 +56,8 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
      * The strategy for loading all resource.
      */
     private final Supplier<List<T>> resourceLoader;
+
+    private final CopyOnWriteArrayList<Consumer<String>> invalidationListeners = new CopyOnWriteArrayList<>();
 
     /**
      * Creates a new entity cache for the specified resource type with the provided loading strategy.
@@ -154,6 +158,18 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
     }
 
     /**
+     * Registers a callback invoked after this cache applies an {@link EventType#INVALIDATE} event.
+     */
+    public void addOnInvalidate(Consumer<String> listener) {
+        invalidationListeners.add(listener);
+    }
+
+    protected void invalidate(String entityName) {
+        resources.remove(entityName);
+        invalidationListeners.forEach(listener -> listener.accept(entityName));
+    }
+
+    /**
      * Handles resource change events by updating the in-memory cache.
      * <p>
      * This method is thread-safe due to the underlying ConcurrentHashMap.
@@ -182,7 +198,7 @@ public class ResourceReadCache<T extends Resource> implements ResourceEventListe
                 });
             }
         } else if (operation == EventType.INVALIDATE) {
-            resources.remove(entityName);
+            invalidate(entityName);
         }
     }
 }
