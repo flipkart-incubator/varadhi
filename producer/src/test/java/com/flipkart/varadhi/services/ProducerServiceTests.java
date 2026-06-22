@@ -59,7 +59,9 @@ class ProducerServiceTests {
 
     @BeforeAll
     static void setup() {
-        StdHeaders.init(TestStdHeaders.get());
+        if (!StdHeaders.isGlobalInstanceInitialized()) {
+            StdHeaders.init(TestStdHeaders.get());
+        }
     }
 
     @BeforeEach

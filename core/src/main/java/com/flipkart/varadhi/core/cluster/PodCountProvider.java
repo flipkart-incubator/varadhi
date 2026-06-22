@@ -74,7 +74,7 @@ public final class PodCountProvider implements IntSupplier {
         countChangeListeners.add(listener);
     }
 
-    private void updateCountIfChanged() {
+    private synchronized void updateCountIfChanged() {
         int newCount = Math.max(minCount, countMatchingMembers());
         int previous = podCount;
         if (newCount != previous) {

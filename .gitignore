@@ -50,6 +50,7 @@ setup/docker/configs/varadhi-auto-generated/*
 
 # temporary directory for doc generator
 .codescope/
+.codegraph/
 
 # skills. ignored for now. Its a personal choice.
 .claude/

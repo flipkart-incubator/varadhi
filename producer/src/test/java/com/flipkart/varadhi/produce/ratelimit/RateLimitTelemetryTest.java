@@ -3,7 +3,7 @@ package com.flipkart.varadhi.produce.ratelimit;
 import com.flipkart.varadhi.common.MockTicker;
 import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
-import com.flipkart.varadhi.core.cluster.FakeVaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.InMemoryVaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.NodeCapacity;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
@@ -80,7 +80,7 @@ class RateLimitTelemetryTest {
         RateLimiterMode mode,
         Function<String, ProducerMetrics> metricsProvider
     ) {
-        FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+        InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
         clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
         ClusterMembershipView membership = new ClusterMembershipView(clusterManager);
         membership.start();

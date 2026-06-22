@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /** In-memory {@link VaradhiClusterManager} for unit tests. */
-public final class FakeVaradhiClusterManager implements VaradhiClusterManager {
+public final class InMemoryVaradhiClusterManager implements VaradhiClusterManager {
 
     private final Map<String, MemberInfo> members = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<MembershipListener> listeners = new CopyOnWriteArrayList<>();

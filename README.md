@@ -31,6 +31,8 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ./gradlew build test
 ```
 
+See [AGENTS.md](./AGENTS.md) for a repo map and agent-oriented workflows (Cursor, Claude Code). See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor conventions.
+
 ## Dev Setup
 Start Apache Pulsar (message broker) and ZooKeeper (metadata store) with Docker Compose, then run the Varadhi server on your host with Gradle.
 
@@ -57,16 +59,23 @@ docker compose --profile dev -f setup/docker/compose.yml down -v
 
 ## Integration Tests (E2E)
 
-```bash
-./gradlew clean build copyDependencies copyE2EConfig
+E2E tests run against a Docker stack (`server`, `zookeeper`, `pulsar`) with the Varadhi server image built from your working tree. **Always tear down with `-v` before bringing the stack up** — leftover ZooKeeper/Pulsar data causes setup failures (e.g. HTTP 409 when creating orgs/projects that already exist from a prior run).
 
-docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg SKIP_CERT_CHECK=true
+```bash
+./gradlew clean build copyDependencies copyE2EConfig -x test
+
+docker build . --file setup/docker/Dockerfile \
+  --tag varadhi.docker.registry/varadhi:latest \
+  --build-arg ENV=test \
+  --build-arg SKIP_CERT_CHECK=true
 
 docker compose --profile test -f setup/docker/compose.yml down -v
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 
-./gradlew testE2E
+./gradlew test testE2E
 ```
+
+`SKIP_CERT_CHECK=true` skips TLS verification when the image build downloads Apache ZooKeeper/Pulsar archives — use it if `docker build` fails with an untrusted `archive.apache.org` certificate. CI uses the same compose file and matches this flow (see `.github/workflows/e2e.yml`).
 
 ### Dependencies
 

@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClusterMembershipViewTest {
 
-    private final FakeVaradhiClusterManager clusterManager = new FakeVaradhiClusterManager();
+    private final InMemoryVaradhiClusterManager clusterManager = new InMemoryVaradhiClusterManager();
     private final ClusterMembershipView membership = new ClusterMembershipView(clusterManager);
     private final AtomicInteger changeNotifications = new AtomicInteger();
 
@@ -52,6 +52,19 @@ class ClusterMembershipViewTest {
         membership.start();
 
         assertEquals(1, membership.snapshot().size());
+    }
+
+    @Test
+    void stop_IgnoresSubsequentMembershipChanges() {
+        clusterManager.replaceMembers(Map.of("server-1", server("server-1")));
+        startWithChangeListener();
+        changeNotifications.set(0);
+
+        membership.stop();
+        clusterManager.simulateJoin("server-2", server("server-2"));
+
+        assertEquals(1, membership.snapshot().size());
+        assertEquals(0, changeNotifications.get());
     }
 
     private void startWithChangeListener() {
