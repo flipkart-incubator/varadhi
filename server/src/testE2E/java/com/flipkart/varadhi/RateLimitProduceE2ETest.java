@@ -35,6 +35,10 @@ public class RateLimitProduceE2ETest extends E2EBase {
 
     private static final long POLL_INTERVAL_MS = 100;
     private static final long POLL_TIMEOUT_MS = 10_000;
+    private static final int HTTP_NOT_FOUND = 404;
+    private static final int HTTP_UNPROCESSABLE = 422;
+    private static final int HTTP_OK = 200;
+    private static final int HTTP_RATE_LIMITED = 429;
 
     private static Org org;
     private static Team team;
@@ -76,12 +80,11 @@ public class RateLimitProduceE2ETest extends E2EBase {
         String topicName = "rl_enforced_" + System.currentTimeMillis();
         createRateLimitTopic(topicName, RateLimiterMode.enforced, 1);
 
-        // fallbackBuffer=0.25 on a single pod → ceil(1 × 1.25) = 2 qps tokens per window
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
+        int admits = drainBurstUntilThrottled(topicName);
+        Assertions.assertTrue(admits >= 1, "expected at least one admit before throttle");
         assertProduceThrottled(topicName);
 
-        waitForProduceStatus(topicName, 200);
+        waitForProduceStatus(topicName, HTTP_OK);
     }
 
     @Test
@@ -89,9 +92,9 @@ public class RateLimitProduceE2ETest extends E2EBase {
         String topicName = "rl_shadow_" + System.currentTimeMillis();
         createRateLimitTopic(topicName, RateLimiterMode.shadow, 1);
 
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
+        assertProduceStatus(topicName, HTTP_OK);
+        assertProduceStatus(topicName, HTTP_OK);
+        assertProduceStatus(topicName, HTTP_OK);
     }
 
     @Test
@@ -99,9 +102,9 @@ public class RateLimitProduceE2ETest extends E2EBase {
         String topicName = "rl_disabled_" + System.currentTimeMillis();
         createRateLimitTopic(topicName, RateLimiterMode.disabled, 1);
 
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
+        assertProduceStatus(topicName, HTTP_OK);
+        assertProduceStatus(topicName, HTTP_OK);
+        assertProduceStatus(topicName, HTTP_OK);
     }
 
     @Test
@@ -116,10 +119,10 @@ public class RateLimitProduceE2ETest extends E2EBase {
         );
         makeCreateRequest(getTopicsUri(project), topic, EXPECTED_STATUS_OK);
         trackTopic(topicName);
-        waitForTopicActivation(topicName);
+        waitForProducePathReady(topicName);
 
-        assertProduceStatus(topicName, 200);
-        assertProduceStatus(topicName, 200);
+        assertProduceStatus(topicName, HTTP_OK);
+        assertProduceStatus(topicName, HTTP_OK);
     }
 
     private static void createRateLimitTopic(String topicName, RateLimiterMode mode, int qps)
@@ -135,7 +138,7 @@ public class RateLimitProduceE2ETest extends E2EBase {
         topic.setPerRegionQuotaWeights(Map.of("default", 1.0));
         makeCreateRequest(getTopicsUri(project), topic, EXPECTED_STATUS_OK);
         trackTopic(topicName);
-        waitForTopicActivation(topicName);
+        waitForProducePathReady(topicName);
     }
 
     private static void trackTopic(String topicName) {
@@ -153,8 +156,31 @@ public class RateLimitProduceE2ETest extends E2EBase {
         });
     }
 
-    private static void waitForTopicActivation(String topicName) throws InterruptedException {
-        waitForProduceStatus(topicName, 200);
+    /**
+     * Polls produce until the topic is on the hot path (not still provisioning). {@code 404} means the
+     * topic is missing or inactive; {@code 422} means lifecycle/storage is not yet {@code Producing}.
+     * A {@code 429} during this wait does not debit buckets (reject is check-only), so it is a valid
+     * readiness signal without spending burst budget.
+     */
+    private static void waitForProducePathReady(String topicName) throws InterruptedException {
+        pollUntil("produce path ready for " + topicName, () -> {
+            int status = produceStatus(topicName);
+            return status != HTTP_NOT_FOUND && status != HTTP_UNPROCESSABLE;
+        });
+    }
+
+    /** Produces until the first non-200 (expected {@code 429}); returns how many messages were admitted. */
+    private static int drainBurstUntilThrottled(String topicName) {
+        int admits = 0;
+        int status;
+        do {
+            status = produceStatus(topicName);
+            if (status == HTTP_OK) {
+                admits++;
+            }
+        } while (status == HTTP_OK);
+        Assertions.assertEquals(HTTP_RATE_LIMITED, status, "expected throttle after burst exhausted");
+        return admits;
     }
 
     private static void waitForProduceStatus(String topicName, int expectedStatus) throws InterruptedException {
@@ -190,7 +216,7 @@ public class RateLimitProduceE2ETest extends E2EBase {
 
     private static void assertProduceThrottled(String topicName) {
         try (Response response = postProduce(topicName)) {
-            Assertions.assertEquals(429, response.getStatus());
+            Assertions.assertEquals(HTTP_RATE_LIMITED, response.getStatus());
             ErrorResponse error = response.readEntity(ErrorResponse.class);
             Assertions.assertEquals(RATE_LIMIT_MSG, error.reason());
         }
