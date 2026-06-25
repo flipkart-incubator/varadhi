@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.produce.failover;
 
+import com.flipkart.varadhi.common.utils.ScheduledPoller;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -13,9 +14,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 /**
@@ -37,9 +38,10 @@ import java.util.function.BiFunction;
  * on receipt:
  * <ul>
  *   <li><b>PREPARE</b> ({@code topicVersionToAwait} = N) — readiness: poll until the cache
- *       observes exactly version N, then pre-warm this pod's producer and ack; a
- *       stale/unreachable pod times out, and a pod that cannot warm its producer acks
- *       failure — both let the controller abort before any change.</li>
+ *       observes exactly version N, then pre-warm this pod's producer (only if the pod is already
+ *       producing the topic; otherwise it stays {@link TransitionPrepareResult#NOT_INVOLVED} and
+ *       creates nothing) and ack; a stale/unreachable pod times out, and a pod that cannot warm its
+ *       producer acks failure — both let the controller abort before any change.</li>
  *   <li><b>SWITCH</b> ({@code topicVersionToAwait} = N+1) — convergence: same exact-version
  *       wait but for N+1, then ack.</li>
  *   <li>For version-gated stages, if the cache has already moved <em>past</em> the target, the
@@ -61,64 +63,81 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private final TransitionAckClient ackClient;
     /**
      * PREPARE pre-warm action per {@link TransitionType}. Each accepts {@code (topicFqn, target)}
-     * and asynchronously pre-creates the producer for the transition's target (region for
-     * failover, storage-topic id for migration); the returned future fails if warming fails.
+     * and asynchronously prepares this pod for the transition's target (region for failover,
+     * storage-topic id for migration). It returns {@link TransitionPrepareResult#WARMED} when the
+     * pod was producing the topic and pre-created the producer, or
+     * {@link TransitionPrepareResult#NOT_INVOLVED} when the pod has no producer for the topic and
+     * therefore creates nothing; the returned future fails if warming fails.
      */
-    private final Map<TransitionType, BiFunction<String, String, CompletableFuture<Void>>> prepareActions;
+    private final Map<TransitionType, BiFunction<String, String, CompletableFuture<TransitionPrepareResult>>> prepareActions;
     private final PodTransitionConfig config;
     private final ScheduledExecutorService scheduler;
+    private final TransitionMetrics metrics;
 
     @Override
     public void handle(ClusterMessage message) {
         TransitionEvent event = message.getData(TransitionEvent.class);
+        metrics.stageReceived(event.transitionType(), event.stage());
         // Non-version-gated stages ack immediately on receipt.
         if (event.topicVersionToAwait() <= 0) {
             ackOk(event);
             return;
         }
-        // handle() runs on the event-bus thread that delivered this publish. Offload the version
-        // wait (and the PREPARE pre-warm it triggers) to the transition scheduler so the event bus
-        // is never stalled.
+        // handle() runs on the event-bus thread that delivered this publish. The version wait (and
+        // the PREPARE pre-warm it triggers) runs on the transition scheduler via ScheduledPoller so
+        // the event bus is never stalled; we only supply the domain probe and terminal handlers.
         long deadlineInMs = System.currentTimeMillis() + config.podVersionWaitMs();
-        scheduler.execute(() -> awaitVersionThenAck(event, deadlineInMs));
+        ScheduledPoller.pollUntil(
+            scheduler,
+            () -> probeVersion(event),
+            config.podPollIntervalMs(),
+            deadlineInMs,
+            current -> onVersionResolved(event, current),
+            () -> ackFail(
+                event,
+                "timeout awaiting topic version " + event.topicVersionToAwait() + " (current " + describe(
+                    currentVersion(event)
+                ) + ")"
+            ),
+            e -> {
+                // Any unexpected failure in the poll loop must still notify the controller, otherwise
+                // its stage barrier waits until timeout for an ack that will never come.
+                log.error("transition poll loop failed for {} op={}", event.topicFqn(), event.opId(), e);
+                ackFail(event, "transition poll error: " + e.getMessage());
+            }
+        );
     }
 
-    private void awaitVersionThenAck(TransitionEvent event, long deadlineInMs) {
-        try {
-            long current = currentVersion(event);
-            long target = event.topicVersionToAwait();
-
-            if (current == target) {
-                onVersionReached(event);
-                return;
-            }
-            if (current > target && current != VERSION_ABSENT) {
-                // The cache jumped past the version the controller coordinated: the topic was
-                // modified concurrently during the transition. Fail so the controller can
-                // abort/retry rather than act on a version it never coordinated.
-                ackFail(
-                    event,
-                    "topic version overshot target " + target + " (current " + current + "), concurrent modification"
-                );
-                return;
-            }
-            // Either the topic is not yet in this pod's cache (VERSION_ABSENT) or it has not yet
-            // reached the target. Both are transient: keep polling until the deadline, then fail.
-            if (System.currentTimeMillis() >= deadlineInMs) {
-                ackFail(event, "timeout awaiting topic version " + target + " (current " + describe(current) + ")");
-                return;
-            }
-            scheduler.schedule(
-                () -> awaitVersionThenAck(event, deadlineInMs),
-                config.podPollIntervalMs(),
-                TimeUnit.MILLISECONDS
-            );
-        } catch (Exception e) {
-            // Any unexpected failure in the poll loop must still notify the controller, otherwise
-            // its stage barrier waits until timeout for an ack that will never come.
-            log.error("transition poll loop failed for {} op={}", event.topicFqn(), event.opId(), e);
-            ackFail(event, "transition poll error: " + e.getMessage());
+    /**
+     * Terminal when the cache has reached (or overshot) the coordinated version, empty while it is
+     * still behind or absent (keep polling). Returns the observed version on termination.
+     */
+    private Optional<Long> probeVersion(TransitionEvent event) {
+        long current = currentVersion(event);
+        long target = event.topicVersionToAwait();
+        if (current == target) {
+            return Optional.of(current);
         }
+        if (current > target && current != VERSION_ABSENT) {
+            return Optional.of(current);
+        }
+        // Topic not yet in this pod's cache (VERSION_ABSENT) or not yet at the target: keep waiting.
+        return Optional.empty();
+    }
+
+    private void onVersionResolved(TransitionEvent event, long current) {
+        if (current > event.topicVersionToAwait()) {
+            // The cache jumped past the version the controller coordinated: the topic was modified
+            // concurrently during the transition. Fail so the controller can abort/retry rather than
+            // act on a version it never coordinated.
+            ackFail(
+                event,
+                "topic version overshot target " + event.topicVersionToAwait() + " (current " + current
+                       + "), concurrent modification"
+            );
+            return;
+        }
+        onVersionReached(event);
     }
 
     private long currentVersion(TransitionEvent event) {
@@ -134,28 +153,40 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        BiFunction<String, String, CompletableFuture<Void>> warmer = prepareActions.get(event.transitionType());
+        BiFunction<String, String, CompletableFuture<TransitionPrepareResult>> warmer = prepareActions.get(
+            event.transitionType()
+        );
         if (warmer == null) {
             ackFail(event, "no prepare action registered for transition type " + event.transitionType());
             return;
         }
-        // PREPARE doubles as readiness: pre-warm this pod's producer so the target has a live
-        // producer before SWITCH flips produce to it. A warm failure fails the ack, letting the
-        // controller abort before any switch. Done asynchronously so producer creation never
-        // blocks the scheduler thread.
-        warmer.apply(event.topicFqn(), event.target()).whenComplete((ignored, t) -> {
-            if (t == null) {
-                ackOk(event);
+        // PREPARE doubles as readiness: pods already producing this topic pre-warm the target
+        // producer so it is live before SWITCH; pods not producing it stay NOT_INVOLVED and create
+        // nothing (no unnecessary producers), still acking so the controller barrier completes. A
+        // warm failure fails the ack, letting the controller abort before any switch. Done
+        // asynchronously so producer creation never blocks the scheduler thread.
+        warmer.apply(event.topicFqn(), event.target()).whenComplete((result, t) -> {
+            if (t != null) {
+                log.warn(
+                    "Transition PREPARE warm failed for {} op={} type={}",
+                    event.topicFqn(),
+                    event.opId(),
+                    event.transitionType(),
+                    t
+                );
+                ackFail(event, "prepare warm failed: " + t.getMessage());
                 return;
             }
-            log.warn(
-                "Transition PREPARE warm failed for {} op={} type={}",
-                event.topicFqn(),
-                event.opId(),
-                event.transitionType(),
-                t
-            );
-            ackFail(event, "prepare warm failed: " + t.getMessage());
+            if (result == TransitionPrepareResult.NOT_INVOLVED) {
+                metrics.prepareNotInvolved(event.transitionType());
+                log.debug(
+                    "Transition PREPARE: pod not involved for {} op={} type={}; nothing to pre-warm",
+                    event.topicFqn(),
+                    event.opId(),
+                    event.transitionType()
+                );
+            }
+            ackOk(event);
         });
     }
 
@@ -164,10 +195,12 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackOk(TransitionEvent event) {
+        metrics.stageAcked(event.transitionType(), event.stage(), true);
         ackClient.ack(TransitionAck.success(event.opId(), hostname, event.stage()));
     }
 
     private void ackFail(TransitionEvent event, String errorMsg) {
+        metrics.stageAcked(event.transitionType(), event.stage(), false);
         ackClient.ack(TransitionAck.failure(event.opId(), hostname, event.stage(), errorMsg));
     }
 }

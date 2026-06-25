@@ -80,7 +80,8 @@ class ProduceTransitionMsgHandlerTest {
             acker,
             Map.of(TransitionType.TOPIC_FAILOVER, warmer, TransitionType.STORAGE_MIGRATION, storageWarmer),
             config,
-            scheduler
+            scheduler,
+            TransitionMetrics.NOOP
         );
     }
 
@@ -161,6 +162,24 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionStage.PREPARE, ack.stage());
         assertFalse(ack.success());
         assertTrue(ack.errorMsg().contains("prepare warm failed"));
+    }
+
+    @Test
+    void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
+        // Pod is not producing the topic: it must ack OK without creating any producer.
+        seed(10);
+        warmer.notInvolved = true;
+        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
+
+        h.handle(
+            ClusterMessage.of(TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER))
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        TransitionAck ack = acker.acks.get(0);
+        assertEquals(TransitionStage.PREPARE, ack.stage());
+        assertTrue(ack.success());
+        assertTrue(warmer.warmed.isEmpty(), "an uninvolved pod must not pre-warm any producer");
     }
 
     @Test
@@ -280,18 +299,27 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.success());
     }
 
-    /** Records warm requests; returns a future that fails when {@code toFail} is set. */
-    private static final class RecordingWarmer implements BiFunction<String, String, CompletableFuture<Void>> {
+    /**
+     * Records warm requests; returns a future that fails when {@code toFail} is set, or resolves to
+     * {@link TransitionPrepareResult#NOT_INVOLVED} (without recording a warm) when {@code notInvolved}
+     * is set — mirroring a pod that is not producing the topic.
+     */
+    private static final class RecordingWarmer implements
+        BiFunction<String, String, CompletableFuture<TransitionPrepareResult>> {
         private final CopyOnWriteArrayList<String> warmed = new CopyOnWriteArrayList<>();
         private volatile RuntimeException toFail;
+        private volatile boolean notInvolved;
 
         @Override
-        public CompletableFuture<Void> apply(String topicFqn, String target) {
+        public CompletableFuture<TransitionPrepareResult> apply(String topicFqn, String target) {
             if (toFail != null) {
                 return CompletableFuture.failedFuture(toFail);
             }
+            if (notInvolved) {
+                return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
+            }
             warmed.add(topicFqn + "@" + target);
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(TransitionPrepareResult.WARMED);
         }
     }
 

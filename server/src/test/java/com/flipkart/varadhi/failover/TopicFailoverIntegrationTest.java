@@ -28,6 +28,8 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.failover.ControllerTransitionAckClient;
 import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
 import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
+import com.flipkart.varadhi.produce.failover.TransitionMetrics;
+import com.flipkart.varadhi.produce.failover.TransitionPrepareResult;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 import io.vertx.core.Future;
@@ -89,10 +91,11 @@ class TopicFailoverIntegrationTest {
     private VaradhiTopic topic;
     private String fqn;
 
-    private final List<ResourceReadCache<Resource.EntityResource<VaradhiTopic>>> podCaches = new CopyOnWriteArrayList<>();
+    private final List<ResourceReadCache<Resource.EntityResource<VaradhiTopic>>> podCaches =
+        new CopyOnWriteArrayList<>();
     private final List<String> warmed = new CopyOnWriteArrayList<>();
-    private static final java.util.concurrent.CompletableFuture<Void> WARM_OK =
-        java.util.concurrent.CompletableFuture.completedFuture(null);
+    private static final java.util.concurrent.CompletableFuture<TransitionPrepareResult> WARM_OK =
+        java.util.concurrent.CompletableFuture.completedFuture(TransitionPrepareResult.WARMED);
 
     @BeforeEach
     void setup() {
@@ -204,7 +207,10 @@ class TopicFailoverIntegrationTest {
     private void registerPod(String hostname) {
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = newSeededCache();
         podCaches.add(cache);
-        BiFunction<String, String, java.util.concurrent.CompletableFuture<Void>> warmer = (topicFqn, target) -> {
+        BiFunction<String, String, java.util.concurrent.CompletableFuture<TransitionPrepareResult>> warmer = (
+            topicFqn,
+            target
+        ) -> {
             warmed.add(hostname + "@" + target);
             return WARM_OK;
         };
@@ -214,7 +220,8 @@ class TopicFailoverIntegrationTest {
             new ControllerTransitionAckClient(exchange),
             Map.of(TransitionType.TOPIC_FAILOVER, warmer),
             new PodTransitionConfig(3000, 10),
-            podScheduler
+            podScheduler,
+            TransitionMetrics.NOOP
         );
         router.publishHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
@@ -225,11 +232,12 @@ class TopicFailoverIntegrationTest {
 
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> newSeededCache() {
         try {
-            ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = ResourceReadCache.<Resource.EntityResource<VaradhiTopic>>create(
-                ResourceType.TOPIC,
-                () -> List.of(Resource.of(topic, ResourceType.TOPIC)),
-                vertx
-            ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+            ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache =
+                ResourceReadCache.<Resource.EntityResource<VaradhiTopic>>create(
+                    ResourceType.TOPIC,
+                    () -> List.of(Resource.of(topic, ResourceType.TOPIC)),
+                    vertx
+                ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
             return cache;
         } catch (Exception e) {
             throw new RuntimeException("failed to seed pod cache", e);
@@ -313,6 +321,7 @@ class TopicFailoverIntegrationTest {
             topics.remove(topicName);
         }
     }
+
 
     private static final class InMemTransitionStore implements TransitionStore {
         private final Map<String, TransitionObject> map = new java.util.concurrent.ConcurrentHashMap<>();

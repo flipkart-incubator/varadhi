@@ -22,6 +22,8 @@ import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.failover.ControllerTransitionAckClient;
 import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
 import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
+import com.flipkart.varadhi.produce.failover.TransitionMetricsImpl;
+import com.flipkart.varadhi.produce.failover.TransitionPrepareResult;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -328,13 +330,37 @@ public class WebServerVerticle extends AbstractVerticle {
         // transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by registering their own
         // action here. The failover action interprets the event's opaque target as the region to
         // pre-warm and returns a future so producer creation never blocks the scheduler thread.
-        Map<TransitionType, BiFunction<String, String, CompletableFuture<Void>>> prepareActions = Map.of(
-            TransitionType.TOPIC_FAILOVER,
-            (topicFqn, targetRegion) -> producerService.getProducer(
-                VaradhiTopicName.parse(topicFqn),
-                RegionName.of(targetRegion)
-            ).thenApply(producer -> null)
-        );
+        // A pod only pre-warms if it is already producing the topic; otherwise it stays
+        // NOT_INVOLVED and creates no producer it would never use.
+        Map<TransitionType, BiFunction<String, String, CompletableFuture<TransitionPrepareResult>>> prepareActions = Map
+                                                                                                                        .of(
+                                                                                                                            TransitionType.TOPIC_FAILOVER,
+                                                                                                                            (
+                                                                                                                                topicFqn,
+                                                                                                                                targetRegion
+                                                                                                                            ) -> {
+                                                                                                                                VaradhiTopicName topicName =
+                                                                                                                                    VaradhiTopicName.parse(
+                                                                                                                                        topicFqn
+                                                                                                                                    );
+                                                                                                                                if (!producerService.isProducingTopic(
+                                                                                                                                    topicName
+                                                                                                                                )) {
+                                                                                                                                    return CompletableFuture.completedFuture(
+                                                                                                                                        TransitionPrepareResult.NOT_INVOLVED
+                                                                                                                                    );
+                                                                                                                                }
+                                                                                                                                return producerService.getProducer(
+                                                                                                                                    topicName,
+                                                                                                                                    RegionName.of(
+                                                                                                                                        targetRegion
+                                                                                                                                    )
+                                                                                                                                )
+                                                                                                                                                      .thenApply(
+                                                                                                                                                          producer -> TransitionPrepareResult.WARMED
+                                                                                                                                                      );
+                                                                                                                            }
+                                                                                                                        );
         ProducerOptions producerOptions = configuration.getProducerOptions();
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
@@ -345,7 +371,8 @@ public class WebServerVerticle extends AbstractVerticle {
                 producerOptions.getTransitionVersionWaitMs(),
                 producerOptions.getTransitionPollIntervalMs()
             ),
-            transitionScheduler
+            transitionScheduler,
+            new TransitionMetricsImpl(meterRegistry)
         );
         messageRouter.publishHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,

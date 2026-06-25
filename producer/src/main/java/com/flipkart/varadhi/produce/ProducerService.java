@@ -294,6 +294,20 @@ public final class ProducerService {
     }
 
     /**
+     * Whether this pod currently holds a cached producer for {@code topicName} (in any region).
+     * Used to decide PREPARE participation during a topic transition: only pods already producing
+     * the topic pre-warm the target producer; others stay uninvolved and avoid creating producers
+     * they would otherwise never use.
+     *
+     * @param topicName the Varadhi topic to check
+     * @return {@code true} if a producer for the topic is present in this pod's cache
+     */
+    public boolean isProducingTopic(VaradhiTopicName topicName) {
+        String topicFQN = topicName.toFqn();
+        return producerCache.asMap().keySet().stream().anyMatch(key -> key.varadhiTopicFQN().equals(topicFQN));
+    }
+
+    /**
      * Produces a message to a storage topic using the specified producer.
      * <p>
      * This method handles the details of producing to a specific storage topic, including:
