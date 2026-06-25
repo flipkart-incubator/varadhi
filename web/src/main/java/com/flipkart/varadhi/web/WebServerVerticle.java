@@ -326,47 +326,12 @@ public class WebServerVerticle extends AbstractVerticle {
             r -> new Thread(r, "topic-transition-version-wait")
         );
         ProducerService producerService = serviceRegistry.get(ProducerService.class);
-        // PREPARE pre-warm action per transition type. Only TOPIC_FAILOVER is wired today; other
-        // transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by registering their own
-        // action here. The failover action interprets the event's opaque target as the region to
-        // pre-warm and returns a future so producer creation never blocks the scheduler thread.
-        // A pod only pre-warms if it is already producing the topic; otherwise it stays
-        // NOT_INVOLVED and creates no producer it would never use.
-        Map<TransitionType, BiFunction<String, String, CompletableFuture<TransitionPrepareResult>>> prepareActions = Map
-                                                                                                                        .of(
-                                                                                                                            TransitionType.TOPIC_FAILOVER,
-                                                                                                                            (
-                                                                                                                                topicFqn,
-                                                                                                                                targetRegion
-                                                                                                                            ) -> {
-                                                                                                                                VaradhiTopicName topicName =
-                                                                                                                                    VaradhiTopicName.parse(
-                                                                                                                                        topicFqn
-                                                                                                                                    );
-                                                                                                                                if (!producerService.isProducingTopic(
-                                                                                                                                    topicName
-                                                                                                                                )) {
-                                                                                                                                    return CompletableFuture.completedFuture(
-                                                                                                                                        TransitionPrepareResult.NOT_INVOLVED
-                                                                                                                                    );
-                                                                                                                                }
-                                                                                                                                return producerService.getProducer(
-                                                                                                                                    topicName,
-                                                                                                                                    RegionName.of(
-                                                                                                                                        targetRegion
-                                                                                                                                    )
-                                                                                                                                )
-                                                                                                                                                      .thenApply(
-                                                                                                                                                          producer -> TransitionPrepareResult.WARMED
-                                                                                                                                                      );
-                                                                                                                            }
-                                                                                                                        );
         ProducerOptions producerOptions = configuration.getProducerOptions();
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
             new ControllerTransitionAckClient(messageExchange),
-            prepareActions,
+            buildPrepareActions(producerService),
             new PodTransitionConfig(
                 producerOptions.getTransitionVersionWaitMs(),
                 producerOptions.getTransitionPollIntervalMs()
@@ -380,6 +345,30 @@ public class WebServerVerticle extends AbstractVerticle {
             handler
         );
         log.info("Registered topic-transition stage handler for region {}", verticleConfig.deployedRegion());
+    }
+
+    /**
+     * PREPARE pre-warm action per transition type. Only {@link TransitionType#TOPIC_FAILOVER} is
+     * wired today; other transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by
+     * registering their own action here. The failover action interprets the event's opaque target
+     * as the region to pre-warm and returns a future so producer creation never blocks the
+     * scheduler thread. A pod only pre-warms if it is already producing the topic; otherwise it
+     * stays {@link TransitionPrepareResult#NOT_INVOLVED} and creates no producer it would never use.
+     */
+    private Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> buildPrepareActions(
+        ProducerService producerService
+    ) {
+        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> failoverWarm = (
+            topicName,
+            targetRegion
+        ) -> {
+            if (!producerService.isProducingTopic(topicName)) {
+                return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
+            }
+            return producerService.getProducer(topicName, RegionName.of(targetRegion))
+                                  .thenApply(producer -> TransitionPrepareResult.WARMED);
+        };
+        return Map.of(TransitionType.TOPIC_FAILOVER, failoverWarm);
     }
 
     /**

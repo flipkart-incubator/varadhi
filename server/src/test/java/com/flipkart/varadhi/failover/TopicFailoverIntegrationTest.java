@@ -20,6 +20,7 @@ import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.Operation;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
@@ -66,7 +67,7 @@ import static org.mockito.Mockito.when;
  *
  * <p>This exercises the forward leg ({@code publish}), the pod version-convergence + ack, the return
  * leg ({@code send} -> controller ack handler -> {@link StageAwaiter#recordAck}), and the full
- * PREPARE -> SWITCH -> DRAIN -> COMPLETED progression including the traffic-affecting SWITCH topic
+ * PREPARE -> SWITCH -> COMPLETED progression including the traffic-affecting SWITCH topic
  * write that pods converge on.
  */
 class TopicFailoverIntegrationTest {
@@ -207,7 +208,7 @@ class TopicFailoverIntegrationTest {
     private void registerPod(String hostname) {
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = newSeededCache();
         podCaches.add(cache);
-        BiFunction<String, String, java.util.concurrent.CompletableFuture<TransitionPrepareResult>> warmer = (
+        BiFunction<VaradhiTopicName, String, java.util.concurrent.CompletableFuture<TransitionPrepareResult>> warmer = (
             topicFqn,
             target
         ) -> {

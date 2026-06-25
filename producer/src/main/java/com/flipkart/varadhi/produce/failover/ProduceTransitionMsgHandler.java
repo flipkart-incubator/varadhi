@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
@@ -27,11 +28,11 @@ import java.util.function.BiFunction;
  *
  * <p>The stage machine and version-convergence logic are identical across
  * {@link TransitionType}s; only the PREPARE pre-warm differs and is supplied per type via
- * {@code prepareActions}. Each action takes {@code (topicFqn, target)} as opaque strings —
- * the action interprets {@code target} for its type (region for failover, storage-topic id
- * for migration) — and returns a {@link CompletableFuture} that completes when the producer
- * is warmed (or fails). Keeping it asynchronous means a producer cache-miss never blocks the
- * transition scheduler thread.
+ * {@code prepareActions}. Each action takes {@code (topicFqn, target)} — a typed
+ * {@link VaradhiTopicName} and an opaque {@code target} string the action interprets for its
+ * type (region for failover, storage-topic id for migration) — and returns a
+ * {@link CompletableFuture} that completes when the producer is warmed (or fails). Keeping it
+ * asynchronous means a producer cache-miss never blocks the transition scheduler thread.
  *
  * <p><b>Every</b> stage is acknowledged. Version-gated stages wait for the local TopicCache to
  * converge to the <em>exact</em> coordinated version before acking; all others ack immediately
@@ -47,8 +48,8 @@ import java.util.function.BiFunction;
  *   <li>For version-gated stages, if the cache has already moved <em>past</em> the target, the
  *       pod acks failure, treating it as a concurrent modification so the controller can
  *       abort/retry.</li>
- *   <li><b>PENDING / DRAIN / COMPLETED / ABORTED</b> ({@code topicVersionToAwait} = 0) — no
- *       version to await; ack immediately so the controller knows the pod processed the stage.</li>
+ *   <li><b>PENDING / COMPLETED / ABORTED</b> ({@code awaitVersion} = false) — no version to
+ *       await; ack immediately so the controller knows the pod processed the stage.</li>
  * </ul>
  */
 @Slf4j
@@ -69,7 +70,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * {@link TransitionPrepareResult#NOT_INVOLVED} when the pod has no producer for the topic and
      * therefore creates nothing; the returned future fails if warming fails.
      */
-    private final Map<TransitionType, BiFunction<String, String, CompletableFuture<TransitionPrepareResult>>> prepareActions;
+    private final Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> prepareActions;
     private final PodTransitionConfig config;
     private final ScheduledExecutorService scheduler;
     private final TransitionMetrics metrics;
@@ -79,7 +80,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         TransitionEvent event = message.getData(TransitionEvent.class);
         metrics.stageReceived(event.transitionType(), event.stage());
         // Non-version-gated stages ack immediately on receipt.
-        if (event.topicVersionToAwait() <= 0) {
+        if (!event.awaitVersion()) {
             ackOk(event);
             return;
         }
@@ -102,7 +103,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             e -> {
                 // Any unexpected failure in the poll loop must still notify the controller, otherwise
                 // its stage barrier waits until timeout for an ack that will never come.
-                log.error("transition poll loop failed for {} op={}", event.topicFqn(), event.opId(), e);
+                log.error("transition poll loop failed for {} op={}", event.topicFqn().toFqn(), event.opId(), e);
                 ackFail(event, "transition poll error: " + e.getMessage());
             }
         );
@@ -141,7 +142,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private long currentVersion(TransitionEvent event) {
-        return topicCache.get(event.topicFqn())
+        return topicCache.get(event.topicFqn().toFqn())
                          .map(Resource::getVersion)
                          .map(Integer::longValue)
                          .orElse(VERSION_ABSENT);
@@ -153,7 +154,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        BiFunction<String, String, CompletableFuture<TransitionPrepareResult>> warmer = prepareActions.get(
+        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> warmer = prepareActions.get(
             event.transitionType()
         );
         if (warmer == null) {
@@ -169,7 +170,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             if (t != null) {
                 log.warn(
                     "Transition PREPARE warm failed for {} op={} type={}",
-                    event.topicFqn(),
+                    event.topicFqn().toFqn(),
                     event.opId(),
                     event.transitionType(),
                     t
@@ -181,7 +182,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 metrics.prepareNotInvolved(event.transitionType());
                 log.debug(
                     "Transition PREPARE: pod not involved for {} op={} type={}; nothing to pre-warm",
-                    event.topicFqn(),
+                    event.topicFqn().toFqn(),
                     event.opId(),
                     event.transitionType()
                 );

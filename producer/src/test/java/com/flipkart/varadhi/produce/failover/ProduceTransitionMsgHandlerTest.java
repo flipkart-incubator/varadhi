@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
@@ -43,6 +44,7 @@ class ProduceTransitionMsgHandlerTest {
     private static final String PROJECT = "proj";
     private static final String TOPIC = "topic1";
     private static final String FQN = PROJECT + "." + TOPIC;
+    private static final VaradhiTopicName TOPIC_NAME = VaradhiTopicName.of(PROJECT, TOPIC);
     private static final String TARGET_REGION = "region-b";
     private static final String TARGET_STORAGE_TOPIC_ID = "7";
 
@@ -112,7 +114,9 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
-            ClusterMessage.of(TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER))
+            ClusterMessage.of(
+                TransitionEvent.forPrepare(OP_ID, TOPIC_NAME, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER)
+            )
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -132,7 +136,13 @@ class ProduceTransitionMsgHandlerTest {
 
         h.handle(
             ClusterMessage.of(
-                TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_STORAGE_TOPIC_ID, TransitionType.STORAGE_MIGRATION)
+                TransitionEvent.forPrepare(
+                    OP_ID,
+                    TOPIC_NAME,
+                    10,
+                    TARGET_STORAGE_TOPIC_ID,
+                    TransitionType.STORAGE_MIGRATION
+                )
             )
         );
 
@@ -154,7 +164,9 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
-            ClusterMessage.of(TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER))
+            ClusterMessage.of(
+                TransitionEvent.forPrepare(OP_ID, TOPIC_NAME, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER)
+            )
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -172,7 +184,9 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
-            ClusterMessage.of(TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER))
+            ClusterMessage.of(
+                TransitionEvent.forPrepare(OP_ID, TOPIC_NAME, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER)
+            )
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -188,7 +202,9 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
         h.handle(
-            ClusterMessage.of(TransitionEvent.forPrepare(OP_ID, FQN, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER))
+            ClusterMessage.of(
+                TransitionEvent.forPrepare(OP_ID, TOPIC_NAME, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER)
+            )
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -203,7 +219,7 @@ class ProduceTransitionMsgHandlerTest {
         seed(11);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, FQN, 11, TransitionType.TOPIC_FAILOVER)));
+        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, TOPIC_NAME, 11, TransitionType.TOPIC_FAILOVER)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
@@ -218,7 +234,7 @@ class ProduceTransitionMsgHandlerTest {
         // The version is not present at first; it propagates into the cache shortly after.
         scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
-        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, FQN, 11, TransitionType.TOPIC_FAILOVER)));
+        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, TOPIC_NAME, 11, TransitionType.TOPIC_FAILOVER)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         assertTrue(acker.acks.get(0).success());
@@ -228,7 +244,7 @@ class ProduceTransitionMsgHandlerTest {
     void switchAcksFailureOnTimeout() throws Exception {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
-        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, FQN, 11, TransitionType.TOPIC_FAILOVER)));
+        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, TOPIC_NAME, 11, TransitionType.TOPIC_FAILOVER)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
@@ -242,7 +258,7 @@ class ProduceTransitionMsgHandlerTest {
         seed(12);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, FQN, 11, TransitionType.TOPIC_FAILOVER)));
+        h.handle(ClusterMessage.of(TransitionEvent.forSwitch(OP_ID, TOPIC_NAME, 11, TransitionType.TOPIC_FAILOVER)));
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
@@ -257,7 +273,7 @@ class ProduceTransitionMsgHandlerTest {
 
         h.handle(
             ClusterMessage.of(
-                TransitionEvent.forStage(OP_ID, FQN, TransitionStage.COMPLETED, TransitionType.TOPIC_FAILOVER)
+                TransitionEvent.forStage(OP_ID, TOPIC_NAME, TransitionStage.COMPLETED, TransitionType.TOPIC_FAILOVER)
             )
         );
 
@@ -273,7 +289,7 @@ class ProduceTransitionMsgHandlerTest {
 
         h.handle(
             ClusterMessage.of(
-                TransitionEvent.forStage(OP_ID, FQN, TransitionStage.ABORTED, TransitionType.TOPIC_FAILOVER)
+                TransitionEvent.forStage(OP_ID, TOPIC_NAME, TransitionStage.ABORTED, TransitionType.TOPIC_FAILOVER)
             )
         );
 
@@ -284,18 +300,18 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     @Test
-    void drainAcksOkImmediatelyWithoutVersionWait() throws Exception {
+    void pendingAcksOkImmediatelyWithoutVersionWait() throws Exception {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
             ClusterMessage.of(
-                TransitionEvent.forStage(OP_ID, FQN, TransitionStage.DRAIN, TransitionType.TOPIC_FAILOVER)
+                TransitionEvent.forStage(OP_ID, TOPIC_NAME, TransitionStage.PENDING, TransitionType.TOPIC_FAILOVER)
             )
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
-        assertEquals(TransitionStage.DRAIN, ack.stage());
+        assertEquals(TransitionStage.PENDING, ack.stage());
         assertTrue(ack.success());
     }
 
@@ -305,20 +321,20 @@ class ProduceTransitionMsgHandlerTest {
      * is set — mirroring a pod that is not producing the topic.
      */
     private static final class RecordingWarmer implements
-        BiFunction<String, String, CompletableFuture<TransitionPrepareResult>> {
+        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> {
         private final CopyOnWriteArrayList<String> warmed = new CopyOnWriteArrayList<>();
         private volatile RuntimeException toFail;
         private volatile boolean notInvolved;
 
         @Override
-        public CompletableFuture<TransitionPrepareResult> apply(String topicFqn, String target) {
+        public CompletableFuture<TransitionPrepareResult> apply(VaradhiTopicName topicFqn, String target) {
             if (toFail != null) {
                 return CompletableFuture.failedFuture(toFail);
             }
             if (notInvolved) {
                 return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
             }
-            warmed.add(topicFqn + "@" + target);
+            warmed.add(topicFqn.toFqn() + "@" + target);
             return CompletableFuture.completedFuture(TransitionPrepareResult.WARMED);
         }
     }

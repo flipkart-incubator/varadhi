@@ -20,12 +20,12 @@ package com.flipkart.varadhi.entities.cluster.failover;
  *       (N+1) so produce re-gates to the new region.</li>
  * </ul>
  *
- * <p>All other stages ({@link #PENDING}, {@link #DRAIN}, {@link #COMPLETED},
- * {@link #ABORTED}) carry no version and are acked immediately on receipt — a
- * confirmation that the pod processed the stage.
+ * <p>All other stages ({@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED}) carry no
+ * version and are acked immediately on receipt — a confirmation that the pod processed the
+ * stage.
  */
 public enum TransitionStage {
-    PENDING, PREPARE, SWITCH, DRAIN, COMPLETED, ABORTED;
+    PENDING, PREPARE, SWITCH, COMPLETED, ABORTED;
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
