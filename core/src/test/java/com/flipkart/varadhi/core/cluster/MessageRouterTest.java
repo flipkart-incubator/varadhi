@@ -13,6 +13,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,15 +75,47 @@ public class MessageRouterTest {
     }
 
     @Test
+    public void testSendHandlerReceivesExactPayload(VertxTestContext testContext) throws Exception {
+        // The handler must receive the same message id/data that was sent (round-trip integrity).
+        Checkpoint received = testContext.checkpoint(1);
+        Checkpoint delivered = testContext.checkpoint(1);
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        ClusterMessage sent = getClusterMessage("payload-1");
+        mr.sendHandler("addr", "echo", message -> testContext.verify(() -> {
+            Assertions.assertEquals(sent.getId(), message.getId());
+            Assertions.assertEquals("payload-1", message.getData(String.class));
+            received.flag();
+        }));
+        Future.fromCompletionStage(me.send("addr", "echo", sent))
+              .onComplete(testContext.succeeding(v -> delivered.flag()));
+    }
+
+    @Test
     public void testPublishMessageFansOutToAllHandlers(VertxTestContext testContext) throws Exception {
         // publish fans out to every registered handler at the same address.
         Checkpoint checkpoint = testContext.checkpoint(2);
         Vertx vertx = createClusteredVertx();
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.publishHandler("failover", "stageEvent", message -> checkpoint.flag());
-        mr.publishHandler("failover", "stageEvent", message -> checkpoint.flag());
+        mr.publishHandler("route", "api", message -> checkpoint.flag());
+        mr.publishHandler("route", "api", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
-        vertx.eventBus().publish("failover.stageEvent.publish", JsonMapper.jsonSerialize(cm));
+        vertx.eventBus().publish("route.api.publish", JsonMapper.jsonSerialize(cm));
+    }
+
+    @Test
+    public void testPublishHandlerSwallowsHandlerExceptions(VertxTestContext testContext) throws Exception {
+        // A throwing publish handler must not prevent other handlers at the same address from
+        // receiving the message (publish is fire-and-forget; exceptions are only logged).
+        Checkpoint healthy = testContext.checkpoint(1);
+        Vertx vertx = createClusteredVertx();
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.publishHandler("route", "api", message -> {
+            throw new RuntimeException("boom");
+        });
+        mr.publishHandler("route", "api", message -> healthy.flag());
+        vertx.eventBus().publish("route.api.publish", JsonMapper.jsonSerialize(getClusterMessage("foo")));
     }
 
     ClusterMessage getClusterMessage(String data) {

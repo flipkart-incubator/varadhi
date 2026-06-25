@@ -8,17 +8,20 @@ import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
-import com.flipkart.varadhi.core.cluster.failover.FailoverChannels;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.MetricsOptions;
+import com.flipkart.varadhi.core.config.ProducerOptions;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.failover.ControllerFailoverClient;
-import com.flipkart.varadhi.produce.failover.FailoverAckTriggerHandler;
-import com.flipkart.varadhi.produce.failover.PodFailoverConfig;
+import com.flipkart.varadhi.produce.failover.ControllerTransitionAckClient;
+import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
+import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -76,6 +79,10 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -124,7 +131,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
-    private java.util.concurrent.ScheduledExecutorService failoverScheduler;
+    private ScheduledExecutorService transitionScheduler;
 
     /**
      * Creates a new WebServerVerticle with the specified configuration and services.
@@ -225,8 +232,8 @@ public class WebServerVerticle extends AbstractVerticle {
     @Override
     public void stop(Promise<Void> stopPromise) {
         log.info("Stopping HttpServer");
-        if (failoverScheduler != null) {
-            failoverScheduler.shutdownNow();
+        if (transitionScheduler != null) {
+            transitionScheduler.shutdownNow();
         }
         if (httpServer != null) {
             httpServer.close(stopPromise);
@@ -299,41 +306,53 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
-        setupFailoverAckHandler();
+        setupTransitionStageHandler();
     }
 
     /**
-     * Registers the pod-side failover stage handler on the broadcast bus. The handler is
-     * inert until the controller starts publishing {@code FailoverEvent}s, and the
-     * produce path itself is unchanged (it already gates on per-region {@code TopicState}).
+     * Registers the pod-side topic-transition stage handler on the broadcast bus. The handler is
+     * inert until the controller starts publishing {@code TransitionEvent}s, and the produce path
+     * itself is unchanged (it already gates on per-region {@code TopicState}).
      */
-    private void setupFailoverAckHandler() {
+    private void setupTransitionStageHandler() {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(
             ResourceType.TOPIC
         );
-        this.failoverScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
-            r -> new Thread(r, "failover-switch-wait")
+        this.transitionScheduler = Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "topic-transition-version-wait")
         );
         ProducerService producerService = serviceRegistry.get(ProducerService.class);
-        // PREPARE pre-warm action per transition type. Only TOPIC_FAILOVER is wired today;
-        // other transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by
-        // registering their own action here.
-        Map<TransitionType, java.util.function.BiConsumer<String, String>> prepareActions = Map.of(
+        // PREPARE pre-warm action per transition type. Only TOPIC_FAILOVER is wired today; other
+        // transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by registering their own
+        // action here. The failover action interprets the event's opaque target as the region to
+        // pre-warm and returns a future so producer creation never blocks the scheduler thread.
+        Map<TransitionType, BiFunction<String, String, CompletableFuture<Void>>> prepareActions = Map.of(
             TransitionType.TOPIC_FAILOVER,
-            producerService::warmProducer
+            (topicFqn, targetRegion) -> producerService.getProducer(
+                VaradhiTopicName.parse(topicFqn),
+                RegionName.of(targetRegion)
+            ).thenApply(producer -> null)
         );
-        FailoverAckTriggerHandler handler = new FailoverAckTriggerHandler(
+        ProducerOptions producerOptions = configuration.getProducerOptions();
+        ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
-            new ControllerFailoverClient(messageExchange),
+            new ControllerTransitionAckClient(messageExchange),
             prepareActions,
-            PodFailoverConfig.defaultConfig(),
-            failoverScheduler
+            new PodTransitionConfig(
+                producerOptions.getTransitionVersionWaitMs(),
+                producerOptions.getTransitionPollIntervalMs()
+            ),
+            transitionScheduler
         );
-        messageRouter.publishHandler(FailoverChannels.FAILOVER_ROUTE, FailoverChannels.STAGE_EVENT_API, handler);
-        log.info("Registered failover stage handler for region {}", verticleConfig.deployedRegion());
+        messageRouter.publishHandler(
+            TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
+            TransitionBusAddress.STAGE_BROADCAST_API,
+            handler
+        );
+        log.info("Registered topic-transition stage handler for region {}", verticleConfig.deployedRegion());
     }
 
     /**

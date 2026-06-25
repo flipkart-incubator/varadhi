@@ -16,6 +16,13 @@ import java.util.Objects;
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
+    /**
+     * Runtime produce state per region (keyed by the same region key used in
+     * {@link #internalTopics}). Moved here from {@code SegmentedStorageTopic} so the
+     * topic — the entity replicated to every pod's {@code TopicCache} — owns the
+     * routing-relevant state that the produce gate and topic failover read.
+     */
+    private final Map<String, TopicState> topicStates;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
     private final String nfrFilterName;
@@ -43,6 +50,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         boolean grouped,
         TopicCapacityPolicy capacity,
         Map<String, SegmentedStorageTopic> internalTopics,
+        Map<String, TopicState> topicStates,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory
@@ -51,6 +59,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
+        this.topicStates = topicStates != null ? topicStates : new HashMap<>();
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.status = status;
@@ -106,6 +115,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             grouped,
             capacity,
             new HashMap<>(),
+            new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory
@@ -124,13 +134,45 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
-     * Adds an internal topic for a specific region.
+     * Adds an internal topic for a specific region and initializes the region's produce
+     * state to {@link TopicState#Producing} if not already set.
      *
      * @param region        the region for the internal topic
      * @param internalTopic the internal topic to add
      */
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
+        this.topicStates.putIfAbsent(region, TopicState.Producing);
+    }
+
+    /**
+     * Returns the produce {@link TopicState} for {@code region}, defaulting to
+     * {@link TopicState#Producing} when no explicit state has been recorded for a region
+     * that has an internal topic.
+     *
+     * @param region the region whose produce state is requested
+     * @return the region's produce state, or {@code null} if the region is unknown to this topic
+     */
+    public TopicState getTopicState(RegionName region) {
+        Objects.requireNonNull(region, "region must not be null");
+        String key = region.value();
+        if (!internalTopics.containsKey(key)) {
+            return null;
+        }
+        return topicStates.getOrDefault(key, TopicState.Producing);
+    }
+
+    /**
+     * Sets the produce {@link TopicState} for {@code region}. Used by topic failover to flip
+     * a region between {@link TopicState#Producing} and {@link TopicState#Replicating}.
+     *
+     * @param region the region whose produce state is being set
+     * @param state  the new produce state; must not be {@code null}
+     */
+    public void setTopicState(RegionName region, TopicState state) {
+        Objects.requireNonNull(region, "region must not be null");
+        Objects.requireNonNull(state, "topic state must not be null");
+        this.topicStates.put(region.value(), state);
     }
 
     /**

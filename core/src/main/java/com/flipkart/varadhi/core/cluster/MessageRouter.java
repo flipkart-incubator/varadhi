@@ -86,10 +86,12 @@ public class MessageRouter {
     }
 
     /**
-     * Registers a handler for broadcast (publish) messages. Every node that registers a
-     * handler at {@code <routeName>.<apiName>.publish} receives a copy of each published
-     * message. Publish is fire-and-forget, so unlike {@link #sendHandler} and
-     * {@link #requestHandler} no reply is sent back to the publisher.
+     * Registers a consumer for broadcast (publish) messages at
+     * {@code <routeName>.<apiName>.publish}. Vert.x {@code EventBus.publish} delivers the
+     * message to <em>all</em> consumers registered on that address across the cluster (as
+     * opposed to {@code send}, which picks a single consumer round-robin); see the Vert.x
+     * Event Bus docs on publish/subscribe semantics. Publish is fire-and-forget, so unlike
+     * {@link #sendHandler} and {@link #requestHandler} no reply is sent back to the publisher.
      */
     public void publishHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
@@ -102,7 +104,8 @@ public class MessageRouter {
                 // Publish has no transport-level reply (unlike send/request), so an unexpected
                 // exception here can only be logged. Any application-level acknowledgment is the
                 // handler's responsibility and is sent as a separate message, not a bus reply.
-                log.error("publish handler.handle({}) Unhandled exception: {}", message.body(), e.getMessage());
+                // Log the message id (not the full body) with the full stack trace for diagnosis.
+                log.error("publish handler.handle failed for msg {} on {}", msg.getId(), apiPath, e);
             }
         });
     }

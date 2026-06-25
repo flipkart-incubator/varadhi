@@ -208,9 +208,10 @@ public final class ProducerService {
             throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
         }
 
-        if (!internalTopic.getTopicState().isProduceAllowed()) {
+        TopicState topicState = topic.getTopicState(RegionName.of(produceRegion));
+        if (!topicState.isProduceAllowed()) {
             return CompletableFuture.completedFuture(
-                ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
+                ProduceResult.ofNonProducingTopic(message.getMessageId(), topicState)
             );
         }
 
@@ -259,28 +260,37 @@ public final class ProducerService {
     }
 
     /**
-     * Eagerly creates and caches the producer for the given {@code region}, so that a
-     * subsequent produce does not pay the producer-creation cost. Used during failover
-     * PREPARE to pre-warm the <em>target</em> region before its {@code TopicState} flips to
-     * producing (produce keeps flowing to the old region until SWITCH).
-     * <p>
-     * It is a no-op when the topic has no produce topic configured for {@code region}
-     * (nothing to warm). Any failure to create the producer is propagated to the caller.
+     * Resolves (creating and caching on first use) the producer for {@code topicName} in
+     * {@code region}, asynchronously. This is the producer-object accessor for a given topic
+     * and region; callers decide what to do with it (produce, or pre-warm ahead of a topic
+     * transition's SWITCH). It does not block: the returned future completes once the producer
+     * is available, or fails if it cannot be created.
      *
-     * @param topicFQN the full name of the Varadhi topic to warm
-     * @param region   the region whose producer should be pre-created
-     * @throws ResourceNotFoundException if the topic is not present in this pod's cache
+     * @param topicName the Varadhi topic whose producer is requested
+     * @param region    the region the producer produces to
+     * @return a future completing with the producer, or failing with
+     *         {@link ResourceNotFoundException} if the topic is absent from this pod's cache or
+     *         has no produce configuration for {@code region}
      */
-    public void warmProducer(String topicFQN, String region) {
-        var topic = topicCache.get(topicFQN);
+    public CompletableFuture<Producer<? extends Offset>> getProducer(VaradhiTopicName topicName, RegionName region) {
+        String topicFQN = topicName.toFqn();
+        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(topicFQN);
         if (topic.isEmpty()) {
-            throw new ResourceNotFoundException("Topic(%s) does not exist in region(%s).".formatted(topicFQN, region));
+            return CompletableFuture.failedFuture(
+                new ResourceNotFoundException("Topic(%s) does not exist.".formatted(topicFQN))
+            );
         }
-        SegmentedStorageTopic internalTopic = topic.get().getEntity().getProduceTopicForRegion(region);
+        SegmentedStorageTopic internalTopic = topic.get().getEntity().getProduceTopicForRegion(region.value());
         if (internalTopic == null) {
-            return;
+            // A transition target the pod cannot serve: surface it so the controller's PREPARE
+            // barrier fails fast rather than silently proceeding to a SWITCH the pod can't honor.
+            return CompletableFuture.failedFuture(
+                new ResourceNotFoundException(
+                    "Topic(%s) has no produce configuration for region(%s).".formatted(topicFQN, region.value())
+                )
+            );
         }
-        getProducer(topicFQN, internalTopic.getTopicToProduce(), region).join();
+        return getProducer(topicFQN, internalTopic.getTopicToProduce(), region.value());
     }
 
     /**

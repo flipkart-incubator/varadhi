@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.entities.cluster.failover;
 
 /**
- * The kind of topic transition a {@link FailoverEvent} drives. The pod-side handler
+ * The kind of topic transition a {@link TransitionEvent} drives. The pod-side handler
  * and the controller orchestration share the same stage machine
- * ({@link FailoverStage}), ack barrier and version-convergence mechanics; only the
- * per-stage work and the meaning of {@link FailoverEvent#target()} differ per type.
+ * ({@link TransitionStage}), ack barrier and version-convergence mechanics; only the
+ * per-stage work and the meaning of {@link TransitionEvent#target()} differ per type.
  *
  * <ul>
  *   <li>{@link #TOPIC_FAILOVER} — switch produce authority for a topic from one region

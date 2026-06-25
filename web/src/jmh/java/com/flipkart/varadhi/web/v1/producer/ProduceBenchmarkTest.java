@@ -19,7 +19,6 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.WebServerVerticle;
@@ -334,9 +333,8 @@ public class ProduceBenchmarkTest {
             // Create the topic in the messaging stack
             messagingStackProvider.getStorageTopicService().create(project, storageTopic, policy);
 
-            // Add as internal topic with proper state
+            // Add as internal topic (addInternalTopic defaults the region's TopicState to Producing).
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            segmentedTopic.setTopicState(TopicState.Producing);
             topic.addInternalTopic("default", segmentedTopic);
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));

@@ -22,4 +22,14 @@ public record RegionName(String value) {
             throw new IllegalArgumentException("region name cannot be blank");
         }
     }
+
+    /**
+     * Factory for a {@link RegionName} from its string value.
+     *
+     * @param value the region name string; must be non-null and non-blank
+     * @return a validated {@link RegionName}
+     */
+    public static RegionName of(String value) {
+        return new RegionName(value);
+    }
 }

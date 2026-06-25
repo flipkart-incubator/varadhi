@@ -290,6 +290,52 @@ class ProducerServiceTests {
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }
 
+    @Test
+    void getProducerReturnsProducerForExistingTopicAndRegion() {
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+        doReturn(producer).when(producerFactory).newProducer(any(), any());
+
+        Producer<? extends Offset> resolved = service.getProducer(
+            VaradhiTopicName.of(project.getName(), topic),
+            RegionName.of(region)
+        ).join();
+
+        Assertions.assertSame(producer, resolved);
+        verify(producerFactory, times(1)).newProducer(any(), any());
+    }
+
+    @Test
+    void getProducerFailsWhenTopicAbsentFromCache() {
+        when(topicReadCache.get(any())).thenReturn(Optional.empty());
+
+        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
+            VaradhiTopicName.of(project.getName(), topic),
+            RegionName.of(region)
+        );
+
+        CompletionException ex = Assertions.assertThrows(CompletionException.class, future::join);
+        assertTrue(ex.getCause() instanceof ResourceNotFoundException);
+        assertTrue(ex.getCause().getMessage().contains("does not exist"));
+        verify(producerFactory, never()).newProducer(any(), any());
+    }
+
+    @Test
+    void getProducerFailsWhenRegionNotConfigured() {
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
+            VaradhiTopicName.of(project.getName(), topic),
+            RegionName.of("unknown-region")
+        );
+
+        CompletionException ex = Assertions.assertThrows(CompletionException.class, future::join);
+        assertTrue(ex.getCause() instanceof ResourceNotFoundException);
+        assertTrue(ex.getCause().getMessage().contains("no produce configuration for region"));
+        verify(producerFactory, never()).newProducer(any(), any());
+    }
+
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
         return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
     }
@@ -306,8 +352,8 @@ class ProducerServiceTests {
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
         SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
-        ict.setTopicState(state);
         topic.addInternalTopic(region, ict);
+        topic.setTopicState(RegionName.of(region), state);
         return topic;
     }
 
