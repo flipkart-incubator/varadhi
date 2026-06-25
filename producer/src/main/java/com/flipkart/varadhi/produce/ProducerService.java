@@ -42,11 +42,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ProducerService {
 
-    private static final ExecutorService PRODUCER_LOAD_EXECUTOR = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "producer-cache-load");
-        t.setDaemon(true);
-        return t;
-    });
+    private static final int PRODUCER_LOAD_POOL_SIZE = Math.max(4, Runtime.getRuntime().availableProcessors());
+
+    private static final ExecutorService PRODUCER_LOAD_EXECUTOR = Executors.newFixedThreadPool(
+        PRODUCER_LOAD_POOL_SIZE,
+        r -> {
+            Thread t = new Thread(r, "producer-cache-load");
+            t.setDaemon(true);
+            return t;
+        }
+    );
 
     /**
      * A record that serves as a cache key for producers.
@@ -310,6 +315,11 @@ public final class ProducerService {
      * Used to decide PREPARE participation during a topic transition: only pods already producing
      * the topic pre-warm the target producer; others stay uninvolved and avoid creating producers
      * they would otherwise never use.
+     *
+     * <p>This is a <em>cache-presence</em> heuristic, not live traffic detection: a pod that
+     * recently evicted the producer from Caffeine may still be actively serving produce requests
+     * and will report {@code false}, skipping PREPARE pre-warm (first post-switch produce pays a
+     * cold-start cost).
      *
      * @param topicName the Varadhi topic to check
      * @return {@code true} if a producer for the topic is present in this pod's cache

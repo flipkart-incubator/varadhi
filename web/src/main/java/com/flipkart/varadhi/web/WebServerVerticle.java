@@ -317,6 +317,7 @@ public class WebServerVerticle extends AbstractVerticle {
      * itself is unchanged (it already gates on per-region {@code TopicState}).
      */
     private void setupTransitionStageHandler() {
+        // clusterManager is null in produce-only benchmarks (see ProduceBenchmarkTest).
         if (clusterManager == null) {
             log.info("Skipping topic-transition stage handler: no cluster manager configured (produce-only mode)");
             return;

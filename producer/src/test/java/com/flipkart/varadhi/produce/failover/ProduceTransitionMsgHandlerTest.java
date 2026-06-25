@@ -268,6 +268,24 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     @Test
+    void prepareAcksFailureWhenVersionOvershoots() throws Exception {
+        seed(11);
+        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
+
+        h.handle(
+            ClusterMessage.of(
+                TransitionEvent.forPrepare(OP_ID, TOPIC_NAME, 10, TARGET_REGION, TransitionType.TOPIC_FAILOVER)
+            )
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        TransitionAck ack = acker.acks.get(0);
+        assertEquals(TransitionStage.PREPARE, ack.stage());
+        assertFalse(ack.success());
+        assertTrue(ack.errorMsg().contains("overshot"));
+    }
+
+    @Test
     void completedAcksOkImmediately() throws Exception {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 

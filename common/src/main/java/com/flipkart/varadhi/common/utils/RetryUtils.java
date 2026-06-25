@@ -109,7 +109,8 @@ public final class RetryUtils {
 
     /**
      * Runs {@code probe} on {@code executor}, retrying while {@code retryOnResult} matches, up to
-     * {@code maxAttempts}.
+     * {@code maxAttempts}. Intended for result-based polling (e.g. cache convergence); does not
+     * attach {@code onFailedAttempt} listeners so expected “not yet ready” retries stay quiet.
      */
     public static <T> java.util.concurrent.CompletableFuture<T> getAsync(
         Executor executor,
@@ -120,9 +121,7 @@ public final class RetryUtils {
     ) {
         RetryPolicyBuilder<T> policy = RetryPolicy.<T>builder()
                                                   .withMaxAttempts(maxAttempts)
-                                                  .withDelay(Duration.ofMillis(delayInMs))
-                                                  .onFailedAttempt(RetryUtils::logFailedAttempt)
-                                                  .onRetriesExceeded(RetryUtils::logRetriesExceeded);
+                                                  .withDelay(Duration.ofMillis(delayInMs));
         return new Builder<>(policy).retryOnResultIf(retryOnResult).withExecutor(executor).getAsync(probe::get);
     }
 

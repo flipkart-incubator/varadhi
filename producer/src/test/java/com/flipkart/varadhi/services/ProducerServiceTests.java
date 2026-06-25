@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -334,6 +335,18 @@ class ProducerServiceTests {
         assertTrue(ex.getCause() instanceof ResourceNotFoundException);
         assertTrue(ex.getCause().getMessage().contains("no produce configuration for region"));
         verify(producerFactory, never()).newProducer(any(), any());
+    }
+
+    @Test
+    void isProducingTopicReflectsProducerCachePresence() {
+        VaradhiTopicName topicName = VaradhiTopicName.of(project.getName(), topic);
+        assertFalse(service.isProducingTopic(topicName));
+
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+        service.getProducer(topicName, RegionName.of(region)).join();
+
+        assertTrue(service.isProducingTopic(topicName));
     }
 
     @Test
