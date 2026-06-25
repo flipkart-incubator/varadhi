@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicTest {
@@ -172,6 +173,16 @@ class VaradhiTopicTest {
         assertAll(
             () -> assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)),
             () -> assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC))
+        );
+    }
+
+    @Test
+    void setTopicState_rejectsUnknownRegion() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> varadhiTopic.setTopicState(RegionName.of("unknown"), TopicState.Producing)
         );
     }
 

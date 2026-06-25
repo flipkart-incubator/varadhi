@@ -317,6 +317,10 @@ public class WebServerVerticle extends AbstractVerticle {
      * itself is unchanged (it already gates on per-region {@code TopicState}).
      */
     private void setupTransitionStageHandler() {
+        if (clusterManager == null) {
+            log.info("Skipping topic-transition stage handler: no cluster manager configured (produce-only mode)");
+            return;
+        }
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(

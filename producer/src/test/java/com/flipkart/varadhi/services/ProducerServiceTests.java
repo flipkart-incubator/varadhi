@@ -336,6 +336,41 @@ class ProducerServiceTests {
         verify(producerFactory, never()).newProducer(any(), any());
     }
 
+    @Test
+    void getProducerUsesDistinctCacheEntriesPerRegion() {
+        String regionB = "region-b";
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        StorageTopic storageA = new DummyStorageTopic(entity.getName() + ".a");
+        StorageTopic storageB = new DummyStorageTopic(entity.getName() + ".b");
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(storageA));
+        entity.addInternalTopic(regionB, SegmentedStorageTopic.of(storageB));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Producer<? extends Offset> producerB = spy(new DummyProducer(JsonMapper.getMapper()));
+        doReturn(producer).doReturn(producerB).when(producerFactory).newProducer(any(), any());
+
+        Producer<? extends Offset> resolvedA = service.getProducer(
+            VaradhiTopicName.of(project.getName(), topic),
+            RegionName.of(region)
+        ).join();
+        Producer<? extends Offset> resolvedB = service.getProducer(
+            VaradhiTopicName.of(project.getName(), topic),
+            RegionName.of(regionB)
+        ).join();
+
+        Assertions.assertSame(producer, resolvedA);
+        Assertions.assertSame(producerB, resolvedB);
+        verify(producerFactory, times(2)).newProducer(any(), any());
+    }
+
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
         return Resource.of(getTopic(TopicState.Producing, name, project, region), ResourceType.TOPIC);
     }

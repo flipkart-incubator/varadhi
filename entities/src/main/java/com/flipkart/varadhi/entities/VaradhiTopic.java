@@ -172,7 +172,11 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     public void setTopicState(RegionName region, TopicState state) {
         Objects.requireNonNull(region, "region must not be null");
         Objects.requireNonNull(state, "topic state must not be null");
-        this.topicStates.put(region.value(), state);
+        String key = region.value();
+        if (!internalTopics.containsKey(key)) {
+            throw new IllegalArgumentException("unknown region for topic: " + key);
+        }
+        this.topicStates.put(key, state);
     }
 
     /**

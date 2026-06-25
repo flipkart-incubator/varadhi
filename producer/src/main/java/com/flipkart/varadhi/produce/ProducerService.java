@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -40,6 +42,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ProducerService {
 
+    private static final ExecutorService PRODUCER_LOAD_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "producer-cache-load");
+        t.setDaemon(true);
+        return t;
+    });
+
     /**
      * A record that serves as a cache key for producers.
      *
@@ -61,17 +69,16 @@ public final class ProducerService {
     private final String produceRegion;
 
     /**
-     * Cache for Varad
+     * Cache for {@link OrgDetails}.
      */
     private final ResourceReadCache<OrgDetails> orgCache;
     /**
-     * Cache for Varad
+     * Cache for {@link Project} resources.
      */
     private final ResourceReadCache<Resource.EntityResource<Project>> projectCache;
     /**
      * Cache for VaradhiTopic resource.
      */
-
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     private final Map<String, ProducerMetrics> metrics = new ConcurrentHashMap<>();
@@ -247,15 +254,19 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(producer);
         }
 
+        return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key, storageTopic), PRODUCER_LOAD_EXECUTOR);
+    }
+
+    private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key, StorageTopic storageTopic) {
         try {
-            return CompletableFuture.completedFuture(producerCache.get(key));
+            return producerCache.get(key);
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
                 storageTopic.getName(),
-                e.getMessage()
+                e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()
             );
-            return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
+            throw new ProduceException(errorMsg, e);
         }
     }
 
@@ -263,8 +274,9 @@ public final class ProducerService {
      * Resolves (creating and caching on first use) the producer for {@code topicName} in
      * {@code region}, asynchronously. This is the producer-object accessor for a given topic
      * and region; callers decide what to do with it (produce, or pre-warm ahead of a topic
-     * transition's SWITCH). It does not block: the returned future completes once the producer
-     * is available, or fails if it cannot be created.
+     * transition's SWITCH). On a cache hit the future completes immediately; on a miss the
+     * producer is created on a dedicated worker thread so callers (including the transition
+     * scheduler) are not blocked.
      *
      * @param topicName the Varadhi topic whose producer is requested
      * @param region    the region the producer produces to

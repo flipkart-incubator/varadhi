@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.produce.failover;
 
-import com.flipkart.varadhi.common.utils.ScheduledPoller;
+import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -85,28 +85,37 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             return;
         }
         // handle() runs on the event-bus thread that delivered this publish. The version wait (and
-        // the PREPARE pre-warm it triggers) runs on the transition scheduler via ScheduledPoller so
-        // the event bus is never stalled; we only supply the domain probe and terminal handlers.
-        long deadlineInMs = System.currentTimeMillis() + config.podVersionWaitMs();
-        ScheduledPoller.pollUntil(
+        // the PREPARE pre-warm it triggers) runs on the transition scheduler via RetryUtils so the
+        // event bus is never stalled.
+        int maxAttempts = Math.max(1, (int)Math.ceil((double)config.podVersionWaitMs() / config.podPollIntervalMs()));
+        RetryUtils.getAsync(
             scheduler,
-            () -> probeVersion(event),
+            maxAttempts,
             config.podPollIntervalMs(),
-            deadlineInMs,
-            current -> onVersionResolved(event, current),
-            () -> ackFail(
-                event,
-                "timeout awaiting topic version " + event.topicVersionToAwait() + " (current " + describe(
-                    currentVersion(event)
-                ) + ")"
-            ),
-            e -> {
-                // Any unexpected failure in the poll loop must still notify the controller, otherwise
-                // its stage barrier waits until timeout for an ack that will never come.
-                log.error("transition poll loop failed for {} op={}", event.topicFqn().toFqn(), event.opId(), e);
-                ackFail(event, "transition poll error: " + e.getMessage());
+            Optional::isEmpty,
+            () -> probeVersion(event)
+        ).whenComplete((outcome, t) -> {
+            if (t != null) {
+                if (RetryUtils.isRetriesExceeded(t)) {
+                    ackFail(event, versionWaitTimeoutMessage(event));
+                    return;
+                }
+                log.error("transition version wait failed for {} op={}", event.topicFqn().toFqn(), event.opId(), t);
+                ackFail(event, "transition poll error: " + RetryUtils.rootMessage(t));
+                return;
             }
-        );
+            if (outcome.isEmpty()) {
+                ackFail(event, versionWaitTimeoutMessage(event));
+                return;
+            }
+            onVersionResolved(event, outcome.get());
+        });
+    }
+
+    private String versionWaitTimeoutMessage(TransitionEvent event) {
+        return "timeout awaiting topic version " + event.topicVersionToAwait() + " (current " + describe(
+            currentVersion(event)
+        ) + ")";
     }
 
     /**
@@ -202,6 +211,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void ackFail(TransitionEvent event, String errorMsg) {
         metrics.stageAcked(event.transitionType(), event.stage(), false);
-        ackClient.ack(TransitionAck.failure(event.opId(), hostname, event.stage(), errorMsg));
+        String msg = (errorMsg == null || errorMsg.isBlank()) ? "transition stage failed" : errorMsg;
+        ackClient.ack(TransitionAck.failure(event.opId(), hostname, event.stage(), msg));
     }
 }

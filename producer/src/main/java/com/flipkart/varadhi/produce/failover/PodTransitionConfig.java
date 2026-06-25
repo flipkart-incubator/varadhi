@@ -11,6 +11,15 @@ package com.flipkart.varadhi.produce.failover;
  */
 public record PodTransitionConfig(long podVersionWaitMs, long podPollIntervalMs) {
 
+    public PodTransitionConfig {
+        if (podVersionWaitMs <= 0) {
+            throw new IllegalArgumentException("podVersionWaitMs must be positive");
+        }
+        if (podPollIntervalMs <= 0) {
+            throw new IllegalArgumentException("podPollIntervalMs must be positive");
+        }
+    }
+
     public static PodTransitionConfig defaultConfig() {
         return new PodTransitionConfig(5000L, 25L);
     }

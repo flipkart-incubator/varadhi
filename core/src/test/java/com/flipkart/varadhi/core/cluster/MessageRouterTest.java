@@ -18,6 +18,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+
 
 @ExtendWith (VertxExtension.class)
 public class MessageRouterTest {
@@ -25,6 +29,7 @@ public class MessageRouterTest {
     private TestingServer zkCuratorTestingServer;
     private CuratorFramework zkCuratorFramework;
     private VaradhiZkClusterManager vZkCm;
+    private final List<Vertx> clusteredVertxInstances = new CopyOnWriteArrayList<>();
 
     // TODO:: Tests needs to be added, so this will go under refactor
     @BeforeEach
@@ -40,17 +45,23 @@ public class MessageRouterTest {
 
     @AfterEach
     public void tearDown() throws Exception {
+        for (Vertx vertx : clusteredVertxInstances) {
+            vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        }
+        clusteredVertxInstances.clear();
         zkCuratorFramework.close();
         zkCuratorTestingServer.close();
     }
 
     private Vertx createClusteredVertx() throws Exception {
-        return Vertx.builder()
-                    .withClusterManager(vZkCm)
-                    .buildClustered()
-                    .toCompletionStage()
-                    .toCompletableFuture()
-                    .get();
+        Vertx vertx = Vertx.builder()
+                           .withClusterManager(vZkCm)
+                           .buildClustered()
+                           .toCompletionStage()
+                           .toCompletableFuture()
+                           .get();
+        clusteredVertxInstances.add(vertx);
+        return vertx;
     }
 
     //    @Test
