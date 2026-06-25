@@ -52,7 +52,7 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
         this.rejectedCount = Counter.builder("producer.rejected.count").tag("topic", topicFQN).register(registry);
 
         // relying on the registry to dedup it for other ProducerMetricsImpl instances. Since instance creation is rare
-        // operation, this is success.
+        // operation, this is ok.
         this.successTimer = Timer.builder("producer.latency")
                                  .tag("result", "success")
                                  .publishPercentileHistogram()
