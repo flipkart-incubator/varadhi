@@ -333,7 +333,7 @@ public class ProduceBenchmarkTest {
             // Create the topic in the messaging stack
             messagingStackProvider.getStorageTopicService().create(project, storageTopic, policy);
 
-            // Add as internal topic (addInternalTopic defaults the region's TopicState to Producing).
+            // Add as internal topic for the deployment region.
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
             topic.addInternalTopic("default", segmentedTopic);
 

@@ -59,7 +59,7 @@ class VaradhiTopicFactoryTest {
 
         assertNotNull(varadhiTopic);
         SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
-        assertEquals(TopicState.Producing, varadhiTopic.getTopicState(RegionName.of(REGION)));
+        assertEquals(TopicState.Producing, varadhiTopic.getTopicState());
         assertNotNull(internalTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
@@ -110,7 +110,7 @@ class VaradhiTopicFactoryTest {
 
         SegmentedStorageTopic internalCompositeTopic = varadhiTopic.getProduceTopicForRegion(REGION);
         assertNotNull(internalCompositeTopic);
-        assertEquals(TopicState.Producing, varadhiTopic.getTopicState(RegionName.of(REGION)));
+        assertEquals(TopicState.Producing, varadhiTopic.getTopicState());
         assertNotNull(internalCompositeTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(

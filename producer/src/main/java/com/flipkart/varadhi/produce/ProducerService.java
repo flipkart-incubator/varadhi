@@ -220,7 +220,7 @@ public final class ProducerService {
             throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
         }
 
-        TopicState topicState = topic.getTopicState(RegionName.of(produceRegion));
+        TopicState topicState = topic.getTopicState();
         if (!topicState.isProduceAllowed()) {
             return CompletableFuture.completedFuture(
                 ProduceResult.ofNonProducingTopic(message.getMessageId(), topicState)

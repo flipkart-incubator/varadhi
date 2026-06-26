@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.core.cluster;
 
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.entities.JsonMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -108,11 +107,12 @@ public class MessageRouterTest {
         // publish fans out to every registered handler at the same address.
         Checkpoint checkpoint = testContext.checkpoint(2);
         Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
         mr.publishHandler("route", "api", message -> checkpoint.flag());
         mr.publishHandler("route", "api", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
-        vertx.eventBus().publish("route.api.publish", JsonMapper.jsonSerialize(cm));
+        me.publish("route", "api", cm);
     }
 
     @Test
@@ -121,12 +121,13 @@ public class MessageRouterTest {
         // receiving the message (publish is fire-and-forget; exceptions are only logged).
         Checkpoint healthy = testContext.checkpoint(1);
         Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
         mr.publishHandler("route", "api", message -> {
             throw new RuntimeException("boom");
         });
         mr.publishHandler("route", "api", message -> healthy.flag());
-        vertx.eventBus().publish("route.api.publish", JsonMapper.jsonSerialize(getClusterMessage("foo")));
+        me.publish("route", "api", getClusterMessage("foo"));
     }
 
     ClusterMessage getClusterMessage(String data) {

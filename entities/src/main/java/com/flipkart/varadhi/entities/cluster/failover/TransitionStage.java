@@ -30,4 +30,19 @@ public enum TransitionStage {
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
     }
+
+    /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */
+    public boolean isVersionGated() {
+        return this == PREPARE || this == SWITCH;
+    }
+
+    /** Stages acked immediately on receipt with no version wait. */
+    public boolean isImmediateAck() {
+        return !isVersionGated();
+    }
+
+    /** Only {@link #PREPARE} carries a {@code target} for producer pre-warm. */
+    public boolean requiresTarget() {
+        return this == PREPARE;
+    }
 }

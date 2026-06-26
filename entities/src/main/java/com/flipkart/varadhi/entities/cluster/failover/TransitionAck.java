@@ -28,7 +28,7 @@ public record TransitionAck(String opId, String hostname, TransitionStage stage,
     }
 
     public static TransitionAck failure(String opId, String hostname, TransitionStage stage, String errorMsg) {
-        if (errorMsg == null || errorMsg.isBlank()) {
+        if (errorMsg == null || errorMsg.isEmpty()) {
             throw new IllegalArgumentException("failure ack requires a non-blank errorMsg");
         }
         return new TransitionAck(opId, hostname, stage, errorMsg);

@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicTest {
@@ -177,13 +176,10 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void setTopicState_rejectsUnknownRegion() {
+    void topicState_defaultsToProducing() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> varadhiTopic.setTopicState(RegionName.of("unknown"), TopicState.Producing)
-        );
+        assertEquals(TopicState.Producing, varadhiTopic.getTopicState());
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -13,16 +14,15 @@ import java.util.Objects;
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
+@JsonIgnoreProperties (ignoreUnknown = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
     /**
-     * Runtime produce state per region (keyed by the same region key used in
-     * {@link #internalTopics}). Moved here from {@code SegmentedStorageTopic} so the
-     * topic — the entity replicated to every pod's {@code TopicCache} — owns the
-     * routing-relevant state that the produce gate and topic failover read.
+     * Runtime produce state for this topic. Replicated to every pod's {@code TopicCache}; the
+     * produce gate and topic failover read this field.
      */
-    private final Map<String, TopicState> topicStates;
+    private final TopicState topicState;
     private final boolean grouped;
     private final TopicCapacityPolicy capacity;
     private final String nfrFilterName;
@@ -40,6 +40,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param grouped        whether the topic is grouped
      * @param capacity       the capacity policy of the topic
      * @param internalTopics the internal topics associated with this topic
+     * @param topicState     runtime produce state; defaults to {@link TopicState#Producing} when
+     *                       {@code null}
      * @param status         the status of the topic
      * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory  topic vs queue classification; must not be {@code null}
@@ -50,7 +52,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         boolean grouped,
         TopicCapacityPolicy capacity,
         Map<String, SegmentedStorageTopic> internalTopics,
-        Map<String, TopicState> topicStates,
+        TopicState topicState,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory
@@ -59,7 +61,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
-        this.topicStates = topicStates != null ? topicStates : new HashMap<>();
+        this.topicState = topicState != null ? topicState : TopicState.Producing;
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.status = status;
@@ -115,7 +117,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             grouped,
             capacity,
             new HashMap<>(),
-            new HashMap<>(),
+            TopicState.Producing,
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory
@@ -134,49 +136,13 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
-     * Adds an internal topic for a specific region and initializes the region's produce
-     * state to {@link TopicState#Producing} if not already set.
+     * Adds an internal topic for a specific region.
      *
      * @param region        the region for the internal topic
      * @param internalTopic the internal topic to add
      */
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
-        this.topicStates.putIfAbsent(region, TopicState.Producing);
-    }
-
-    /**
-     * Returns the produce {@link TopicState} for {@code region}, defaulting to
-     * {@link TopicState#Producing} when no explicit state has been recorded for a region
-     * that has an internal topic.
-     *
-     * @param region the region whose produce state is requested
-     * @return the region's produce state, or {@code null} if the region is unknown to this topic
-     */
-    public TopicState getTopicState(RegionName region) {
-        Objects.requireNonNull(region, "region must not be null");
-        String key = region.value();
-        if (!internalTopics.containsKey(key)) {
-            return null;
-        }
-        return topicStates.getOrDefault(key, TopicState.Producing);
-    }
-
-    /**
-     * Sets the produce {@link TopicState} for {@code region}. Used by topic failover to flip
-     * a region between {@link TopicState#Producing} and {@link TopicState#Replicating}.
-     *
-     * @param region the region whose produce state is being set
-     * @param state  the new produce state; must not be {@code null}
-     */
-    public void setTopicState(RegionName region, TopicState state) {
-        Objects.requireNonNull(region, "region must not be null");
-        Objects.requireNonNull(state, "topic state must not be null");
-        String key = region.value();
-        if (!internalTopics.containsKey(key)) {
-            throw new IllegalArgumentException("unknown region for topic: " + key);
-        }
-        this.topicStates.put(key, state);
     }
 
     /**

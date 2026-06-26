@@ -4,7 +4,7 @@ import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.entities.JsonMapper;
+import java.lang.reflect.Constructor;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.produce.ProduceResult;
 import com.flipkart.varadhi.core.config.ProducerOptions;
@@ -399,10 +399,41 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
-        topic.addInternalTopic(region, ict);
-        topic.setTopicState(RegionName.of(region), state);
+        topic.addInternalTopic(region, SegmentedStorageTopic.of(st));
+        if (state != TopicState.Producing) {
+            topic = copyWithTopicState(topic, state);
+        }
         return topic;
+    }
+
+    private static VaradhiTopic copyWithTopicState(VaradhiTopic topic, TopicState state) {
+        try {
+            Constructor<VaradhiTopic> ctor = VaradhiTopic.class.getDeclaredConstructor(
+                String.class,
+                int.class,
+                boolean.class,
+                TopicCapacityPolicy.class,
+                java.util.Map.class,
+                TopicState.class,
+                LifecycleStatus.class,
+                String.class,
+                VaradhiTopic.TopicCategory.class
+            );
+            ctor.setAccessible(true);
+            return ctor.newInstance(
+                topic.getName(),
+                topic.getVersion(),
+                topic.isGrouped(),
+                topic.getCapacity(),
+                topic.getInternalTopics(),
+                state,
+                topic.getStatus(),
+                topic.getNfrFilterName(),
+                topic.getTopicCategory()
+            );
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Message getMessage(int sleepMs, int offset, String exceptionClass, int payloadSize) {

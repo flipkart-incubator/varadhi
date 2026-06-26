@@ -23,8 +23,7 @@ import java.util.function.BiFunction;
 /**
  * Minimal pod-side handler for topic-transition stage broadcasts (topic failover and
  * storage-topic migration alike). It reacts using only the self-contained
- * {@link TransitionEvent} and the pod's local {@code TopicCache}; it never reads the
- * controller-side {@code TransitionObject}.
+ * {@link TransitionEvent} and the pod's local {@code TopicCache};
  *
  * <p>The stage machine and version-convergence logic are identical across
  * {@link TransitionType}s; only the PREPARE pre-warm differs and is supplied per type via
@@ -56,16 +55,13 @@ import java.util.function.BiFunction;
 @AllArgsConstructor
 public final class ProduceTransitionMsgHandler implements MsgHandler {
 
-    /** Sentinel for "topic not yet present in this pod's cache" (not the same as version 0). */
-    private static final long VERSION_ABSENT = -1L;
-
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private final TransitionAckClient ackClient;
     /**
      * PREPARE pre-warm action per {@link TransitionType}. Each accepts {@code (topicFqn, target)}
      * and asynchronously prepares this pod for the transition's target (region for failover,
-     * storage-topic id for migration). It returns {@link TransitionPrepareResult#WARMED} when the
+     * storage-topic id for migration). It returns {@link TransitionPrepareResult#INVOLVED} when the
      * pod was producing the topic and pre-created the producer, or
      * {@link TransitionPrepareResult#NOT_INVOLVED} when the pod has no producer for the topic and
      * therefore creates nothing; the returned future fails if warming fails.
@@ -123,15 +119,15 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * still behind or absent (keep polling). Returns the observed version on termination.
      */
     private Optional<Long> probeVersion(TransitionEvent event) {
-        long current = currentVersion(event);
+        Optional<Long> current = currentVersion(event);
+        if (current.isEmpty()) {
+            return Optional.empty();
+        }
+        long version = current.get();
         long target = event.topicVersionToAwait();
-        if (current == target) {
-            return Optional.of(current);
+        if (version >= target) {
+            return Optional.of(version);
         }
-        if (current > target && current != VERSION_ABSENT) {
-            return Optional.of(current);
-        }
-        // Topic not yet in this pod's cache (VERSION_ABSENT) or not yet at the target: keep waiting.
         return Optional.empty();
     }
 
@@ -150,11 +146,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         onVersionReached(event);
     }
 
-    private long currentVersion(TransitionEvent event) {
-        return topicCache.get(event.topicFqn().toFqn())
-                         .map(Resource::getVersion)
-                         .map(Integer::longValue)
-                         .orElse(VERSION_ABSENT);
+    private Optional<Long> currentVersion(TransitionEvent event) {
+        return topicCache.get(event.topicFqn().toFqn()).map(Resource::getVersion).map(Integer::longValue);
     }
 
     private void onVersionReached(TransitionEvent event) {
@@ -200,8 +193,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         });
     }
 
-    private static String describe(long version) {
-        return version == VERSION_ABSENT ? "absent from cache" : Long.toString(version);
+    private static String describe(Optional<Long> version) {
+        return version.map(Object::toString).orElse("absent from cache");
     }
 
     private void ackOk(TransitionEvent event) {

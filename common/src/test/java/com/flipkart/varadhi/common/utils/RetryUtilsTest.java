@@ -47,16 +47,10 @@ class RetryUtilsTest {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         AtomicInteger attempts = new AtomicInteger();
 
-        CompletableFuture<Optional<Long>> future = RetryUtils.getAsync(
-            scheduler,
-            3,
-            5L,
-            Optional::isEmpty,
-            () -> {
-                attempts.getAndIncrement();
-                return Optional.empty();
-            }
-        );
+        CompletableFuture<Optional<Long>> future = RetryUtils.getAsync(scheduler, 3, 5L, Optional::isEmpty, () -> {
+            attempts.getAndIncrement();
+            return Optional.empty();
+        });
 
         try {
             Optional<Long> result = future.get(2, TimeUnit.SECONDS);

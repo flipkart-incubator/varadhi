@@ -8,12 +8,10 @@ import java.util.Objects;
  * Immutable, self-contained payload the controller broadcasts to every pod when a topic
  * transition advances to a stage that needs pod participation. The same event drives every
  * {@link TransitionType} (topic failover, storage-topic migration); the pod reacts to
- * {@link #stage()} generically and only the {@link #target()} meaning and the PREPARE work
- * differ per type.
+ * {@link #stage()} generically.
  *
  * <p><b>Self-contained by design:</b> a pod reacts using only the fields here plus what it
- * already has in its local {@code TopicCache}. It never reads the controller-side
- * {@code TransitionObject} (which is not replicated to pods).
+ * already has in its local {@code TopicCache}.
  *
  * <ul>
  *   <li>{@code transitionType} — which transition this event belongs to. Selects the
@@ -24,11 +22,7 @@ import java.util.Objects;
  *       ({@link TransitionStage#PENDING}, {@link TransitionStage#COMPLETED},
  *       {@link TransitionStage#ABORTED}).</li>
  *   <li>{@code topicVersionToAwait} — the {@code VaradhiTopic} version the pod must observe in
- *       its TopicCache before acking, applied only when {@code awaitVersion} is {@code true}.
- *       For {@link TransitionStage#PREPARE} this is the current version (N) (readiness check);
- *       for {@link TransitionStage#SWITCH} it is the post-switch version (N+1). It may still be
- *       carried (for diagnostics) on non-gated stages, but is only validated and awaited when
- *       {@code awaitVersion} is set.</li>
+ *       its TopicCache before acking.</li>
  *   <li>{@code target} — the destination of the switch, interpreted per {@code transitionType}:
  *       the region produce is switching <em>to</em> for {@link TransitionType#TOPIC_FAILOVER},
  *       or the destination {@code StorageTopic} id for {@link TransitionType#STORAGE_MIGRATION}.
@@ -53,69 +47,43 @@ public record TransitionEvent(
         Objects.requireNonNull(topicFqn, "topicFqn must not be null");
         Objects.requireNonNull(transitionType, "transitionType must not be null");
         Objects.requireNonNull(stage, "stage must not be null");
-        // The version is only validated when the stage actually gates on it; non-gated stages may
-        // carry any value (it is ignored).
+        if (awaitVersion != stage.isVersionGated()) {
+            throw new IllegalArgumentException("awaitVersion=" + awaitVersion + " incompatible with stage " + stage);
+        }
         if (awaitVersion && topicVersionToAwait <= 0) {
             throw new IllegalArgumentException("a version-gated stage requires a positive topicVersionToAwait");
         }
-        if (stage == TransitionStage.PREPARE && target == null) {
+        if (stage.requiresTarget() && target == null) {
             throw new IllegalArgumentException("PREPARE requires a non-null target to pre-warm");
         }
     }
 
     /**
-     * PREPARE readiness: pods confirm they are alive and caught up to the current topic version
-     * (N), and pre-create the {@code target} producer for {@code transitionType}, before the
-     * switch is applied. A pod that is unreachable, stale, or cannot warm the target producer
-     * fails this barrier, letting the controller abort with no change applied.
+     * Creates a stage broadcast for pods. {@code topicVersionToAwait} and {@code target} are
+     * interpreted from {@link TransitionStage}:
+     * <ul>
+     *   <li>{@link TransitionStage#PREPARE} — version N and non-null {@code target} (pre-warm)</li>
+     *   <li>{@link TransitionStage#SWITCH} — version N+1; {@code target} ignored</li>
+     *   <li>{@link TransitionStage#PENDING}, {@link TransitionStage#COMPLETED},
+     *       {@link TransitionStage#ABORTED} — immediate ack; version and target ignored</li>
+     * </ul>
      */
-    public static TransitionEvent forPrepare(
+    public static TransitionEvent of(
         String opId,
         VaradhiTopicName topicFqn,
-        long currentTopicVersion,
-        String target,
-        TransitionType transitionType
-    ) {
-        return new TransitionEvent(
-            opId,
-            topicFqn,
-            transitionType,
-            TransitionStage.PREPARE,
-            true,
-            currentTopicVersion,
-            target
-        );
-    }
-
-    /** SWITCH: pods wait until TopicCache reaches {@code topicVersionToAwait} (= N+1), then ack. */
-    public static TransitionEvent forSwitch(
-        String opId,
-        VaradhiTopicName topicFqn,
-        long topicVersionToAwait,
-        TransitionType transitionType
-    ) {
-        return new TransitionEvent(
-            opId,
-            topicFqn,
-            transitionType,
-            TransitionStage.SWITCH,
-            true,
-            topicVersionToAwait,
-            null
-        );
-    }
-
-    /**
-     * Any non-version-gated stage ({@link TransitionStage#PENDING},
-     * {@link TransitionStage#COMPLETED}, {@link TransitionStage#ABORTED}): the pod has no version
-     * to await and acks immediately on receipt.
-     */
-    public static TransitionEvent forStage(
-        String opId,
-        VaradhiTopicName topicFqn,
+        TransitionType transitionType,
         TransitionStage stage,
-        TransitionType transitionType
+        long topicVersionToAwait,
+        String target
     ) {
-        return new TransitionEvent(opId, topicFqn, transitionType, stage, false, 0L, null);
+        return new TransitionEvent(
+            opId,
+            topicFqn,
+            transitionType,
+            stage,
+            stage.isVersionGated(),
+            stage.isVersionGated() ? topicVersionToAwait : 0L,
+            stage.requiresTarget() ? target : null
+        );
     }
 }

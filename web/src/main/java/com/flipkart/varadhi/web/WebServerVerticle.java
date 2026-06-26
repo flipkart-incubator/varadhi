@@ -314,7 +314,7 @@ public class WebServerVerticle extends AbstractVerticle {
     /**
      * Registers the pod-side topic-transition stage handler on the broadcast bus. The handler is
      * inert until the controller starts publishing {@code TransitionEvent}s, and the produce path
-     * itself is unchanged (it already gates on per-region {@code TopicState}).
+     * itself is unchanged (it already gates on {@code VaradhiTopic#getTopicState()}).
      */
     private void setupTransitionStageHandler() {
         // clusterManager is null in produce-only benchmarks (see ProduceBenchmarkTest).
@@ -371,7 +371,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
             }
             return producerService.getProducer(topicName, RegionName.of(targetRegion))
-                                  .thenApply(producer -> TransitionPrepareResult.WARMED);
+                                  .thenApply(producer -> TransitionPrepareResult.INVOLVED);
         };
         return Map.of(TransitionType.TOPIC_FAILOVER, failoverWarm);
     }

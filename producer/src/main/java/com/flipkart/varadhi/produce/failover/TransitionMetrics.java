@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 /**
  * Observability seam for the pod-side topic-transition stage handler. Lets the handler emit
  * counters for stage receipts, acks (with outcome), and not-involved PREPAREs without coupling
- * it to a specific metrics backend. Use {@link #NOOP} where metrics are not wired.
+ * it to a specific metrics backend.
  *
  * @see TransitionMetricsImpl
  */
@@ -20,18 +20,4 @@ public interface TransitionMetrics {
 
     /** A PREPARE resolved to {@link TransitionPrepareResult#NOT_INVOLVED} on this pod. */
     void prepareNotInvolved(TransitionType type);
-
-    TransitionMetrics NOOP = new TransitionMetrics() {
-        @Override
-        public void stageReceived(TransitionType type, TransitionStage stage) {
-        }
-
-        @Override
-        public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
-        }
-
-        @Override
-        public void prepareNotInvolved(TransitionType type) {
-        }
-    };
 }
