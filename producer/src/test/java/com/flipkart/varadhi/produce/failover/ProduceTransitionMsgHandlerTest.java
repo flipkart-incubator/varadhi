@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,7 @@ class ProduceTransitionMsgHandlerTest {
     private RecordingWarmer warmer;
     private RecordingWarmer storageWarmer;
     private ScheduledExecutorService scheduler;
+    private TransitionMetrics metrics;
 
     @BeforeEach
     void setup() throws Exception {
@@ -66,6 +68,7 @@ class ProduceTransitionMsgHandlerTest {
         warmer = new RecordingWarmer();
         storageWarmer = new RecordingWarmer();
         scheduler = Executors.newSingleThreadScheduledExecutor();
+        metrics = new TransitionMetricsImpl(new SimpleMeterRegistry());
     }
 
     @AfterEach
@@ -83,7 +86,7 @@ class ProduceTransitionMsgHandlerTest {
             Map.of(TransitionType.TOPIC_FAILOVER, warmer, TransitionType.STORAGE_MIGRATION, storageWarmer),
             config,
             scheduler,
-            TransitionMetrics.NOOP
+            metrics
         );
     }
 

@@ -146,6 +146,24 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
+     * Returns a copy of this topic with an updated {@link #topicState}. Used when persisting a new
+     * topic snapshot (e.g. topic failover SWITCH) without mutating the cached instance.
+     */
+    public VaradhiTopic withTopicState(TopicState state) {
+        return new VaradhiTopic(
+            getName(),
+            getVersion(),
+            grouped,
+            capacity,
+            internalTopics,
+            Objects.requireNonNull(state, "topic state must not be null"),
+            getStatus(),
+            nfrFilterName,
+            topicCategory
+        );
+    }
+
+    /**
      * Retrieves the project name from the topic name.
      *
      * @return the project name

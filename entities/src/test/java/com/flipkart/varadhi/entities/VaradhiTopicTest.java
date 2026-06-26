@@ -176,6 +176,16 @@ class VaradhiTopicTest {
     }
 
     @Test
+    void withTopicState_returnsCopyWithUpdatedState() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        VaradhiTopic updated = varadhiTopic.withTopicState(TopicState.Blocked);
+
+        assertEquals(TopicState.Blocked, updated.getTopicState());
+        assertEquals(TopicState.Producing, varadhiTopic.getTopicState(), "original must be unchanged");
+    }
+
+    @Test
     void topicState_defaultsToProducing() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
