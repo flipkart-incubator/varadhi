@@ -186,6 +186,42 @@ class VaradhiTopicTest {
     }
 
     @Test
+    void withActiveRegion_returnsCopyWithUpdatedRegion() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+
+        VaradhiTopic updated = varadhiTopic.withActiveRegion(RegionName.of("r2"));
+
+        assertEquals(RegionName.of("r2"), updated.getActiveRegion());
+        assertEquals(RegionName.of("r1"), varadhiTopic.getActiveRegion(), "original must be unchanged");
+    }
+
+    @Test
+    void addInternalTopic_setsActiveRegionOnFirstRegion() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+
+        assertEquals(RegionName.of("r1"), varadhiTopic.getActiveRegion());
+    }
+
+    @Test
+    void resolveActiveRegion_usesExplicitActiveRegionWhenSet() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+        varadhiTopic = varadhiTopic.withActiveRegion(RegionName.of("r2"));
+
+        assertEquals(RegionName.of("r2"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
+    }
+
+    @Test
+    void resolveActiveRegion_fallsBackToPodRegionWhenUnset() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertEquals(RegionName.of("r1"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
+    }
+
+    @Test
     void topicState_defaultsToProducing() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 

@@ -8,12 +8,16 @@ import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
+import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
@@ -146,7 +150,14 @@ public class ControllerVerticle extends AbstractVerticle {
             operationMgr,
             assigner,
             metaStoreProvider.getMetaStore().subscriptions(),
-            consumerClientFactory
+            consumerClientFactory,
+            metaStoreProvider.getTransitionStore(),
+            metaStoreProvider.getMetaStore().topics(),
+            metaStoreProvider.getMetaStore().regions(),
+            clusterManager,
+            messageExchange,
+            new StageAwaiter(),
+            TopicFailoverConfig.defaultConfig()
         );
     }
 
@@ -254,8 +265,27 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(controllerApiMgr);
 
+        // Resume in-flight topic failovers from their TransitionObject stage
+        requeueInProgressFailovers(controllerApiMgr);
+
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
+    }
+
+    /**
+     * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
+     * executor is idempotent and re-enters from {@code TransitionObject.currentStage}.
+     */
+    private void requeueInProgressFailovers(ControllerApiMgr controllerApiMgr) {
+        List<TopicFailoverOperation> pendingFailovers = controllerApiMgr.getPendingTopicFailoverOps();
+        if (pendingFailovers.isEmpty()) {
+            log.info("No pending topic failovers to resume");
+            return;
+        }
+        pendingFailovers.stream()
+                        .sorted(Comparator.comparing(TopicFailoverOperation::getStartTime))
+                        .forEach(controllerApiMgr::retryTopicFailover);
+        log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
     }
 
     /**
@@ -338,8 +368,19 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
 
-        // Register send handler for updates
+        // Topic failover lifecycle (web -> controller)
+        messageRouter.requestHandler(
+            ROUTE_CONTROLLER,
+            TransitionBusAddress.CREATE_FAILOVER_API,
+            handler::createFailover
+        );
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.GET_FAILOVER_API, handler::getFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.ABORT_FAILOVER_API, handler::abortFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, handler::listFailovers);
+
+        // Register send handlers
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
+        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, handler::failoverAck);
 
         log.info("Controller API handlers registered successfully");
     }

@@ -49,6 +49,8 @@ public final class ZNode {
     public static final ZNodeKind ASSIGNMENT = new ZNodeKind("Assignment", "%s");
     // TODO: Hierarchical or Flat?
     public static final ZNodeKind SHARD_OP = new ZNodeKind("ShardOperation", "%s");
+    public static final ZNodeKind TOPIC_FAILOVER_OP = new ZNodeKind("TopicFailoverOperation", "%s");
+    public static final ZNodeKind TRANSITION = new ZNodeKind("Transition", "%s");
     public static final ZNodeKind EVENT = new ZNodeKind("ChangeEvent", "%s");
 
     private final String name;
@@ -106,6 +108,18 @@ public final class ZNode {
 
     public static ZNode ofShardOperation(String operationId) {
         return new ZNode(operationId, SHARD_OP.kind(), SHARD_OP.resolvePath(ENTITIES_BASE_PATH, operationId));
+    }
+
+    public static ZNode ofTopicFailoverOperation(String operationId) {
+        return new ZNode(
+            operationId,
+            TOPIC_FAILOVER_OP.kind(),
+            TOPIC_FAILOVER_OP.resolvePath(ENTITIES_BASE_PATH, operationId)
+        );
+    }
+
+    public static ZNode ofTransition(String topicFqn) {
+        return new ZNode(topicFqn, TRANSITION.kind(), TRANSITION.resolvePath(ENTITIES_BASE_PATH, topicFqn));
     }
 
     public static ZNode ofAssignment(String assignment) {

@@ -10,10 +10,15 @@ import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.eventbus.ReplyFailure;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +67,19 @@ public class ControllerApiMgrTest {
         subscriptionStore = mock(SubscriptionStore.class);
         when(metaStore.subscriptions()).thenReturn(subscriptionStore);
         controllerApiMgr = spy(
-            new ControllerApiMgr(operationMgr, assignmentManager, subscriptionStore, consumerClientFactory)
+            new ControllerApiMgr(
+                operationMgr,
+                assignmentManager,
+                subscriptionStore,
+                consumerClientFactory,
+                mock(TransitionStore.class),
+                mock(TopicStore.class),
+                mock(RegionStore.class),
+                mock(VaradhiClusterManager.class),
+                mock(MessageExchange.class),
+                new StageAwaiter(),
+                TopicFailoverConfig.defaultConfig()
+            )
         );
     }
 
