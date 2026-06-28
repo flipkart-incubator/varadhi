@@ -214,6 +214,14 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
+        RegionName podRegion = RegionName.of(produceRegion);
+        RegionName routedRegion = topic.resolveActiveRegion(podRegion);
+        if (!routedRegion.equals(podRegion)) {
+            throw new ResourceNotFoundException(
+                "Topic(%s) is not active in region(%s).".formatted(topic.getName(), produceRegion)
+            );
+        }
+
         SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
 
         if (internalTopic == null) {

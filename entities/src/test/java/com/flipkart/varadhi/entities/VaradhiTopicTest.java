@@ -3,6 +3,8 @@ package com.flipkart.varadhi.entities;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -203,6 +205,36 @@ class VaradhiTopicTest {
         varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
 
         assertEquals(RegionName.of("r1"), varadhiTopic.getActiveRegion());
+    }
+
+    @Test
+    void resolveActiveRegion_usesExplicitActiveRegionWhenSet() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+        varadhiTopic = varadhiTopic.withActiveRegion(RegionName.of("r2"));
+
+        assertEquals(RegionName.of("r2"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
+    }
+
+    @Test
+    void resolveActiveRegion_fallsBackToPodRegionWhenUnset() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        assertEquals(RegionName.of("r1"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
+    }
+
+    @Test
+    void effectiveActiveRegion_prefersExplicitActiveRegion() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+        varadhiTopic = varadhiTopic.withActiveRegion(RegionName.of("r2"));
+
+        assertEquals(Optional.of(RegionName.of("r2")), varadhiTopic.effectiveActiveRegion());
+    }
+
+    @Test
+    void effectiveActiveRegion_emptyWhenNoRegionsConfigured() {
+        assertEquals(Optional.empty(), createDefaultVaradhiTopic(false).effectiveActiveRegion());
     }
 
     @Test

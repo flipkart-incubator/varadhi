@@ -8,6 +8,7 @@ import lombok.Getter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -179,7 +180,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     /**
      * Returns a copy of this topic with an updated {@link #topicState}. Used when persisting a new
-     * topic snapshot (e.g. topic failover SWITCH) without mutating the cached instance.
+     * topic snapshot (e.g. topic failover SWITCH/COMPLETE) without mutating the cached instance.
      */
     public VaradhiTopic withTopicState(TopicState state) {
         return new VaradhiTopic(
@@ -222,6 +223,31 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      */
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
         return internalTopics.get(region);
+    }
+
+    /**
+     * The region produce traffic should route to for this topic. When {@link #activeRegion} is unset
+     * on legacy topics, returns {@code podRegion} so single-region behavior is unchanged.
+     */
+    @JsonIgnore
+    public RegionName resolveActiveRegion(RegionName podRegion) {
+        Objects.requireNonNull(podRegion, "podRegion must not be null");
+        return activeRegion != null ? activeRegion : podRegion;
+    }
+
+    /**
+     * Best-effort view of the topic's current active produce region: explicit {@link #activeRegion},
+     * or the sole {@link #internalTopics} key when there is exactly one region (legacy topics).
+     */
+    @JsonIgnore
+    public Optional<RegionName> effectiveActiveRegion() {
+        if (activeRegion != null) {
+            return Optional.of(activeRegion);
+        }
+        if (internalTopics.size() == 1) {
+            return Optional.of(RegionName.of(internalTopics.keySet().iterator().next()));
+        }
+        return Optional.empty();
     }
 
     /**

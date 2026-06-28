@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -133,6 +134,18 @@ class ControllerApiMgrFailoverTest {
             () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, SOURCE, false, "t")).get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+    }
+
+    @Test
+    void createRejectsWhenSourceNotActiveRegion() {
+        when(topicStore.get(FQN)).thenReturn(topicWithRegions());
+
+        ExecutionException ex = assertThrows(
+            ExecutionException.class,
+            () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false, "t")).get()
+        );
+        assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+        assertTrue(ex.getCause().getMessage().contains("activeRegion"));
     }
 
     @Test

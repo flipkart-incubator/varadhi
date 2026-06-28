@@ -349,6 +349,60 @@ class ProducerServiceTests {
     }
 
     @Test
+    void produceRejectsWhenPodRegionIsNotActiveRegion() {
+        String activeRegion = "region-b";
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+        entity = entity.withActiveRegion(RegionName.of(activeRegion));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Message msg = getMessage(0, 1, null, 10);
+        Assertions.assertThrows(ResourceNotFoundException.class, () -> service.produceToTopic(msg, vt.getName()));
+        verify(producerFactory, never()).newProducer(any(), any());
+    }
+
+    @Test
+    void produceSucceedsWhenPodRegionMatchesActiveRegion() throws InterruptedException {
+        String activeRegion = "region-b";
+        ProducerService regionalService = new ProducerService(
+            activeRegion,
+            producerFactory::newProducer,
+            orgCache,
+            projectCache,
+            topicReadCache
+        );
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+        entity = entity.withActiveRegion(RegionName.of(activeRegion));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Message msg = getMessage(0, 1, null, 10);
+        ResultCapture rc = getResult(regionalService.produceToTopic(msg, vt.getName()));
+
+        Assertions.assertNotNull(rc.produceResult);
+        Assertions.assertNull(rc.throwable);
+        verify(producer, times(1)).produceAsync(eq(msg));
+    }
+
+    @Test
     void getProducerUsesDistinctCacheEntriesPerRegion() {
         String regionB = "region-b";
         VaradhiTopic entity = VaradhiTopic.of(

@@ -420,6 +420,16 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
+        topic.effectiveActiveRegion().ifPresent(active -> {
+            if (!source.equals(active)) {
+                throw new IllegalArgumentException(
+                    "sourceRegion must match the topic activeRegion (" + active.value() + ")."
+                );
+            }
+            if (target.equals(active)) {
+                throw new IllegalArgumentException("targetRegion is already the active produce region.");
+            }
+        });
     }
 
     public CompletableFuture<String> addConsumerNode(ConsumerNode consumerNode) {
