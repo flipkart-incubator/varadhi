@@ -3,8 +3,6 @@ package com.flipkart.varadhi.entities;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -221,20 +219,6 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         assertEquals(RegionName.of("r1"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
-    }
-
-    @Test
-    void effectiveActiveRegion_prefersExplicitActiveRegion() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
-        varadhiTopic = varadhiTopic.withActiveRegion(RegionName.of("r2"));
-
-        assertEquals(Optional.of(RegionName.of("r2")), varadhiTopic.effectiveActiveRegion());
-    }
-
-    @Test
-    void effectiveActiveRegion_emptyWhenNoRegionsConfigured() {
-        assertEquals(Optional.empty(), createDefaultVaradhiTopic(false).effectiveActiveRegion());
     }
 
     @Test

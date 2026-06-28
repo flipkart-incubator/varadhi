@@ -15,6 +15,7 @@ import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
@@ -73,6 +74,7 @@ public class ControllerApiMgrTest {
                 consumerClientFactory,
                 mock(TransitionStore.class),
                 mock(TopicStore.class),
+                mock(RegionStore.class),
                 mock(VaradhiClusterManager.class),
                 mock(MessageExchange.class),
                 new StageAwaiter(),

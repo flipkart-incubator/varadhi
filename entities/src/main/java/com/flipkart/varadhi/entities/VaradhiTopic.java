@@ -8,7 +8,6 @@ import lombok.Getter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -233,21 +232,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     public RegionName resolveActiveRegion(RegionName podRegion) {
         Objects.requireNonNull(podRegion, "podRegion must not be null");
         return activeRegion != null ? activeRegion : podRegion;
-    }
-
-    /**
-     * Best-effort view of the topic's current active produce region: explicit {@link #activeRegion},
-     * or the sole {@link #internalTopics} key when there is exactly one region (legacy topics).
-     */
-    @JsonIgnore
-    public Optional<RegionName> effectiveActiveRegion() {
-        if (activeRegion != null) {
-            return Optional.of(activeRegion);
-        }
-        if (internalTopics.size() == 1) {
-            return Optional.of(RegionName.of(internalTopics.keySet().iterator().next()));
-        }
-        return Optional.empty();
     }
 
     /**

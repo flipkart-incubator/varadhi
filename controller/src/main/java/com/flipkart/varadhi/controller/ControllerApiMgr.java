@@ -5,6 +5,7 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
 import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.controller.impl.failover.TopicFailoverOpExecutor;
@@ -59,6 +60,7 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     private final OperationMgr operationMgr;
     private final TransitionStore transitionStore;
     private final TopicStore topicStore;
+    private final RegionStore regionStore;
     private final VaradhiClusterManager clusterManager;
     private final MessageExchange messageExchange;
     private final StageAwaiter stageAwaiter;
@@ -71,6 +73,7 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         ConsumerClientFactory consumerClientFactory,
         TransitionStore transitionStore,
         TopicStore topicStore,
+        RegionStore regionStore,
         VaradhiClusterManager clusterManager,
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
@@ -82,6 +85,7 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         this.operationMgr = operationMgr;
         this.transitionStore = transitionStore;
         this.topicStore = topicStore;
+        this.regionStore = regionStore;
         this.clusterManager = clusterManager;
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
@@ -410,6 +414,8 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         if (source.equals(target)) {
             throw new IllegalArgumentException("sourceRegion and targetRegion must differ.");
         }
+        requireRegisteredRegion(source);
+        requireRegisteredRegion(target);
         if (topic.getProduceTopicForRegion(source.value()) == null) {
             throw new IllegalArgumentException(
                 "Topic " + topic.getName() + " is not configured for sourceRegion " + source.value() + "."
@@ -420,7 +426,8 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
-        topic.effectiveActiveRegion().ifPresent(active -> {
+        RegionName active = topic.getActiveRegion();
+        if (active != null) {
             if (!source.equals(active)) {
                 throw new IllegalArgumentException(
                     "sourceRegion must match the topic activeRegion (" + active.value() + ")."
@@ -429,7 +436,13 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
             if (target.equals(active)) {
                 throw new IllegalArgumentException("targetRegion is already the active produce region.");
             }
-        });
+        }
+    }
+
+    private void requireRegisteredRegion(RegionName region) {
+        if (!regionStore.exists(region.value())) {
+            throw new IllegalArgumentException("Region " + region.value() + " is not registered.");
+        }
     }
 
     public CompletableFuture<String> addConsumerNode(ConsumerNode consumerNode) {
