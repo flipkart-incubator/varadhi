@@ -2,9 +2,13 @@ package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.*;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -29,4 +33,12 @@ public interface ControllerApi {
     );
 
     CompletableFuture<ShardAssignments> getShardAssignments(String subscriptionId);
+
+    CompletableFuture<TopicFailoverOperation> createTopicFailover(String topicFqn, TopicFailoverRequest request);
+
+    CompletableFuture<TransitionObject> getTopicFailover(String topicFqn);
+
+    CompletableFuture<TransitionObject> abortTopicFailover(String topicFqn, String requestedBy);
+
+    CompletableFuture<List<TransitionObject>> getActiveFailovers();
 }

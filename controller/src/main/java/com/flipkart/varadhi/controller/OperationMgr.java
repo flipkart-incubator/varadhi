@@ -3,6 +3,7 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -202,6 +203,37 @@ public class OperationMgr {
     void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         opStore.createSubOp(subOp);
         enqueue(subOp, opExecutor);
+    }
+
+    void enqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        OpTask opTask = new OpTask(opExecutor, o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o), op);
+        enqueueOpTask(opTask);
+    }
+
+    void createAndEnqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        opStore.createTopicFailoverOp(op);
+        enqueueTopicFailover(op, opExecutor);
+    }
+
+    List<TopicFailoverOperation> getPendingTopicFailoverOps() {
+        return opStore.getPendingTopicFailoverOps();
+    }
+
+    public TopicFailoverOperation getTopicFailoverOp(String operationId) {
+        return opStore.getTopicFailoverOp(operationId);
+    }
+
+    /**
+     * Records a terminal (or progress) update on a topic-failover op: re-reads the latest from the
+     * store, applies the new state, persists, and lets the queue dequeue/retry as needed.
+     */
+    public void updateTopicFailoverOp(TopicFailoverOperation operation) {
+        processOpTaskForOpUpdate(operation, op -> {
+            TopicFailoverOperation latest = opStore.getTopicFailoverOp(operation.getId());
+            latest.update(operation.getState(), operation.getErrorMsg());
+            opStore.updateTopicFailoverOp(latest);
+            return latest;
+        });
     }
 
     public void submitShardOp(ShardOperation shardOp, boolean isRetry) {

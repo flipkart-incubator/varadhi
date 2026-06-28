@@ -29,6 +29,15 @@ public final class TransitionBusAddress {
     /** Api (under {@link #ROUTE_TOPIC_TRANSITION}) on which the per-stage event is broadcast to all pods. */
     public final String EVENT_PUBLISH_API = "event.publish";
 
+    /** Alias for {@link #EVENT_PUBLISH_API}; used on the controller broadcast path. */
+    public final String STAGE_BROADCAST_API = EVENT_PUBLISH_API;
+
     /** Api (under the controller route) for the pod-to-controller per-stage acknowledgement. */
-    public final String TRANSITION_EVENT_ACK_API = "topic.transition.event.ack";
+    public final String STAGE_ACK_API = "stage.ack";
+
+    /** Controller request APIs (web → controller) for the failover lifecycle. */
+    public final String CREATE_FAILOVER_API = "createFailover";
+    public final String GET_FAILOVER_API = "getFailover";
+    public final String ABORT_FAILOVER_API = "abortFailover";
+    public final String LIST_FAILOVERS_API = "listFailovers";
 }

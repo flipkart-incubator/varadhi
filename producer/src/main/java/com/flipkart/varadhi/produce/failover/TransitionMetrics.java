@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -82,6 +83,11 @@ public final class TransitionMetrics {
         }
     }
 
+    /** A PREPARE resolved to NOT_INVOLVED on this pod. */
+    public void prepareNotInvolved(TransitionType type) {
+        registry.counter("topic.transition.prepare.not_involved", "type", type.name()).increment();
+    }
+
     /** Failed to deliver a {@code TransitionAck} to the controller. */
     public void ackSendFailed(TransitionType type, TransitionStage stage, String topicFqn) {
         registry.counter(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name(), "topic", topicFqn).increment();
@@ -117,4 +123,7 @@ public final class TransitionMetrics {
         });
         holder.set(value);
     }
+
+    /** No-op instance for use in tests. */
+    public static final TransitionMetrics NOOP = new TransitionMetrics(new SimpleMeterRegistry());
 }

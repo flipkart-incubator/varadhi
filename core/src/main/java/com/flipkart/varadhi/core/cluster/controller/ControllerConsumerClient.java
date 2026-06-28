@@ -30,6 +30,6 @@ public class ControllerConsumerClient implements PodToControllerApi {
     @Override
     public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
         ClusterMessage message = ClusterMessage.of(ack);
-        return exchange.send(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, message);
+        return exchange.send(ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, message);
     }
 }
