@@ -20,4 +20,21 @@ public interface TransitionMetrics {
 
     /** A PREPARE resolved to {@link TransitionPrepareResult#NOT_INVOLVED} on this pod. */
     void prepareNotInvolved(TransitionType type);
+
+    TransitionMetrics NOOP = new NoOpImpl();
+
+    class NoOpImpl implements TransitionMetrics {
+
+        @Override
+        public void stageReceived(TransitionType type, TransitionStage stage) {
+        }
+
+        @Override
+        public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
+        }
+
+        @Override
+        public void prepareNotInvolved(TransitionType type) {
+        }
+    }
 }
