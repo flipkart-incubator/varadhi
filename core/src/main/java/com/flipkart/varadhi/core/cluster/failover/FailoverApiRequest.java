@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.core.cluster.failover;
 
+import com.flipkart.varadhi.entities.RegionName;
+
 /**
  * Cluster-bus request envelope for the controller's topic-failover APIs (web → controller).
  * For create, all fields are set; for get/abort only {@code topicFqn} (and {@code requestedBy} for
@@ -7,8 +9,8 @@ package com.flipkart.varadhi.core.cluster.failover;
  */
 public record FailoverApiRequest(
     String topicFqn,
-    String sourceRegion,
-    String targetRegion,
+    RegionName sourceRegion,
+    RegionName targetRegion,
     boolean waitForReplicationLagToClear,
     String requestedBy
 ) {

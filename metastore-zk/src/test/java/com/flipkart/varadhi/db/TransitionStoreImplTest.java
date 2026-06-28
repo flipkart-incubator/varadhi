@@ -2,6 +2,7 @@ package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
 import org.apache.curator.framework.CuratorFramework;
@@ -44,7 +45,7 @@ class TransitionStoreImplTest {
     @Test
     void createGetExistsDelete() {
         assertFalse(store.exists(FQN));
-        store.create(TransitionObject.forFailover("op-1", FQN, "r1", "r2"));
+        store.create(TransitionObject.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
 
         assertTrue(store.exists(FQN));
         TransitionObject got = store.get(FQN);
@@ -58,16 +59,16 @@ class TransitionStoreImplTest {
 
     @Test
     void createIsUniquePerTopic() {
-        store.create(TransitionObject.forFailover("op-1", FQN, "r1", "r2"));
+        store.create(TransitionObject.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
         assertThrows(
             DuplicateResourceException.class,
-            () -> store.create(TransitionObject.forFailover("op-2", FQN, "r1", "r2"))
+            () -> store.create(TransitionObject.forFailover("op-2", FQN, RegionName.of("r1"), RegionName.of("r2")))
         );
     }
 
     @Test
     void updatePersistsStageAdvance() {
-        store.create(TransitionObject.forFailover("op-1", FQN, "r1", "r2"));
+        store.create(TransitionObject.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
         TransitionObject t = store.get(FQN);
         t.advanceTo(TransitionStage.SWITCH, 42L);
         store.update(t);
@@ -79,8 +80,8 @@ class TransitionStoreImplTest {
 
     @Test
     void listActiveReturnsAll() {
-        store.create(TransitionObject.forFailover("op-1", "proj.a", "r1", "r2"));
-        store.create(TransitionObject.forFailover("op-2", "proj.b", "r1", "r2"));
+        store.create(TransitionObject.forFailover("op-1", "proj.a", RegionName.of("r1"), RegionName.of("r2")));
+        store.create(TransitionObject.forFailover("op-2", "proj.b", RegionName.of("r1"), RegionName.of("r2")));
 
         List<TransitionObject> active = store.listActive();
         assertEquals(2, active.size());

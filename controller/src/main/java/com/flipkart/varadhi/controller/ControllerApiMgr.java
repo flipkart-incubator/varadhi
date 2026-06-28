@@ -24,6 +24,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -401,22 +402,22 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     }
 
     private void validateFailoverRegions(VaradhiTopic topic, TopicFailoverRequest request) {
-        String source = request.sourceRegion();
-        String target = request.targetRegion();
-        if (source == null || source.isBlank() || target == null || target.isBlank()) {
+        RegionName source = request.sourceRegion();
+        RegionName target = request.targetRegion();
+        if (source == null || target == null) {
             throw new IllegalArgumentException("sourceRegion and targetRegion are required for failover.");
         }
         if (source.equals(target)) {
             throw new IllegalArgumentException("sourceRegion and targetRegion must differ.");
         }
-        if (topic.getProduceTopicForRegion(source) == null) {
+        if (topic.getProduceTopicForRegion(source.value()) == null) {
             throw new IllegalArgumentException(
-                "Topic " + topic.getName() + " is not configured for sourceRegion " + source + "."
+                "Topic " + topic.getName() + " is not configured for sourceRegion " + source.value() + "."
             );
         }
-        if (topic.getProduceTopicForRegion(target) == null) {
+        if (topic.getProduceTopicForRegion(target.value()) == null) {
             throw new IllegalArgumentException(
-                "Topic " + topic.getName() + " is not configured for targetRegion " + target + "."
+                "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
     }

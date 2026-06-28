@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities.cluster.failover;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -25,8 +26,8 @@ public class TransitionObject extends MetaStoreEntity {
     private final TransitionKind transitionKind;
     private final String operationId;
     private final String topicFqn;
-    private final String sourceRegion;
-    private final String targetRegion;
+    private final RegionName sourceRegion;
+    private final RegionName targetRegion;
     private final long createdAt;
 
     private TransitionStage currentStage;
@@ -40,8 +41,8 @@ public class TransitionObject extends MetaStoreEntity {
         int version,
         TransitionKind transitionKind,
         String operationId,
-        String sourceRegion,
-        String targetRegion,
+        RegionName sourceRegion,
+        RegionName targetRegion,
         long createdAt,
         TransitionStage currentStage,
         long topicVersionToAwait,
@@ -64,8 +65,8 @@ public class TransitionObject extends MetaStoreEntity {
     public static TransitionObject forFailover(
         String operationId,
         String topicFqn,
-        String sourceRegion,
-        String targetRegion
+        RegionName sourceRegion,
+        RegionName targetRegion
     ) {
         long now = System.currentTimeMillis();
         return new TransitionObject(

@@ -21,6 +21,7 @@ import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -98,18 +99,25 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             transition.advanceTo(TransitionStage.PREPARE, currentVersion);
             transitionStore.update(transition);
         }
-        TransitionEvent event = stageEvent(op, TransitionStage.PREPARE, currentVersion, op.getTargetRegion());
+        TransitionEvent event = stageEvent(op, TransitionStage.PREPARE, currentVersion, op.getTargetRegion().value());
         return runStageBarrier(op, TransitionStage.PREPARE, event, config.prepareTimeoutMs());
     }
 
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        if (topic.getTopicState().isProduceAllowed()) {
-            topicStore.update(topic.withTopicState(TopicState.Blocked));
+        boolean needsActiveRegionUpdate = !Objects.equals(op.getTargetRegion(), topic.getActiveRegion());
+        boolean needsBlock = topic.getTopicState().isProduceAllowed();
+        if (needsActiveRegionUpdate || needsBlock) {
+            VaradhiTopic next = needsActiveRegionUpdate ? topic.withActiveRegion(op.getTargetRegion()) : topic;
+            if (needsBlock) {
+                next = next.withTopicState(TopicState.Blocked);
+            }
+            topicStore.update(next);
             topic = topicStore.get(op.getTopicFqn());
             log.info(
-                "Failover op {}: blocked produce for {}, topic now v{}",
+                "Failover op {}: switched activeRegion to {} and blocked produce for {}, topic now v{}",
                 op.getId(),
+                op.getTargetRegion().value(),
                 op.getTopicFqn(),
                 topic.getVersion()
             );

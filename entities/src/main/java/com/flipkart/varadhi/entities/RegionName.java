@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.util.Objects;
 
 /**
@@ -7,7 +10,7 @@ import java.util.Objects;
  * <p>
  * This class provides type safety for region names and ensures they are not null or blank.
  */
-public record RegionName(String value) {
+public record RegionName(@JsonValue String value) {
 
     /**
      * Special region name that is accepted during cluster bootstrapping when no regions have been registered in the
@@ -29,6 +32,7 @@ public record RegionName(String value) {
      * @param value the region name string; must be non-null and non-blank
      * @return a validated {@link RegionName}
      */
+    @JsonCreator
     public static RegionName of(String value) {
         return new RegionName(value);
     }
