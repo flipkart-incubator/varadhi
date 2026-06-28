@@ -17,6 +17,7 @@ import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
@@ -51,6 +52,7 @@ class ControllerApiMgrFailoverTest {
 
     private TransitionStore transitionStore;
     private TopicStore topicStore;
+    private RegionStore regionStore;
     private OperationMgr operationMgr;
     private ControllerApiMgr apiMgr;
 
@@ -59,6 +61,10 @@ class ControllerApiMgrFailoverTest {
         operationMgr = mock(OperationMgr.class);
         transitionStore = mock(TransitionStore.class);
         topicStore = mock(TopicStore.class);
+        regionStore = mock(RegionStore.class);
+        when(regionStore.exists(SOURCE.value())).thenReturn(true);
+        when(regionStore.exists(TARGET.value())).thenReturn(true);
+        when(regionStore.exists("nope")).thenReturn(false);
         apiMgr = new ControllerApiMgr(
             operationMgr,
             mock(AssignmentManager.class),
@@ -66,6 +72,7 @@ class ControllerApiMgrFailoverTest {
             mock(ConsumerClientFactory.class),
             transitionStore,
             topicStore,
+            regionStore,
             mock(VaradhiClusterManager.class),
             mock(MessageExchange.class),
             new StageAwaiter(),
@@ -123,6 +130,7 @@ class ControllerApiMgrFailoverTest {
                         .get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+        assertTrue(ex.getCause().getMessage().contains("not registered"));
     }
 
     @Test

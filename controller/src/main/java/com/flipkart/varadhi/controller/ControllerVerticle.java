@@ -157,6 +157,7 @@ public class ControllerVerticle extends AbstractVerticle {
             consumerClientFactory,
             metaStoreProvider.getTransitionStore(),
             metaStoreProvider.getMetaStore().topics(),
+            metaStoreProvider.getMetaStore().regions(),
             clusterManager,
             messageExchange,
             new StageAwaiter(),
