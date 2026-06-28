@@ -25,10 +25,17 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * stage.
  */
 public enum TransitionStage {
-    PENDING, PREPARE, SWITCH, COMPLETED, ABORTED;
+    PENDING, PREPARE, SWITCH, DRAIN, COMPLETED, ABORTED;
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
+    }
+
+    /**
+     * Abort is honored only before SWITCH commits the tracked topic write.
+     */
+    public boolean isAbortable() {
+        return this == PENDING || this == PREPARE;
     }
 
     /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */

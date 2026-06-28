@@ -12,6 +12,7 @@ import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceExcepti
 import com.flipkart.varadhi.spi.db.ProjectStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,23 +29,41 @@ public class VaradhiTopicService {
     private final TopicStore topicStore;
     private final SubscriptionStore subscriptionStore;
     private final ProjectStore projectStore;
+    private final TransitionStore transitionStore;
 
     /**
      * Constructs a VaradhiTopicService with the specified storage topic service and meta store.
      *
      * @param storageTopicService the storage topic service
      * @param topicStore           the meta store
+     * @param transitionStore      the controller-only transition store, used to block topic
+     *                             delete/update while a failover is active
      */
     public VaradhiTopicService(
         StorageTopicService storageTopicService,
         TopicStore topicStore,
         SubscriptionStore subscriptionStore,
-        ProjectStore projectStore
+        ProjectStore projectStore,
+        TransitionStore transitionStore
     ) {
         this.storageTopicService = storageTopicService;
         this.topicStore = topicStore;
         this.subscriptionStore = subscriptionStore;
         this.projectStore = projectStore;
+        this.transitionStore = transitionStore;
+    }
+
+    /**
+     * Rejects topic mutations (delete/update) while an active failover transition exists for it.
+     * Lock-free: relies on the controller-only {@code TransitionStore} as the single source of truth
+     * for "is a failover in flight".
+     */
+    private void assertNoActiveFailover(String topicName) {
+        if (transitionStore != null && transitionStore.exists(topicName)) {
+            throw new InvalidOperationForResourceException(
+                "Cannot modify topic " + topicName + " while a failover is in progress. Abort or wait for completion."
+            );
+        }
     }
 
     /**
@@ -164,6 +183,7 @@ public class VaradhiTopicService {
     public void delete(String topicName, ResourceDeletionType deletionType, RequestActionType actionRequest) {
         log.info("Deleting Varadhi topic: {}", topicName);
         // TODO: If the only topic in a namespace, also delete the namespace and tenant. Perform cleanup independently of the delete operation.
+        assertNoActiveFailover(topicName);
         VaradhiTopic varadhiTopic = topicStore.get(topicName);
         validateTopicForDeletion(topicName, deletionType);
 

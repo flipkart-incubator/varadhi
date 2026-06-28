@@ -62,10 +62,7 @@ class TransitionMetricsImplTest {
 
         assertEquals(
             1.0,
-            registry.find("topic.transition.prepare.not_involved")
-                    .tag("type", "STORAGE_MIGRATION")
-                    .counter()
-                    .count()
+            registry.find("topic.transition.prepare.not_involved").tag("type", "STORAGE_MIGRATION").counter().count()
         );
     }
 }

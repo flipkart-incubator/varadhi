@@ -31,4 +31,10 @@ public final class TransitionBusAddress {
 
     /** Api (under the controller route) for the pod-to-controller per-stage acknowledgement. */
     public final String STAGE_ACK_API = "stage.ack";
+
+    /** Controller request APIs (web → controller) for the failover lifecycle. */
+    public final String CREATE_FAILOVER_API = "createFailover";
+    public final String GET_FAILOVER_API = "getFailover";
+    public final String ABORT_FAILOVER_API = "abortFailover";
+    public final String LIST_FAILOVERS_API = "listFailovers";
 }

@@ -1,20 +1,31 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
+import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
+import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.AssignmentState;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
@@ -22,6 +33,14 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
+import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -37,17 +56,35 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;
     private final OperationMgr operationMgr;
+    private final TransitionStore transitionStore;
+    private final TopicStore topicStore;
+    private final VaradhiClusterManager clusterManager;
+    private final MessageExchange messageExchange;
+    private final StageAwaiter stageAwaiter;
+    private final TopicFailoverConfig failoverConfig;
 
     public ControllerApiMgr(
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
         SubscriptionStore subscriptionStore,
-        ConsumerClientFactory consumerClientFactory
+        ConsumerClientFactory consumerClientFactory,
+        TransitionStore transitionStore,
+        TopicStore topicStore,
+        VaradhiClusterManager clusterManager,
+        MessageExchange messageExchange,
+        StageAwaiter stageAwaiter,
+        TopicFailoverConfig failoverConfig
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.assignmentManager = assignmentManager;
         this.subscriptionStore = subscriptionStore;
         this.operationMgr = operationMgr;
+        this.transitionStore = transitionStore;
+        this.topicStore = topicStore;
+        this.clusterManager = clusterManager;
+        this.messageExchange = messageExchange;
+        this.stageAwaiter = stageAwaiter;
+        this.failoverConfig = failoverConfig;
     }
 
     @Override
@@ -239,6 +276,149 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         return CompletableFuture.completedFuture(
             new ShardAssignments(assignmentManager.getSubAssignments(subscriptionId))
         );
+    }
+
+    @Override
+    public CompletableFuture<TopicFailoverOperation> createTopicFailover(
+        String topicFqn,
+        TopicFailoverRequest request
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            VaradhiTopic topic = topicStore.get(topicFqn); // throws ResourceNotFoundException if missing
+            validateFailoverRegions(topic, request);
+            if (transitionStore.exists(topicFqn)) {
+                throw new InvalidOperationForResourceException(
+                    "An active failover already exists for topic " + topicFqn + "."
+                );
+            }
+            TopicFailoverOperation op = TopicFailoverOperation.of(
+                topicFqn,
+                request.sourceRegion(),
+                request.targetRegion(),
+                request.waitForReplicationLagToClear(),
+                request.requestedBy()
+            );
+            // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
+            transitionStore.create(
+                TransitionObject.forFailover(op.getId(), topicFqn, request.sourceRegion(), request.targetRegion())
+            );
+            log.info(
+                "Created topic failover op {} for {} ({}->{})",
+                op.getId(),
+                topicFqn,
+                request.sourceRegion(),
+                request.targetRegion()
+            );
+            operationMgr.createAndEnqueueTopicFailover(op, newFailoverExecutor());
+            return op;
+        });
+    }
+
+    @Override
+    public CompletableFuture<TransitionObject> getTopicFailover(String topicFqn) {
+        return CompletableFuture.supplyAsync(() -> {
+            if (!transitionStore.exists(topicFqn)) {
+                throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
+            }
+            return transitionStore.get(topicFqn);
+        });
+    }
+
+    @Override
+    public CompletableFuture<TransitionObject> abortTopicFailover(String topicFqn, String requestedBy) {
+        return CompletableFuture.supplyAsync(() -> {
+            if (!transitionStore.exists(topicFqn)) {
+                throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
+            }
+            TransitionObject transition = transitionStore.get(topicFqn);
+            if (!transition.isAbortable()) {
+                throw new InvalidOperationForResourceException(
+                    "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
+                );
+            }
+            log.info(
+                "Aborting topic failover op {} for {} (requestedBy={})",
+                transition.getOperationId(),
+                topicFqn,
+                requestedBy
+            );
+            // Notify pods best-effort, fail the in-flight stage barrier (which fails the executor and
+            // marks the op ERRORED), then drop the master so retries/resume become no-ops.
+            broadcastTransition(
+                TransitionEvent.of(
+                    transition.getOperationId(),
+                    VaradhiTopicName.parse(topicFqn),
+                    TransitionType.TOPIC_FAILOVER,
+                    TransitionStage.ABORTED,
+                    0L,
+                    null
+                )
+            );
+            stageAwaiter.abort(transition.getOperationId(), "aborted by " + requestedBy);
+            transition.advanceTo(TransitionStage.ABORTED, 0L);
+            transitionStore.delete(topicFqn);
+            return transition;
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<TransitionObject>> getActiveFailovers() {
+        return CompletableFuture.supplyAsync(transitionStore::listActive);
+    }
+
+    /** Routes a pod ack to the matching stage barrier. Invoked from the controller ack send-handler. */
+    public void recordFailoverAck(TransitionAck ack) {
+        log.debug("Failover ack op={} host={} stage={} ok={}", ack.opId(), ack.hostname(), ack.stage(), ack.success());
+        stageAwaiter.recordAck(ack);
+    }
+
+    public List<TopicFailoverOperation> getPendingTopicFailoverOps() {
+        return operationMgr.getPendingTopicFailoverOps();
+    }
+
+    public void retryTopicFailover(TopicFailoverOperation operation) {
+        operationMgr.enqueueTopicFailover(operation, newFailoverExecutor());
+    }
+
+    private TopicFailoverOpExecutor newFailoverExecutor() {
+        return new TopicFailoverOpExecutor(
+            operationMgr,
+            transitionStore,
+            topicStore,
+            messageExchange,
+            stageAwaiter,
+            clusterManager,
+            failoverConfig
+        );
+    }
+
+    private void broadcastTransition(TransitionEvent event) {
+        messageExchange.publish(
+            TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
+            TransitionBusAddress.STAGE_BROADCAST_API,
+            ClusterMessage.of(event)
+        );
+    }
+
+    private void validateFailoverRegions(VaradhiTopic topic, TopicFailoverRequest request) {
+        String source = request.sourceRegion();
+        String target = request.targetRegion();
+        if (source == null || source.isBlank() || target == null || target.isBlank()) {
+            throw new IllegalArgumentException("sourceRegion and targetRegion are required for failover.");
+        }
+        if (source.equals(target)) {
+            throw new IllegalArgumentException("sourceRegion and targetRegion must differ.");
+        }
+        if (topic.getProduceTopicForRegion(source) == null) {
+            throw new IllegalArgumentException(
+                "Topic " + topic.getName() + " is not configured for sourceRegion " + source + "."
+            );
+        }
+        if (topic.getProduceTopicForRegion(target) == null) {
+            throw new IllegalArgumentException(
+                "Topic " + topic.getName() + " is not configured for targetRegion " + target + "."
+            );
+        }
     }
 
     public CompletableFuture<String> addConsumerNode(ConsumerNode consumerNode) {

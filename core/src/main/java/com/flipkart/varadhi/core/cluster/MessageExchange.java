@@ -48,6 +48,11 @@ public class MessageExchange {
         }
     }
 
+    /**
+     * Broadcasts a message to every handler registered at {@code <routeName>.<apiName>.publish}.
+     * Fire-and-forget: there is no delivery tracking or reply (unlike {@link #send} / {@link #request}).
+     * Recipients acknowledge out-of-band via a separate message when an ack protocol is needed.
+     */
     public void publish(String routeName, String apiName, ClusterMessage msg) {
         String apiPath = getPath(routeName, apiName, RouteMethod.PUBLISH);
         try {
