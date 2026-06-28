@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities.cluster;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -28,8 +29,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     private final String operationId;
     private final String topicFqn;
     private final String requestedBy;
-    private final String sourceRegion;
-    private final String targetRegion;
+    private final RegionName sourceRegion;
+    private final RegionName targetRegion;
     private final boolean waitForReplicationLagToClear;
     private final int retryAttempt;
     private final long startTime;
@@ -43,8 +44,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         int version,
         String topicFqn,
         String requestedBy,
-        String sourceRegion,
-        String targetRegion,
+        RegionName sourceRegion,
+        RegionName targetRegion,
         boolean waitForReplicationLagToClear,
         int retryAttempt,
         long startTime,
@@ -68,8 +69,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     public static TopicFailoverOperation of(
         String topicFqn,
-        String sourceRegion,
-        String targetRegion,
+        RegionName sourceRegion,
+        RegionName targetRegion,
         boolean waitForReplicationLagToClear,
         String requestedBy
     ) {

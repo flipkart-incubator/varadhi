@@ -7,6 +7,7 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -43,8 +44,8 @@ import static org.mockito.Mockito.when;
 class TopicFailoverOpExecutorTest {
 
     private static final String FQN = "proj.topic";
-    private static final String SOURCE = "r1";
-    private static final String TARGET = "r2";
+    private static final RegionName SOURCE = RegionName.of("r1");
+    private static final RegionName TARGET = RegionName.of("r2");
 
     @EqualsAndHashCode (callSuper = true)
     private static final class DummyStorageTopic extends StorageTopic {
@@ -81,8 +82,14 @@ class TopicFailoverOpExecutorTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic.addInternalTopic(SOURCE, SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + SOURCE)));
-        topic.addInternalTopic(TARGET, SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + TARGET)));
+        topic.addInternalTopic(
+            SOURCE.value(),
+            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + SOURCE.value()))
+        );
+        topic.addInternalTopic(
+            TARGET.value(),
+            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + TARGET.value()))
+        );
         topic.setVersion(1);
 
         op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
@@ -123,7 +130,9 @@ class TopicFailoverOpExecutorTest {
         ArgumentCaptor<VaradhiTopic> updated = ArgumentCaptor.forClass(VaradhiTopic.class);
         verify(topicStore, times(2)).update(updated.capture());
         assertEquals(TopicState.Blocked, updated.getAllValues().get(0).getTopicState());
+        assertEquals(TARGET, updated.getAllValues().get(0).getActiveRegion());
         assertEquals(TopicState.Producing, updated.getAllValues().get(1).getTopicState());
+        assertEquals(TARGET, updated.getAllValues().get(1).getActiveRegion());
         assertEquals(TransitionStage.COMPLETED, transition.getCurrentStage());
         verify(transitionStore).delete(FQN);
 
