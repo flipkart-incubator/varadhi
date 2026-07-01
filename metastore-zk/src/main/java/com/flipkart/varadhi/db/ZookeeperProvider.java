@@ -39,8 +39,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ZookeeperProvider implements MetaStoreProvider {
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-    private CuratorFramework zkCurator;
-    private ZKMetaStore zkMetaStore;
+    private CuratorFramework globalStoreCurator;
+    private CuratorFramework localStoreCurator;
+    private ZKMetaStore globalZkStore;
+    private ZKMetaStore localZkStore;
     private VaradhiMetaStore varadhiMetaStore;
     private OpStoreImpl opStore;
     private AssignmentStoreImpl assignmentStore;
@@ -56,24 +58,26 @@ public class ZookeeperProvider implements MetaStoreProvider {
                     metaStoreOptions.getConfigFile(),
                     ZKMetaStoreConfig.class
                 );
-                zkCurator = create(zkMetaStoreConfig.getZookeeperOptions());
+                globalStoreCurator = create(zkMetaStoreConfig.getGlobalZookeeperOptions());
+                localStoreCurator = create(zkMetaStoreConfig.getLocalZookeeperOptions());
                 initializeStores();
             } catch (Exception e) {
-                initialized.set(false);
+                close();
                 throw new IllegalStateException("Failed to initialize ZookeeperProvider", e);
             }
         }
     }
 
     /**
-     * Initializes all store implementations with the configured ZooKeeper curator.
+     * Initializes all store implementations with their respective ZooKeeper curators.
      * This method should only be called once during initialization.
      */
     private void initializeStores() {
-        zkMetaStore = new ZKMetaStore(zkCurator);
-        varadhiMetaStore = new VaradhiMetaStore(zkMetaStore);
-        opStore = new OpStoreImpl(zkMetaStore);
-        assignmentStore = new AssignmentStoreImpl(zkMetaStore);
+        globalZkStore = new ZKMetaStore(globalStoreCurator);
+        localZkStore = new ZKMetaStore(localStoreCurator);
+        varadhiMetaStore = new VaradhiMetaStore(globalZkStore);
+        opStore = new OpStoreImpl(localZkStore);
+        assignmentStore = new AssignmentStoreImpl(localZkStore);
     }
 
     /**
@@ -121,16 +125,24 @@ public class ZookeeperProvider implements MetaStoreProvider {
      */
     @Override
     public void close() {
-        if (initialized.get() && zkCurator != null) {
+        if (initialized.get()) {
             try {
-                if (zkMetaStore != null) {
-                    zkMetaStore.close();
-                }
-                zkCurator.close();
-            } catch (Exception e) {
-                log.error("Error closing ZooKeeper curator", e);
+                tryClose(localZkStore);
+                tryClose(localStoreCurator);
+                tryClose(globalZkStore);
+                tryClose(globalStoreCurator);
             } finally {
                 initialized.set(false);
+            }
+        }
+    }
+
+    private void tryClose(AutoCloseable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                log.error("Error closing ZooKeeper resource: {}", closeable.getClass().getSimpleName(), e);
             }
         }
     }

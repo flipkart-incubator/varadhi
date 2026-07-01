@@ -119,7 +119,11 @@ logging:
 #############################################
 metastore:
   configMapName: metastore
-  zookeeper:
+  globalZookeeperStore:
+    connectUrl: "http://host.docker.internal:2181"
+    sessionTimeoutMs: 60000
+    connectTimeoutMs: 2000
+  localZookeeperStore:
     connectUrl: "http://host.docker.internal:2181"
     sessionTimeoutMs: 60000
     connectTimeoutMs: 2000

@@ -12,6 +12,5 @@ metadata:
     component: {{ .Values.deployment.name }}
 data:
   metastore.yml: |
-    {{- if .Values.metastore.zookeeper }}
-    {{ include "configMap.metastore.zookeeper" . | nindent 4}}
-    {{- end }}
+    {{ include "configMap.metastore.globalZookeeperStore" . | nindent 4}}
+    {{ include "configMap.metastore.localZookeeperStore" . | nindent 4}}
