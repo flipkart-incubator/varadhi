@@ -1,4 +1,9 @@
-zookeeperOptions:
-  connectUrl: "${ZOOKEEPER_URL}"
+globalZookeeperOptions:
+  connectUrl: "${GLOBAL_ZOOKEEPER_URL}"
+  sessionTimeoutMs: 60000
+  connectTimeoutMs: 2000
+
+localZookeeperOptions:
+  connectUrl: "${LOCAL_ZOOKEEPER_URL}"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000

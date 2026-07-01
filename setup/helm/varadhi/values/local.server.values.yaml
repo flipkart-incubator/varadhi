@@ -36,7 +36,11 @@ varadhi:
 #############################################
 metastore:
   configMapName: metastore
-  zookeeper:
+  globalZookeeperStore:
+    connectUrl: "172.17.0.1:2181"
+    sessionTimeoutMs: 60000
+    connectTimeoutMs: 2000
+  localZookeeperStore:
     connectUrl: "172.17.0.1:2181"
     sessionTimeoutMs: 60000
     connectTimeoutMs: 2000

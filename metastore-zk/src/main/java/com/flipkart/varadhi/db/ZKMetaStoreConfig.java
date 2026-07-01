@@ -19,5 +19,7 @@ import lombok.Data;
  */
 @Data
 public class ZKMetaStoreConfig {
-    private ZookeeperConnectConfig zookeeperOptions;
+    private ZookeeperConnectConfig globalZookeeperOptions;
+
+    private ZookeeperConnectConfig localZookeeperOptions;
 }
