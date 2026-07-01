@@ -52,7 +52,8 @@ setup/docker/configs/varadhi-auto-generated/*
 .codescope/
 .codegraph/
 
-# skills. ignored for now. Its a personal choice.
+# skills/agents. ignored for now. Its a personal choice.
+.agents/
 .claude/
 skills-lock.json
 
