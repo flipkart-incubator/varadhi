@@ -142,7 +142,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
             try {
                 closeable.close();
             } catch (Exception e) {
-                log.error("Error closing ZooKeeper resource: {}", closeable.getClass().getSimpleName(), e);
+                log.error("Error closing resource: {}", closeable.getClass().getSimpleName(), e);
             }
         }
     }
